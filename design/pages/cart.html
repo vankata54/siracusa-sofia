@@ -83,9 +83,11 @@
 .ln-tot .price{font-size:18px}
 .ln-tot .old{font-size:14px}
 .ln.out .ln-pic, .ln.out .ln-name{opacity:.55}
-.ln-outmsg{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:15px}
+.ln-outmsg{grid-column:1 / -1; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:10px; padding:14px; border-radius:18px; background:var(--surface-2); font-size:15px}
+.ln-outmsg > .ic{color:var(--warn); margin-top:2px}
 .ln-outmsg b{color:var(--warn)}
-.ln-outmsg .pill{min-height:48px; margin-left:auto}
+.ln-outmsg .pill{grid-column:1 / -1; min-height:48px; white-space:normal; text-align:center; line-height:1.25; padding:8px 18px}
+@container app (min-width:700px){ .ln-outmsg .pill{grid-column:2; justify-self:start} }
 @container app (min-width:700px){
   .lines{padding:4px 24px}
   .ln{grid-template-columns:84px minmax(0,1fr) auto; grid-template-areas:"pic info act"; padding:18px 0}
@@ -206,6 +208,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 
 /* ---------- step 3 ---------- */
 .form{display:grid; gap:18px}
+@container app (min-width:900px){ .form, .opts, .consent-wrap{max-width:620px} }
 .field .err{display:flex; gap:6px; align-items:flex-start; margin:0}
 .field .err[hidden]{display:none}
 .field .err .ic{margin-top:1px}
@@ -449,7 +452,7 @@ function ctaLabel(I, step){
   if (step===1){ if (I.closed) return (I.m<600 ? "Поръчай за днес" : "Поръчай за утре"); return I.mode==="delivery" ? "Към адреса" : "Избери час"; }
   if (step===2) return "Към данните";
   return P.err==="offline" ? "Опитай пак" : "Поръчай"; }
-function ctaBtn(I, step, block){ var lbl = ctaLabel(I, step) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "");
+function ctaBtn(I, step, block){ var lbl = ctaLabel(I, step) + " · " + fmt(I.total) + (I.feeUnknown && block ? " + доставка" : "");
   if (step===3 && P.sending) return '<button class="pill pill-red pill-lg'+(block?" pill-block":"")+'" type="button" aria-busy="true" aria-disabled="true">'+esc(lbl)+'<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
   if (step===1 && I.conflict==="delivery") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Смени на вземане · -30%</button>';
   if (step===2 && I.mode==="delivery" && D.zk==="out") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Вземи от място · '+fmt(I.total)+'</button>';

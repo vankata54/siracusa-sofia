@@ -286,7 +286,7 @@
 .proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
 
 /* ---------- sheets ---------- */
-.ts{display:grid; gap:14px; padding:4px 2px 2px}
+.ts{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:4px 2px 2px}
 .ts-top{display:grid; grid-template-columns:72px 1fr; gap:14px; align-items:center}
 .ts-top .tno{width:72px; height:72px; border-radius:22px; font-size:28px}
 .ts-top b{display:block; font-size:20px; letter-spacing:-.02em}
@@ -297,7 +297,8 @@
 .phs{display:flex; align-items:center; gap:12px; padding:16px; border-radius:var(--r-img); background:var(--surface-2)}
 .phs .ic{color:var(--muted)}
 .center{text-align:center}
-.wl{display:grid; gap:16px; padding:4px 2px 2px}
+.wl{display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:4px 2px 2px}
+.wl .pill, .ts .pill{white-space:normal; text-align:center; line-height:1.2}
 .wl p{margin:0}
 .wl .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
 .wl .okm{width:72px; height:72px; margin:4px auto 0}
@@ -555,7 +556,7 @@ function step2(){ if (st.loading) return recap()+'<div class="skel" style="heigh
   if (n > 6){ /* large group: tables are joined, the guest picks a zone */
     h += '<div class="shell grp"><div class="core"><div class="row" style="align-items:flex-start;gap:14px"><span class="gic">'+ic("users-three",26)+'</span><div><h2 class="h3" tabindex="-1" data-h>За '+n+' души ще съединим маси</h2><p>Изберете къде предпочитате. Ние ще подредим масите преди да дойдете.</p></div></div><div class="opts">'+
       ["salon","garden"].map(function(z){ var ok = freeSeats(z,d,m) >= n+2, on = st.sel==="J-"+z;
-        return '<div class="gopt'+(on?" on":"")+'"><span><b>'+zoneName(z)+'</b><small>'+(z==="garden"?"Затворена и отоплявана":"До прозорците и бара")+'</small></span>'+
+        return '<div class="gopt'+(on?" on":"")+'"><span><b>'+zoneName(z)+'</b><small>'+(z==="garden"?"Затворена и отоплявана":"Масите до прозорците")+'</small></span>'+
           (on ? '<span class="st sel" style="color:var(--red);font-weight:800;display:inline-flex;gap:4px;align-items:center;padding-right:10px">'+ic("check",18)+'Избрано</span>'
             : ok ? '<button class="pill pill-red" type="button" data-pick="J-'+z+'" data-fk="j'+z+'">Избери '+zoneName(z,"in").replace("в ","")+'</button>'
             : '<span class="small muted" style="padding-right:10px;text-align:right">Няма място в '+hm(m)+'</span>')+'</div>'; }).join("")+'</div></div></div>';

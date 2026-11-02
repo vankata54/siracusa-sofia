@@ -206,6 +206,8 @@ SC.dishCard = function(x, variant){ if (typeof x === "string") x = SC.byId[x];
 var cart = load("sc-cart", {lines:[], mode:"delivery"});
 var listeners = [];
 function saveCart(){ store("sc-cart", cart); listeners.forEach(function(f){ f(cart); }); updateCartUI(true); }
+/* signed-in client (prototype: localStorage "sc-user", written by login.html) */
+SC.user = function(){ return load("sc-user", null); };
 SC.cart = {
   get:function(){ return cart; },
   lines:function(){ return cart.lines; },
