@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Wireframes · Сайт · Обедно, резервация, профил</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sheet{background:#F2F2F0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1F1F1F;font-size:16px;line-height:1.45;padding:40px;box-sizing:border-box;display:flex;gap:40px;align-items:flex-start}
+.sheet h1,.sheet h2,.sheet h3,.sheet p{margin:0}
+.sheet button,.sheet a,.sheet input{font:inherit;color:inherit}
+.sheet a{text-decoration:none}
+.col{display:flex;flex-direction:column;gap:8px;flex:none}
+.lbl{font-size:14px;font-weight:700;color:#555555;height:24px}
+.scr{width:390px;height:844px;background:#FFFFFF;border:1px solid #BDBDBD;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-sizing:border-box}
+.dsk{width:1440px;height:900px;background:#FFFFFF;border:1px solid #BDBDBD;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-sizing:border-box}
+.box{background:#E3E3E3;color:#5C5C5C;display:flex;align-items:center;justify-content:center;font-size:14px;text-align:center;box-sizing:border-box;padding:6px}
+.pad{padding:16px;display:flex;flex-direction:column;gap:12px}
+.h{font-size:22px;font-weight:800;line-height:1.2}
+.mu{color:#5C5C5C}
+.sm{font-size:14px}
+.btn{min-height:56px;border-radius:12px;background:#2B2B2B;color:#FFFFFF;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;border:0;padding:0 16px;box-sizing:border-box;width:100%}
+.btn2{min-height:48px;border-radius:12px;background:#FFFFFF;color:#2B2B2B;border:2px solid #2B2B2B;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;box-sizing:border-box}
+.chip{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #9E9E9E;background:#FFFFFF;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:15px}
+.chip.on{background:#2B2B2B;color:#FFFFFF;border-color:#2B2B2B}
+.line{height:1px;background:#DDDDDD}
+.hdr1{display:flex;align-items:center;gap:6px;height:56px;padding:0 12px 0 16px;border-bottom:1px solid #DDDDDD}
+.logo{font-weight:800;font-size:20px;margin-right:auto}
+.st{padding:6px 16px;background:#EEEEEE;font-size:15px;display:flex;align-items:center;gap:8px}
+.nav{margin-top:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #DDDDDD;padding:6px 4px 10px;background:#FFFFFF}
+.nv{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:600;min-height:52px;justify-content:center}
+.sheetup{position:absolute;left:0;right:0;bottom:0;background:#FFFFFF;border-radius:20px 20px 0 0;border-top:1px solid #BDBDBD;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:8px}
+.sb{justify-content:space-between}
+.card{border:1px solid #CFCFCF;border-radius:12px;background:#FFFFFF;overflow:hidden;position:relative}
+.bdg{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 8px;border-radius:999px;border:1.5px solid #5C5C5C;background:#FFFFFF;font-size:14px;font-weight:700;white-space:nowrap;align-self:flex-start}
+.bdg .i{width:16px;height:16px}
+.miss{border:1.5px dashed #9E9E9E;border-radius:8px;padding:6px 10px;color:#5C5C5C;font-size:14px}
+.in{min-height:48px;border:1.5px solid #9E9E9E;border-radius:10px;padding:0 12px;box-sizing:border-box;width:100%;background:#FFFFFF;font-size:16px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:14px;font-weight:700}
+.pr{font-weight:800;font-size:18px;white-space:nowrap}
+.hb{min-height:48px;display:inline-flex;align-items:center;gap:4px;padding:0 6px;border:0;background:none;font-weight:700;font-size:15px}
+.ib{min-width:48px;min-height:48px;border-radius:12px;border:1.5px solid #9E9E9E;background:#FFFFFF;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;box-sizing:border-box;font-weight:700}
+.dt{width:10px;height:10px;border-radius:50%;background:#1F1F1F;flex:none}
+.dt.o{background:#FFFFFF;border:2px solid #1F1F1F;box-sizing:border-box}
+.stp{padding:8px 16px 10px;border-bottom:1px solid #DDDDDD;display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.bar span{height:6px;border-radius:3px;background:#DDDDDD}
+.bar span.on{background:#2B2B2B}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:2px solid #2B2B2B;border-radius:12px;overflow:hidden}
+.seg button{min-height:56px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;background:#FFFFFF;border:0}
+.seg button.on{background:#2B2B2B;color:#FFFFFF}
+.foot{margin-top:auto;padding:12px 16px;border-top:1px solid #DDDDDD;background:#FFFFFF;display:flex;flex-direction:column;gap:8px}
+.add{width:48px;height:48px;border-radius:50%;background:#2B2B2B;color:#FFFFFF;border:0;display:flex;align-items:center;justify-content:center;flex:none}
+.cnt{position:absolute;top:2px;left:calc(50% + 4px);min-width:20px;height:20px;border-radius:10px;background:#2B2B2B;color:#FFFFFF;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+.nv{position:relative}
+.nv.on{background:#E3E3E3;border-radius:10px;font-weight:800}
+.dn{font-weight:700;line-height:1.3}
+.so{opacity:.45}
+.qty{display:flex;align-items:center;gap:4px}
+.qty span{min-width:28px;text-align:center;font-weight:800}
+.opt{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid #DDDDDD}
+.opt input{width:22px;height:22px;margin:0;flex:none}
+.sel{border:1.5px solid #9E9E9E;border-radius:12px;min-height:56px;display:flex;align-items:center;gap:8px;padding:8px 12px;box-sizing:border-box;background:#FFFFFF;font-weight:600}
+.sel.on{border:3px solid #2B2B2B}
+.sw{width:48px;height:28px;border-radius:14px;border:2px solid #5C5C5C;position:relative;flex:none;box-sizing:border-box;background:#FFFFFF;display:inline-block}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#5C5C5C}
+.swb{min-height:48px;display:inline-flex;align-items:center;gap:8px;border:0;background:none;font-weight:700;font-size:15px;padding:0;flex:none}
+.hatch{background:repeating-linear-gradient(45deg,#CFCFCF 0 4px,#FFFFFF 4px 9px)}
+.toast{position:absolute;left:12px;right:12px;top:100px;background:#2B2B2B;color:#FFFFFF;border-radius:12px;padding:6px 6px 6px 14px;display:flex;align-items:center;gap:8px;z-index:2}
+.ms{font-size:14px;font-weight:700;color:#555555}
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tgrid button{min-height:48px;border-radius:10px;border:1.5px solid #9E9E9E;background:#FFFFFF;font-weight:700}
+.tgrid button.on{background:#2B2B2B;color:#FFFFFF;border-color:#2B2B2B}
+.tgrid button.off{border-style:dashed;color:#757575}
+.lr{display:flex;align-items:center;gap:10px;min-height:56px;padding:4px 12px;border-bottom:1px solid #DDDDDD}
+.lr:last-child{border-bottom:0}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal button{min-height:36px;border:0;background:#FFFFFF;border-radius:8px;font-weight:600;position:relative;padding:0}
+.cal .off{color:#9E9E9E;text-decoration:line-through}
+.cal .td{border:2px solid #9E9E9E}
+.cal .on{background:#2B2B2B;color:#FFFFFF}
+.cal .ev::after{content:"";position:absolute;bottom:2px;left:50%;margin-left:-3px;width:6px;height:6px;border-radius:50%;background:currentColor}
+.wk{font-size:14px;font-weight:700;color:#5C5C5C}
+.fp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 4px;padding:10px 6px;border:1.5px solid #BDBDBD;border-radius:12px;background:#FAFAFA}
+.tc{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:84px;justify-content:center;border:0;background:none;padding:0}
+.tb2{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;font-weight:800;font-size:15px;border:2px solid #2B2B2B;background:#FFFFFF;box-sizing:border-box}
+.tb2 small{font-size:13px;font-weight:600}
+.t-r{width:52px;height:52px;border-radius:50%}
+.t-s{width:56px;height:56px;border-radius:8px}
+.t-l{width:74px;height:50px;border-radius:8px}
+.t-taken{background:repeating-linear-gradient(45deg,#CFCFCF 0 4px,#FFFFFF 4px 9px);border-color:#757575}
+.t-un{border-style:dashed;opacity:.5}
+.t-sel{border-width:5px}
+.tw{font-size:13px;font-weight:700}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{border-bottom:1px solid #DDDDDD;padding:8px 4px;text-align:left;vertical-align:top}
+.tbl th{font-size:14px;color:#5C5C5C}
+.sk{background:#E3E3E3;border-radius:8px}
+.stamp{width:26px;height:26px;border-radius:50%;border:2px dashed #9E9E9E;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.stamp.on{background:#2B2B2B;border:2px solid #2B2B2B;color:#FFFFFF}
+</style>
+</helmet>
+<div class="sheet" style="width: 4340px; height: 1000px">
+
+<!-- 10 Обедно меню до 15:00 -->
+<div class="col"><div class="lbl">10 · Обедно меню · до 15:00</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 class="h" style="font-size: 26px">Обедно меню</h1>
+<p class="mu">Понеделник, 2 ноември</p>
+</div>
+<div class="row" style="background: #EEEEEE; border-radius: 10px; padding: 10px 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4h14v12H1zM15 8h4l4 4v4h-8"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg><span>До 15:00 · доставка и вземане от място</span></div>
+<p class="miss">[ЛИПСВА: ястия за деня - за макета са взети ястия от менюто с етикет "Обедно"]</p>
+<div class="card">
+<div class="lr"><div style="flex: 1; display: flex; flex-direction: column"><span class="dn">Кебапчета</span><span class="mu sm">450 гр.</span></div><span class="pr">7,61 €</span><button class="add" aria-label="Добави Кебапчета"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+<div class="lr"><div style="flex: 1; display: flex; flex-direction: column"><span class="dn">Пица Вегетариана</span><span class="mu sm">420 гр.</span></div><span class="pr">6,13 €</span><button class="add" aria-label="Добави Пица Вегетариана"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+<div class="lr" style="min-height: 64px"><div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="dn so">Плескавица</span><span class="bdg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 5l14 14"/></svg>Изчерпано днес</span></div><span class="pr mu">8,18 €</span></div>
+</div>
+<a href="#" class="hb" style="padding: 0; align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Цялата седмица<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+</div>
+<div class="foot" style="margin-top: 0"><button class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Поръчай обедно меню</button></div>
+<nav class="nav" aria-label="Основна навигация" style="margin-top: 0">
+<a href="#" class="nv on" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Количка</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div></div>
+
+<!-- 11 Обедно меню след 15:00 -->
+<div class="col"><div class="lbl">11 · Обедно меню · след 15:00</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h1 class="h" style="font-size: 26px">Обедно меню</h1>
+<p class="mu">Понеделник, 2 ноември</p>
+</div>
+<div class="card row" style="padding: 12px; border: 3px solid #2B2B2B; align-items: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l2-5h14l2 5M4 9v11h16V9M9 20v-6h6v6"/></svg><p class="dn">-30% при вземане от място · след 15:00 обедното меню е само за вземане</p></div>
+<div class="card">
+<div class="lr"><div style="flex: 1; display: flex; flex-direction: column"><span class="dn">Кебапчета</span><span class="mu sm">450 гр.</span></div><div style="display: flex; flex-direction: column; align-items: flex-end"><s class="mu sm" aria-label="Стара цена 7,61 €">7,61 €</s><span class="pr">5,33 €</span></div><button class="add" aria-label="Добави Кебапчета"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+<div class="lr"><div style="flex: 1; display: flex; flex-direction: column"><span class="dn">Пица Вегетариана</span><span class="mu sm">420 гр.</span></div><div style="display: flex; flex-direction: column; align-items: flex-end"><s class="mu sm" aria-label="Стара цена 6,13 €">6,13 €</s><span class="pr">4,29 €</span></div><button class="add" aria-label="Добави Пица Вегетариана"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+<div class="lr" style="min-height: 64px"><div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="dn so">Плескавица</span><span class="bdg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 5l14 14"/></svg>Изчерпано днес</span></div><span class="pr mu">8,18 €</span></div>
+</div>
+<div class="row" style="background: #EEEEEE; border-radius: 10px; padding: 10px 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="sm">Доставка за обедното меню след 15:00 не се предлага</span></div>
+<a href="#" class="hb" style="padding: 0; align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Цялата седмица<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+</div>
+<div class="foot" style="margin-top: 0"><button class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l2-5h14l2 5M4 9v11h16V9M9 20v-6h6v6"/></svg>Вземи от място · -30%</button></div>
+<nav class="nav" aria-label="Основна навигация" style="margin-top: 0">
+<a href="#" class="nv on" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Количка</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div></div>
+
+<!-- 12 Резервация 1 -->
+<div class="col"><div class="lbl">12 · Резервация 1 · Кога и колко</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="stp"><div class="row sb"><span class="fl">Стъпка 1 от 3 · Кога и колко</span><span class="mu sm">Маса · Данни</span></div><div class="bar"><span class="on"></span><span></span><span></span></div></div>
+<div class="body">
+<div class="pad" style="gap: 8px">
+<div class="row sb"><button class="ib" aria-label="Предишен месец" disabled=""><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><h1 style="font-size: 18px; font-weight: 800">Ноември 2026</h1><button class="ib" aria-label="Следващ месец"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div>
+<div class="cal" role="grid" aria-label="Ноември 2026">
+<span class="wk">По</span><span class="wk">Вт</span><span class="wk">Ср</span><span class="wk">Че</span><span class="wk">Пе</span><span class="wk">Съ</span><span class="wk">Не</span>
+<span></span><span></span><span></span><span></span><span></span><span></span><button class="off" disabled="">1</button>
+<button class="td" aria-label="2 ноември, днес">2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button>
+<button>9</button><button>10</button><button>11</button><button>12</button><button>13</button><button>14</button><button>15</button>
+<button>16</button><button>17</button><button>18</button><button>19</button><button>20</button><button>21</button><button>22</button>
+<button>23</button><button>24</button><button>25</button><button>26</button><button>27</button><button class="on ev" aria-pressed="true" aria-label="28 ноември, Гръцка вечер, избран">28</button><button>29</button>
+<button>30</button>
+</div>
+<div class="card row" style="padding: 10px 12px; align-items: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div style="display: flex; flex-direction: column"><span class="dn">Събота, 28 ноември · Гръцка вечер</span><span class="mu sm">● точката = събитие · [ЛИПСВА: цена или вход свободен]</span></div></div>
+<span class="fl">Час</span>
+<div class="tgrid" role="group" aria-label="Час">
+<button>18:00</button><button>18:30</button><button class="on" aria-pressed="true">19:00</button><button>19:30</button>
+<button>20:00</button><button>20:30</button><button class="off" disabled="">21:00 пълно</button><button>21:30</button>
+</div>
+<div class="row sb" style="min-height: 56px"><span class="fl" style="font-size: 16px">Брой хора</span><div class="qty"><button class="ib" aria-label="Един човек по-малко"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><span>2</span><button class="ib" aria-label="Един човек повече"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+</div>
+</div>
+<div class="foot"><button class="btn">Напред · Избери маса<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div>
+</div></div>
+
+<!-- 13 Резервация 2 Маса -->
+<div class="col"><div class="lbl">13 · Резервация 2 · Маса</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="stp"><div class="row sb"><button class="hb" style="padding-left: 0"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Назад</button><span class="fl">Стъпка 2 от 3 · Маса</span></div><div class="bar"><span class="on"></span><span class="on"></span><span></span></div></div>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<p class="mu">Събота, 28 ноември · 19:00 · 2 души</p>
+<div class="seg" role="tablist" aria-label="Зона">
+<button class="on" role="tab" aria-selected="true">Салон</button>
+<button role="tab" aria-selected="false">Градина</button>
+</div>
+<div class="fp" aria-label="Карта на салона, 12 маси (условни за макета)">
+<button class="tc"><span class="tb2 t-r">М1<small>2 м.</small></span><span class="tw">свободна</span></button>
+<button class="tc" disabled=""><span class="tb2 t-r t-taken">М2<small>2 м.</small></span><span class="tw">заета</span></button>
+<button class="tc"><span class="tb2 t-s">М3<small>4 м.</small></span><span class="tw">свободна</span></button>
+<button class="tc" disabled=""><span class="tb2 t-s t-taken">М4<small>4 м.</small></span><span class="tw">заета</span></button>
+<button class="tc" aria-pressed="true"><span class="tb2 t-r t-sel"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 18px; height: 18px"><path d="M20 6 9 17l-5-5"/></svg><small>М5</small></span><span class="tw">избрана</span></button>
+<button class="tc" disabled=""><span class="tb2 t-l t-un">М6<small>6 м.</small></span><span class="tw">неподходяща</span></button>
+<button class="tc"><span class="tb2 t-s">М7<small>4 м.</small></span><span class="tw">свободна</span></button>
+<button class="tc" disabled=""><span class="tb2 t-r t-taken">М8<small>2 м.</small></span><span class="tw">заета</span></button>
+<button class="tc" disabled=""><span class="tb2 t-l t-un">М9<small>6 м.</small></span><span class="tw">неподходяща</span></button>
+<button class="tc"><span class="tb2 t-s">М10<small>4 м.</small></span><span class="tw">свободна</span></button>
+<button class="tc"><span class="tb2 t-r">М11<small>2 м.</small></span><span class="tw">свободна</span></button>
+<button class="tc" disabled=""><span class="tb2 t-s t-taken">М12<small>4 м.</small></span><span class="tw">заета</span></button>
+</div>
+<div class="row" style="flex-wrap: wrap; gap: 6px 14px">
+<span class="row sm"><span class="tb2" style="width: 18px; height: 18px; border-radius: 4px"></span>Свободна</span>
+<span class="row sm"><span class="tb2 t-taken" style="width: 18px; height: 18px; border-radius: 4px"></span>Заета</span>
+<span class="row sm"><span class="tb2 t-un" style="width: 18px; height: 18px; border-radius: 4px"></span>Неподходяща</span>
+</div>
+<div class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+<span class="dn">Маса 5 · 2 места</span>
+<span class="mu sm">[ЛИПСВА: особености на масата - до прозореца, за детска количка, достъпна]</span>
+</div>
+<div class="row" role="timer" style="background: #EEEEEE; border-radius: 10px; padding: 8px 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg><span>Масата е задържана за 10:00 мин</span></div>
+<a href="#" class="hb" style="padding: 0; align-self: flex-start; text-decoration: underline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Предпочитам списък</a>
+</div>
+</div>
+<div class="foot"><button class="btn">Избери маса 5 · Напред<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div>
+</div></div>
+
+<!-- 14 Резервация 3 Данни -->
+<div class="col"><div class="lbl">14 · Резервация 3 · Данни</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="stp"><div class="row sb"><button class="hb" style="padding-left: 0"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Назад</button><span class="fl">Стъпка 3 от 3 · Данни</span></div><div class="bar"><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<div class="row" style="background: #EEEEEE; border-radius: 10px; padding: 8px 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Сб, 28 ноември · 19:00 · 2 души · Салон, маса 5</span></div>
+<div class="fld"><label class="fl" for="r-name">Име (задължително)</label><input id="r-name" class="in" autocomplete="name" required=""></div>
+<div class="fld"><label class="fl" for="r-tel">Телефон (задължително)</label><input id="r-tel" class="in" type="tel" autocomplete="tel" required=""></div>
+<div class="fld"><label class="fl" for="r-mail">Имейл (по желание)</label><input id="r-mail" class="in" type="email" autocomplete="email"></div>
+<div class="fld"><label class="fl" for="r-occ">Повод (по желание)</label><input id="r-occ" class="in" placeholder="Например: рожден ден"></div>
+<div class="fld"><label class="fl" for="r-note">Бележка (по желание)</label><input id="r-note" class="in" placeholder="Например: идваме с детска количка"></div>
+<label class="opt" style="border: 1.5px solid #9E9E9E; border-radius: 12px; padding: 8px 12px; align-items: flex-start"><input type="checkbox" style="margin-top: 2px"><span>Искам да получавам оферти и маркетингови предложения</span></label>
+</div>
+</div>
+<div class="foot"><button class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай маса</button><p class="sm mu" style="text-align: center">Без депозит · потвърждение по SMS или Viber</p></div>
+</div></div>
+
+<!-- 15 Резервация успех -->
+<div class="col"><div class="lbl">15 · Резервация · успех и състояния</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<div style="width: 72px; height: 72px; border-radius: 50%; background: #2B2B2B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; align-self: center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 42px; height: 42px; stroke-width: 2.5"><path d="M20 6 9 17l-5-5"/></svg></div>
+<h1 class="h" style="text-align: center">Масата е запазена</h1>
+<div class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+<span class="dn">Събота, 28 ноември · 19:00</span>
+<span>2 души · Салон, маса 5</span>
+<span class="mu sm">Вечерта е Гръцка вечер</span>
+</div>
+<p class="sm">Потвърждението идва по SMS или Viber. Напомняме ден преди и 3 часа преди.</p>
+<button class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg>Добави в календара</button>
+<p class="sm mu">Промяна или отказ - от линка в SMS (до 2 часа преди вечер, до 1 час през деня)</p>
+<div class="line"></div>
+<span class="ms">Състояние · няма свободни маси</span>
+<div class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+<p>За този час няма свободни маси.</p>
+<button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Запиши ме в списъка на чакащите</button>
+</div>
+<span class="ms">Състояние · блокиран номер</span>
+<div class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+<p>Не успяхме да запазим маса онлайн. Свържете се с нас на 0894 36 55 77</p>
+<a href="tel:+359894365577" class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a>
+</div>
+</div>
+</div>
+</div></div>
+
+<!-- 16 Събития и поводи -->
+<div class="col"><div class="lbl">16 · Събития и поводи</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad">
+<h1 class="h" style="font-size: 26px">Събития и поводи</h1>
+<div class="seg" role="tablist" aria-label="Събития">
+<button class="on" role="tab" aria-selected="true">Предстоящи</button>
+<button role="tab" aria-selected="false">Минали</button>
+</div>
+<div class="row" style="overflow: hidden">
+<button class="chip on">Всички</button><button class="chip">Жива музика</button><button class="chip">Тематични вечери</button><button class="chip">Празници</button>
+</div>
+<article class="card">
+<div class="box" style="height: 150px; flex-direction: column; gap: 4px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>Снимка · Гръцка вечер</div>
+<div style="padding: 12px; display: flex; gap: 12px">
+<div style="width: 64px; height: 76px; flex: none; border-radius: 10px; border: 2px solid #2B2B2B; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1"><span class="sm" style="font-weight: 800">НОЕ</span><span style="font-size: 28px; font-weight: 800">28</span><span class="sm mu">събота</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; flex: 1">
+<span class="mu sm">Тематични вечери</span>
+<h2 class="h">Гръцка вечер</h2>
+<span class="mu sm">Последна събота от месеца</span>
+<span class="sm">[ЛИПСВА: цена или вход свободен]</span>
+<span class="bdg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>-5% при ранна резервация</span>
+</div>
+</div>
+<div style="padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px">
+<button class="btn">Запази място</button>
+<button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Добави в календара</button>
+</div>
+</article>
+<a href="#" class="card row" style="padding: 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><span style="flex: 1; display: flex; flex-direction: column"><span class="dn">Рожден ден, кръщене или фирмено парти?</span><span class="mu sm">Сметнете празника си</span></span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+</div>
+<nav class="nav" aria-label="Основна навигация">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Количка</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div></div>
+
+<!-- 17 Калкулатор на празник -->
+<div class="col"><div class="lbl">17 · Калкулатор на празник</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="stp"><div class="row sb"><button class="hb" style="padding-left: 0"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Назад</button><span class="fl">Стъпка 2 от 3 · Ястия и екстри</span></div><div class="bar"><span class="on"></span><span class="on"></span><span></span></div><span class="sm mu">1 Тип и хора → 2 Ястия, торта, украса, зона → 3 Данни</span></div>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<div class="row sb" style="background: #EEEEEE; border-radius: 10px; padding: 4px 4px 4px 12px"><span>Рожден ден · [брой] души</span><button class="hb">Промени</button></div>
+<div class="seg" role="radiogroup" aria-label="Меню">
+<button class="on" role="radio" aria-checked="true">От пакетите</button>
+<button role="radio" aria-checked="false">Собствено меню</button>
+</div>
+<p class="sm mu">Собствено меню: "Свържете се с нас за оферта"</p>
+<div class="card">
+<div class="lr"><span class="dn" style="flex: 1">Апетайзери</span><span class="mu sm">[ЛИПСВА: пакети]</span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></div>
+<div class="lr"><span class="dn" style="flex: 1">Предястие</span><span class="mu sm">[ЛИПСВА: пакети]</span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></div>
+<div class="lr"><span class="dn" style="flex: 1">Основно</span><span class="mu sm">[ЛИПСВА: пакети]</span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></div>
+<div class="lr"><span class="dn" style="flex: 1">Десерт</span><span class="mu sm">[ЛИПСВА: пакети]</span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></div>
+</div>
+<div class="row" style="flex-wrap: wrap"><span class="fl" style="width: 64px">Екстри</span><button class="chip on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21h16v-8H4zM4 16c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1M12 13V8"/></svg>Торта</button><button class="chip">Украса</button></div>
+<div class="row" style="flex-wrap: wrap"><span class="fl" style="width: 64px">Зона</span><button class="chip on">Салон</button><button class="chip">Отоплявана градина</button></div>
+</div>
+</div>
+<div class="foot">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+<div style="border: 1.5px solid #9E9E9E; border-radius: 10px; padding: 8px"><span class="ms">Ако цените са включени</span><p class="dn">Ориентировъчно:</p><p class="sm">[ЛИПСВА: цени от админа]</p></div>
+<div style="border: 1.5px dashed #9E9E9E; border-radius: 10px; padding: 8px"><span class="ms">Ако са скрити</span><p class="dn">Ще ви изпратим оферта</p></div>
+</div>
+<p class="sm mu">-5% при ранна резервация</p>
+<button class="btn">Напред · Данни<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+</div>
+</div></div>
+
+<!-- 18 Вход и профил -->
+<div class="col"><div class="lbl">18 · Вход и профил</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<span class="ms">Вход · без парола</span>
+<div class="card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px">
+<div class="row"><label class="fl" for="p-tel" style="width: 76px">Телефон</label><input id="p-tel" class="in" type="tel" style="flex: 1"><button class="btn2" style="flex: none; padding: 0 10px">Изпрати код</button></div>
+<div class="row"><label class="fl" for="p-code" style="width: 76px">Код от SMS</label><input id="p-code" class="in" inputmode="numeric" autocomplete="one-time-code" style="flex: 1"><button class="btn2" style="flex: none; padding: 0 10px">Влез</button></div>
+</div>
+<span class="ms">Профил</span>
+<div class="card row" style="padding: 8px 8px 8px 12px"><div style="flex: 1; display: flex; flex-direction: column"><span class="dn">Поръчка #128</span><span class="mu sm">17,83 € · 2 ястия</span></div><button class="btn2" style="padding: 0 10px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>Поръчай отново</button></div>
+<div class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+<div class="row sb"><span class="dn">Карта с печати</span><span class="fl">2 от 10</span></div>
+<div class="row" style="gap: 6px" role="img" aria-label="2 от 10 печата">
+<span class="stamp on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stamp on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span><span class="stamp"></span>
+</div>
+<span class="sm mu">[ЛИПСВА: какво дава пълната карта]</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+<a href="#" class="sel"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>Любими</a>
+<a href="#" class="sel"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Адреси</a>
+<a href="#" class="sel"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/></svg>Ваучери · -10%</a>
+<a href="#" class="sel"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>Език · BG / EN</a>
+</div>
+<div class="card">
+<div class="lr"><span style="flex: 1">Искам да получавам оферти и маркетингови предложения</span><button class="swb" role="switch" aria-checked="false"><span class="sw"></span>Изкл.</button></div>
+<div class="lr"><span style="flex: 1">Рожден ден (по желание)</span><button class="hb">Добави дата</button></div>
+<div class="lr"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span style="flex: 1">Тъмен режим</span><button class="swb" role="switch" aria-checked="false"><span class="sw"></span>Изкл.</button></div>
+</div>
+<div class="row sb"><a href="#" class="hb" style="padding: 0"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Изтегли данните ми</a><a href="#" class="hb" style="padding: 0"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Изтрий профила</a></div>
+</div>
+</div>
+</div></div>
+
+<!-- 19 Доставка -->
+<div class="col"><div class="lbl">19 · Доставка</div><div class="scr">
+<header>
+<div class="hdr1"><a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a><a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Обади се</a><button class="hb" aria-label="Switch to English">EN</button><button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button></div>
+<div class="st"><span class="dt"></span>Отворено до 23:00 · Доставка до 21:00</div>
+</header>
+<div class="body">
+<div class="pad" style="gap: 10px">
+<h1 class="h" style="font-size: 26px">Доставка</h1>
+<div class="box" style="height: 160px; border-radius: 12px; flex-direction: column; gap: 4px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Статична карта на зоните<br>интерактивна при докосване</div>
+<div class="row" style="gap: 16px">
+<span class="row sm"><span style="width: 18px; height: 18px; border-radius: 4px; background: #9E9E9E"></span>Безплатна доставка</span>
+<span class="row sm"><span class="hatch" style="width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #757575; box-sizing: border-box"></span>По тарифа</span>
+</div>
+<table class="tbl">
+<thead><tr><th scope="col">Зона</th><th scope="col">Такса</th></tr></thead>
+<tbody>
+<tr><td>Дружба 1 и 2</td><td><b>Безплатно</b></td></tr>
+<tr><td>НПЗ Искър</td><td><b>Безплатно</b></td></tr>
+<tr><td>Бусманци</td><td><b>Безплатно</b></td></tr>
+<tr><td>Горубляне</td><td>По тарифа [ЛИПСВА: такса]</td></tr>
+<tr><td>Гара Искър</td><td>По тарифа [ЛИПСВА: такса]</td></tr>
+<tr><td>Минимална поръчка</td><td>[ЛИПСВА]</td></tr>
+</tbody>
+</table>
+<div class="fld"><label class="fl" for="d-adr">Проверете адреса си</label><div class="row"><input id="d-adr" class="in" style="flex: 1" autocomplete="street-address"><button class="btn2" style="flex: none">Провери</button></div></div>
+<div class="row" style="background: #EEEEEE; border-radius: 10px; padding: 8px 12px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Доставка всеки ден до 21:00 · вземане до 22:30</span></div>
+</div>
+</div>
+<nav class="nav" aria-label="Основна навигация">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Количка</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div></div>
+
+<!-- 20 Общи състояния -->
+<div class="col"><div class="lbl">20 · Общи състояния</div><div class="scr" style="background: #FAFAFA">
+<div class="pad" style="gap: 8px; padding: 12px">
+<span class="ms">Банер за бисквитки (отдолу)</span>
+<div class="card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px">
+<p class="sm">[ЛИПСВА: текст за бисквитките от политиката]</p>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px">
+<button class="btn2" style="padding: 0 4px; font-size: 14px; line-height: 1.2">Приеми всички</button>
+<button class="btn2" style="padding: 0 4px; font-size: 14px; line-height: 1.2">Само необходимите</button>
+<button class="btn2" style="padding: 0 4px; font-size: 14px; line-height: 1.2">Настройки</button>
+</div>
+</div>
+<span class="ms">404</span>
+<div class="card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px">
+<p class="dn">Тази страница я няма в менюто</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px"><a href="#" class="btn2">Към менюто</a><a href="#" class="btn2">Към началото</a></div>
+</div>
+<span class="ms">Празна количка</span>
+<div class="card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px">
+<div class="row"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg><p>Количката е празна. Какво ви се хапва?</p></div>
+<a href="#" class="btn">Към менюто</a>
+</div>
+<span class="ms">Няма връзка</span>
+<div class="card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px">
+<div class="row" style="align-items: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.2-2.8M19 13a10 10 0 0 0-2.3-1.7M12 20h.01"/></svg><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p></div>
+<button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>Опитай пак</button>
+</div>
+<span class="ms">Статус 21:00 - 22:30</span>
+<div class="st" style="border-radius: 10px"><span class="dt o"></span>Доставката приключи за днес · Вземане до 22:30</div>
+<span class="ms">Зареждане</span>
+<div class="card" style="padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px" aria-busy="true" aria-label="Зареждане">
+<div style="display: flex; flex-direction: column; gap: 6px"><div class="sk" style="height: 70px"></div><div class="sk" style="height: 14px; width: 80%"></div><div class="sk" style="height: 14px; width: 50%"></div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><div class="sk" style="height: 70px"></div><div class="sk" style="height: 14px; width: 80%"></div><div class="sk" style="height: 14px; width: 50%"></div></div>
+</div>
+</div>
+</div></div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4340,"height":1000}}'>class Component extends DCLogic { renderVals() { return {}; } }</script>
+</body>
+</html>

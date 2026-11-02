@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Посока Б · Контраст · Начало</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;600;700;800&amp;family=Golos+Text:wght@400;600;700;800&amp;family=Inter:wght@400;600;700;800&amp;family=Manrope:wght@400;600;700;800&amp;family=Onest:wght@400;600;700;800&amp;family=Rubik:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.B{--bg:#FFFFFF;--sf:#F6F4F0;--sf2:#EDE9E2;--tx:#141210;--mu:#57524B;--br:#B3121B;--brp:#9E1B1B;--onbr:#FFFFFF;--ac:#F2B23A;--onac:#141210;--ok:#2E7D4F;--wa:#B45309;--onwa:#FFFFFF;--ln:#E2DDD5;--ink:#141210;--onink:#F7F3EC}
+.B.dark{--bg:#0F0E0D;--sf:#1C1A18;--sf2:#26231F;--tx:#F7F3EC;--mu:#B8B0A4;--br:#FF6B5E;--brp:#E85A4F;--onbr:#141210;--ok:#4CAF7A;--wa:#F59E0B;--onwa:#141210;--ln:#33302B;--ink:#1C1A18;--onink:#F7F3EC}
+.B{background:var(--bg);color:var(--tx);font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.B h1,.B h2,.B h3,.B p{margin:0}
+.B button,.B a{font:inherit;color:inherit}
+.B button{cursor:pointer}
+.B a{text-decoration:none}
+.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.proto{background:#ECECEC;color:#222;padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:system-ui,sans-serif}
+.pl{font-size:14px;font-weight:700;margin:0}
+.prow{display:flex;flex-wrap:wrap;gap:8px}
+.fbtn{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #8A8A8A;background:#FFFFFF;color:#222;font-size:15px}
+.fbtn.on{background:#222;color:#FFFFFF;border-color:#222}
+.hdr{background:var(--bg);border-bottom:1px solid var(--ln)}
+.r1{display:flex;align-items:center;gap:2px;height:64px;padding:0 8px 0 16px}
+.logo{font-size:20px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--tx);margin-right:auto}
+.hb{min-height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:0;background:none;border-radius:12px;font-weight:700}
+.r2{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--ln)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.lab{font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--br);line-height:1.4}
+.h1{font-size:36px;font-weight:800;line-height:1.1;letter-spacing:-.03em}
+.h2{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em}
+.sec{padding:28px 16px;display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--ln)}
+.bleed{margin:0 -16px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:12px;font-weight:700;font-size:18px;border:0;width:100%;box-sizing:border-box;padding:0 16px}
+.p{background:var(--br);color:var(--onbr)}
+.o{background:transparent;color:var(--tx);border:1.5px solid var(--tx)}
+.oi{background:transparent;color:var(--onink);border:1.5px solid var(--onink)}
+.ph{background:var(--sf2);color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:14px;text-align:center;padding:8px;box-sizing:border-box}
+.phk{background:#2A2622;color:#D2CABE}
+.ink{background:var(--ink);color:var(--onink)}
+.tag{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 8px;border-radius:4px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;box-sizing:border-box}
+.tag .i{width:16px;height:16px}
+.hit{background:var(--ac);color:var(--onac)}
+.so{background:var(--wa);color:var(--onwa)}
+.okb{border:1.5px solid var(--ok);color:var(--ok)}
+.mub{border:1.5px solid var(--mu);color:var(--tx)}
+.mu{color:var(--mu)}
+.add{width:48px;height:48px;border-radius:50%;background:var(--br);color:var(--onbr);border:0;display:flex;align-items:center;justify-content:center;flex:none}
+.li{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--ln)}
+.li .ph{width:96px;height:96px;border-radius:8px;flex:none;padding:4px}
+.lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dn{font-size:18px;font-weight:800;line-height:1.25;letter-spacing:-.01em}
+.pr{font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.lnk{color:var(--br);font-weight:700;display:inline-flex;align-items:center;gap:2px;min-height:48px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{display:flex;flex-direction:column;gap:6px}
+.tile .ph{aspect-ratio:4 / 3;border-radius:8px}
+.tn{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:800;letter-spacing:-.01em;min-height:48px}
+.hl{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--ln)}
+.dots{display:flex;align-items:center;gap:6px}
+.dots span{width:16px;height:4px;background:var(--mu);opacity:.4}
+.dots span.on{width:32px;background:var(--br);opacity:1}
+.strip{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;background:var(--ink);color:var(--onink);font-weight:700;border-top:1px solid var(--ln)}
+.nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--bg);border-top:1px solid var(--ln);padding:0 4px 12px}
+.nv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;font-size:14px;font-weight:700;color:var(--mu);position:relative;line-height:1.2;border-top:3px solid transparent}
+.nv.on{color:var(--br);border-top-color:var(--br)}
+.cnt{position:absolute;top:6px;left:calc(50% + 4px);min-width:20px;height:20px;border-radius:4px;background:var(--br);color:var(--onbr);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+</style>
+</helmet>
+<div class="B {{mode}}" style="width: 390px; min-height: 5250px; display: flex; flex-direction: column; font-family: {{ff}}; overflow: hidden">
+
+<div class="proto">
+<p class="pl">Само за прототипа · шрифт и режим на живо</p>
+<div class="prow">
+<sc-for list="{{fonts}}" as="f" hint-placeholder-count="6"><button class="fbtn {{f.cls}}" style="font-family: {{f.css}}" onClick="{{f.pick}}">{{f.name}}</button></sc-for>
+</div>
+<div class="prow"><button class="fbtn {{lightCls}}" onClick="{{setLight}}">Светъл</button><button class="fbtn {{darkCls}}" onClick="{{setDark}}">Тъмен</button></div>
+</div>
+
+<header class="hdr">
+<div class="r1">
+<a href="B-Home.dc.html" class="logo" aria-label="Siracusa, към началото">Siracusa</a>
+<a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Обади се</a>
+<button class="hb" aria-label="Switch to English">EN</button>
+<button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button>
+</div>
+<div class="r2"><span class="dot"></span><span><span style="font-weight: 700">Отворено до 23:00</span> · Доставка до 21:00</span></div>
+</header>
+
+<section class="ink" style="display: flex; flex-direction: column">
+<div class="ph phk" style="height: 200px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка от фотосесията 2025 · пица на пещ, от край до край</span></div>
+<div style="padding: 24px 16px 32px; display: flex; flex-direction: column; gap: 24px">
+<h1 class="h1">Пица на пещ и скара на дървени въглища в Дружба 2</h1>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<a href="#" class="btn p"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Поръчай</a>
+<a href="#" class="btn oi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай маса</a>
+<a href="#" class="btn oi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Обедно меню днес</a>
+</div>
+</div>
+</section>
+
+<section class="sec" style="border-top: 0">
+<p class="lab">Промоции</p>
+<div class="ph bleed" style="height: 180px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка · Гръцка вечер</span></div>
+<span class="tag hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>след 26 дни</span>
+<h2 class="h2">Гръцка вечер · събота, 28 ноември</h2>
+<p class="mu">Последна събота от месеца. -5% при ранна резервация.</p>
+<a href="#" class="btn p">Запази място</a>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div class="dots" role="img" aria-label="Слайд 2 от 4"><span></span><span class="on"></span><span></span><span></span></div>
+<button class="hb" style="border: 1.5px solid var(--ln)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>Пауза</button>
+</div>
+</section>
+
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 20px 16px; background: var(--ac); color: var(--onac)">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 32px; height: 32px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+<span style="font-weight: 800; flex: 1; line-height: 1.3">Кажете ни как беше - вземете -10% от следващата поръчка</span>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+
+<section class="sec" style="gap: 0; border-top: 0">
+<p class="lab">Менюто</p>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; border-bottom: 1px solid var(--ln)">
+<h2 class="h2">Най-поръчвани</h2>
+<a href="#" class="lnk">Цялото меню<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+<div class="li">
+<div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<div class="lt">
+<span class="tag hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>Хит</span>
+<a href="B-Dish.dc.html" class="dn">Пица с бурата и прошуто Крудо</a>
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="pr">10,22 €</span><span class="mu" style="font-size: 14px">420 гр.</span></div>
+</div>
+<button class="add" aria-label="Добави Пица с бурата и прошуто Крудо"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<div class="li">
+<div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<div class="lt">
+<span class="tag hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>Хит</span>
+<a href="#" class="dn">Свински ребра</a>
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="pr">13,29 €</span><span class="mu" style="font-size: 14px">450 гр. · Скара Bertha</span></div>
+</div>
+<button class="add" aria-label="Добави Свински ребра"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<div class="li">
+<div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<div class="lt">
+<span class="tag hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>Ново</span>
+<a href="#" class="dn">Пица с прошуто Кото и трюфел</a>
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="pr">8,69 €</span><span class="mu" style="font-size: 14px">420 гр.</span></div>
+</div>
+<button class="add" aria-label="Добави Пица с прошуто Кото и трюфел"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<div class="li">
+<div class="ph" style="opacity: 0.45"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<div class="lt">
+<span class="tag so" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 5l14 14"/></svg>Изчерпано днес</span>
+<a href="#" class="dn">Плескавица</a>
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="pr mu">8,18 €</span><span class="mu" style="font-size: 14px">400 гр. · Скара Bertha</span></div>
+</div>
+</div>
+</section>
+
+<section class="sec">
+<p class="lab">Категории</p>
+<div class="tiles">
+<a href="#" class="tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div><span class="tn">Пици на пещ<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span></a>
+<a href="#" class="tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div><span class="tn">Скара Bertha<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span></a>
+<a href="#" class="tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div><span class="tn">Обедно меню<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span></a>
+<a href="#" class="tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div><span class="tn">Салати<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></span></a>
+</div>
+<a href="#" class="btn o">Всички 14 категории<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</section>
+
+<section class="ink" style="display: flex; flex-direction: column">
+<div class="ph phk" style="height: 180px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка или кратко видео · фурната Bertha с жарта</span></div>
+<div style="padding: 28px 16px 32px; display: flex; flex-direction: column; gap: 12px">
+<p class="lab" style="color: #F2B23A">Нашата фурна</p>
+<h2 class="h1">Bertha</h2>
+<p style="font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; color: #F2B23A; font-variant-numeric: tabular-nums">250 - 350 °C</p>
+<p style="color: #E2DDD5">Затворена фурна на дървени въглища. Месата и зеленчуците се пекат на жар.</p>
+<a href="#" class="lnk" style="color: var(--onink)">Как готвим във Bertha<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+</section>
+
+<section class="sec" style="border-top: 0; gap: 0">
+<p class="lab" style="padding-bottom: 8px">Събития и поводи</p>
+<a href="#" style="display: flex; gap: 16px; align-items: flex-end; padding: 8px 0 20px; border-bottom: 1px solid var(--ln)">
+<div style="display: flex; flex-direction: column; flex: none; line-height: 1">
+<span style="font-size: 96px; font-weight: 800; letter-spacing: -0.05em; color: var(--br); font-variant-numeric: tabular-nums">28</span>
+<span style="font-size: 14px; font-weight: 800; letter-spacing: 0.16em; padding-top: 6px">НОЕ · СЪБОТА</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 2px">
+<span class="mu" style="font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700">Тематична вечер</span>
+<h3 style="font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em">Гръцка вечер</h3>
+<span class="mu">[ЛИПСВА: цена или вход свободен]</span>
+</div>
+</a>
+<a href="#" class="hl">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 32px; height: 32px; color: var(--br)"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+<span style="display: flex; flex-direction: column; flex: 1"><span style="font-size: 18px; font-weight: 800; line-height: 1.3">Рожден ден, кръщене или фирмено парти?</span><span class="mu">Сметнете празника си за 2 минути</span></span>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+<a href="#" class="lnk" style="padding-top: 8px">Всички събития и поводи<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</section>
+
+<section class="sec">
+<p class="lab">Отзиви</p>
+<h2 class="h2">Какво казват гостите</h2>
+<div class="mu" style="padding: 20px; border: 1.5px dashed var(--mu); border-radius: 8px">[ЛИПСВА: 2 - 3 отзива от Google профила, с име и дата]</div>
+</section>
+
+<section class="sec" style="gap: 0">
+<p class="lab">Доставка</p>
+<h2 class="h2" style="padding: 4px 0 16px">Доставяме до вас</h2>
+<div class="ph bleed" style="height: 180px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Статична карта на зоните · интерактивна при докосване</span></div>
+<div class="hl" style="align-items: flex-start"><span class="tag okb" style="flex: none"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Безплатно</span><span>Дружба 1 и 2, НПЗ Искър, Бусманци</span></div>
+<div class="hl" style="align-items: flex-start"><span class="tag mub" style="flex: none"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v10M9 10h6"/></svg>По тарифа</span><span>Горубляне, Гара Искър [ЛИПСВА: такса]</span></div>
+<p class="mu" style="padding: 14px 0 16px">Доставка всеки ден до 21:00</p>
+<a href="#" class="btn o"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Провери адреса си</a>
+</section>
+
+<section class="sec" style="gap: 0; padding-bottom: 40px">
+<p class="lab">Контакти</p>
+<h2 class="h2" style="padding: 4px 0 12px">Контакти и работно време</h2>
+<a href="tel:+359894365577" class="hl" style="font-size: 30px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; border-top: 1px solid var(--ln)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>0894 36 55 77</a>
+<div class="hl" style="align-items: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span>ж.к. Дружба 2, срещу бл. 311, 1582 София</span></div>
+<div class="hl" style="align-items: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span><span style="font-weight: 700">Всеки ден 10:00 - 23:00</span><br><span class="mu">Кухнята приема до 22:30 · доставка до 21:00</span></span></div>
+</section>
+
+<div style="margin-top: auto; display: flex; flex-direction: column">
+<a href="#" class="strip">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: #F2B23A"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+<span style="flex: 1">Поръчката ви е на път · ~8 мин</span>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+<nav class="nav" aria-label="Основна навигация">
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span class="cnt">2</span>Количка<span style="font-size: 13px">17,83 €</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"font":{"editor":"enum","options":["Manrope","Onest","Golos Text","Commissioner","Inter","Rubik"],"default":"Manrope"},"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":5250}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var s = this.state || {};
+    var names = ['Manrope', 'Onest', 'Golos Text', 'Commissioner', 'Inter', 'Rubik'];
+    var font = s.font || this.props.font || 'Manrope';
+    var dark = (s.dark !== undefined) ? s.dark : !!this.props.dark;
+    var self = this;
+    return {
+      ff: "'" + font + "', system-ui, sans-serif",
+      mode: dark ? 'dark' : '',
+      fonts: names.map(function (n) {
+        return { name: n, css: "'" + n + "', system-ui, sans-serif", cls: n === font ? 'on' : '', pick: function () { self.setState({ font: n }); } };
+      }),
+      lightCls: dark ? '' : 'on',
+      darkCls: dark ? 'on' : '',
+      setLight: function () { self.setState({ dark: false }); },
+      setDark: function () { self.setState({ dark: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

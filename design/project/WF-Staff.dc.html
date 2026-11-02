@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Wireframes · Персонал</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sheet{background:#F2F2F0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1F1F1F;font-size:16px;line-height:1.45;padding:40px;box-sizing:border-box;display:flex;gap:40px;align-items:flex-start}
+.sheet h1,.sheet h2,.sheet h3,.sheet p{margin:0}
+.sheet button,.sheet a,.sheet input{font:inherit;color:inherit}
+.sheet a{text-decoration:none}
+.col{display:flex;flex-direction:column;gap:8px;flex:none}
+.lbl{font-size:14px;font-weight:700;color:#555555;height:24px}
+.scr{width:390px;height:844px;background:#FFFFFF;border:1px solid #BDBDBD;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-sizing:border-box}
+.dsk{width:1440px;height:900px;background:#FFFFFF;border:1px solid #BDBDBD;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-sizing:border-box}
+.box{background:#E3E3E3;color:#5C5C5C;display:flex;align-items:center;justify-content:center;font-size:14px;text-align:center;box-sizing:border-box;padding:6px}
+.pad{padding:16px;display:flex;flex-direction:column;gap:12px}
+.h{font-size:22px;font-weight:800;line-height:1.2}
+.mu{color:#5C5C5C}
+.sm{font-size:14px}
+.btn{min-height:56px;border-radius:12px;background:#2B2B2B;color:#FFFFFF;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;border:0;padding:0 16px;box-sizing:border-box;width:100%}
+.btn2{min-height:48px;border-radius:12px;background:#FFFFFF;color:#2B2B2B;border:2px solid #2B2B2B;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;box-sizing:border-box}
+.chip{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #9E9E9E;background:#FFFFFF;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:15px}
+.chip.on{background:#2B2B2B;color:#FFFFFF;border-color:#2B2B2B}
+.line{height:1px;background:#DDDDDD}
+.hdr1{display:flex;align-items:center;gap:6px;height:56px;padding:0 12px 0 16px;border-bottom:1px solid #DDDDDD}
+.logo{font-weight:800;font-size:20px;margin-right:auto}
+.st{padding:6px 16px;background:#EEEEEE;font-size:15px;display:flex;align-items:center;gap:8px}
+.nav{margin-top:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #DDDDDD;padding:6px 4px 10px;background:#FFFFFF}
+.nv{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:600;min-height:52px;justify-content:center}
+.sheetup{position:absolute;left:0;right:0;bottom:0;background:#FFFFFF;border-radius:20px 20px 0 0;border-top:1px solid #BDBDBD;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.c48{min-height:48px}
+.nvt{text-align:center;line-height:1.15}
+.nv.on{background:#E3E3E3;border-radius:12px}
+.row{display:flex;align-items:center;gap:12px}
+.card{border:1px solid #BDBDBD;border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;background:#FFFFFF}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:700;padding:2px 8px;border-radius:8px;background:#EEEEEE;white-space:nowrap}
+.tag .i{width:16px;height:16px}
+.ib{width:48px;height:48px;border-radius:12px;border:2px solid #2B2B2B;background:#FFFFFF;display:flex;align-items:center;justify-content:center;flex:none;padding:0;box-sizing:border-box}
+.note{border:1.5px dashed #9E9E9E;border-radius:10px;padding:8px 10px;font-size:14px;color:#555555;background:#FAFAFA}
+.off{opacity:.55}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:2px solid #2B2B2B;border-radius:12px;overflow:hidden}
+.seg>*{min-height:48px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;background:#FFFFFF;border:0}
+.seg>.on{background:#2B2B2B;color:#FFFFFF}
+.price{font-weight:800;white-space:nowrap}
+.ttl{font-weight:700}
+.grow{flex:1;min-width:0}
+.dots{display:flex;gap:18px;justify-content:center;padding:8px 0}
+.dots span{width:20px;height:20px;border-radius:50%;border:2px solid #2B2B2B;box-sizing:border-box}
+.dots span.f{background:#2B2B2B}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.key{min-height:76px;border-radius:16px;border:2px solid #BDBDBD;background:#FFFFFF;font-size:30px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+.key.w{font-size:16px}
+.strip{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:12px;background:#2B2B2B;color:#FFFFFF}
+.strip .btn2{min-height:48px;padding:0 12px}
+.strip.done{background:#E3E3E3;color:#1F1F1F}
+.plan{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tb{border:2px solid #2B2B2B;border-radius:14px;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#FFFFFF;padding:6px 4px;box-sizing:border-box;text-align:center}
+.tb .n{font-size:20px;font-weight:800;line-height:1.1}
+.tb .s{font-size:14px;font-weight:700;display:flex;align-items:center;gap:4px;line-height:1.15}
+.tb .s .i{width:18px;height:18px}
+.tb.free{border-style:dashed;border-color:#9E9E9E}
+.tb.alert{border-width:5px}
+.tb.ready{background:#2B2B2B;color:#FFFFFF}
+.tb.rnd{border-radius:48px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 12px}
+.leg span{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600}
+.leg .i{width:18px;height:18px}
+.dbtn{min-height:52px;border:1.5px solid #9E9E9E;border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 6px 0 12px;background:#FFFFFF;width:100%;box-sizing:border-box;text-align:left}
+.dbtn .plus{width:40px;height:40px;border-radius:10px;background:#2B2B2B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;flex:none}
+.cat{min-height:56px;border:2px solid #2B2B2B;border-radius:12px;background:#FFFFFF;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;line-height:1.15;padding:4px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-weight:700}
+.inp{min-height:56px;border:2px solid #9E9E9E;border-radius:12px;padding:0 14px;font:inherit;font-size:22px;box-sizing:border-box;width:100%;background:#FFFFFF}
+.srch{display:flex;align-items:center;gap:8px;min-height:48px;border:1.5px solid #9E9E9E;border-radius:12px;padding:0 12px}
+.srch input{border:0;outline:0;flex:1;min-width:0;background:transparent;font-size:16px}
+.rc{border:2px solid #2B2B2B;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.rc.pick{border-width:4px}
+.kpi4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.kpi4 div{background:#EEEEEE;border-radius:10px;padding:6px 4px;text-align:center;display:flex;flex-direction:column}
+.kpi4 b{font-size:20px;line-height:1.15}
+.kpi4 span{font-size:14px;color:#5C5C5C}
+.ord{display:flex;flex-direction:column;gap:2px}
+.ord p{display:flex;gap:8px;align-items:center}
+.num{width:26px;height:26px;border-radius:50%;border:2px solid #2B2B2B;font-size:14px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.watch{width:200px;height:240px;border-radius:44px;background:#2B2B2B;color:#FFFFFF;border:6px solid #9E9E9E;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px;text-align:center}
+.watch .i{width:30px;height:30px}
+.watch .wt{font-size:20px;font-weight:800;line-height:1.2}
+.watch .wb{min-height:48px;width:100%;border-radius:999px;background:#FFFFFF;color:#2B2B2B;border:0;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;gap:6px}
+.watch .wb .i{width:20px;height:20px}
+.wn{width:200px;font-size:14px;color:#555555;display:flex;gap:6px;align-items:flex-start}
+.wn .i{width:18px;height:18px}
+</style>
+</helmet>
+<div class="sheet" style="width: 4390px; height: 1000px">
+
+<!-- 01 Вход с ПИН -->
+<div class="col"><div class="lbl">01 · Вход с ПИН</div><div class="scr">
+<header class="hdr1"><span class="logo">Siracusa · Персонал</span></header>
+<div class="pad" style="gap:16px;padding-top:32px">
+<h1 class="h" style="text-align:center">Въведете личния си ПИН</h1>
+<p class="mu" style="text-align:center">4 цифри. Без имейл и парола.</p>
+<div class="dots" aria-label="Въведени 2 от 4 цифри"><span class="f"></span><span class="f"></span><span></span><span></span></div>
+<div class="keys">
+<button class="key">1</button><button class="key">2</button><button class="key">3</button>
+<button class="key">4</button><button class="key">5</button><button class="key">6</button>
+<button class="key">7</button><button class="key">8</button><button class="key">9</button>
+<button class="key w"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Изчисти</button><button class="key">0</button><button class="key w"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 5H8l-6 7 6 7h13V5Z"/><path d="M11 9l6 6M17 9l-6 6"/></svg>Изтрий</button>
+</div>
+<p class="note">Входът става сам след 4-тата цифра. Всяка роля вижда само своите екрани: сервитьор, кухня, шофьор.</p>
+</div>
+</div></div>
+
+<!-- 02 Сервитьор · Маси -->
+<div class="col"><div class="lbl">02 · Сервитьор · Маси</div><div class="scr">
+<header class="hdr1"><span class="logo">Маси</span><span class="tag">Сервитьор</span></header>
+<div class="pad" style="gap:10px">
+<div class="strip" role="alert"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg><span class="ttl grow">Маса 12 · Сметка · 3 мин</span><button class="btn2">Отивам</button></div>
+<div class="strip done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h12M12 6l6 6-6 6"/></svg><span class="grow"><span class="ttl">Маса 4 · Поръчка · 1 мин</span><br><span class="sm">Отивате</span></span><button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Обслужено</button></div>
+<div class="row" style="gap:8px"><div class="seg grow" role="group" aria-label="Зона"><button aria-pressed="false">Салон · 12</button><button class="on" aria-pressed="true">Градина · 8</button></div><button class="btn2" style="padding:0 10px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Списък</button></div>
+<div class="plan">
+<button class="tb free"><span class="n">9</span><span class="sm mu">2 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Свободна</span></button>
+<button class="tb rnd"><span class="n">10</span><span class="sm mu">4 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/></svg>Заета</span></button>
+<button class="tb"><span class="n">11</span><span class="sm mu">4 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3v3l5 6 5-6V3M7 21v-3l5-6 5 6v3"/></svg>Чака поръчка</span></button>
+<button class="tb alert"><span class="n">12</span><span class="sm mu">4 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>Иска сметка</span></button>
+<button class="tb ready rnd"><span class="n">13</span><span class="sm">2 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Готово за сервиране</span></button>
+<button class="tb alert"><span class="n">14</span><span class="sm mu">6 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg>Повикване</span></button>
+<button class="tb free"><span class="n">15</span><span class="sm mu">4 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Свободна</span></button>
+<button class="tb"><span class="n">16</span><span class="sm mu">6 места</span><span class="s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/></svg>Заета</span></button>
+</div>
+<p class="note">Номерата на масите са условни [ЛИПСВА: номерация]. Статусът е икона + дума + вид на рамката, не само цвят.</p>
+</div>
+<nav class="nav" aria-label="Сервитьор" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nvt">Маси</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="nvt">Нова поръчка</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg><span class="nvt">Известия · 2</span></a>
+</nav>
+</div></div>
+
+<!-- 03 Нова поръчка -->
+<div class="col"><div class="lbl">03 · Нова поръчка</div><div class="scr">
+<header class="hdr1"><span class="logo">Нова поръчка</span><span class="tag">Сервитьор</span></header>
+<div class="pad" style="gap:8px">
+<div class="row" style="gap:8px;overflow:hidden"><span class="ttl">Маса</span><button class="chip c48">10</button><button class="chip c48">11</button><button class="chip c48 on">12</button><button class="chip c48">14</button><button class="chip c48">16</button></div>
+<div class="seg" role="group" aria-label="Вид сметка"><button aria-pressed="false">Една сметка</button><button class="on" aria-pressed="true">Поотделно</button></div>
+<div class="row" style="gap:8px"><button class="chip c48 on">Гост 1</button><button class="chip c48">Гост 2</button><button class="chip c48"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Гост</button></div>
+<div class="srch"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><label for="st-srch" class="sm mu">Търси</label><input id="st-srch" type="search" placeholder="ястие"></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><button class="cat">Пици на пещ</button><button class="cat">Скара Bertha</button><button class="cat">Всички 14</button></div>
+<p class="sm mu">Често поръчвани</p>
+<button class="dbtn"><span class="ttl grow">Кебапчета</span><span class="price">7,61 €</span><span class="plus" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+<button class="dbtn"><span class="ttl grow">Пица Маргарита</span><span class="price">7,15 €</span><span class="plus" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+<button class="dbtn"><span class="ttl grow">Свински ребра</span><span class="price">13,29 €</span><span class="plus" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+<button class="dbtn off" disabled><span class="grow"><span class="ttl">Плескавица</span><br><span class="sm" style="display:inline-flex;align-items:center;gap:4px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>Изчерпано днес</span></span><span class="price">8,18 €</span></button>
+<p><span class="ttl">Гост 1:</span> 2 × Кебапчета · <span class="ttl">Гост 2:</span> 1 × Свински ребра</p>
+<a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2Z"/></svg>Изпрати в кухнята · 28,51 €</a>
+</div>
+<nav class="nav" aria-label="Сервитьор" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nvt">Маси</span></a>
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="nvt">Нова поръчка</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg><span class="nvt">Известия · 2</span></a>
+</nav>
+</div></div>
+
+<!-- 04 QR поръчки за потвърждение -->
+<div class="col"><div class="lbl">04 · QR поръчки за потвърждение</div><div class="scr">
+<header class="hdr1"><span class="logo">Известия</span><span class="tag">Сервитьор</span></header>
+<div class="pad">
+<div class="row" style="gap:8px"><button class="chip c48 on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 20h4v-3"/></svg>QR поръчки · 1</button><button class="chip c48"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg>Повиквания · 1</button></div>
+<div class="card" style="flex-direction:column;align-items:stretch;border:3px solid #2B2B2B;gap:10px">
+<div class="row"><div class="grow"><p class="h">Маса 12 · Градина</p><p class="mu">Първа поръчка от QR · преди 1 мин</p></div></div>
+<div class="line"></div>
+<div class="row"><span class="ttl" style="width:36px">1 ×</span><span class="grow">Пица с бурата и прошуто Крудо</span><span class="price">10,22 €</span></div>
+<div class="row"><span class="ttl" style="width:36px">2 ×</span><span class="grow">Кебапчета</span><span class="price">15,22 €</span></div>
+<div class="row"><span class="ttl" style="width:36px">1 ×</span><span class="grow">Пица Маргарита</span><span class="price">7,15 €</span></div>
+<div class="line"></div>
+<div class="row"><span class="ttl grow">Общо</span><span class="price" style="font-size:20px">32,59 €</span></div>
+<a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Потвърди</a>
+<a href="#" class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Откажи</a>
+</div>
+<p class="mu">След потвърждението поръчката отива в кухнята, а гостите виждат статус „Прието“. Следващите поръчки от масата отиват направо.</p>
+<p class="note">При „Откажи“ се пита за причина [ЛИПСВА: списък с причини] и гостът вижда кратко съобщение.</p>
+</div>
+<nav class="nav" aria-label="Сервитьор" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nvt">Маси</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="nvt">Нова поръчка</span></a>
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg><span class="nvt">Известия · 2</span></a>
+</nav>
+</div></div>
+
+<!-- 05 Сметка -->
+<div class="col"><div class="lbl">05 · Сметка</div><div class="scr">
+<header class="hdr1"><span class="logo">Сметка · Маса 12</span><span class="tag">Сервитьор</span></header>
+<div class="pad" style="gap:10px">
+<div class="seg" role="group" aria-label="Изглед на сметката"><button aria-pressed="false">По маса</button><button class="on" aria-pressed="true">По гост</button></div>
+<div class="card" style="flex-direction:column;align-items:stretch;gap:8px">
+<div class="row"><span class="ttl grow">Гост 1</span><span class="price">10,22 €</span></div>
+<p class="mu">1 × Пица с бурата и прошуто Крудо</p>
+<div class="grid2" style="gap:8px"><button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Плати в брой</button><button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>Плати с карта</button></div>
+</div>
+<div class="card" style="flex-direction:column;align-items:stretch;gap:8px;background:#F4F4F4">
+<div class="row"><span class="ttl grow">Гост 2</span><span class="price">15,22 €</span></div>
+<p class="mu">2 × Кебапчета</p>
+<div class="row"><span class="tag" style="background:#2B2B2B;color:#FFFFFF;font-size:16px;padding:6px 10px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Платено · в брой</span><button class="btn2" style="margin-left:auto"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Отмени</button></div>
+</div>
+<div class="card" style="flex-direction:column;align-items:stretch;gap:8px">
+<div class="row"><span class="ttl grow">Гост 3</span><span class="price">7,15 €</span></div>
+<p class="mu">1 × Пица Маргарита</p>
+<div class="grid2" style="gap:8px"><button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Плати в брой</button><button class="btn2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>Плати с карта</button></div>
+</div>
+<div class="line"></div>
+<div class="row"><span class="grow">Общо</span><span class="price">32,59 €</span></div>
+<div class="row"><span class="grow">Платено</span><span class="price">15,22 €</span></div>
+<div class="row"><span class="ttl grow" style="font-size:20px">Остава</span><span class="price" style="font-size:20px">17,37 €</span></div>
+</div>
+<nav class="nav" aria-label="Сервитьор" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nvt">Маси</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="nvt">Нова поръчка</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg><span class="nvt">Известия · 2</span></a>
+</nav>
+</div></div>
+
+<!-- 06 Шофьор · Доставки -->
+<div class="col"><div class="lbl">06 · Шофьор · Доставки</div><div class="scr">
+<header class="hdr1"><span class="logo">Доставки · 4 адреса</span><span class="tag">Шофьор</span></header>
+<div class="pad" style="gap:8px">
+<div class="card" style="align-items:flex-start"><span class="num">1</span><div class="grow"><p class="ttl">Дружба 2, [ЛИПСВА: адрес]</p><p>[ЛИПСВА: име] · #128</p><p class="mu">[ЛИПСВА: телефон]</p><p><span class="ttl">Събери 30,10 €</span> · <svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-3px"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg> В брой</p></div><button class="ib" aria-label="Обади се на клиента"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg></button></div>
+<div class="card" style="align-items:flex-start"><span class="num">2</span><div class="grow"><p class="ttl">Дружба 2, [ЛИПСВА: адрес]</p><p>[ЛИПСВА: име]</p><p class="mu">[ЛИПСВА: телефон]</p><p><span class="ttl">Събери [ЛИПСВА: сума]</span> · <svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-3px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg> С карта</p></div><button class="ib" aria-label="Обади се на клиента"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg></button></div>
+<div class="card" style="align-items:flex-start"><span class="num">3</span><div class="grow"><p class="ttl">Дружба 2, [ЛИПСВА: адрес]</p><p>[ЛИПСВА: име]</p><p class="mu">[ЛИПСВА: телефон]</p><p><span class="ttl">Събери [ЛИПСВА: сума]</span> · <svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-3px"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg> В брой</p></div><button class="ib" aria-label="Обади се на клиента"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg></button></div>
+<div class="card" style="align-items:flex-start"><span class="num">4</span><div class="grow"><p class="ttl">Дружба 2, [ЛИПСВА: адрес]</p><p>[ЛИПСВА: име]</p><p class="mu">[ЛИПСВА: телефон]</p><p><span class="ttl">Събери [ЛИПСВА: сума]</span> · <svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;vertical-align:-3px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg> С карта</p></div><button class="ib" aria-label="Обади се на клиента"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg></button></div>
+</div>
+<div style="margin-top:auto;padding:0 16px 12px"><a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></svg>Маршрут</a></div>
+<nav class="nav" aria-label="Шофьор" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:0">
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="nvt">Доставки</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></svg><span class="nvt">Маршрут</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-6h14l2 6v5H3v-5Z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg><span class="nvt">Автомобил</span></a>
+</nav>
+</div></div>
+
+<!-- 07 Маршрут -->
+<div class="col"><div class="lbl">07 · Маршрут</div><div class="scr">
+<header class="hdr1"><span class="logo">Маршрут · 4 адреса</span><span class="tag">Шофьор</span></header>
+<div class="pad" style="gap:8px">
+<div class="rc">
+<p class="h">Път А · по-бърз</p>
+<div class="kpi4"><div><b>42</b><span>мин</span></div><div><b>18</b><span>км</span></div><div><b>1,4</b><span>л</span></div><div><b>2,10 €</b><span>гориво</span></div></div>
+<div class="ord"><p><span class="num">1</span>Дружба 2, [ЛИПСВА: адрес 1]</p><p><span class="num">2</span>Дружба 2, [ЛИПСВА: адрес 2]</p><p><span class="num">3</span>Дружба 2, [ЛИПСВА: адрес 3]</p><p><span class="num">4</span>Дружба 2, [ЛИПСВА: адрес 4]</p></div>
+<a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Избирам А</a>
+</div>
+<div class="rc">
+<p class="h">Път Б · по-евтин</p>
+<div class="kpi4"><div><b>47</b><span>мин</span></div><div><b>15</b><span>км</span></div><div><b>1,2</b><span>л</span></div><div><b>1,80 €</b><span>гориво</span></div></div>
+<div class="ord"><p><span class="num">1</span>Дружба 2, [ЛИПСВА: адрес 1]</p><p><span class="num">2</span>Дружба 2, [ЛИПСВА: адрес 3]</p><p><span class="num">3</span>Дружба 2, [ЛИПСВА: адрес 2]</p><p><span class="num">4</span>Дружба 2, [ЛИПСВА: адрес 4]</p></div>
+<a href="#" class="btn2" style="min-height:56px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Избирам Б</a>
+</div>
+<p class="note">Литрите и еврото са по разхода на избрания автомобил.</p>
+</div>
+<nav class="nav" aria-label="Шофьор" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="nvt">Доставки</span></a>
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></svg><span class="nvt">Маршрут</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-6h14l2 6v5H3v-5Z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg><span class="nvt">Автомобил</span></a>
+</nav>
+</div></div>
+
+<!-- 08 Следващ адрес -->
+<div class="col"><div class="lbl">08 · Следващ адрес</div><div class="scr">
+<header class="hdr1"><span class="logo">Адрес 1 от 4</span><span class="tag">Път А</span></header>
+<div class="pad" style="gap:12px">
+<div class="row" style="gap:8px"><span class="chip c48"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-6h14l2 6v5H3v-5Z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg>[ЛИПСВА: автомобил]</span><button class="btn2" style="margin-left:auto">Смени</button></div>
+<div class="card" style="flex-direction:column;align-items:stretch;border:3px solid #2B2B2B;gap:8px;padding:16px">
+<p class="sm mu">Следващ адрес</p>
+<p style="font-size:28px;font-weight:800;line-height:1.2">Дружба 2, [ЛИПСВА: адрес]</p>
+<p>[ЛИПСВА: име] · [ЛИПСВА: телефон]</p>
+<p class="mu">Поръчка #128 · 3 ястия</p>
+<div class="row"><span class="tag" style="font-size:18px;padding:6px 10px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Събери 30,10 € · В брой</span></div>
+</div>
+<a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2Z"/></svg>Навигирай</a>
+<div class="row" style="gap:8px"><span class="sm mu">Отваря в:</span><button class="chip c48 on" aria-pressed="true">Google Maps</button><button class="chip c48" aria-pressed="false">Waze</button></div>
+<p class="sm mu">Изборът се запомня за следващия път.</p>
+<a href="#" class="btn2" style="min-height:56px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg>Обади се</a>
+</div>
+<div style="margin-top:auto;padding:0 16px 12px"><button class="btn" style="min-height:72px;font-size:20px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Доставено</button></div>
+<nav class="nav" aria-label="Шофьор" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:0">
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="nvt">Доставки</span></a>
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/></svg><span class="nvt">Маршрут</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-6h14l2 6v5H3v-5Z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg><span class="nvt">Автомобил</span></a>
+</nav>
+</div></div>
+
+<!-- 09 Зареждане -->
+<div class="col"><div class="lbl">09 · Зареждане</div><div class="scr">
+<header class="hdr1"><span class="logo">Зареждане</span><span class="tag">Шофьор</span></header>
+<div class="pad" style="gap:14px">
+<div class="row" style="gap:8px"><span class="chip c48"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-6h14l2 6v5H3v-5Z"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></svg>[ЛИПСВА: автомобил]</span></div>
+<div class="fld"><label for="fuel-l">Литри</label><input id="fuel-l" class="inp" type="text" inputmode="decimal" placeholder="напр. 30,5"></div>
+<div class="fld"><label for="fuel-e">Сума в €</label><input id="fuel-e" class="inp" type="text" inputmode="decimal" placeholder="0,00 €"></div>
+<div class="fld"><label for="fuel-km">Километраж</label><input id="fuel-km" class="inp" type="text" inputmode="numeric" placeholder="км на таблото"></div>
+<a href="#" class="btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M4 10h10"/><path d="M14 8l3 3v6a1.5 1.5 0 0 0 3 0V9l-3-3"/></svg>Запази зареждането</a>
+</div>
+<div class="box" style="margin-top:auto;height:250px;flex-direction:column;gap:6px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:32px;height:32px"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Цифрова клавиатура на телефона (inputmode decimal / numeric). Долната лента е скрита, докато клавиатурата е отворена.</div>
+</div></div>
+
+<!-- 10 Часовник · повикване -->
+<div class="col" style="width:200px"><div class="lbl">10 · Часовник · Сметка</div>
+<div class="watch" role="alert">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 21h4"/></svg>
+<p class="wt">Маса 12 · Сметка</p>
+<button class="wb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h12M12 6l6 6-6 6"/></svg>Отивам</button>
+</div>
+<p class="wn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9v6M22 9v6M5 7v10M19 7v10"/><rect x="8" y="5" width="8" height="14" rx="2"/></svg>Вибрация за повикване - различна от тази за готово ястие.</p>
+</div>
+
+<!-- 11 Часовник · готово -->
+<div class="col" style="width:200px"><div class="lbl">11 · Часовник · Готово</div>
+<div class="watch" role="alert">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+<p class="wt">Маса 4 · Поръчката е готова</p>
+<button class="wb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h12M12 6l6 6-6 6"/></svg>Отивам</button>
+</div>
+<p class="wn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9v6M22 9v6M5 7v10M19 7v10"/><rect x="8" y="5" width="8" height="14" rx="2"/></svg>Вибрация за готово ястие - различна от тази за повикване.</p>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":4390,"height":1000}}'>class Component extends DCLogic { renderVals() { return {}; } }</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Посока А · Жар · Начало</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;600;700;800&amp;family=Golos+Text:wght@400;600;700;800&amp;family=Inter:wght@400;600;700;800&amp;family=Manrope:wght@400;600;700;800&amp;family=Onest:wght@400;600;700;800&amp;family=Rubik:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.A{--bg:#F7F3EC;--sf:#FFFFFF;--sf2:#E8E1D3;--tx:#1F1D1B;--mu:#5A554E;--br:#B3121B;--brp:#9E1B1B;--onbr:#FFFFFF;--ac:#F2B23A;--onac:#1F1D1B;--ok:#2E7D4F;--wa:#B45309;--onwa:#FFFFFF;--ln:#DDD5C6;--sh:0 2px 12px rgba(31,29,27,.08);--fire:#1F1D1B;--onfire:#F7F3EC}
+.A.dark{--bg:#1A1816;--sf:#24211E;--sf2:#2E2A26;--tx:#F7F3EC;--mu:#B8B0A4;--br:#FF6B5E;--brp:#E85A4F;--onbr:#1A1816;--ok:#4CAF7A;--wa:#F59E0B;--onwa:#1A1816;--ln:#3A352F;--sh:none;--fire:#2E2A26}
+.A{background:var(--bg);color:var(--tx);font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.A h1,.A h2,.A h3,.A p{margin:0}
+.A button,.A a{font:inherit;color:inherit}
+.A button{cursor:pointer}
+.A a{text-decoration:none}
+.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.proto{background:#ECECEC;color:#222;padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:system-ui,sans-serif}
+.pl{font-size:14px;font-weight:700;margin:0}
+.prow{display:flex;flex-wrap:wrap;gap:8px}
+.fbtn{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #8A8A8A;background:#FFFFFF;color:#222;font-size:15px}
+.fbtn.on{background:#222;color:#FFFFFF;border-color:#222}
+.hdr{background:var(--bg);border-bottom:1px solid var(--ln)}
+.r1{display:flex;align-items:center;gap:2px;height:64px;padding:0 8px 0 16px}
+.logo{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--br);margin-right:auto}
+.hb{min-height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:0;background:none;border-radius:12px;font-weight:700}
+.r2{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--sf2)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.sec{padding:24px 16px;display:flex;flex-direction:column;gap:16px}
+.h2{font-size:22px;font-weight:800;line-height:1.2}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:12px;font-weight:700;font-size:18px;border:0;width:100%;box-sizing:border-box;padding:0 16px}
+.p{background:var(--br);color:var(--onbr)}
+.s{background:var(--sf);color:var(--br);border:2px solid var(--br)}
+.ph{background:var(--sf2);color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:14px;text-align:center;padding:8px;box-sizing:border-box}
+.card{background:var(--sf);border-radius:20px;box-shadow:var(--sh);overflow:hidden}
+.badge{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 10px;border-radius:999px;font-size:14px;font-weight:700}
+.badge .i{width:16px;height:16px}
+.hit{background:var(--ac);color:var(--onac)}
+.so{background:var(--wa);color:var(--onwa)}
+.mu{color:var(--mu)}
+.price{font-size:18px;font-weight:800}
+.add{width:48px;height:48px;border-radius:50%;background:var(--br);color:var(--onbr);border:0;display:flex;align-items:center;justify-content:center;flex:none}
+.dc{width:168px;flex:none;display:flex;flex-direction:column;position:relative}
+.dn{font-size:16px;font-weight:700;line-height:1.3}
+.lnk{color:var(--br);font-weight:700;display:inline-flex;align-items:center;gap:2px;min-height:48px}
+.nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--sf);border-top:1px solid var(--ln);padding:6px 4px 12px;margin-top:auto}
+.nv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;font-size:14px;font-weight:700;color:var(--mu);position:relative;line-height:1.2}
+.nv.on{color:var(--br)}
+.cnt{position:absolute;top:0;left:calc(50% + 4px);min-width:20px;height:20px;border-radius:10px;background:var(--br);color:var(--onbr);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+.dots{display:flex;gap:8px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--mu);opacity:.45}
+.dots span.on{opacity:1;width:24px;border-radius:4px;background:var(--br)}
+.row{display:flex;align-items:flex-start;gap:12px}
+</style>
+</helmet>
+<div class="A {{mode}}" style="width: 390px; min-height: 3100px; display: flex; flex-direction: column; font-family: {{ff}}; overflow: hidden">
+
+<div class="proto">
+<p class="pl">Само за прототипа · шрифт и режим на живо</p>
+<div class="prow">
+<sc-for list="{{fonts}}" as="f" hint-placeholder-count="6"><button class="fbtn {{f.cls}}" style="font-family: {{f.css}}" onClick="{{f.pick}}">{{f.name}}</button></sc-for>
+</div>
+<div class="prow"><button class="fbtn {{lightCls}}" onClick="{{setLight}}">Светъл</button><button class="fbtn {{darkCls}}" onClick="{{setDark}}">Тъмен</button></div>
+</div>
+
+<header class="hdr">
+<div class="r1">
+<a href="#" class="logo" aria-label="Siracusa, към началото">Siracusa</a>
+<a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Обади се</a>
+<button class="hb" aria-label="Switch to English">EN</button>
+<button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button>
+</div>
+<div class="r2"><span class="dot"></span><span>Отворено до 23:00 · Доставка до 21:00</span></div>
+</header>
+
+<section style="padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 20px">
+<div class="ph" style="height: 240px; border-radius: 20px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка от фотосесията 2025 · пица на пещ</span></div>
+<h1 style="font-size: 30px; line-height: 1.2; font-weight: 800; letter-spacing: -0.01em">Пица на пещ и скара на дървени въглища в Дружба 2</h1>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<a href="#" class="btn p"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Поръчай</a>
+<a href="#" class="btn s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай маса</a>
+<a href="#" class="btn s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Обедно меню днес</a>
+</div>
+</section>
+
+<section class="sec">
+<div class="card" style="display: flex; flex-direction: column">
+<div class="ph" style="height: 150px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка · Гръцка вечер</span></div>
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<span class="badge hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>след 26 дни</span>
+<h2 class="h2">Гръцка вечер · събота, 28 ноември</h2>
+<p class="mu">Последна събота от месеца. -5% при ранна резервация.</p>
+<a href="#" class="btn p" style="margin-top: 8px">Запази място</a>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div class="dots" role="img" aria-label="Слайд 2 от 4"><span></span><span class="on"></span><span></span><span></span></div>
+<button class="hb" style="color: var(--tx)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>Пауза</button>
+</div>
+</section>
+
+<section style="padding: 0 16px 8px">
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; background: var(--ac); color: var(--onac)">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 32px; height: 32px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+<span style="font-weight: 700; flex: 1">Кажете ни как беше - вземете -10% от следващата поръчка</span>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+</section>
+
+<section class="sec">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 class="h2">Най-поръчвани</h2>
+<a href="#" class="lnk">Цялото меню<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>
+<div style="display: flex; gap: 12px; width: 720px">
+<article class="card dc">
+<div class="ph" style="aspect-ratio: 1 / 1"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<span class="badge hit" style="position: absolute; top: 8px; left: 8px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>Хит</span>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 4px; flex: 1">
+<a href="A-Dish.dc.html" class="dn">Пица с бурата и прошуто Крудо</a>
+<span class="mu" style="font-size: 14px">420 гр.</span>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px"><span class="price">10,22 €</span><button class="add" aria-label="Добави Пица с бурата и прошуто Крудо"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card dc">
+<div class="ph" style="aspect-ratio: 1 / 1"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<span class="badge hit" style="position: absolute; top: 8px; left: 8px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>Хит</span>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 4px; flex: 1">
+<a href="#" class="dn">Свински ребра</a>
+<span class="mu" style="font-size: 14px">450 гр. · Скара Bertha</span>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px"><span class="price">13,29 €</span><button class="add" aria-label="Добави Свински ребра"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card dc">
+<div class="ph" style="aspect-ratio: 1 / 1"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<span class="badge hit" style="position: absolute; top: 8px; left: 8px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>Ново</span>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 4px; flex: 1">
+<a href="#" class="dn">Пица с прошуто Кото и трюфел</a>
+<span class="mu" style="font-size: 14px">420 гр.</span>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px"><span class="price">8,69 €</span><button class="add" aria-label="Добави Пица с прошуто Кото и трюфел"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card dc">
+<div class="ph" style="aspect-ratio: 1 / 1; opacity: 0.45"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 1:1</span></div>
+<span class="badge so" style="position: absolute; top: 8px; left: 8px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 5l14 14"/></svg>Изчерпано днес</span>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 4px; flex: 1">
+<a href="#" class="dn">Плескавица</a>
+<span class="mu" style="font-size: 14px">400 гр. · Скара Bertha</span>
+<div style="display: flex; align-items: center; min-height: 48px; margin-top: auto; padding-top: 8px"><span class="price mu">8,18 €</span></div>
+</div>
+</article>
+</div>
+</section>
+
+<section style="background: var(--fire); color: var(--onfire); padding: 32px 16px; display: flex; flex-direction: column; gap: 16px">
+<div class="ph" style="height: 200px; border-radius: 20px; background: #2E2A26; color: #B8B0A4"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка или кратко видео · фурната Bertha с жарта</span></div>
+<p style="font-size: 14px; font-weight: 700; letter-spacing: 0.08em; color: #F2B23A">НАШАТА ФУРНА</p>
+<h2 class="h2" style="font-size: 28px">Bertha</h2>
+<p style="font-size: 44px; font-weight: 800; line-height: 1; color: #F2B23A">250 - 350 °C</p>
+<p style="color: #E8E1D3">Затворена фурна на дървени въглища. Месата и зеленчуците се пекат на жар.</p>
+<a href="#" class="lnk" style="color: #F7F3EC">Как готвим във Bertha<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</section>
+
+<section class="sec">
+<h2 class="h2">Събития и поводи</h2>
+<a href="#" class="card" style="display: flex; gap: 16px; padding: 16px; align-items: center">
+<div style="width: 72px; height: 80px; flex: none; border-radius: 12px; background: var(--bg); border: 2px solid var(--ln); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1">
+<span style="font-size: 14px; font-weight: 800; color: var(--br)">НОЕ</span>
+<span style="font-size: 30px; font-weight: 800">28</span>
+<span class="mu" style="font-size: 14px">събота</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span class="mu" style="font-size: 14px">Тематична вечер</span>
+<h3 style="font-size: 20px; font-weight: 800">Гръцка вечер</h3>
+<span class="mu">[ЛИПСВА: цена или вход свободен]</span>
+</div>
+</a>
+<a href="#" class="card" style="display: flex; gap: 16px; padding: 16px; align-items: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 40px; height: 40px; color: var(--br)"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+<div style="display: flex; flex-direction: column; gap: 2px; flex: 1">
+<h3 style="font-size: 18px; font-weight: 800">Рожден ден, кръщене или фирмено парти?</h3>
+<span class="mu">Сметнете празника си за 2 минути</span>
+</div>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+<a href="#" class="lnk">Всички събития и поводи<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+</section>
+
+<section class="sec">
+<h2 class="h2">Какво казват гостите</h2>
+<div class="card mu" style="padding: 20px; border: 2px dashed var(--ln); box-shadow: none">[ЛИПСВА: 2 - 3 отзива от Google профила, с име и дата]</div>
+</section>
+
+<section class="sec">
+<h2 class="h2">Доставяме до вас</h2>
+<div class="ph" style="height: 180px; border-radius: 20px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Статична карта на зоните · интерактивна при докосване</span></div>
+<div class="row"><span class="badge" style="background: var(--ok); color: #FFFFFF; flex: none"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Безплатно</span><span>Дружба 1 и 2, НПЗ Искър, Бусманци</span></div>
+<div class="row"><span class="badge" style="background: var(--sf2); color: var(--tx); flex: none"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v10M9 10h6"/></svg>По тарифа</span><span>Горубляне, Гара Искър [ЛИПСВА: такса]</span></div>
+<p class="mu">Доставка всеки ден до 21:00</p>
+<a href="#" class="btn s"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Провери адреса си</a>
+</section>
+
+<section class="sec" style="padding-bottom: 40px">
+<h2 class="h2">Контакти и работно време</h2>
+<div class="row"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span>ж.к. Дружба 2, срещу бл. 311, 1582 София</span></div>
+<div class="row"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg><a href="tel:+359894365577" style="font-weight: 700">0894 36 55 77</a></div>
+<div class="row"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Всеки ден 10:00 - 23:00<br><span class="mu">Кухнята приема до 22:30 · доставка до 21:00</span></span></div>
+</section>
+
+<nav class="nav" aria-label="Основна навигация">
+<a href="#" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span class="cnt">2</span>Количка<span style="font-size: 13px">17,83 €</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"font":{"editor":"enum","options":["Manrope","Onest","Golos Text","Commissioner","Inter","Rubik"],"default":"Manrope"},"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":3100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var s = this.state || {};
+    var names = ['Manrope', 'Onest', 'Golos Text', 'Commissioner', 'Inter', 'Rubik'];
+    var font = s.font || this.props.font || 'Manrope';
+    var dark = (s.dark !== undefined) ? s.dark : !!this.props.dark;
+    var self = this;
+    return {
+      ff: "'" + font + "', system-ui, sans-serif",
+      mode: dark ? 'dark' : '',
+      fonts: names.map(function (n) {
+        return { name: n, css: "'" + n + "', system-ui, sans-serif", cls: n === font ? 'on' : '', pick: function () { self.setState({ font: n }); } };
+      }),
+      lightCls: dark ? '' : 'on',
+      darkCls: dark ? 'on' : '',
+      setLight: function () { self.setState({ dark: false }); },
+      setDark: function () { self.setState({ dark: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Посока А · Жар · Ястие</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;600;700;800&amp;family=Golos+Text:wght@400;600;700;800&amp;family=Inter:wght@400;600;700;800&amp;family=Manrope:wght@400;600;700;800&amp;family=Onest:wght@400;600;700;800&amp;family=Rubik:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+.A{--bg:#F7F3EC;--sf:#FFFFFF;--sf2:#E8E1D3;--tx:#1F1D1B;--mu:#5A554E;--br:#B3121B;--brp:#9E1B1B;--onbr:#FFFFFF;--ac:#F2B23A;--onac:#1F1D1B;--ok:#2E7D4F;--wa:#B45309;--onwa:#FFFFFF;--ln:#DDD5C6;--sh:0 2px 12px rgba(31,29,27,.08);--fire:#1F1D1B;--onfire:#F7F3EC}
+.A.dark{--bg:#1A1816;--sf:#24211E;--sf2:#2E2A26;--tx:#F7F3EC;--mu:#B8B0A4;--br:#FF6B5E;--brp:#E85A4F;--onbr:#1A1816;--ok:#4CAF7A;--wa:#F59E0B;--onwa:#1A1816;--ln:#3A352F;--sh:none;--fire:#2E2A26}
+.A{background:var(--bg);color:var(--tx);font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.A h1,.A h2,.A h3,.A p{margin:0}
+.A button,.A a{font:inherit;color:inherit}
+.A button{cursor:pointer}
+.A a{text-decoration:none}
+.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.proto{background:#ECECEC;color:#222;padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-family:system-ui,sans-serif}
+.pl{font-size:14px;font-weight:700;margin:0}
+.prow{display:flex;flex-wrap:wrap;gap:8px}
+.fbtn{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #8A8A8A;background:#FFFFFF;color:#222;font-size:15px}
+.fbtn.on{background:#222;color:#FFFFFF;border-color:#222}
+.hdr{background:var(--bg);border-bottom:1px solid var(--ln)}
+.r1{display:flex;align-items:center;gap:2px;height:64px;padding:0 8px 0 16px}
+.logo{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--br);margin-right:auto}
+.hb{min-height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:0;background:none;border-radius:12px;font-weight:700}
+.r2{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--sf2)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.sec{padding:24px 16px;display:flex;flex-direction:column;gap:16px}
+.h2{font-size:22px;font-weight:800;line-height:1.2}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:12px;font-weight:700;font-size:18px;border:0;width:100%;box-sizing:border-box;padding:0 16px}
+.p{background:var(--br);color:var(--onbr)}
+.s{background:var(--sf);color:var(--br);border:2px solid var(--br)}
+.ph{background:var(--sf2);color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:14px;text-align:center;padding:8px;box-sizing:border-box}
+.card{background:var(--sf);border-radius:20px;box-shadow:var(--sh);overflow:hidden}
+.badge{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:0 10px;border-radius:999px;font-size:14px;font-weight:700}
+.badge .i{width:16px;height:16px}
+.hit{background:var(--ac);color:var(--onac)}
+.so{background:var(--wa);color:var(--onwa)}
+.mu{color:var(--mu)}
+.price{font-size:18px;font-weight:800}
+.add{width:48px;height:48px;border-radius:50%;background:var(--br);color:var(--onbr);border:0;display:flex;align-items:center;justify-content:center;flex:none}
+.dc{width:168px;flex:none;display:flex;flex-direction:column;position:relative}
+.dn{font-size:16px;font-weight:700;line-height:1.3}
+.lnk{color:var(--br);font-weight:700;display:inline-flex;align-items:center;gap:2px;min-height:48px}
+.nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--sf);border-top:1px solid var(--ln);padding:6px 4px 12px;margin-top:auto}
+.nv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;font-size:14px;font-weight:700;color:var(--mu);position:relative;line-height:1.2}
+.nv.on{color:var(--br)}
+.cnt{position:absolute;top:0;left:calc(50% + 4px);min-width:20px;height:20px;border-radius:10px;background:var(--br);color:var(--onbr);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+.dots{display:flex;gap:8px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--mu);opacity:.45}
+.dots span.on{opacity:1;width:24px;border-radius:4px;background:var(--br)}
+.row{display:flex;align-items:flex-start;gap:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;background:var(--sf);border:1.5px solid var(--ln);font-weight:600}
+.rowbtn{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 16px;border-radius:12px;background:var(--sf);border:1.5px solid var(--ln);text-align:left;box-sizing:border-box}
+.chev{transition:transform 200ms cubic-bezier(.2,0,0,1)}
+.chev.up{transform:rotate(180deg)}
+.v{background:var(--sf2);color:var(--tx)}
+.v .i{color:var(--ok)}
+.hot{background:var(--sf2);color:var(--tx)}
+.hot .i{color:var(--br)}
+.mini{display:flex;flex-direction:column;position:relative}
+.bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--sf);border-top:1px solid var(--ln)}
+.stp{display:flex;align-items:center;border:1.5px solid var(--ln);border-radius:12px;background:var(--bg);flex:none}
+.sb{width:48px;height:56px;border:0;background:none;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.sb.off{color:var(--mu)}
+.qn{min-width:24px;text-align:center;font-size:18px;font-weight:800}
+.scrim{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;border:0;padding:0;margin:0;background:rgba(0,0,0,.5);cursor:pointer}
+.sheet{position:absolute;left:0;right:0;top:880px;background:var(--sf);border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:8px 16px 24px;display:flex;flex-direction:column;gap:12px}
+.handle{width:40px;height:5px;border-radius:3px;background:var(--mu);align-self:center;opacity:.6}
+.grp{font-size:14px;font-weight:800;letter-spacing:.06em;color:var(--mu);margin-top:4px}
+.opt{display:flex;align-items:center;gap:12px;min-height:56px;width:100%;border:0;border-bottom:1px solid var(--ln);background:none;text-align:left;padding:0}
+.box{width:24px;height:24px;border-radius:6px;border:2px solid var(--mu);display:flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box}
+.box .i{width:16px;height:16px;opacity:0}
+.box.on{background:var(--br);border-color:var(--br);color:var(--onbr)}
+.box.on .i{opacity:1}
+.pv{position:absolute;bottom:12px;right:12px;min-height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;border-radius:12px;border:0;background:var(--sf);color:var(--tx);font-weight:700;box-shadow:var(--sh)}
+.play{min-height:56px;display:flex;align-items:center;gap:8px;padding:0 20px;border-radius:999px;border:0;background:var(--sf);color:var(--tx);font-weight:700}
+</style>
+</helmet>
+<div class="A {{mode}}" style="width: 390px; min-height: 2600px; display: flex; flex-direction: column; font-family: {{ff}}; overflow: hidden; position: relative">
+
+<div class="proto">
+<p class="pl">Само за прототипа · шрифт, режим и състояние на живо</p>
+<div class="prow">
+<sc-for list="{{fonts}}" as="f" hint-placeholder-count="6"><button class="fbtn {{f.cls}}" style="font-family: {{f.css}}" onClick="{{f.pick}}">{{f.name}}</button></sc-for>
+</div>
+<div class="prow"><button class="fbtn {{lightCls}}" onClick="{{setLight}}">Светъл</button><button class="fbtn {{darkCls}}" onClick="{{setDark}}">Тъмен</button><button class="fbtn {{soldCls}}" aria-pressed="{{soldPressed}}" onClick="{{toggleSold}}">Изчерпано днес: {{soldWord}}</button></div>
+</div>
+
+<header class="hdr">
+<div class="r1">
+<a href="Main.dc.html" class="logo" aria-label="Siracusa, към началото">Siracusa</a>
+<a href="tel:+359894365577" class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Обади се</a>
+<button class="hb" aria-label="Switch to English">EN</button>
+<button class="hb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Още</button>
+</div>
+</header>
+
+<div style="padding: 4px 8px 0">
+<a href="Main.dc.html" class="lnk" style="padding: 0 8px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Пици на пещ</a>
+</div>
+
+<section style="padding: 4px 16px 0; display: flex; flex-direction: column; gap: 8px">
+<div style="position: relative">
+<div class="ph" style="aspect-ratio: 4 / 3; border-radius: 20px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3 · Пица с бурата и прошуто Крудо</span></div>
+<button class="pv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>Виж в 3D</button>
+</div>
+<p class="mu" style="font-size: 14px; display: flex; align-items: center; gap: 6px"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>На бързи устройства снимката плавно става 3D модел</p>
+</section>
+
+<section style="padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px">
+<span class="badge hit" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>Хит</span>
+<h1 style="font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: -0.01em">Пица с бурата и прошуто Крудо</h1>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span class="mu" style="font-size: 18px">420 гр.</span>
+<span style="font-size: 30px; font-weight: 800; line-height: 1.2">10,22 €</span>
+</div>
+</section>
+
+<section class="sec" style="gap: 8px; padding-bottom: 8px">
+<h2 class="h2">Състав</h2>
+<p class="mu">[ЛИПСВА: състав от собственика]</p>
+</section>
+
+<section class="sec" style="gap: 12px">
+<h2 class="h2">Алергени</h2>
+<div class="prow">
+<span class="chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22V8M12 8c-2-1-3-3-3-5 2 0 3 2 3 5zM12 8c2-1 3-3 3-5-2 0-3 2-3 5zM12 13c-2-1-3-3-3-5 2 0 3 2 3 5zM12 13c2-1 3-3 3-5-2 0-3 2-3 5zM12 18c-2-1-3-3-3-5 2 0 3 2 3 5zM12 18c2-1 3-3 3-5-2 0-3 2-3 5z"/></svg>Глутен</span>
+<span class="chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8M9 2v3L7 9v11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9l-2-4V2M7 13h10"/></svg>Мляко</span>
+</div>
+<p class="mu" style="font-size: 14px">Пример за макета · [ЛИПСВА: алергени от собственика]</p>
+<button class="rowbtn" aria-expanded="{{nutExp}}" onClick="{{toggleNut}}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+<span style="flex: 1; font-weight: 700">Хранителна информация</span>
+<svg class="i chev {{nutChev}}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+<sc-if value="{{nutOpen}}" hint-placeholder-val="{{ true }}">
+<div class="card" style="padding: 16px; box-shadow: none; border: 1.5px solid var(--ln)">
+<p class="mu">[ЛИПСВА: хранителна информация на 100 гр. - енергия, мазнини, въглехидрати, белтъчини, сол]</p>
+</div>
+</sc-if>
+<button class="rowbtn" onClick="{{openSheet}}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--br)"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700">Добавки и промени</span><span class="mu" style="font-size: 14px">Махни · Добави</span></span>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+</button>
+</section>
+
+<section class="sec">
+<h2 class="h2">Върви добре с</h2>
+<div style="display: flex; gap: 12px">
+<article class="card mini" style="flex: 1; min-width: 0">
+<div class="ph" style="aspect-ratio: 4 / 3"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 2px">
+<a href="#" class="dn">Пица Нутела</a>
+<span class="mu" style="font-size: 14px">420 гр.</span>
+<div style="display: flex; align-items: center; justify-content: space-between; padding-top: 8px"><span class="price">7,66 €</span><button class="add" aria-label="Добави Пица Нутела"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card mini" style="flex: 1; min-width: 0">
+<div class="ph" style="aspect-ratio: 4 / 3"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка 4:3</span></div>
+<div style="padding: 12px; display: flex; flex-direction: column; gap: 2px">
+<a href="#" class="dn">Кебапчета</a>
+<span class="mu" style="font-size: 14px">450 гр. · Скара Bertha</span>
+<div style="display: flex; align-items: center; justify-content: space-between; padding-top: 8px"><span class="price">7,61 €</span><button class="add" aria-label="Добави Кебапчета"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+</div>
+</section>
+
+<section class="sec">
+<h2 class="h2">Как се прави</h2>
+<div class="ph" style="height: 180px; border-radius: 20px; gap: 12px">
+<button class="play" aria-label="Пусни видеото без звук"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/></svg>Пусни</button>
+<span>Постер на видеото</span>
+</div>
+<p class="mu" style="font-size: 14px">Видео: от суровата съставка до готовото ястие · без звук</p>
+</section>
+
+<section class="sec" style="padding-bottom: 32px">
+<h2 class="h2">Отзиви за ястието</h2>
+<div class="card mu" style="padding: 20px; border: 2px dashed var(--ln); box-shadow: none">[ЛИПСВА: отзиви за ястието - блокът се показва само ако има]</div>
+</section>
+
+<div style="margin-top: auto; display: flex; flex-direction: column">
+<sc-if value="{{notSold}}" hint-placeholder-val="{{ true }}">
+<div class="bar">
+<div class="stp" role="group" aria-label="Количество">
+<button class="sb {{minusCls}}" aria-label="Намали количеството" onClick="{{dec}}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+<span class="qn" aria-live="polite">{{qty}}</span>
+<button class="sb" aria-label="Увеличи количеството" onClick="{{inc}}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<button class="btn p" style="flex: 1; width: auto"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Добави · {{total}}</button>
+</div>
+</sc-if>
+<sc-if value="{{sold}}" hint-placeholder-val="{{ false }}">
+<div style="background: var(--sf); border-top: 1px solid var(--ln); padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px; border-radius: 12px; background: var(--wa); color: var(--onwa)">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 5l14 14"/></svg>
+<span style="display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 800; font-size: 18px">Изчерпано днес</span><span>Съжаляваме, свърши за днес.</span></span>
+</div>
+<h2 class="h2">Вижте подобни</h2>
+<div style="display: flex; gap: 12px; width: 474px">
+<article class="card mini" style="width: 150px; flex: none">
+<div class="ph" style="aspect-ratio: 4 / 3"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка</span></div>
+<div style="padding: 10px; display: flex; flex-direction: column; gap: 6px">
+<span class="badge v" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M2 21c0-3 1.9-5.4 5.1-6"/></svg>Вегетарианско</span>
+<a href="#" class="dn">Пица Маргарита</a>
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="price">7,15 €</span><button class="add" aria-label="Добави Пица Маргарита"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card mini" style="width: 150px; flex: none">
+<div class="ph" style="aspect-ratio: 4 / 3"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка</span></div>
+<div style="padding: 10px; display: flex; flex-direction: column; gap: 6px">
+<span class="badge v" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M2 21c0-3 1.9-5.4 5.1-6"/></svg>Вегетарианско</span>
+<a href="#" class="dn">Пица Вегетариана</a>
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="price">6,13 €</span><button class="add" aria-label="Добави Пица Вегетариана"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+<article class="card mini" style="width: 150px; flex: none">
+<div class="ph" style="aspect-ratio: 4 / 3"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Снимка</span></div>
+<div style="padding: 10px; display: flex; flex-direction: column; gap: 6px">
+<span class="badge hot" style="align-self: flex-start"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6c0-2 1-3 3-4M12 6c-4 0-7 4-7 9 0 4 2 7 4 7 5 0 11-6 11-11 0-3-3-5-8-5z"/></svg>Люто</span>
+<a href="#" class="dn">Пица Дяволо</a>
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="price">8,18 €</span><button class="add" aria-label="Добави Пица Дяволо"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+</article>
+</div>
+</div>
+</sc-if>
+
+<nav class="nav" aria-label="Основна навигация" style="margin-top: 0">
+<a href="Main.dc.html" class="nv on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>Меню</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Резервирай</a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span class="cnt">2</span>Количка<span style="font-size: 13px">17,83 €</span></a>
+<a href="#" class="nv"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профил</a>
+</nav>
+</div>
+
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+<button class="scrim" aria-label="Затвори листа" onClick="{{closeSheet}}"></button>
+<div class="sheet" role="dialog" aria-label="Добавки и промени">
+<div class="handle"></div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<h2 class="h2">Добавки и промени</h2>
+<button class="hb" style="color: var(--br)" onClick="{{closeSheet}}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>Затвори</button>
+</div>
+<p class="grp">МАХНИ</p>
+<sc-for list="{{removeItems}}" as="it" hint-placeholder-count="2">
+<button class="opt" aria-pressed="{{it.pressed}}" onClick="{{it.toggle}}">
+<span class="box {{it.cls}}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+<span style="flex: 1">{{it.label}}</span>
+<span class="mu">безплатно</span>
+</button>
+</sc-for>
+<p class="grp">ДОБАВИ</p>
+<sc-for list="{{addItems}}" as="it" hint-placeholder-count="2">
+<button class="opt" aria-pressed="{{it.pressed}}" onClick="{{it.toggle}}">
+<span class="box {{it.cls}}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+<span style="flex: 1">{{it.label}}</span>
+<span style="font-weight: 700">{{it.price}}</span>
+</button>
+</sc-for>
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding-top: 4px">
+<span style="font-weight: 700">Общо за {{qty}} бр.</span>
+<span style="font-size: 22px; font-weight: 800">{{total}}</span>
+</div>
+<sc-if value="{{hasAdds}}" hint-placeholder-val="{{ false }}">
+<p class="mu" style="font-size: 14px">Цената на добавките влиза в общата сума на живо · [ЛИПСВА: цени на добавките]</p>
+</sc-if>
+<button class="btn p" onClick="{{closeSheet}}">Готово · {{total}}</button>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"font":{"editor":"enum","options":["Manrope","Onest","Golos Text","Commissioner","Inter","Rubik"],"default":"Manrope"},"dark":{"editor":"boolean","default":false},"soldOut":{"editor":"boolean","default":false},"$preview":{"width":390,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var s = this.state || {};
+    var self = this;
+    var names = ['Manrope', 'Onest', 'Golos Text', 'Commissioner', 'Inter', 'Rubik'];
+    var font = s.font || this.props.font || 'Manrope';
+    var dark = (s.dark !== undefined) ? s.dark : !!this.props.dark;
+    var sold = (s.sold !== undefined) ? s.sold : !!this.props.soldOut;
+    var qty = s.qty || 1;
+    var nut = !!s.nut;
+    var sheet = !!s.sheet;
+    var picked = s.picked || {};
+    function fmt(cents) { return (Math.round(cents) / 100).toFixed(2).replace('.', ',') + ' €'; }
+    function opt(key, label, price) {
+      var on = !!picked[key];
+      return {
+        label: label,
+        price: price,
+        cls: on ? 'on' : '',
+        pressed: on ? 'true' : 'false',
+        toggle: function () {
+          var n = {};
+          for (var k in picked) { n[k] = picked[k]; }
+          n[key] = !on;
+          self.setState({ picked: n });
+        }
+      };
+    }
+    var hasAdds = !!(picked.a1 || picked.a2);
+    return {
+      ff: "'" + font + "', system-ui, sans-serif",
+      mode: dark ? 'dark' : '',
+      fonts: names.map(function (n) {
+        return { name: n, css: "'" + n + "', system-ui, sans-serif", cls: n === font ? 'on' : '', pick: function () { self.setState({ font: n }); } };
+      }),
+      lightCls: dark ? '' : 'on',
+      darkCls: dark ? 'on' : '',
+      setLight: function () { self.setState({ dark: false }); },
+      setDark: function () { self.setState({ dark: true }); },
+      sold: sold,
+      notSold: !sold,
+      soldCls: sold ? 'on' : '',
+      soldPressed: sold ? 'true' : 'false',
+      soldWord: sold ? 'вкл.' : 'изкл.',
+      toggleSold: function () { self.setState({ sold: !sold }); },
+      qty: qty,
+      total: fmt(1022 * qty),
+      minusCls: qty <= 1 ? 'off' : '',
+      dec: function () { self.setState({ qty: Math.max(1, qty - 1) }); },
+      inc: function () { self.setState({ qty: qty + 1 }); },
+      nutOpen: nut,
+      nutExp: nut ? 'true' : 'false',
+      nutChev: nut ? 'up' : '',
+      toggleNut: function () { self.setState({ nut: !nut }); },
+      sheetOpen: sheet,
+      openSheet: function () { self.setState({ sheet: true }); },
+      closeSheet: function () { self.setState({ sheet: false }); },
+      removeItems: [opt('r1', 'Без [ЛИПСВА: съставка 1]', ''), opt('r2', 'Без [ЛИПСВА: съставка 2]', '')],
+      addItems: [opt('a1', '[ЛИПСВА: добавка 1]', '+ [ЛИПСВА: цена]'), opt('a2', '[ЛИПСВА: добавка 2]', '+ [ЛИПСВА: цена]')],
+      hasAdds: hasAdds
+    };
+  }
+}
+</script>
+</body>
+</html>
