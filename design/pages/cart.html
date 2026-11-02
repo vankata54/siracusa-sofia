@@ -53,8 +53,10 @@
 .note.bad{box-shadow:inset 0 0 0 2px var(--danger)}
 .note.bad > .ic{color:var(--danger)}
 .note.ok > .ic{color:var(--ok)}
+.note.promo{background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.note.promo > .ic{color:var(--ink)}
 .note.info > .ic{color:var(--muted)}
-.note b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.note b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em; text-wrap:balance}
 .note p{margin:2px 0 0; color:var(--muted)}
 .note .acts{grid-column:2; display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
 .note .acts .pill{min-height:48px}
@@ -72,6 +74,7 @@
 .tag{display:inline-flex; align-items:center; gap:4px; min-height:28px; padding:0 10px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1}
 .tag.add{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
 .tag.lunch .ic{color:var(--muted)}
+.tag.promo{background:var(--ember); color:var(--on-ember)}
 .ln-act{grid-area:act; display:flex; align-items:center; gap:6px; min-width:0}
 .ln-rm{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--ink); font-weight:700; font-size:15px; cursor:pointer}
 .ln-rm .ic{color:var(--muted)}
@@ -124,7 +127,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .sum .kv{align-items:flex-start; padding:11px 0}
 .sum .kv > span:first-child{min-width:0}
 .sum .kv small{display:block; font-size:14px; color:var(--muted); font-weight:500; line-height:1.35; margin-top:2px}
-.sum .kv > :last-child{text-align:right; font-weight:700}
+.sum .kv > :last-child{text-align:right; font-weight:700; white-space:nowrap}
 .sum .kv.tot{border-top:1.5px solid var(--line-strong); margin-top:4px; padding-top:14px; align-items:baseline}
 .sum .kv.tot > span:first-child{font-weight:800; font-size:18px}
 .sum .kv.tot .price{font-size:26px; letter-spacing:-.03em}
@@ -401,7 +404,7 @@ function topNotes(I, step){ var h = "";
 
 function lineHTML(r, I){ var x = r.x, l = r.l, out = r.out;
   var mods = (l.mods||[]).map(function(md){ var add = /^\+/.test(md); var txt = add ? md.replace(/^\+\s*/,"") : md; txt = txt.charAt(0).toUpperCase()+txt.slice(1); return '<span class="tag'+(add?" add":"")+'">'+(add?ic("plus",14):"")+esc(txt)+'</span>'; }).join("");
-  var tags = (x.lunch ? '<span class="tag lunch">'+ic("bowl-food",16)+'Обедно меню</span>' : "") + mods;
+  var tags = (x.lunch ? '<span class="tag lunch">'+ic("bowl-food",16)+'Обедно меню</span>' : "") + (r.disc ? '<span class="tag promo">-30% след 15:00</span>' : "") + mods;
   var sub = fmt(r.unit) + (l.q>1 ? " за брой" : "") + (x.g ? " · "+x.g : "") + (l.extra ? " · с добавки" : "");
   var price = out ? '<span class="muted small">Не се брои</span>' : r.disc ? '<span class="old">'+fmt(r.tot)+'</span><span class="price">'+fmt(r.tot-r.disc)+'</span>' : '<span class="price">'+fmt(r.tot)+'</span>';
   var counter = '<div class="counter" role="group" aria-label="Брой: '+esc(x.n)+'"><button type="button" data-act="dec" data-key="'+esc(l.key)+'" data-fk="dec-'+esc(l.key)+'" aria-label="'+(l.q===1?"Махни ":"Едно по-малко: ")+esc(x.n)+'">'+ic("minus",20)+'</button><output aria-live="polite">'+l.q+'</output><button type="button" data-act="inc" data-key="'+esc(l.key)+'" data-fk="inc-'+esc(l.key)+'" aria-label="Още едно: '+esc(x.n)+'"'+(out?" disabled":"")+'>'+ic("plus",20)+'</button></div>';
@@ -425,15 +428,15 @@ function suggestions(I){ var ids = SC.cart.lines().map(function(l){ return l.id;
     SC.suggest(r.x.id, ids).forEach(function(s){ if (out.length<2 && !seenC[s.c] && !seenI[s.id] && ids.indexOf(s.id)<0){ seenC[s.c]=1; seenI[s.id]=1; out.push(s); } }); });
   return out; }
 
-function ffHTML(I){ var s = I.s, e = SC.eta();
+function ffHTML(I, step){ var s = I.s, e = SC.eta();
   var dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около "+e.min+" мин") : "по избран час";
   var pSmall = I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
   var h = '<div class="seg ff" role="group" aria-label="Как да получите поръчката">'+
     '<button type="button" data-act="mode" data-v="delivery" aria-pressed="'+(I.mode==="delivery")+'"'+(I.delivOK?"":" disabled")+'>'+ic("moped",26)+'<b>Доставка</b><small>'+dSmall+'</small></button>'+
     '<button type="button" data-act="mode" data-v="pickup" aria-pressed="'+(I.mode==="pickup")+'">'+ic("storefront",26)+'<b>Вземи от място</b><small>'+pSmall+'</small></button></div>';
   if (!I.delivOK) h += '<div class="ff-note">'+note("info","info","Доставката е до 21:00","Можете да я вземете от ресторанта до 22:30.")+'</div>';
-  else if (I.mode==="delivery" && I.today && e.busy) h += '<div class="ff-note">'+note("info","clock","Възможни са закъснения · около 55 мин","Кухнята е натоварена. Ако бързате, вземете я от място.")+'</div>';
-  else if (I.mode==="pickup" && I.today && s.lunchDiscount && I.hasLunch) h += '<div class="ff-note">'+note("ok","seal-percent","-30% на обедното меню","След 15:00 при вземане от място. Отстъпката вече е сметната.")+'</div>';
+  else if (step===1 && I.mode==="delivery" && I.today && e.busy) h += '<div class="ff-note">'+note("info","clock","Възможни са закъснения · около 55 мин","Кухнята е натоварена. Ако бързате, вземете я от място.")+'</div>';
+  else if (I.mode==="pickup" && I.today && s.lunchDiscount && I.hasLunch) h += '<div class="ff-note">'+note("promo","seal-percent","-30% на обедното меню","След 15:00 при вземане от място. Отстъпката вече е сметната.")+'</div>';
   return h; }
 
 function ctaLabel(I, step){
@@ -443,11 +446,12 @@ function ctaLabel(I, step){
 function ctaBtn(I, step, block){ var lbl = ctaLabel(I, step) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "");
   if (step===3 && P.sending) return '<button class="pill pill-red pill-lg'+(block?" pill-block":"")+'" type="button" aria-busy="true" aria-disabled="true">'+esc(lbl)+'<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
   if (step===1 && I.conflict==="delivery") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Смени на вземане · -30%</button>';
+  if (step===2 && I.mode==="delivery" && D.zk==="out") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Вземи от място · '+fmt(I.total)+'</button>';
   if (step===1 && I.conflict==="sched") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>';
   return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="next" data-n="'+step+'">'+esc(lbl)+'</button>'; }
 
 function summaryHTML(I, step){ var e = etaText(I), zoneName = D.zone || "";
-  var del = I.mode==="pickup" ? ['Вземане от място','<small>'+esc(R.address)+'</small>','Без такса']
+  var del = I.mode==="pickup" ? ['Вземане от място','<small>Дружба 2, срещу бл. 311</small>','Без такса']
     : D.zk==="free" ? ['Доставка','<small>'+esc(zoneName)+', в зоната ни</small>','Безплатна']
     : D.zk==="paid" ? ['Доставка','<small>'+esc(zoneName)+', по тарифа</small>','<span class="missing">[ЛИПСВА: такса]</span>']
     : ['Доставка','<small>Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. Горубляне и Гара Искър по тарифа.</small>','Безплатна'];
@@ -493,7 +497,7 @@ function viewStep1(I){
     '<section class="blk" aria-label="Ястия в количката"><div class="shell"><div class="core"><ul class="lines">'+I.rows.map(function(r){ return lineHTML(r, I); }).join("")+'</ul></div></div>'+(I.n?allergensHTML(I):'')+'</section>'+
     (sg.length ? '<section class="blk sugg" aria-labelledby="sgh"><div class="blk-h"><h2 class="h3" id="sgh">Да добавим ли?</h2><p class="muted small">Допълва менюто</p></div><div class="shell"><div class="core">'+
       sg.map(function(s){ var x = SC.byId[s.id]; return '<div class="drow"><a class="open" href="dish.html#'+x.id+'">'+SC.pic(x)+'<span><small>'+SC.COURSE_NAME[s.c]+'</small><span class="nm">'+esc(x.n)+'</span><span class="meta"><span class="price">'+fmt(x.p)+'</span><span class="muted small">'+x.g+'</span></span></span></a>'+SC.plusBtn(x)+'</div>'; }).join("")+'</div></div></section>' : '')+
-    '<section class="blk" aria-labelledby="ffh"><div class="blk-h"><h2 class="h3" id="ffh">Как да я получите?</h2></div>'+ffHTML(I)+'</section>';
+    '<section class="blk" aria-labelledby="ffh"><div class="blk-h"><h2 class="h3" id="ffh">Как да я получите?</h2></div>'+ffHTML(I,1)+'</section>';
   return '<div class="ck"><div class="ck-grid"><div class="ck-main">'+left+'</div><div class="ck-side">'+summaryHTML(I,1)+'</div></div>'+protoHTML("cart")+'</div>'; }
 
 function addrResult(I){
@@ -517,7 +521,7 @@ function viewStep2(I){ var h;
     var list = D.addr && !D.zk ? findAddr(D.addr) : [];
     h = '<h1 class="h1 ck-title" tabindex="-1">Къде да я доставим?</h1><p class="lead ck-lead">Проверяваме адреса веднага: зона, такса и време.</p>'+
       '<div style="margin-top:22px">'+topNotes(I,2)+'</div>'+
-      '<section class="blk">'+ffHTML(I)+'</section>'+
+      '<section class="blk">'+ffHTML(I,2)+'</section>'+
       '<section class="blk"><div class="field"><label for="addr">Адрес за доставка</label>'+
       '<div class="combo">'+ic("map-pin",22)+'<input id="addr" class="input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addr-list" autocomplete="off" placeholder="Квартал, улица, блок" value="'+esc(D.addr)+'" data-fk="addr" aria-describedby="addr-help">'+
       (D.addr?'<button class="combo-x" type="button" data-act="addr-clear" aria-label="Изчисти адреса">'+ic("x",20)+'</button>':'')+'</div>'+
@@ -531,7 +535,7 @@ function viewStep2(I){ var h;
   } else {
     h = '<h1 class="h1 ck-title" tabindex="-1">Кога ще я вземете?</h1><p class="lead ck-lead">'+(I.today?(I.hasTrad?"Приготвяме я за около 20 минути.":"Обедното меню е готово веднага."):"Изберете час за "+(I.sched==="утре"?"утре":"днес")+".")+'</p>'+
       '<div style="margin-top:22px">'+topNotes(I,2)+'</div>'+
-      '<section class="blk">'+ffHTML(I)+'</section>'+
+      '<section class="blk">'+ffHTML(I,2)+'</section>'+
       '<section class="blk">'+(I.today && I.earliest<=1350 ? '<div class="opts"><label class="opt">'+'<input type="radio" name="asap" data-act-r="asap"'+(D.slot==="asap"?" checked":"")+' data-fk="asap">'+ic("timer",24)+'<span><b>Възможно най-скоро</b><small>'+(I.hasTrad?"Готова около "+t2(round5(I.earliest)):"Готова веднага, елате когато ви е удобно")+'</small></span></label></div>' : '')+
       slotsHTML(I, I.today?"Или изберете час":"Изберете час")+'</section>'+
       '<section class="blk"><div class="card place">'+ic("map-pin",24)+'<div><b>Siracusa Bar &amp; Grill</b><p>'+esc(R.address)+'</p><p class="small" style="margin-top:4px">Паркиране: <span class="missing">[ЛИПСВА: къде]</span></p></div><a class="link" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("path",18)+'Маршрут в Google Maps</a></div></section>';
@@ -642,7 +646,7 @@ var aIdx = -1;
 function wireAddr(){ var inp = main.querySelector("#addr"); if (!inp) return; var list = main.querySelector("#addr-list");
   function paint(){ var q = inp.value, r = findAddr(q);
     if (q.trim().length < 2 || D.zk){ list.hidden = true; inp.setAttribute("aria-expanded","false"); return; }
-    list.innerHTML = r.length ? r.map(function(a,k){ return '<li role="option" id="ao-'+k+'" data-i="'+a.i+'" aria-selected="'+(k===aIdx)+'">'+ic("map-pin",20)+'<span>'+esc(a.a)+'<small>'+(a.z||"София")+'</small></span></li>'; }).join("")
+    list.innerHTML = r.length ? r.map(function(a,k){ return '<li role="option" id="ao-'+k+'" data-i="'+a.i+'" aria-selected="'+(k===aIdx)+'">'+ic("map-pin",20)+'<span>'+esc(a.a)+'<small>'+(function(z){ return z ? (z.free?"Безплатна доставка":"Доставка по тарифа") : "Извън зоната ни"; })(zoneOf(a.z))+'</small></span></li>'; }).join("")
       : '<li class="none" role="option" aria-disabled="true">Не намираме такъв адрес. Опитайте с квартал и блок, например „Дружба 2, бл. 311“.</li>';
     list.hidden = false; inp.setAttribute("aria-expanded","true");
     if (aIdx>-1 && r.length) inp.setAttribute("aria-activedescendant","ao-"+aIdx); else inp.removeAttribute("aria-activedescendant"); }

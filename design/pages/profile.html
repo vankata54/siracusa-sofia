@@ -138,7 +138,8 @@
 .sw[aria-checked="true"] .kn{transform:translateX(22px)}
 .bday{display:grid; gap:8px; padding:14px 0 18px}
 .bday .two{display:grid; grid-template-columns:1fr 1.4fr; gap:8px}
-.bday select.input{appearance:none; -webkit-appearance:none; padding-right:40px; background-image:none; cursor:pointer}
+.selw select.input{appearance:none; -webkit-appearance:none; padding-right:44px; background-image:none; cursor:pointer}
+.ember-card .missing{color:inherit; opacity:.85}
 .selw{position:relative}
 .selw .ic{position:absolute; right:14px; top:50%; margin-top:-10px; pointer-events:none; color:var(--muted)}
 .legal{margin:12px 2px 0; font-size:14px; color:var(--muted)}
@@ -265,8 +266,8 @@ var SECTIONS = [["porachki","Поръчки","receipt"],["lyubimi","Любими
 function zoneOf(n){ return SC.ZONES.filter(function(z){ return z.n===n; })[0]; }
 function zoneLine(n){ var z = zoneOf(n);
   if (!z) return {cls:"no", icon:"warning-circle", html:"Не доставяме до този адрес. Можете да я вземете от ресторанта."};
-  if (z.free) return {cls:"ok", icon:"truck", html:"Безплатна доставка · "+z.eta};
-  return {cls:"tar", icon:"truck", html:'Доставка по тарифа <span class="missing">[ЛИПСВА: такса]</span> · '+z.eta}; }
+  if (z.free) return {cls:"ok", icon:"truck", html:'Безплатна доставка · <span style="white-space:nowrap">'+z.eta+'</span>'};
+  return {cls:"tar", icon:"truck", html:'Доставка по тарифа <span class="missing">[ЛИПСВА: такса]</span> · <span style="white-space:nowrap">'+z.eta+'</span>'}; }
 function dayStr(ago){ var d = new Date(); d.setDate(d.getDate()-ago); return d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
 function sw(key, title, sub, on){ return '<button class="sw" type="button" role="switch" aria-checked="'+on+'" data-sw="'+key+'"><span class="tx"><b>'+title+'</b><span class="s">'+sub+'</span></span><span class="tg" aria-hidden="true"><span class="tr"><span class="kn"></span></span><span class="st2">'+(on?"Включено":"Изключено")+'</span></span></button>'; }
 function orderParts(o){ var ok = [], out = [], sum = 0;
@@ -282,7 +283,7 @@ function renderInvite(){
   main.innerHTML = '<section class="inv"><div class="shell"><div class="core">'+
     '<span class="ring">'+ic("user",32)+'</span>'+
     '<div><h1 class="h1">Вашият профил</h1><p class="lead" style="margin-top:8px">Влезте с телефона си. Без парола, с код по SMS.</p></div>'+
-    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span></div>'+
+    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил.</span></span></div>'+
     '<a class="pill pill-red pill-lg pill-block" href="login.html">'+ic("sign-in",22)+'Влез с телефон</a>'+
     '<ul class="perks">'+PERKS.map(function(p){ return '<li><span class="i">'+ic(p[0],22)+'</span><span><b>'+p[1]+'</b><span class="s">'+p[2]+'</span></span></li>'; }).join("")+'</ul>'+
     '<p class="noacc">Поръчка без профил също става. <a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></p>'+
@@ -350,7 +351,7 @@ function favsHTML(){ if (!U.favs.length) return '<div class="card empty"><span c
     return SC.dishCard(x).replace(/<\/div>$/, '<button class="pill fx" type="button" data-unfav="'+id+'">'+ic("x",18)+'Махни</button></div>'); }).join("")+'</div>'; }
 
 function adrsHTML(){ var list = U.addrs.length ? '<div class="card alist">'+U.addrs.map(function(a){ var k = KIND[a.kind]||KIND.other, z = zoneLine(a.zone);
-    return '<div class="adr"><span class="i">'+ic(k[1],22)+'</span><span><span class="top2"><b>'+k[0]+(a.main?'<span class="tag">Основен</span>':'')+'</b><button class="link" type="button" data-adr="'+a.id+'" aria-label="Промени адрес '+k[0]+'">'+ic("pencil-simple",18)+'Промени</button></span><span class="l">'+(/Дружба/.test(a.zone)?'ж.к. ':'')+esc(a.zone||"Друг квартал")+(a.line?', '+esc(a.line):', <span class="missing">[ЛИПСВА: адрес за примера]</span>')+'</span><span class="z '+z.cls+'">'+ic(z.icon,18)+'<span>'+z.html+'</span></span></span></div>'; }).join("")+'</div>'
+    return '<div class="adr"><span class="i">'+ic(k[1],22)+'</span><span><span class="top2"><b>'+k[0]+(a.main?'<span class="tag">Основен</span>':'')+'</b><button class="link" type="button" data-adr="'+a.id+'" aria-label="Промени адрес '+k[0]+'">'+ic("pencil-simple",18)+'Промени</button></span><span class="l">'+(/Дружба/.test(a.zone)?'ж.к. ':'')+esc(a.zone||"Друг квартал")+(a.line?', '+esc(a.line):', <span class="missing">[ЛИПСВА: адрес]</span>')+'</span><span class="z '+z.cls+'">'+ic(z.icon,18)+'<span>'+z.html+'</span></span></span></div>'; }).join("")+'</div>'
     : '<div class="card empty"><span class="ill">'+ic("map-pin",44)+'</span><h3 class="h3">Няма запазени адреси</h3><p class="muted" style="margin:0;max-width:30em">Добавете адрес веднъж и при поръчка само го изберете.</p></div>';
   return list+'<button class="pill pill-line pill-block addbtn" type="button" data-adr="new">'+ic("plus",20)+'Добави адрес</button>'; }
 
@@ -400,7 +401,7 @@ function reorder(i, btn){ var o = U.orders[i], P = orderParts(o); if (!P.ok.leng
   P.ok.forEach(function(l){ SC.cart.add(l[0], l[1]); });
   SC.fly(btn, P.ok[0][0]); SC.haptic(); SC.flash(btn, ic("check",20)+"Добавено в количката", 1800);
   var go = btn.parentNode.querySelector("[data-gocart]"); if (go) go.hidden = false;
-  SC.toast("Добавихме "+SC.plural(count(P.ok),"ястие","ястия")+" в количката", function(){ SC.cart.clear(); snap.forEach(function(l){ SC.cart.restore(l); }); if (go) go.hidden = true; }); }
+  SC.toast("Добавихме "+SC.plural(count(P.ok),"ястие","ястия"), function(){ SC.cart.clear(); snap.forEach(function(l){ SC.cart.restore(l); }); if (go) go.hidden = true; }); }
 
 function toggle(btn){ var k = btn.dataset.sw.split("."), on = btn.getAttribute("aria-checked")!=="true";
   U[k[0]][k[1]] = on; saveUser();
@@ -437,7 +438,7 @@ function doDelete(){ var phone = U.phone; U = null; saveUser();
   try{ var k = JSON.parse(localStorage.getItem("sc-known")||"{}"); delete k[phone]; localStorage.setItem("sc-known", JSON.stringify(k)); }catch(e){}
   main.innerHTML = '<section class="gone"><div class="card empty" style="padding:40px 20px"><span class="ill">'+ic("check",44)+'</span><h1 class="h2">Профилът е изтрит</h1><p class="muted" style="margin:0;max-width:30em">Изтрихме данните ви. Благодарим, че бяхте с нас. Можете да поръчвате и без профил.</p><a class="pill pill-red pill-lg" href="menu.html">'+ic("fork-knife",20)+'Към менюто</a><a class="link" href="login.html">Нов профил'+ic("caret-right",18)+'</a></div></section>';
   SC.scroller.scrollTop = 0; }
-function logout(){ U = null; saveUser(); render(); SC.scroller.scrollTop = 0; SC.toast("Излязохте от профила. До скоро!"); }
+function logout(){ U = null; saveUser(); render(); SC.scroller.scrollTop = 0; SC.toast("Излязохте. До скоро!"); }
 
 /* edit name + email */
 function editSheet(){ var s = SC.sheet({title:"Лични данни", html:
@@ -499,7 +500,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.hasAttribute("data-delno")){ main.querySelector("[data-del]").innerHTML = '<button class="pill pill-dline pill-block" type="button" data-delask>'+ic("trash",20)+'Изтрий профила</button>'; main.querySelector("[data-delask]").focus({preventScroll:true}); return; }
   if (t.hasAttribute("data-delyes")){ doDelete(); return; }
   if (t.hasAttribute("data-logout")){ logout(); return; }
-  if (t.dataset.p==="empty"){ U.orders = []; U.favs = []; U.addrs = []; U.demo = false; saveUser(); render(); SC.toast("Показваме нов клиент без поръчки"); return; }
+  if (t.dataset.p==="empty"){ U.orders = []; U.favs = []; U.addrs = []; U.demo = false; saveUser(); render(); SC.toast("Показваме нов клиент"); return; }
   if (t.dataset.p==="error"){ var ob = main.querySelector("[data-orders]"); ob.style.display = ""; ob.setAttribute("aria-busy","true"); ob.innerHTML = skel(); loadOrders(500, true); main.querySelector("#porachki").scrollIntoView({block:"start"}); return; }
   if (t.hasAttribute("data-demo")){ e.preventDefault(); U = demoUser(); saveUser(); render(); SC.scroller.scrollTop = 0; return; }
 });

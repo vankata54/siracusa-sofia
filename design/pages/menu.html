@@ -181,7 +181,7 @@
   .mcat:first-child,.qhead{padding-top:24px}
 }
 /* desktop sidebar with a sliding marker */
-.snav{position:sticky; top:104px; padding:28px 0 24px}
+.snav{position:sticky; top:104px; max-height:calc(100dvh - 112px); overflow-y:auto; scrollbar-width:none; padding:28px 0 24px}
 .snav .label{display:block; margin:0 0 10px 16px; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
 .slist{position:relative; display:grid; gap:2px}
 .slist a{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px; padding:0 16px; border-radius:999px; text-decoration:none; font-weight:700; font-size:16px; color:var(--muted); transition:color var(--t-base) var(--ease)}
@@ -305,7 +305,7 @@ main.innerHTML =
   '<section class="sec mhero" aria-labelledby="mh1">'+
     '<div class="mtop"><div class="hero-art" aria-hidden="true"><div class="pic">'+SC.art(heroArt)+'</div></div>'+
       '<h1 class="h1" id="mh1">Меню</h1>'+
-      '<p class="lead">Пица на пещ и скара на дървени въглища. Цени в евро с ДДС.</p>'+etaLine()+'</div>'+
+      '<p class="lead">Пица на пещ и скара на дървени въглища.</p>'+etaLine()+'</div>'+
     '<div class="mctl">'+
       '<div class="seg mseg" role="group" aria-label="Кое меню">'+
         '<button type="button" data-menu="main"><b>Основно</b><small>'+segSub("main")+'</small></button>'+
@@ -323,7 +323,7 @@ main.innerHTML =
   '</section>'+
   '<div class="wrap mbody">'+
     '<aside class="mside"><nav class="snav" aria-label="Категории в менюто"><span class="label">Категории</span><div class="slist" data-slist></div>'+
-      '<p class="note-auto">'+SC.ic("phone",18)+'<span>Въпрос за ястие? <a class="link" href="tel:+359894365577" style="min-height:0;display:inline">'+SC.RESTAURANT.phone+'</a></span></p></nav></aside>'+
+      '</nav></aside>'+
     '<div class="mmain"><nav class="catbar" data-catbar aria-label="Категории"><div class="catscroll" data-catscroll></div></nav><div data-results></div></div>'+
   '</div>'+
   '<section class="sec" style="padding-top:64px"><div class="proto"><p class="lbl">'+SC.ic("eye",18)+'Само в прототипа</p><p>Покажете как изглежда менюто в другите състояния.</p>'+

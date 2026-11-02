@@ -339,7 +339,7 @@ var POP = ["pitsa-s-burata-i-proshuto-krudo","svinski-rebra","pitsa-s-proshuto-k
 var popItems = POP.map(function(id){ return SC.byId[id]; }).filter(function(x){ return x && !SC.isOut(x); });
 var popBody;
 if (demo === "loading") popBody = '<div class="rail pop" aria-busy="true" aria-label="Зареждане">'+[0,1,2,3].map(function(){ return '<div class="skcard"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>'; }).join("")+'</div>';
-else if (demo === "error" || !popItems.length) popBody = '<div class="errbox" role="alert">'+ic("warning-circle",28)+'<b>Не успяхме да заредим ястията.</b><p>Проверете връзката и опитайте пак. Менюто е и на телефон '+R.phone+'.</p><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div>';
+else if (demo === "error" || !popItems.length) popBody = '<div class="errbox" role="alert">'+ic("warning-circle",28)+'<b>Не успяхме да заредим ястията.</b><p>Проверете връзката и опитайте пак. Можете да поръчате и по телефона: '+R.phone+'.</p><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div>';
 else popBody = '<div class="rail pop">'+popItems.map(function(x){ return SC.dishCard(x); }).join("")+'</div>';
 var popular =
   '<section class="sec" aria-labelledby="pop-h"><div class="sec-h"><h2 class="h2" id="pop-h">Популярни</h2><a class="link" href="menu.html">Цялото меню'+ic("caret-right",18)+'</a></div>'+
@@ -480,7 +480,8 @@ function zoneOf(v){ v = " " + v.toLowerCase() + " "; LAT.forEach(function(r){ v 
   if (/гара\s*искър/.test(v)) return SC.ZONES[5];
   if (/нпз|искър/.test(v)) return SC.ZONES[2];
   if (/дружба\s*(1|i)\b/.test(v)) return SC.ZONES[0];
-  if (/дружба/.test(v)) return SC.ZONES[1];
+  if (/дружба\s*(2|ii)\b/.test(v)) return SC.ZONES[1];
+  if (/дружба/.test(v)) return {n:"Дружба 1 и 2", free:true, eta:"около 25 - 30 мин"};
   if (/бусманци/.test(v)) return SC.ZONES[3];
   if (/горубляне/.test(v)) return SC.ZONES[4];
   if (OUT.test(v)) return "out";
@@ -488,9 +489,9 @@ function zoneOf(v){ v = " " + v.toLowerCase() + " "; LAT.forEach(function(r){ v 
 var chk = main.querySelector("[data-chk]"), inp = chk.querySelector("#addr"), err = chk.querySelector("#addr-err"), res = chk.querySelector("[data-res]");
 inp.addEventListener("input", function(){ if (!err.hidden){ err.hidden = true; inp.removeAttribute("aria-invalid"); } });
 chk.addEventListener("submit", function(e){ e.preventDefault(); var v = inp.value.trim();
-  if (v.length < 3){ err.textContent = "Напишете квартал, улица или блок, например „Дружба 2, бл. 311“."; err.hidden = false; inp.setAttribute("aria-invalid","true"); res.hidden = true; inp.focus(); return; }
+  if (v.length < 3){ err.textContent = "Напишете квартал, улица или блок, например „Дружба 1, бл. 12“."; err.hidden = false; inp.setAttribute("aria-invalid","true"); res.hidden = true; inp.focus(); return; }
   var z = zoneOf(v), when = st.delivery ? (eta.busy ? "Възможни са закъснения · около " + eta.min + " мин" : z && z.eta ? z.eta[0].toUpperCase() + z.eta.slice(1) : "") : (st.kitchen ? "Днес доставката приключи. Утре доставяме от 10:00." : "Доставяме от 10:00 до 21:00."), h;
-  if (z === "out") h = {c:"no", i:"warning-circle", t:"Не доставяме до този адрес.", p:"Можете да я вземете от ресторанта в Дружба 2.", a:'<a class="pill pill-line" href="pickup.html">'+ic("storefront",20)+'Вземи от място</a>'};
+  if (z === "out") h = {c:"no", i:"warning-circle", t:"Не доставяме до този адрес.", p:"Можете да вземете поръчката от ресторанта в Дружба 2.", a:'<a class="pill pill-line" href="pickup.html">'+ic("storefront",20)+'Вземи от място</a>'};
   else if (!z) h = {c:"q", i:"question", t:"Не разпознахме квартала.", p:"Напишете го към адреса, например „Дружба 1, бл. 12“. Безплатно доставяме в Дружба 1 и 2, НПЗ Искър и Бусманци.", a:""};
   else if (z.free) h = {c:"ok", i:"check-circle", t:z.n+": безплатна доставка", p:when, a:st.delivery ? '<a class="pill pill-red" href="menu.html">Поръчай'+ic("arrow-right",20)+'</a>' : '<a class="pill pill-line" href="pickup.html">'+ic("storefront",20)+'Вземи от място</a>'};
   else h = {c:"paid", i:"map-pin", t:z.n+": доставка по тарифа", p:'Таксата се вижда в количката. <span class="missing">[ЛИПСВА: такса в €]</span>'+(when ? '<br>'+when : ''), a:st.delivery ? '<a class="pill pill-red" href="menu.html">Поръчай'+ic("arrow-right",20)+'</a>' : ''};

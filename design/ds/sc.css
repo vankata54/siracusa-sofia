@@ -143,7 +143,7 @@ html.pv-phone .device{width:min(410px,100%); height:min(864px, calc(100dvh - 96p
 .badges.onpic .badge.hit,.badges.onpic .badge.new{background:var(--chip-dark); color:var(--on-chip-dark)}
 .chips{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 16px; margin:0 -16px; scroll-padding:0 16px}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 16px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-weight:700; font-size:15px; cursor:pointer; white-space:nowrap; transition:transform var(--t-fast) var(--ease)}
+.chip{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-weight:700; font-size:15px; cursor:pointer; white-space:nowrap; transition:transform var(--t-fast) var(--ease)}
 .chip:active{transform:scale(.96)}
 .chip[aria-pressed="true"],.chip[aria-current="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
 .chip .n{font-variant-numeric:tabular-nums; opacity:.7; font-weight:600}
@@ -208,7 +208,6 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
   .dnav{display:flex; gap:2px; margin:0 auto}
   .dnav a{min-height:44px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; font-weight:700; text-decoration:none; font-size:15px}
   .dnav a[aria-current="page"]{background:var(--surface-2)}
-  .hb.more{display:none}
   .row2{top:90px; margin:10px max(24px, calc((100% - 1240px)/2)) 0}
   .status{flex:0 1 auto}
 }
@@ -276,7 +275,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .drow .meta{display:flex; gap:10px; align-items:baseline; font-size:15px}
 
 /* ---------- misc components ---------- */
-.toast{position:absolute; left:50%; top:16px; z-index:90; transform:translate(-50%,-140%); opacity:0; display:flex; align-items:center; gap:12px; min-height:52px; padding:0 8px 0 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:calc(100% - 24px)}
+.toast{position:absolute; left:50%; top:148px; z-index:90; transform:translate(-50%,-140%); opacity:0; display:flex; align-items:center; gap:12px; min-height:52px; padding:0 8px 0 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:calc(100% - 24px)}
 .toast.on{transform:translate(-50%,0); opacity:1}
 .toast button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:rgba(255,255,255,.16); color:inherit; font-weight:800; cursor:pointer}
 .empty{display:grid; justify-items:center; gap:12px; text-align:center; padding:32px 16px}

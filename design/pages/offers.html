@@ -50,7 +50,8 @@
 .feat-soon .ic{margin-top:2px}
 .go.dark{background:var(--on-ember); color:var(--on-chip-dark); margin-top:4px}
 .go.dark .knob{background:var(--ember); color:var(--on-ember)}
-.of-after{margin:12px 4px 0}
+.of-after{margin:14px 4px 0; font-size:16px}
+.of-after .ic{margin-top:3px}
 
 /* ---------- coupons ---------- */
 .of-sum{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:14px; font-weight:700; color:var(--muted)}
@@ -97,7 +98,8 @@
 .of-err p{margin:0; max-width:34ch}
 
 /* ---------- loyalty + voucher ---------- */
-.of-split{display:grid; gap:28px}
+.of-split{display:grid; grid-template-columns:minmax(0,1fr); gap:28px}
+.of-split > *{min-width:0}
 .of-stage{position:relative; display:grid; place-items:center; padding:30px 18px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); overflow:hidden; scroll-margin-top:150px}
 .of-copy .lead{margin-top:10px}
 .steps{list-style:none; margin:22px 0 0; padding:0; display:grid; gap:16px; counter-reset:st}
@@ -105,11 +107,11 @@
 .steps li::before{content:counter(st); width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--ember-soft); color:var(--ink); font-weight:800; font-size:17px; box-shadow:inset 0 0 0 1.5px var(--ember)}
 .steps b{display:block; font-size:17px; letter-spacing:-.01em}
 .steps .d{display:block; color:var(--muted)}
-.of-copy .pill{margin-top:24px}
+.of-copy .pill{margin-top:24px; white-space:normal; text-align:center; line-height:1.25; padding-top:10px; padding-bottom:10px}
 .of-fine{margin:14px 0 0; font-size:14px; color:var(--muted)}
 
 /* loyalty card */
-.lc{position:relative; width:100%; max-width:400px; padding:20px 20px 18px; border-radius:24px; background:radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--ember) 26%, transparent), transparent 58%), var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow-lg); transform:rotate(-2.5deg)}
+.lc{position:relative; width:100%; max-width:400px; padding:20px 20px 18px; border-radius:24px; background:radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--ember) 26%, transparent), transparent 58%), var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow-lg), inset 0 0 0 1px color-mix(in srgb, var(--on-chip-dark) 10%, transparent); transform:rotate(-2.5deg)}
 .lc-h{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
 .lc-h .word{font-size:22px}
 .lc-k{font-size:14px; font-weight:700; opacity:.72}
@@ -402,12 +404,12 @@ SC.reveal();
 setInterval(function(){ if (view==="ok") fill(false); }, 30000);
 
 /* ---------- anchors: #lunch, #birthday ... (aliases for SC.offers ids) ---------- */
-var ALIAS = {lunch30:"lunch", tomorrow:"lunch", "gratska-vecher":"greek", profile:"signup", loyalty:"loyalty", stamps:"loyalty", gift:"voucher"};
+var ALIAS = {lunch30:"lunch", tomorrow:"lunch", "gratska-vecher":"greek", profile:"signup", stamps:"loyalty", gift:"voucher"};
 function goTo(id, smooth){ id = ALIAS[id] || id; var el = main.querySelector("#"+CSS.escape(id)); if (!el) return false;
   el.scrollIntoView({behavior:(smooth && !SC.reduce) ? "smooth" : "auto", block:"start"});
   if (el.classList.contains("cp")){ el.classList.remove("hl"); void el.offsetWidth; el.classList.add("hl"); }
   else if (el.classList.contains("rv")) el.classList.add("in");
-  var f = el.querySelector("h3, .lc, .vc"); return true; }
+  return true; }
 function fromHash(smooth){ var h = decodeURIComponent(location.hash.slice(1)); if (h) setTimeout(function(){ goTo(h, smooth); }, 60); }
 fromHash(false);
 window.addEventListener("hashchange", function(){ fromHash(true); });
@@ -424,7 +426,7 @@ function send(form, btn, label, done){
   var box = form.querySelector("[data-alert]"); box.innerHTML = "";
   busy(btn, true, label);
   setTimeout(function(){
-    if (net.offline){ busy(btn, false, "Опитай пак · "+label); box.innerHTML = offlineBox("Запитването ви е запазено - опитайте пак."); return; }
+    if (net.offline){ busy(btn, false, "Опитай пак · "+label); box.innerHTML = offlineBox("Запитването ви е запазено - опитайте пак."); box.scrollIntoView({block:"nearest", behavior:SC.reduce?"auto":"smooth"}); return; }
     done();
   }, SC.reduce ? 200 : 800);
 }
@@ -467,7 +469,7 @@ function voucherSheet(){
 function birthdaySheet(){
   var days = '<option value="">Ден</option>'; for (var i=1;i<=31;i++) days += '<option value="'+i+'">'+i+'</option>';
   var mons = '<option value="">Месец</option>'+SC.MONTHS.map(function(m,i){ return '<option value="'+i+'">'+m+'</option>'; }).join("");
-  var s = SC.sheet({title:"Подарък за рождения ден", html:
+  var s = SC.sheet({title:"Рожден ден при нас", html:
     '<form class="of-form" novalidate>'+
     '<p class="intro">Седмица преди рождения ви ден ще ви изпратим имейл с подаръка: -10% от сметката или малка торта, когато празнувате при нас.</p>'+
     '<fieldset style="border:0;margin:0;padding:0;display:grid;gap:6px"><legend class="label" style="padding:0;margin-bottom:6px">Рожден ден</legend>'+

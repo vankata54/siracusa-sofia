@@ -30,14 +30,15 @@
 .steps-t{margin:0; font-size:14px; font-weight:700; color:var(--muted)}
 .steps-t b{color:var(--ink)}
 .steps ol{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
-.steps li > *{display:grid; gap:8px; align-content:start; width:100%; min-height:48px; padding:0; border:0; background:none; text-align:left; font-size:14px; font-weight:700; color:var(--muted); line-height:1.25}
-.steps button{cursor:pointer}
+.steps li{position:relative; display:grid; gap:8px; align-content:start; min-height:44px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.25}
+.steps .sl{display:block; padding:0; border:0; background:none; font:inherit; color:inherit; text-align:left}
+.steps button.sl{cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px; text-decoration-color:var(--line-strong)}
+.steps button.sl::after{content:""; position:absolute; inset:-6px 0 -4px}
 .steps .bar{position:relative; display:block; height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden}
 .steps .bar::after{content:""; position:absolute; inset:0; background:var(--red); border-radius:3px; transform:scaleX(0); transform-origin:left}
-.steps .done .bar::after{transform:none}
-.steps .on .bar::after{transform:none; animation:rFill 520ms var(--ease) both}
-.steps .on > *{color:var(--ink)}
-.steps .done button span:last-child{text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px; text-decoration-color:var(--line-strong)}
+.steps .done .bar::after, .steps .on .bar::after{transform:none}
+.steps.anim .on .bar::after{animation:rFill 520ms var(--ease) both}
+.steps .on{color:var(--ink)}
 @keyframes rFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 /* ---------- step 1 ---------- */
@@ -88,7 +89,7 @@
 
 /* ---------- step 2 ---------- */
 .recap{display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:56px; padding:4px 4px 4px 16px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-weight:700; margin-bottom:16px}
-.recap span{min-width:0; display:flex; align-items:center; gap:8px; font-size:15px}
+.recap span{min-width:0; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .recap .ic{color:var(--muted)}
 .recap .pill{min-height:48px; padding:0 16px; flex:none}
 .zseg button{flex-direction:row; gap:10px; min-height:60px; text-align:left}
@@ -211,6 +212,7 @@
 /* ---------- action bar (phone) + summary (desktop) ---------- */
 .rabar .back{flex:none; padding:0 16px 0 12px; gap:6px; min-height:56px}
 .rabar[hidden]{display:none}
+.device.rfocus .nav{display:none}
 .cta{justify-content:space-between; gap:10px; min-height:56px; padding:0 6px 0 22px; text-align:left}
 .cta.solo{padding-right:6px}
 .cta .ct{display:grid; gap:1px; min-width:0}
@@ -323,7 +325,7 @@
   .rabar{display:none}
   .recap, .rc{display:none}
   .mapbox{max-width:580px}
-  .fp{max-width:540px}
+  .fp{max-width:480px}
   .done{padding-top:56px}
   .done-in{max-width:980px; margin:0 auto}
   .infog{grid-template-columns:repeat(4,1fr)}
@@ -453,10 +455,10 @@ function isBlocked(p){ return normPhone(p)==="0888000000"; }
 
 /* ---------- pieces ---------- */
 var STEP_N = ["Кога и колко","Маса","Данни"];
-function stepper(){ return '<nav class="steps" aria-label="Стъпки на резервацията"><p class="steps-t"><b>Стъпка '+st.step+' от 3</b> · '+STEP_N[st.step-1]+'</p><ol>'+
+function stepper(){ return '<nav class="steps'+(st.anim?" anim":"")+'" aria-label="Стъпки на резервацията"><p class="steps-t"><b>Стъпка '+st.step+' от 3</b> · '+STEP_N[st.step-1]+'</p><ol>'+
   STEP_N.map(function(n,i){ var k = i+1;
-    if (k<st.step) return '<li class="done"><button type="button" data-go="'+k+'" data-fk="st'+k+'"><span class="bar"></span><span>'+n+'</span></button></li>';
-    return '<li class="'+(k===st.step?"on":"")+'"'+(k===st.step?' aria-current="step"':'')+'><span><span class="bar"></span><span>'+n+'</span></span></li>'; }).join("")+'</ol></nav>'; }
+    if (k<st.step) return '<li class="done"><span class="bar"></span><button class="sl" type="button" data-go="'+k+'" data-fk="st'+k+'" aria-label="Назад към стъпка '+k+': '+n+'">'+n+'</button></li>';
+    return '<li class="'+(k===st.step?"on":"")+'"'+(k===st.step?' aria-current="step"':'')+'><span class="bar"></span><span class="sl">'+n+'</span></li>'; }).join("")+'</ol></nav>'; }
 
 function hero(){ return '<section class="sec rhero"><h1 class="h1">Резервирай маса</h1><p class="lead">Изберете ден, час и маса в салона или в отопляваната градина. Без депозит, потвърждение по SMS или Viber.</p>'+
   '<ul class="facts"><li>'+ic("wallet",20)+'Без депозит</li><li>'+ic("chat-circle-dots",20)+'Потвърждение по SMS или Viber</li><li>'+ic("bell",20)+'Напомняне ден преди и 3 часа преди</li><li>'+ic("clock",20)+'Промяна до 2 ч преди</li></ul></section>'; }
@@ -540,7 +542,7 @@ function tList(z){ var T = zoneTables(z).map(function(t){ return {t:t, s:tState(
     return '<li class="trow '+s+'"><span class="tno'+(s==="sel"?" on":"")+'" aria-hidden="true">'+t.n+'</span><span><b>Маса '+t.n+' · '+t.seats+' места</b><span class="ft">'+(fs.length?cap(fs.join(" · ")):"Без особености")+'</span></span>'+right+'</li>'; }
   return '<div class="tlist">'+(free.length?'<h3>Свободни за '+ppl(st.n)+'</h3><ul class="tlist">'+free.map(row).join("")+'</ul>':'')+(rest.length?'<h3>Заети или неподходящи</h3><ul class="tlist">'+rest.map(row).join("")+'</ul>':'')+'</div>'; }
 
-function recap(){ return '<div class="recap"><span>'+ic("calendar-blank",20)+fShort(st.date)+' · '+hm(st.slot)+' · '+ppl(st.n)+'</span><button class="pill pill-soft" type="button" data-go="1" data-fk="rc1">Промени</button></div>'; }
+function recap(){ return '<div class="recap"><span>'+fShort(st.date)+' · '+hm(st.slot)+' · '+ppl(st.n)+'</span><button class="pill pill-soft" type="button" data-go="1" data-fk="rc1">Промени</button></div>'; }
 function selCard(){ var s = selInfo(); if (!s) return "";
   var body = '<div class="selrow"><span class="tno on" aria-hidden="true">'+(s.joined?ic("users-three",24):s.t.n)+'</span><div><b>'+s.label+' · '+s.seats+' места · '+zoneName(s.zone)+'</b><p>'+(s.joined?"Ще подредим масите преди да дойдете.":(featShort(s.t).length?cap(featShort(s.t).join(" · ")):"Друга маса? Докоснете я на картата."))+'</p></div></div>';
   if (st.expired) body += '<div class="alert warn" role="alert">'+ic("timer",22)+'<div><b>Задържането изтече</b><p>'+s.label+' още е свободна. Задръжте я пак, за да не я вземе друг.</p><div class="acts"><button class="pill pill-red" type="button" data-rehold data-fk="rh">'+ic("timer",20)+'Задръж я пак за 10 мин</button></div></div></div>';
@@ -684,7 +686,7 @@ function render(){ var a = document.activeElement, fk = a && a.getAttribute && a
   if (fk){ var el = document.querySelector('[data-fk="'+fk+'"]'); if (el){ try{ el.focus({preventScroll:true}); if (selS!=null && el.setSelectionRange) el.setSelectionRange(selS, selS); }catch(e){} } } }
 function toTop(focusHead){ var tgt = st.view==="flow" ? document.getElementById("flow") : main; var sc = SC.scroller;
   var y = tgt.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - (SC.device.clientWidth>=900 ? 170 : 140);
-  sc.scrollTo({top:Math.max(0, st.view==="flow" ? y : 0), behavior:SC.reduce?"auto":"smooth"});
+  sc.scrollTo({top:Math.max(0, st.view==="flow" ? y : 0), behavior:"auto"});
   if (focusHead){ var hd = main.querySelector("[data-h]"); hd && hd.focus({preventScroll:true}); } }
 function scrollToEl(el){ if (!el) return; var sc = SC.scroller; var y = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 150; sc.scrollTo({top:y, behavior:SC.reduce?"auto":"smooth"}); }
 

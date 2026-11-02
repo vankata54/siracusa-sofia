@@ -37,7 +37,7 @@
 @keyframes calIn{from{transform:perspective(500px) rotateX(-75deg); opacity:0} to{transform:none; opacity:1}}
 .when{min-width:0}
 .when .k{display:block; font-size:14px; font-weight:700; color:var(--muted)}
-.when .v{display:flex; align-items:center; gap:10px; font-size:40px; font-weight:800; letter-spacing:-.05em; line-height:1.05; font-variant-numeric:tabular-nums; margin-top:2px}
+.when .v{display:flex; align-items:center; gap:10px; font-size:clamp(30px, 10cqi, 40px); font-weight:800; letter-spacing:-.05em; line-height:1.05; font-variant-numeric:tabular-nums; margin-top:2px}
 .when .s{display:block; font-size:16px; font-weight:600; margin-top:6px; line-height:1.35}
 .live{position:relative; width:12px; height:12px; border-radius:50%; background:var(--ember); flex:none}
 .live::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ember); animation:livePulse 1.6s var(--ease) infinite}
@@ -212,9 +212,10 @@ function sofiaOffset(d){ var y = d.getFullYear();
 function model(ev, st){
   var e = {}, k; for (k in ev) e[k] = ev[k];
   var today = mid(new Date()), m = SC.minutes();
-  if (st === "dnes"){ e.date = today; m = 16*60 + 30; }
-  if (st === "sega"){ e.date = today; m = 20*60 + 15; }
-  if (st === "prikljuchi"){ e.date = today; m = 23*60 + 20; }
+  /* demo: pretend it is already the evening's day, at a fixed time */
+  if (st === "dnes"){ today = mid(e.date); m = 16*60 + 30; }
+  if (st === "sega"){ today = mid(e.date); m = 20*60 + 15; }
+  if (st === "prikljuchi"){ today = mid(e.date); m = 23*60 + 20; }
   if (st === "mesta") e.seatsLeft = 6;
   if (st === "pulno") e.seatsLeft = 0;
   e.start = toMin(e.time);
@@ -248,8 +249,8 @@ function whenHTML(e){ var k, v, s, extra = "";
   if (e.phase === "soon"){ k = "До вечерта остават"; v = SC.plural(e.days, "ден", "дни"); s = "Начало в " + e.time; }
   else if (e.phase === "tomorrow"){ k = "Вечерта е"; v = "Утре"; s = "Начало в " + e.time; }
   else if (e.phase === "today"){ var h = Math.floor(e.minsLeft/60), mm = e.minsLeft % 60;
-    k = "Вечерта е"; v = "Днес"; s = "Започва в " + e.time + (e.minsLeft > 0 ? ", след " + (h ? h + " ч" : "") + (h && mm ? " " : "") + (mm ? mm + " мин" : "") : ""); }
-  else if (e.phase === "live"){ k = "В момента"; v = '<span class="live" aria-hidden="true"></span>Тече'; s = "Ресторантът работи до " + R.close; }
+    k = "Започва след " + (h ? h + "&nbsp;ч" : "") + (h && mm ? " " : "") + (mm ? mm + "&nbsp;мин" : ""); v = "Днес"; s = "Начало в " + e.time; }
+  else if (e.phase === "live"){ k = "В момента"; v = '<span class="live" aria-hidden="true"></span>Тече'; s = "Работим до " + R.close; }
   else { k = "Тази вечер"; v = "Приключи"; s = "Следващата: " + e.next.getDate() + " " + SC.MONTHS[e.next.getMonth()]; }
   if (e.seatsLeft != null && e.phase !== "over") extra = '<span class="seats">'+ic("users-three",18)+(e.seatsLeft > 0 ? "Остават " + SC.plural(e.seatsLeft, "място", "места") : "Местата свършиха")+'</span>';
   return '<div class="when" role="group" aria-label="Кога"><span class="k">'+k+'</span><span class="v">'+v+'</span><span class="s">'+s+'</span>'+extra+'</div>'; }
@@ -260,15 +261,15 @@ function slot(icon, label, cls){ return '<div class="slot '+(cls||"")+'" role="i
 function ticketHTML(e){ var c = cta(e);
   var offer = (e.phase === "soon" && !e.full) ? '<span class="lbl">'+ic("seal-percent",18)+'-5% при ранна резервация</span>' : "";
   var note = e.offline ? '<div class="ev-note" role="status">'+ic("warning-circle",20)+'<span>Няма връзка с интернет. Обадете ни се на <b>'+R.phone+'</b> и ще ви запазим място.</span></div>'
-    : e.phase === "live" ? '<div class="ev-note">'+ic("info",20)+'<span>Вечерта вече тече. Обадете се и ще ви кажем има ли свободна маса.</span></div>'
+    : e.phase === "live" ? '<div class="ev-note">'+ic("info",20)+'<span>Вечерта тече. Обадете се и ще ви кажем дали има свободна маса.</span></div>'
     : e.full ? '<div class="ev-note">'+ic("info",20)+'<span>Всички места са заети. Запишете се и ще ви се обадим, ако се освободи маса.</span></div>' : "";
-  var cal2 = e.phase === "over" ? "" : '<button class="pill pill-line pill-block" type="button" data-cal>'+ic("calendar-check",20)+'Добави в календара</button>';
+  var cal2 = (e.phase === "over" || e.phase === "live" || e.offline) ? "" : '<button class="pill pill-line pill-block" type="button" data-cal>'+ic("calendar-check",20)+'Добави в календара</button>';
   return '<div class="shell ticket"><div class="core">'+
     '<span class="tk-band">'+meander("mk-band", 34)+offer+'</span>'+
     '<div class="tk-main">'+cal(e.date)+whenHTML(e)+'</div>'+
     '<div class="tk-perf" aria-hidden="true"><i></i><i></i></div>'+
-    '<div class="tk-stub">'+note+
-      '<a class="pill pill-red go" href="'+c.href+'" data-hero-cta>'+c.t+'<span class="knob">'+ic(c.ic,22)+'</span></a>'+cal2+
+    '<div class="tk-stub">'+
+      '<a class="pill pill-red go" href="'+c.href+'" data-hero-cta>'+c.t+'<span class="knob">'+ic(c.ic,22)+'</span></a>'+note+cal2+
     '</div></div></div>'; }
 
 function factsHTML(e){ var rows = [
@@ -323,7 +324,7 @@ function invalidHTML(){
 function errorHTML(id){
   return '<section class="sec ev-state"><div class="empty" role="alert"><span class="ill err">'+ic("warning-circle",44)+'</span>'+
     '<h1 class="h2">Не успяхме да заредим събитието</h1><p class="lead">Проверете връзката с интернет и опитайте пак. Ако не стане, обадете ни се.</p>'+
-    '<div class="acts"><button class="pill pill-red pill-lg" type="button" data-retry="'+esc(id)+'">'+ic("arrow-right",20)+'Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></section>'; }
+    '<div class="acts"><button class="pill pill-red pill-lg" type="button" data-retry="'+esc(id)+'">Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></section>'; }
 function loadingHTML(){
   return '<section class="sec ev-hero" aria-busy="true"><span class="vh" role="status">Зареждаме събитието</span>'+
     '<div class="ev-head"><div class="skel" style="width:150px;height:36px;border-radius:18px;margin-bottom:18px"></div><div class="skel" style="width:78%;height:46px;border-radius:14px"></div><div class="skel sk-line" style="width:92%;margin-top:16px"></div><div class="skel sk-line" style="width:64%;margin-top:10px"></div></div>'+
