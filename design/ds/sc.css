@@ -275,7 +275,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .drow .meta{display:flex; gap:10px; align-items:baseline; font-size:15px}
 
 /* ---------- misc components ---------- */
-.toast{position:absolute; left:50%; top:148px; z-index:90; transform:translate(-50%,-140%); opacity:0; display:flex; align-items:center; gap:12px; min-height:52px; padding:0 8px 0 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:calc(100% - 24px); white-space:nowrap}
+.toast{position:absolute; left:50%; top:148px; z-index:90; transform:translate(-50%,-140%); opacity:0; display:flex; align-items:center; gap:12px; min-height:52px; padding:0 8px 0 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:calc(100% - 24px); width:max-content; white-space:nowrap}
 .toast.on{transform:translate(-50%,0); opacity:1}
 .toast button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:rgba(255,255,255,.16); color:inherit; font-weight:800; cursor:pointer}
 .empty{display:grid; justify-items:center; gap:12px; text-align:center; padding:32px 16px}

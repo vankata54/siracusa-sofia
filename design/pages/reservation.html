@@ -235,7 +235,7 @@
 .trust li{display:flex; gap:10px; align-items:center}
 
 /* ---------- success / manage ---------- */
-.done{padding-top:24px}
+.rdone{padding-top:24px}
 .dhero{display:grid; justify-items:center; text-align:center; gap:10px}
 .okm{position:relative; width:96px; height:96px; margin-bottom:8px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface); animation:rPop 560ms var(--ease) both}
 .okm::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:rRing 1100ms 200ms var(--ease) both}
@@ -324,9 +324,8 @@
   .aside{display:block; position:sticky; top:164px}
   .rabar{display:none}
   .recap, .rc{display:none}
-  .mapbox{max-width:580px}
-  .fp{max-width:480px}
-  .done{padding-top:56px}
+  .mapbox{max-width:500px}
+  .rdone{padding-top:56px}
   .done-in{max-width:980px; margin:0 auto}
   .infog{grid-template-columns:repeat(4,1fr)}
   .ic-card{grid-template-columns:1fr; gap:12px}
@@ -637,7 +636,7 @@ function icsFile(b){ var d = ymd(b.date).replace(/-/g,""), s = d+"T"+pad(Math.fl
     "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:Резервация в Siracusa","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
   var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type:"text/calendar"})); a.download = "siracusa-rezervatsia.ics"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function done(){ var b = st.booking, ev = isEvent(b.date);
-  return '<section class="sec done"><div class="done-in"><div class="dhero"><div class="okm" aria-hidden="true">'+ic("check",48)+'</div><h1 class="h1" tabindex="-1" data-h>'+(b.changed?"Резервацията е променена":"Масата е запазена")+'</h1><p class="lead">Очакваме ви '+fWhen(b.date)+', в '+hm(b.slot)+'.</p></div>'+
+  return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm" aria-hidden="true">'+ic("check",48)+'</div><h1 class="h1" tabindex="-1" data-h>'+(b.changed?"Резервацията е променена":"Масата е запазена")+'</h1><p class="lead">Очакваме ви '+fWhen(b.date)+', в '+hm(b.slot)+'.</p></div>'+
     '<div class="dgrid"><div class="shell dcard"><div class="core">'+kvRows(b)+'</div></div><div class="dside"><p class="sms">'+ic("chat-circle-dots",22)+'<span>Потвърждението идва по SMS или Viber на '+esc(b.phone)+'.</span></p>'+
     '<button class="pill pill-red pill-lg pill-block" type="button" data-ics data-fk="ics">'+ic("calendar-check",22)+'Добави в календара</button><a class="link gcal" href="'+gcalUrl(b)+'" target="_blank" rel="noopener">или в Google Календар'+ic("arrow-up-right",18)+'</a>'+
     '<div class="two"><a class="pill pill-line" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("map-pin",20)+'Маршрут</a><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a></div></div></div>'+
@@ -652,9 +651,9 @@ function openManage(late){ var b = st.booking;
   if (late){ var m = Math.ceil((SC.minutes()+25)/30)*30; if (m>1290){ m = 1170; b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone, fake:80}; } else b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone}; }
   st.manage = {b:b, late:!!late, cancelled:false}; st.view = "manage"; st.confirmCancel = false; st.anim = true; }
 function manage(){ var M = st.manage, b = M.b, left = M.late ? (b.fake || (b.slot - SC.minutes())) : null, lim = b.slot>=EVENING ? 120 : 60;
-  if (M.cancelled) return '<section class="sec done"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">'+ic("calendar-blank",44)+'</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.</p>'+
+  if (M.cancelled) return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">'+ic("calendar-blank",44)+'</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.</p>'+
     '<button class="pill pill-red pill-lg" type="button" data-new data-fk="nw" style="margin-top:12px">'+ic("calendar-blank",22)+'Резервирай нова маса</button></div></div></section>';
-  var h = '<section class="sec done"><div class="done-in" style="max-width:640px"><p class="steps-t" style="margin:0 0 6px">От линка в SMS</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>'+
+  var h = '<section class="sec rdone"><div class="done-in" style="max-width:640px"><p class="steps-t" style="margin:0 0 6px">От линка в SMS</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>'+
     '<div class="shell dcard" style="margin-top:20px"><div class="core">'+kvRows(b)+'</div></div><div style="margin-top:16px">';
   if (M.late) h += '<div class="alert warn">'+ic("lock",22)+'<div><b>Онлайн промяна вече не е възможна</b><p>До резервацията остават '+(left>=60?Math.floor(left/60)+" ч "+(left%60?left%60+" мин":""):left+" мин")+'. Онлайн промяна и отказ има до '+(lim===120?"2 часа преди резервация след 17:00":"1 час преди резервация през деня")+', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></div>';
   else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><b id="cfh">Да откажем ли резервацията за '+fShort(b.date)+', '+hm(b.slot)+'?</b><p>Масата ще се освободи за други гости.</p><div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy">'+ic("x",20)+'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
@@ -686,7 +685,7 @@ function render(){ var a = document.activeElement, fk = a && a.getAttribute && a
   if (fk){ var el = document.querySelector('[data-fk="'+fk+'"]'); if (el){ try{ el.focus({preventScroll:true}); if (selS!=null && el.setSelectionRange) el.setSelectionRange(selS, selS); }catch(e){} } } }
 function toTop(focusHead){ var tgt = st.view==="flow" ? document.getElementById("flow") : main; var sc = SC.scroller;
   var y = tgt.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - (SC.device.clientWidth>=900 ? 170 : 140);
-  sc.scrollTo({top:Math.max(0, st.view==="flow" ? y : 0), behavior:"auto"});
+  sc.scrollTo({top:Math.max(0, st.view==="flow" && SC.device.clientWidth<900 ? y : 0), behavior:"auto"});
   if (focusHead){ var hd = main.querySelector("[data-h]"); hd && hd.focus({preventScroll:true}); } }
 function scrollToEl(el){ if (!el) return; var sc = SC.scroller; var y = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 150; sc.scrollTo({top:y, behavior:SC.reduce?"auto":"smooth"}); }
 

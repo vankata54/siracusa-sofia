@@ -207,6 +207,9 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 /* ---------- step 3 ---------- */
 .form{display:grid; gap:18px}
 .field .err{display:flex; gap:6px; align-items:flex-start; margin:0}
+.field .err[hidden]{display:none}
+/* local fix: the shared toast shrinks to half the width because of left:50% (request to the lead) */
+.toast{width:max-content}
 .field .err .ic{margin-top:1px}
 .opt-tag{font-weight:600; color:var(--muted); font-size:14px; margin-left:4px}
 .recap{padding:6px 18px}
@@ -304,7 +307,8 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 <script>
 (function(){
 "use strict";
-var R = SC.RESTAURANT, esc = SC.esc, fmt = SC.fmt, ic = SC.ic;
+var R = Object.assign({}, SC.RESTAURANT), esc = SC.esc, fmt = SC.fmt, ic = SC.ic;
+R.phone = R.phone.replace(/ /g, "\u00a0"); /* keep the number on one line */
 var main = SC.mount({page:"cart", nav:null, back:{href:"menu.html", label:"Меню"}, title:"Количка", docTitle:"Количка и поръчка", footer:false, ai:false, bottomNav:false, actionBar:true});
 var dev = SC.device, scroller = SC.scroller;
 var bar = document.createElement("div"); bar.className = "abar nonav ck-bar"; bar.hidden = true; SC.ov.appendChild(bar);
@@ -391,7 +395,7 @@ function stepper(n, grow){
 function note(kind, icon, title, text, acts){ return '<div class="note '+kind+'" role="'+(kind==="bad"?"alert":"status")+'">'+ic(icon,24)+'<div><b>'+title+'</b>'+(text?'<p>'+text+'</p>':'')+'</div>'+(acts?'<div class="acts">'+acts+'</div>':'')+'</div>'; }
 
 function topNotes(I, step){ var h = "";
-  if (P.offline) h += note("warn","warning-circle","Няма връзка с интернет","Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
+  if (P.offline && !(step===3 && P.err==="offline")) h += note("warn","warning-circle","Няма връзка с интернет","Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
   if (I.closed) h += I.m < 600
     ? note("info","clock","Кухнята отваря в 10:00","Можете да поръчате още сега за днес. Изберете час и ще я приготвим точно тогава.")
     : note("info","clock","Кухнята приема поръчки до 22:30","Поръчай за утре? Изберете час и ще я приготвим точно тогава.");
@@ -555,7 +559,7 @@ function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
   var h = stepper(3,true)+'<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">Без регистрация. Обаждаме се само ако нещо не е ясно.</p>'+
     '<div style="margin-top:22px" id="topnotes">'+topNotes(I,3)+
     (P.err==="offline" ? note("bad","warning-circle","Няма връзка. Поръчката ви е запазена - опитайте пак.","Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: "+R.phone+".",'<a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>') : '')+
-    (P.err==="form" ? note("bad","warning-circle","Остава малко","Попълнете полетата, отбелязани по-долу.") : '')+'</div>'+
+    (P.err==="form" ? note("bad","warning-circle","Остава малко","Попълнете отбелязаните полета.") : '')+'</div>'+
     '<section class="blk"><div class="card recap"><div class="kv">'+where+'<button class="link" type="button" data-act="go" data-n="2">Промени</button></div>'+
     '<div class="kv"><span><small>Поръчка</small><b>'+dishWord(I.n)+' · '+fmt(I.total)+(I.feeUnknown?' + доставка':'')+'</b></span><button class="link" type="button" data-act="go" data-n="1">Промени</button></div></div></section>'+
     '<section class="blk" aria-labelledby="dh"><div class="blk-h"><h2 class="h3" id="dh">За връзка</h2></div><div class="form">'+
