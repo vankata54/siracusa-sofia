@@ -165,6 +165,7 @@
 
 @container app (max-width:370px){
   .tl{padding-left:2px; padding-right:2px; gap:4px}
+  .tl.n5 .nm{max-width:min-content}
   .enum b{font-size:70px}
   .viz{width:176px; height:176px}
 }
@@ -300,7 +301,7 @@ function heroHTML(){ var a = stages(), c = cur(), T = times(), D = isD(), done =
   var dish = mainDish();
   var cls = "shell hero"+(c.id==="cook" && !done ? " is-cook" : "")+(done ? " is-done" : "")+(S.late && !done ? " is-late" : "")+(S.offline ? " is-off" : "")+(S.first ? " enter" : "");
   var modeChip = D ? '<span class="mode">'+ic("moped",20)+'Доставка</span>' : '<span class="mode">'+ic("storefront",20)+'Вземане от място</span>';
-  var tl = '<div class="tlw"><span class="track" aria-hidden="true"><span class="fill" data-fill></span></span><ol class="tl" aria-label="Етапи на поръчката">'+
+  var tl = '<div class="tlw"><span class="track" aria-hidden="true"><span class="fill" data-fill></span></span><ol class="tl n'+a.length+'" aria-label="Етапи на поръчката">'+
     a.map(function(s, i){ var st = done || i < S.k ? "done" : i === S.k ? "now" : "next";
       var tm = st==="done" ? clock(s.id==="done" ? T.at("done") : T.at(s.id)) : st==="now" ? "Сега" : "";
       return '<li class="'+st+'"'+(st==="now"?' aria-current="step"':'')+'><span class="dot">'+(st==="done"?ic("check",16):"")+'</span><span class="nm">'+s.nm+'</span><span class="tm">'+(tm||"&nbsp;")+'</span><span class="vh">'+(st==="done"?"готово":st==="now"?"сега":"предстои")+'</span></li>'; }).join("")+'</ol></div>';
