@@ -12,24 +12,26 @@
 /* event.html - one event (hand-off 6.8). Page-only styles, tokens from sc.css only. */
 
 /* ---------- hero ---------- */
-.ev-hero{padding-top:22px; display:grid; gap:22px; grid-template-areas:"head" "ticket" "facts"}
+.ev-hero{padding-top:18px; display:grid; gap:22px; grid-template-areas:"head" "ticket" "facts"}
 .ev-head{grid-area:head; min-width:0}
 .ev-ticket{grid-area:ticket; min-width:0}
 .ev-facts{grid-area:facts; min-width:0}
-.ev-eyebrow{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px}
+.ev-eyebrow{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
 .ev-cat{display:inline-flex; align-items:center; gap:7px; min-height:36px; padding:0 14px 0 11px; border-radius:var(--r-pill); background:var(--chip-dark); color:var(--on-chip-dark); font-size:14px; font-weight:700; white-space:nowrap; box-shadow:inset 0 0 0 1px var(--line)}
 .ev-cat .ic{color:var(--ember)}
 .ev-share{padding:0 18px 0 16px}
-.ev-title{font-size:48px; line-height:.98; letter-spacing:-.055em; font-weight:800; margin:0; text-wrap:balance}
-.ev-lead{margin-top:14px; max-width:36ch; font-size:18px; line-height:1.45}
+.ev-title{font-size:46px; line-height:.98; letter-spacing:-.055em; font-weight:800; margin:0; text-wrap:balance}
+.ev-lead{margin-top:12px; max-width:40ch; font-size:17px; line-height:1.45}
 
 /* ---------- the ticket ---------- */
 .ticket .core{position:relative}
-.tk-band{display:block; height:30px; background:var(--ember); color:var(--on-ember)}
-.tk-band svg{display:block; width:100%; height:100%}
-.tk-main{display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center; padding:20px 18px 16px}
+.tk-band{position:relative; display:block; height:34px; background:var(--ember); color:var(--on-ember)}
+.tk-band > svg{display:block; width:100%; height:100%}
+.tk-band .lbl{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 12px 0 9px; border-radius:var(--r-pill); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 0 0 3px var(--ember); font-size:14px; font-weight:800; white-space:nowrap; letter-spacing:-.01em}
+.tk-band .lbl .ic{color:var(--ember)}
+.tk-main{display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center; padding:18px 18px 12px}
 .cal{width:104px; border-radius:20px; overflow:hidden; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line); transform-origin:50% 0; animation:calIn 900ms var(--ease) 150ms both}
-.cal .m{display:block; padding:7px 0 6px; background:var(--ink); color:var(--bg); font-size:13px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; line-height:1.2}
+.cal .m{display:block; padding:7px 0 6px; background:var(--ink); color:var(--bg); font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; line-height:1.2}
 .cal .d{display:block; padding:10px 0 0; font-size:54px; font-weight:800; letter-spacing:-.06em; line-height:1; font-variant-numeric:tabular-nums}
 .cal .w{display:block; padding:4px 0 12px; font-size:14px; font-weight:700; color:var(--muted)}
 @keyframes calIn{from{transform:perspective(500px) rotateX(-75deg); opacity:0} to{transform:none; opacity:1}}
@@ -46,8 +48,6 @@
 .tk-perf i{position:absolute; top:0; width:24px; height:24px; border-radius:50%; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
 .tk-perf i:first-child{left:-12px} .tk-perf i:last-child{right:-12px}
 .tk-stub{display:grid; gap:10px; padding:6px 18px 18px}
-.ev-offer{display:flex; align-items:center; gap:12px; padding:10px 14px 10px 10px; border-radius:18px; background:var(--ember-soft); font-weight:700; line-height:1.3}
-.ev-offer .ib{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); flex:none}
 .ev-note{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); line-height:1.4}
 .ev-note .ic{color:var(--warn); margin-top:1px}
 .tk-stub .go{min-height:60px}
@@ -80,8 +80,7 @@
 
 /* ---------- missing-content slots (no photos until the new shoot) ---------- */
 .slot{position:relative; overflow:hidden; border-radius:var(--r-img); background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
-.slot .pat{position:absolute; inset:0; color:var(--ink); opacity:.06}
-.slot .pat svg{display:block; width:100%; height:100%}
+.slot .bg{position:absolute; right:-18px; top:50%; transform:translateY(-58%) rotate(-10deg); color:var(--ink); opacity:.07}
 .slot .si{position:absolute; left:14px; top:14px; width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--shadow); color:var(--muted)}
 .slot .sl{position:absolute; left:12px; right:12px; bottom:12px; padding:8px 12px; border-radius:14px; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); font-size:14px; line-height:1.35}
 .slot-menu{min-height:190px}
@@ -94,19 +93,19 @@
 
 /* ---------- good to know ---------- */
 .rules{padding:4px 18px}
-.rule{display:grid; grid-template-columns:44px 1fr; gap:14px; padding:16px 0; align-items:start}
+.rule{display:grid; grid-template-columns:44px 1fr; gap:14px; padding:16px 0; align-items:start; align-content:start}
 .rule + .rule{border-top:1px solid var(--line)}
 .rule .ri{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
 .rule .ri.ok{color:var(--ok)}
 .rule .ri.em{background:var(--ember); color:var(--on-ember)}
 .rule h3{margin:0; font-size:17px; line-height:1.3; letter-spacing:-.01em}
 .rule p{margin:4px 0 0; color:var(--muted); line-height:1.45}
-.ev-call{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; margin-top:16px; padding:8px 8px 8px 20px; border-radius:var(--r-pill); background:var(--surface-2)}
+.ev-call{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding:6px 6px 6px 20px; border-radius:var(--r-pill); background:var(--surface-2)}
 .ev-call span{font-weight:700}
 
 /* ---------- next evening ---------- */
 .nx{display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; padding:18px}
-.nx .cal{width:76px; animation:none; border-radius:18px}
+.nx .cal{width:80px; animation:none; border-radius:18px}
 .nx .cal .m{font-size:12px; padding:5px 0 4px}
 .nx .cal .d{font-size:36px; padding-top:6px}
 .nx .cal .w{font-size:13px; padding-bottom:8px}
@@ -150,8 +149,8 @@ html.pv-phone .ev-pv{display:flex}
 
 /* ---------- desktop ---------- */
 @container app (min-width:700px){
-  .ev-mosaic{grid-template-columns:2fr 1fr; grid-template-areas:"a b" "a c"}
-  .ev-mosaic .slot:nth-child(1){aspect-ratio:auto}
+  .ev-mosaic{grid-template-columns:repeat(3,1fr); grid-template-areas:"a b c"; gap:16px}
+  .ev-mosaic .slot:nth-child(n){aspect-ratio:4/3}
 }
 @container app (min-width:900px){
   .ev-hero{padding-top:56px; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); grid-template-areas:"head ticket" "facts ticket"; grid-template-rows:auto 1fr; gap:36px 64px; align-items:start}
@@ -170,7 +169,7 @@ html.pv-phone .ev-pv{display:flex}
   .rules{display:grid; grid-template-columns:repeat(4,1fr); padding:8px}
   .rule{grid-template-columns:1fr; gap:14px; padding:20px 18px}
   .rule + .rule{border-top:0; box-shadow:-1px 0 0 var(--line)}
-  .ev-call{padding-left:24px}
+  .ev-call{width:fit-content; gap:28px; padding-left:24px}
   .nx{grid-template-columns:auto 1fr auto; padding:20px 20px 20px 22px; gap:22px}
   .nx-go{grid-column:auto}
   .ev-state{padding-top:72px}
@@ -239,11 +238,12 @@ function cta(e){
   return {t:"Запази място", bar:"Запази място · " + shortDate(e.date), href:res, ic:"arrow-right"}; }
 
 /* ---- pieces ---- */
-function meander(id, h){ /* Greek key band, drawn in currentColor */
-  return '<svg aria-hidden="true" focusable="false" width="100%" height="'+h+'"><defs><pattern id="'+id+'" width="20" height="30" patternUnits="userSpaceOnUse">'+
-    '<path d="M0 2.5H20M0 25.5H20M4 25.5V7H17.5V19.5H9V12.5H13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></pattern></defs>'+
+function meander(id, h){ /* Greek key band, drawn in currentColor; numeric h = one row centred in the band */
+  var H = typeof h === "number" ? h : 30, off = (H - 30) / 2;
+  return '<svg aria-hidden="true" focusable="false" width="100%" height="'+h+'"><defs><pattern id="'+id+'" width="20" height="'+H+'" patternUnits="userSpaceOnUse">'+
+    '<path transform="translate(0 '+off+')" d="M0 2.5H20M0 25.5H20M4 25.5V7H17.5V19.5H9V12.5H13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></pattern></defs>'+
     '<rect width="100%" height="100%" fill="url(#'+id+')"/></svg>'; }
-function cal(d){ return '<span class="cal" aria-hidden="true"><span class="m">'+SC.MONTHS[d.getMonth()]+'</span><span class="d">'+d.getDate()+'</span><span class="w">'+SC.DAYS[d.getDay()]+'</span></span>'; }
+function cal(d, small){ return '<span class="cal" aria-hidden="true"><span class="m">'+(small ? SC.MON[d.getMonth()] : SC.MONTHS[d.getMonth()])+'</span><span class="d">'+d.getDate()+'</span><span class="w">'+SC.DAYS[d.getDay()]+'</span></span>'; }
 function whenHTML(e){ var k, v, s, extra = "";
   if (e.phase === "soon"){ k = "До вечерта остават"; v = SC.plural(e.days, "ден", "дни"); s = "Начало в " + e.time; }
   else if (e.phase === "tomorrow"){ k = "Вечерта е"; v = "Утре"; s = "Начало в " + e.time; }
@@ -255,19 +255,19 @@ function whenHTML(e){ var k, v, s, extra = "";
   return '<div class="when" role="group" aria-label="Кога"><span class="k">'+k+'</span><span class="v">'+v+'</span><span class="s">'+s+'</span>'+extra+'</div>'; }
 function priceHTML(e){ if (e.free) return "Вход свободен"; if (e.price) return '<span class="price">'+SC.fmt(e.price)+'</span>';
   return '<span class="missing">[ЛИПСВА: цена, куверт или „Вход свободен“]</span>'; }
-function slot(icon, label, cls, pid){ return '<div class="slot '+(cls||"")+'" role="img" aria-label="Място за снимка: '+esc(label)+'"><span class="pat">'+meander(pid, "100%")+'</span><span class="si">'+ic(icon,24)+'</span><span class="sl"><span class="missing">['+esc(label)+']</span></span></div>'; }
+function slot(icon, label, cls){ return '<div class="slot '+(cls||"")+'" role="img" aria-label="Място за снимка: '+esc(label)+'"><span class="bg">'+ic(icon,160)+'</span><span class="si">'+ic(icon,24)+'</span><span class="sl"><span class="missing">['+esc(label)+']</span></span></div>'; }
 
 function ticketHTML(e){ var c = cta(e);
-  var offer = (e.phase === "soon" && !e.full) ? '<div class="ev-offer"><span class="ib">'+ic("seal-percent",20)+'</span><span>-5% при ранна резервация</span></div>' : "";
+  var offer = (e.phase === "soon" && !e.full) ? '<span class="lbl">'+ic("seal-percent",18)+'-5% при ранна резервация</span>' : "";
   var note = e.offline ? '<div class="ev-note" role="status">'+ic("warning-circle",20)+'<span>Няма връзка с интернет. Обадете ни се на <b>'+R.phone+'</b> и ще ви запазим място.</span></div>'
     : e.phase === "live" ? '<div class="ev-note">'+ic("info",20)+'<span>Вечерта вече тече. Обадете се и ще ви кажем има ли свободна маса.</span></div>'
     : e.full ? '<div class="ev-note">'+ic("info",20)+'<span>Всички места са заети. Запишете се и ще ви се обадим, ако се освободи маса.</span></div>' : "";
   var cal2 = e.phase === "over" ? "" : '<button class="pill pill-line pill-block" type="button" data-cal>'+ic("calendar-check",20)+'Добави в календара</button>';
   return '<div class="shell ticket"><div class="core">'+
-    '<span class="tk-band">'+meander("mk-band", 30)+'</span>'+
+    '<span class="tk-band">'+meander("mk-band", 34)+offer+'</span>'+
     '<div class="tk-main">'+cal(e.date)+whenHTML(e)+'</div>'+
     '<div class="tk-perf" aria-hidden="true"><i></i><i></i></div>'+
-    '<div class="tk-stub">'+offer+note+
+    '<div class="tk-stub">'+note+
       '<a class="pill pill-red go" href="'+c.href+'" data-hero-cta>'+c.t+'<span class="knob">'+ic(c.ic,22)+'</span></a>'+cal2+
     '</div></div></div>'; }
 
@@ -289,14 +289,14 @@ function programHTML(e){
 
 function menuHTML(){ var gs = SC.byId["gratska-salata"];
   return '<div><div class="sec-h"><h2 class="h2">Меню на вечерта</h2></div>'+
-    slot("fork-knife", "ЛИПСВА: менюто на вечерта и цената му", "slot-menu", "mk-menu")+
+    slot("fork-knife", "ЛИПСВА: менюто на вечерта и цената му", "slot-menu")+
     (gs ? '<p class="ev-also">За гръцко настроение и у дома, от основното меню:</p><div class="card ev-dish">'+SC.dishCard(gs, "row")+'</div>' : "")+'</div>'; }
 
 function photosHTML(){
   return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Снимки от вечерта</h2></div><div class="ev-mosaic">'+
-    slot("images", "ЛИПСВА: голяма снимка от гръцката вечер", "", "mk-p1")+
-    slot("bowl-food", "ЛИПСВА: ястие от вечерта", "", "mk-p2")+
-    slot("music-notes", "ЛИПСВА: салонът по време на вечерта", "", "mk-p3")+'</div></section>'; }
+    slot("images", "ЛИПСВА: снимка от гръцката вечер")+
+    slot("bowl-food", "ЛИПСВА: ястие от вечерта")+
+    slot("music-notes", "ЛИПСВА: салонът вечерта")+'</div></section>'; }
 
 function rulesHTML(e){ var R2 = [
     ["check-circle","ok","Без депозит","Запазването на място е безплатно. Потвърждаваме по SMS или Viber."],
@@ -305,16 +305,16 @@ function rulesHTML(e){ var R2 = [
     ["seal-percent","em","-5% при ранна резервация",'<span class="missing">[ЛИПСВА: колко дни преди вечерта важи]</span>'] ];
   return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Добре е да знаете</h2></div><div class="shell"><div class="core rules">'+
     R2.map(function(r){ return '<div class="rule"><span class="ri '+r[1]+'">'+ic(r[0],22)+'</span><div><h3>'+r[2]+'</h3><p>'+r[3]+'</p></div></div>'; }).join("")+
-    '</div></div><div class="ev-call"><span>Предпочитате по телефона?</span><a class="pill pill-ink" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div></section>'; }
+    '</div></div><div class="ev-call"><span>Или по телефона</span><a class="pill pill-ink" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div></section>'; }
 
 function nextHTML(e){ var n = e.next;
-  return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Следващата тематична вечер</h2></div><div class="shell"><div class="core nx">'+cal(n)+
+  return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Следващата тематична вечер</h2></div><div class="shell"><div class="core nx">'+cal(n, true)+
     '<div><b>'+longDate(n)[0].toUpperCase()+longDate(n).slice(1)+'</b><span class="missing">[ЛИПСВА: коя кухня]</span></div>'+
     '<a class="pill pill-line nx-go" href="events.html">'+ic("calendar-dots",20)+'Всички събития</a></div></div></section>'; }
 
 /* ---- page states ---- */
 function upcomingCard(){ var ev = EVENTS[0]; if (!ev) return "";
-  return '<div class="ev-up"><h2 class="h3">Предстои</h2><a class="card ev-upcard" href="event.html#'+ev.id+'">'+cal(ev.date)+
+  return '<div class="ev-up"><h2 class="h3">Предстои</h2><a class="card ev-upcard" href="event.html#'+ev.id+'">'+cal(ev.date, true)+
     '<span><b>'+esc(ev.n)+'</b><span class="muted">'+longDate(ev.date)+', '+ev.time+'</span></span><span class="go2" aria-hidden="true">'+ic("arrow-right",22)+'</span></a></div>'; }
 function invalidHTML(){
   return '<section class="sec ev-state"><div class="empty"><span class="ill">'+ic("calendar-blank",44)+'</span>'+
@@ -384,7 +384,7 @@ var q0 = parse(), ev0 = find(q0.id);
 var main = SC.mount({page:"event", nav:null, back:{href:"events.html", label:"Събития"}, title:ev0 ? ev0.n : "Събитие", actionBar:true});
 SC.ov.insertAdjacentHTML("beforeend", '<div class="abar ev-abar off" data-abar aria-hidden="true" inert></div>');
 var abar = SC.ov.querySelector("[data-abar]"), io = null, cur = null;
-function setBar(on){ abar.classList.toggle("off", !on); if (on){ abar.removeAttribute("aria-hidden"); abar.removeAttribute("inert"); } else { abar.setAttribute("aria-hidden","true"); abar.setAttribute("inert",""); } }
+function setBar(on){ abar.classList.toggle("off", !on); var fab = SC.device.querySelector(".aifab"); if (fab) fab.classList.toggle("up", on); if (on){ abar.removeAttribute("aria-hidden"); abar.removeAttribute("inert"); } else { abar.setAttribute("aria-hidden","true"); abar.setAttribute("inert",""); } }
 
 function render(){
   var q = parse(), ev = find(q.id), ttl = document.querySelector(".top .ttl"), meta = document.querySelector('meta[name="description"]');

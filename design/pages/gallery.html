@@ -40,7 +40,7 @@
 /* empty photo slot: same plate light as the dish illustrations, a dashed "mat" and a subject icon */
 .slot{position:absolute; inset:0; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 25%, var(--plate-1), var(--plate-2))}
 .slot::before{content:""; position:absolute; inset:10px; border-radius:15px; border:1.5px dashed var(--line-strong); opacity:.75}
-.slot .ring{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); transition:transform 600ms var(--ease)}
+.slot .ring{position:relative; width:58px; height:58px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); transition:transform 600ms var(--ease)}
 .slot .tag{position:absolute; top:18px; left:18px; display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:700; color:var(--muted); line-height:1}
 .slot .tag .ic{opacity:.8}
 @media (hover:hover){
@@ -87,6 +87,7 @@
 .lb-slide{flex:0 0 100%; height:100%; padding:8px 16px; display:grid; place-items:center; container-type:size}
 .lb-media{position:relative; width:min(100cqw, calc(100cqh * var(--ar))); aspect-ratio:var(--ar); border-radius:24px; overflow:hidden; box-shadow:0 30px 60px -30px rgba(0,0,0,.7)}
 .lb-media .pic, .lb-media .slot{position:absolute; inset:0}
+.lb-media::after{content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--on-chip-dark) 10%, transparent); pointer-events:none}
 .lb-media .slot::before{inset:14px; border-radius:18px}
 .lb-media .slot .ring{width:96px; height:96px}
 .lb-media .slot .tag{top:26px; left:26px; font-size:14px}
@@ -245,7 +246,7 @@ function render(animate){
     [].forEach.call(mason.children, function(k){ k.style.gridRow = "auto / span 1"; }); mason.style.gridAutoRows = "auto"; mason.style.rowGap = "18px"; return; }
   mason.style.gridAutoRows = ""; mason.style.rowGap = "";
   if (state === "offline"){ mason.innerHTML = ""; countEl.textContent = "";
-    stateBox.innerHTML = '<div class="empty g-state" role="alert"><span class="ill">'+ic("warning-circle",44)+'</span><h2 class="h3">Снимките не се заредиха</h2><p class="lead">Изглежда няма връзка с интернет. Проверете я и опитайте пак.</p><button class="pill pill-red pill-lg" type="button" data-sim="ok">'+ic("arrow-up-right",20)+'Опитай пак</button></div>'; return; }
+    stateBox.innerHTML = '<div class="empty g-state" role="alert"><span class="ill">'+ic("warning-circle",44)+'</span><h2 class="h3">Снимките не се заредиха</h2><p class="lead">Изглежда няма връзка с интернет. Проверете я и опитайте пак.</p><button class="pill pill-red pill-lg" type="button" data-sim="ok">Опитай пак</button></div>'; return; }
   if (!items.length){ mason.innerHTML = ""; countEl.textContent = "";
     stateBox.innerHTML = '<div class="empty g-state"><span class="ill">'+ic("images",44)+'</span><h2 class="h3">Тук още няма снимки</h2><p class="lead">Скоро ще добавим. Междувременно разгледайте останалите.</p><button class="pill pill-red pill-lg" type="button" data-cat="all">Виж всички</button></div>'; return; }
   var nd = items.filter(function(it){ return it.k === "dish"; }).length, ns = items.length - nd;
@@ -269,7 +270,7 @@ window.addEventListener("hashchange", function(){ var c = hashCat(); if (c !== c
 main.addEventListener("click", function(e){
   var b = e.target.closest("[data-cat]"); if (b){ setCat(b.dataset.cat, true); return; }
   var s = e.target.closest("[data-sim]"); if (s){ state = s.dataset.sim; main.querySelectorAll(".proto [data-sim]").forEach(function(x){ x.setAttribute("aria-pressed", String(x.dataset.sim === state)); }); render(state === "ok");
-    if (s.closest(".proto")) mason.scrollIntoView({block:"start", behavior:SC.reduce ? "auto" : "smooth"}); return; }
+    if (s.closest(".proto")){ var sc = SC.scroller, y = mason.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 150; sc.scrollTo({top:Math.max(0, y), behavior:SC.reduce ? "auto" : "smooth"}); } return; }
   var g = e.target.closest(".gi"); if (g) openLB(+g.dataset.i, g);
 });
 
@@ -320,11 +321,12 @@ function zoom(opening, done){
   if (SC.reduce || !m){ if (!opening){ el.style.opacity = 0; setTimeout(done, 10); } return; }
   var a = m.getBoundingClientRect(), b = t ? t.getBoundingClientRect() : null;
   var from = b && b.width ? "translate("+(b.left - a.left + (b.width - a.width)/2)+"px,"+(b.top - a.top + (b.height - a.height)/2)+"px) scale("+(b.width / a.width)+")" : "translateY(24px) scale(.94)";
-  var kf = [{transform:from, borderRadius:"22px"},{transform:"none", borderRadius:"24px"}], o = [{opacity:0},{opacity:1}];
-  if (!opening){ kf.reverse(); o.reverse(); }
+  /* closing uses implicit start keyframes, so a half-done swipe-down continues smoothly from where the finger left it */
+  var kf = opening ? [{transform:from, borderRadius:"22px"},{transform:"none", borderRadius:"24px"}] : [{transform:from, borderRadius:"22px"}];
+  var o = opening ? [{opacity:0},{opacity:1}] : [{opacity:0}];
   var anims = [], anim = m.animate(kf, {duration:D, easing:ease, fill:"both"}); anims.push(anim);
   anims.push(bg.animate(o, {duration:opening ? 300 : 360, easing:"ease-out", fill:"both"}));
-  chrome.forEach(function(c){ anims.push(c.animate(opening ? [{opacity:0, transform:"translateY(10px)"},{opacity:1, transform:"none"}] : [{opacity:1},{opacity:0}], {duration:opening ? 360 : 200, delay:opening ? 120 : 0, easing:ease, fill:"both"})); });
+  chrome.forEach(function(c){ anims.push(c.animate(opening ? [{opacity:0, transform:"translateY(10px)"},{opacity:1, transform:"none"}] : [{opacity:0}], {duration:opening ? 360 : 200, delay:opening ? 120 : 0, easing:ease, fill:"both"})); });
   /* once open, drop the filled animations so the swipe-down gesture can move the photo with inline styles */
   if (opening) Promise.all(anims.map(function(a){ return a.finished; })).then(function(){ anims.forEach(function(a){ a.cancel(); }); }).catch(function(){});
   if (!opening){ var hide = t && t.closest(".gi"); if (hide) hide.style.opacity = 0; anim.onfinish = function(){ if (hide) hide.style.opacity = ""; done && done(); }; }
@@ -365,14 +367,15 @@ function onMove(e){ dx = e.clientX - sx; dy = e.clientY - sy;
   if (dir === "x"){ var edge = (idx === 0 && dx > 0) || (idx === items.length - 1 && dx < 0); var d = edge ? dx / 3 : dx;
     track.style.transform = "translate3d(calc(" + (-idx * 100) + "% + " + d + "px),0,0)"; }
   else { var m = track.children[idx].querySelector(".lb-media"), k = Math.max(0, dy); m.style.transform = "translateY(" + k + "px) scale(" + (1 - Math.min(k, 400) / 1600) + ")";
-    lb.querySelector(".lb-bg").style.opacity = String(1 - Math.min(k, 300) / 450); }
+    lb.querySelector(".lb-bg").style.opacity = String(1 - Math.min(k, 300) / 450);
+    lb.querySelectorAll(".lb-top,.lb-bot").forEach(function(c){ c.style.opacity = String(Math.max(0, 1 - k / 140)); }); }
 }
 function onUp(){ stage.removeEventListener("pointermove", onMove); stage.removeEventListener("pointerup", onUp); stage.removeEventListener("pointercancel", onUp); stage.classList.remove("drag");
   var v = Math.abs(dx) / Math.max(1, performance.now() - st);
   if (dir === "x"){ if ((dx < -60 || (dx < -20 && v > .5)) && idx < items.length - 1) go(idx + 1); else if ((dx > 60 || (dx > 20 && v > .5)) && idx > 0) go(idx - 1); else go(idx); }
   else if (dir === "y"){ var m = track.children[idx].querySelector(".lb-media"), bg = lb.querySelector(".lb-bg");
-    if (dy > 110){ m.style.transform = ""; bg.style.opacity = ""; closeLB(); }
-    else { m.style.transition = "transform var(--t-slow) var(--ease)"; m.style.transform = ""; bg.style.opacity = ""; setTimeout(function(){ m.style.transition = ""; }, 340); } }
+    if (dy > 110) closeLB();
+    else { lb.querySelectorAll(".lb-top,.lb-bot").forEach(function(c){ c.style.opacity = ""; }); m.style.transition = "transform var(--t-slow) var(--ease)"; m.style.transform = ""; bg.style.opacity = ""; setTimeout(function(){ m.style.transition = ""; }, 340); } }
   dir = null; }
 })();
 </script>

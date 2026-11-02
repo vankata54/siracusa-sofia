@@ -42,7 +42,7 @@
 .ev{min-width:0; height:100%}
 .ev > .core{display:flex; flex-direction:column; height:100%}
 .ev-media{position:relative; aspect-ratio:16/10; flex:none}
-.ev.feat .ev-media{aspect-ratio:4/3}
+.ev.feat .ev-media{aspect-ratio:16/10}
 .ev-body{flex:1; display:flex; flex-direction:column; gap:10px; padding:18px 18px 20px}
 .ev-cat{display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:800; color:var(--muted)}
 .ev-ttl{margin:0}
@@ -53,16 +53,25 @@
 .ev-facts li{display:flex; align-items:center; gap:10px; min-height:30px; font-weight:600}
 .ev-facts .ic{color:var(--muted)}
 .ev-facts .seats{color:var(--warn); font-weight:800}
-.ev-act{display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:8px}
-.ev-act .pill-red{flex:1 1 auto}
-.ev.soon .ev-body{gap:8px}
+.ev-act{display:grid; gap:4px; margin-top:auto; padding-top:8px}
+.ev-act .link{justify-self:center; padding:0 12px}
+.ev.soon .ev-body{gap:8px; padding-top:14px}
 .ev.soon .ev-act .pill{width:100%}
+.ev-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:14px 14px 0}
+.ev.soon .ctile,.ev.soon .flag{position:static}
+.ev.soon .ctile{width:66px}
+.ev.soon .ctile .d{font-size:28px}
+.ev-head .cic{width:66px; height:66px; border-radius:18px; display:grid; place-items:center; background:var(--surface-2)}
+.soon-h{display:flex; align-items:center; gap:8px; margin:22px 0 0}
+.soon-h .ic{color:var(--muted)}
+.rl{display:flex; gap:12px; overflow-x:auto; margin:0 -16px; padding:2px 16px 10px; scroll-snap-type:x mandatory; scroll-padding:0 16px; scrollbar-width:none}
+.rl::-webkit-scrollbar{display:none}
+.rl > .ev{flex:0 0 min(300px, 84%); height:auto; scroll-snap-align:start}
 
 /* photo slot ([ЛИПСВА] until the new photo shoot) */
 .slot{position:relative; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
-.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.1; color:var(--ink)}
+.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.075; color:var(--ink); -webkit-mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%); mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%)}
 .slot .big{position:relative; width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
-.ev.soon .slot .big{width:68px; height:68px}
 .slot .cap{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 24px); display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; line-height:1.25; color:var(--muted)}
 .slot .cap .missing{text-decoration:none}
 .slot .cap .ic{color:var(--muted)}
@@ -72,13 +81,10 @@
 .ctile .m{padding:5px 0 4px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.08em; line-height:1.2}
 .ctile .d{padding-top:6px; font-size:34px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
 .ctile .w{padding:3px 0 8px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
-.ev.soon .ctile{width:66px; top:12px; left:12px}
-.ev.soon .ctile .d{font-size:28px}
 .flag{position:absolute; top:14px; right:14px; z-index:2; display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px 0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap; background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 2px 8px var(--line)}
 .flag .ic{color:var(--ember)}
 .flag.soft{background:var(--surface); color:var(--ink)}
 .flag.soft .ic{color:var(--muted)}
-.ev.soon .flag{top:12px; right:12px}
 
 /* occasion panel (private celebration categories) */
 .occ .core{display:grid; gap:12px; padding:24px 20px; justify-items:start}
@@ -98,9 +104,9 @@
 /* ---------- past: gallery + internal reviews ---------- */
 .past-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:8px 0 14px}
 .gal{columns:2; column-gap:12px}
-.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img); display:block}
+.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img)}
 .gtile .big{width:56px; height:56px}
-.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px 0 8px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .gtile .cap{left:10px; bottom:10px; max-width:calc(100% - 20px); padding:4px 10px}
 .revs{display:grid; gap:12px}
 .rev{display:grid; gap:10px; padding:18px}
@@ -146,7 +152,7 @@
 
 /* ---------- "Празник при нас" ---------- */
 .party > .core{display:grid}
-.party-art{position:relative; aspect-ratio:16/10; background:radial-gradient(120% 100% at 50% 40%, var(--plate-1), var(--plate-2))}
+.party-art{position:relative; aspect-ratio:3/2; background:radial-gradient(120% 100% at 50% 40%, var(--plate-1), var(--plate-2))}
 .party-art svg.tbl{position:absolute; inset:0; width:100%; height:100%; display:block}
 .party-art .pl{transform-box:fill-box; transform-origin:center}
 .rv-on .party-art:not(.in) .pl{opacity:0; transform:translateY(-18px) scale(1.08)}
@@ -168,7 +174,7 @@
 .party .fine{font-size:15px; color:var(--muted)}
 
 /* ---------- subscribe ---------- */
-.sub > .core{display:grid; gap:20px; padding:22px 18px}
+.sub > .core{display:grid; grid-template-columns:minmax(0,1fr); gap:20px; padding:22px 18px}
 .sub-h{display:grid; gap:12px; justify-items:start}
 .sub-h .ic-c{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
 .sub-h p{margin:0}
@@ -177,7 +183,10 @@
 .sub legend{padding:0; margin-bottom:8px}
 .wrapchips{display:flex; flex-wrap:wrap; gap:8px}
 .sub .check{padding:4px 0}
+.sub .err{margin:0; font-size:14px; color:var(--danger); font-weight:600}
+.sub .check:has(input[aria-invalid="true"]) input{outline:2px solid var(--danger); outline-offset:2px}
 .sub .check span{line-height:1.4}
+.neterr[hidden]{display:none}
 .neterr{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
 .neterr .ic{color:var(--warn); margin-top:1px}
 .neterr p{margin:0}
@@ -202,6 +211,8 @@
 /* ---------- tablet / desktop ---------- */
 @container app (min-width:700px){
   .ev-grid{grid-template-columns:1fr 1fr}
+  .rl{display:grid; overflow:visible; margin:0; padding:0}
+  .rl > .ev{height:100%}
   .ev.feat > .core{display:grid; grid-template-columns:1.12fr 1fr}
   .ev.feat .ev-media{aspect-ratio:auto; min-height:360px}
   .ev.feat .ev-body{padding:30px 30px 30px 32px; justify-content:center}
@@ -212,7 +223,7 @@
 }
 @container app (min-width:900px){
   .ev-top{padding-top:56px}
-  .hero{display:grid; grid-template-columns:1fr 400px; gap:64px; align-items:start}
+  .hero{display:grid; grid-template-columns:1fr 400px; gap:64px; align-items:center}
   .hero .h1{font-size:60px; margin-top:6px}
   .hero .lead{font-size:19px; margin-top:16px}
   .hfacts{display:grid}
@@ -233,6 +244,8 @@
   .party .go{max-width:420px}
   .sub > .core{grid-template-columns:1fr 1.1fr; gap:48px; padding:40px}
   .sub-h{align-content:start}
+  .gal{columns:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .gal .gtile{aspect-ratio:3/2!important; margin:0}
   .faq-wrap{display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:start}
   .faq-wrap .h2{position:sticky; top:180px}
 }
@@ -290,7 +303,7 @@ SOON.push({key:"praznik", kind:"soon", cat:"Празници", date:null, n:"П�
 function byDate(a,b){ if (!a.date) return 1; if (!b.date) return -1; return a.date - b.date; }
 
 /* past events: gallery and internal reviews are not available yet ([ЛИПСВА]) */
-var GAL = [{cat:"Тематични вечери",ar:"4/5"},{cat:"Жива музика",ar:"1/1"},{cat:"Празници",ar:"4/3"},{cat:"Рождени дни",ar:"1/1"},{cat:"Тематични вечери",ar:"4/3"},{cat:"Фирмени партита",ar:"4/5"}];
+var GAL = [{cat:"Тематични вечери",ar:"3/4"},{cat:"Жива музика",ar:"1/1"},{cat:"Празници",ar:"1/1"},{cat:"Рождени дни",ar:"4/5"},{cat:"Тематични вечери",ar:"1/1"},{cat:"Фирмени партита",ar:"3/4"}];
 var REVS = [{cat:"Тематични вечери",n:"Тематична вечер"},{cat:"Празници",n:"Празнична вечер"},{cat:"Рождени дни",n:"Рожден ден"}];
 
 /* ---------- state (tab and category live in the address: #minali/zhiva-muzika) ---------- */
@@ -319,12 +332,11 @@ function realCard(x, feat){ var e = x.e, d = x.date, n = daysTo(d);
     '<p class="ev-txt'+(feat?" lead":"")+'">'+esc(e.text)+'</p>'+
     '<ul class="ev-facts"><li>'+ic("calendar-blank",20)+'<span>'+longDate(d)+'</span></li><li>'+ic("clock",20)+'<span>'+esc(e.time)+' ч.</span></li><li>'+ic("ticket",20)+'<span>'+price+'</span></li>'+
     (e.seatsLeft!=null ? '<li class="seats">'+ic("users",20)+'Остават '+SC.plural(e.seatsLeft,"място","места")+'</li>' : '')+'</ul>'+
-    '<div class="ev-act"><a class="pill pill-red pill-lg" href="reservation.html#'+iso(d)+'">'+ic("calendar-check",22)+'Запази място</a><a class="pill pill-soft pill-lg" href="event.html#'+x.key+'">Подробности'+ic("caret-right",18)+'</a></div>'+
+    '<div class="ev-act"><a class="pill pill-red pill-lg" href="reservation.html#'+iso(d)+'">'+ic("calendar-check",22)+'Запази място</a><a class="link" href="event.html#'+x.key+'">Подробности за вечерта'+ic("caret-right",18)+'</a></div>'+
     '</div></div></article>'; }
 
 function soonCard(x){ var label = x.date ? x.n+", "+longDate(x.date) : x.n;
-  var media = '<div class="slot ev-media" role="img" aria-label="Място за снимка: '+esc(label)+'">'+(x.date?ctile(x.date):"")+
-    '<span class="flag soft">'+ic("hourglass",16)+'Скоро</span><span class="big">'+ic(CATI[x.cat],30)+'</span></div>';
+  var media = '<div class="ev-head" aria-label="'+esc(label)+'" role="img">'+(x.date ? ctile(x.date) : '<span class="cic">'+ic(CATI[x.cat],30)+'</span>')+'<span class="flag soft">'+ic("hourglass",16)+'Скоро</span></div>';
   return '<article class="ev soon shell" id="ev-'+x.key+'" aria-labelledby="t-'+x.key+'"><div class="core">'+media+
     '<div class="ev-body"><span class="ev-cat">'+ic(CATI[x.cat],18)+esc(x.cat)+'</span><h3 class="ev-ttl h3" id="t-'+x.key+'">'+esc(x.n)+'</h3>'+
     (x.text ? '<p class="ev-txt">'+esc(x.text)+'</p>' : '')+'<p class="ev-txt missing">'+esc(x.miss)+'</p>'+
@@ -341,8 +353,8 @@ function emptyBox(icon, title, text, btns, warn){
 
 function skeleton(){
   var big = '<div class="ev shell feat" aria-hidden="true"><div class="core"><div class="skel sk-media"></div><div class="ev-body"><div class="skel sk-l" style="width:40%"></div><div class="skel" style="height:36px;width:70%;border-radius:12px"></div><div class="skel sk-l" style="width:92%"></div><div class="skel sk-l" style="width:60%"></div><div class="skel" style="height:56px;border-radius:999px;margin-top:8px"></div></div></div></div>';
-  var sm = '<div class="ev shell soon" aria-hidden="true"><div class="core"><div class="skel ev-media" style="border-radius:0"></div><div class="ev-body"><div class="skel sk-l" style="width:50%"></div><div class="skel sk-l" style="width:80%"></div><div class="skel" style="height:48px;border-radius:999px;margin-top:8px"></div></div></div></div>';
-  return '<p class="vh" role="status">Зареждаме събитията</p>'+big+'<div class="ev-grid">'+sm+sm+'</div>'; }
+  var sm = '<div class="ev shell soon" aria-hidden="true"><div class="core"><div class="ev-head"><div class="skel" style="width:66px;height:84px;border-radius:18px"></div></div><div class="ev-body"><div class="skel sk-l" style="width:50%"></div><div class="skel sk-l" style="width:80%"></div><div class="skel" style="height:48px;border-radius:999px;margin-top:8px"></div></div></div></div>';
+  return '<p class="vh" role="status">Зареждаме събитията</p>'+big+'<div class="ev-grid rl" style="margin-top:6px">'+sm+sm+'</div>'; }
 
 /* ---------- list rendering ---------- */
 var listEl, countEl;
@@ -351,7 +363,7 @@ function renderList(){
   if (st.mode==="loading"){ html = skeleton(); count = "Зареждаме..."; }
   else if (st.mode==="error"){
     html = emptyBox("warning-circle","Не успяхме да заредим събитията","Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите на "+R.phone+".",
-      '<button class="pill pill-red pill-lg" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>', true);
+      '<button class="pill pill-red pill-lg" type="button" data-retry>Опитай пак</button><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>', true);
   }
   else if (st.tab==="up"){
     if (st.cat && OCC[st.cat]){ html = occPanel(st.cat); count = "Празник по ваш избор: вие избирате датата"; }
@@ -366,7 +378,7 @@ function renderList(){
         count = st.mode==="none" ? "Няма обявени събития" : "Нищо в тази категория";
       } else {
         var real = L.filter(function(x){ return x.kind==="real"; }), rest = L.filter(function(x){ return x !== real[0]; });
-        html = (real[0] ? realCard(real[0], true) : "") + (rest.length ? '<div class="ev-grid">'+rest.map(function(x){ return x.kind==="real" ? realCard(x) : soonCard(x); }).join("")+'</div>' : "");
+        html = (real[0] ? realCard(real[0], true) : "") + (rest.length ? (real[0] ? '<h3 class="h3 soon-h">'+ic("hourglass",20)+'Скоро обявяваме</h3>' : '')+'<div class="ev-grid rl">'+rest.map(function(x){ return x.kind==="real" ? realCard(x) : soonCard(x); }).join("")+'</div>' : "");
         var nr = real.length, ns = L.length - nr;
         count = (nr ? '<b>'+SC.plural(nr,"обявено събитие","обявени събития")+'</b>' : '') + (nr && ns ? ' · ' : '') + (ns ? ns+' скоро' : '');
       }
@@ -380,7 +392,7 @@ function renderList(){
       count = "Нищо в тази категория";
     } else {
       html = (G.length ? '<div class="past-h"><h3 class="h2">Снимки от минали вечери</h3><a class="link" href="gallery.html">Галерия'+ic("caret-right",18)+'</a></div><div class="gal">'+
-          G.map(function(g){ return '<div class="gtile slot" style="aspect-ratio:'+g.ar+'" role="img" aria-label="Място за снимка: '+esc(g.cat)+'"><span class="gl">'+ic(CATI[g.cat],16)+esc(g.cat)+'</span><span class="big">'+ic("image",26)+'</span><span class="cap"><span class="missing">[ЛИПСВА: снимка]</span></span></div>'; }).join("")+'</div>' : '')+
+          G.map(function(g){ return '<div class="gtile slot" style="aspect-ratio:'+g.ar+'" role="img" aria-label="Място за снимка: '+esc(g.cat)+'"><span class="gl">'+esc(g.cat)+'</span><span class="big">'+ic("image",26)+'</span><span class="cap"><span class="missing">[ЛИПСВА: снимка]</span></span></div>'; }).join("")+'</div>' : '')+
         (V.length ? '<div class="past-h" style="margin-top:28px"><h3 class="h2">Какво казаха гостите</h3></div><div class="revs">'+
           V.map(function(r){ return '<figure class="rev card" style="margin:0"><span class="stars" role="img" aria-label="Оценка: липсва">'+[0,1,2,3,4].map(function(){ return ic("star",20); }).join("")+'</span><blockquote style="margin:0"><p class="missing">[ЛИПСВА: отзив от гост след вечерта]</p></blockquote><figcaption class="who">'+ic(CATI[r.cat],16)+esc(r.n)+' · <span class="missing">[ЛИПСВА: име и дата]</span></figcaption></figure>'; }).join("")+
           '</div><p class="rev-note">'+ic("info",20)+'<span>Оценките са от кратката ни анкета след вечерта, не от Google. Показваме ги без подбор.</span></p>' : '');
@@ -423,7 +435,7 @@ function renderCal(){ main.querySelectorAll("[data-cal]").forEach(function(el){ 
 function pick(id, cat){ return SC.byId[id] || SC.inCat(cat)[0]; }
 function partyArt(){
   var D = [pick("pitsa-s-burata-i-proshuto-krudo","pitsi"), pick("gratska-salata","salati"), pick("svinski-rebra","skara-bertha"),
-           pick("set-ot-balgarski-kolbasi","studeni-predyastia"), pick("tiramisu","deserti"), pick("ribay-stek-ot-blek-angas","skara-bertha")];
+           SC.inCat("pasta-i-rizoto")[0], pick("tiramisu","deserti"), pick("ribay-stek-ot-blek-angas","skara-bertha")];
   var P = [[190,140],[320,140],[450,140],[190,262],[320,262],[450,262]], s = "";
   [[150,22],[280,22],[410,22],[150,338],[280,338],[410,338]].forEach(function(c){ s += '<rect x="'+c[0]+'" y="'+c[1]+'" width="80" height="40" rx="16" style="fill:var(--surface-3)"/>'; });
   s += '<rect x="38" y="160" width="40" height="80" rx="16" style="fill:var(--surface-3)"/><rect x="562" y="160" width="40" height="80" rx="16" style="fill:var(--surface-3)"/>';
@@ -433,7 +445,7 @@ function partyArt(){
     s += '<g class="pl" style="--i:'+i+'"><ellipse cx="'+c[0]+'" cy="'+(c[1]+6)+'" rx="54" ry="52" style="fill:var(--line)"/>'+SC.art(x,'x="'+(c[0]-60)+'" y="'+(c[1]-60)+'" width="120" height="120"')+'</g>'; });
   var C = [[26,40,-20,"--ember"],[96,330,30,"--ok"],[600,52,15,"--ok"],[612,330,-35,"--ember"],[24,300,40,"--muted"],[560,16,-10,"--muted"],[118,14,22,"--ember"],[620,180,60,"--ember"],[14,190,-50,"--ok"],[520,380,12,"--ember"],[250,384,-25,"--muted"],[370,8,35,"--ok"]];
   C.forEach(function(c, i){ s += '<rect class="cf" style="--i:'+(i%6)+';fill:var('+c[3]+')" x="'+c[0]+'" y="'+c[1]+'" width="14" height="7" rx="2" transform="rotate('+c[2]+' '+(c[0]+7)+' '+(c[1]+3)+')"/>'; });
-  return '<div class="party-art rv" role="img" aria-label="Празнична маса отгоре с ястия от менюто: '+D.filter(Boolean).map(function(x){ return esc(x.n); }).join(", ")+' (илюстрация)"><svg class="tbl" viewBox="0 0 640 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+s+'</svg></div>'; }
+  return '<div class="party-art rv" role="img" aria-label="Празнична маса отгоре с ястия от менюто: '+D.filter(Boolean).map(function(x){ return esc(x.n); }).join(", ")+' (илюстрация)"><svg class="tbl" viewBox="20 0 600 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+s+'</svg></div>'; }
 
 /* ---------- page ---------- */
 var greek = REAL[0];
@@ -491,8 +503,8 @@ main.innerHTML =
 
   /* prototype-only state switcher */
   '<section class="sec" aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>'+ic("eye",18)+'Само в прототипа: покажи състояние</p><div class="wrapchips">'+
-    [["ok","Обичайно"],["loading","Зареждане"],["none","Няма събития"],["error","Грешка при зареждане"]].map(function(m){ return '<button class="chip" type="button" data-mode="'+m[0]+'" aria-pressed="'+(m[0]==="ok")+'">'+m[1]+'</button>'; }).join("")+
-    '<button class="chip" type="button" data-offline aria-pressed="false">'+ic("globe",18)+'Без интернет при абонамент</button></div></div></section>';
+    [["ok","Обичайно"],["loading","Зареждане"],["none","Няма събития"],["error","Грешка"]].map(function(m){ return '<button class="chip" type="button" data-mode="'+m[0]+'" aria-pressed="'+(m[0]==="ok")+'">'+m[1]+'</button>'; }).join("")+
+    '<button class="chip" type="button" data-offline aria-pressed="false">'+ic("globe",18)+'Без интернет (абонамент)</button></div></div></section>';
 
 listEl = main.querySelector("[data-list]"); countEl = main.querySelector("[data-count]");
 
@@ -501,11 +513,11 @@ var subEl = main.querySelector("[data-sub]"), draft = "";
 function renderSub(){
   if (st.subDone){ subEl.innerHTML = '<div class="sub-ok" role="status"><span class="ic-c">'+ic("check",32)+'</span><h3 class="h2">Готово, ще ви пишем</h3><p class="lead">Ще получите имейл на <b>'+esc(st.subDone)+'</b>, когато обявим '+(st.want.length ? "ново събитие в: "+st.want.map(esc).join(", ") : "ново събитие")+'.</p><button class="pill pill-line" type="button" data-subreset>'+ic("pencil-simple",20)+'Смени имейла</button></div>'; return; }
   subEl.innerHTML = '<form novalidate data-subform>'+
-    '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">'+PUBLIC.map(function(c){ return '<button class="chip" type="button" data-want="'+esc(c)+'" aria-pressed="'+(st.want.indexOf(c)>-1)+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>'+
+    '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">'+["Тематични вечери","Жива музика","Празници"].map(function(c){ return '<button class="chip" type="button" data-want="'+esc(c)+'" aria-pressed="'+(st.want.indexOf(c)>-1)+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>'+
     '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" type="email" inputmode="email" autocomplete="email" placeholder="например ime@abv.bg" aria-describedby="sub-email-err" value="'+esc(draft)+'"><p class="err" id="sub-email-err" hidden></p></div>'+
     '<div><label class="check"><input type="checkbox" id="sub-ok" aria-describedby="sub-ok-err"><span>Искам да получавам имейли от Siracusa за нови събития. <span class="muted">Отписвате се с едно натискане от всеки имейл.</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>'+
     '<div class="neterr" role="alert" data-neterr hidden>'+ic("warning",22)+'<p><b>Няма връзка с интернет.</b> Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>'+
-    '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("bell",20)+'Уведомявайте ме за събитията</button>'+
+    '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("bell",20)+'Пишете ми за събитията</button>'+
   '</form>'; }
 function fieldErr(input, errEl, msg){ errEl.textContent = msg || ""; errEl.hidden = !msg; if (input) input.setAttribute("aria-invalid", msg ? "true" : "false"); }
 subEl.addEventListener("input", function(e){ if (e.target.id==="sub-email"){ draft = e.target.value; if (e.target.getAttribute("aria-invalid")==="true") fieldErr(e.target, subEl.querySelector("#sub-email-err"), ""); } });
@@ -537,7 +549,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.hasAttribute("data-cat")){ var c = BYSLUG[t.dataset.cat] || null; st.cat = c; update();
     if (t.closest(".evchips")) try{ t.scrollIntoView({block:"nearest", inline:"center", behavior:SC.reduce?"auto":"smooth"}); }catch(x){}
     else scrollToEl(main.querySelector(".ctrl")); return; }
-  if (t.dataset.calm){ st.calM = +t.dataset.calm; renderCal(); var b = main.querySelector('[data-cal] [data-calm="'+st.calM+'"]'); return; }
+  if (t.dataset.calm){ st.calM = +t.dataset.calm; renderCal(); return; }
   if (t.dataset.goto){ st.tab = "up"; st.cat = null; st.mode = "ok"; update(); syncMode(); var card = main.querySelector("#ev-"+t.dataset.goto);
     scrollToEl(card, card && card.querySelector("button, a")); return; }
   if (t.hasAttribute("data-notify")){ notify(t.dataset.notify); return; }

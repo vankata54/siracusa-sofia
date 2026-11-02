@@ -192,7 +192,6 @@ window.SC_MENU={
 "site_eur": 6.2,
 "t": [],
 "al": [
-"fish",
 "gluten",
 "milk",
 "molluscs"
@@ -232,7 +231,6 @@ window.SC_MENU={
 "site_eur": 7.15,
 "t": [],
 "al": [
-"fish",
 "gluten",
 "milk"
 ],
@@ -1530,9 +1528,7 @@ window.SC_MENU={
 "lv": 17.99,
 "site_eur": 9.2,
 "t": [],
-"al": [
-"fish"
-],
+"al": [],
 "noOnion": false,
 "share": false
 },

@@ -33,13 +33,13 @@
 .deal{margin-top:22px; border-radius:var(--r-shell); padding:20px 20px 22px; box-shadow:var(--shadow)}
 .deal .top2{display:flex; align-items:center; justify-content:space-between; gap:12px}
 .deal .big{font-size:60px; line-height:.9; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums}
-.deal .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.35); flex:none}
+.deal .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--on-ember); color:var(--ember); flex:none}
 .deal b{display:block; margin-top:10px; font-size:22px; line-height:1.15; letter-spacing:-.025em}
 .deal p{margin:8px 0 0; font-size:16px; line-height:1.4}
 
 /* ---------- "today" card with day timeline ---------- */
 .today{margin-top:18px}
-.today .core{padding:18px 18px 16px}
+.today .core{padding:18px 16px 16px}
 .now-h{display:flex; align-items:flex-start; gap:10px}
 .now-h .dot{width:10px; height:10px; border-radius:50%; background:var(--off); flex:none; margin-top:7px}
 .now-h .dot.ok{background:var(--ok)} .now-h .dot.warn{background:var(--ember)}
@@ -53,7 +53,7 @@
 .tl-bar .a{flex:300 1 0; background:var(--ok)}
 .tl-bar .b{flex:450 1 0; background:var(--ember)}
 .tl-past{position:absolute; inset:0; border-radius:6px; background:var(--surface); opacity:.62; transform-origin:left center; transform:scaleX(var(--x,0))}
-.tl-now{position:absolute; top:50%; left:calc(var(--x,0) * 100%); width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 4px var(--surface), 0 4px 10px rgba(0,0,0,.25)}
+.tl-now{position:absolute; top:50%; left:calc(var(--x,0) * 100%); width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 4px var(--surface), var(--shadow)}
 .tl-l{position:relative; height:22px; margin-top:8px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
 .tl-l span{position:absolute; top:0}
 .tl-l span:nth-child(1){left:0}
@@ -71,7 +71,8 @@
 @keyframes tlpop{from{transform:scale(0); opacity:0}}
 
 .today .seg{margin-top:18px; grid-auto-columns:auto}
-.today .seg button{white-space:nowrap; padding:0 12px; gap:8px}
+.today .seg button{white-space:nowrap; padding:0 8px; gap:7px; min-width:0}
+@container app (max-width:380px){ .today .seg button .ic{display:none} }
 .modeinfo{display:flex; gap:12px; align-items:flex-start; margin-top:14px; font-size:15px; line-height:1.4}
 .modeinfo .ic{margin-top:1px; color:var(--muted)}
 .modeinfo b{display:block; font-size:16px}
@@ -180,10 +181,11 @@
 .proto .chips{margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
 
 /* ---------- action bar ---------- */
-.abar .asum{flex:none; padding:0 6px 0 14px; display:grid; line-height:1.2}
+.abar .asum{flex:none; padding:0 4px 0 12px; display:grid; line-height:1.2}
+.abar [data-cta] .pill{padding:0 14px; min-width:0}
 .abar .asum b{font-size:16px; font-variant-numeric:tabular-nums}
 .abar .asum small{font-size:13px; font-weight:600; color:var(--muted)}
-.abar .asum[hidden]{display:none}
+.abar .asum[hidden],.abar[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -255,7 +257,7 @@ function dealBanner(){ if (phase !== "discount") return "";
 
 var hero = '<section class="sec lhero" aria-labelledby="lh1">'+
   '<h1 class="h1" id="lh1"><span class="eb">'+SC.ic("fork-knife",18)+'Обедно меню'+(isToday ? ' · днес' : '')+'</span><span class="dt">'+dateText+'</span></h1>'+
-  '<p class="lead">'+SC.plural(SC.lunch.length, "ястие", "ястия")+', от '+SC.fmt(minP)+'. Ново меню всеки ден.'+(canOrder ? ' При вземане от място е готово веднага.' : '')+'</p>'+
+  '<p class="lead" data-lead>'+SC.plural(SC.lunch.length, "ястие", "ястия")+', от '+SC.fmt(minP)+'. Ново меню всеки ден.'+(canOrder ? ' При вземане от място е готово веднага.' : '')+'</p>'+
   dealBanner() + todayCard() + '</section>';
 
 /* ---------- list ---------- */
@@ -280,7 +282,7 @@ function skeleton(){ var g = '<div class="shell"><div class="core"><div class="l
 function emptyState(){ return '<div class="shell"><div class="core empty"><span class="ill">'+SC.ic("bowl-food",44)+'</span><h2 class="h3">Обедното меню за днес още не е качено</h2><p class="muted" style="margin:0;max-width:34ch">Проверете пак след малко или поръчайте от основното меню.</p>'+
   '<a class="pill pill-red pill-lg" href="menu.html">Към основното меню'+SC.ic("arrow-right",20)+'</a><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се</a></div></div>'; }
 function errorState(){ return '<div class="shell"><div class="core empty" role="alert"><span class="ill">'+SC.ic("warning-circle",44)+'</span><h2 class="h3">Не успяхме да заредим обедното меню</h2><p class="muted" style="margin:0;max-width:34ch">Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има днес.</p>'+
-  '<button class="pill pill-red pill-lg" type="button" data-demo="">'+SC.ic("arrow-right",20)+'Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се · '+R.phone+'</a></div></div>'; }
+  '<button class="pill pill-red pill-lg" type="button" data-demo="">Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се · '+R.phone+'</a></div></div>'; }
 function offlineNote(){ return '<div class="lnote warn" role="status" style="margin:0 0 20px">'+SC.ic("warning",22)+'<span><b>Няма връзка</b>Показваме менюто, което заредихме последно. Количката ви е запазена, поръчайте, щом връзката се върне.</span></div>'; }
 
 /* ---------- week (preview only) ---------- */
@@ -306,7 +308,7 @@ function bottomHTML(){
       '<a class="pill pill-line" href="office.html">'+SC.ic("users-three",20)+'Организирай за офиса</a></div></div>'+
     '<div class="faq"><h2 class="h3" style="margin:0 4px 12px">Често питани</h2><div class="shell"><div class="core">'+FAQ.map(function(q){ return '<details><summary>'+q[0]+SC.ic("caret-down",20)+'</summary><p>'+q[1]+'</p></details>'; }).join("")+'</div></div></div>'+
   '</div></section>'+
-  '<section class="sec" style="padding-top:40px"><div class="proto"><div class="label small">'+SC.ic("eye",18)+'<b>Само в прототипа:</b>покажи състояние</div><div class="chips" data-demos></div></div></section>'; }
+  '<section class="sec" style="padding-top:40px"><div class="proto"><div class="label small">'+SC.ic("eye",18)+'<span><b>Само в прототипа:</b> покажи състояние</span></div><div class="chips" data-demos></div></div></section>'; }
 
 /* ---------- render ---------- */
 var DEMOS = [["","Нормално"],["loading","Зарежда"],["empty","Не е качено"],["error","Грешка"],["offline","Без интернет"]];
@@ -320,7 +322,10 @@ function listHTML(){ var d = demo();
 
 main.innerHTML = '<div class="lgrid">' + hero + '<div class="sec lmain" data-list aria-label="Ястията днес"></div></div>' + bottomHTML();
 var listEl = main.querySelector("[data-list]");
+var leadEl = null;
 function renderList(){ listEl.innerHTML = listHTML(); var d = demo();
+  leadEl = leadEl || main.querySelector("[data-lead]"); if (!leadEl.dataset.full) leadEl.dataset.full = leadEl.innerHTML;
+  leadEl.innerHTML = d === "loading" || d === "empty" || d === "error" ? "Ново меню всеки ден." + (canOrder ? " При вземане от място е готово веднага." : "") : leadEl.dataset.full;
   main.querySelector("[data-demos]").innerHTML = DEMOS.map(function(x){ return '<button class="chip" type="button" data-demo="'+x[0]+'" aria-pressed="'+(d === x[0])+'">'+x[1]+'</button>'; }).join("");
   if (abar) abar.hidden = d === "loading" || d === "empty" || d === "error";
   SC.reveal(); }
@@ -335,7 +340,7 @@ function total(){ return SC.cart.lines().reduce(function(a, l){ var x = SC.byId[
 function updateBar(){ if (!abar) return; var n = SC.cart.count(), sum = abar.querySelector("[data-asum]"), cta = abar.querySelector("[data-cta]");
   var verb = phase === "discount" ? "Вземи от място" : "Поръчай";
   sum.hidden = !n; sum.innerHTML = n ? '<b>'+SC.plural(n, "ястие", "ястия")+'</b><small>в количката</small>' : "";
-  cta.innerHTML = n ? '<a class="pill pill-red" href="cart.html">'+verb+' · '+SC.fmt(total())+SC.ic("arrow-right",20)+'</a>'
+  cta.innerHTML = n ? '<a class="pill pill-red" href="cart.html">'+verb+' · '+SC.fmt(total())+'</a>'
     : '<button class="pill pill-red" type="button" data-jump="first">'+(phase === "discount" ? "Вземи от място · -30%" : "Поръчай обедно меню")+SC.ic("caret-down",20)+'</button>'; }
 
 /* after 15:00 the lunch menu is pickup only (decision 4): a lunch item in the cart switches the cart to pickup */

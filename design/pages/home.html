@@ -21,7 +21,7 @@
 /* ---------- hero: simulated 8 - 15 s clip under the floating header ---------- */
 .hero{display:grid; grid-template-areas:"stage" "acts"}
 .stage{grid-area:stage; position:relative; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
-  margin-top:calc(var(--pull,130px) * -1); min-height:calc(var(--pull,130px) + 360px); padding:calc(var(--pull,130px) + 24px) 20px 24px;
+  margin-top:calc(var(--pull,130px) * -1); min-height:calc(var(--pull,130px) + 300px); padding:calc(var(--pull,130px) + 24px) 20px 24px;
   border-radius:0 0 36px 36px; color:var(--on-chip-dark)}
 .film{position:absolute; inset:0; z-index:-1; overflow:hidden; background:var(--chip-dark); border-radius:inherit}
 .film .cam{position:absolute; inset:0; animation:cam 16s var(--ease-std) infinite alternate; transform-origin:70% 35%}
@@ -54,12 +54,11 @@
 .go .gol{display:grid; text-align:left; line-height:1.15}
 .go .gol small{font-size:14px; font-weight:600; opacity:.86; margin-top:3px}
 .tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.tile{position:relative; display:grid; align-content:space-between; gap:14px; min-height:112px; padding:14px 14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow);
+.tile{position:relative; display:grid; align-content:start; gap:10px; min-height:104px; padding:12px 12px 14px 14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow);
   text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
 .tile:active{transform:scale(.97)}
-.tile .ti{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
-.tile .ta{position:absolute; top:14px; right:12px; color:var(--muted)}
-.tile b{display:block; font-size:17px; line-height:1.2; letter-spacing:-.015em}
+.tile .ti{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.tile b{display:block; font-size:16px; line-height:1.2; letter-spacing:-.015em}
 .tile small{display:block; margin-top:3px; font-size:14px; font-weight:600; color:var(--muted); line-height:1.3}
 .tile small.hot{color:var(--ink)}
 .tile small.hot span{display:inline-block; padding:1px 7px; margin-right:4px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800}
@@ -69,7 +68,8 @@
 .eta .dot.ok{animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{0%,100%{transform:scale(1); opacity:1}50%{transform:scale(.7); opacity:.6}}
 .eta .tx{flex:1; min-width:0}
-.eta .tx span{color:var(--muted); font-weight:600}
+.eta .tx{display:grid}
+.eta .tx span{color:var(--muted); font-weight:600; font-size:15px}
 .eta > .ic{color:var(--muted)}
 .offline{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--warn)}
 .offline .ic{color:var(--warn); margin-top:2px}
@@ -86,7 +86,7 @@
 .slide h2{margin:0; font-size:26px; line-height:1.1; letter-spacing:-.035em; font-weight:800; max-width:15ch}
 .slide p{margin:0; font-size:16px; max-width:30ch; font-weight:600; opacity:.88}
 .slide .pill{justify-self:start; margin-top:12px; background:var(--on-ember); color:var(--ember)}
-.slide .sl-ic{position:absolute; right:-14px; top:-10px; opacity:.13; pointer-events:none}
+.slide .sl-ic{position:absolute; right:-34px; top:-26px; opacity:.1; pointer-events:none}
 .pctl{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 10px 10px 8px}
 .dots{display:flex}
 .dots button{width:40px; height:48px; border:0; background:transparent; cursor:pointer; display:grid; place-items:center; padding:0; color:inherit}
@@ -116,23 +116,23 @@
 .scale .mk{position:absolute; left:87.5%; top:-7px; width:4px; height:24px; margin-left:-2px; border-radius:2px; background:var(--on-chip-dark); opacity:0; transition:opacity 400ms var(--ease) 1200ms}
 .temp.in .band{transform:none} .temp.in .mk{opacity:1}
 .scale-l{position:relative; height:22px; margin-top:8px; font-size:14px; font-weight:700; color:color-mix(in srgb, var(--on-chip-dark) 62%, transparent); font-variant-numeric:tabular-nums}
-.scale-l span{position:absolute; transform:translateX(-50%)} .scale-l span:first-child{transform:none} .scale-l span:last-child{transform:translateX(-100%)}
+.scale-l span{position:absolute; transform:translateX(-50%)} .scale-l span:first-child{transform:none}
 .scale-l .on{color:var(--ember)}
 .facts{list-style:none; margin:0; padding:0; display:grid; gap:14px}
 .facts li{display:flex; gap:12px; align-items:flex-start; line-height:1.4}
 .facts .ic{color:var(--ember); margin-top:1px}
-.bact{display:flex; flex-wrap:wrap; gap:8px}
+.bact{display:grid; gap:10px}
 .pill-light{background:var(--on-chip-dark); color:var(--chip-dark)}
 .pill-ghost{background:transparent; color:var(--on-chip-dark); box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--on-chip-dark) 30%, transparent)}
 
 /* ---------- come visit ---------- */
-.vslot{position:relative; aspect-ratio:16/10; display:grid; place-items:center; align-content:center; gap:12px; text-align:center; padding:20px;
+.vslot{position:relative; aspect-ratio:4/3; display:grid; place-items:center; align-content:center; gap:12px; text-align:center; padding:20px;
   background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2))}
 .vslot .play{width:76px; height:76px; border-radius:50%; border:0; display:grid; place-items:center; cursor:pointer; background:var(--surface); color:var(--red); box-shadow:var(--shadow)}
 .vslot .play .ic{margin-left:4px}
 .vslot b{font-size:17px}
 .vslot .missing{font-size:14px; max-width:34ch}
-.vslot .len{position:absolute; left:14px; bottom:14px; display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--surface); font-size:14px; font-weight:700}
+.vslot .len{position:absolute; left:14px; top:14px; display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--surface); font-size:14px; font-weight:700}
 .places{display:flex; flex-wrap:wrap; gap:8px 16px; margin:16px 0 18px; padding:0; list-style:none}
 .places li{display:flex; gap:8px; align-items:center; font-weight:700}
 .places .ic{color:var(--red)}
@@ -190,7 +190,7 @@
 /* ---------- how to get here ---------- */
 .where{display:grid; gap:16px}
 .map{position:relative; aspect-ratio:4/3; background:var(--surface-2)}
-.map svg{position:absolute; inset:0; width:100%; height:100%; display:block}
+.map > svg{position:absolute; inset:0; width:100%; height:100%; display:block}
 .map .blk{fill:var(--surface-3)} .map .road{stroke:var(--surface); fill:none; stroke-linecap:round} .map .park{fill:color-mix(in srgb, var(--ok) 22%, var(--surface-2))}
 .map .road.big{stroke-width:22} .map .road.mid{stroke-width:12} .map .road.sm{stroke-width:7}
 .pinw{position:absolute; left:56%; top:46%; transform:translate(-50%,-100%); display:grid; justify-items:center}
@@ -222,14 +222,14 @@
   .hero{grid-template-columns:minmax(0,1fr) minmax(0,1.08fr); grid-template-rows:1fr auto; grid-template-areas:"txt film" "acts film"; column-gap:56px; row-gap:28px;
     padding:28px max(40px, calc((100% - 1200px)/2)) 0}
   .stage{display:contents}
-  .film{position:relative; grid-area:film; inset:auto; z-index:0; min-height:600px; border-radius:40px}
+  .film{position:relative; grid-area:film; inset:auto; z-index:0; min-height:560px; border-radius:40px}
   .film .glow{width:760px; height:760px; right:auto; left:50%; top:50%; margin:-380px 0 0 -380px}
   .film .spin{width:470px; height:470px; right:auto; left:50%; top:50%; margin:-235px 0 0 -235px}
   .film .shade{width:430px; height:430px; right:auto; left:50%; top:50%; margin:-195px 0 0 -215px}
   .film .veil{background:linear-gradient(to top, color-mix(in srgb, var(--chip-dark) 80%, transparent), transparent 34%)}
   .htxt{grid-area:txt; align-self:end; padding-top:24px}
   .htxt .eyebrow{display:block}
-  .htxt .h1{color:var(--ink); font-size:68px; letter-spacing:-.055em; max-width:11ch}
+  .htxt .h1{color:var(--ink); font-size:60px; letter-spacing:-.055em; max-width:13ch}
   .htxt p{color:var(--muted); font-size:20px; margin-top:18px}
   .vctl{grid-area:film; align-self:end; justify-self:stretch; margin:0; padding:24px; justify-content:space-between}
   .acts{padding:0; gap:12px; align-self:start}
@@ -242,15 +242,17 @@
   .rail.pop .dcard{flex:auto}
   .bcore{grid-template-columns:1.1fr 1fr; gap:48px 64px; padding:56px; align-items:center}
   .bcore .btxt{grid-row:span 2}
+  .bact{display:flex; flex-wrap:wrap}
   .deg{font-size:180px} .deg small{font-size:56px; margin-top:16px}
   .visit{display:grid; grid-template-columns:1.35fr 1fr; gap:0 56px; align-items:center}
-  .visit .vid{grid-row:span 2}
-  .visit .vtxt{align-self:center}
+  .visit .vslot{aspect-ratio:16/10}
+  .visit .vtxt .sec-h{margin-top:0!important}
   .visit .pill-block{width:auto}
   .ev{padding:22px; grid-template-columns:92px 1fr; gap:22px}
   .cel .ci{width:92px; height:92px}
-  .office{grid-template-columns:1.1fr 1.4fr auto; align-items:center; gap:40px; padding:28px 32px}
-  .steps{grid-auto-flow:column; grid-auto-columns:1fr; gap:16px}
+  .office{grid-template-columns:1fr auto; align-items:center; gap:24px 40px; padding:30px 32px}
+  .office .steps{grid-column:1/-1; grid-row:2; grid-auto-flow:column; grid-auto-columns:1fr; gap:16px; padding-top:22px; border-top:1px solid var(--line)}
+  .office p{margin-left:66px!important}
   .dlv{grid-template-columns:1fr 1fr; gap:40px; align-items:start}
   .chk{padding:26px}
   .where{grid-template-columns:1.5fr 1fr; gap:48px; align-items:center}
@@ -258,7 +260,7 @@
   .info .btns{grid-template-columns:1fr 1fr}
 }
 @container app (min-width:1100px){
-  .htxt .h1{font-size:76px}
+  .htxt .h1{font-size:64px}
 }
 @media (prefers-reduced-motion: reduce){
   .film .spark{display:none}
@@ -286,10 +288,10 @@ else if (st.kitchen) order = {t:"Поръчай за вземане", s:"Дос�
 else order = {t:"Поръчай за утре", s:st.m < 600 ? "Отваряме в 10:00" : "Кухнята приема поръчки до 22:30", href:"menu.html"};
 
 if (st.delivery && !eta.busy) etaRow = {dot:"ok", html:"<b>Доставка сега: "+eta.text+"</b>"};
-else if (st.delivery) etaRow = {dot:"warn", html:"<b>Възможни са закъснения</b> <span>· около "+eta.min+" мин</span>"};
-else if (st.kitchen) etaRow = {dot:"warn", html:"<b>Доставката приключи</b> <span>· Вземане до 22:30</span>"};
-else if (st.open) etaRow = {dot:"", html:"<b>Кухнята затвори</b> <span>· Доставка утре от 10:00</span>"};
-else etaRow = {dot:"", html:"<b>Затворено</b> <span>· Доставка "+(st.m < 600 ? "днес" : "утре")+" от 10:00</span>"};
+else if (st.delivery) etaRow = {dot:"warn", html:"<b>Възможни са закъснения</b><span>Доставка сега: около "+eta.min+" мин</span>"};
+else if (st.kitchen) etaRow = {dot:"warn", html:"<b>Доставката приключи</b><span>Вземане от място до 22:30</span>"};
+else if (st.open) etaRow = {dot:"", html:"<b>Кухнята затвори</b><span>Доставка утре от 10:00</span>"};
+else etaRow = {dot:"", html:"<b>Затворено</b><span>Доставка "+(st.m < 600 ? "днес" : "утре")+" от 10:00</span>"};
 
 if (st.lunch) lunchSub = '<small>До 15:00 · с доставка</small>';
 else if (st.lunchDiscount) lunchSub = '<small class="hot"><span>-30%</span>при вземане</small>';
@@ -302,7 +304,7 @@ var sparks = [[58,"5px","4.8s","0s","-22px","34%"],[66,"4px","5.6s","1.1s","10px
 var hero =
   '<section class="hero" aria-labelledby="hero-h">'+
     '<div class="stage">'+
-      '<div class="film" data-film aria-hidden="true"><div class="cam"><span class="glow"></span><span class="shade"></span><span class="spin">'+SC.art("pitsa-s-burata-i-proshuto-krudo")+'</span>'+sparks+'</div><span class="veil"></span></div>'+
+      '<div class="film" data-film aria-hidden="true"><div class="cam"><span class="glow"></span><span class="shade"></span><span class="spin">'+SC.art("pitsa-dyavolo")+'</span>'+sparks+'</div><span class="veil"></span></div>'+
       '<div class="htxt"><p class="eyebrow" hidden>Siracusa Bar &amp; Grill</p><h1 class="h1" id="hero-h">Пица на пещ и скара на дървени въглища</h1><p>В Дружба 2. Всеки ден до 23:00.</p></div>'+
       '<div class="vctl"><button class="vbtn" type="button" data-vid aria-pressed="false">'+ic("pause",20)+'<span>Пауза</span></button><span class="vtag">[ЛИПСВА: видео 8 - 15 сек.]</span></div>'+
     '</div>'+
@@ -310,8 +312,8 @@ var hero =
       (isOffline ? '<div class="offline" role="status">'+ic("warning",22)+'<div><b>Няма връзка с интернет</b><p>Менюто се вижда. Поръчката ще изпратите, щом връзката се върне.</p><button class="link" type="button" data-retry>Опитай пак'+ic("caret-right",18)+'</button></div></div>' : '')+
       '<a class="pill pill-red go" href="'+order.href+'"'+(order.pickup?' data-pickup':'')+'><span class="gol"><span>'+order.t+'</span><small>'+order.s+'</small></span><span class="knob">'+ic("arrow-right",22)+'</span></a>'+
       '<div class="tiles">'+
-        '<a class="tile" href="reservation.html"><span class="ti">'+ic("calendar-check",22)+'</span><span class="ta">'+ic("arrow-up-right",18)+'</span><span><b>Резервирай маса</b><small>Салон и градина</small></span></a>'+
-        '<a class="tile" href="lunch.html"><span class="ti">'+ic("bowl-food",22)+'</span><span class="ta">'+ic("arrow-up-right",18)+'</span><span><b>Обедно меню днес</b>'+lunchSub+'</span></a>'+
+        '<a class="tile" href="reservation.html"><span class="ti">'+ic("calendar-check",22)+'</span><span><b>Резервирай маса</b><small>Салон и градина</small></span></a>'+
+        '<a class="tile" href="lunch.html"><span class="ti">'+ic("bowl-food",22)+'</span><span><b>Обедно меню днес</b>'+lunchSub+'</span></a>'+
       '</div>'+
       '<a class="eta" href="delivery.html"><span class="dot '+etaRow.dot+'"></span>'+ic("moped",22)+'<span class="tx">'+etaRow.html+'</span>'+ic("caret-right",18)+'</a>'+
     '</div>'+
@@ -351,7 +353,7 @@ var bertha =
       '<p class="lead">Затворена фурна на дървени въглища. Огънят нагрява стените и тавана, затова месото се пече равномерно и хваща опушен вкус.</p>'+
       '<ul class="facts" style="margin-top:20px"><li>'+ic("fire",22)+'<span>Истински дървени въглища</span></li><li>'+ic("thermometer",22)+'<span>Равномерна топлина отвсякъде</span></li><li>'+ic("fork-knife",22)+'<span>'+berthaN+' ястия от скарата в менюто</span></li></ul></div>'+
     '<div class="temp" data-temp><div class="deg" aria-label="до 350 градуса">350<small>°C</small></div><p class="deg-cap">Толкова става в затворената камера. Работим между 250 и 350 °C.</p>'+
-      '<div class="scale" aria-hidden="true"><span class="band"></span><span class="mk"></span></div><div class="scale-l" aria-hidden="true"><span style="left:0">0</span><span class="on" style="left:62.5%">250</span><span class="on" style="left:87.5%">350</span><span style="left:100%">400</span></div></div>'+
+      '<div class="scale" aria-hidden="true"><span class="band"></span><span class="mk"></span></div><div class="scale-l" aria-hidden="true"><span style="left:0">0</span><span class="on" style="left:62.5%">250</span><span class="on" style="left:87.5%">350</span></div></div>'+
     '<div class="bact"><a class="pill pill-light" href="category.html#skara-bertha">Ястията от Bertha'+ic("arrow-right",20)+'</a><a class="pill pill-ghost" href="bertha.html">Как работи фурната</a></div>'+
   '</div></div></section>';
 
@@ -363,7 +365,7 @@ var visit =
       '<span class="len">'+ic("video-camera",18)+'без звук</span></div></div>'+
     '<div class="vtxt"><div class="sec-h" style="margin:22px 0 8px"><h2 class="h2" id="visit-h">Елате при нас</h2></div>'+
       '<p class="lead">Салон и отоплявана градина, която работи целогодишно. Подходящо за вечеря с приятели и за семейни празници.</p>'+
-      '<ul class="places"><li>'+ic("chair",22)+'Салон</li><li>'+ic("tree",22)+'Отоплявана градина</li><li>'+ic("confetti",22)+'Празници</li></ul>'+
+      '<ul class="places"><li>'+ic("chair",22)+'Салон</li><li>'+ic("tree",22)+'Отоплявана градина</li></ul>'+
       '<a class="pill pill-red pill-lg pill-block" href="reservation.html">'+ic("calendar-check",22)+'Резервирай маса</a></div>'+
   '</section>';
 
@@ -394,15 +396,16 @@ var office =
 /* ---------- delivery zones + address check ---------- */
 var free = SC.ZONES.filter(function(z){ return z.free; }), paid = SC.ZONES.filter(function(z){ return !z.free; });
 var delivery =
-  '<section class="sec" id="dostavka" aria-labelledby="dl-h"><div class="sec-h"><h2 class="h2" id="dl-h">Доставка до 21:00</h2><a class="link" href="delivery.html">Карта на зоните'+ic("caret-right",18)+'</a></div>'+
+  '<section class="sec" id="dostavka" aria-labelledby="dl-h"><div class="sec-h"><h2 class="h2" id="dl-h">Доставка до 21:00</h2></div>'+
   (!st.delivery ? '<p class="dnote"><span class="dot"></span>'+(st.kitchen ? 'Днес доставката приключи · Вземане до 22:30' : 'Доставяме отново '+(st.m<600?'днес':'утре')+' от 10:00')+'</p>' : '')+
   '<div class="dlv"><div>'+
     '<div class="zgroup"><h3>Безплатна доставка</h3><ul class="ztags">'+free.map(function(z){ return '<li>'+ic("check-circle",20)+z.n+'</li>'; }).join("")+'</ul></div>'+
     '<div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">'+paid.map(function(z){ return '<li>'+ic("map-pin",20)+z.n+'</li>'; }).join("")+'</ul><span class="missing">[ЛИПСВА: такси за доставка в €]</span></div>'+
+    '<a class="link" href="delivery.html">Карта на зоните'+ic("caret-right",18)+'</a>'+
     '<p class="pay">'+ic("wallet",20)+'<span>Плащате при получаване: в брой, с карта или с ваучер.</span></p>'+
   '</div>'+
   '<form class="card chk rv" data-chk novalidate><div class="field"><label for="addr">Провери адреса си</label>'+
-    '<div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Например: Дружба 1, бл. 12" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>'+
+    '<div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Квартал и блок" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>'+
     '<p class="err" id="addr-err" hidden></p></div>'+
     '<div class="res" data-res hidden aria-live="polite"></div></form></div></section>';
 

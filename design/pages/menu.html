@@ -84,7 +84,8 @@
 .catbar[hidden]{display:none}
 .catscroll{position:relative; display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; border-radius:999px; scroll-behavior:smooth}
 .catscroll::-webkit-scrollbar{display:none}
-.catscroll{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.catscroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 28px),transparent)}
+.catscroll.atstart{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
 .catbar .chip{position:relative; z-index:1; text-decoration:none; background:transparent; box-shadow:none; padding:0 14px; transition:color var(--t-base) var(--ease), transform var(--t-fast) var(--ease)}
 .catbar .chip[aria-current="true"]{background:transparent; color:var(--bg)}
 .catbar .chip .n{font-size:14px}
@@ -230,24 +231,30 @@ function squash(s){ return s.replace(/(.)\1+/g, "$1"); }
 function words(s){ return s.split(/[^a-z0-9]+/).filter(Boolean); }
 /* a typed (Latin) query can mean several spellings: c as "ц" (pica) or as "k" (carbonara) */
 function qVariants(raw){ var s = latin(raw).replace(/4/g,"ch").replace(/6/g,"sh").replace(/w/g,"v").replace(/x/g,"ks").replace(/kh/g,"h")
-    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts");
+    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts").replace(/ck/g,"k");
   var a = s.replace(/ch/g,"\u0001").replace(/c/g,"ts").replace(/\u0001/g,"ch"), b = s.replace(/ch/g,"\u0001").replace(/c/g,"k").replace(/\u0001/g,"ch");
   return (a === b ? [a] : [a,b]).map(function(v){ return words(squash(v)); }); }
 function dl(a, b){ var m = a.length, n = b.length, d = [], i, j; for (i=0;i<=m;i++){ d[i] = [i]; } for (j=0;j<=n;j++) d[0][j] = j;
   for (i=1;i<=m;i++) for (j=1;j<=n;j++){ var c = a[i-1]===b[j-1] ? 0 : 1; d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+c);
     if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1); } return d[m][n]; }
+/* exact prefix 3, inner substring 2, typo-tolerant prefix 0.5 (words of 4+ Latin letters, i.e. Cyrillic words over 4 letters and short Latin ones) */
 function wordScore(q, t){ if (t.indexOf(q) === 0) return 3; if (q.length >= 3 && t.indexOf(q) > 0) return 2;
-  var k = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0; if (!k) return 0;
-  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 1; } return 0; }
+  var k = q.length >= 9 ? 2 : q.length >= 4 ? 1 : 0; if (!k) return 0;
+  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 0.5; } return 0; }
 var IDX = {}; SC.items.forEach(function(x){ var c = SC.catById[x.cat];
-  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:""))))}; });
-function score(x, qv){ var best = 0;
-  qv.forEach(function(qw){ var total = 0;
-    for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0, w = IDX[x.id];
-      w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
-      if (!s) return; total += s; }
-    best = Math.max(best, total); });
-  return best; }
+  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:"")+" "+(NOUN[x.cat]&&x.cat!=="hlebcheta"?NOUN[x.cat][0]:""))))}; });
+/* name matches weigh 3x; returns {s: score, f: relied on a typo match} */
+function scoreWords(x, qw){ var total = 0, fz = false, w = IDX[x.id];
+  for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0;
+    w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
+    if (!s) return {s:0, f:false}; if (s === 1.5 || s === 0.5) fz = true; total += s; }
+  return {s:total, f:fz}; }
+/* search over a list: first spelling variant that finds anything wins; exact hits hide typo-only hits */
+function search(list, raw){ var vs = qVariants(raw), out = null;
+  for (var v=0; v<vs.length && !out; v++){ var hits = [];
+    list.forEach(function(x){ var r = scoreWords(x, vs[v]); if (r.s) hits.push([x, r]); });
+    if (hits.length){ if (hits.some(function(h){ return !h[1].f; })) hits = hits.filter(function(h){ return !h[1].f; }); out = hits; } }
+  var sc = {}; (out || []).forEach(function(h){ sc[h[0].id] = h[1].s; }); return sc; }
 
 /* ---------- filtering ---------- */
 function scopeItems(){ return st.menu === "bf" ? BF_ITEMS : MAIN_ITEMS; }
@@ -255,8 +262,8 @@ function scopeCats(){ return st.menu === "bf" ? [SC.catById.zakuski] : MAIN_CATS
 function fById(id){ return SC.FILTERS.filter(function(f){ return f.id===id; })[0]; }
 function passes(x){ for (var i=0;i<st.f.length;i++){ if (!fById(st.f[i]).test(x)) return false; }
   for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; } return true; }
-function results(){ var qv = st.q.trim() ? qVariants(st.q.trim()) : null, sc = {};
-  var list = scopeItems().filter(function(x){ if (!passes(x)) return false; if (!qv) return true; var s = score(x, qv); sc[x.id] = s; return s > 0; });
+function results(){ var qv = st.q.trim() || null, list = scopeItems().filter(passes), sc = {};
+  if (qv){ sc = search(list, qv); list = list.filter(function(x){ return sc[x.id]; }); }
   var groups = scopeCats().map(function(c){ var it = list.filter(function(x){ return x.cat === c.id; });
     it = it.map(function(x,i){ return [x,i]; }).sort(function(a,b){ return (SC.isOut(a[0]) - SC.isOut(b[0])) || (qv ? sc[b[0].id]-sc[a[0].id] : 0) || (a[1]-b[1]); }).map(function(z){ return z[0]; });
     return {c:c, items:it, top: qv ? Math.max.apply(null, it.map(function(x){ return sc[x.id]; }).concat([0])) : 0}; }).filter(function(g){ return g.items.length; });
@@ -323,13 +330,14 @@ main.innerHTML =
 var $ = function(s){ return main.querySelector(s); };
 var elRes = $("[data-results]"), elCat = $("[data-catscroll]"), elBar = $("[data-catbar]"), elSide = $("[data-slist]"), elF = $("[data-fchips]"), elCount = $("[data-count]"), elNot = $("[data-notices]"), elQ = $("#mq");
 var scroller = SC.scroller;
+elCat.classList.add("atstart"); elCat.addEventListener("scroll", function(){ elCat.classList.toggle("atstart", elCat.scrollLeft < 4); }, {passive:true});
 elQ.value = st.q;
 
 /* ---------- render ---------- */
 var R = {groups:[], list:[]};
 function filterChips(){ var items = scopeItems(), h = '';
   var aOn = st.a.length;
-  h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+(aOn ? 'Без '+st.a.length+' '+(st.a.length===1?"алерген":"алергена") : 'Алергени')+'</button>';
+  h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+(aOn === 1 ? 'Без '+SC.allergenName(st.a[0]).toLowerCase() : aOn ? 'Без '+aOn+' алергена' : 'Алергени')+'</button>';
   SC.FILTERS.forEach(function(f){ if (f.needs) return; var n = items.filter(f.test).length; if (!n) return; var on = st.f.indexOf(f.id) > -1;
     h += '<button class="chip '+(FICON[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+on+'">'+SC.ic(f.icon,20)+f.n+' <span class="n">'+n+'</span></button>'; });
   h += '<button class="chip more" type="button" data-sheet="more" aria-haspopup="dialog">'+SC.ic("sliders-horizontal",20)+'Още филтри</button>';
@@ -379,7 +387,7 @@ function render(){ R = results();
     return '<section class="mcat" id="c-'+c.id+'" data-cat="'+c.id+'" aria-labelledby="h-'+c.id+'">'+
       '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">'+SC.esc(c.n)+'</h2>'+(st.menu==="main" ? '<a class="link" href="category.html#'+c.id+'" aria-label="Повече за '+SC.esc(c.n)+'">Повече'+SC.ic("caret-right",18)+'</a>' : '')+'</div>'+
       '<p class="cdesc">'+catDesc(c)+'</p>'+
-      '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>'+
+      (q ? '' : '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>')+
       '<div class="grid-dishes">'+g.items.map(card).join("")+'</div></section>'; }).join("");
   requestAnimationFrame(spy); }
 
@@ -391,26 +399,34 @@ function topOf(el){ return el.getBoundingClientRect().top - scroller.getBounding
 function setActive(id, jump){ if (id === active) return; active = id;
   elCat.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
   elSide.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
+  placeMarks(jump, true);
+  if (Date.now() > lockUntil){ st.cat = st.menu === "main" ? id : null; writeHash(); } }
+function placeMarks(jump, follow){ var id = active;
   var ind = elCat.querySelector(".ind"), chip = id && elCat.querySelector('[data-go="'+id+'"]');
   if (ind){ ind.classList.toggle("jump", !!jump || !ind.classList.contains("on")); ind.classList.toggle("on", !!chip);
     if (chip){ var x = chip.offsetLeft, w = chip.offsetWidth;
       ind.querySelector(".l").style.transform = "translateX("+x+"px)";
       ind.querySelector(".m").style.transform = "translateX("+(x+24)+"px) scaleX("+Math.max(0,(w-48)/2+1)+")";
       ind.querySelector(".r").style.transform = "translateX("+(x+w-24)+"px)";
-      if (elBar.offsetParent){ var target = x - (elCat.clientWidth - w)/2; elCat.scrollTo({left:Math.max(0,target), behavior: jump ? "auto" : "smooth"}); } }
+      if (follow && elBar.offsetParent){ elCat.scrollTo({left:Math.max(0, x - (elCat.clientWidth - w)/2), behavior: jump ? "auto" : "smooth"}); } }
     void ind.offsetWidth; ind.classList.remove("jump"); }
   var mk = elSide.querySelector(".smark"), sl = id && elSide.querySelector('[data-go="'+id+'"]');
-  if (mk){ mk.classList.toggle("on", !!sl); if (sl) mk.style.transform = "translateY("+sl.offsetTop+"px)"; }
-  if (Date.now() > lockUntil){ st.cat = st.menu === "main" ? id : null; writeHash(); } }
+  if (mk){ if (jump) mk.style.transition = "none"; mk.classList.toggle("on", !!sl); if (sl) mk.style.transform = "translateY("+sl.offsetTop+"px)"; if (jump){ void mk.offsetWidth; mk.style.transition = ""; } } }
+/* web font or width changes move the chips: re-measure without animating */
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ placeMarks(true, true); });
+if ("ResizeObserver" in window) new ResizeObserver(function(){ placeMarks(true, false); }).observe(SC.device);
 function spy(){ if (Date.now() < lockUntil) return; var secs = elRes.querySelectorAll(".mcat"), id = null, o = offset() + 8;
   for (var i=0;i<secs.length;i++){ if (topOf(secs[i]) <= o) id = secs[i].dataset.cat; else break; }
   if (!id && secs.length && R.groups.length > 1){ /* above the first section: no category is active yet */ }
   setActive(id); }
-var raf = 0; scroller.addEventListener("scroll", function(){ if (!raf) raf = requestAnimationFrame(function(){ raf = 0; spy(); }); }, {passive:true});
+var raf = 0, idle; scroller.addEventListener("scroll", function(){ if (!raf) raf = requestAnimationFrame(function(){ raf = 0; spy(); });
+  /* release the lock once a programmatic scroll settles (scrollend where supported, else a quiet 140 ms) */
+  clearTimeout(idle); idle = setTimeout(function(){ if (lockUntil){ lockUntil = 0; spy(); } }, 140); }, {passive:true});
+scroller.addEventListener("scrollend", function(){ if (lockUntil){ lockUntil = 0; spy(); } });
 function goCat(id, instant){ var sec = elRes.querySelector('[data-cat="'+id+'"]'); if (!sec) return;
   var y = scroller.scrollTop + topOf(sec) - offset() + (isDesk() ? 0 : 0);
   /* the sticky island needs the header to be collapsed: always land past the hero */
-  lockUntil = Date.now() + (instant ? 50 : 700); st.cat = id; writeHash();
+  lockUntil = Date.now() + (instant ? 60 : 1600); st.cat = id; writeHash();
   setActive(id, instant); active = id;
   scroller.scrollTo({top:Math.max(0,y), behavior: (instant || SC.reduce) ? "auto" : "smooth"}); }
 

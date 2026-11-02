@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Оферти и отстъпки | Siracusa Bar & Grill</title>
+<meta name="description" content="Всички оферти на Siracusa Bar & Grill в Дружба 2: -30% на обедното меню след 15:00 при вземане, -10% с профил, подарък за рожден ден, карта с печати и ваучер за подарък.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* offers.html - page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.of-hero{padding-top:28px}
+.of-hgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
+.of-hgrid > *{min-width:0}
+.of-hero .lead{margin-top:10px; max-width:36ch}
+.of-hgrid{grid-template-areas:"head" "feat" "nav"}
+.of-head{grid-area:head} .of-feat{grid-area:feat} .of-nav{grid-area:nav; margin-top:4px}
+.of-now{display:flex; align-items:center; gap:10px; margin:0; font-size:16px; font-weight:600; color:var(--muted)}
+.of-now b{color:var(--ink); font-weight:800}
+.of-now .dot{width:10px; height:10px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 4px var(--ember-soft); flex:none}
+.of-jump{margin-top:18px}
+.of-jump .label{display:block; font-size:14px; color:var(--muted); margin-bottom:8px}
+.of-jump .chip{text-decoration:none}
+.of-net{display:flex; gap:12px; align-items:flex-start; margin:0 0 18px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.of-net .ic{color:var(--warn); margin-top:2px}
+.of-net p{margin:0}
+
+/* featured offer (ember) */
+.feat{position:relative; overflow:hidden; isolation:isolate; display:grid; gap:14px; padding:20px 20px 20px}
+.feat .bgic{position:absolute; right:-54px; bottom:-60px; z-index:-1; opacity:.09; transform:rotate(-16deg); color:var(--on-ember)}
+.feat-live{justify-self:start; display:inline-flex; align-items:center; gap:8px; min-height:34px; padding:0 14px 0 12px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:14px; font-weight:800; white-space:nowrap}
+.feat-live .d{width:8px; height:8px; border-radius:50%; background:currentColor}
+.feat-kick{margin:0; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; opacity:.78}
+.feat-num{display:block; font-size:104px; line-height:.84; font-weight:800; letter-spacing:-.065em; margin:6px 0 0 -4px; font-variant-numeric:tabular-nums}
+.feat-t{margin:0; font-size:26px; line-height:1.1; letter-spacing:-.035em; font-weight:800; text-wrap:balance}
+.feat-t.big{font-size:40px; line-height:1.02; letter-spacing:-.045em}
+.feat-p{margin:0; font-size:16px; opacity:.86; max-width:40ch}
+.feat-ex{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; padding:12px 16px; border-radius:18px; background:color-mix(in srgb, var(--on-ember) 9%, transparent)}
+.feat-ex .nm{flex:1 1 100%; font-size:14px; font-weight:700; opacity:.78}
+.feat-ex .was{font-variant-numeric:tabular-nums; text-decoration:line-through; font-weight:600; opacity:.7}
+.feat-ex .now{font-size:22px}
+.feat-list{list-style:none; margin:0; padding:4px 16px; border-radius:18px; background:color-mix(in srgb, var(--on-ember) 9%, transparent)}
+.feat-list li{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:9px 0}
+.feat-list li + li{border-top:1px solid color-mix(in srgb, var(--on-ember) 14%, transparent)}
+.feat-list .nm{font-weight:600; min-width:0}
+.feat-soon{display:flex; align-items:flex-start; gap:8px; margin:0; font-size:16px; font-weight:700}
+.feat-soon .ic{margin-top:2px}
+.go.dark{background:var(--on-ember); color:var(--on-chip-dark); margin-top:4px}
+.go.dark .knob{background:var(--ember); color:var(--on-ember)}
+.of-after{margin:12px 4px 0}
+
+/* ---------- coupons ---------- */
+.of-sum{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:14px; font-weight:700; color:var(--muted)}
+.of-sum span{display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
+.of-sum i{width:12px; height:12px; border-radius:4px; background:var(--ember)}
+.of-sum i.g{background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line-strong)}
+.of-all .sec-h{flex-wrap:wrap; align-items:flex-end}
+.of-grid{display:grid; gap:14px}
+.cp{position:relative; display:flex; scroll-margin-top:150px}
+.cp > .core{position:relative; display:flex; flex-direction:column; flex:1; min-width:0}
+.cp-top{display:flex; flex-direction:column; align-items:flex-start; gap:16px; padding:16px 18px 22px; background:var(--ember); color:var(--on-ember)}
+.cp-when{display:inline-flex; align-items:center; gap:7px; min-height:32px; padding:0 13px 0 10px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:14px; font-weight:800; line-height:1.2}
+.cp-big{display:flex; align-items:flex-end; gap:14px}
+.cp-num{font-size:60px; line-height:.84; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums; margin-left:-2px}
+.cp-sub{font-size:14px; font-weight:700; line-height:1.25; max-width:15ch; padding-bottom:2px; opacity:.86}
+.cp.off .cp-top{background:var(--surface-3); color:var(--muted)}
+.cp.off .cp-when{background:var(--surface); color:var(--ink)}
+.cp-cut{position:relative; height:0}
+.cp-cut::before,.cp-cut::after{content:""; position:absolute; top:-11px; width:11px; height:22px; background:var(--surface-2)}
+.cp-cut::before{left:0; border-radius:0 11px 11px 0}
+.cp-cut::after{right:0; border-radius:11px 0 0 11px}
+.cp-cut i{position:absolute; left:20px; right:20px; top:-3px; height:6px; background:radial-gradient(circle at 3px 3px, var(--surface-2) 2.2px, transparent 2.6px) 0 0/11px 6px repeat-x}
+.cp-body{display:flex; flex-direction:column; gap:12px; flex:1; padding:20px 18px 18px}
+.cp-body p{margin:0}
+.terms{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:9px}
+.terms li{display:grid; grid-template-columns:20px 1fr; gap:10px; line-height:1.4}
+.terms .ic{color:var(--muted); margin-top:2px}
+.cp-ex{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; padding:12px 14px; border-radius:16px; background:var(--surface-2)}
+.cp-ex .was{font-variant-numeric:tabular-nums; text-decoration:line-through; color:var(--muted); font-weight:600}
+.cp-ex .now{font-size:18px}
+.cp-ex .nm{flex:1 1 100%; font-size:14px; font-weight:700; color:var(--muted)}
+.cp-act{margin-top:auto; padding-top:6px}
+.cp-act .pill{width:100%; justify-content:space-between; padding:0 14px 0 20px}
+.cp.hl::after{content:""; position:absolute; inset:-5px; border-radius:33px; box-shadow:0 0 0 3px var(--ember); opacity:0; pointer-events:none; animation:hl 2.2s var(--ease-std) forwards}
+@keyframes hl{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
+@container app (min-width:700px){ .of-grid{grid-template-columns:1fr 1fr} }
+@container app (min-width:1100px){ .of-grid{grid-template-columns:repeat(3,1fr); gap:20px} }
+
+/* skeleton + error */
+.sk-top{height:132px; border-radius:0}
+.sk-line{height:16px; border-radius:8px}
+.of-err{grid-column:1/-1}
+.of-err .ill{color:var(--warn)}
+.of-err p{margin:0; max-width:34ch}
+
+/* ---------- loyalty + voucher ---------- */
+.of-split{display:grid; gap:28px}
+.of-stage{position:relative; display:grid; place-items:center; padding:30px 18px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); overflow:hidden; scroll-margin-top:150px}
+.of-copy .lead{margin-top:10px}
+.steps{list-style:none; margin:22px 0 0; padding:0; display:grid; gap:16px; counter-reset:st}
+.steps li{display:grid; grid-template-columns:40px 1fr; gap:14px; align-items:start; counter-increment:st}
+.steps li::before{content:counter(st); width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--ember-soft); color:var(--ink); font-weight:800; font-size:17px; box-shadow:inset 0 0 0 1.5px var(--ember)}
+.steps b{display:block; font-size:17px; letter-spacing:-.01em}
+.steps .d{display:block; color:var(--muted)}
+.of-copy .pill{margin-top:24px}
+.of-fine{margin:14px 0 0; font-size:14px; color:var(--muted)}
+
+/* loyalty card */
+.lc{position:relative; width:100%; max-width:400px; padding:20px 20px 18px; border-radius:24px; background:radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--ember) 26%, transparent), transparent 58%), var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow-lg); transform:rotate(-2.5deg)}
+.lc-h{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.lc-h .word{font-size:22px}
+.lc-k{font-size:14px; font-weight:700; opacity:.72}
+.lc-st{list-style:none; margin:20px 0 18px; padding:0; display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
+.st{aspect-ratio:1; border-radius:50%; display:grid; place-items:center; font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; color:color-mix(in srgb, var(--on-chip-dark) 50%, transparent); box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--on-chip-dark) 22%, transparent)}
+.st.on{position:relative; background:var(--ember); color:var(--on-ember); box-shadow:none; transform:rotate(-10deg)}
+.st.on::after{content:""; position:absolute; inset:4px; border-radius:50%; border:1.5px dashed color-mix(in srgb, var(--on-ember) 45%, transparent)}
+.st.gift{color:var(--ember); box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ember) 65%, transparent)}
+.lc-f{display:flex; justify-content:space-between; align-items:center; gap:10px; padding-top:14px; border-top:1px dashed color-mix(in srgb, var(--on-chip-dark) 24%, transparent)}
+.lc-f .cnt2{font-size:16px; font-weight:600; opacity:.85}
+.lc-f .cnt2 b{font-size:26px; font-weight:800; letter-spacing:-.03em; opacity:1}
+.lc-tag{display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 12px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+/* the one strong motion of the page: the two gift stamps are pressed onto the card when it comes into view */
+.rv-on .of-stage.rv:not(.in) .st.on{opacity:0}
+.rv-on .of-stage.rv.in .st.on{animation:stamp 620ms var(--ease) both}
+.rv-on .of-stage.rv.in .st.on:nth-child(1){animation-delay:420ms}
+.rv-on .of-stage.rv.in .st.on:nth-child(2){animation-delay:640ms}
+@keyframes stamp{0%{opacity:0; transform:scale(1.9) rotate(-34deg)}55%{opacity:1; transform:scale(.92) rotate(-6deg)}100%{opacity:1; transform:scale(1) rotate(-10deg)}}
+
+/* voucher card */
+.vc{position:relative; width:100%; max-width:400px; aspect-ratio:1.62; padding:20px 22px; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; background:radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--surface) 30%, transparent), transparent 55%), var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transform:rotate(2deg)}
+.vc-rib{position:absolute; top:0; bottom:0; right:23%; width:16px; background:var(--on-ember)}
+.vc-rib2{position:absolute; left:0; right:0; top:34%; height:16px; background:var(--on-ember)}
+.vc-bow{position:absolute; right:calc(23% - 20px); top:calc(34% - 20px); width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--on-ember); color:var(--ember); box-shadow:0 0 0 5px var(--ember)}
+.vc .word{position:relative; font-size:22px}
+.vc-k{position:relative; display:block; font-size:24px; font-weight:800; letter-spacing:-.035em; line-height:1.05; max-width:9ch}
+.vc-t{position:relative; display:block; margin-top:6px; font-size:14px; font-weight:700; opacity:.8; max-width:24ch}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:760px}
+.qa{border-top:1px solid var(--line)}
+.qa:last-child{border-bottom:1px solid var(--line)}
+.qa summary{display:flex; justify-content:space-between; align-items:center; gap:16px; min-height:60px; padding:10px 0; font-weight:800; font-size:17px; letter-spacing:-.01em; cursor:pointer; list-style:none}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary .ic{transition:transform var(--t-base) var(--ease)}
+.qa[open] summary .ic{transform:rotate(180deg)}
+.qa p{margin:0 0 18px; color:var(--muted); max-width:62ch}
+
+/* ---------- prototype panel ---------- */
+.proto{display:grid; gap:12px; padding:18px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent; border:0}
+.proto h2{margin:0; font-size:16px; display:flex; align-items:center; gap:8px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+.proto .btns{display:flex; flex-wrap:wrap; gap:8px}
+.proto .pill{min-height:48px; font-size:15px}
+.proto .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+
+/* ---------- forms in sheets ---------- */
+.of-form{display:grid; gap:18px; padding:4px 2px 6px}
+.of-form .intro{margin:0; color:var(--muted)}
+.two{display:grid; grid-template-columns:1fr 1.5fr; gap:10px}
+.selw{position:relative}
+.selw select{appearance:none; -webkit-appearance:none; padding-right:44px; cursor:pointer}
+.selw .ic{position:absolute; right:14px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--muted)}
+.sumw{position:relative}
+.sumw .input{padding-right:48px; font-variant-numeric:tabular-nums; font-weight:700}
+.sumw .unit{position:absolute; right:18px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--muted); pointer-events:none}
+.of-form .check{padding:12px 14px; border-radius:var(--r-field); background:var(--surface-2); min-height:56px}
+.of-form .check[data-bad]{box-shadow:inset 0 0 0 2px var(--danger)}
+.of-form .check b{display:block}
+.of-form .check .muted{display:block; font-size:14px; margin-top:2px}
+.of-form .submit{display:grid; gap:10px}
+.of-form .submit .pill{white-space:normal; text-align:center}
+.of-form .fine{margin:0; font-size:14px; color:var(--muted); text-align:center}
+.of-alert{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.of-alert .ic{color:var(--warn); margin-top:2px}
+.of-alert p{margin:0}
+.spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:spin .8s linear infinite; flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.of-done{display:grid; justify-items:center; text-align:center; gap:12px; padding:18px 4px 8px}
+.of-done .okc{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.of-done h3{outline:none}
+.of-done p{margin:0; max-width:34ch}
+.of-done .pill{margin-top:8px}
+
+/* ---------- desktop ---------- */
+@container app (min-width:900px){
+  .of-hero{padding-top:48px}
+  .of-hgrid{grid-template-columns:minmax(0,1fr) minmax(0,520px); grid-template-rows:1fr auto auto 1fr; grid-template-areas:"pad feat" "head feat" "nav feat" "pad2 feat"; column-gap:56px; row-gap:0; align-items:end}
+  .of-nav{margin-top:28px}
+  .of-feat{align-self:center}
+  .of-hero .lead{font-size:19px}
+  .of-jump .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .feat{padding:28px 28px 26px; gap:16px}
+  .feat-num{font-size:128px}
+  .feat-t{font-size:30px}
+  .feat-t.big{font-size:48px}
+  .go.dark{width:auto; justify-self:start; min-width:300px}
+  .cp-act .pill{width:auto; min-width:220px}
+  .cp > .core{transition:transform var(--t-base) var(--ease)}
+  .cp:hover > .core{transform:translateY(-3px)}
+  .of-split{grid-template-columns:1fr 1fr; gap:64px; align-items:center}
+  .of-split.rev .of-stage{order:2}
+  .of-stage{min-height:420px; padding:48px}
+  .of-copy .pill{width:auto}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+var main = SC.mount({page:"offers", nav:"offers", title:"Оферти", docTitle:"Оферти и отстъпки"});
+var esc = SC.esc, ic = SC.ic;
+var net = {offline:false};           /* prototype switch: "Без интернет" */
+var view = "ok";                     /* prototype switch: ok | loading | error */
+var DSHORT = ["нд","пн","вт","ср","чт","пт","сб"];
+
+/* ---------- helpers ---------- */
+function miss(t){ return '<span class="missing">[ЛИПСВА: '+esc(t)+']</span>'; }
+function dur(n){ var h = Math.floor(n/60), m = n%60; return h ? h+" ч"+(m ? " "+m+" мин" : "") : m+" мин"; }
+function off30(p){ return Math.round(p*100*0.7)/100; }
+function longDate(d){ return SC.DAYS[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
+function lunchDate(){ var p = (SC.menu.lunch && SC.menu.lunch.date || "").split("-"); if (p.length<3) return ""; return longDate(new Date(+p[0], +p[1]-1, +p[2])); }
+/* real lunch dishes used as examples (never invented) */
+var L = SC.lunch || [];
+function pickLunch(re){ return L.filter(function(x){ return re.test(x.n); })[0]; }
+var exDish = pickLunch(/Лазаня/) || L.filter(function(x){ return x.course==="main"; })[0] || L[0];
+var lunchTeaser = [L.filter(function(x){ return x.group==="Супи"; })[0], exDish, L.filter(function(x){ return x.group==="Десерти"; })[0]].filter(Boolean);
+
+/* ---------- offers model: everything time-dependent comes from SC.state() ---------- */
+function model(){
+  var s = SC.state(), m = s.m, ev = SC.events()[0], ls = SC.lastSaturday(), d = ls.d;
+  var lunchOn = s.lunchDiscount;
+  var lunchWhen = lunchOn ? "Важи сега · до 22:30" : m < 900 ? "Днес от 15:00 · след "+dur(900-m) : "Утре от 15:00 до 22:30";
+  var greekWhen = ls.days===0 ? "Днес от "+ev.time : DSHORT[d.getDay()]+", "+d.getDate()+" "+SC.MON[d.getMonth()]+" · след "+SC.plural(ls.days,"ден","дни");
+  var list = [
+    {id:"lunch", on:lunchOn, when:lunchWhen, num:"-30%", sub:"при вземане след 15:00", title:"Обедното меню след 15:00",
+     text:"Вземете обедното меню от ресторанта след 15:00 и платете 30% по-малко. Отстъпката се смята сама в количката.",
+     terms:["Само за ястията от обедното меню","Само при вземане от място: след 15:00 обедното меню не се доставя","От 15:00 до 22:30, готово е веднага"],
+     ex:true, cta: lunchOn ? {t:"Вземи от място", href:"lunch.html", pickup:true} : {t:"Виж обедното меню", href:"lunch.html"}},
+    {id:"greek", on:true, icon:"calendar-blank", when:greekWhen, num:"-5%", sub:"при ранна резервация", title:ev.n,
+     text:ev.text,
+     terms:[esc(longDate(d))+", от "+ev.time, "До кога е ранна резервация: "+miss("дата"), "Програма, меню и цена: "+miss("от ресторанта")],
+     cta:{t:"Запази място", href:"event.html#"+ev.id}},
+    {id:"signup", on:true, when:"Важи сега", num:"-10%", sub:"от следващата поръчка", title:"Направете профил",
+     text:"Профилът се прави с телефонния номер и код по SMS, без парола. Вземате -10% от следващата поръчка.",
+     terms:["Веднъж, при първата регистрация","В профила са и картата с печати, любимите ястия и адресите ви"],
+     cta:{t:"Направи профил", href:"login.html"}},
+    {id:"rating", on:true, icon:"chat-circle-dots", when:"След всяка поръчка", num:"-10%", sub:"за кратка оценка", title:"Кажете ни как беше",
+     text:"След поръчката ви питаме „Останахте ли доволни?“. Отговорете и вземете -10% от следващата поръчка.",
+     terms:["Еднакво при „Да“ и при „Не“","Питаме 40 мин след доставката или когато поискате сметката в ресторанта","Кодът се показва веднага след отговора. Веднъж на телефонен номер","Отзивът в Google е по желание и не е свързан с отстъпката"],
+     cta:{t:"Към менюто", href:"menu.html"}},
+    {id:"birthday", on:true, icon:"cake", when:"Около рождения ви ден", num:"-10%", sub:"или малка торта за рожденика", title:"Рожден ден при нас",
+     text:"Празнувайте при нас и изберете: -10% от сметката или малка торта. Пишем ви седмица по-рано.",
+     terms:["Само ако сте се съгласили да ви пишем. По желание","Питаме само за ден и месец, без годината","Поздрав и за имения ден"],
+     cta:{t:"Запиши рождения ми ден", sheet:"birthday"}},
+    {id:"celebration", on:true, icon:"confetti", when:"Важи сега", num:"-5%", sub:"от крайната цена", title:"Празник при нас",
+     text:"Рожден ден, кръщене, юбилей или фирмено парти: резервирайте рано и вземете -5% от крайната цена.",
+     terms:["Колко рано: "+miss("дни преди празника"),"Салон, отоплявана градина или цялото място","Собствено меню: свържете се с нас за оферта"],
+     cta:{t:"Изчисли празника", href:"celebration.html"}}
+  ];
+  /* active first, the rest keep their order */
+  list = list.filter(function(o){ return o.on; }).concat(list.filter(function(o){ return !o.on; }));
+  return {s:s, m:m, ev:ev, ls:ls, list:list, total:list.length+2 /* + loyalty card + voucher */, active:list.filter(function(o){ return o.on; }).length+2};
+}
+
+/* ---------- hero: lead offer is SC.offers()[0] (same as the home banner) ---------- */
+function exBox(cls){ if (!exDish) return "";
+  return '<div class="'+cls+'"><span class="nm">Например: '+esc(exDish.n)+'</span><span class="was">'+SC.fmt(exDish.p)+'</span><span class="price now">'+SC.fmt(off30(exDish.p))+'</span><span class="vh">след отстъпката</span></div>'; }
+function heroCard(M){
+  var all = SC.offers(), lead = all[0], o;
+  if (lead.id==="lunch30") o = {live:"Важи сега · до 22:30", num:"-30%", title:"на обедното меню при вземане от място",
+      text:"След 15:00 обедното меню е само за вземане. Отстъпката се смята сама в количката.", extra:exBox("feat-ex"), go:lead.go, href:lead.href, pickup:true};
+  else if (lead.id==="lunch") o = {live:"Сега · до 15:00", kick:lunchDate(), big:true, title:"Обедно меню днес", text:lead.p,
+      extra:(lunchTeaser.length ? '<ul class="feat-list" aria-label="Примери от днешното обедно меню">'+lunchTeaser.map(function(x){ return '<li><span class="nm">'+esc(x.n)+'</span><span class="price">'+SC.fmt(x.p)+'</span></li>'; }).join("")+'</ul>' : "")+
+        '<p class="feat-soon">'+ic("clock",20)+'<span>От 15:00: -30% при вземане от място · след '+dur(900-M.m)+'</span></p>', go:lead.go, href:lead.href};
+  else { var g = all.filter(function(x){ return x.id==="greek"; })[0], d = M.ls.d;
+    o = {live:(M.ls.days===0 ? "Днес от "+M.ev.time : DSHORT[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]+" · "+M.ev.time), num:"-5%", title:"при ранна резервация за Гръцка вечер",
+      text:M.ev.text, go:g.go, href:g.href,
+      after:'<p class="note-auto of-after">'+ic("clock",18)+'<span>Кухнята приема поръчки от 10:00. -30% на обедното меню: '+(M.m<600?"днес":"утре")+' от 15:00.</span></p>'}; }
+  return '<div class="shell"><div class="core ember-card feat">'+
+    '<span class="bgic" aria-hidden="true">'+ic("seal-percent",280)+'</span>'+
+    '<span class="feat-live"><span class="d"></span>'+esc(o.live)+'</span>'+
+    (o.kick ? '<p class="feat-kick">'+esc(o.kick)+'</p>' : '')+
+    '<h2 class="feat-t'+(o.big?" big":"")+'">'+(o.num ? '<span class="feat-num">'+o.num+'</span> ' : '')+esc(o.title)+'</h2>'+
+    '<p class="feat-p">'+esc(o.text)+'</p>'+(o.extra||"")+
+    '<a class="pill go dark" href="'+o.href+'"'+(o.pickup?' data-pickup':'')+'>'+esc(o.go)+'<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
+    '</div></div>'+(o.after||"");
+}
+function heroSkel(){ return '<div class="shell" aria-hidden="true"><div class="core pad" style="display:grid;gap:14px"><span class="skel" style="height:34px;width:46%;border-radius:999px"></span><span class="skel" style="height:96px;width:58%"></span><span class="skel sk-line" style="width:90%"></span><span class="skel sk-line" style="width:70%"></span><span class="skel" style="height:60px;border-radius:999px"></span></div></div>'; }
+
+/* ---------- coupon ---------- */
+function coupon(o){
+  var whenIc = o.on ? (o.icon || "check-circle") : "clock";
+  var cta = o.cta.sheet
+    ? '<button class="pill pill-line" type="button" data-sheet="'+o.cta.sheet+'">'+esc(o.cta.t)+ic("caret-right",20)+'</button>'
+    : '<a class="pill pill-line" href="'+o.cta.href+'"'+(o.cta.pickup?' data-pickup':'')+'>'+esc(o.cta.t)+ic("arrow-right",20)+'</a>';
+  return '<article class="cp shell'+(o.on?"":" off")+'" id="'+o.id+'" aria-labelledby="t-'+o.id+'"><div class="core">'+
+    '<div class="cp-top"><span class="cp-when">'+ic(whenIc,18)+'<span>'+esc(o.when)+'</span></span>'+
+      '<div class="cp-big"><span class="cp-num">'+o.num+'</span><span class="cp-sub">'+esc(o.sub)+'</span></div></div>'+
+    '<div class="cp-cut" aria-hidden="true"><i></i></div>'+
+    '<div class="cp-body"><h3 class="h3" id="t-'+o.id+'">'+esc(o.title)+'</h3><p>'+esc(o.text)+'</p>'+
+      (o.ex ? exBox("cp-ex") : "")+
+      '<ul class="terms" aria-label="Условия">'+o.terms.map(function(t){ return '<li>'+ic("check",18)+'<span>'+t+'</span></li>'; }).join("")+'</ul>'+
+      '<div class="cp-act">'+cta+'</div></div>'+
+    '</div></article>';
+}
+function couponSkel(){ return '<div class="shell" aria-hidden="true"><div class="core"><div class="skel sk-top"></div><div class="pad" style="display:grid;gap:12px"><span class="skel" style="height:24px;width:62%"></span><span class="skel sk-line"></span><span class="skel sk-line" style="width:84%"></span><span class="skel sk-line" style="width:70%"></span><span class="skel" style="height:48px;border-radius:999px;margin-top:8px"></span></div></div></div>'; }
+
+/* ---------- static sections ---------- */
+function loyalty(){
+  var st = ""; for (var i=1;i<=10;i++) st += '<li class="st'+(i<=2?" on":"")+(i===10?" gift":"")+'">'+(i<=2 ? ic("fire",22) : i===10 ? ic("gift",22) : i)+'</li>';
+  return '<section class="sec" aria-labelledby="h-loyalty"><div class="of-split">'+
+    '<div class="of-stage rv" id="loyalty">'+
+      '<div class="lc" role="img" aria-label="Карта с печати: 2 от 10 печата, двата първи са подарък от нас">'+
+        '<div class="lc-h"><span class="word">Siracusa</span><span class="lc-k">Карта с печати</span></div>'+
+        '<ol class="lc-st" aria-hidden="true">'+st+'</ol>'+
+        '<div class="lc-f"><span class="cnt2"><b>2</b> от 10</span><span class="lc-tag">'+ic("gift",16)+'2 печата подарък</span></div>'+
+      '</div></div>'+
+    '<div class="of-copy"><h2 class="h2" id="h-loyalty">Карта с печати</h2>'+
+      '<p class="lead">Започвате с 2 от 10 печата, подарък от нас. Картата е в профила ви: без приложение и без пластмаса.</p>'+
+      '<ol class="steps">'+
+        '<li><div><b>Направете профил</b><span class="d">С телефонния номер и код по SMS.</span></div></li>'+
+        '<li><div><b>Събирайте печати</b><span class="d">Печат получавате за '+miss("за какво се дава печат")+'.</span></div></li>'+
+        '<li><div><b>Вземете подаръка</b><span class="d">На 10-ия печат: '+miss("наградата")+'.</span></div></li>'+
+      '</ol>'+
+      '<a class="pill pill-ink pill-lg pill-block" href="login.html">'+ic("seal-percent",22)+'Вземи картата · 2 печата подарък</a>'+
+    '</div></div></section>';
+}
+function voucher(){
+  return '<section class="sec" aria-labelledby="h-voucher"><div class="of-split rev">'+
+    '<div class="of-stage" id="voucher">'+
+      '<div class="vc" role="img" aria-label="Ваучер за подарък от Siracusa">'+
+        '<span class="vc-rib" aria-hidden="true"></span><span class="vc-rib2" aria-hidden="true"></span><span class="vc-bow" aria-hidden="true">'+ic("gift",26)+'</span>'+
+        '<span class="word">Siracusa</span>'+
+        '<div><span class="vc-k">Ваучер за подарък</span><span class="vc-t">Пица на пещ и скара на дървени въглища</span></div>'+
+      '</div></div>'+
+    '<div class="of-copy"><h2 class="h2" id="h-voucher">Ваучер за подарък</h2>'+
+      '<p class="lead">Подарете вечеря при нас. Онлайн плащане засега няма: изпращате запитване, а плащате на място.</p>'+
+      '<ol class="steps">'+
+        '<li><div><b>Изпращате запитване</b><span class="d">С желаната сума и телефон за връзка.</span></div></li>'+
+        '<li><div><b>Обаждаме ви се</b><span class="d">Уговаряме кога да минете. Срок: '+miss("до кога се обаждаме")+'.</span></div></li>'+
+        '<li><div><b>Плащате на място</b><span class="d">В брой или с карта и взимате ваучера.</span></div></li>'+
+      '</ol>'+
+      '<button class="pill pill-ink pill-lg pill-block" type="button" data-sheet="voucher">'+ic("gift",22)+'Запитване за ваучер</button>'+
+      '<p class="of-fine">Валидност на ваучера: '+miss("срок")+'</p>'+
+    '</div></div></section>';
+}
+function faq(){
+  var ex = exDish ? SC.fmt(Math.round(exDish.p*100*0.3)/100) : "";
+  var q = [
+    ["Къде виждам отстъпката?", "В количката, на отделен ред, преди да поръчате."+(ex?" Например: „Отстъпка след 15:00: -"+ex+"“.":"")],
+    ["Мога ли да съчетая две отстъпки?", miss("правило за съчетаване, решава собственикът")],
+    ["Трябва ли ми профил?", "За -30% след 15:00 и за ранната резервация не. За -10% с профил и за картата с печати да. Профилът се прави с телефон и код по SMS, без парола."],
+    ["Как плащам?", "В брой или с карта, на място или при доставка. Приемаме и ваучери за храна. Онлайн плащане засега няма."]
+  ];
+  return '<section class="sec" aria-labelledby="h-faq"><div class="faq"><h2 class="h2" id="h-faq" style="margin-bottom:12px">Добре е да знаете</h2>'+
+    q.map(function(x){ return '<details class="qa"><summary>'+esc(x[0])+ic("caret-down",20)+'</summary><p>'+x[1]+'</p></details>'; }).join("")+'</div></section>';
+}
+function proto(){
+  return '<section class="sec"><div class="proto" role="group" aria-labelledby="h-proto"><h2 id="h-proto">'+ic("sliders-horizontal",18)+'Само в прототипа</h2>'+
+    '<p>Покажете състоянията на страницата. Часът се сменя от лентата най-горе.</p>'+
+    '<div class="btns"><button class="pill pill-soft" type="button" data-proto="loading">Зареждане</button>'+
+    '<button class="pill pill-soft" type="button" data-proto="error">Грешка при зареждане</button>'+
+    '<button class="pill pill-soft" type="button" data-proto="offline" aria-pressed="false">Без интернет</button></div></div></section>';
+}
+
+/* ---------- render ---------- */
+var JUMP = [["lunch","Обедно -30%"],["greek","Гръцка вечер"],["signup","Профил -10%"],["rating","Оценка -10%"],["birthday","Рожден ден"],["celebration","Празник -5%"],["loyalty","Карта с печати"],["voucher","Ваучер"]];
+main.innerHTML =
+  '<section class="sec of-hero" aria-labelledby="h-offers"><div data-net></div><div class="of-hgrid">'+
+    '<div class="of-head"><h1 class="h1" id="h-offers">Оферти и отстъпки</h1>'+
+      '<p class="lead">Всички промоции на едно място, с ясни условия и без дребен шрифт.</p></div>'+
+    '<div class="of-feat" data-feat></div>'+
+    '<div class="of-nav"><p class="of-now" data-now></p>'+
+      '<nav class="of-jump" aria-label="Към офертата"><span class="label">Бързо към</span><div class="chips">'+JUMP.map(function(j){ return '<a class="chip" href="#'+j[0]+'">'+j[1]+'</a>'; }).join("")+'</div></nav></div>'+
+    '</div></section>'+
+  '<section class="sec of-all" aria-labelledby="h-all"><div class="sec-h"><h2 class="h2" id="h-all">Всички оферти</h2><span class="of-sum" data-sum></span></div><div class="of-grid" data-grid aria-live="polite"></div></section>'+
+  loyalty() + voucher() + faq() + proto();
+
+var lastKey = "";
+function fill(force){
+  var M = model(), key = view+"|"+SC.offers()[0].id+"|"+M.m;
+  if (!force && key===lastKey) return; lastKey = key;
+  var feat = main.querySelector("[data-feat]"), grid = main.querySelector("[data-grid]"), now = main.querySelector("[data-now]"), sum = main.querySelector("[data-sum]");
+  if (view==="loading"){ feat.innerHTML = heroSkel(); grid.innerHTML = '<span class="vh">Зареждаме офертите</span>'+couponSkel()+couponSkel()+couponSkel(); now.innerHTML = '<span class="skel" style="display:block;height:20px;width:200px"></span>'; sum.textContent = ""; grid.setAttribute("aria-busy","true"); return; }
+  grid.removeAttribute("aria-busy");
+  if (view==="error"){ feat.innerHTML = ""; now.innerHTML = ""; sum.textContent = "";
+    grid.innerHTML = '<div class="empty of-err"><div class="ill">'+ic("warning-circle",44)+'</div><h3 class="h3">Офертите не се заредиха</h3><p class="muted">Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите на <a href="tel:+359894365577" style="font-weight:700">'+esc(SC.RESTAURANT.phone)+'</a>.</p><button class="pill pill-red" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button></div>'; return; }
+  feat.innerHTML = heroCard(M);
+  now.innerHTML = '<span class="dot" aria-hidden="true"></span><span>Сега важат <b>'+M.active+' от '+M.total+'</b> оферти</span>';
+  sum.innerHTML = '<span><i aria-hidden="true"></i>Важи сега</span>'+(M.list.some(function(o){ return !o.on; }) ? '<span><i class="g" aria-hidden="true"></i>По-късно</span>' : '');
+  grid.innerHTML = M.list.map(coupon).join("");
+}
+fill(true);
+SC.reveal();
+/* live clock: only re-renders when the minute or the offer state changes */
+setInterval(function(){ if (view==="ok") fill(false); }, 30000);
+
+/* ---------- anchors: #lunch, #birthday ... (aliases for SC.offers ids) ---------- */
+var ALIAS = {lunch30:"lunch", tomorrow:"lunch", "gratska-vecher":"greek", profile:"signup", loyalty:"loyalty", stamps:"loyalty", gift:"voucher"};
+function goTo(id, smooth){ id = ALIAS[id] || id; var el = main.querySelector("#"+CSS.escape(id)); if (!el) return false;
+  el.scrollIntoView({behavior:(smooth && !SC.reduce) ? "smooth" : "auto", block:"start"});
+  if (el.classList.contains("cp")){ el.classList.remove("hl"); void el.offsetWidth; el.classList.add("hl"); }
+  else if (el.classList.contains("rv")) el.classList.add("in");
+  var f = el.querySelector("h3, .lc, .vc"); return true; }
+function fromHash(smooth){ var h = decodeURIComponent(location.hash.slice(1)); if (h) setTimeout(function(){ goTo(h, smooth); }, 60); }
+fromHash(false);
+window.addEventListener("hashchange", function(){ fromHash(true); });
+
+/* ---------- forms in sheets ---------- */
+function phoneOk(v){ var d = v.replace(/[\s\-()]/g,""); return /^(\+359|00359|0)8[789]\d{7}$/.test(d); }
+function niceTel(v){ var d = v.replace(/\D/g,""); if (d.indexOf("359")===0) d = "0"+d.slice(3); return d.length===10 ? d.slice(0,4)+" "+d.slice(4,7)+" "+d.slice(7) : v; }
+function setErr(form, name, msg){ var inp = form.querySelector("[name="+name+"]"), e = form.querySelector("#e-"+name), wrap = inp.closest(".check");
+  if (wrap){ if (msg) wrap.setAttribute("data-bad",""); else wrap.removeAttribute("data-bad"); }
+  inp.setAttribute("aria-invalid", msg ? "true" : "false"); e.hidden = !msg; e.textContent = msg || ""; return !msg; }
+function busy(btn, on, label){ btn.disabled = on; btn.setAttribute("aria-busy", on ? "true" : "false"); btn.innerHTML = (on ? '<span class="spin" aria-hidden="true"></span>' : '')+esc(label); }
+function offlineBox(text){ return '<div class="of-alert" role="alert">'+ic("warning",22)+'<p><b>Няма връзка.</b> '+esc(text)+'</p></div>'; }
+function send(form, btn, label, done){
+  var box = form.querySelector("[data-alert]"); box.innerHTML = "";
+  busy(btn, true, label);
+  setTimeout(function(){
+    if (net.offline){ busy(btn, false, "Опитай пак · "+label); box.innerHTML = offlineBox("Запитването ви е запазено - опитайте пак."); return; }
+    done();
+  }, SC.reduce ? 200 : 800);
+}
+function doneView(sheet, title, html){
+  var body = sheet.el.querySelector(".body");
+  body.innerHTML = '<div class="of-done" role="status"><span class="okc">'+ic("check",36)+'</span><h3 class="h3" tabindex="-1">'+esc(title)+'</h3>'+html+'<button class="pill pill-line pill-block" type="button" data-done>Затвори</button></div>';
+  body.querySelector("[data-done]").onclick = sheet.close; body.querySelector("h3").focus({preventScroll:true}); }
+
+function voucherSheet(){
+  var s = SC.sheet({title:"Ваучер за подарък", html:
+    '<form class="of-form" novalidate>'+
+    '<p class="intro">Изпратете запитване, а платете на място. Ще ви се обадим, за да уговорим кога да минете.</p>'+
+    '<div class="field"><label for="v-sum">Сума на ваучера</label><div class="sumw"><input class="input" id="v-sum" name="sum" inputmode="decimal" autocomplete="off" placeholder="Сума в евро" aria-describedby="h-sum e-sum"><span class="unit" aria-hidden="true">€</span></div><span class="help" id="h-sum">Ще я потвърдим по телефона.</span><span class="err" id="e-sum" hidden></span></div>'+
+    '<div class="field"><label for="v-name">Вашето име</label><input class="input" id="v-name" name="name" autocomplete="name" aria-describedby="e-name"><span class="err" id="e-name" hidden></span></div>'+
+    '<div class="field"><label for="v-tel">Телефон</label><input class="input" id="v-tel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="08XX XXX XXX" aria-describedby="e-tel"><span class="err" id="e-tel" hidden></span></div>'+
+    '<div class="field"><label for="v-note">За кого е или по какъв повод <span class="muted" style="font-weight:600">(по желание)</span></label><textarea class="input" id="v-note" name="note" rows="2"></textarea></div>'+
+    '<div data-alert></div>'+
+    '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Поискай ваучер</button><p class="fine">Плащате на място, в брой или с карта.</p></div>'+
+    '</form>'});
+  var f = s.el.querySelector("form"), btn = f.querySelector("[data-go]");
+  function amount(){ var v = f.sum.value.replace(/\s/g,"").replace(",","."); return /^\d+(\.\d{1,2})?$/.test(v) ? +v : NaN; }
+  function label(){ var a = amount(); return a > 0 ? "Поискай ваучер за "+SC.fmt(a) : "Поискай ваучер"; }
+  f.sum.addEventListener("input", function(){ if (!btn.disabled) btn.textContent = label(); if (f.sum.getAttribute("aria-invalid")==="true") check("sum"); });
+  function check(n){
+    if (n==="sum"){ var raw = f.sum.value.trim(), a = amount(); return setErr(f,"sum", !raw ? "Напишете сумата в евро." : !(a>0) ? "Напишете сумата само с цифри, без букви." : ""); }
+    if (n==="name") return setErr(f,"name", f.name.value.trim().length<2 ? "Напишете името си, за да знаем кого търсим." : "");
+    if (n==="tel") return setErr(f,"tel", !f.tel.value.trim() ? "Напишете телефон, на който да ви се обадим." : !phoneOk(f.tel.value) ? "Проверете номера: 10 цифри, започва с 08." : "");
+  }
+  ["name","tel"].forEach(function(n){ f[n].addEventListener("blur", function(){ if (f[n].value.trim()) check(n); }); f[n].addEventListener("input", function(){ if (f[n].getAttribute("aria-invalid")==="true") check(n); }); });
+  f.addEventListener("submit", function(e){ e.preventDefault();
+    var ok = ["sum","name","tel"].map(check), bad = ["sum","name","tel"].filter(function(n,i){ return !ok[i]; });
+    if (bad.length){ f[bad[0]].focus(); return; }
+    var a = amount(), tel = niceTel(f.tel.value);
+    send(f, btn, label(), function(){ doneView(s, "Запитването е изпратено",
+      '<p>Ще ви се обадим на <b class="price">'+esc(tel)+'</b>, за да уговорим кога да минете за ваучера за <b class="price">'+SC.fmt(a)+'</b>.</p><p class="muted small">Плащате на място, в брой или с карта.</p>'); });
+  });
+  setTimeout(function(){ f.sum.focus({preventScroll:true}); }, 380);
+}
+
+function birthdaySheet(){
+  var days = '<option value="">Ден</option>'; for (var i=1;i<=31;i++) days += '<option value="'+i+'">'+i+'</option>';
+  var mons = '<option value="">Месец</option>'+SC.MONTHS.map(function(m,i){ return '<option value="'+i+'">'+m+'</option>'; }).join("");
+  var s = SC.sheet({title:"Подарък за рождения ден", html:
+    '<form class="of-form" novalidate>'+
+    '<p class="intro">Седмица преди рождения ви ден ще ви изпратим имейл с подаръка: -10% от сметката или малка торта, когато празнувате при нас.</p>'+
+    '<fieldset style="border:0;margin:0;padding:0;display:grid;gap:6px"><legend class="label" style="padding:0;margin-bottom:6px">Рожден ден</legend>'+
+      '<div class="two"><div class="field"><label class="vh" for="b-day">Ден</label><div class="selw"><select class="input" id="b-day" name="day" aria-describedby="e-day">'+days+'</select>'+ic("caret-down",18)+'</div></div>'+
+      '<div class="field"><label class="vh" for="b-mon">Месец</label><div class="selw"><select class="input" id="b-mon" name="mon" aria-describedby="e-day">'+mons+'</select>'+ic("caret-down",18)+'</div></div></div>'+
+      '<span class="help muted small">Без годината. Не ни трябва.</span><span class="err" id="e-day" hidden style="font-size:14px;color:var(--danger);font-weight:600"></span></fieldset>'+
+    '<div class="field"><label for="b-mail">Имейл</label><input class="input" id="b-mail" name="mail" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" aria-describedby="e-mail"><span class="err" id="e-mail" hidden></span></div>'+
+    '<div class="field"><label class="check" for="b-ok"><input type="checkbox" id="b-ok" name="ok" aria-describedby="e-ok"><span><b>Искам подарък за рождения си ден и първи да научавам за събитията</b><span class="muted">Може да се откажете по всяко време с един клик в имейла.</span></span></label><span class="err" id="e-ok" hidden></span></div>'+
+    '<div data-alert></div>'+
+    '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Запиши рождения ми ден</button><p class="fine">С профил датата се пази заедно с картата с печати. <a class="link" href="login.html" style="min-height:0;display:inline">Направи профил</a></p></div>'+
+    '</form>'});
+  var f = s.el.querySelector("form"), btn = f.querySelector("[data-go]");
+  var DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  function dayErr(){ var d = +f.day.value, m = f.mon.value;
+    var msg = (!d || m==="") ? "Изберете ден и месец." : d > DIM[+m] ? "В "+SC.MONTHS[+m]+" има "+DIM[+m]+" дни. Изберете друг ден." : "";
+    f.day.setAttribute("aria-invalid", msg ? "true" : "false"); f.mon.setAttribute("aria-invalid", msg ? "true" : "false");
+    var e = f.querySelector("#e-day"); e.hidden = !msg; e.textContent = msg; return !msg; }
+  function check(n){
+    if (n==="day") return dayErr();
+    if (n==="mail"){ var v = f.mail.value.trim(); return setErr(f,"mail", !v ? "Напишете имейл, на който да ви пишем." : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "Проверете имейла, например ime@primer.bg." : ""); }
+    if (n==="ok") return setErr(f,"ok", f.ok.checked ? "" : "Без съгласие не можем да ви пишем. Отметнете полето, ако искате подаръка.");
+  }
+  f.day.addEventListener("change", function(){ if (f.mon.value!=="") check("day"); }); f.mon.addEventListener("change", function(){ if (f.day.value) check("day"); });
+  f.mail.addEventListener("blur", function(){ if (f.mail.value.trim()) check("mail"); });
+  f.mail.addEventListener("input", function(){ if (f.mail.getAttribute("aria-invalid")==="true") check("mail"); });
+  f.ok.addEventListener("change", function(){ if (f.ok.getAttribute("aria-invalid")==="true") check("ok"); });
+  f.addEventListener("submit", function(e){ e.preventDefault();
+    var names = ["day","mail","ok"], ok = names.map(check), bad = names.filter(function(n,i){ return !ok[i]; });
+    if (bad.length){ f[bad[0]].focus(); return; }
+    var d = +f.day.value, m = +f.mon.value, pre = new Date(2027, m, d-7);
+    send(f, btn, "Запиши рождения ми ден", function(){ doneView(s, "Готово, записахме "+d+" "+SC.MONTHS[m],
+      '<p>Около <b>'+pre.getDate()+" "+SC.MONTHS[pre.getMonth()]+'</b> ще ви пишем на <b>'+esc(f.mail.value.trim())+'</b> с подаръка.</p><p class="muted small">Подаръкът важи, когато празнувате при нас.</p>'); });
+  });
+}
+
+/* ---------- page events ---------- */
+main.addEventListener("click", function(e){
+  var t = e.target.closest("a, button"); if (!t) return;
+  var href = t.getAttribute("href");
+  if (href && href.charAt(0)==="#" && href.length>1){ e.preventDefault(); if (goTo(href.slice(1), true)) history.replaceState(null, "", href); return; }
+  if (t.hasAttribute("data-pickup")){ SC.cart.mode("pickup"); return; }
+  if (t.dataset.sheet==="voucher"){ voucherSheet(); return; }
+  if (t.dataset.sheet==="birthday"){ birthdaySheet(); return; }
+  if (t.hasAttribute("data-retry")){ view = "loading"; fill(true); setTimeout(function(){ view = "ok"; fill(true); }, SC.reduce ? 200 : 1100); return; }
+  var p = t.dataset.proto;
+  if (p==="loading"){ view = "loading"; fill(true); main.querySelector("[data-grid]").scrollIntoView({block:"center"}); setTimeout(function(){ view = "ok"; fill(true); }, 1800); return; }
+  if (p==="error"){ view = "error"; fill(true); main.querySelector("[data-grid]").scrollIntoView({block:"center"}); return; }
+  if (p==="offline"){ net.offline = !net.offline; t.setAttribute("aria-pressed", String(net.offline));
+    main.querySelector("[data-net]").innerHTML = net.offline ? '<div class="of-net" role="status">'+ic("warning",22)+'<p><b>Няма връзка с интернет.</b> Показваме последно заредените оферти. Запитванията ще се изпратят, когато връзката се върне.</p></div>' : "";
+    SC.toast(net.offline ? "Симулираме: няма интернет" : "Връзката е възстановена"); return; }
+});
+})();
+</script>
+</body>
+</html>

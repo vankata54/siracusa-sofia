@@ -24,6 +24,8 @@
 .live .ic{color:var(--muted)}
 .live b{font-weight:800}
 .hero-grid{display:grid; gap:24px}
+.hero-grid > *,.map-grid > *,.hours-grid > *{min-width:0}
+.rcard .pill,.zcard .pill,.end .pill{white-space:normal; text-align:center}
 
 /* address check */
 .chk{margin-top:24px}
@@ -81,8 +83,9 @@
 .map .z.on path.sel{opacity:1}
 .map .z:hover path.f{fill:var(--z-free-2)}
 .map .z.paid:hover path.f{fill:color-mix(in srgb, var(--ember) 40%, var(--surface))}
-.map .zl{font:800 17px var(--font); letter-spacing:-.02em; fill:var(--ink); pointer-events:none; text-anchor:middle; transition:fill var(--t-base) var(--ease)}
-.map .z.on .zl{fill:var(--surface)}
+.map .zl{font:800 17px var(--font); letter-spacing:-.02em; fill:var(--ink); stroke:var(--surface); stroke-width:4px; stroke-linejoin:round; paint-order:stroke; pointer-events:none; text-anchor:middle; transition:fill var(--t-base) var(--ease)}
+.map .z.free .zl{stroke:var(--z-free)}
+.map .z.on .zl{fill:var(--surface); stroke:none}
 .map .z.paid.on .zl{fill:var(--on-ember)}
 .map .air path{fill:var(--surface-2); stroke:var(--surface); stroke-width:6; stroke-linejoin:round}
 .map .air text{font:700 14px var(--font); fill:var(--muted); text-anchor:middle}
@@ -112,7 +115,7 @@
 .zcard .kv{padding:11px 0; align-items:baseline}
 .zcard dt{color:var(--muted); font-weight:600; white-space:nowrap}
 .zcard dd{margin:0; font-weight:800; text-align:right}
-.zcard dd.missing{font-weight:600}
+.zcard dd.missing{font-weight:600; white-space:nowrap}
 .zcard .busy{color:var(--warn)}
 .zcard .note{margin:12px 0 0; font-size:15px; color:var(--muted)}
 .zswap{animation:rin var(--t-slow) var(--ease)}
@@ -173,6 +176,9 @@
 
 /* ---------- FAQ ---------- */
 .faq{display:grid; gap:10px}
+.faq-grid{display:grid; gap:20px}
+.faq-side{display:grid; gap:12px; justify-items:start}
+.faq-side .pill{margin-top:4px}
 .faq details{border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .faq summary{list-style:none; cursor:pointer; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 14px 20px; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; border-radius:22px}
 .faq summary::-webkit-details-marker{display:none}
@@ -201,10 +207,18 @@
   .chk .core{padding:28px}
   .chk h2{font-size:26px}
   .map-grid{grid-template-columns:minmax(0, 1.25fr) minmax(360px, 1fr); gap:28px; align-items:start}
+  .map-grid > .shell{position:sticky; top:160px}
+  .map .zl{font-size:13px; stroke-width:3px}
+  .map .air text{font-size:11px}
+  .map .pin .tag text{font-size:11px}
   .map-side{display:grid; gap:20px}
   .zcard{padding:24px}
   .hours-grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:28px; align-items:start}
-  .faq{grid-template-columns:1fr 1fr; align-items:start}
+  .faq-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:56px; align-items:start}
+  .faq-side{position:sticky; top:160px}
+  .end h2{max-width:none}
+  .pay{grid-template-columns:1fr}
+  .pay .card{grid-template-columns:52px 1fr}
   .end .core{grid-template-columns:1fr auto; align-items:center; padding:40px 40px}
   .end .btns{grid-auto-flow:column; min-width:440px}
 }
@@ -244,7 +258,7 @@ function feeHTML(z){ return z.free ? "Безплатно" : (z.fee != null ? SC.
 function cartCTA(){ var n = SC.cart.count(); return n ? {label:"Към количката · "+SC.fmt(SC.cart.subtotal()), href:"cart.html", mode:"delivery"} : null; }
 function action(z){
   var c;
-  if (S.delivery){ c = cartCTA() || {label: z ? (z.free ? "Поръчай с безплатна доставка" : "Поръчай с доставка до " + z.n) : "Поръчай с доставка", href:"menu.html", mode:"delivery"}; return c; }
+  if (S.delivery){ c = cartCTA() || {label: z ? (z.free ? "Поръчай с безплатна доставка" : "Поръчай с доставка") : "Поръчай с доставка", href:"menu.html", mode:"delivery"}; return c; }
   if (S.kitchen) return {label:"Вземи от място до 22:30", href:"pickup.html", mode:"pickup", note:"Доставката приключи за днес. Утре доставяме от 10:00."};
   if (S.m < 600) return {label:"Разгледай менюто", href:"menu.html", mode:"delivery", note:"Доставката започва в 10:00. Можете да изберете отсега."};
   return {label:"Поръчай за утре", href:"menu.html", mode:"delivery", note:"Кухнята приема поръчки до 22:30. Утре доставяме от 10:00."};
@@ -256,8 +270,8 @@ function liveHTML(){
   if (S.delivery) return ETA.busy
     ? '<span class="dot warn"></span><span><b>Натоварено:</b> доставка около '+ETA.min+' мин</span>'
     : '<span class="dot ok"></span><span><b>Доставка сега:</b> около '+ETA.min+' мин</span>';
-  if (S.kitchen) return '<span class="dot warn"></span><span><b>Доставката приключи за днес</b> · Вземане до 22:30</span>';
-  return '<span class="dot"></span><span><b>Сега не доставяме</b> · утре от 10:00</span>';
+  if (S.kitchen) return '<span class="dot warn"></span><span><b>Утре доставяме от 10:00</b> · днес вземане до 22:30</span>';
+  return '<span class="dot"></span><span><b>Сега не доставяме</b> · '+(S.m < 600 ? "днес" : "утре")+' от 10:00</span>';
 }
 
 /* ---------- map SVG ---------- */
@@ -337,9 +351,9 @@ main.innerHTML =
   '<p class="paynote">'+ic("info",20)+'<span>Онлайн плащане засега няма. Никой няма да ви поиска данни за карта предварително.</span></p></div>'+
 '</div></section>'+
 
-'<section class="sec" aria-labelledby="faqH"><div class="sec-h"><h2 class="h2" id="faqH">Често питате</h2></div><div class="faq">'+
+'<section class="sec" aria-labelledby="faqH"><div class="faq-grid"><div class="faq-side"><h2 class="h2" id="faqH">Често питате</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div><div class="faq">'+
   faqs.map(function(f,i){ return '<details class="rv"'+(i===0?' open':'')+'><summary>'+f[0]+'<span class="cv">'+ic("caret-down",20)+'</span></summary><div class="ans"><p>'+f[1]+'</p></div></details>'; }).join("")+
-'</div></section>'+
+'</div></div></section>'+
 
 '<section class="sec end"><div class="shell rv"><div class="core" data-end></div></div></section>';
 
@@ -369,16 +383,16 @@ var zcard = main.querySelector("[data-zcard]"), svg = main.querySelector(".map")
 var current = null;
 function zoneCardHTML(z){
   if (!z) return '<div class="zt"><h3 class="h3">Извън зоните</h3><span class="ztag out">'+ic("x",16)+'Не доставяме</span></div>'+
-    '<p class="note" style="margin-top:8px">Не доставяме до този адрес. Можете да я вземете от ресторанта.</p>'+
+    '<p class="note" style="margin-top:8px">Не доставяме до този адрес. Можете да вземете поръчката си от ресторанта.</p>'+
     '<div style="display:grid;gap:10px;margin-top:16px"><a class="pill pill-red pill-lg pill-block" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a><a class="pill pill-line pill-block" href="tel:+359894365577">'+ic("phone",20)+'Наблизо сте? Обадете се</a></div>';
   var a = action(z), mins = etaMin(z);
   return '<div class="zswap"><div class="zt"><h3 class="h3">'+z.n+'</h3>'+(z.free?'<span class="ztag free">'+ic("check",16)+'Безплатна доставка</span>':'<span class="ztag paid">'+ic("tag",16)+'По тарифа</span>')+'</div>'+
     (z.slug==="druzhba-2"?'<p class="here">'+ic("map-pin",18)+'Тук сме: срещу бл. 311</p>':'')+
     '<dl>'+
-      '<div class="kv"><dt>Време до вас</dt><dd>'+(ETA.busy?'<span class="busy">около '+mins+' мин · натоварено</span>':'около '+mins+' мин')+'</dd></div>'+
+      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"":"утре, ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин · натоварено</span>':'около '+mins+' мин')+'</dd></div>'+
       '<div class="kv"><dt>Такса</dt><dd'+(z.free||z.fee!=null?'':' class="missing"')+'>'+(z.free?"Безплатно":(z.fee!=null?SC.fmt(z.fee):MISS_FEE))+'</dd></div>'+
       '<div class="kv"><dt>Минимална поръчка</dt><dd class="missing">[ЛИПСВА: сума в €]</dd></div>'+
-      '<div class="kv"><dt>Днес</dt><dd>'+(S.delivery?"до 21:00":"не доставяме")+'</dd></div>'+
+      '<div class="kv"><dt>Днес</dt><dd>'+(S.delivery?"до 21:00":S.m<600?"от 10:00 до 21:00":"не доставяме")+'</dd></div>'+
     '</dl>'+ctaHTML(a)+(a.note?'<p class="note">'+a.note+'</p>':'')+'</div>';
 }
 function select(slug, opts){ opts = opts || {};
@@ -426,7 +440,7 @@ function resultHTML(r, text){
   if (r.type==="zone"){ var z = bySlug[r.slug], a = action(z), mins = etaMin(z);
     return '<div class="rcard '+(z.free?"free":"paid")+'"><div class="rh"><span class="ri">'+ic(z.free?"check":"tag",24)+'</span><div><h3>'+(z.free?"Доставяме безплатно до "+z.n:"Доставяме до "+z.n+" по тарифа")+'</h3>'+
       (S.delivery?'':'<p class="muted">'+esc(a.note||"")+'</p>')+'</div></div>'+
-      '<div class="rfacts"><span class="fact">'+ic("clock",18)+'около '+mins+' мин'+(ETA.busy?' · натоварено':'')+'</span>'+
+      '<div class="rfacts">'+(S.delivery?'<span class="fact">'+ic("clock",18)+'около '+mins+' мин'+(ETA.busy?' · натоварено':'')+'</span>':'')+
         (z.free?'<span class="fact">'+ic("truck",18)+'Без такса</span>':'<span class="fact missing">'+ic("truck",18)+MISS_FEE+'</span>')+
         '<span class="fact missing">'+ic("receipt",18)+MISS_MIN+'</span></div>'+
       ctaHTML(a)+'<a class="link" href="#karta" data-tomap>'+ic("map-trifold",20)+'Виж '+z.n+' на картата</a></div>'; }
@@ -434,7 +448,7 @@ function resultHTML(r, text){
       '<div class="ropts">'+r.opts.map(function(s){ return '<button class="pill pill-line" type="button" data-ans="'+s+'">'+bySlug[s].n+'</button>'; }).join("")+'</div></div>';
   if (r.type==="unknown") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("map-pin-line",24)+'</span><div><h3>Не открихме квартала в „'+esc(text)+'“</h3><p class="muted">Изберете го от списъка:</p></div></div>'+
       '<div class="ropts">'+ORDER.map(function(z){ return '<button class="pill pill-line" type="button" data-ans="'+z.slug+'">'+z.n+'</button>'; }).join("")+'<button class="pill pill-soft" type="button" data-ans="none">Моят квартал го няма</button></div></div>';
-  if (r.type==="out") return '<div class="rcard out"><div class="rh"><span class="ri">'+ic("storefront",24)+'</span><div><h3>Не доставяме до този адрес.</h3><p>Можете да я вземете от ресторанта: '+esc(R.address)+'.</p></div></div>'+
+  if (r.type==="out") return '<div class="rcard out"><div class="rh"><span class="ri">'+ic("storefront",24)+'</span><div><h3>Не доставяме до този адрес.</h3><p>Можете да вземете поръчката си от ресторанта: '+esc(R.address)+'.</p></div></div>'+
       '<a class="pill pill-red pill-lg pill-block" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>'+
       '<p class="rnote">'+ic("phone",18)+'<span>Наблизо сте? Обадете се на <a class="link" style="min-height:0" href="tel:+359894365577">'+R.phone+'</a> и ще проверим.</span></p></div>';
   if (r.type==="offline") return '<div class="rcard err"><div class="rh"><span class="ri">'+ic("warning-circle",24)+'</span><div><h3>Няма връзка.</h3><p>Адресът ви е запазен - опитайте пак.</p></div></div><button class="pill pill-ink pill-block" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button></div>';
@@ -464,8 +478,10 @@ res.addEventListener("click", function(e){
 
 /* ---------- closing CTA ---------- */
 (function(){ var a = action(null), el = main.querySelector("[data-end]");
-  var title = S.delivery ? "Доставяме днес до 21:00." : S.kitchen ? "Доставката приключи за днес." : "Утре доставяме от 10:00.";
-  var lead = S.delivery ? "Изберете от менюто. Адресът, таксата и времето се виждат в количката, преди да поръчате." : (a.note || "");
+  var title = S.delivery ? "Доставяме днес до 21:00." : S.kitchen ? "Доставката приключи за днес." : S.m < 600 ? "Доставяме днес от 10:00." : "Утре доставяме от 10:00.";
+  var lead = S.delivery ? "Изберете от менюто. Адресът, таксата и времето се виждат в количката, преди да поръчате."
+    : S.kitchen ? "Утре доставяме от 10:00. Днес можете да вземете поръчката си от ресторанта до 22:30."
+    : S.m < 600 ? "Разгледайте менюто отсега. Кухнята приема поръчки до 22:30." : "Кухнята приема поръчки до 22:30. Можете да изберете отсега.";
   el.innerHTML = '<div><h2 class="h2">'+title+'</h2><p class="lead" style="margin-top:10px">'+lead+'</p></div>'+
     '<div class="btns"><a class="pill pill-red go" href="'+a.href+'" data-mode="'+a.mode+'">'+esc(a.label)+'<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
     (a.mode==="pickup" ? '<a class="pill pill-line pill-lg" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a>' : '<a class="pill pill-line pill-lg" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>')+'</div>';

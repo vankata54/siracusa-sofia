@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Профил | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* profile.html: signed-in customer (sc-user) or an invitation to sign in. Tokens only. */
+.device[data-page="profile"] .scroller{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ .device[data-page="profile"] .scroller{scroll-behavior:auto} }
+.eyebrow{margin:0 0 6px; font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+[data-gocart][hidden]{display:none}
+.err{font-size:14px; color:var(--danger); font-weight:600; margin:0}
+
+.pf{padding:24px 16px 0}
+.pf-aside{display:none}
+.ps{padding-top:56px; scroll-margin-top:150px}
+.ps .sec-h{margin-bottom:16px; align-items:center}
+.ps .sec-h .link{flex:none}
+.ps .intro{margin:-6px 0 16px; color:var(--muted)}
+
+/* head */
+.ph{display:flex; align-items:center; gap:16px}
+.av{flex:none; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--chip-dark); color:var(--ember); font-size:28px; font-weight:800; letter-spacing:-.03em; box-shadow:inset 0 0 0 1.5px var(--line), var(--shadow)}
+.who{min-width:0}
+.who .h1{font-size:30px}
+.who .tel{margin:6px 0 0; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.tiles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:22px}
+.tiles a{display:grid; align-content:center; gap:2px; min-height:96px; padding:12px 14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.tiles a:active{transform:scale(.97)}
+.tiles .ic{color:var(--muted); margin-bottom:6px}
+.tiles b{font-size:26px; line-height:1.05; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.tiles b small{font-size:16px; font-weight:700; color:var(--muted); letter-spacing:0}
+.tiles .w{font-size:14px; font-weight:700; color:var(--muted)}
+.tiles a.em{background:var(--ember); color:var(--on-ember)}
+.tiles a.em .ic,.tiles a.em .w{color:var(--on-ember)}
+
+/* orders */
+.olist{display:grid; gap:12px}
+.ord{padding:18px; display:grid; gap:14px}
+.ord-h{display:flex; gap:14px; align-items:center}
+.ord-pics{display:flex; flex:none}
+.ord-pics .pic{width:52px; height:52px; border-radius:50%; box-shadow:0 0 0 3px var(--surface)}
+.ord-pics .pic + .pic{margin-left:-20px}
+.ord-pics .pic > svg{filter:none}
+.ord-meta{min-width:0}
+.ord-meta b{display:block; font-size:17px; line-height:1.25}
+.ord-meta .d{display:block; font-size:15px; color:var(--muted)}
+.st{display:inline-flex; gap:6px; align-items:center; font-size:14px; font-weight:700; color:var(--ok); margin-top:2px}
+.ord-l{list-style:none; margin:0; padding:0}
+.ord-l li{display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:8px; align-items:baseline; padding:9px 0; border-top:1px solid var(--line)}
+.ord-l .q{color:var(--muted); font-weight:700; font-variant-numeric:tabular-nums}
+.ord-l .n{font-weight:600; line-height:1.3}
+.ord-l .badge{margin-top:6px}
+.ord-l li.out .n,.ord-l li.out .price{color:var(--muted)}
+.ord .note{display:flex; gap:8px; align-items:flex-start; margin:-4px 0 0; font-size:14px; color:var(--muted)}
+.ord .note .ic{color:var(--warn); margin-top:1px}
+.ord .acts{display:grid; gap:4px}
+.ord .acts .link{justify-self:center}
+.closed{display:flex; gap:10px; align-items:flex-start; margin:0 0 14px; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:15px; color:var(--muted)}
+.closed b{color:var(--ink)}
+.sk-ord{padding:18px; display:grid; gap:14px}
+.sk-row{display:flex; gap:14px; align-items:center}
+
+/* favourites */
+.favs .dcard{flex:0 0 172px}
+.favs .fx{margin-top:2px; min-height:48px; font-size:15px; color:var(--danger); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.favs:not(.editing) .fx{display:none}
+
+/* addresses */
+.alist{padding:2px 18px}
+.adr{display:grid; grid-template-columns:48px minmax(0,1fr); gap:14px; align-items:start; padding:12px 0 16px}
+.adr .i{margin-top:4px}
+.adr .top2{display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px}
+.adr .top2 .link{flex:none; font-size:15px}
+.adr + .adr{border-top:1px solid var(--line)}
+.adr .i{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.adr b{display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; font-size:17px}
+.adr .l{display:block; font-size:15px; color:var(--muted); line-height:1.35; margin-top:2px}
+.adr .z{display:flex; gap:6px; align-items:center; font-size:14px; font-weight:700; margin-top:4px}
+.adr .z.ok{color:var(--ok)} .adr .z.tar{color:var(--warn)} .adr .z.no{color:var(--danger)}
+.tag{display:inline-flex; align-items:center; min-height:24px; padding:0 9px; border-radius:999px; background:var(--surface-2); font-size:13px; font-weight:800; color:var(--muted)}
+.pill.sm{min-height:48px; padding:0 16px; font-size:15px}
+.addbtn{margin-top:12px}
+
+/* loyalty card + coupons */
+.loyal{padding:20px; border-radius:var(--r-shell); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:inset 0 0 0 1px var(--line), var(--shadow)}
+.loyal .lh{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
+.loyal .lh b{display:block; font-size:20px; letter-spacing:-.02em}
+.loyal .lh .s{display:block; font-size:14px; opacity:.75; margin-top:2px}
+.loyal .cnt2{flex:none; text-align:right; font-weight:700; font-size:15px; line-height:1}
+.loyal .cnt2 b{display:inline; font-size:36px; color:var(--ember); letter-spacing:-.04em}
+.loyal .missing{color:inherit; opacity:.8}
+.loyal p{margin:0; font-size:15px; opacity:.85}
+.stamps{list-style:none; margin:18px 0 16px; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; justify-items:center}
+.stamps li{position:relative; width:100%; max-width:60px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px; font-variant-numeric:tabular-nums}
+.stamps li.e::before,.stamps li.g::before{content:""; position:absolute; inset:0; border-radius:50%; border:2px dashed currentColor; opacity:.3}
+.stamps li.e span{opacity:.55}
+.stamps li.f{background:var(--ember); color:var(--on-ember)}
+.stamps li.g{color:var(--ember)}
+.stamps li.g::before{opacity:.7}
+.rv-on .loyal.rv .stamps li.f{opacity:0}
+.rv-on .loyal.rv.in .stamps li.f{animation:stamp 560ms var(--ease) both; animation-delay:420ms}
+.rv-on .loyal.rv.in .stamps li.f + li.f{animation-delay:620ms}
+@keyframes stamp{0%{opacity:0; transform:scale(1.7) rotate(-24deg)}60%{opacity:1; transform:scale(.92) rotate(4deg)}100%{opacity:1; transform:none}}
+.cps{display:grid; gap:12px; margin-top:14px}
+.ticket{--notch:var(--bg); position:relative; display:grid; grid-template-columns:76px auto minmax(0,1fr); align-items:center; gap:14px; padding:16px 20px; border-radius:22px}
+.ticket::before,.ticket::after{content:""; position:absolute; top:50%; width:22px; height:22px; margin-top:-11px; border-radius:50%; background:var(--notch)}
+.ticket::before{left:-11px} .ticket::after{right:-11px}
+.ticket .big{font-size:30px; line-height:1; font-weight:800; letter-spacing:-.05em; text-align:center; justify-self:center}
+.ticket .cut{width:0; align-self:stretch; border-left:2px dashed currentColor; opacity:.3}
+.ticket b{display:block; font-size:17px; line-height:1.25}
+.ticket .s{display:block; font-size:15px; line-height:1.35; margin-top:2px}
+.ticket.ember-card .s{opacity:.85}
+.ticket.off{background:var(--surface-2); color:var(--ink)}
+.ticket.off .big{color:var(--muted)}
+.ticket.off .s{color:var(--muted)}
+.ticket .state{display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:14px; font-weight:800}
+.ticket .link{min-height:44px; font-size:15px}
+
+/* switches (ConsentCheckbox, toggle variant) */
+.box{padding:2px 18px}
+.sw{display:flex; align-items:center; gap:14px; width:100%; min-height:72px; padding:14px 0; border:0; background:transparent; text-align:left; cursor:pointer; color:inherit; font:inherit}
+.sw + .sw,.sw + .bday,.bday + .sw{border-top:1px solid var(--line)}
+.sw .tx{flex:1; min-width:0}
+.sw .tx b{display:block; font-size:16px; line-height:1.3}
+.sw .tx .s{display:block; font-size:14px; color:var(--muted); line-height:1.4; margin-top:3px}
+.sw .tg{flex:none; display:grid; justify-items:center; gap:4px}
+.sw .st2{font-size:13px; font-weight:800; color:var(--muted)}
+.sw[aria-checked="true"] .st2{color:var(--ok)}
+.sw .tr{position:relative; width:56px; height:34px; border-radius:999px; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.sw .kn{position:absolute; top:4px; left:4px; width:26px; height:26px; border-radius:50%; background:var(--on-chip-dark); box-shadow:0 1px 3px var(--line-strong); transition:transform var(--t-base) var(--ease)}
+.sw[aria-checked="true"] .tr{background:var(--ok); box-shadow:none}
+.sw[aria-checked="true"] .kn{transform:translateX(22px)}
+.bday{display:grid; gap:8px; padding:14px 0 18px}
+.bday .two{display:grid; grid-template-columns:1fr 1.4fr; gap:8px}
+.bday select.input{appearance:none; -webkit-appearance:none; padding-right:40px; background-image:none; cursor:pointer}
+.selw{position:relative}
+.selw .ic{position:absolute; right:14px; top:50%; margin-top:-10px; pointer-events:none; color:var(--muted)}
+.legal{margin:12px 2px 0; font-size:14px; color:var(--muted)}
+.legal a{color:var(--ink); font-weight:700}
+
+/* settings */
+.kvr{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:72px; padding:12px 0}
+.kvr + .kvr,.kvr + .setg,.setg + .setg{border-top:1px solid var(--line)}
+.kvr .k{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.kvr .v{display:block; font-size:17px; font-weight:700; line-height:1.3; overflow-wrap:anywhere}
+.kvr .v.none{color:var(--muted); font-weight:600}
+.kvr .h{display:block; font-size:14px; color:var(--muted); margin-top:2px}
+.setg{display:grid; gap:10px; padding:16px 0 18px}
+.setg .label{display:block}
+.seg button{color:var(--ink)}
+
+/* data + delete */
+.dbox{padding:18px; display:grid; gap:12px}
+.dbox p{margin:0}
+.pill-dline{background:transparent; color:var(--danger); box-shadow:inset 0 0 0 1.5px var(--danger)}
+.pill-danger{background:var(--danger); color:var(--on-red)}
+.confirm{display:grid; gap:12px; padding:18px; border-radius:22px; background:var(--surface-2); box-shadow:inset 0 0 0 2px var(--danger)}
+.confirm.in{animation:cin var(--t-slow) var(--ease)}
+@keyframes cin{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+.confirm h3{display:flex; gap:10px; align-items:center}
+.confirm h3 .ic{color:var(--danger)}
+.confirm ul{margin:0; padding-left:20px; color:var(--muted)}
+.confirm li + li{margin-top:4px}
+.confirm .btns{display:grid; gap:8px}
+.out-btn{margin-top:20px}
+
+/* signed-out invitation + deleted */
+.inv{padding:24px 16px 0}
+.inv .core{padding:24px 18px; display:grid; gap:18px}
+.ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.bonus{display:flex; align-items:center; gap:16px; padding:16px 18px; border-radius:var(--r-shell)}
+.bonus .big{flex:none; font-size:44px; line-height:1; font-weight:800; letter-spacing:-.05em}
+.bonus .tx{min-width:0}
+.bonus b{display:block; font-size:17px; line-height:1.25}
+.bonus .s{display:block; font-size:15px; line-height:1.35; opacity:.85; margin-top:2px}
+.perks{display:grid; margin:0; padding:0; list-style:none}
+.perks li{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:center; padding:10px 0}
+.perks li + li{border-top:1px solid var(--line)}
+.perks .i{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.perks b{display:block; line-height:1.3}
+.perks .s{display:block; font-size:15px; color:var(--muted); line-height:1.35}
+.noacc{margin:0; color:var(--muted); text-align:center}
+.gone{padding:56px 16px 0}
+
+/* prototype-only panel */
+.proto{margin:56px 16px 0; padding:16px; border-radius:var(--r-core); border:1.5px dashed var(--line-strong); display:grid; gap:10px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+.proto .t{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--muted)}
+.proto .btns{display:flex; flex-wrap:wrap; gap:8px}
+.proto .pill{min-height:48px; padding:0 16px; font-size:15px}
+
+/* sheets made here */
+.sform{display:grid; gap:16px; padding:6px 2px 4px}
+.zres{display:flex; gap:8px; align-items:flex-start; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; font-weight:600}
+.zres.ok .ic{color:var(--ok)} .zres.tar .ic{color:var(--warn)} .zres.no .ic{color:var(--danger)}
+
+@container app (max-width:370px){ .tiles a{padding:10px} .tiles b{font-size:22px} .who .h1{font-size:26px} .av{width:56px; height:56px; font-size:24px} }
+@container app (min-width:700px){ .olist{grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start} }
+@container app (min-width:900px){
+  .pf{display:grid; grid-template-columns:232px minmax(0,1fr); column-gap:56px; padding:56px max(40px, calc((100% - 1200px)/2)) 0; align-items:start}
+  .pf-aside{display:grid; gap:2px; position:sticky; top:160px}
+  .pf-aside a,.pf-aside button{display:flex; gap:12px; align-items:center; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:transparent; text-decoration:none; font-weight:700; font-size:16px; color:var(--muted); cursor:pointer; text-align:left}
+  .pf-aside a:hover,.pf-aside button:hover{color:var(--ink)}
+  .pf-aside a[aria-current="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow)}
+  .pf-aside a[aria-current="true"] .ic{color:var(--red)}
+  .pf-aside hr{border:0; height:1px; background:var(--line); margin:10px 16px}
+  .ps{padding-top:72px; scroll-margin-top:170px}
+  .av{width:88px; height:88px; font-size:38px}
+  .who .h1{font-size:46px}
+  .tiles{grid-template-columns:repeat(3,minmax(0,220px)); gap:12px}
+  .favs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px 20px; margin:0; padding:0; overflow:visible}
+  .favs .dcard{flex:auto}
+  .rew{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:20px; align-items:start}
+  .rew .cps{margin-top:0}
+  .duo{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:start}
+  .duo .ps{padding-top:72px}
+  .inv{padding:64px 16px 0}
+  .inv .shell{max-width:620px; margin:0 auto}
+  .inv .core{padding:36px 40px}
+  .proto{margin:72px max(40px, calc((100% - 1200px)/2)) 0}
+  .out-btn{display:none}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+var main = SC.mount({page:"profile", nav:"profile", title:"Профил"});
+var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
+
+/* ---------- storage: "sc-user" holds the signed-in user (prototype; real data lives on the server) ---------- */
+function getUser(){ try{ var v = localStorage.getItem("sc-user"); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+function saveUser(){ try{ if (U) localStorage.setItem("sc-user", JSON.stringify(U)); else localStorage.removeItem("sc-user"); }catch(e){} }
+function pretty(d){ d = String(d||""); return d.length===10 ? d.slice(0,4)+" "+d.slice(4,7)+" "+d.slice(7) : d; }
+
+/* sample customer for the prototype: real dishes and prices from the menu, order #128 with 3 dishes as in hand-off 14 */
+function demoUser(){ return {phone:"0888123456", name:"Мария", email:"", demo:true,
+  orders:[{no:128, ago:4, mode:"delivery", lines:[["pitsa-s-burata-i-proshuto-krudo",1],["svinski-rebra",1],["shopska-salata",1]]},
+          {no:116, ago:11, mode:"pickup", lines:[["pitsa-margarita",2],["tiramisu",2]]},
+          {no:104, ago:23, mode:"delivery", lines:[["kebapcheta",1],["pleskavitsa",1],["parzheni-kartofi",2]]}],
+  favs:["pitsa-s-burata-i-proshuto-krudo","svinski-rebra","topeni-sirentsa-s-kornfleyks-i-domashno-sladko-o","tiramisu","pleskavitsa"],
+  addrs:[{id:"a1", kind:"home", zone:"Дружба 2", line:"", note:"", main:true},{id:"a2", kind:"work", zone:"НПЗ Искър", line:"", note:"", main:false}],
+  stamps:2, coupons:{signup:true}, notif:{sms:true, push:false, remind:true}, consent:{marketing:false, birthday:false, bday:""}}; }
+function fill(u){ var d = {name:"", email:"", orders:[], favs:[], addrs:[], stamps:2, coupons:{signup:true}, notif:{sms:true, push:false, remind:true}, consent:{marketing:false, birthday:false, bday:""}};
+  Object.keys(d).forEach(function(k){ if (u[k]==null) u[k] = d[k]; });
+  ["notif","consent"].forEach(function(k){ Object.keys(d[k]).forEach(function(j){ if (u[k][j]==null) u[k][j] = d[k][j]; }); });
+  return u; }
+
+var U = null;
+function boot(){ if (location.hash==="#demo"){ U = demoUser(); saveUser(); try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  U = getUser(); if (U) fill(U); render(); }
+
+/* ---------- small builders ---------- */
+var KIND = {home:["Вкъщи","house"], work:["Работа","briefcase"], other:["Друго","map-pin"]};
+var SECTIONS = [["porachki","Поръчки","receipt"],["lyubimi","Любими","heart"],["adresi","Адреси","map-pin"],["nagradi","Печати и купони","ticket"],["izvestia","Известия","bell"],["saglasia","Съгласия","shield-check"],["nastroyki","Настройки","sliders-horizontal"],["danni","Вашите данни","lock"]];
+function zoneOf(n){ return SC.ZONES.filter(function(z){ return z.n===n; })[0]; }
+function zoneLine(n){ var z = zoneOf(n);
+  if (!z) return {cls:"no", icon:"warning-circle", html:"Не доставяме до този адрес. Можете да я вземете от ресторанта."};
+  if (z.free) return {cls:"ok", icon:"truck", html:"Безплатна доставка · "+z.eta};
+  return {cls:"tar", icon:"truck", html:'Доставка по тарифа <span class="missing">[ЛИПСВА: такса]</span> · '+z.eta}; }
+function dayStr(ago){ var d = new Date(); d.setDate(d.getDate()-ago); return d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
+function sw(key, title, sub, on){ return '<button class="sw" type="button" role="switch" aria-checked="'+on+'" data-sw="'+key+'"><span class="tx"><b>'+title+'</b><span class="s">'+sub+'</span></span><span class="tg" aria-hidden="true"><span class="tr"><span class="kn"></span></span><span class="st2">'+(on?"Включено":"Изключено")+'</span></span></button>'; }
+function orderParts(o){ var ok = [], out = [], sum = 0;
+  o.lines.forEach(function(l){ var x = SC.byId[l[0]]; if (!x) return; if (SC.isOut(x)) out.push(x); else { ok.push(l); sum += x.p*l[1]; } });
+  return {ok:ok, out:out, sum:sum}; }
+function count(lines){ return lines.reduce(function(a,l){ return a+l[1]; },0); }
+var PERKS = [["receipt","Поръчай отново","Любимата поръчка с едно докосване."],["map-pin","Адресите са запомнени","Не ги пишете всеки път."],["fire","Карта с печати","Започвате с 2 от 10 печата подарък."],["ticket","Купоните на едно място","Отстъпките се прилагат сами в количката."]];
+
+/* ---------- render ---------- */
+function render(){ if (!U) return renderInvite(); renderProfile(); }
+
+function renderInvite(){
+  main.innerHTML = '<section class="inv"><div class="shell"><div class="core">'+
+    '<span class="ring">'+ic("user",32)+'</span>'+
+    '<div><h1 class="h1">Вашият профил</h1><p class="lead" style="margin-top:8px">Влезте с телефона си. Без парола, с код по SMS.</p></div>'+
+    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span></div>'+
+    '<a class="pill pill-red pill-lg pill-block" href="login.html">'+ic("sign-in",22)+'Влез с телефон</a>'+
+    '<ul class="perks">'+PERKS.map(function(p){ return '<li><span class="i">'+ic(p[0],22)+'</span><span><b>'+p[1]+'</b><span class="s">'+p[2]+'</span></span></li>'; }).join("")+'</ul>'+
+    '<p class="noacc">Поръчка без профил също става. <a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></p>'+
+    '</div></div></section>'+
+    '<div class="proto"><span class="t">'+ic("flag",18)+'Само за прототипа</span><p>Вижте как изглежда профилът на клиент с няколко поръчки.</p><div class="btns"><a class="pill pill-soft" href="#demo" data-demo>'+ic("user",18)+'Примерен профил</a></div></div>';
+}
+
+function renderProfile(){
+  var u = U, nOrd = u.orders.length, cps = (u.coupons.signup?1:0) + (u.consent.birthday?1:0);
+  var aside = '<nav class="pf-aside" aria-label="Раздели на профила">'+SECTIONS.map(function(s){ return '<a href="#'+s[0]+'" data-spy="'+s[0]+'">'+ic(s[2],20)+s[1]+'</a>'; }).join("")+'<hr><button type="button" data-logout>'+ic("sign-out",20)+'Изход</button></nav>';
+  var head = '<header class="ph"><span class="av" aria-hidden="true">'+esc((u.name||"?").trim().charAt(0).toUpperCase())+'</span><div class="who"><p class="eyebrow">Вашият профил</p><h1 class="h1">Здравейте'+(u.name?', '+esc(u.name):'')+'</h1><p class="tel">'+pretty(u.phone)+'</p></div></header>'+
+    '<nav class="tiles" aria-label="Бързо към">'+
+      '<a href="#porachki">'+ic("receipt",22)+'<b>'+nOrd+'</b><span class="w">'+(nOrd===1?"поръчка":"поръчки")+'</span></a>'+
+      '<a href="#nagradi">'+ic("fire",22)+'<b>'+u.stamps+'<small> от 10</small></b><span class="w">печата</span></a>'+
+      '<a href="#nagradi"'+(cps?' class="em"':'')+'>'+ic("ticket",22)+'<b>'+cps+'</b><span class="w">'+(cps===1?"купон":"купона")+'</span></a>'+
+    '</nav>';
+  var st = SC.state();
+  var orders = '<section class="ps" id="porachki" aria-labelledby="h-ord"><div class="sec-h"><h2 class="h2" id="h-ord">Поръчки</h2></div>'+
+    (st.kitchen ? '' : '<p class="closed">'+ic("clock",20)+'<span><b>Кухнята приема поръчки до 22:30.</b> Добавете в количката и поръчайте за утре.</span></p>')+
+    '<div class="olist" data-orders aria-busy="true">'+skel()+skel()+'</div></section>';
+  var favs = '<section class="ps" id="lyubimi" aria-labelledby="h-fav"><div class="sec-h"><h2 class="h2" id="h-fav">Любими</h2>'+(u.favs.length?'<button class="link" type="button" data-favedit>'+ic("pencil-simple",18)+'Промени</button>':'')+'</div><div data-favs>'+favsHTML()+'</div></section>';
+  var adrs = '<section class="ps" id="adresi" aria-labelledby="h-adr"><div class="sec-h"><h2 class="h2" id="h-adr">Адреси</h2></div><div data-adrs>'+adrsHTML()+'</div></section>';
+  var rew = '<section class="ps" id="nagradi" aria-labelledby="h-rew"><div class="sec-h"><h2 class="h2" id="h-rew">Печати и купони</h2></div><div class="rew">'+loyalHTML()+'<div class="cps" data-cps>'+couponsHTML()+'</div></div></section>';
+  var notif = '<section class="ps" id="izvestia" aria-labelledby="h-not"><div class="sec-h"><h2 class="h2" id="h-not">Известия</h2></div><div class="card box">'+
+    sw("notif.sms","Статус на поръчката по SMS","Кога е приета, готова и на път.",u.notif.sms)+
+    sw("notif.push","Известия на този телефон","Същото, но направо на екрана, без SMS.",u.notif.push)+
+    sw("notif.remind","Напомняне за резервация","Ден преди и 3 часа преди резервацията.",u.notif.remind)+'</div></section>';
+  var cons = '<section class="ps" id="saglasia" aria-labelledby="h-con"><div class="sec-h"><h2 class="h2" id="h-con">Съгласия</h2></div><div class="card box" data-cons>'+consHTML()+'</div>'+
+    '<p class="legal">Можете да оттеглите съгласие по всяко време, със същото докосване. <a href="#" data-noop>Политика за поверителност</a></p></section>';
+  var sets = '<section class="ps" id="nastroyki" aria-labelledby="h-set"><div class="sec-h"><h2 class="h2" id="h-set">Настройки</h2></div><div class="card box" data-sets>'+setsHTML()+'</div></section>';
+  var data = '<section class="ps" id="danni" aria-labelledby="h-dat"><div class="sec-h"><h2 class="h2" id="h-dat">Вашите данни</h2></div><div class="card dbox">'+
+    '<p class="muted">Вие решавате какво пазим. Можете да изтеглите всичко за вас или да изтриете профила.</p>'+
+    '<button class="pill pill-line pill-block" type="button" data-export>'+ic("export",20)+'Изтегли данните ми</button>'+
+    '<div data-del><button class="pill pill-dline pill-block" type="button" data-delask>'+ic("trash",20)+'Изтрий профила</button></div></div>'+
+    '<button class="pill pill-soft pill-lg pill-block out-btn" type="button" data-logout>'+ic("sign-out",20)+'Изход от профила</button></section>';
+  main.innerHTML = '<div class="pf">'+aside+'<div class="pm">'+head+orders+favs+adrs+rew+'<div class="duo">'+notif+cons+'</div><div class="duo">'+sets+data+'</div></div></div>'+
+    '<div class="proto"><span class="t">'+ic("flag",18)+'Само за прототипа</span><p>'+(u.demo?'Примерен клиент: поръчките са измислени, ястията и цените са от истинското меню.':'Профилът е създаден от входа в прототипа.')+'</p><div class="btns">'+
+      '<button class="pill pill-soft" type="button" data-p="empty">'+ic("user",18)+'Нов клиент без поръчки</button>'+
+      '<button class="pill pill-soft" type="button" data-p="error">'+ic("warning",18)+'Грешка при зареждане</button>'+
+      '<a class="pill pill-soft" href="#demo" data-demo>'+ic("receipt",18)+'Примерен профил</a></div></div>';
+  loadOrders(600);
+  SC.reveal(); spy();
+}
+function skel(){ return '<div class="card sk-ord" aria-hidden="true"><div class="sk-row"><span class="skel" style="width:76px;height:52px;border-radius:26px"></span><span style="flex:1;display:grid;gap:8px"><span class="skel" style="height:16px;width:60%"></span><span class="skel" style="height:14px;width:40%"></span></span></div><span class="skel" style="height:14px"></span><span class="skel" style="height:14px;width:80%"></span><span class="skel" style="height:48px;border-radius:24px"></span></div>'; }
+
+function loadOrders(delay, fail){ var box = main.querySelector("[data-orders]"); if (!box) return;
+  setTimeout(function(){ if (!box.isConnected) return; box.removeAttribute("aria-busy");
+    if (fail){ box.style.display = "block"; box.innerHTML = '<div class="card empty" role="alert"><span class="ill">'+ic("warning-circle",44)+'</span><h3 class="h3">Не успяхме да заредим поръчките</h3><p class="muted" style="margin:0;max-width:30em">Връзката прекъсна за момент. Нищо не е изгубено - опитайте пак.</p><button class="pill pill-red" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button></div>'; return; }
+    box.style.display = "";
+    if (!U.orders.length){ box.style.display = "block"; box.innerHTML = '<div class="card empty"><span class="ill">'+ic("receipt",44)+'</span><h3 class="h3">Още нямате поръчки</h3><p class="muted" style="margin:0;max-width:30em">Първата ще се появи тук и после ще я поръчвате отново с едно докосване. А -10% вече ви чака.</p><a class="pill pill-red" href="menu.html">'+ic("fork-knife",20)+'Към менюто</a></div>'; return; }
+    box.innerHTML = U.orders.map(orderHTML).join("");
+  }, delay); }
+function orderHTML(o, i){ var P = orderParts(o), n = count(P.ok);
+  var pics = o.lines.slice(0,3).map(function(l){ return SC.pic(l[0]); }).join("");
+  return '<article class="card ord" aria-labelledby="o'+o.no+'">'+
+    '<div class="ord-h"><span class="ord-pics" aria-hidden="true">'+pics+'</span><span class="ord-meta"><b id="o'+o.no+'">Поръчка #'+o.no+'</b><span class="d">'+dayStr(o.ago)+' · '+(o.mode==="pickup"?"Взета от място":"Доставка")+'</span><span class="st">'+ic("check-circle",18)+(o.mode==="pickup"?"Взета":"Доставена")+'</span></span></div>'+
+    '<ul class="ord-l">'+o.lines.map(function(l){ var x = SC.byId[l[0]]; if (!x) return ""; var out = SC.isOut(x);
+      return '<li'+(out?' class="out"':'')+'><span class="q">'+l[1]+' ×</span><span class="n">'+esc(x.n)+(out?'<br>'+SC.badges({t:["out"]}):'')+'</span><span class="price">'+fmt(x.p*l[1])+'</span></li>'; }).join("")+'</ul>'+
+    (P.out.length ? '<p class="note">'+ic("info",18)+'<span>'+P.out.map(function(x){ return esc(x.n); }).join(", ")+(P.out.length>1?' са изчерпани':' е изчерпана')+' днес. Добавяме останалите '+SC.plural(n,"ястие","ястия")+'.</span></p>' : '')+
+    '<div class="acts"><button class="pill '+(i===0?'pill-red pill-lg':'pill-line')+' pill-block" type="button" data-re="'+i+'">'+ic("arrow-right",20)+'<span>Поръчай отново · <span class="price">'+fmt(P.sum)+'</span></span></button>'+
+    '<a class="link" href="cart.html" data-gocart hidden>Към количката'+ic("caret-right",18)+'</a></div></article>'; }
+
+function favsHTML(){ if (!U.favs.length) return '<div class="card empty"><span class="ill">'+ic("heart",44)+'</span><h3 class="h3">Още нямате любими</h3><p class="muted" style="margin:0;max-width:30em">Докоснете сърцето на страницата на ястие и то ще чака тук.</p><a class="pill pill-line" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a></div>';
+  return '<div class="rail favs">'+U.favs.filter(function(id){ return SC.byId[id]; }).map(function(id){ var x = SC.byId[id];
+    return SC.dishCard(x).replace(/<\/div>$/, '<button class="pill fx" type="button" data-unfav="'+id+'">'+ic("x",18)+'Махни</button></div>'); }).join("")+'</div>'; }
+
+function adrsHTML(){ var list = U.addrs.length ? '<div class="card alist">'+U.addrs.map(function(a){ var k = KIND[a.kind]||KIND.other, z = zoneLine(a.zone);
+    return '<div class="adr"><span class="i">'+ic(k[1],22)+'</span><span><span class="top2"><b>'+k[0]+(a.main?'<span class="tag">Основен</span>':'')+'</b><button class="link" type="button" data-adr="'+a.id+'" aria-label="Промени адрес '+k[0]+'">'+ic("pencil-simple",18)+'Промени</button></span><span class="l">'+(zoneOf(a.zone)?'ж.к. '+esc(a.zone):esc(a.zone||"Друг квартал"))+(a.line?', '+esc(a.line):', <span class="missing">[примерен адрес]</span>')+'</span><span class="z '+z.cls+'">'+ic(z.icon,18)+'<span>'+z.html+'</span></span></span></div>'; }).join("")+'</div>'
+    : '<div class="card empty"><span class="ill">'+ic("map-pin",44)+'</span><h3 class="h3">Няма запазени адреси</h3><p class="muted" style="margin:0;max-width:30em">Добавете адрес веднъж и при поръчка само го изберете.</p></div>';
+  return list+'<button class="pill pill-line pill-block addbtn" type="button" data-adr="new">'+ic("plus",20)+'Добави адрес</button>'; }
+
+function loyalHTML(){ var n = Math.min(U.stamps,10), li = "";
+  for (var i=1; i<=10; i++){ li += i<=n ? '<li class="f">'+ic("fire",24)+'<span class="vh">Печат '+i+'</span></li>' : i===10 ? '<li class="g">'+ic("gift",24)+'<span class="vh">Печат 10, награда</span></li>' : '<li class="e"><span>'+i+'</span></li>'; }
+  return '<div class="loyal rv" role="group" aria-label="Карта с печати, '+n+' от 10"><div class="lh"><span><b>Карта с печати</b><span class="s">Печат за всяка поръчка <span class="missing">[ЛИПСВА: точно правило]</span></span></span><span class="cnt2"><b>'+n+'</b> от 10</span></div>'+
+    '<ol class="stamps">'+li+'</ol><p>Първите 2 са подарък от нас. Още '+(10-n)+' до <span class="missing">[ЛИПСВА: награда при 10 печата]</span>.</p></div>'; }
+
+function couponsHTML(){ var c = U.consent;
+  return (U.coupons.signup ? '<div class="ticket ember-card"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката. Валиден до <span class="missing">[ЛИПСВА: срок]</span>.</span></span></div>' : '')+
+    '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">След поръчка ни кажете как е било, с „Да“ или с „Не“. Кодът идва веднага.</span></span></div>'+
+    (c.birthday
+      ? '<div class="ticket ember-card"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% или малка торта. Пишем ви седмица преди празника.</span><span class="state">'+ic("check-circle",18)+'Включено</span></span></div>'
+      : '<div class="ticket off"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% или малка торта за рожденика.</span><a class="link" href="#saglasia">Включете в „Съгласия“'+ic("caret-right",16)+'</a></span></div>'); }
+
+function consHTML(){ var c = U.consent, D = [];
+  for (var d=1; d<=31; d++) D.push(d);
+  var bd = (c.bday||"").split("-"), bm = +bd[0]||0, bdd = +bd[1]||0;
+  return sw("consent.marketing","Искам да получавам оферти и маркетингови предложения","Първи научавате за събитията и новите оферти.",c.marketing)+
+    sw("consent.birthday","Искам подарък за рождения си ден","-10% или малка торта. Пишем ви седмица преди празника.",c.birthday)+
+    (c.birthday ? '<div class="bday"><span class="label" id="bd-l">Рожден ден (по желание)</span><div class="two">'+
+      '<div class="selw"><label class="vh" for="bd-d">Ден</label><select class="input" id="bd-d" data-bday aria-describedby="bd-l"><option value="">Ден</option>'+D.map(function(x){ return '<option'+(x===bdd?' selected':'')+'>'+x+'</option>'; }).join("")+'</select>'+ic("caret-down",20)+'</div>'+
+      '<div class="selw"><label class="vh" for="bd-m">Месец</label><select class="input" id="bd-m" data-bday aria-describedby="bd-l"><option value="">Месец</option>'+SC.MONTHS.map(function(m,i){ return '<option value="'+(i+1)+'"'+(i+1===bm?' selected':'')+'>'+m+'</option>'; }).join("")+'</select>'+ic("caret-down",20)+'</div>'+
+      '</div><span class="muted small">Пазим само деня и месеца, без годината.</span></div>' : ''); }
+
+function setsHTML(){ var th = SC.prefs.theme || "system";
+  return '<div class="kvr"><span><span class="k">Име</span><span class="v">'+esc(U.name||"")+'</span></span><button class="pill pill-soft sm" type="button" data-edit>Промени</button></div>'+
+    '<div class="kvr"><span><span class="k">Телефон</span><span class="v" style="font-variant-numeric:tabular-nums">'+pretty(U.phone)+'</span><span class="h">С него влизате. Смяна с нов SMS код.</span></span></div>'+
+    '<div class="kvr"><span><span class="k">Имейл</span><span class="v'+(U.email?'':' none')+'">'+(U.email?esc(U.email):'Не е добавен')+'</span><span class="h">По желание, за касовата бележка.</span></span><button class="pill pill-soft sm" type="button" data-edit>'+(U.email?'Промени':'Добави')+'</button></div>'+
+    '<div class="setg" role="group" aria-labelledby="lang-l"><span class="label" id="lang-l">Език</span><div class="seg"><button type="button" aria-pressed="true">Български</button><button type="button" data-en aria-pressed="false">English</button></div></div>'+
+    '<div class="setg" role="group" aria-labelledby="th-l"><span class="label" id="th-l">Тъмен режим</span><div class="seg" data-theme-seg>'+[["system","Авто"],["light","Светъл"],["dark","Тъмен"]].map(function(t){ return '<button type="button" data-th="'+t[0]+'" aria-pressed="'+(th===t[0])+'">'+t[1]+'</button>'; }).join("")+'</div><span class="muted small">„Авто“ следва настройката на телефона.</span></div>'; }
+
+/* ---------- desktop scrollspy for the side menu ---------- */
+var io;
+function spy(){ if (io) io.disconnect(); if (!("IntersectionObserver" in window)) return; var links = main.querySelectorAll("[data-spy]"); if (!links.length) return;
+  io = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) links.forEach(function(a){ a.setAttribute("aria-current", a.dataset.spy===e.target.id ? "true" : "false"); }); }); }, {root:SC.scroller, rootMargin:"-30% 0px -60% 0px"});
+  SECTIONS.forEach(function(s){ var el = main.querySelector("#"+s[0]); el && io.observe(el); }); }
+
+/* ---------- actions ---------- */
+function refresh(sel, html){ var el = main.querySelector(sel); if (el) el.innerHTML = html; }
+function refreshTiles(){ var y = SC.scroller.scrollTop; renderProfileKeep(); SC.scroller.scrollTop = y; }
+function renderProfileKeep(){ var t = main.querySelector(".tiles"); if (!t) return; var cps = (U.coupons.signup?1:0)+(U.consent.birthday?1:0), a = t.querySelectorAll("a")[2];
+  a.className = cps ? "em" : ""; a.querySelector("b").textContent = cps; a.querySelector(".w").textContent = cps===1 ? "купон" : "купона"; }
+
+function reorder(i, btn){ var o = U.orders[i], P = orderParts(o); if (!P.ok.length) return;
+  var snap = JSON.parse(JSON.stringify(SC.cart.lines()));
+  P.ok.forEach(function(l){ SC.cart.add(l[0], l[1]); });
+  SC.fly(btn, P.ok[0][0]); SC.haptic(); SC.flash(btn, ic("check",20)+"Добавено в количката", 1800);
+  var go = btn.parentNode.querySelector("[data-gocart]"); if (go) go.hidden = false;
+  SC.toast("Добавихме "+SC.plural(count(P.ok),"ястие","ястия")+" в количката", function(){ SC.cart.clear(); snap.forEach(function(l){ SC.cart.restore(l); }); if (go) go.hidden = true; }); }
+
+function toggle(btn){ var k = btn.dataset.sw.split("."), on = btn.getAttribute("aria-checked")!=="true";
+  U[k[0]][k[1]] = on; saveUser();
+  btn.setAttribute("aria-checked", on); btn.querySelector(".st2").textContent = on ? "Включено" : "Изключено";
+  var msg = {
+    "notif.sms":["Ще ви пишем по SMS за поръчката.","Спряхме SMS-ите за поръчката. Следете я от сайта."],
+    "notif.push":["Известията на този телефон са включени.","Известията на този телефон са спрени."],
+    "notif.remind":["Ще ви напомняме за резервацията.","Спряхме напомнянията за резервации."],
+    "consent.marketing":["Благодарим! Ще научавате първи за офертите.","Спряхме офертите. Няма да ви пишем за тях."],
+    "consent.birthday":["Включено. Изберете деня, ако искате.","Спряхме подаръка за рождения ден."]}[btn.dataset.sw];
+  if (k[0]==="consent" && k[1]==="birthday"){ if (!on) U.consent.bday = ""; saveUser(); refresh("[data-cons]", consHTML()); refresh("[data-cps]", couponsHTML()); renderProfileKeep();
+    var nb = main.querySelector('[data-sw="consent.birthday"]'); nb && nb.focus({preventScroll:true}); }
+  if (msg) SC.toast(on ? msg[0] : msg[1]); }
+
+function setTheme(v){ SC.prefs.theme = v; SC.store("sc-prefs", SC.prefs); var de = document.documentElement;
+  if (v==="system") delete de.dataset.theme; else de.dataset.theme = v;
+  document.querySelectorAll("[data-th]").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.th===v); });
+  document.querySelectorAll('[data-pv="theme"]').forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.v===v); }); }
+
+function exportData(){ var d = JSON.parse(JSON.stringify(U)); delete d.demo;
+  d.orders = U.orders.map(function(o){ return {no:o.no, date:dayStr(o.ago), mode:o.mode==="pickup"?"вземане":"доставка", items:o.lines.map(function(l){ var x = SC.byId[l[0]]; return {name:x?x.n:l[0], qty:l[1], price:x?x.p:null}; })}; });
+  d.favs = U.favs.map(function(id){ return SC.byId[id] ? SC.byId[id].n : id; });
+  d.exported = new Date().toISOString();
+  try{ var blob = new Blob([JSON.stringify(d, null, 2)], {type:"application/json"}), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "siracusa-moite-danni.json"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    SC.toast("Файлът с данните ви е изтеглен"); }catch(e){ SC.toast("Не успяхме да изтеглим файла. Опитайте пак."); } }
+
+function askDelete(){ var box = main.querySelector("[data-del]");
+  box.innerHTML = '<div class="confirm'+(SC.reduce?'':' in')+'" role="region" aria-labelledby="del-h"><h3 class="h3" id="del-h">'+ic("warning",24)+'Да изтрием ли профила?</h3>'+
+    '<ul><li>Изтриваме адресите, любимите, печатите ('+U.stamps+' от 10) и купоните.</li><li>Касовите бележки пазим, колкото изисква законът.</li><li>Това не може да се върне.</li></ul>'+
+    '<div class="btns"><button class="pill pill-danger pill-lg pill-block" type="button" data-delyes>'+ic("trash",20)+'Да, изтрий профила</button><button class="pill pill-line pill-block" type="button" data-delno>Не, остави го</button></div></div>';
+  box.querySelector("[data-delno]").focus({preventScroll:true}); }
+function doDelete(){ var phone = U.phone; U = null; saveUser();
+  try{ var k = JSON.parse(localStorage.getItem("sc-known")||"{}"); delete k[phone]; localStorage.setItem("sc-known", JSON.stringify(k)); }catch(e){}
+  main.innerHTML = '<section class="gone"><div class="card empty" style="padding:40px 20px"><span class="ill">'+ic("check",44)+'</span><h1 class="h2">Профилът е изтрит</h1><p class="muted" style="margin:0;max-width:30em">Изтрихме данните ви. Благодарим, че бяхте с нас. Можете да поръчвате и без профил.</p><a class="pill pill-red pill-lg" href="menu.html">'+ic("fork-knife",20)+'Към менюто</a><a class="link" href="login.html">Нов профил'+ic("caret-right",18)+'</a></div></section>';
+  SC.scroller.scrollTop = 0; }
+function logout(){ U = null; saveUser(); render(); SC.scroller.scrollTop = 0; SC.toast("Излязохте от профила. До скоро!"); }
+
+/* edit name + email */
+function editSheet(){ var s = SC.sheet({title:"Лични данни", html:
+  '<form class="sform" novalidate><div class="field"><label for="e-n">Име</label><input class="input" id="e-n" autocomplete="given-name" value="'+esc(U.name)+'" aria-describedby="e-n-err"><p class="err" id="e-n-err" hidden></p></div>'+
+  '<div class="field"><label for="e-m">Имейл (по желание)</label><input class="input" id="e-m" type="email" inputmode="email" autocomplete="email" placeholder="например ime@poshta.bg" value="'+esc(U.email)+'" aria-describedby="e-m-h e-m-err"><p class="help" id="e-m-h">За касовата бележка. Без реклами, освен ако не ги включите.</p><p class="err" id="e-m-err" hidden></p></div>'+
+  '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("check",20)+'Запази промените</button></form>'});
+  var f = s.el.querySelector("form");
+  f.addEventListener("submit", function(e){ e.preventDefault(); var n = f.querySelector("#e-n"), m = f.querySelector("#e-m"), ok = true;
+    [[n, !n.value.trim(), "Напишете името си."],[m, m.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m.value.trim()), "Проверете имейла, например ime@poshta.bg."]].forEach(function(c){ var er = f.querySelector("#"+c[0].id+"-err");
+      if (c[1]){ ok = false; c[0].setAttribute("aria-invalid","true"); er.textContent = c[2]; er.hidden = false; } else { c[0].removeAttribute("aria-invalid"); er.hidden = true; } });
+    if (!ok){ f.querySelector('[aria-invalid="true"]').focus(); return; }
+    U.name = n.value.trim(); U.email = m.value.trim(); saveUser(); s.close();
+    refresh("[data-sets]", setsHTML()); var h = main.querySelector(".who .h1"); if (h) h.textContent = "Здравейте, "+U.name; var av = main.querySelector(".av"); if (av) av.textContent = U.name.charAt(0).toUpperCase();
+    SC.toast("Записахме промените"); }); }
+
+/* add / edit address */
+function adrSheet(id){ var a = U.addrs.filter(function(x){ return x.id===id; })[0], isNew = !a; a = a || {id:"a"+Date.now(), kind:"home", zone:"Дружба 2", line:"", note:"", main:!U.addrs.length};
+  var zones = SC.ZONES.map(function(z){ return z.n; }).concat(["Друг квартал"]);
+  var s = SC.sheet({title:isNew?"Нов адрес":"Промени адреса", html:
+    '<form class="sform" novalidate>'+
+    '<div class="field" role="group" aria-labelledby="ak-l"><span class="label" id="ak-l">Какъв е адресът</span><div class="seg" data-kind>'+Object.keys(KIND).map(function(k){ return '<button type="button" data-k="'+k+'" aria-pressed="'+(a.kind===k)+'">'+ic(KIND[k][1],20)+KIND[k][0]+'</button>'; }).join("")+'</div></div>'+
+    '<div class="field"><label for="a-z">Квартал</label><div class="selw"><select class="input" id="a-z">'+zones.map(function(z){ return '<option'+(z===a.zone||(z==="Друг квартал"&&!zoneOf(a.zone))?' selected':'')+'>'+z+'</option>'; }).join("")+'</select>'+ic("caret-down",20)+'</div><div class="zres" data-zres aria-live="polite"></div></div>'+
+    '<div class="field"><label for="a-l">Улица и номер или блок, вход, етаж</label><input class="input" id="a-l" autocomplete="street-address" placeholder="например бл. 311, вх. Б, ет. 4" value="'+esc(a.line)+'" aria-describedby="a-l-err"><p class="err" id="a-l-err" hidden></p></div>'+
+    '<div class="field"><label for="a-n">Бележка за куриера (по желание)</label><input class="input" id="a-n" placeholder="например звънецът не работи, обадете се" value="'+esc(a.note)+'"></div>'+
+    '<label class="check"><input type="checkbox" id="a-m"'+(a.main?' checked':'')+'><span><b>Основен адрес</b><br><span class="muted small">Избира се сам при поръчка.</span></span></label>'+
+    '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("check",20)+'Запази адреса</button>'+
+    (isNew ? '' : '<button class="pill pill-dline pill-block" type="button" data-adrdel>'+ic("trash",20)+'Махни адреса</button>')+
+    '</form>'});
+  var f = s.el.querySelector("form"), zs = f.querySelector("#a-z"), zr = f.querySelector("[data-zres]"), kind = a.kind;
+  function zupd(){ var z = zoneLine(zs.value); zr.className = "zres "+z.cls; zr.innerHTML = ic(z.icon,20)+'<span>'+z.html+'</span>'; }
+  zs.addEventListener("change", zupd); zupd();
+  f.querySelector("[data-kind]").addEventListener("click", function(e){ var b = e.target.closest("[data-k]"); if (!b) return; kind = b.dataset.k; f.querySelectorAll("[data-k]").forEach(function(x){ x.setAttribute("aria-pressed", x===b); }); });
+  f.addEventListener("submit", function(e){ e.preventDefault(); var l = f.querySelector("#a-l"), er = f.querySelector("#a-l-err");
+    if (!l.value.trim()){ l.setAttribute("aria-invalid","true"); er.textContent = "Напишете улица или блок, за да ви намери куриерът."; er.hidden = false; l.focus(); return; }
+    a.kind = kind; a.zone = zs.value; a.line = l.value.trim(); a.note = f.querySelector("#a-n").value.trim(); a.main = f.querySelector("#a-m").checked;
+    if (a.main) U.addrs.forEach(function(x){ x.main = false; }); a.main = a.main || !U.addrs.filter(function(x){ return x.id!==a.id; }).length;
+    if (isNew) U.addrs.push(a); else U.addrs = U.addrs.map(function(x){ return x.id===a.id ? a : x; });
+    if (!U.addrs.some(function(x){ return x.main; })) U.addrs[0].main = true;
+    saveUser(); refresh("[data-adrs]", adrsHTML()); s.close(); SC.toast(isNew ? "Адресът е добавен" : "Адресът е променен"); });
+  var del = f.querySelector("[data-adrdel]");
+  if (del) del.onclick = function(){ var before = JSON.parse(JSON.stringify(U.addrs)); U.addrs = U.addrs.filter(function(x){ return x.id!==a.id; }); if (U.addrs.length && !U.addrs.some(function(x){ return x.main; })) U.addrs[0].main = true;
+    saveUser(); refresh("[data-adrs]", adrsHTML()); s.close(); SC.toast("Махнахме адреса", function(){ U.addrs = before; saveUser(); refresh("[data-adrs]", adrsHTML()); }); }; }
+
+/* ---------- delegation ---------- */
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
+  if (t.dataset.re){ reorder(+t.dataset.re, t); return; }
+  if (t.hasAttribute("data-retry")){ var b = main.querySelector("[data-orders]"); b.style.display = ""; b.setAttribute("aria-busy","true"); b.innerHTML = skel()+skel(); loadOrders(600); return; }
+  if (t.dataset.sw){ toggle(t); return; }
+  if (t.dataset.th){ setTheme(t.dataset.th); return; }
+  if (t.hasAttribute("data-en")){ SC.toast("Английската версия идва след българската."); return; }
+  if (t.hasAttribute("data-edit")){ editSheet(); return; }
+  if (t.dataset.adr){ adrSheet(t.dataset.adr==="new" ? null : t.dataset.adr); return; }
+  if (t.hasAttribute("data-favedit")){ var fv = main.querySelector(".favs"); if (!fv) return; var on = fv.classList.toggle("editing"); t.innerHTML = on ? ic("check",18)+"Готово" : ic("pencil-simple",18)+"Промени"; return; }
+  if (t.dataset.unfav){ var id = t.dataset.unfav, before = U.favs.slice(), wasEditing = true; U.favs = U.favs.filter(function(x){ return x!==id; }); saveUser();
+    var redraw = function(){ refresh("[data-favs]", favsHTML()); var fv2 = main.querySelector(".favs"), eb = main.querySelector("[data-favedit]"); if (fv2 && wasEditing) fv2.classList.add("editing"); if (eb){ eb.hidden = !U.favs.length; if (!U.favs.length) eb.innerHTML = ic("pencil-simple",18)+"Промени"; } };
+    redraw(); SC.toast("Махнахме "+(SC.byId[id]?SC.byId[id].n:"ястието")+" от любими", function(){ U.favs = before; saveUser(); redraw(); }); return; }
+  if (t.hasAttribute("data-export")){ exportData(); return; }
+  if (t.hasAttribute("data-delask")){ askDelete(); return; }
+  if (t.hasAttribute("data-delno")){ main.querySelector("[data-del]").innerHTML = '<button class="pill pill-dline pill-block" type="button" data-delask>'+ic("trash",20)+'Изтрий профила</button>'; main.querySelector("[data-delask]").focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-delyes")){ doDelete(); return; }
+  if (t.hasAttribute("data-logout")){ logout(); return; }
+  if (t.dataset.p==="empty"){ U.orders = []; U.favs = []; U.addrs = []; U.demo = false; saveUser(); render(); SC.toast("Показваме нов клиент без поръчки"); return; }
+  if (t.dataset.p==="error"){ var ob = main.querySelector("[data-orders]"); ob.style.display = ""; ob.setAttribute("aria-busy","true"); ob.innerHTML = skel(); loadOrders(500, true); main.querySelector("#porachki").scrollIntoView({block:"start"}); return; }
+  if (t.hasAttribute("data-demo")){ e.preventDefault(); U = demoUser(); saveUser(); render(); SC.scroller.scrollTop = 0; return; }
+});
+main.addEventListener("change", function(e){ if (e.target.matches("[data-bday]")){ var d = main.querySelector("#bd-d").value, m = main.querySelector("#bd-m").value;
+  U.consent.bday = (m && d) ? m+"-"+d : ""; saveUser(); if (m && d) SC.toast("Записахме: "+d+" "+SC.MONTHS[m-1]); } });
+window.addEventListener("hashchange", function(){ if (location.hash==="#demo") boot(); });
+
+boot();
+})();
+</script>
+</body>
+</html>

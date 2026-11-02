@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Проследяване на поръчка | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* tracking.html: order status + rating after delivery. Tokens only. One strong motion: the plate + ring entrance and the slow pulse of the current step. */
+.trk-s{padding-top:14px}
+.trk{display:grid; gap:16px}
+.trk-l,.trk-r{display:grid; gap:16px; align-content:start; min-width:0}
+.trk-title{display:flex; align-items:center; justify-content:space-between; gap:4px 12px; flex-wrap:wrap; margin-bottom:12px}
+.trk-title h1{font-size:28px; line-height:1.1; letter-spacing:-.035em; font-weight:800; margin:0}
+.trk-title h1 .no{font-variant-numeric:tabular-nums}
+.live{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.live i{position:relative; width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+.live i::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
+.live.off i{background:var(--off)} .live.off i::after{display:none}
+
+/* hero */
+.hero{display:grid; gap:0}
+.hero > .core{padding:10px 10px 22px; text-align:center}
+.hrow{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.mode{display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px 0 12px; border-radius:var(--r-pill); background:var(--surface-2); font-size:14px; font-weight:700}
+.hrow .hb{font-size:15px}
+.hgrid{display:grid; justify-items:center}
+.viz{position:relative; width:188px; height:188px; margin:4px auto 0}
+.viz .ring{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.ring path{fill:none; stroke-width:9; stroke-linecap:round}
+.ring .off{stroke:var(--surface-3)}
+.ring .on{stroke:var(--ok)}
+.ring .now{stroke:var(--ok); animation:breathe 2s ease-in-out infinite}
+.is-late .ring .now{stroke:var(--warn)}
+.viz .plate{position:absolute; inset:21px; border-radius:50%; box-shadow:var(--shadow)}
+.viz .plate > svg{filter:none; inset:6%; width:88%; height:88%}
+.is-cook .viz .plate > svg{animation:spin 48s linear infinite}
+.vb{position:absolute; left:50%; bottom:0; width:56px; height:56px; margin-left:-28px; margin-bottom:-16px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ok); box-shadow:var(--shadow), inset 0 0 0 1.5px var(--line)}
+.vb::before{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 3px var(--ok); opacity:0; animation:halo2 2s var(--ease-std) infinite}
+.is-done .vb{background:var(--ok); color:var(--surface)} .is-done .vb::before{display:none}
+.is-late .vb{color:var(--warn)} .is-late .vb::before{box-shadow:0 0 0 3px var(--warn)}
+.is-off .vb::before,.is-off .ring .now,.is-off .live i::after{animation:none}
+.enter .viz{animation:pop 700ms var(--ease) both}
+.enter .etxt{animation:rise 700ms 80ms var(--ease) both}
+
+.etxt{display:grid; justify-items:center; margin-top:28px; padding:0 8px}
+.latechip{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; margin-bottom:10px; border-radius:var(--r-pill); font-size:14px; font-weight:800; color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor}
+.elab{font-size:16px; font-weight:700; color:var(--muted)}
+.enum{display:flex; align-items:baseline; justify-content:center; gap:8px; margin-top:2px; font-weight:800; line-height:1; letter-spacing:-.05em; white-space:nowrap}
+.enum .ab{font-size:24px; letter-spacing:-.025em}
+.enum b{font-size:78px; font-weight:800; font-variant-numeric:tabular-nums}
+.enum .u{font-size:30px; letter-spacing:-.03em}
+.enum.clock b{font-size:72px}
+.say{margin:12px 0 0; font-size:24px; line-height:1.2; letter-spacing:-.03em; font-weight:800; text-wrap:balance}
+.sub{margin:8px 0 0; font-size:17px; color:var(--muted); text-wrap:balance; max-width:34ch}
+.sub .price{color:var(--ink)}
+.hnote{display:flex; gap:10px; align-items:flex-start; margin:0; padding:2px 14px 12px; font-size:15px; color:var(--muted)}
+.hnote .ic{margin-top:2px}
+.is-off .enum,.is-off .say{opacity:.55}
+
+/* status timeline (inside the shell, under the core) */
+.tl{position:relative; list-style:none; margin:0; padding:18px 10px 12px; display:flex; justify-content:space-between; gap:6px}
+.tl li{position:relative; z-index:2; display:grid; justify-items:center; align-content:start; gap:6px; text-align:center; min-width:0}
+.tl .dot{width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); position:relative}
+.tl .done .dot{background:var(--ok); color:var(--surface); box-shadow:none}
+.tl .now .dot{box-shadow:inset 0 0 0 3px var(--ok)}
+.tl .now .dot::before{content:""; width:10px; height:10px; border-radius:50%; background:var(--ok)}
+.tl .now .dot::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
+.is-late .tl .now .dot{box-shadow:inset 0 0 0 3px var(--warn)} .is-late .tl .now .dot::before,.is-late .tl .now .dot::after{background:var(--warn)}
+.is-off .tl .now .dot::after{display:none}
+.tl .nm{font-size:14px; font-weight:700; line-height:1.2; letter-spacing:-.01em; max-width:9.5em}
+.tl .next .nm{color:var(--muted); font-weight:600}
+.tl .tm{font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:600; min-height:1.5em}
+.tl .now .tm{color:var(--ink); font-weight:800}
+.tlw{position:relative}
+.tlw .track{position:absolute; z-index:1; top:32px; height:4px; margin-top:-2px; left:24px; right:24px; border-radius:2px; background:var(--surface-3); overflow:hidden}
+.tlw .fill{position:absolute; inset:0; background:var(--ok); transform-origin:left center; transform:scaleX(0); transition:transform 900ms var(--ease)}
+.is-late .tlw .fill{background:var(--ok)}
+
+.acts{display:grid; gap:10px}
+
+/* cards on the right */
+.card-h{display:flex; gap:14px; align-items:flex-start}
+.card-h .nic{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.card-h h2{font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800; margin:0}
+.card-h p{margin:4px 0 0; color:var(--muted)}
+.cpad{padding:20px}
+.cgap{display:grid; gap:16px}
+.okline{display:flex; gap:12px; align-items:flex-start}
+.okline .ic{color:var(--ok); margin-top:1px}
+.okline b{display:block; font-size:17px}
+.okline span{color:var(--muted)}
+
+/* rating */
+.rate{scroll-margin-top:150px}
+.rate h2{font-size:28px; line-height:1.08; letter-spacing:-.035em; font-weight:800; margin:10px 0 0}
+.rate .lead{margin-top:6px}
+.offer{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; border-radius:var(--r-pill); background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.yn{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+.yn button{min-height:64px; border:0; border-radius:var(--r-pill); display:inline-flex; align-items:center; justify-content:center; gap:10px; font-size:19px; font-weight:800; cursor:pointer; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:transform var(--t-fast) var(--ease)}
+.yn button:active{transform:scale(.97)}
+.yn button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.ans{display:grid; gap:16px; margin-top:20px; padding-top:20px; border-top:1px solid var(--line); animation:rise 420ms var(--ease) both}
+.ans h3{font-size:20px; letter-spacing:-.02em; margin:0}
+.ans h3:focus{outline:none}
+.ans p{margin:0}
+.code{border-radius:var(--r-core); padding:18px; display:grid; gap:12px}
+.code .k{font-size:14px; font-weight:800}
+.code .v{font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; line-height:1}
+.code .row{justify-content:space-between; flex-wrap:wrap}
+.code p{font-size:15px}
+.code .pill{background:var(--on-ember); color:var(--ember)}
+.gq{display:grid; gap:10px}
+.gq .missing{font-size:14px}
+.fbsent{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.fbsent .ic{color:var(--ok); margin-top:2px}
+.change{justify-self:start; color:var(--muted)}
+
+/* order summary */
+.oline{display:grid; grid-template-columns:56px 1fr auto; gap:14px; align-items:center; padding:10px 0}
+.oline + .oline{border-top:1px solid var(--line)}
+.oline .pic{width:56px; height:56px; border-radius:16px}
+.oline .nm{font-weight:700; line-height:1.25}
+.oline .q{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.okv .kv{align-items:baseline}
+.okv .kv span:first-child{color:var(--muted)}
+.okv .kv span:last-child{text-align:right; font-weight:700}
+.okv .tot span:last-child{font-size:20px}
+.okv .disc span:last-child{color:var(--ok)}
+
+/* banners & states */
+.banner{display:flex; gap:12px; align-items:flex-start; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 4px 0 0 var(--warn)}
+.banner .ic{color:var(--warn); margin-top:2px}
+.banner b{display:block}
+.banner p{margin:2px 0 10px; color:var(--muted); font-size:15px}
+.banner .pill{min-height:48px}
+.state{padding:28px 18px 24px}
+.state .ill{color:var(--ink)}
+.state.err .ill{color:var(--warn)}
+.state h2{font-size:26px; line-height:1.12; letter-spacing:-.03em; margin:0}
+.state p{margin:0; color:var(--muted); max-width:34ch}
+.state .acts{width:100%; margin-top:8px}
+.sk{display:grid; justify-items:center; gap:14px; padding:22px 16px 26px}
+.skrow{display:flex; justify-content:space-between; padding:18px 18px 14px}
+
+/* prototype-only panel */
+.proto{border:1.5px dashed var(--line-strong); border-radius:var(--r-shell); padding:18px 16px; display:grid; gap:14px}
+.ptag{display:flex; align-items:center; gap:8px; margin:0; font-size:14px; font-weight:800; color:var(--muted)}
+.proto .seg button{font-size:15px; min-height:48px}
+.pbtns{display:flex; flex-wrap:wrap; gap:8px}
+.pbtns .pill{padding:0 16px; font-size:15px}
+.proto .help{margin:0; font-size:14px; color:var(--muted)}
+
+@keyframes halo{0%{transform:scale(1); opacity:.45}100%{transform:scale(2.4); opacity:0}}
+@keyframes halo2{0%{transform:scale(1); opacity:.5}100%{transform:scale(1.45); opacity:0}}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{transform:scale(.9); opacity:0}to{transform:none; opacity:1}}
+@keyframes rise{from{transform:translateY(12px); opacity:0}to{transform:none; opacity:1}}
+
+@container app (max-width:370px){
+  .tl{padding-left:2px; padding-right:2px; gap:4px}
+  .enum b{font-size:70px}
+  .viz{width:176px; height:176px}
+}
+@container app (min-width:700px){
+  .hero > .core{padding:14px 14px 32px}
+  .hgrid{grid-template-columns:auto minmax(0,1fr); align-items:center; justify-items:start; gap:8px 36px; padding:6px 18px 0 22px}
+  .viz{margin:14px 0 18px}
+  .etxt{justify-items:start; text-align:left; margin-top:0; padding:0}
+  .enum{justify-content:flex-start}
+  .hnote{padding:0 26px 16px}
+  .tl{padding:22px 26px 16px}
+  .acts{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+}
+@container app (min-width:900px){
+  .trk-s{padding-top:40px}
+  .trk{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:28px; align-items:start}
+  .trk-title h1{font-size:40px}
+  .trk-title{margin-bottom:22px}
+  .viz{width:248px; height:248px}
+  .enum b{font-size:104px}
+  .enum.clock b{font-size:88px}
+  .say{font-size:30px}
+  .tl .nm{font-size:15px}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var R = SC.RESTAURANT, ST = SC.state();
+var main = SC.mount({page:"tracking", nav:null, title:"Проследяване", docTitle:"Проследяване на поръчка", status:false, ai:false, footer:false});
+var TEL = "tel:+359894365577";
+
+/* ---------- helpers ---------- */
+function two(n){ return (n<10?"0":"")+n; }
+function clock(min){ min = ((Math.round(min)%1440)+1440)%1440; return two(Math.floor(min/60))+":"+two(min%60); }
+function ic(n,s){ return SC.ic(n,s); }
+function esc(s){ return SC.esc(s); }
+
+/* ---------- the order: from checkout (sc-order) if present, otherwise a sample built from the real menu ---------- */
+var saved = SC.load("sc-order", null);
+var tok = {}, hashNo = null;
+location.hash.slice(1).split("-").forEach(function(t){ if (/^\d{3,7}$/.test(t)) hashNo = t; else if (t) tok[t] = true; });
+
+function sampleLines(lunch){
+  if (lunch){
+    var soup = SC.lunch.filter(function(x){ return x.course==="starter"; })[0], ml = SC.lunch.filter(function(x){ return x.course==="main"; })[0];
+    return [soup && {id:soup.id, q:1}, ml && {id:ml.id, q:1}].filter(Boolean);
+  }
+  var pz = SC.inCat("pitsi").filter(function(x){ return !SC.isOut(x); });
+  var pick = pz.filter(function(x){ return x.t.indexOf("hit")>-1; })[0] || pz[0];
+  var sal = SC.inCat("salati").filter(function(x){ return !SC.isOut(x); })[0];
+  return [pick && {id:pick.id, q:2}, sal && {id:sal.id, q:1}].filter(Boolean);
+}
+function lines(){
+  if (saved && saved.lines && saved.lines.length && !S.sampleSwap) return saved.lines.filter(function(l){ return SC.byId[l.id]; });
+  return sampleLines(S.lunch);
+}
+
+var S = {
+  no: hashNo || (saved && saved.no) || "1042",
+  mode: tok.pickup ? "pickup" : tok.delivery ? "delivery" : (saved && saved.mode) || (ST.delivery ? "delivery" : "pickup"),
+  lunch: !!tok.lunch || !!(saved && saved.lunchOnly),
+  k: 1, late: !!tok.late, offline: !!tok.offline || (navigator.onLine===false),
+  view: tok.notfound ? "notfound" : tok.none ? "none" : tok.loading ? "loading" : (!ST.open && !hashNo && !saved ? "none" : "order"),
+  rating: null, fb: "", fbSent: false, fbErr: "", notify: null, ch: "push", first: true, updated: SC.minutes(), sampleSwap: false
+};
+/* lunch menu is not delivered after 15:00 (decision 4) */
+function lunchPickupOnly(){ return S.lunch && !ST.lunch; }
+if (lunchPickupOnly()) S.mode = "pickup";
+
+function isD(){ return S.mode==="delivery"; }
+function stages(){ var a = [{id:"acc", nm:"Приета", ic:"receipt"}];
+  if (!S.lunch) a.push({id:"cook", nm:"Готви се", ic:"chef-hat"});
+  if (isD()){ a.push({id:"ready", nm:"Готова", ic:"shopping-bag"}, {id:"way", nm:"На път", ic:"moped"}, {id:"done", nm:"Доставена", ic:"house"}); }
+  else a.push({id:"ready", nm:"Готова за вземане", ic:"storefront"});
+  return a; }
+if (tok.delivered || tok.done) S.k = isD() ? stages().length-1 : stages().length;
+if (tok.way && isD()) S.k = stages().length-2;
+function finished(){ var n = stages().length; return isD() ? S.k>=n-1 : S.k>=n; }
+function cur(){ var a = stages(); return a[Math.min(S.k, a.length-1)]; }
+
+var BUSY = SC.eta().busy;
+function etaMin(id){ var L = S.lunch, add = S.late ? 10 : 0, t;
+  t = isD() ? {acc:L?25:(BUSY?55:35), cook:BUSY?40:22, ready:L?14:15, way:8} : {acc:L?5:(BUSY?30:20), cook:BUSY?22:12};
+  return t[id]!=null ? t[id]+add : 0; }
+/* minutes after placing the order at which each step started (prototype timeline) */
+function offsets(){ var L = S.lunch;
+  return isD() ? {acc:0, cook:2, ready:L?6:(BUSY?32:16), way:L?9:(BUSY?35:19), done:L?24:(BUSY?50:31)}
+               : {acc:0, cook:2, ready:L?5:(BUSY?24:18)}; }
+function times(){ var o = offsets(), a = stages(), now = SC.minutes(), c = cur();
+  var placed = finished() ? now - (o[isD()?"done":"ready"] + (isD()?1:6)) : now - o[c.id] - 3;
+  return {placed:placed, at:function(id){ return placed + o[id]; }, now:now, pickedAt:now-1}; }
+
+function mainDish(){ var ls = lines().map(function(l){ return SC.byId[l.id]; }).filter(Boolean);
+  return ls.filter(function(x){ return x.cat==="pitsi"; })[0] || ls.filter(function(x){ return x.course==="main"; })[0] || ls[0]; }
+function cookSay(){ var m = mainDish(); if (m && m.cat==="pitsi") return "Пицата е в пещта"; if (m && m.cat==="skara-bertha") return "Месото е във фурната Bertha"; return "Готвим поръчката ви"; }
+function totals(){ var sub = 0, lunchSub = 0; lines().forEach(function(l){ var x = SC.byId[l.id]; var p = x.p*l.q + (l.extra||0)*l.q; sub += p; if (x.lunch) lunchSub += p; });
+  var disc = (!isD() && ST.lunchDiscount && lunchSub) ? Math.round(lunchSub*0.30*100)/100 : 0;
+  return {sub:sub, disc:disc, total:sub-disc}; }
+
+/* ---------- ring around the plate: one arc per step, starting and ending at the badge (bottom) ---------- */
+function ringSVG(){ var a = stages(), n = a.length, gap = n>3 ? 15 : 13, step = 360/n, out = "", done = finished(), r = 92;
+  function pt(deg){ var t = (deg-90)*Math.PI/180; return (100+r*Math.cos(t)).toFixed(2)+" "+(100+r*Math.sin(t)).toFixed(2); }
+  for (var i=0;i<n;i++){ var s = 180 + i*step + gap/2, e = 180 + (i+1)*step - gap/2;
+    var cls = done || i < S.k ? "on" : i === S.k ? "now" : "off";
+    out += '<path class="'+cls+'" d="M'+pt(s)+' A'+r+' '+r+' 0 '+((e-s)>180?1:0)+' 1 '+pt(e)+'"/>'; }
+  return '<svg class="ring" viewBox="0 0 200 200" aria-hidden="true">'+out+'</svg>'; }
+
+/* ---------- blocks ---------- */
+function heroHTML(){ var a = stages(), c = cur(), T = times(), D = isD(), done = finished(), tot = totals();
+  var label, big, say, sub, note = "", badgeIc = done ? "check" : c.id==="done" ? "check" : c.ic;
+  if (done){ label = D ? "Доставена в" : "Взехте я в"; big = '<span class="enum clock"><b>'+clock(D ? T.at("done") : T.pickedAt)+'</b></span>';
+    say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас."; }
+  else if (!D && c.id==="ready"){ label = "Готова от"; big = '<span class="enum clock"><b>'+clock(T.at("ready"))+'</b></span>';
+    say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта. Вземане до "+R.kitchen+"."; }
+  else { var m = etaMin(c.id), arrive = clock(T.now + m);
+    label = D ? "Пристига след" : "Готова след";
+    big = '<span class="enum"><span class="ab">около</span><b>'+m+'</b><span class="u">мин</span></span>';
+    say = c.id==="acc" ? "Получихме поръчката ви" : c.id==="cook" ? cookSay() : c.id==="ready" ? "Поръчката е готова" : "Шофьорът е на път към вас";
+    if (S.late) sub = "Съжаляваме, кухнята е натоварена. Новото време е около "+arrive+".";
+    else if (c.id==="way") sub = 'Пристига около '+arrive+'. Плащате при получаване: <span class="price">'+SC.fmt(tot.total)+'</span>.';
+    else if (c.id==="ready") sub = "Тръгва към вас до минута. Пристига около "+arrive+".";
+    else sub = D ? "Очакваме да пристигне около "+arrive+"." : "Ще е готова около "+arrive+".";
+    if (S.lunch && (c.id==="acc" || c.id==="ready")) note = '<p class="hnote">'+ic("info",18)+'<span>Обедното меню е приготвено предварително, затова пропуска етапа „Готви се“.</span></p>';
+    else if (BUSY && !S.late && (c.id==="acc" || c.id==="cook")) note = '<p class="hnote">'+ic("info",18)+'<span>Кухнята е натоварена в момента, затова времето е малко по-дълго.</span></p>';
+  }
+  var dish = mainDish();
+  var cls = "shell hero"+(c.id==="cook" && !done ? " is-cook" : "")+(done ? " is-done" : "")+(S.late && !done ? " is-late" : "")+(S.offline ? " is-off" : "")+(S.first ? " enter" : "");
+  var modeChip = D ? '<span class="mode">'+ic("moped",20)+'Доставка</span>' : '<span class="mode">'+ic("storefront",20)+'Вземане от място</span>';
+  var tl = '<div class="tlw"><span class="track" aria-hidden="true"><span class="fill" data-fill></span></span><ol class="tl" aria-label="Етапи на поръчката">'+
+    a.map(function(s, i){ var st = done || i < S.k ? "done" : i === S.k ? "now" : "next";
+      var tm = st==="done" ? clock(s.id==="done" ? T.at("done") : T.at(s.id)) : st==="now" ? "Сега" : "";
+      return '<li class="'+st+'"'+(st==="now"?' aria-current="step"':'')+'><span class="dot">'+(st==="done"?ic("check",16):"")+'</span><span class="nm">'+s.nm+'</span><span class="tm">'+(tm||"&nbsp;")+'</span><span class="vh">'+(st==="done"?"готово":st==="now"?"сега":"предстои")+'</span></li>'; }).join("")+'</ol></div>';
+  return '<div class="'+cls+'" data-hero>'+
+    '<div class="core"><div class="hrow">'+modeChip+'<button class="hb" type="button" data-share>'+ic("share-network",20)+'Сподели</button></div>'+
+      '<div class="hgrid"><div class="viz">'+ringSVG()+(dish ? SC.pic(dish,"plate") : "")+'<span class="vb" aria-hidden="true">'+ic(badgeIc,26)+'</span></div>'+
+      '<div class="etxt" aria-live="polite">'+(S.late && !done ? '<span class="latechip">'+ic("clock",18)+'Закъснява с около 10 мин</span>' : '')+
+        '<span class="elab">'+label+'</span>'+big+'<h2 class="say">'+say+'</h2><p class="sub">'+sub+'</p></div></div>'+
+    '</div>'+tl+note+'</div>'; }
+
+function actsHTML(){ var D = isD(), c = cur();
+  var route = (!D) ? '<a class="pill pill-line pill-lg pill-block" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("map-pin",20)+'Маршрут до ресторанта</a>' : '';
+  return '<div class="acts"><a class="pill pill-line pill-lg pill-block" href="'+TEL+'" aria-label="Обади се в ресторанта на '+R.phone+'">'+ic("phone",20)+'Обади се в ресторанта</a>'+route+'</div>'; }
+
+function offlineHTML(){ if (!S.offline) return "";
+  return '<div class="banner" role="alert">'+ic("warning-circle",24)+'<div><b>Няма връзка с интернет</b><p>Показваме последното, което знаем (от '+clock(S.updated)+'). Поръчката ви си върви и ще обновим сами, щом връзката се върне.</p><button class="pill pill-ink" type="button" data-retry>'+ic("arrow-up-right",18)+'Опитай пак</button></div></div>'; }
+
+function notifyHTML(){ var D = isD();
+  if (finished()) return "";
+  if (!D && cur().id==="ready") return "";
+  var title = D ? "Да ви кажем, когато е близо?" : "Да ви кажем, когато е готова?";
+  var text = D ? "Ще получите съобщение, когато поръчката тръгне и когато е на 10 мин от вас." : "Ще получите съобщение, щом поръчката е готова за вземане.";
+  if (S.notify){ var where = S.notify==="push" ? "Ще получите известие на този телефон." : S.notify==="sms" ? "Ще ви пишем по SMS на номера от поръчката." : "Ще ви пишем във Viber на номера от поръчката.";
+    return '<div class="shell"><div class="core cpad cgap"><div class="okline">'+ic("check-circle",26)+'<div><b>Известията са включени</b><span>'+where+'</span></div></div><button class="link change" type="button" data-notify-off>Изключи известията</button></div></div>'; }
+  var btn = S.ch==="push" ? "Включи известията" : S.ch==="sms" ? "Пиши ми по SMS" : "Пиши ми във Viber";
+  return '<div class="shell"><div class="core cpad cgap">'+
+    '<div class="card-h"><span class="nic">'+ic("bell-ringing",24)+'</span><div><h2>'+title+'</h2><p>'+text+'</p></div></div>'+
+    '<div class="seg" role="group" aria-label="Как да ви пишем">'+[["push","Известие"],["sms","SMS"],["viber","Viber"]].map(function(o){ return '<button type="button" data-ch="'+o[0]+'" aria-pressed="'+(S.ch===o[0])+'">'+o[1]+'</button>'; }).join("")+'</div>'+
+    '<button class="pill pill-red pill-lg pill-block" type="button" data-notify>'+ic("bell",20)+btn+'</button>'+
+    (S.ch==="push" ? '<p class="small muted" style="margin:0">На iPhone известията работят, ако сайтът е добавен на началния екран.</p>' : '')+
+  '</div></div>'; }
+
+function code(){ return "SIR10-"+S.no; }
+function codeHTML(){ return '<div class="code ember-card"><span class="k">Вашият код за -10% от следващата поръчка</span><div class="row"><span class="v">'+code()+'</span><button class="pill pill-ink" type="button" data-copy>'+ic("copy",18)+'Копирай кода</button></div><p>Въведете го в количката при следващата поръчка. Един код на телефонен номер.</p></div>'; }
+function rateHTML(){ if (!finished()) return "";
+  var r = S.rating, ans = "";
+  if (r==="yes") ans = '<div class="ans"><h3 tabindex="-1" data-focus>Благодарим! Радваме се, че ви хареса.</h3>'+codeHTML()+
+    '<div class="gq"><p><b>Ще ни помогнете ли с отзив в Google?</b><br><span class="muted">Така и съседите ви ще ни намерят <span style="white-space:nowrap">по-лесно</span>.</span></p><a class="pill pill-line pill-lg pill-block" href="#" data-google>'+ic("google-logo",20)+'Напиши отзив в Google'+ic("arrow-up-right",18)+'</a><span class="missing">[ЛИПСВА: линк към профила в Google]</span></div>'+
+    '<button class="link change" type="button" data-rate-reset>Промени отговора</button></div>';
+  if (r==="no") ans = '<div class="ans"><h3 tabindex="-1" data-focus>Съжаляваме. Благодарим, че ни казвате.</h3>'+
+    (S.fbSent ? '<div class="fbsent">'+ic("check-circle",22)+'<span><b>Изпратихме го на управителя.</b><br><span class="muted">Ще го прочете лично.</span></span></div>'
+      : '<div class="field"><label for="fb">Споделете с нас как бихме могли да подобрим вашето преживяване</label><textarea class="input" id="fb" rows="4" aria-describedby="fbh'+(S.fbErr?' fbe':'')+'"'+(S.fbErr?' aria-invalid="true"':'')+'>'+esc(S.fb)+'</textarea><span class="help" id="fbh">Стига само до управителя.</span>'+(S.fbErr?'<span class="err" id="fbe">'+S.fbErr+'</span>':'')+'</div>'+
+        '<button class="pill pill-red pill-lg pill-block" type="button" data-fb>'+ic("paper-plane-right",20)+'Изпрати на управителя</button>')+
+    codeHTML()+
+    '<p class="muted">Ако желаете, можете да оставите и отзив в Google.</p><div><a class="link" href="#" data-google>'+ic("google-logo",20)+'Отзив в Google'+ic("arrow-up-right",16)+'</a><br><span class="missing small">[ЛИПСВА: линк към профила в Google]</span></div>'+
+    '<button class="link change" type="button" data-rate-reset>Промени отговора</button></div>';
+  return '<div class="shell rate" data-rate><div class="core cpad"><span class="offer">'+ic("seal-percent",18)+'-10% за оценката</span><h2 id="rate-h">Останахте ли доволни?</h2><p class="lead">От храната и '+(isD()?"доставката":"обслужването")+'. За отговора ви даваме -10% от следващата поръчка, каквото и да изберете.</p>'+
+    '<div class="yn" role="group" aria-labelledby="rate-h"><button type="button" data-rate="yes" aria-pressed="'+(r==="yes")+'">'+ic("thumbs-up",26)+'Да</button><button type="button" data-rate="no" aria-pressed="'+(r==="no")+'">'+ic("thumbs-down",26)+'Не</button></div>'+ans+'</div></div>'; }
+
+function orderHTML(){ var ls = lines(), t = totals(), D = isD();
+  var rows = ls.map(function(l){ var x = SC.byId[l.id]; return '<div class="oline">'+SC.pic(x)+'<span><span class="nm">'+esc(x.n)+'</span><span class="q">'+l.q+' бр.'+(x.g?' · '+esc(x.g):'')+'</span></span><span class="price">'+SC.fmt(x.p*l.q+(l.extra||0)*l.q)+'</span></div>'; }).join("");
+  var zone = (saved && saved.zone) || SC.ZONES[1].n;
+  var kv = (D ? '<div class="kv"><span>Доставка до</span><span>'+esc(zone)+' · безплатна</span></div>'
+              : '<div class="kv"><span>Вземане от</span><span>Siracusa, Дружба 2</span></div>')+
+    (t.disc ? '<div class="kv disc"><span>Отстъпка след 15:00</span><span class="price">-'+SC.fmt(t.disc)+'</span></div>' : '')+
+    '<div class="kv"><span>Плащане</span><span>'+esc((saved && saved.pay) || (D ? "В брой при получаване" : "В брой в ресторанта"))+'</span></div>'+
+    '<div class="kv tot"><span>Общо</span><span class="price">'+SC.fmt(t.total)+'</span></div>';
+  var again = finished() ? '<button class="pill pill-line pill-lg pill-block" type="button" data-again style="margin-top:12px">'+ic("plus",20)+'Поръчай същото · '+SC.fmt(t.sub)+'</button>' : '';
+  return '<div class="shell"><div class="core cpad"><div class="sec-h" style="margin-bottom:4px"><h2 class="h3">Вашата поръчка</h2><span class="muted small">'+SC.plural(ls.reduce(function(a,l){ return a+l.q; },0),"ястие","ястия")+'</span></div>'+rows+
+    '<div class="okv" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">'+kv+'</div>'+again+'</div></div>'; }
+
+function protoHTML(){ var lpo = lunchPickupOnly(), D = isD(), done = finished();
+  return '<section class="proto" aria-label="Само за прототипа"><p class="ptag">'+ic("sliders-horizontal",18)+'Само за прототипа</p>'+
+    '<div class="field"><span class="label">Начин</span><div class="seg"><button type="button" data-mode="delivery" aria-pressed="'+D+'"'+(lpo?' disabled':'')+'>'+ic("moped",20)+'Доставка</button><button type="button" data-mode="pickup" aria-pressed="'+(!D)+'">'+ic("storefront",20)+'Вземане</button></div>'+(lpo?'<span class="help">Обедното меню след 15:00 е само за вземане от място (-30%).</span>':'')+'</div>'+
+    '<div class="field"><span class="label">Какво има в поръчката</span><div class="seg"><button type="button" data-lunch="0" aria-pressed="'+(!S.lunch)+'">Основно меню</button><button type="button" data-lunch="1" aria-pressed="'+S.lunch+'">Обедно меню</button></div></div>'+
+    '<div class="pbtns">'+
+      '<button class="pill pill-soft" type="button" data-sim="next"'+(done?' disabled':'')+'>'+ic("arrow-right",18)+'Следващ етап</button>'+
+      '<button class="pill pill-ink" type="button" data-sim="done">'+ic("check",18)+'Симулирай: '+(D?"доставена":"взета")+'</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="late" aria-pressed="'+S.late+'">'+ic("clock",18)+(S.late?'Без закъснение':'Закъснение')+'</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="offline">'+ic("warning-circle",18)+(S.offline?'Върни връзката':'Без интернет')+'</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="loading">'+ic("hourglass",18)+'Зареждане</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="notfound">'+ic("question",18)+'Грешен номер</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="none">'+ic("receipt",18)+'Без поръчка</button>'+
+      '<button class="pill pill-soft" type="button" data-sim="reset">'+ic("arrow-left",18)+'Отначало</button>'+
+    '</div><p class="help">В истинския сайт въпросът „Останахте ли доволни?“ идва 40 мин след доставката, като известие и тук. Часът се сменя от лентата горе.</p></section>'; }
+
+function titleHTML(){ return '<div class="trk-title"><h1>Поръчка <span class="no">№ '+esc(S.no)+'</span></h1>'+
+  (S.offline ? '<span class="live off"><i></i>Без връзка · от '+clock(S.updated)+'</span>' : finished() ? '<span class="live off"><i></i>'+(isD()?"Доставена":"Взета")+'</span>' : '<span class="live"><i></i>На живо · '+clock(S.updated)+'</span>')+'</div>'; }
+
+/* ---------- other views ---------- */
+function skeletonHTML(){ return '<div class="trk-title"><span class="skel" style="width:220px;height:32px"></span></div><div class="trk" aria-busy="true" aria-label="Зареждаме поръчката"><div class="trk-l"><div class="shell"><div class="core sk">'+
+  '<span class="skel" style="width:100%;height:40px;border-radius:999px"></span><span class="skel" style="width:196px;height:196px;border-radius:50%"></span><span class="skel" style="width:52%;height:18px"></span><span class="skel" style="width:46%;height:64px"></span><span class="skel" style="width:70%;height:24px"></span></div>'+
+  '<div class="skrow">'+[1,2,3,4,5].map(function(){ return '<span class="skel" style="width:28px;height:28px;border-radius:50%"></span>'; }).join("")+'</div></div><span class="skel" style="height:56px;border-radius:999px"></span></div>'+
+  '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div></div>'; }
+function stateHTML(kind){ var closed = !ST.kitchen;
+  if (kind==="notfound") return '<div class="shell"><div class="core empty state err"><span class="ill">'+ic("warning-circle",44)+'</span><h1 class="h2" style="font-size:26px">Не намираме поръчка № '+esc(S.no)+'</h1><p>Може връзката да е непълна. Обадете ни се и ще ви кажем докъде е поръчката.</p>'+
+    '<div class="acts"><a class="pill pill-red pill-lg pill-block" href="'+TEL+'">'+ic("phone",20)+'Обади се в ресторанта</a><button class="pill pill-line pill-lg pill-block" type="button" data-sim="reset">Опитай пак</button></div></div></div>';
+  return '<div class="shell"><div class="core empty state"><span class="ill">'+ic("receipt",44)+'</span><h1 class="h2" style="font-size:26px">Нямате поръчка в момента</h1>'+
+    '<p>'+(closed ? "Кухнята приема поръчки до 22:30. Поръчай за утре?" : "Щом поръчате, тук ще виждате на кой етап е поръчката и кога пристига.")+'</p>'+
+    '<div class="acts"><a class="pill pill-red pill-lg pill-block" href="menu.html">'+ic("fork-knife",20)+(closed ? "Поръчай за утре" : "Към менюто")+'</a></div></div></div>'; }
+
+/* ---------- render ---------- */
+var lastFill = 0;
+function render(){
+  var html;
+  if (S.view==="loading") html = skeletonHTML();
+  else if (S.view==="notfound" || S.view==="none") html = '<div class="trk"><div class="trk-l">'+stateHTML(S.view)+'</div><div class="trk-r">'+protoHTML()+'</div></div>';
+  else html = titleHTML()+'<div class="trk"><div class="trk-l">'+offlineHTML()+heroHTML()+actsHTML()+'</div><div class="trk-r">'+rateHTML()+notifyHTML()+orderHTML()+protoHTML()+'</div></div>';
+  main.innerHTML = '<section class="sec trk-s">'+html+'</section>';
+  S.first = false;
+  placeTrack();
+}
+/* the track runs from the first dot to the last; the fill grows to the current dot (transform only) */
+function placeTrack(){ var tl = main.querySelector(".tlw"); if (!tl) return;
+  var dots = tl.querySelectorAll(".tl .dot"), tr = tl.querySelector(".track"), fill = tl.querySelector("[data-fill]"); if (dots.length < 2) return;
+  var b = tl.getBoundingClientRect(), f = dots[0].getBoundingClientRect(), l = dots[dots.length-1].getBoundingClientRect();
+  var x0 = f.left + f.width/2 - b.left, x1 = l.left + l.width/2 - b.left;
+  tr.style.left = x0+"px"; tr.style.right = (b.width - x1)+"px";
+  var idx = Math.min(S.k, dots.length-1), d = dots[idx].getBoundingClientRect(), p = (d.left + d.width/2 - b.left - x0)/(x1 - x0);
+  fill.style.transition = "none"; fill.style.transform = "scaleX("+lastFill+")"; void fill.offsetWidth; fill.style.transition = "";
+  requestAnimationFrame(function(){ fill.style.transform = "scaleX("+p+")"; }); lastFill = p; }
+if ("ResizeObserver" in window) new ResizeObserver(function(){ var fl = main.querySelector("[data-fill]"); if (fl){ fl.style.transition = "none"; placeTrack(); } }).observe(SC.device);
+
+function stepToast(){ var c = cur(), D = isD();
+  if (finished()) return SC.toast(D ? "Поръчката е доставена" : "Добър апетит!");
+  SC.toast(c.id==="cook" ? cookSay() : c.id==="ready" ? (D ? "Поръчката е готова" : "Поръчката ви е готова") : c.id==="way" ? "Поръчката тръгна към вас" : "Получихме поръчката ви"); }
+
+function focusRate(){ var h = main.querySelector("[data-focus]"); if (h) h.focus({preventScroll:true});
+  var r = main.querySelector("[data-rate]"); if (r) r.scrollIntoView({block:"start", behavior:SC.reduce ? "auto" : "smooth"}); }
+
+/* ---------- interactions ---------- */
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
+  var ds = t.dataset;
+  if (t.hasAttribute("data-share")){ e.stopPropagation();
+    var url = location.href.split("#")[0]+"#"+S.no;
+    if (navigator.share){ navigator.share({title:"Поръчка № "+S.no+" от Siracusa", url:url}).catch(function(){}); }
+    else { try{ navigator.clipboard.writeText(url).catch(function(){}); }catch(x){} SC.toast("Връзката е копирана"); }
+    return; }
+  if (ds.sim){ var k = ds.sim;
+    if (k==="next"){ S.k = Math.min(S.k+1, isD() ? stages().length-1 : stages().length); S.updated = SC.minutes(); render(); stepToast(); if (finished()) setTimeout(focusRate, 450); return; }
+    if (k==="done"){ S.k = isD() ? stages().length-1 : stages().length; S.view = "order"; render(); stepToast(); setTimeout(focusRate, 450); return; }
+    if (k==="late"){ S.late = !S.late; if (finished()) S.k = 1; render(); return; }
+    if (k==="offline"){ S.offline = !S.offline; if (!S.offline){ S.updated = SC.minutes(); SC.toast("Връзката се върна"); } render(); return; }
+    if (k==="loading"){ S.view = "loading"; render(); setTimeout(function(){ S.view = "order"; S.first = true; render(); }, 1600); return; }
+    if (k==="notfound" || k==="none"){ S.view = k; render(); SC.scroller.scrollTop = 0; return; }
+    if (k==="reset"){ S.view = "order"; S.k = 1; S.late = false; S.offline = false; S.rating = null; S.fbSent = false; S.fb = ""; S.fbErr = ""; S.notify = null; S.first = true; lastFill = 0; render(); SC.scroller.scrollTop = 0; return; } }
+  if (ds.mode){ if (t.disabled) return; S.mode = ds.mode; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
+  if (ds.lunch){ S.lunch = ds.lunch==="1"; S.sampleSwap = true; if (lunchPickupOnly()) S.mode = "pickup"; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
+  if (ds.ch){ S.ch = ds.ch; render(); var b = main.querySelector('[data-ch="'+S.ch+'"]'); b && b.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-notify")){ var btn = t; btn.disabled = true; btn.innerHTML = ic("hourglass",20)+"Включваме..."; setTimeout(function(){ S.notify = S.ch; render(); SC.toast("Известията са включени"); }, 650); return; }
+  if (t.hasAttribute("data-notify-off")){ S.notify = null; render(); return; }
+  if (ds.rate){ S.rating = ds.rate; render(); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-rate-reset")){ S.rating = null; S.fbErr = ""; render(); var y = main.querySelector('[data-rate="yes"]'); y && y.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-fb")){ var ta = main.querySelector("#fb"); S.fb = ta ? ta.value : S.fb;
+    if (S.fb.trim().length < 3){ S.fbErr = "Напишете няколко думи, за да го изпратим."; render(); var f = main.querySelector("#fb"); f && f.focus(); return; }
+    S.fbErr = ""; S.fbSent = true; render(); SC.toast("Изпратихме го на управителя"); return; }
+  if (t.hasAttribute("data-copy")){ try{ navigator.clipboard.writeText(code()).catch(function(){}); }catch(x){} SC.flash(t, ic("check",18)+"Копирано", 1400); return; }
+  if (t.hasAttribute("data-google")){ e.preventDefault(); SC.toast("Тук ще се отвори профилът в Google"); return; }
+  if (t.hasAttribute("data-again")){ lines().forEach(function(l, i){ SC.cart.add(l.id, l.q); setTimeout(function(){ SC.fly(t, l.id); }, i*120); }); SC.flash(t, ic("check",20)+"Добавено в количката", 1600); return; }
+  if (t.hasAttribute("data-retry")){ if (navigator.onLine===false && !tok.offline){ SC.toast("Още няма връзка"); return; } S.offline = false; S.updated = SC.minutes(); render(); SC.toast("Връзката се върна"); return; }
+});
+main.addEventListener("input", function(e){ if (e.target.id==="fb"){ S.fb = e.target.value; if (S.fbErr && S.fb.trim().length >= 3){ S.fbErr = ""; e.target.removeAttribute("aria-invalid"); var er = main.querySelector("#fbe"); er && er.remove(); } } });
+window.addEventListener("offline", function(){ S.offline = true; render(); });
+window.addEventListener("online", function(){ if (S.offline){ S.offline = false; S.updated = SC.minutes(); render(); SC.toast("Връзката се върна"); } });
+
+render();
+if (S.view==="loading") setTimeout(function(){ S.view = "order"; S.first = true; render(); }, 1600);
+})();
+</script>
+</body>
+</html>
