@@ -41,7 +41,8 @@
 
 /* orders */
 .olist{display:grid; gap:12px}
-.ord{padding:18px; display:grid; gap:14px}
+.ord{padding:18px; display:flex; flex-direction:column; gap:14px}
+.ord .acts{margin-top:auto}
 .ord-h{display:flex; gap:14px; align-items:center}
 .ord-pics{display:flex; flex:none}
 .ord-pics .pic{width:52px; height:52px; border-radius:50%; box-shadow:0 0 0 3px var(--surface)}
@@ -202,7 +203,8 @@
 .zres.ok .ic{color:var(--ok)} .zres.tar .ic{color:var(--warn)} .zres.no .ic{color:var(--danger)}
 
 @container app (max-width:370px){ .tiles a{padding:10px} .tiles b{font-size:22px} .who .h1{font-size:26px} .av{width:56px; height:56px; font-size:24px} }
-@container app (min-width:700px){ .olist{grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start} }
+@container app (min-width:700px){ .olist{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container app (min-width:1100px){ .olist{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @container app (min-width:900px){
   .pf{display:grid; grid-template-columns:232px minmax(0,1fr); column-gap:56px; padding:56px max(40px, calc((100% - 1200px)/2)) 0; align-items:start}
   .pf-aside{display:grid; gap:2px; position:sticky; top:160px}
@@ -215,7 +217,7 @@
   .av{width:88px; height:88px; font-size:38px}
   .who .h1{font-size:46px}
   .tiles{grid-template-columns:repeat(3,minmax(0,220px)); gap:12px}
-  .favs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px 20px; margin:0; padding:0; overflow:visible}
+  .favs{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:24px 18px; margin:0; padding:0; overflow:visible}
   .favs .dcard{flex:auto}
   .rew{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:20px; align-items:start}
   .rew .cps{margin-top:0}
@@ -293,7 +295,7 @@ function renderInvite(){
 
 function renderProfile(){
   var u = U, nOrd = u.orders.length, cps = (u.coupons.signup?1:0) + (u.consent.birthday?1:0);
-  var aside = '<nav class="pf-aside" aria-label="Раздели на профила">'+SECTIONS.map(function(s){ return '<a href="#'+s[0]+'" data-spy="'+s[0]+'">'+ic(s[2],20)+s[1]+'</a>'; }).join("")+'<hr><button type="button" data-logout>'+ic("sign-out",20)+'Изход</button></nav>';
+  var aside = '<nav class="pf-aside" aria-label="Раздели на профила">'+SECTIONS.map(function(s){ return '<a href="#'+s[0]+'" data-spy="'+s[0]+'" aria-current="'+(s[0]==="porachki")+'">'+ic(s[2],20)+s[1]+'</a>'; }).join("")+'<hr><button type="button" data-logout>'+ic("sign-out",20)+'Изход</button></nav>';
   var head = '<header class="ph"><span class="av" aria-hidden="true">'+esc((u.name||"?").trim().charAt(0).toUpperCase())+'</span><div class="who"><p class="eyebrow">Вашият профил</p><h1 class="h1">Здравейте'+(u.name?', '+esc(u.name):'')+'</h1><p class="tel">'+pretty(u.phone)+'</p></div></header>'+
     '<nav class="tiles" aria-label="Бързо към">'+
       '<a href="#porachki">'+ic("receipt",22)+'<b>'+nOrd+'</b><span class="w">'+(nOrd===1?"поръчка":"поръчки")+'</span></a>'+

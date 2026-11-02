@@ -211,7 +211,7 @@ SC.cart = {
   lines:function(){ return cart.lines; },
   count:function(){ return cart.lines.reduce(function(a,l){ return a+l.q; },0); },
   subtotal:function(){ return cart.lines.reduce(function(a,l){ var x=SC.byId[l.id]; return a+(x?x.p*l.q:0)+(l.extra||0)*l.q; },0); },
-  add:function(id, q, opts){ q=q||1; opts=opts||{}; var key=id+(opts.mods?"|"+opts.mods.join(","):"");
+  add:function(id, q, opts){ q=q||1; opts=opts||{}; var key=id+(opts.mods&&opts.mods.length?"|"+opts.mods.join(","):"");
     var l=cart.lines.filter(function(z){ return z.key===key; })[0]; if (l) l.q+=q; else cart.lines.push({key:key, id:id, q:q, mods:opts.mods||[], extra:opts.extra||0});
     saveCart(); },
   setQty:function(key, q){ cart.lines = cart.lines.map(function(l){ if (l.key===key) l.q=q; return l; }).filter(function(l){ return l.q>0; }); saveCart(); },
