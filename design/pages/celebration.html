@@ -588,11 +588,10 @@ function successHTML(){ var st = SC.state(), conf = "";
 /* ---------- events ---------- */
 function onNext(){ if (sending) return; if (S.step < 3){ if (validate()) go(S.step+1); } else submit(); }
 document.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t || !SC.device.contains(t)) return;
-  if (t.hasAttribute("data-next")){ onNext(); return; }
+  if (t.hasAttribute("data-next")){ var sw = t.closest(".sheetwrap"); if (sw) sw.querySelector("[data-close]").click(); onNext(); return; }
   if (t.hasAttribute("data-back")){ go(S.step-1); return; }
   if (t.dataset.goto){ go(+t.dataset.goto); return; }
-  if (t.hasAttribute("data-sum")){ SC.sheet({title:"Вашият празник", html:summaryHTML(true)+'<button class="pill pill-red pill-lg pill-block" type="button" data-next data-closesheet style="margin-top:16px">'+nextLabel()+'</button>'}); return; }
-  if (t.hasAttribute("data-closesheet")){ var w = t.closest(".sheetwrap"); w && w.querySelector("[data-close]").click(); return; }
+  if (t.hasAttribute("data-sum")){ SC.sheet({title:"Вашият празник", html:summaryHTML(true)+'<button class="pill pill-red pill-lg pill-block" type="button" data-next style="margin-top:16px">'+nextLabel()+'</button>'}); return; }
   if (t.dataset.g){ S.guests = Math.max(2, Math.min(200, S.guests + (+t.dataset.g))); setErr("e-guests"); changed(); return; }
   if (t.dataset.gset){ S.guests = +t.dataset.gset; setErr("e-guests"); changed(); return; }
   if (t.dataset.pp){ P.price = t.dataset.pp; saveProto(); renderProto(); updPkgs(); updSummary(); var pb = protoEl.querySelector('[data-pp="'+P.price+'"]'); pb && pb.focus(); return; }

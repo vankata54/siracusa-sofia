@@ -295,7 +295,7 @@ function openAI(){ var s = SC.sheet({title:"Асистент", html:aiPanelHTML(
 function cookieBanner(){ if (load("sc-cookie", null)) return "";
   return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите.</p><div class="btns"><button class="pill pill-red" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>'; }
 function previewBar(){ if (window.innerWidth <= 700) return "";
-  var t=[["now","Часът: сега"],["10:30","10:30 (закуски, обедно)"],["12:30","12:30 (натоварено)"],["16:30","16:30 (-30% обедно)"],["21:30","21:30 (без доставка)"],["22:45","22:45 (кухнята затвори)"],["23:30","23:30 (затворено)"]];
+  var t=[["now","Часът: сега"],["08:30","08:30 (преди отваряне)"],["10:30","10:30 (закуски, обедно)"],["12:30","12:30 (натоварено)"],["16:30","16:30 (-30% обедно)"],["21:30","21:30 (без доставка)"],["22:45","22:45 (кухнята затвори)"],["23:30","23:30 (затворено)"]];
   return '<div class="pv-bar'+(prefs.view==="desktop"?" low":"")+'" role="toolbar" aria-label="Изглед на прототипа"><a href="../index.html">'+SC.ic("squares-four",18)+'Страници</a><span class="sep"></span>'+
     '<button type="button" data-pv="view" data-v="phone" aria-pressed="'+(prefs.view==="phone")+'">Телефон</button><button type="button" data-pv="view" data-v="desktop" aria-pressed="'+(prefs.view==="desktop")+'">Компютър</button><span class="sep"></span>'+
     '<button type="button" data-pv="theme" data-v="system" aria-pressed="'+(prefs.theme==="system")+'">Авто</button><button type="button" data-pv="theme" data-v="light" aria-pressed="'+(prefs.theme==="light")+'">Светла</button><button type="button" data-pv="theme" data-v="dark" aria-pressed="'+(prefs.theme==="dark")+'">Тъмна</button><span class="sep"></span>'+
@@ -316,8 +316,8 @@ SC.mount = function(o){ o = o || {};
   SC.device = device; SC.scroller = scroller; SC.ov = ov;
   scroller.innerHTML = header(o) + '<main id="main" data-main></main>' + (o.footer===false ? '<div class="end-space"></div>' : SC.footer());
   var showNav = o.bottomNav !== false;
-  ov.insertAdjacentHTML("beforeend", (showNav ? bottomNav(o.nav) : "") + (o.ai===false ? "" : '<button class="aifab'+(o.actionBar?" up":"")+(showNav?"":" nonav")+'" type="button" data-ai>'+SC.ic("sparkle",20)+'Асистент</button>') + cookieBanner());
-  if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ scroller.classList.toggle("scrolled", !es[0].isIntersecting); }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
+  ov.insertAdjacentHTML("beforeend", (showNav ? bottomNav(o.nav) : "") + (o.ai===false ? "" : '<button class="aifab'+(o.actionBar?" up":"")+(showNav?"":" nonav")+'" type="button" data-ai aria-label="Асистент">'+SC.ic("sparkle",20)+'<span class="lbl">Асистент</span></button>') + cookieBanner());
+  if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); f && f.classList.toggle("mini", sc); }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
   updateCartUI(false);
   document.title = (o.docTitle || o.title || "Siracusa") + (o.docTitle||o.title ? " | Siracusa Bar & Grill" : " Bar & Grill");
   return scroller.querySelector("[data-main]"); };

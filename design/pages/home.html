@@ -401,7 +401,7 @@ var office =
 var free = SC.ZONES.filter(function(z){ return z.free; }), paid = SC.ZONES.filter(function(z){ return !z.free; });
 var delivery =
   '<section class="sec" id="dostavka" aria-labelledby="dl-h"><div class="sec-h"><h2 class="h2" id="dl-h">Доставка до 21:00</h2></div>'+
-  (!st.delivery ? '<p class="dnote"><span class="dot"></span>'+(st.kitchen ? 'Днес доставката приключи · Вземане до 22:30' : 'Доставяме отново '+(st.m<600?'днес':'утре')+' от 10:00')+'</p>' : '')+
+  (!st.delivery ? '<p class="dnote"><span class="dot"></span>'+(st.kitchen ? 'Днес доставката приключи. Можете да вземете поръчката до 22:30.' : 'Доставяме отново '+(st.m<600?'днес':'утре')+' от 10:00')+'</p>' : '')+
   '<div class="dlv"><div>'+
     '<div class="zgroup"><h3>Безплатна доставка</h3><ul class="ztags">'+free.map(function(z){ return '<li>'+ic("check-circle",20)+z.n+'</li>'; }).join("")+'</ul></div>'+
     '<div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">'+paid.map(function(z){ return '<li>'+ic("map-pin",20)+z.n+'</li>'; }).join("")+'</ul><span class="missing">[ЛИПСВА: такси за доставка в €]</span></div>'+

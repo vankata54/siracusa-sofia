@@ -251,7 +251,7 @@ function whenHTML(e){ var k, v, s, extra = "";
   else if (e.phase === "today"){ var h = Math.floor(e.minsLeft/60), mm = e.minsLeft % 60;
     k = "Започва след " + (h ? h + "&nbsp;ч" : "") + (h && mm ? " " : "") + (mm ? mm + "&nbsp;мин" : ""); v = "Днес"; s = "Начало в " + e.time; }
   else if (e.phase === "live"){ k = "В момента"; v = '<span class="live" aria-hidden="true"></span>Тече'; s = "Работим до " + R.close; }
-  else { k = "Тази вечер"; v = "Приключи"; s = "Следващата: " + e.next.getDate() + " " + SC.MONTHS[e.next.getMonth()]; }
+  else { k = "Тази вечер"; v = "Приключи"; s = "Следващата: " + e.next.getDate() + "&nbsp;" + SC.MONTHS[e.next.getMonth()]; }
   if (e.seatsLeft != null && e.phase !== "over") extra = '<span class="seats">'+ic("users-three",18)+(e.seatsLeft > 0 ? "Остават " + SC.plural(e.seatsLeft, "място", "места") : "Местата свършиха")+'</span>';
   return '<div class="when" role="group" aria-label="Кога"><span class="k">'+k+'</span><span class="v">'+v+'</span><span class="s">'+s+'</span>'+extra+'</div>'; }
 function priceHTML(e){ if (e.free) return "Вход свободен"; if (e.price) return '<span class="price">'+SC.fmt(e.price)+'</span>';
