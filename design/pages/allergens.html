@@ -31,8 +31,8 @@
 .ring .t::after{content:""; position:absolute; left:3px; right:3px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--ink); transform:rotate(-45deg) scaleX(0); transition:transform var(--t-slow) var(--ease)}
 .ring .t.off{opacity:.45; transform:translate(var(--x),var(--y)) scale(.86)}
 .ring .t.off::after{transform:rotate(-45deg) scaleX(1)}
-.ring.go .t{animation:ringout 900ms var(--ease) both; animation-delay:calc(var(--i) * 34ms + 120ms)}
-.ring.go .ctr{animation:ctrin 700ms var(--ease) both}
+.ring.go .t{animation:ringout 900ms var(--ease) backwards; animation-delay:calc(var(--i) * 34ms + 120ms)}
+.ring.go .ctr{animation:ctrin 700ms var(--ease) backwards}
 @keyframes ringout{from{transform:translate(0,0) scale(.3) rotate(-90deg); opacity:0}}
 @keyframes ctrin{from{transform:scale(.7); opacity:0}}
 
@@ -91,7 +91,8 @@
 .atbl caption{text-align:left}
 .atbl,.atbl tbody,.atbl tr,.atbl th,.atbl td{display:block}
 .atbl thead,.atbl colgroup{display:none}
-.atbl .cath th{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:32px 4px 12px; text-align:left; font-weight:400}
+.atbl .cath th{padding:32px 4px 12px; text-align:left; font-weight:400}
+.atbl .cath .ch{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
 .atbl .cath h3{margin:0; font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800}
 .atbl .cath .cn{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
 .atbl .grp{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
@@ -106,7 +107,7 @@
 .nm a:hover .ic{transform:translateX(3px)}
 .nm .comp{margin:4px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
 .nm .badge{margin-top:8px}
-.nm .ndn{display:none}
+.nm .ndn{display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:14px; font-weight:600; color:var(--muted)}
 .atbl .a.n{display:none}
 .tk{display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 12px 0 5px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1; white-space:nowrap}
 .tk i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-style:normal}
@@ -122,7 +123,7 @@
 /* lunch note */
 .lunchnote{margin-top:32px}
 .lunchnote .core{padding:18px; display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start}
-.lunchnote .li{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--ember-soft); color:var(--ink)}
+.lunchnote .li{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
 .lunchnote h3{margin:2px 0 4px; font-size:18px; letter-spacing:-.02em}
 .lunchnote p{margin:0; color:var(--muted)}
 .lunchnote .link{margin-top:2px}
@@ -214,7 +215,7 @@
   .atbl thead th{position:sticky; top:150px; z-index:6; background:var(--surface); vertical-align:bottom; padding:14px 2px 12px; border-bottom:1px solid var(--line-strong); box-shadow:0 10px 18px -16px rgba(0,0,0,.5)}
   .atbl thead th:first-child{border-top-left-radius:var(--r-core); padding:18px 16px 12px 22px; text-align:left}
   .atbl thead th:last-child{border-top-right-radius:var(--r-core)}
-  .th-d b{display:block; font-size:20px; letter-spacing:-.02em; font-weight:800}
+  .th-d{display:block; font-size:20px; letter-spacing:-.02em; font-weight:800}
   .legend{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; font-size:14px; font-weight:600; color:var(--muted)}
   .legend span{display:inline-flex; align-items:center; gap:7px}
   .ah{display:grid; justify-items:center; gap:8px; font-size:14px; font-weight:700; line-height:1.15; text-align:center; -webkit-hyphens:manual; hyphens:manual}
@@ -234,7 +235,6 @@
   .nm a .ic{display:none}
   .nm .comp{font-size:15px; margin-top:2px}
   .nm .badge{margin:6px 0 0}
-  .nm .ndn{display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:14px; font-weight:600; color:var(--muted)}
   .atbl .a{text-align:center; padding:10px 2px}
   .atbl .a.n{display:table-cell}
   .tk{width:32px; height:32px; min-height:0; padding:0; justify-content:center; background:var(--ink); color:var(--bg); vertical-align:middle}
@@ -383,9 +383,8 @@ function controlsHTML(){
     '<div class="fgrp" role="group" aria-labelledby="al-l"><p class="flbl" id="al-l">Изключете алерген</p><p class="help">Скриваме ястията, които го съдържат по състава. Може няколко наведнъж.</p><div class="achips">'+chipsHTML()+'</div></div>'+
   '</section>'; }
 
-function thead(){ return '<thead><tr><th scope="col" class="th-dish"><span class="th-d"><b>Ястие</b>'+
-    '<span class="legend"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></span>'+
-    '<span class="vh">Ястие</span></th>'+
+function thead(){ return '<thead><tr><th scope="col" class="th-dish"><b class="th-d">Ястие</b>'+
+    '<span class="legend" aria-hidden="true"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></th>'+
   AL.map(function(a){ return '<th scope="col" class="c-'+a[0]+'"><span class="ah"><i>'+ic(a[2],20)+'</i><span class="hn">'+(HY[a[0]]||a[1])+'</span></span></th>'; }).join("")+'</tr></thead>'; }
 
 function rowHTML(x){ var out = SC.isOut(x), has = !!x.comp;
@@ -424,7 +423,7 @@ function loadingHTML(){ var rows = "";
   return '<div aria-busy="true" aria-label="Зареждаме алергените"><div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">'+rows+'</div></div></div>'; }
 function lunchHTML(){ var L = SC.lunch, d = SC.menu.lunch;
   return '<div class="shell lunchnote"><div class="core"><span class="li">'+ic("bowl-food",24)+'</span><div><h3>Обедното меню се сменя всеки ден</h3>'+
-    '<p>Днес '+(d.dayName ? low(d.dayName) : "")+' има '+plural(L.length)+'. Тях ги няма в таблицата: <span class="missing">[ЛИПСВА: състав и алергени на дневните ястия от кухнята]</span>. Дотогава попитайте ни.</p>'+
+    '<p>Днес'+(d.dayName ? ' ('+low(d.dayName)+')' : '')+' в него има '+plural(L.length)+'. Тях ги няма в таблицата: <span class="missing">[ЛИПСВА: състав и алергени на дневните ястия от кухнята]</span>. Дотогава попитайте ни.</p>'+
     '<a class="link" href="lunch.html">Обедно меню днес'+ic("caret-right",18)+'</a></div></div></div>'; }
 
 function refHTML(){
@@ -451,7 +450,7 @@ var main = SC.mount({page:"allergens", nav:null, title:"Алергени", docTi
 main.innerHTML =
   '<section class="sec hero"><div class="hh"><p class="eyebrow">'+ic("shield-check",18)+'Информация за храната</p><h1 class="h1">Алергени в менюто</h1></div>'+ringHTML()+
     '<p class="lead">Всички '+N+' ястия и 14-те основни алергена по Регламент (ЕС) 1169/2011. Изберете какво не ядете и ще скрием ястията, които го съдържат.</p>'+
-    '<div class="notice">'+noticeHTML()+'</div></section>'+
+    noticeHTML()+'</section>'+
   controlsHTML()+
   '<section class="sec res" id="res" aria-labelledby="res-h"><h2 class="vh" id="res-h">Ястия и алергени</h2>'+
     '<div class="sum"><p class="st" data-sum aria-live="polite"></p><button class="pill pill-soft" type="button" data-goto="filters">'+ic("sliders-horizontal",20)+'Филтри</button></div>'+
@@ -465,7 +464,7 @@ ringR(); if ("ResizeObserver" in window) new ResizeObserver(ringR).observe(ring)
 if (!reduce) ring.classList.add("go");
 
 /* column highlight for excluded allergens on the computer table (one rule per allergen) */
-(function(){ var css = AL.map(function(a){ return '.atbl.x-'+a[0]+' td.c-'+a[0]+'{background:var(--ember-soft)}.atbl.x-'+a[0]+' th.c-'+a[0]+' .ah i{background:var(--ink);color:var(--bg)}'; }).join("");
+(function(){ var css = AL.map(function(a){ return '.atbl.x-'+a[0]+' td.c-'+a[0]+'{background:var(--surface-2)}.atbl.x-'+a[0]+' th.c-'+a[0]+' .ah i{background:var(--ink);color:var(--bg)}'; }).join("");
   var s = document.createElement("style"); s.textContent = '@container app (min-width:1100px){'+css+'}'; document.head.appendChild(s); })();
 
 var loadT;

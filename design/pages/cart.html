@@ -556,7 +556,7 @@ function fieldHTML(id, label, type, extra, help, optional){ var e = P.errs[id];
 
 function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
   var where = deliv ? '<span><small>Доставка до</small><b>'+esc(D.addr)+(D.addrMore?', '+esc(D.addrMore):'')+'</b><span class="muted small">'+esc(e.big)+'</span></span>'
-    : '<span><small>Вземане от ресторанта</small><b>'+(D.slot==="asap"?esc(e.big):(I.sched?esc(e.big):"В "+esc(D.slot)))+'</b><span class="muted small">'+esc(R.address)+'</span></span>';
+    : '<span><small>Вземане от ресторанта</small><b>'+(D.slot==="asap"?esc(e.big):(I.sched?esc(e.big):"В "+esc(D.slot)))+'</b><span class="muted small">Siracusa, Дружба 2, срещу бл. 311</span></span>';
   var pays = [["cash","money","В брой",deliv?"На шофьора":"В ресторанта"],["card","credit-card",deliv?"Карта при доставка":"Карта в ресторанта","Visa или Mastercard"],["voucher","ticket","Ваучер","Sodexo или подаръчна карта"]];
   var h = stepper(3,true)+'<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">Без регистрация. Обаждаме се само ако нещо не е ясно.</p>'+
     '<div style="margin-top:22px" id="topnotes">'+topNotes(I,3)+

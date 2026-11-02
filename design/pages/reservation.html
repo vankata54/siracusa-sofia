@@ -243,13 +243,13 @@
 .okm.off::before{display:none}
 @keyframes rPop{0%{transform:scale(.5); opacity:0}60%{transform:scale(1.06); opacity:1}100%{transform:none}}
 @keyframes rRing{0%{transform:scale(1); opacity:.35}100%{transform:scale(1.7); opacity:0}}
-.dhero .lead{max-width:30em; color:var(--ink); font-size:18px; font-weight:600}
+.dhero .lead{max-width:30em; text-wrap:balance; color:var(--ink); font-size:18px; font-weight:600}
 .dgrid{display:grid; gap:16px; margin-top:28px}
 .dcard .core{padding:6px 18px}
 .dcard .kv{padding:12px 0}
 .dcard .kv span{color:var(--muted)}
 .dcard .kv b{text-align:right}
-.dside{display:grid; gap:10px; align-content:start}
+.dside{display:grid; gap:10px; align-content:start; order:-1}
 .sms{display:flex; gap:12px; align-items:flex-start; padding:16px; border-radius:var(--r-core); background:var(--surface-2); font-weight:600}
 .sms .ic{flex:none; color:var(--ok); margin-top:1px}
 .dside .two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
@@ -315,6 +315,7 @@
   .infog{grid-template-columns:1fr 1fr}
   .form .two{grid-template-columns:1fr 1fr}
   .dgrid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:start}
+  .dside{order:0}
 }
 @container app (min-width:900px){
   .rhero{padding-top:44px}
@@ -636,7 +637,7 @@ function icsFile(b){ var d = ymd(b.date).replace(/-/g,""), s = d+"T"+pad(Math.fl
     "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:Резервация в Siracusa","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
   var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type:"text/calendar"})); a.download = "siracusa-rezervatsia.ics"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 function done(){ var b = st.booking, ev = isEvent(b.date);
-  return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm" aria-hidden="true">'+ic("check",48)+'</div><h1 class="h1" tabindex="-1" data-h>'+(b.changed?"Резервацията е променена":"Масата е запазена")+'</h1><p class="lead">Очакваме ви '+fWhen(b.date)+', в '+hm(b.slot)+'.</p></div>'+
+  return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm" aria-hidden="true">'+ic("check",48)+'</div><h1 class="h1" tabindex="-1" data-h>'+(b.changed?"Резервацията е променена":"Масата е запазена")+'</h1><p class="lead">Очакваме ви '+fWhen(b.date)+', в&nbsp;'+hm(b.slot)+'.</p></div>'+
     '<div class="dgrid"><div class="shell dcard"><div class="core">'+kvRows(b)+'</div></div><div class="dside"><p class="sms">'+ic("chat-circle-dots",22)+'<span>Потвърждението идва по SMS или Viber на '+esc(b.phone)+'.</span></p>'+
     '<button class="pill pill-red pill-lg pill-block" type="button" data-ics data-fk="ics">'+ic("calendar-check",22)+'Добави в календара</button><a class="link gcal" href="'+gcalUrl(b)+'" target="_blank" rel="noopener">или в Google Календар'+ic("arrow-up-right",18)+'</a>'+
     '<div class="two"><a class="pill pill-line" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("map-pin",20)+'Маршрут</a><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a></div></div></div>'+

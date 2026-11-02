@@ -347,6 +347,8 @@ function jsonLD(e){ var old = document.getElementById("ev-ld"); if (old) old.rem
 
 /* ---- calendar + share ---- */
 function stamp(d, mins){ return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + "T" + pad(Math.floor(mins/60)) + pad(mins%60) + "00"; }
+function utcStamp(d, mins){ var off = parseInt(sofiaOffset(d), 10), x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, mins - off*60));
+  return x.getUTCFullYear() + pad(x.getUTCMonth()+1) + pad(x.getUTCDate()) + "T" + pad(x.getUTCHours()) + pad(x.getUTCMinutes()) + "00Z"; }
 function icsEsc(s){ return String(s).replace(/\\/g,"\\\\").replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n"); }
 function openCalendar(e){
   var end = toMin(R.close), title = e.n + " в Siracusa", where = R.name + ", " + R.address;
@@ -360,7 +362,7 @@ function openCalendar(e){
   s.el.querySelector("[data-ics]").addEventListener("click", function(){
     var ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Siracusa Bar & Grill//BG","CALSCALE:GREGORIAN","BEGIN:VEVENT",
       "UID:" + e.id + "-" + e.iso + "@siracusa-sofia.com", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z",
-      "DTSTART;TZID=Europe/Sofia:" + stamp(e.date, e.start), "DTEND;TZID=Europe/Sofia:" + stamp(e.date, end),
+      "DTSTART:" + utcStamp(e.date, e.start), "DTEND:" + utcStamp(e.date, end),
       "SUMMARY:" + icsEsc(title), "LOCATION:" + icsEsc(where), "DESCRIPTION:" + icsEsc(e.text + "\nРезервации: " + R.phone),
       "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:" + icsEsc(title),"END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
     try{ var url = URL.createObjectURL(new Blob([ics], {type:"text/calendar;charset=utf-8"})), a = document.createElement("a");
