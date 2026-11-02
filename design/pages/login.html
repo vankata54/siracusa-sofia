@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Вход | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* login.html: phone -> SMS code -> name (new profiles only) -> done. Tokens only. */
+.lg{display:grid; gap:20px; padding:24px 16px 0}
+.eyebrow{margin:0 0 10px; font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.lg-a .lead{margin-top:10px}
+
+/* -10% bonus, the one ember element on the page */
+.bonus{position:relative; overflow:hidden; display:flex; align-items:center; gap:16px; margin-top:20px; padding:16px 18px; border-radius:var(--r-shell)}
+.bonus .big{flex:none; font-size:44px; line-height:1; font-weight:800; letter-spacing:-.05em; font-variant-numeric:tabular-nums}
+.bonus .tx{min-width:0}
+.bonus b{display:block; font-size:17px; line-height:1.25}
+.bonus .s{display:block; font-size:15px; line-height:1.35; opacity:.85; margin-top:2px}
+.bonus .art{display:none}
+
+/* form card */
+.core.box{padding:20px 16px 22px}
+.view{display:grid; gap:18px}
+.view.in{animation:vin var(--t-slow) var(--ease)}
+@keyframes vin{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+.view .h3{font-size:22px}
+.view p{margin:0}
+.sub{color:var(--muted)}
+.center .sub{text-wrap:balance}
+.err{font-size:14px; color:var(--danger); font-weight:600; margin:0}
+.sub b{color:var(--ink); white-space:nowrap}
+.fine{font-size:14px; color:var(--muted); margin:0}
+.fine a{color:var(--ink); font-weight:700}
+.pill .spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:spin 700ms linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pill.busy{pointer-events:none}
+.backl{justify-self:start; min-height:48px; margin:-10px 0 -12px -4px; padding:0 4px}
+.backl .ic{color:var(--red)}
+
+/* 6-box code */
+.otp{border:0; margin:0; padding:0; min-width:0}
+.otp .boxes{display:grid; grid-template-columns:repeat(6,1fr); gap:6px}
+.otp input{width:100%; min-width:0; height:64px; padding:0; border:0; border-radius:var(--r-field); text-align:center; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); outline:none; caret-color:var(--red); transition:transform var(--t-fast) var(--ease)}
+.otp input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.otp input.full{box-shadow:inset 0 0 0 2px var(--ink)}
+.otp input.full:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.otp input.pop{animation:pop var(--t-base) var(--ease)}
+.otp[aria-invalid="true"] input{box-shadow:inset 0 0 0 2px var(--danger)}
+.otp input:disabled{opacity:.5}
+.otp.shake .boxes{animation:shake 420ms var(--ease)}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.resend{display:flex; align-items:center; justify-content:center; gap:8px; min-height:48px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.resend .link{min-height:48px}
+.hint{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:14px; color:var(--muted)}
+.hint .ic{margin-top:1px}
+
+/* error / blocked / offline */
+[data-alert]:empty{display:none}
+.alert{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; padding:14px 16px; border-radius:20px; background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--danger)}
+.alert > .ic{color:var(--danger); grid-row:span 2; margin-top:1px}
+.alert b{line-height:1.3}
+.alert span{font-size:15px; color:var(--muted)}
+.alert .pill{grid-column:2; justify-self:start; margin-top:8px; min-height:48px}
+.ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.center{text-align:center; justify-items:center}
+
+/* success */
+.ok-ring{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-chip-dark)}
+.ok-ring.in{animation:okin 520ms var(--ease) both}
+@keyframes okin{0%{transform:scale(.4); opacity:0}60%{transform:scale(1.08); opacity:1}100%{transform:scale(1)}}
+.ticket{--notch:var(--surface); position:relative; display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:16px; width:100%; padding:18px 20px; border-radius:22px; text-align:left}
+.ticket::before,.ticket::after{content:""; position:absolute; top:50%; width:22px; height:22px; margin-top:-11px; border-radius:50%; background:var(--notch)}
+.ticket::before{left:-11px} .ticket::after{right:-11px}
+.ticket .big{font-size:40px; line-height:1; font-weight:800; letter-spacing:-.05em}
+.ticket .cut{width:0; align-self:stretch; border-left:2px dashed currentColor; opacity:.35}
+.ticket b{display:block; font-size:17px; line-height:1.25}
+.ticket span{display:block; font-size:15px; opacity:.85; line-height:1.35}
+.ticket.in{animation:tin 640ms var(--ease) 180ms both}
+@keyframes tin{0%{transform:translateY(16px) rotate(-3deg) scale(.94); opacity:0}100%{transform:none; opacity:1}}
+
+/* perks */
+.perks{display:grid; gap:4px; margin:0; padding:0; list-style:none}
+.perks li{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:center; padding:10px 0}
+.perks li + li{border-top:1px solid var(--line)}
+.perks .i{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.perks b{display:block; line-height:1.3}
+.perks .s{display:block; font-size:15px; color:var(--muted); line-height:1.35}
+.lg-p h2{margin:8px 0 6px}
+.noacc{margin:14px 0 0; color:var(--muted)}
+
+/* prototype-only panel */
+.proto{margin:40px 16px 0; padding:16px; border-radius:var(--r-core); border:1.5px dashed var(--line-strong); display:grid; gap:10px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+.proto .t{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--muted)}
+.proto .btns{display:flex; flex-wrap:wrap; gap:8px}
+.proto .pill{min-height:48px; padding:0 16px; font-size:15px}
+
+@container app (max-width:370px){ .otp .boxes{gap:4px} .otp input{height:58px; font-size:23px} .bonus .big{font-size:38px} }
+@container app (min-width:900px){
+  .lg{grid-template-columns:minmax(0,1fr) 460px; grid-template-rows:auto 1fr; column-gap:72px; row-gap:40px; padding:64px max(40px, calc((100% - 1120px)/2)) 0; align-items:start}
+  .lg-a{grid-column:1; grid-row:1}
+  .lg-p{grid-column:1; grid-row:2}
+  .lg-f{grid-column:2; grid-row:1 / span 2; position:sticky; top:110px}
+  .lg-a .lead{font-size:19px; max-width:30em}
+  .bonus{margin-top:32px; padding:24px 28px; min-height:132px; padding-right:180px}
+  .bonus .big{font-size:64px}
+  .bonus b{font-size:20px}
+  .bonus .art{display:block; position:absolute; right:-36px; top:50%; width:200px; height:200px; margin-top:-100px; transform:rotate(-12deg)}
+  .bonus .art svg{width:100%; height:100%; display:block; filter:drop-shadow(0 14px 18px rgba(0,0,0,.25))}
+  .perks{grid-template-columns:1fr 1fr; column-gap:28px}
+  .perks li:nth-child(2){border-top:0}
+  .core.box{padding:28px 28px 30px}
+  .proto{margin:56px max(40px, calc((100% - 1120px)/2)) 0}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+var main = SC.mount({page:"login", nav:"profile", title:"Вход", status:false, ai:false, footer:false});
+var R = SC.RESTAURANT, ic = SC.ic, esc = SC.esc;
+var TEL = "tel:+359894365577";
+var BLOCKED = "0888000000";           /* prototype: simulated blocked number (same as reservation.html) */
+var BAD_CODE = "000000";              /* prototype: the only code that is "wrong" */
+var DEMO_PHONE = "0888123456";        /* prototype: sample number for the #kod / #ime states */
+
+/* ---------- storage: "sc-user" = signed-in user, "sc-known" = numbers that already have a profile ---------- */
+function get(k){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+function put(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+var S = {step:"phone", phone:"", tries:0, offline:false, name:"", mkt:false, isNew:true, timer:null, left:0};
+
+/* ---------- phone helpers ---------- */
+function digits(v){ var d = String(v||"").replace(/\D/g,"");
+  if (d.indexOf("00359")===0) d = "0"+d.slice(5); else if (d.indexOf("359")===0) d = "0"+d.slice(3); else if (/^[89]/.test(d) && d.length===9) d = "0"+d;
+  return d; }
+function valid(d){ return /^0(8[789]|9[89])\d{7}$/.test(d); }
+function pretty(d){ return d.length===10 ? d.slice(0,4)+" "+d.slice(4,7)+" "+d.slice(7) : d; }
+
+/* ---------- page frame ---------- */
+var PERKS = [["receipt","Поръчай отново","Любимата поръчка с едно докосване."],["map-pin","Адресите са запомнени","Не ги пишете всеки път."],["fire","Карта с печати","Започвате с 2 от 10 печата подарък."],["ticket","Купоните на едно място","Отстъпките се прилагат сами в количката."]];
+main.innerHTML =
+  '<div class="lg">'+
+    '<div class="lg-a">'+
+      '<p class="eyebrow">Вход и регистрация</p>'+
+      '<h1 class="h1">Влезте с телефона си</h1>'+
+      '<p class="lead">Без парола. Пращаме ви код по SMS и сте вътре.</p>'+
+      '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span><span class="art" aria-hidden="true">'+SC.art("pitsa-s-burata-i-proshuto-krudo")+'</span></div>'+
+    '</div>'+
+    '<div class="lg-f"><div class="shell"><div class="core box" data-box aria-live="polite"></div></div></div>'+
+    '<div class="lg-p">'+
+      '<h2 class="h3">Какво получавате</h2>'+
+      '<ul class="perks">'+PERKS.map(function(p){ return '<li><span class="i">'+ic(p[0],22)+'</span><span><b>'+p[1]+'</b><span class="s">'+p[2]+'</span></span></li>'; }).join("")+'</ul>'+
+      '<p class="noacc">Поръчка без профил също става. <a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></p>'+
+    '</div>'+
+  '</div>'+
+  '<div class="proto" aria-label="Само за прототипа">'+
+    '<span class="t">'+ic("flag",18)+'Само за прототипа</span>'+
+    '<p>Блокиран номер: '+pretty(BLOCKED)+'. Грешен код: '+BAD_CODE+', всеки друг код работи.</p>'+
+    '<div class="btns"><button class="pill pill-soft" type="button" data-offline aria-pressed="false">'+ic("warning",18)+'Без интернет: изключено</button><a class="pill pill-soft" href="profile.html#demo">'+ic("user",18)+'Примерен профил</a></div>'+
+  '</div>';
+var box = main.querySelector("[data-box]");
+
+function stepper(n, label){ return '<div class="stepper" style="--n:3"><div class="bar">'+[1,2,3].map(function(i){ return '<span'+(i<=n?' class="on"':'')+'></span>'; }).join("")+'</div><div class="t"><b>Стъпка '+n+' от 3</b><span>'+label+'</span></div></div>'; }
+function show(html, focusSel){ clearInterval(S.timer); box.innerHTML = '<div class="view'+(SC.reduce?'':' in')+'">'+html+'</div>';
+  if (focusSel){ var f = box.querySelector(focusSel); if (f) setTimeout(function(){ f.focus({preventScroll:true}); }, 30); } }
+function busy(btn, text){ btn.classList.add("busy"); btn.setAttribute("aria-busy","true"); btn.innerHTML = '<span class="spin" aria-hidden="true"></span>'+text; }
+
+/* ---------- already signed in ---------- */
+function viewSignedIn(u){
+  show('<div class="view center" style="display:grid;gap:14px"><span class="ring">'+ic("user",32)+'</span><h2 class="h3">Вече сте в профила си</h2><p class="sub">'+esc(u.name||"")+(u.name?' · ':'')+'<b>'+pretty(u.phone||"")+'</b></p>'+
+    '<a class="pill pill-red pill-lg pill-block" href="profile.html">'+ic("user",20)+'Към профила</a>'+
+    '<button class="pill pill-line pill-block" type="button" data-other>'+ic("sign-out",20)+'Влез с друг номер</button></div>');
+  box.querySelector("[data-other]").onclick = function(){ try{ localStorage.removeItem("sc-user"); }catch(e){} viewPhone(null, true); };
+}
+
+/* ---------- step 1: phone ---------- */
+function viewPhone(err, focusPh){
+  show(stepper(1,"Телефон")+
+    '<form class="view" style="gap:18px;animation:none" data-f="phone" novalidate>'+
+      '<div class="field"><label for="ph">Мобилен телефон</label>'+
+        '<input class="input" id="ph" name="ph" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="0888 123 456" value="'+esc(S.phone?pretty(S.phone):"")+'" aria-describedby="ph-help ph-err"'+(err?' aria-invalid="true"':'')+'>'+
+        '<p class="help" id="ph-help">Пращаме SMS с 6 цифри. Без парола.</p>'+
+        '<p class="err" id="ph-err"'+(err?'':' hidden')+'>'+(err||"")+'</p></div>'+
+      '<div data-alert></div>'+
+      '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("paper-plane-right",20)+'Изпрати код по SMS</button>'+
+      '<p class="fine">С входа приемате <a href="#" data-noop>Общите условия</a> и <a href="#" data-noop>Политиката за поверителност</a>.</p>'+
+    '</form>', focusPh ? "#ph" : null);
+  var f = box.querySelector("form"), inp = f.querySelector("#ph"), er = f.querySelector("#ph-err");
+  inp.addEventListener("input", function(){ if (inp.getAttribute("aria-invalid")){ var d = digits(inp.value); if (valid(d) || !d){ inp.removeAttribute("aria-invalid"); er.hidden = true; } } });
+  inp.addEventListener("blur", function(){ var d = digits(inp.value); if (valid(d)) inp.value = pretty(d); });
+  f.addEventListener("submit", function(e){ e.preventDefault(); var d = digits(inp.value); S.phone = d;
+    var msg = !d ? "Напишете номера си, например 0888 123 456." : !valid(d) ? "Номерът изглежда непълен. Трябват 10 цифри, например 0888 123 456." : "";
+    if (msg){ inp.setAttribute("aria-invalid","true"); er.textContent = msg; er.hidden = false; inp.focus(); return; }
+    inp.value = pretty(d);
+    var btn = f.querySelector("[type=submit]"); busy(btn, "Изпращаме кода...");
+    setTimeout(function(){
+      if (S.offline || navigator.onLine === false){ btn.classList.remove("busy"); btn.removeAttribute("aria-busy"); btn.innerHTML = ic("paper-plane-right",20)+"Изпрати код по SMS"; offlineAlert(f.querySelector("[data-alert]")); return; }
+      if (d === BLOCKED){ viewBlocked(); return; }
+      S.tries = 0; viewCode(true);
+    }, 700); });
+}
+function offlineAlert(slot){
+  slot.innerHTML = '<div class="alert" role="alert">'+ic("warning-circle",24)+'<b>Няма връзка с интернет</b><span>Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак.</span><button class="pill pill-line" type="submit">'+ic("arrow-right",18)+'Опитай пак</button></div>';
+}
+
+/* ---------- blocked number: polite, no blame ---------- */
+function viewBlocked(){
+  show('<div class="view center" style="display:grid;gap:14px"><span class="ring">'+ic("phone",30)+'</span>'+
+    '<h2 class="h3">Нека го направим по телефона</h2>'+
+    '<p class="sub">С номер <b>'+pretty(S.phone)+'</b> не можем да направим профил онлайн. Обадете ни се и ще помогнем с удоволствие.</p>'+
+    '<a class="pill pill-red pill-lg pill-block" href="'+TEL+'">'+ic("phone",20)+'Обади се на '+R.phone+'</a>'+
+    '<button class="pill pill-line pill-block" type="button" data-again>'+ic("arrow-left",20)+'Въведи друг номер</button>'+
+    '<p class="fine">Всеки ден от 10:00 до 23:00.</p></div>');
+  box.querySelector("[data-again]").onclick = function(){ viewPhone(null, true); };
+}
+
+/* ---------- step 2: SMS code ---------- */
+function viewCode(fresh){
+  var known = get("sc-known") || {}; S.isNew = !known[S.phone];
+  show(stepper(2,"Код от SMS")+
+    '<button class="link backl" type="button" data-back>'+ic("arrow-left",20)+'Смени номера</button>'+
+    '<div style="display:grid;gap:6px"><h2 class="h3">Въведете кода</h2><p class="sub">Изпратихме 6 цифри на <b>'+pretty(S.phone)+'</b>.</p></div>'+
+    '<form class="view" style="gap:16px;animation:none" data-f="code" novalidate>'+
+      '<fieldset class="otp" aria-describedby="otp-err"><legend class="vh">Код от SMS, 6 цифри</legend><div class="boxes">'+
+        [0,1,2,3,4,5].map(function(i){ return '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" '+(i===0?'autocomplete="one-time-code" ':'autocomplete="off" ')+'aria-label="Цифра '+(i+1)+' от 6" data-i="'+i+'">'; }).join("")+
+      '</div></fieldset>'+
+      '<p class="err" id="otp-err" role="alert" hidden></p>'+
+      '<button class="pill pill-red pill-lg pill-block" type="submit" disabled>'+ic("check",20)+'Потвърди кода</button>'+
+    '</form>'+
+    '<div class="resend" data-resend></div>'+
+    '<p class="hint">'+ic("info",20)+'<span>Кодът идва до минута. Ако не дойде, проверете дали номерът е верен.</span></p>', '.otp input');
+  var f = box.querySelector("form"), ins = [].slice.call(f.querySelectorAll(".otp input")), fs = f.querySelector(".otp"), er = f.querySelector("#otp-err"), btn = f.querySelector("[type=submit]");
+  box.querySelector("[data-back]").onclick = function(){ viewPhone(null, true); };
+  function code(){ return ins.map(function(x){ return x.value; }).join(""); }
+  function sync(){ ins.forEach(function(x){ x.classList.toggle("full", !!x.value); }); btn.disabled = code().length !== 6; }
+  function clearErr(){ fs.removeAttribute("aria-invalid"); er.hidden = true; }
+  function fill(from, str){ str = str.replace(/\D/g,""); for (var k=0; k<str.length && from+k<6; k++){ ins[from+k].value = str[k]; pop(ins[from+k]); } var nx = Math.min(from+str.length, 5); ins[nx].focus(); sync(); if (code().length===6) submit(); }
+  function pop(x){ if (SC.reduce) return; x.classList.remove("pop"); void x.offsetWidth; x.classList.add("pop"); }
+  ins.forEach(function(x, i){
+    x.addEventListener("input", function(){ clearErr(); var v = x.value.replace(/\D/g,""); x.value = ""; if (v.length) fill(i, v); else sync(); });
+    x.addEventListener("keydown", function(e){
+      if (e.key==="Backspace" && !x.value && i>0){ e.preventDefault(); ins[i-1].value = ""; ins[i-1].focus(); sync(); }
+      else if (e.key==="ArrowLeft" && i>0){ e.preventDefault(); ins[i-1].focus(); }
+      else if (e.key==="ArrowRight" && i<5){ e.preventDefault(); ins[i+1].focus(); } });
+    x.addEventListener("paste", function(e){ var t = (e.clipboardData||window.clipboardData).getData("text"); if (t){ e.preventDefault(); clearErr(); fill(i, t); } });
+    x.addEventListener("focus", function(){ x.select(); });
+  });
+  function submit(){ if (code().length!==6 || btn.classList.contains("busy")) return;
+    busy(btn, "Проверяваме..."); ins.forEach(function(x){ x.disabled = true; });
+    setTimeout(function(){
+      if (code() === BAD_CODE){ S.tries++;
+        btn.classList.remove("busy"); btn.removeAttribute("aria-busy"); btn.innerHTML = ic("check",20)+"Потвърди кода";
+        fs.setAttribute("aria-invalid","true"); er.hidden = false;
+        if (!SC.reduce){ fs.classList.remove("shake"); void fs.offsetWidth; fs.classList.add("shake"); }
+        if (S.tries >= 3){ er.textContent = "Кодът не съвпадна 3 пъти. Поискайте нов код отдолу."; ins.forEach(function(x){ x.value = ""; }); sync(); btn.disabled = true; clearInterval(S.timer); S.left = 0; tick(); return; }
+        er.textContent = "Кодът не съвпада. Проверете SMS-а и опитайте пак.";
+        ins.forEach(function(x){ x.disabled = false; x.value = ""; }); sync(); ins[0].focus(); return; }
+      if (S.isNew) viewName(); else finish();
+    }, 650); }
+  f.addEventListener("submit", function(e){ e.preventDefault(); submit(); });
+  /* resend countdown 0:30 */
+  var rs = box.querySelector("[data-resend]");
+  function tick(){ if (S.left > 0){ rs.innerHTML = ic("timer",20)+'<span>Изпрати нов код след 0:'+(S.left<10?"0":"")+S.left+'</span>'; }
+    else { clearInterval(S.timer); rs.innerHTML = '<button class="link" type="button" data-resend-btn>'+ic("paper-plane-right",20)+'Изпрати нов код</button>'; } }
+  function start(){ S.left = 30; tick(); clearInterval(S.timer); S.timer = setInterval(function(){ S.left--; tick(); }, 1000); }
+  rs.addEventListener("click", function(e){ if (!e.target.closest("[data-resend-btn]")) return; S.tries = 0; clearErr(); ins.forEach(function(x){ x.disabled = false; x.value = ""; }); sync(); ins[0].focus(); start(); SC.toast("Изпратихме нов код на "+pretty(S.phone)); });
+  start();
+}
+
+/* ---------- step 3: name (new profiles only) ---------- */
+function viewName(){
+  show(stepper(3,"Име")+
+    '<div style="display:grid;gap:6px"><h2 class="h3">Как да ви наричаме?</h2><p class="sub">Името е за поръчките и резервациите, за да знае куриерът кого да търси.</p></div>'+
+    '<form class="view" style="gap:16px;animation:none" data-f="name" novalidate>'+
+      '<div class="field"><label for="nm">Име</label><input class="input" id="nm" type="text" autocomplete="given-name" placeholder="Например Мария" value="'+esc(S.name)+'" aria-describedby="nm-err"><p class="err" id="nm-err" hidden></p></div>'+
+      '<label class="check"><input type="checkbox" id="mkt"'+(S.mkt?' checked':'')+'><span><b>Искам да получавам оферти и маркетингови предложения</b><br><span class="muted small">По желание. Първи научавате за събитията и новите оферти. Спирате ги от профила с едно докосване.</span></span></label>'+
+      '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("gift",20)+'Създай профил и вземи -10%</button>'+
+    '</form>', "#nm");
+  var f = box.querySelector("form"), inp = f.querySelector("#nm"), er = f.querySelector("#nm-err");
+  inp.addEventListener("input", function(){ S.name = inp.value; if (inp.value.trim()){ inp.removeAttribute("aria-invalid"); er.hidden = true; } });
+  f.querySelector("#mkt").addEventListener("change", function(e){ S.mkt = e.target.checked; });
+  f.addEventListener("submit", function(e){ e.preventDefault(); var n = inp.value.trim();
+    if (!n){ inp.setAttribute("aria-invalid","true"); er.textContent = "Напишете името си, за да знаем кого да търсим."; er.hidden = false; inp.focus(); return; }
+    S.name = n; busy(f.querySelector("[type=submit]"), "Създаваме профила..."); setTimeout(finish, 600); });
+}
+
+/* ---------- done ---------- */
+function finish(){
+  var known = get("sc-known") || {}, prev = known[S.phone];
+  var name = S.isNew ? S.name : (prev && prev.name) || "";
+  var u = {phone:S.phone, name:name, isNew:S.isNew, since:new Date().toISOString().slice(0,10), consent:{marketing:S.isNew ? S.mkt : !!(prev && prev.marketing), birthday:false, bday:""}};
+  put("sc-user", u); known[S.phone] = {name:name, marketing:u.consent.marketing}; put("sc-known", known);
+  if (S.isNew){
+    show('<div class="view center" style="display:grid;gap:16px">'+
+      '<span class="ok-ring'+(SC.reduce?'':' in')+'">'+ic("check",44)+'</span>'+
+      '<div style="display:grid;gap:6px"><h2 class="h3" style="font-size:26px">Профилът е готов, '+esc(name)+'</h2><p class="sub">Добре дошли в Siracusa. Ето подаръка ви:</p></div>'+
+      '<div class="ticket ember-card'+(SC.reduce?'':' in')+'"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>от следващата поръчка</b><span>Прилага се сам в количката.</span></span></div>'+
+      '<p class="sub" style="display:flex;gap:8px;align-items:center;justify-content:center">'+ic("fire",20)+'И 2 от 10 печата на картата ви.</p>'+
+      '<a class="pill pill-red pill-lg pill-block" href="profile.html">'+ic("user",20)+'Към профила</a>'+
+      '<a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></div>');
+  } else {
+    show('<div class="view center" style="display:grid;gap:16px">'+
+      '<span class="ok-ring'+(SC.reduce?'':' in')+'">'+ic("check",44)+'</span>'+
+      '<h2 class="h3" style="font-size:26px">Добре дошли отново'+(name?', '+esc(name):'')+'</h2><p class="sub">Влязохте с <b>'+pretty(S.phone)+'</b>.</p>'+
+      '<a class="pill pill-red pill-lg pill-block" href="profile.html">'+ic("user",20)+'Към профила</a></div>');
+  }
+  var a = box.querySelector("a.pill"); if (a) setTimeout(function(){ a.focus({preventScroll:true}); }, 60);
+}
+
+/* ---------- prototype controls ---------- */
+var offBtn = main.querySelector("[data-offline]");
+offBtn.onclick = function(){ S.offline = !S.offline; offBtn.setAttribute("aria-pressed", S.offline); offBtn.innerHTML = ic("warning",18)+"Без интернет: "+(S.offline?"включено":"изключено"); SC.toast(S.offline ? "Симулираме липса на връзка" : "Връзката е обратно"); };
+
+/* ---------- entry: #kod, #ime, #gotovo, #blokiran, #offline open a state directly (for review) ---------- */
+function route(){ var h = location.hash.slice(1), me = get("sc-user");
+  S.tries = 0; S.offline = h==="offline"; offBtn.setAttribute("aria-pressed", S.offline); offBtn.innerHTML = ic("warning",18)+"Без интернет: "+(S.offline?"включено":"изключено");
+  if (h) S.phone = DEMO_PHONE;
+  if (h==="kod") viewCode(true);
+  else if (h==="ime"){ S.isNew = true; viewName(); }
+  else if (h==="gotovo"){ S.isNew = true; S.name = "Мария"; finish(); }
+  else if (h==="blokiran"){ S.phone = BLOCKED; viewBlocked(); }
+  else if (h==="offline"){ viewPhone(); offlineAlert(box.querySelector("[data-alert]")); }
+  else if (me && me.phone) viewSignedIn(me);
+  else viewPhone(); }
+window.addEventListener("hashchange", route);
+route();
+})();
+</script>
+</body>
+</html>

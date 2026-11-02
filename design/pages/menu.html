@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Меню | Siracusa Bar & Grill</title>
+<meta name="description" content="Менюто на Siracusa Bar & Grill в Дружба 2: пица на пещ, скара на дървени въглища Bertha, салати, паста, бургери и десерти. Цени в евро, доставка до 21:00.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* menu.html: page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.mhero{position:relative; padding-top:20px}
+.mtop{position:relative; min-height:150px; padding-right:128px}
+.mtop .h1{font-size:44px; letter-spacing:-.05em}
+.mtop .lead{margin-top:8px; font-size:16px; max-width:28ch}
+.eta{display:flex; align-items:flex-start; gap:8px; margin-top:12px; font-size:15px; font-weight:700; line-height:1.35}
+.eta .ic{margin-top:1px; color:var(--ok)}
+.eta.warn .ic{color:var(--warn)}
+.eta span{color:var(--muted); font-weight:600}
+.hero-art{position:absolute; top:-8px; right:-60px; width:184px; height:184px; pointer-events:none; animation:artIn 900ms var(--ease) both}
+.hero-art .pic{width:100%; height:100%; background:none; overflow:visible}
+.hero-art .pic > svg{inset:0; width:100%; height:100%}
+@keyframes artIn{from{transform:rotate(-40deg) scale(.86); opacity:0}to{transform:none; opacity:1}}
+
+.mctl{display:grid; gap:16px; margin-top:22px}
+.mseg{grid-auto-columns:1fr}
+.mseg > button,.mseg > a{min-height:64px; border:0; border-radius:16px; background:transparent; color:var(--ink); text-decoration:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 4px; line-height:1.15; transition:transform var(--t-fast) var(--ease)}
+.mseg > *:active{transform:scale(.97)}
+.mseg b{font-size:16px; font-weight:800; letter-spacing:-.01em}
+.mseg small{font-size:14px; font-weight:600; color:var(--muted); white-space:nowrap}
+.mseg [aria-pressed="true"]{background:var(--surface); box-shadow:var(--shadow), inset 0 0 0 1.5px var(--line)}
+.mseg .tg{display:inline-flex; align-items:center; gap:3px; color:var(--ink)}
+.mseg .tg i{font-style:normal; font-size:13px; font-weight:800; padding:1px 6px; border-radius:999px; background:var(--ember); color:var(--on-ember)}
+
+.search{display:grid; gap:6px}
+.search label{font-weight:700; font-size:15px}
+.sbox{position:relative}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:56px; padding:0 56px 0 50px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong), var(--hi); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input::placeholder{color:var(--muted)}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sbox .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.sbox .clr[hidden]{display:none}
+
+.fchips{padding-top:2px; padding-bottom:4px}
+.fchips .chip,.catbar .chip{min-height:48px}
+.chip .ic{flex:none}
+.chip.leaf .ic{color:var(--ok)} .chip.pep .ic{color:var(--red)}
+.chip[aria-pressed="true"] .ic{color:inherit}
+.chip.more{box-shadow:none; background:var(--surface-2)}
+.chip .dot{min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:13px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums}
+
+.mstat{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 12px; margin-top:18px}
+.mstat .cnt-t{font-weight:800; font-size:17px; letter-spacing:-.01em; font-variant-numeric:tabular-nums}
+.mstat .cnt-t span{color:var(--muted); font-weight:600}
+.mstat .link{min-height:44px}
+.mstat .link[hidden]{display:none}
+.alnote{margin-top:2px}
+.alnote .ic{margin-top:2px}
+
+/* ---------- notices ---------- */
+.notices{display:grid; gap:10px; margin-top:16px}
+.notices:empty{display:none}
+.notice{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:start; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.notice .nic{grid-row:span 3; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.notice.warn .nic{color:var(--warn)}
+.notice.off .nic{color:var(--danger)}
+.notice b{font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.notice p{margin:0; color:var(--muted); font-size:15px}
+.notice .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.notice .acts .pill{min-height:48px}
+
+/* ---------- body layout ---------- */
+.mbody{position:relative; margin-top:20px}
+.mside{display:none}
+.mmain{min-width:0}
+
+/* sticky category island, sits left of the floating cart button */
+.catbar{position:sticky; top:74px; z-index:18; margin:0 52px 0 -8px; padding:4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.catbar[hidden]{display:none}
+.catscroll{position:relative; display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; border-radius:999px; scroll-behavior:smooth}
+.catscroll::-webkit-scrollbar{display:none}
+.catscroll{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.catbar .chip{position:relative; z-index:1; text-decoration:none; background:transparent; box-shadow:none; padding:0 14px; transition:color var(--t-base) var(--ease), transform var(--t-fast) var(--ease)}
+.catbar .chip[aria-current="true"]{background:transparent; color:var(--bg)}
+.catbar .chip .n{font-size:14px}
+/* sliding indicator: two caps + a stretched middle, moved with transform only */
+.ind{position:absolute; left:0; top:0; height:48px; width:0; pointer-events:none; opacity:0; transition:opacity var(--t-base) var(--ease)}
+.ind.on{opacity:1}
+.ind i{position:absolute; top:0; left:0; height:48px; background:var(--ink); transition:transform var(--t-slow) var(--ease)}
+.ind .l{width:24px; border-radius:24px 0 0 24px}
+.ind .r{width:24px; border-radius:0 24px 24px 0}
+.ind .m{width:2px; margin-left:-1px; transform-origin:0 0}
+.ind.jump i{transition:none}
+
+/* ---------- category sections ---------- */
+.mcat{padding-top:48px}
+.mcat:first-child{padding-top:28px}
+.mcat .sec-h{margin-bottom:6px; align-items:center}
+.mcat .sec-h .link{flex:none}
+.cdesc{margin:0; font-size:15px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums}
+.cseo{margin:4px 0 18px; font-size:14px}
+.qhead{padding-top:28px}
+.qhead .h3{font-size:22px}
+.qhead p{margin:4px 0 0; color:var(--muted)}
+.dcard .nodata{display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; line-height:1.3; color:var(--warn)}
+.dcard .nodata .ic{margin-top:1px}
+.dcard .later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
+.mcat .grid-dishes{animation:gridIn var(--t-slow) var(--ease) both}
+@keyframes gridIn{from{opacity:0}to{opacity:1}}
+
+/* ---------- empty, error, loading ---------- */
+.mempty{margin-top:24px; padding:36px 20px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mempty .ill{background:var(--surface); color:var(--ink)}
+.mempty.err .ill{color:var(--danger)}
+.mempty p{margin:0; color:var(--muted); max-width:34ch}
+.mempty .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:6px}
+.mempty .rm{display:flex; flex-wrap:wrap; justify-content:center; gap:8px}
+.mempty .rm .chip{box-shadow:none; background:var(--surface)}
+.mempty .tryq{display:flex; flex-wrap:wrap; justify-content:center; gap:8px}
+.mempty .tryq .chip{box-shadow:none; background:var(--surface)}
+.sk-row{display:flex; gap:8px; overflow:hidden; margin-top:4px}
+.sk-row .skel{flex:none; height:48px; border-radius:999px}
+.sk-sec{padding-top:36px}
+.sk-sec .t{height:30px; width:56%; border-radius:12px}
+.sk-sec .d{height:16px; width:70%; margin:12px 0 18px; border-radius:8px}
+.sk-card{display:grid; gap:10px}
+.sk-card .p{aspect-ratio:1; border-radius:24px}
+.sk-card .a{height:18px; width:85%; border-radius:8px}
+.sk-card .b{height:18px; width:45%; border-radius:8px}
+
+/* ---------- prototype-only state switch ---------- */
+.proto{padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent}
+.proto .lbl{display:flex; align-items:center; gap:8px; margin:0 0 4px; font-weight:800; font-size:15px}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+.proto .chips{margin:0; padding:2px 0; flex-wrap:wrap}
+
+/* ---------- sheets ---------- */
+.flist{display:grid; margin:4px 0 0}
+.flist .check{align-items:center; padding:6px 0; min-height:56px; border-top:1px solid var(--line)}
+.flist .check:first-child{border-top:0}
+.flist .fi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.flist .fi.leaf{color:var(--ok)} .flist .fi.pep{color:var(--red)}
+.flist .ft{flex:1; min-width:0; display:grid; line-height:1.25}
+.flist .ft b{font-size:16px}
+.flist .ft small{font-size:14px; color:var(--muted); font-weight:600}
+.flist .check.dis{cursor:not-allowed}
+.flist .check.dis .ft b,.flist .check.dis .fi{opacity:.55}
+.sh-intro{margin:0 0 6px; color:var(--muted); font-size:15px}
+.sh-sub{margin:18px 0 0; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
+.sh-note{display:flex; gap:8px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:14px; color:var(--muted)}
+.sh-note .ic{margin-top:1px; color:var(--ink)}
+.sh-foot{position:sticky; bottom:0; display:grid; grid-template-columns:auto 1fr; gap:8px; padding:14px 0 2px; margin-top:8px; background:var(--surface)}
+.sh-foot .pill-red{min-height:56px; font-size:17px}
+
+/* ---------- tablet & desktop ---------- */
+@container app (min-width:700px){
+  .mtop{padding-right:220px}
+  .hero-art{width:240px; height:240px; top:-30px; right:-20px}
+}
+@container app (min-width:900px){
+  .mhero{padding-top:40px}
+  .mtop{position:static; min-height:0; padding-right:0}
+  .mtop .h1{font-size:64px}
+  .mtop .lead{font-size:18px; max-width:none; margin-top:12px}
+  .hero-art{width:300px; height:300px; top:16px; right:max(40px, calc((100% - 1200px)/2))}
+  .mctl{grid-template-columns:minmax(360px,420px) 1fr; align-items:end; gap:16px 16px; margin-top:28px; margin-right:340px}
+  .search{grid-column:2}
+  .mseg{grid-column:1; grid-row:1}
+  .fchips{grid-column:1 / -1; flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .mstat{margin-top:22px; margin-right:340px}
+  .mbody{display:grid; grid-template-columns:232px 1fr; gap:48px; margin-top:12px}
+  .mside{display:block}
+  .catbar{display:none}
+  .mcat{padding-top:64px}
+  .mcat:first-child,.qhead{padding-top:24px}
+}
+/* desktop sidebar with a sliding marker */
+.snav{position:sticky; top:104px; padding:28px 0 24px}
+.snav .label{display:block; margin:0 0 10px 16px; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
+.slist{position:relative; display:grid; gap:2px}
+.slist a{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px; padding:0 16px; border-radius:999px; text-decoration:none; font-weight:700; font-size:16px; color:var(--muted); transition:color var(--t-base) var(--ease)}
+.slist a:hover{color:var(--ink)}
+.slist a[aria-current="true"]{color:var(--ink)}
+.slist a .n{font-size:14px; font-weight:600; font-variant-numeric:tabular-nums}
+.smark{position:absolute; left:0; right:0; top:0; height:44px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); opacity:0; transition:transform var(--t-slow) var(--ease), opacity var(--t-base) var(--ease); pointer-events:none}
+.smark.on{opacity:1}
+.smark::before{content:""; position:absolute; left:6px; top:12px; bottom:12px; width:4px; border-radius:2px; background:var(--red)}
+.snav .note-auto{margin:20px 0 0 16px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var main = SC.mount({page:"menu", nav:"menu", title:"Меню"});
+var S = SC.state();
+var MAIN_CATS = SC.cats.filter(function(c){ return c.id !== "zakuski"; });
+var MAIN_ITEMS = SC.items.filter(function(x){ return x.cat !== "zakuski"; });
+var BF_ITEMS = SC.inCat("zakuski");
+var NOUN = {supi:["супа","супи"], salati:["салата","салати"], pitsi:["пица","пици"], sosove:["сос","соса"], dobavki:["добавка","добавки"], garnituri:["гарнитура","гарнитури"], deserti:["десерт","десерта"], hlebcheta:["вид","вида"], zakuski:["закуска","закуски"]};
+var FICON = {veg:"leaf", hot:"pep"};
+
+/* ---------- state (kept in the address: #pitsi&f=veg.hot&a=gluten&q=пица) ---------- */
+var st = {menu:"main", f:[], a:[], q:"", cat:null, view:"ok"};
+function readHash(){ var h = ""; try{ h = decodeURIComponent(location.hash.slice(1)); }catch(e){ h = location.hash.slice(1); }
+  h.split("&").forEach(function(p){ if (!p) return; var i = p.indexOf("=");
+    if (i < 0){ if (p === "zakuski") st.menu = "bf"; else if (SC.catById[p]) st.cat = p; return; }
+    var k = p.slice(0,i), v = p.slice(i+1);
+    if (k === "f") st.f = v.split(".").filter(function(id){ return SC.FILTERS.some(function(f){ return f.id===id && !f.needs; }); });
+    if (k === "a") st.a = v.split(".").filter(function(id){ return SC.ALLERGENS.some(function(a){ return a[0]===id; }); });
+    if (k === "q") st.q = v; }); }
+function writeHash(){ var p = [];
+  if (st.menu === "bf") p.push("zakuski"); else if (st.cat) p.push(st.cat);
+  if (st.f.length) p.push("f="+st.f.join(".")); if (st.a.length) p.push("a="+st.a.join(".")); if (st.q) p.push("q="+encodeURIComponent(st.q));
+  try{ history.replaceState(null, "", p.length ? "#"+p.join("&") : location.pathname); }catch(e){} }
+readHash();
+
+/* ---------- search: case-insensitive, Latin input, one typo in words over 4 letters ---------- */
+var LAT = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya","ѝ":"i"};
+function latin(s){ return String(s).toLowerCase().replace(/[а-яѝ]/g, function(c){ return LAT[c] || c; }); }
+function squash(s){ return s.replace(/(.)\1+/g, "$1"); }
+function words(s){ return s.split(/[^a-z0-9]+/).filter(Boolean); }
+/* a typed (Latin) query can mean several spellings: c as "ц" (pica) or as "k" (carbonara) */
+function qVariants(raw){ var s = latin(raw).replace(/4/g,"ch").replace(/6/g,"sh").replace(/w/g,"v").replace(/x/g,"ks").replace(/kh/g,"h")
+    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts");
+  var a = s.replace(/ch/g,"\u0001").replace(/c/g,"ts").replace(/\u0001/g,"ch"), b = s.replace(/ch/g,"\u0001").replace(/c/g,"k").replace(/\u0001/g,"ch");
+  return (a === b ? [a] : [a,b]).map(function(v){ return words(squash(v)); }); }
+function dl(a, b){ var m = a.length, n = b.length, d = [], i, j; for (i=0;i<=m;i++){ d[i] = [i]; } for (j=0;j<=n;j++) d[0][j] = j;
+  for (i=1;i<=m;i++) for (j=1;j<=n;j++){ var c = a[i-1]===b[j-1] ? 0 : 1; d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+c);
+    if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1); } return d[m][n]; }
+function wordScore(q, t){ if (t.indexOf(q) === 0) return 3; if (q.length >= 3 && t.indexOf(q) > 0) return 2;
+  var k = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0; if (!k) return 0;
+  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 1; } return 0; }
+var IDX = {}; SC.items.forEach(function(x){ var c = SC.catById[x.cat];
+  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:""))))}; });
+function score(x, qv){ var best = 0;
+  qv.forEach(function(qw){ var total = 0;
+    for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0, w = IDX[x.id];
+      w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
+      if (!s) return; total += s; }
+    best = Math.max(best, total); });
+  return best; }
+
+/* ---------- filtering ---------- */
+function scopeItems(){ return st.menu === "bf" ? BF_ITEMS : MAIN_ITEMS; }
+function scopeCats(){ return st.menu === "bf" ? [SC.catById.zakuski] : MAIN_CATS; }
+function fById(id){ return SC.FILTERS.filter(function(f){ return f.id===id; })[0]; }
+function passes(x){ for (var i=0;i<st.f.length;i++){ if (!fById(st.f[i]).test(x)) return false; }
+  for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; } return true; }
+function results(){ var qv = st.q.trim() ? qVariants(st.q.trim()) : null, sc = {};
+  var list = scopeItems().filter(function(x){ if (!passes(x)) return false; if (!qv) return true; var s = score(x, qv); sc[x.id] = s; return s > 0; });
+  var groups = scopeCats().map(function(c){ var it = list.filter(function(x){ return x.cat === c.id; });
+    it = it.map(function(x,i){ return [x,i]; }).sort(function(a,b){ return (SC.isOut(a[0]) - SC.isOut(b[0])) || (qv ? sc[b[0].id]-sc[a[0].id] : 0) || (a[1]-b[1]); }).map(function(z){ return z[0]; });
+    return {c:c, items:it, top: qv ? Math.max.apply(null, it.map(function(x){ return sc[x.id]; }).concat([0])) : 0}; }).filter(function(g){ return g.items.length; });
+  if (qv) groups.sort(function(a,b){ return b.top - a.top; });
+  return {list:list, groups:groups}; }
+
+/* ---------- small helpers ---------- */
+function noun(cat, n){ var w = NOUN[cat] || ["ястие","ястия"]; return n + " " + (n===1 ? w[0] : w[1]); }
+function catDesc(c){ var it = SC.inCat(c.id), parts = [noun(c.id, it.length)];
+  var g = it.map(function(x){ var m = /(\d+)\s*(гр|мл)/.exec(x.g); return m ? [+m[1], m[2]] : null; }).filter(Boolean);
+  if (g.length){ var lo = Math.min.apply(null, g.map(function(z){ return z[0]; })), hi = Math.max.apply(null, g.map(function(z){ return z[0]; }));
+    parts.push((lo===hi ? lo : lo+" - "+hi)+" "+g[0][1]+"."); }
+  var ps = it.map(function(x){ return x.p; }), pl = Math.min.apply(null, ps), ph = Math.max.apply(null, ps);
+  parts.push(pl===ph ? SC.fmt(pl) : "от "+SC.fmt(pl)+" до "+SC.fmt(ph));
+  var v = it.filter(function(x){ return x.t.indexOf("veg")>-1; }).length; if (v && v < it.length) parts.push(v+" вегетариански");
+  return parts.join(" · "); }
+var CARD = {};
+function card(x){ var key = x.id + (st.a.length && !x.comp ? "|nd" : "") + (st.menu==="bf" && !S.breakfast ? "|later" : "");
+  if (CARD[key]) return CARD[key]; var h = SC.dishCard(x);
+  if (st.a.length && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">'+SC.ic("info",18)+'Няма данни за алергени, попитайте ни</span></a><div class="rowp">');
+  if (st.menu==="bf" && !S.breakfast) h = h.replace('class="pic ', 'class="pic out ').replace(/<button class="plus"[\s\S]*?<\/button>/, '<span class="later">'+(S.m < 600 ? "от 10:00" : "утре<br>от 10:00")+'</span>');
+  return (CARD[key] = h); }
+function plural(n){ return SC.plural(n, "ястие", "ястия"); }
+
+/* ---------- static frame ---------- */
+var heroArt = SC.byId["pitsa-s-burata-i-proshuto-krudo"] || SC.inCat("pitsi")[0];
+function segSub(kind){
+  if (kind === "main") return plural(MAIN_ITEMS.length);
+  if (kind === "lunch"){ if (S.lunch) return "до 15:00"; if (S.lunchDiscount) return '<span class="tg"><i>-30%</i>вземане</span>'; return S.m < 600 ? "от 10:00" : "утре от 10:00"; }
+  if (S.breakfast) return "до 11:30"; return S.m < 600 ? "от 10:00" : "утре";
+}
+function etaLine(){ var e = SC.eta();
+  if (S.delivery) return '<p class="eta'+(e.busy?" warn":"")+'">'+SC.ic("moped",20)+'<b>'+(e.busy ? "Доставка: "+e.text.charAt(0).toLowerCase()+e.text.slice(1) : "Доставка сега: "+e.text)+'</b></p>';
+  if (S.kitchen) return '<p class="eta warn">'+SC.ic("storefront",20)+'<b>Вземане от място <span>· готово след около 20 мин</span></b></p>';
+  return ""; }
+main.innerHTML =
+  '<section class="sec mhero" aria-labelledby="mh1">'+
+    '<div class="mtop"><div class="hero-art" aria-hidden="true"><div class="pic">'+SC.art(heroArt)+'</div></div>'+
+      '<h1 class="h1" id="mh1">Меню</h1>'+
+      '<p class="lead">Пица на пещ и скара на дървени въглища. Цените са в евро с ДДС.</p>'+etaLine()+'</div>'+
+    '<div class="mctl">'+
+      '<div class="seg mseg" role="group" aria-label="Кое меню">'+
+        '<button type="button" data-menu="main"><b>Основно</b><small>'+segSub("main")+'</small></button>'+
+        '<a href="lunch.html"><b>Обедно</b><small>'+segSub("lunch")+'</small></a>'+
+        '<button type="button" data-menu="bf"><b>Закуски</b><small>'+segSub("bf")+'</small></button>'+
+      '</div>'+
+      '<div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox">'+SC.ic("magnifying-glass",22)+
+        '<input id="mq" type="search" placeholder="пица, kebapcheta, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">'+
+        '<button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden>'+SC.ic("x",20)+'</button></div></div>'+
+      '<div class="chips fchips" data-fchips role="group" aria-label="Филтри"></div>'+
+    '</div>'+
+    '<div class="mstat"><p class="cnt-t" data-count aria-live="polite" style="margin:0"></p><button class="link" type="button" data-clearall hidden>'+SC.ic("x",18)+'Изчисти филтрите</button></div>'+
+    '<p class="note-auto alnote">'+SC.ic("info",18)+'<span>Алергените са предварителни, от състава. Кухнята ги потвърждава.</span></p>'+
+    '<div class="notices" data-notices></div>'+
+  '</section>'+
+  '<div class="wrap mbody">'+
+    '<aside class="mside"><nav class="snav" aria-label="Категории в менюто"><span class="label">Категории</span><div class="slist" data-slist></div>'+
+      '<p class="note-auto">'+SC.ic("phone",18)+'<span>Въпрос за ястие? <a class="link" href="tel:+359894365577" style="min-height:0;display:inline">'+SC.RESTAURANT.phone+'</a></span></p></nav></aside>'+
+    '<div class="mmain"><nav class="catbar" data-catbar aria-label="Категории"><div class="catscroll" data-catscroll></div></nav><div data-results></div></div>'+
+  '</div>'+
+  '<section class="sec" style="padding-top:64px"><div class="proto"><p class="lbl">'+SC.ic("eye",18)+'Само в прототипа</p><p>Покажете как изглежда менюто в другите състояния.</p>'+
+    '<div class="chips" role="group" aria-label="Състояние за прототипа"><button class="chip" type="button" data-view="ok" aria-pressed="true">Нормално</button><button class="chip" type="button" data-view="loading">Зареждане</button><button class="chip" type="button" data-view="error">Грешка</button><button class="chip" type="button" data-view="offline">Без интернет</button></div></div></section>';
+
+var $ = function(s){ return main.querySelector(s); };
+var elRes = $("[data-results]"), elCat = $("[data-catscroll]"), elBar = $("[data-catbar]"), elSide = $("[data-slist]"), elF = $("[data-fchips]"), elCount = $("[data-count]"), elNot = $("[data-notices]"), elQ = $("#mq");
+var scroller = SC.scroller;
+elQ.value = st.q;
+
+/* ---------- render ---------- */
+var R = {groups:[], list:[]};
+function filterChips(){ var items = scopeItems(), h = '';
+  var aOn = st.a.length;
+  h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+(aOn ? 'Без '+st.a.length+' '+(st.a.length===1?"алерген":"алергена") : 'Алергени')+'</button>';
+  SC.FILTERS.forEach(function(f){ if (f.needs) return; var n = items.filter(f.test).length; if (!n) return; var on = st.f.indexOf(f.id) > -1;
+    h += '<button class="chip '+(FICON[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+on+'">'+SC.ic(f.icon,20)+f.n+' <span class="n">'+n+'</span></button>'; });
+  h += '<button class="chip more" type="button" data-sheet="more" aria-haspopup="dialog">'+SC.ic("sliders-horizontal",20)+'Още филтри</button>';
+  elF.innerHTML = h; }
+function notices(){ var h = '';
+  if (st.view === "offline") h += '<div class="notice off" role="status"><span class="nic">'+SC.ic("warning-circle",24)+'</span><b>Няма връзка с интернет</b><p>Менюто е заредено, а количката ви е запазена. Поръчайте, когато връзката се върне.</p><div class="acts"><button class="pill pill-line" type="button" data-retry>'+SC.ic("arrow-up-right",20)+'Опитай пак</button></div></div>';
+  if (!S.kitchen) h += '<div class="notice warn"><span class="nic">'+SC.ic("clock",24)+'</span><b>Кухнята приема поръчки до 22:30. Поръчай за утре?</b><p>Изберете ястията сега, а в количката посочете час утре след 10:00.</p></div>';
+  if (st.menu === "bf"){
+    if (S.breakfast){ var left = 690 - S.m; h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуски всеки ден до 11:30</b><p>Остават '+(left >= 60 ? "1 ч. и "+(left-60)+" мин" : left+" мин")+' за днес.</p></div>'; }
+    else if (S.m < 600) h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуските са от 10:00 до 11:30</b><p>Разгледайте ги сега и поръчайте, щом отворим.</p></div>';
+    else h += '<div class="notice"><span class="nic">'+SC.ic("moon",24)+'</span><b>Закуските свършиха за днес</b><p>Очакваме ви утре от 10:00 до 11:30. Междувременно цялото меню е тук.</p><div class="acts"><button class="pill pill-line" type="button" data-menu="main">Към основното меню</button></div></div>';
+  }
+  elNot.innerHTML = h; }
+function count(){ var total = scopeItems().length, n = R.list.length, q = st.q.trim();
+  if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“';
+  else if (st.f.length || st.a.length) elCount.innerHTML = 'Показваме '+n+' <span>от '+plural(total)+'</span>';
+  else elCount.innerHTML = plural(total)+' <span>· '+(st.menu==="bf" ? "закуски" : MAIN_CATS.length+" категории")+'</span>';
+  $("[data-clearall]").hidden = !(st.f.length || st.a.length); }
+function navs(){ var multi = R.groups.length > 1 && st.view !== "error" && st.view !== "loading";
+  elBar.hidden = !multi;
+  var ch = R.groups.map(function(g){ return '<a class="chip" href="#'+g.c.id+'" data-go="'+g.c.id+'">'+SC.esc(g.c.n)+' <span class="n">'+g.items.length+'</span></a>'; }).join("");
+  elCat.innerHTML = '<span class="ind" aria-hidden="true"><i class="l"></i><i class="m"></i><i class="r"></i></span>' + ch;
+  elSide.innerHTML = '<span class="smark" aria-hidden="true"></span>' + (st.view==="loading"||st.view==="error" ? "" : R.groups.map(function(g){ return '<a href="#'+g.c.id+'" data-go="'+g.c.id+'"><span>'+SC.esc(g.c.n)+'</span><span class="n">'+g.items.length+'</span></a>'; }).join(""));
+  active = null; }
+function emptyHTML(){ var q = st.q.trim();
+  if (q && !(st.f.length || st.a.length)) return '<div class="empty mempty"><span class="ill">'+SC.ic("magnifying-glass",40)+'</span><h2 class="h3">Не намерихме „'+SC.esc(q)+'“</h2><p>Проверете думата или опитайте някое от тези. Можете да попитате и асистента.</p>'+
+    '<div class="tryq">'+["пица","кебапчета","салата","бургер"].map(function(w){ return '<button class="chip" type="button" data-try="'+w+'">'+w+'</button>'; }).join("")+'</div>'+
+    '<div class="acts"><button class="pill pill-line" type="button" data-qclear>'+SC.ic("x",20)+'Изчисти търсенето</button><button class="pill pill-ember" type="button" data-ai>'+SC.ic("sparkle",20)+'Попитай асистента</button></div></div>';
+  var rm = st.f.map(function(id){ var f = fById(id); return '<button class="chip" type="button" data-f="'+id+'">'+SC.ic("x",18)+f.n+'</button>'; })
+    .concat(st.a.map(function(id){ return '<button class="chip" type="button" data-arm="'+id+'">'+SC.ic("x",18)+'Без '+SC.allergenName(id).toLowerCase()+'</button>'; })).join("");
+  return '<div class="empty mempty"><span class="ill">'+SC.ic("funnel",40)+'</span><h2 class="h3">Няма ястия с тези филтри</h2><p>'+(q ? 'Търсим „'+SC.esc(q)+'“ само сред ястията, които минават филтрите. ' : '')+'Махнете някой филтър или изчистете всички.</p>'+
+    (rm ? '<div class="rm">'+rm+'</div>' : '')+'<div class="acts"><button class="pill pill-red" type="button" data-clearall>Изчисти филтрите</button>'+(q?'<button class="pill pill-line" type="button" data-qclear>Изчисти търсенето</button>':'')+'</div></div>'; }
+function skeletonHTML(){ var cards = ''; for (var i=0;i<4;i++) cards += '<div class="sk-card"><div class="skel p"></div><div class="skel a"></div><div class="skel b"></div></div>';
+  var sec = '<div class="sk-sec"><div class="skel t"></div><div class="skel d"></div><div class="grid-dishes">'+cards+'</div></div>';
+  return '<div aria-busy="true" aria-label="Менюто се зарежда"><div class="sk-row">'+[90,120,150,110].map(function(w){ return '<span class="skel" style="width:'+w+'px"></span>'; }).join("")+'</div>'+sec+sec+'</div>'; }
+function errorHTML(){ return '<div class="empty mempty err" role="alert"><span class="ill">'+SC.ic("warning",40)+'</span><h2 class="h3">Менюто не се зареди</h2><p>Връзката прекъсна, докато зареждахме. Опитайте пак след малко или поръчайте по телефона.</p>'+
+  '<div class="acts"><button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+SC.RESTAURANT.phone+'</a></div></div>'; }
+function render(){ R = results();
+  main.querySelectorAll("[data-menu]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.menu === st.menu)); });
+  filterChips(); notices(); count();
+  if (st.view === "loading"){ R = {groups:[], list:R.list}; navs(); elRes.innerHTML = skeletonHTML(); return; }
+  if (st.view === "error"){ R = {groups:[], list:R.list}; navs(); elRes.innerHTML = errorHTML(); return; }
+  navs();
+  var q = st.q.trim();
+  if (!R.list.length){ elRes.innerHTML = emptyHTML(); return; }
+  elRes.innerHTML = R.groups.map(function(g){ var c = g.c;
+    return '<section class="mcat" id="c-'+c.id+'" data-cat="'+c.id+'" aria-labelledby="h-'+c.id+'">'+
+      '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">'+SC.esc(c.n)+'</h2>'+(st.menu==="main" ? '<a class="link" href="category.html#'+c.id+'" aria-label="Повече за '+SC.esc(c.n)+'">Повече'+SC.ic("caret-right",18)+'</a>' : '')+'</div>'+
+      '<p class="cdesc">'+catDesc(c)+'</p>'+
+      '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>'+
+      '<div class="grid-dishes">'+g.items.map(card).join("")+'</div></section>'; }).join("");
+  requestAnimationFrame(spy); }
+
+/* ---------- scrollspy: sticky chips (phone) and sidebar (desktop) ---------- */
+var active = null, lockUntil = 0;
+function isDesk(){ return SC.device.clientWidth >= 900; }
+function offset(){ return isDesk() ? 120 : 146; }
+function topOf(el){ return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top; }
+function setActive(id, jump){ if (id === active) return; active = id;
+  elCat.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
+  elSide.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
+  var ind = elCat.querySelector(".ind"), chip = id && elCat.querySelector('[data-go="'+id+'"]');
+  if (ind){ ind.classList.toggle("jump", !!jump || !ind.classList.contains("on")); ind.classList.toggle("on", !!chip);
+    if (chip){ var x = chip.offsetLeft, w = chip.offsetWidth;
+      ind.querySelector(".l").style.transform = "translateX("+x+"px)";
+      ind.querySelector(".m").style.transform = "translateX("+(x+24)+"px) scaleX("+Math.max(0,(w-48)/2+1)+")";
+      ind.querySelector(".r").style.transform = "translateX("+(x+w-24)+"px)";
+      if (elBar.offsetParent){ var target = x - (elCat.clientWidth - w)/2; elCat.scrollTo({left:Math.max(0,target), behavior: jump ? "auto" : "smooth"}); } }
+    void ind.offsetWidth; ind.classList.remove("jump"); }
+  var mk = elSide.querySelector(".smark"), sl = id && elSide.querySelector('[data-go="'+id+'"]');
+  if (mk){ mk.classList.toggle("on", !!sl); if (sl) mk.style.transform = "translateY("+sl.offsetTop+"px)"; }
+  if (Date.now() > lockUntil){ st.cat = st.menu === "main" ? id : null; writeHash(); } }
+function spy(){ if (Date.now() < lockUntil) return; var secs = elRes.querySelectorAll(".mcat"), id = null, o = offset() + 8;
+  for (var i=0;i<secs.length;i++){ if (topOf(secs[i]) <= o) id = secs[i].dataset.cat; else break; }
+  if (!id && secs.length && R.groups.length > 1){ /* above the first section: no category is active yet */ }
+  setActive(id); }
+var raf = 0; scroller.addEventListener("scroll", function(){ if (!raf) raf = requestAnimationFrame(function(){ raf = 0; spy(); }); }, {passive:true});
+function goCat(id, instant){ var sec = elRes.querySelector('[data-cat="'+id+'"]'); if (!sec) return;
+  var y = scroller.scrollTop + topOf(sec) - offset() + (isDesk() ? 0 : 0);
+  /* the sticky island needs the header to be collapsed: always land past the hero */
+  lockUntil = Date.now() + (instant ? 50 : 700); st.cat = id; writeHash();
+  setActive(id, instant); active = id;
+  scroller.scrollTo({top:Math.max(0,y), behavior: (instant || SC.reduce) ? "auto" : "smooth"}); }
+
+/* ---------- sheets ---------- */
+function liveBtn(){ var n = results().list.length; return n ? 'Покажи '+plural(n) : 'Няма ястия с тези филтри'; }
+function allergenSheet(){ var items = scopeItems();
+  var rows = SC.ALLERGENS.map(function(a){ var n = items.filter(function(x){ return x.al.indexOf(a[0]) > -1; }).length, on = st.a.indexOf(a[0]) > -1;
+    return '<label class="check"><input type="checkbox" data-al="'+a[0]+'"'+(on?" checked":"")+'><span class="fi">'+SC.ic(a[2],22)+'</span><span class="ft"><b>'+a[1]+'</b><small>'+(n ? "в "+plural(n)+" по състава" : "не е открит в състава")+'</small></span></label>'; }).join("");
+  var nd = items.filter(function(x){ return !x.comp; }).length;
+  var s = SC.sheet({title:"Алергени", html:
+    '<p class="sh-intro">Отметнете какво не ядете. Ще скрием ястията, които го съдържат.</p>'+
+    '<p class="sh-note">'+SC.ic("info",18)+'<span>Алергените са предварителни, от състава. Кухнята ги потвърждава. За '+plural(nd)+' още нямаме състав: показваме ги с бележка „попитайте ни“.</span></p>'+
+    '<div class="flist">'+rows+'</div>'+
+    '<div class="sh-foot"><button class="pill pill-soft" type="button" data-shclear>Изчисти</button><button class="pill pill-red" type="button" data-shgo>'+liveBtn()+'</button></div>'});
+  wireSheet(s, function(inp){ var id = inp.dataset.al; st.a = st.a.filter(function(k){ return k!==id; }); if (inp.checked) st.a.push(id); }, function(){ st.a = []; }); }
+function moreSheet(){ var items = scopeItems();
+  var rows = SC.FILTERS.map(function(f){ var n = f.needs ? 0 : items.filter(f.test).length, on = st.f.indexOf(f.id) > -1, dis = !!f.needs || !n;
+    return '<label class="check'+(dis?" dis":"")+'"><input type="checkbox" data-fx="'+f.id+'"'+(on?" checked":"")+(dis?" disabled":"")+'><span class="fi '+(FICON[f.id]||"")+'">'+SC.ic(f.icon,22)+'</span><span class="ft"><b>'+f.n+'</b><small>'+(f.needs ? "Скоро. Чакаме "+f.needs+" от кухнята." : n ? plural(n) : "Няма такива в това меню")+'</small></span></label>'; }).join("");
+  var s = SC.sheet({title:"Филтри", html:
+    '<p class="sh-intro">Изберете няколко. Показваме ястията, за които важат всички.</p>'+
+    '<div class="flist">'+rows+'</div>'+
+    '<div class="sh-foot"><button class="pill pill-soft" type="button" data-shclear>Изчисти</button><button class="pill pill-red" type="button" data-shgo>'+liveBtn()+'</button></div>'});
+  wireSheet(s, function(inp){ var id = inp.dataset.fx; st.f = st.f.filter(function(k){ return k!==id; }); if (inp.checked) st.f.push(id); }, function(){ st.f = []; }); }
+function wireSheet(s, onToggle, onClear){ var go = s.el.querySelector("[data-shgo]");
+  function upd(){ go.textContent = liveBtn(); writeHash(); render(); }
+  s.el.addEventListener("change", function(e){ if (e.target.matches("input[type=checkbox]")){ onToggle(e.target); upd(); } });
+  s.el.querySelector("[data-shclear]").onclick = function(){ onClear(); s.el.querySelectorAll("input[type=checkbox]:not([disabled])").forEach(function(i){ i.checked = false; }); upd(); };
+  go.onclick = function(){ s.close(); jumpToResults(); }; }
+function jumpToResults(){ var top = scroller.scrollTop + topOf(main.querySelector(".mstat")) - offset() + 40;
+  if (scroller.scrollTop > top) scroller.scrollTo({top:top, behavior: SC.reduce ? "auto" : "smooth"}); }
+
+/* ---------- events ---------- */
+var qt;
+elQ.addEventListener("input", function(){ $("[data-qclear]").hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(function(){ st.q = elQ.value; writeHash(); render(); }, 120); });
+elQ.addEventListener("keydown", function(e){ if (e.key === "Escape" && elQ.value){ e.stopPropagation(); setQ(""); } if (e.key === "Enter"){ elQ.blur(); } });
+function setQ(v){ elQ.value = v; st.q = v; $("[data-qclear]").hidden = !v; writeHash(); render(); }
+$("[data-qclear]").hidden = !st.q;
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t || !main.contains(t)) return;
+  if (t.dataset.go){ e.preventDefault(); goCat(t.dataset.go); return; }
+  if (t.dataset.menu){ if (st.menu !== t.dataset.menu){ st.menu = t.dataset.menu; st.cat = null; writeHash(); render(); jumpToResults(); } return; }
+  if (t.dataset.f){ var id = t.dataset.f; st.f = st.f.indexOf(id) > -1 ? st.f.filter(function(k){ return k!==id; }) : st.f.concat(id); writeHash(); render(); return; }
+  if (t.dataset.arm){ var a = t.dataset.arm; st.a = st.a.filter(function(k){ return k!==a; }); writeHash(); render(); return; }
+  if (t.dataset.sheet === "al"){ allergenSheet(); return; }
+  if (t.dataset.sheet === "more"){ moreSheet(); return; }
+  if (t.hasAttribute("data-clearall")){ st.f = []; st.a = []; writeHash(); render(); return; }
+  if (t.hasAttribute("data-qclear")){ setQ(""); elQ.focus({preventScroll:true}); return; }
+  if (t.dataset.try){ setQ(t.dataset.try); return; }
+  if (t.hasAttribute("data-retry")){ setView("loading"); setTimeout(function(){ setView(navigator.onLine === false ? "offline" : "ok"); }, 900); return; }
+  if (t.dataset.view){ setView(t.dataset.view); return; }
+});
+function setView(v){ st.view = v; main.querySelectorAll("[data-view]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.view === v)); }); render(); }
+window.addEventListener("offline", function(){ setView("offline"); });
+window.addEventListener("online", function(){ if (st.view === "offline"){ setView("ok"); SC.toast("Връзката се върна"); } });
+window.addEventListener("hashchange", function(){ var c = st.cat; st = {menu:"main", f:[], a:[], q:"", cat:null, view:st.view}; readHash(); elQ.value = st.q; render(); if (st.cat && st.cat !== c) goCat(st.cat, true); });
+
+/* ---------- first paint ---------- */
+render();
+if (st.cat) requestAnimationFrame(function(){ goCat(st.cat, true); });
+else if (st.menu === "bf" || st.q || st.f.length || st.a.length) requestAnimationFrame(function(){ jumpToResults(); });
+})();
+</script>
+</body>
+</html>

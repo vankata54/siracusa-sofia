@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Фурната Bertha: скара на дървени въглища | Siracusa Bar & Grill</title>
+<meta name="description" content="Скара на дървени въглища във фурна Bertha в Дружба 2, София. Затворена фурна, равномерна топлина около 250 - 350 °C и опушен вкус. Кебапчета, ребра, стекове Black Angus с доставка или на място.">
+<!-- final URL per master prompt 5: /furna-bertha/ -->
+<link rel="canonical" href="https://siracusa-sofia.com/furna-bertha/">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* bertha.html - page-only styles. Tokens only; dark panels derive every shade from --chip-dark / --on-chip-dark / --ember / --red. */
+
+/* ---------- forced-dark "fire" scope: same look in light and dark theme ---------- */
+.fire{
+  --ink:var(--on-chip-dark);
+  --muted:color-mix(in srgb, var(--on-chip-dark) 74%, var(--chip-dark));
+  --line:color-mix(in srgb, var(--on-chip-dark) 12%, transparent);
+  --line-strong:color-mix(in srgb, var(--on-chip-dark) 34%, transparent);
+  --surface-2:color-mix(in srgb, var(--on-chip-dark) 9%, var(--chip-dark));
+  --steel:color-mix(in srgb, var(--on-chip-dark) 13%, var(--chip-dark));
+  position:relative; isolation:isolate; overflow:hidden; border-radius:var(--r-shell);
+  background:var(--chip-dark); color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--line), var(--shadow);
+}
+.fire .muted{color:var(--muted)}
+.fire .lead{color:var(--muted)}
+.glow{position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--ember) 42%, transparent), color-mix(in srgb, var(--red) 16%, transparent) 58%, transparent);
+  animation:breathe 5.5s ease-in-out 3 alternate}
+@keyframes breathe{from{opacity:.75; transform:scale(.94)} to{opacity:1; transform:scale(1.04)}}
+
+/* ---------- breadcrumbs ---------- */
+.crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:14px 0 8px; font-size:14px; font-weight:600; color:var(--muted)}
+.crumbs a{min-height:48px; display:inline-flex; align-items:center; text-decoration:none; color:var(--muted)}
+.crumbs a:hover{color:var(--ink)}
+.crumbs [aria-current]{color:var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{padding:26px 22px 22px; display:grid; gap:24px; grid-template-areas:"txt" "cta" "vis"}
+.hero .txt{grid-area:txt} .hero .cta{grid-area:cta} .hero .vis{grid-area:vis}
+.hero .glow{width:150%; aspect-ratio:1; left:-25%; top:34%}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; justify-self:start; min-height:36px; padding:0 14px 0 10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:700; font-size:14px}
+.eyebrow .ic{color:var(--ember)}
+.hero .h1{font-size:36px}
+.hero .lead{margin-top:12px; max-width:34em}
+.gauge{position:relative; width:100%; max-width:360px; justify-self:center; aspect-ratio:240/138}
+.gauge svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.g-track{fill:none; stroke:var(--line); stroke-width:12; stroke-linecap:round}
+.g-band{fill:none; stroke:url(#gband); stroke-width:12; stroke-linecap:round}
+.g-tick{stroke:var(--line-strong); stroke-width:1.6; stroke-linecap:round}
+.g-tick.mj{stroke:var(--muted); stroke-width:2.2}
+.g-dot{transform-box:view-box; transform-origin:120px 126px; transform:rotate(157.5deg); animation:sweep 1.7s var(--ease) .35s both}
+@keyframes sweep{from{transform:rotate(0deg)}}
+.g-dot .halo{fill:var(--ember); opacity:.28}
+.g-dot .pin{fill:var(--ember); stroke:var(--chip-dark); stroke-width:3}
+.read{position:absolute; left:0; right:0; bottom:0; display:grid; justify-items:center; line-height:1}
+.read .k{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:6px}
+.read .v{font-size:64px; font-weight:800; letter-spacing:-.05em; font-variant-numeric:tabular-nums; display:flex; align-items:flex-start}
+.read .v small{font-size:26px; letter-spacing:-.02em; margin:6px 0 0 4px; color:var(--ember)}
+.gcap{margin:6px 0 0; text-align:center; font-size:15px; color:var(--muted)}
+.gcap b{color:var(--ink); font-weight:800; white-space:nowrap}
+.cta{display:grid; gap:10px}
+.cta .pill-line{width:100%}
+
+/* ---------- diagram ---------- */
+.dia{padding:8px; display:grid; gap:6px; position:relative}
+.dia .glow{width:110%; aspect-ratio:1; left:-5%; top:-30%; animation:none; opacity:.55}
+.stage{position:relative; border-radius:var(--r-core); padding:52px 4px 4px}
+.stage > svg{display:block; width:100%; height:auto}
+.d-body{fill:var(--steel)}
+.d-edge{fill:none; stroke:var(--line-strong); stroke-width:1.2}
+.d-cav{fill:var(--chip-dark)}
+.d-rack{stroke:var(--muted); stroke-width:3; stroke-linecap:round}
+.d-rack-s{stroke:var(--line-strong); stroke-width:2}
+.d-meat{fill:color-mix(in srgb, var(--red) 46%, var(--chip-dark))}
+.d-sear{stroke:var(--chip-dark); stroke-width:3; stroke-linecap:round; opacity:.8}
+.d-coal-a{fill:var(--red)} .d-coal-b{fill:var(--ember)} .d-coal-c{fill:color-mix(in srgb, var(--red) 55%, var(--chip-dark))}
+.d-flame{fill:var(--ember); transform-box:fill-box; transform-origin:50% 100%; animation:flick 1.6s ease-in-out infinite alternate}
+.d-flame.r{fill:color-mix(in srgb, var(--ember) 45%, var(--red))}
+@keyframes flick{from{transform:scaleY(.82) scaleX(1.04); opacity:.75} to{transform:scaleY(1.08); opacity:1}}
+.d-wall{fill:none; stroke:var(--ember); stroke-width:4}
+.d-wallglow{fill:none; stroke:var(--ember); stroke-width:14; opacity:.35; filter:url(#soft)}
+.d-chev{fill:none; stroke:var(--ember); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; opacity:.18; animation:chev 2.4s linear infinite}
+@keyframes chev{0%,100%{opacity:.18} 18%{opacity:1} 40%{opacity:.18}}
+.d-ray{fill:none; stroke:color-mix(in srgb, var(--ember) 65%, var(--red)); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; animation:ray 2s ease-in-out infinite}
+@keyframes ray{0%,100%{opacity:.3} 50%{opacity:1}}
+.d-temp{fill:var(--ember); font-weight:800; font-size:13px; letter-spacing:.02em}
+.d-smoke{fill:none; stroke:color-mix(in srgb, var(--on-chip-dark) 60%, transparent); stroke-width:2.6; stroke-linecap:round; opacity:0; animation:smoke 3.2s ease-out infinite}
+@keyframes smoke{0%{opacity:0; transform:translateY(6px)} 30%{opacity:.85} 100%{opacity:0; transform:translateY(-14px)}}
+.d-num circle{fill:var(--ember)} .d-num text{fill:var(--on-ember); font-weight:800; font-size:13px}
+.d-num{transition:transform var(--t-slow) var(--ease); transform-box:fill-box; transform-origin:center}
+.layer{transition:opacity var(--t-slow) var(--ease)}
+.stage[data-step]:not([data-step="0"]) .layer{opacity:.16}
+.stage[data-step="1"] .l1,.stage[data-step="2"] .l2,.stage[data-step="3"] .l3,.stage[data-step="4"] .l4{opacity:1}
+.stage[data-step="1"] .n1,.stage[data-step="2"] .n2,.stage[data-step="3"] .n3,.stage[data-step="4"] .n4{transform:scale(1.22)}
+.stage:not(.live) *,.stage.paused *{animation-play-state:paused!important}
+.dtools{position:absolute; top:10px; right:10px; z-index:2}
+.dtools .pill{min-height:44px; padding:0 14px; font-size:15px; background:var(--surface-2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line)}
+.dtools .pill:focus-visible{outline-color:var(--ember)}
+.steps{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.step{width:100%; display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:start; padding:14px 14px 14px 12px; border:0; border-radius:var(--r-core); background:transparent; color:var(--ink); text-align:left; cursor:pointer; transition:background-color var(--t-base) var(--ease)}
+.step .no{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px; background:var(--surface-2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line-strong); transition:transform var(--t-base) var(--ease)}
+.step b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.step span.t{display:block; margin-top:2px; color:var(--muted); font-size:16px; line-height:1.45}
+.step[aria-pressed="true"]{background:var(--surface-2)}
+.step[aria-pressed="true"] .no{background:var(--ember); color:var(--on-ember); box-shadow:none; transform:scale(1.06)}
+.step:focus-visible{outline-color:var(--ember); outline-offset:-3px}
+
+/* ---------- photo / video slots ---------- */
+.slot{position:relative; display:grid; place-items:center; align-content:center; gap:12px; padding:24px; text-align:center; border-radius:var(--r-img); overflow:hidden}
+.slot.v{aspect-ratio:16/10}
+.slot.p{aspect-ratio:4/3}
+.slot .ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--glass); color:var(--ink); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+.slot .ring.red{color:var(--red)}
+.slot .missing{max-width:24em; font-size:15px; color:var(--ink); opacity:.8}
+.slot .tag{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--glass); font-size:14px; font-weight:700; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+.vnote{display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:12px; font-size:14px; color:var(--muted)}
+.vnote span{display:inline-flex; align-items:center; gap:6px}
+
+/* ---------- dishes ---------- */
+.anchor{scroll-margin-top:150px}
+.svc{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); margin-bottom:20px}
+.svc .ic{margin-top:2px}
+.svc b{display:block; font-size:16px; line-height:1.35}
+.svc p{margin:2px 0 0; color:var(--muted); font-size:15px}
+.svc .pill{margin-top:10px; min-height:48px}
+.svc.ok .ic{color:var(--ok)} .svc.warn .ic{color:var(--warn)} .svc.off .ic{color:var(--off)} .svc.err .ic{color:var(--danger)}
+.svc.ok{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line); padding:12px 16px}
+.svc .lines{display:grid; gap:4px}
+.svc .lines span{display:block; font-size:15px; font-weight:600; color:var(--muted)}
+.svc .lines b{display:inline; color:var(--ink); font-size:15px}
+.count{font-size:15px; color:var(--muted); font-weight:600; margin:6px 0 18px}
+.skcard{display:grid; gap:10px}
+.skcard .a{aspect-ratio:1; border-radius:24px}
+.skcard .b{height:18px; width:80%}
+.skcard .c{height:18px; width:45%}
+.err-box .ill{color:var(--danger)}
+.err-box .row{flex-wrap:wrap; justify-content:center}
+.side .rail .dcard{flex-basis:180px}
+.side .lead{margin:-6px 0 14px}
+
+/* ---------- passport + faq ---------- */
+.pp{display:grid; gap:12px}
+.pp .core{padding:6px 18px}
+.pp .kv{display:grid; grid-template-columns:112px 1fr; gap:12px; padding:14px 0; align-items:baseline}
+.pp .kv dt{color:var(--muted); font-size:15px; font-weight:600}
+.pp .kv dd{margin:0; font-weight:700; font-size:16px; line-height:1.4}
+.pp dl{margin:0}
+.faq .core{padding:4px 18px}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 0; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; cursor:pointer; list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{color:var(--muted); transition:transform var(--t-base) var(--ease)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq .ans{margin:0; padding:0 0 18px; color:var(--muted)}
+.faq .ans a{color:var(--red); font-weight:700}
+
+/* ---------- closing ---------- */
+.close{padding:30px 22px 22px; display:grid; gap:14px}
+.close .glow{width:140%; aspect-ratio:1; left:-20%; top:20%; animation:none}
+.close .lead{max-width:30em}
+
+/* ---------- desktop (container queries) ---------- */
+@container app (min-width:700px){
+  .hero{padding:40px}
+  .cta{grid-template-columns:1fr 1fr}
+  .pp{grid-template-columns:1fr 1fr; align-items:stretch}
+  .pp > .shell{display:grid}
+  .pp .slot.p{aspect-ratio:auto; min-height:300px}
+}
+@container app (min-width:900px){
+  .crumbs{margin:20px 0 12px}
+  .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); column-gap:56px; row-gap:0; padding:64px 64px 56px; align-items:center}
+  .hero .glow{width:90%; left:auto; right:-14%; top:-10%}
+  .hero .h1{font-size:60px}
+  .hero .lead{font-size:19px; margin-top:18px}
+  .hero{grid-template-areas:"txt vis" "cta vis"}
+  .hero .gauge{max-width:440px}
+  .hero .cta{margin-top:32px; grid-template-columns:auto auto; justify-content:start}
+  .hero .cta .go{width:auto; min-width:320px}
+  .hero .cta .pill-line{width:auto; min-height:60px; padding:0 26px}
+  .read .v{font-size:88px} .read .v small{font-size:34px; margin-top:10px}
+  .dia{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); padding:10px; gap:10px; align-items:center}
+  .stage{padding:40px 18px 24px}
+  .dtools{top:18px; right:18px}
+  .steps{padding:12px 12px 12px 0}
+  .slot.v{aspect-ratio:21/9}
+  .side .rail{display:grid; grid-template-columns:repeat(4,1fr); overflow:visible; margin:0; padding:0; gap:28px 20px}
+  .side .rail .dcard{flex:auto}
+  .faqwrap{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:56px; align-items:start}
+  .faqwrap .sec-h{position:sticky; top:180px; display:block}
+  .close{grid-template-columns:1fr auto; align-items:center; padding:56px 64px; column-gap:40px}
+  .close .cta{grid-template-columns:auto auto}
+  .close .cta .go{min-width:300px}
+  .close .cta .pill-line{min-height:60px; padding:0 26px}
+}
+@container app (min-width:1100px){
+  .side .rail{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+<script type="application/ld+json" id="ld-crumbs">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"Начало","item":"https://siracusa-sofia.com/"},
+ {"@type":"ListItem","position":2,"name":"Нашата фурна Bertha","item":"https://siracusa-sofia.com/furna-bertha/"}]}
+</script>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var main = SC.mount({page:"bertha", nav:null, title:"Нашата фурна Bertha", docTitle:"Фурната Bertha: скара на дървени въглища"});
+var R = SC.RESTAURANT, st = SC.state(), esc = SC.esc, ic = SC.ic;
+
+/* Prototype-only demo states through the hash: #loading, #error, #offline. #yastia jumps to the dishes. */
+var demo = (location.hash || "").slice(1);
+
+/* ---------- facts (only what hand-off 6.10 and master prompt 11.3 say) ---------- */
+var STEPS = [
+  ["Огънят е затворен", "Дървените въглища горят в затворена камера, а не на открито."],
+  ["Нагрява стените и тавана", "Горещината остава във фурната и нагрява стените и тавана."],
+  ["Топлината идва отвсякъде", "Затова температурата е равномерна: около 250 - 350\u00a0°C."],
+  ["Опушеният вкус", "Идва от дървените въглища. Месото го поема, докато се пече."]
+];
+
+var dishes = SC.inCat("skara-bertha").slice().sort(function(a,b){
+  var r = function(x){ return SC.isOut(x) ? 2 : x.t.indexOf("hit")>-1 ? 0 : 1; }; return r(a) - r(b); });
+var sides = SC.inCat("garnituri");
+
+function zonesText(){
+  var free = SC.ZONES.filter(function(z){ return z.free; }).map(function(z){ return z.n; });
+  var paid = SC.ZONES.filter(function(z){ return !z.free; }).map(function(z){ return z.n; });
+  function list(a){ return a.length > 1 ? a.slice(0,-1).join(", ") + " и " + a[a.length-1] : a[0]; }
+  return "безплатно до " + list(free) + ", а до " + list(paid) + " по тарифа";
+}
+var FAQ = [
+  ["Какво е фурната Bertha?", "Bertha е британска затворена фурна на дървени въглища. Огънят гори в затворена камера, която нагрява стените и тавана. Така топлината идва отвсякъде, а не само отдолу."],
+  ["До колко градуса се нагрява?", "Скарата работи при около 250 - 350\u00a0°C. Камерата е затворена, затова температурата е равномерна."],
+  ["Откъде идва опушеният вкус?", "От дървените въглища. Те горят в същата затворена фурна, в която се пече месото."],
+  ["Кои ястия се приготвят в Bertha?", "Всичко от раздела „Скара Bertha“: " + dishes.map(function(x){ return x.n.charAt(0).toLowerCase() + x.n.slice(1); }).join(", ") + "."],
+  ["Мога ли да поръчам скара за вкъщи?", "Да. Доставяме всеки ден до " + R.delivery + ": " + zonesText() + ". Може да вземете поръчката и от ресторанта до " + R.kitchen + "."],
+  ["Къде е ресторантът?", "Siracusa Bar & Grill е в " + R.address + ". Отворено всеки ден " + R.open + " - " + R.close + ", кухнята приема до " + R.kitchen + "."]
+];
+
+/* ---------- gauge (hero) ---------- */
+function gauge(){
+  var cx=120, cy=126, r=100;
+  function pt(v, rr){ var a=Math.PI*(1-v/400); return [(cx+rr*Math.cos(a)).toFixed(2), (cy-rr*Math.sin(a)).toFixed(2)]; }
+  function arc(v1, v2){ var a=pt(v1,r), b=pt(v2,r); return "M"+a[0]+" "+a[1]+" A"+r+" "+r+" 0 0 1 "+b[0]+" "+b[1]; }
+  var ticks="";
+  for (var v=0; v<=400; v+=25){ var mj = v%100===0, a=pt(v, mj?78:82), b=pt(v, 88); ticks+='<line class="g-tick'+(mj?' mj':'')+'" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>'; }
+  return '<div class="gauge" role="img" aria-label="Работна температура на скарата: около 250 до 350 градуса">'+
+    '<svg viewBox="0 0 240 138" aria-hidden="true"><defs><linearGradient id="gband" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--ember)"/><stop offset="1" style="stop-color:var(--red)"/></linearGradient></defs>'+
+    '<path class="g-track" d="'+arc(0,400)+'"/>'+ticks+'<path class="g-band" d="'+arc(250,350)+'"/>'+
+    '<g class="g-dot"><circle class="halo" cx="20" cy="126" r="17"/><circle class="pin" cx="20" cy="126" r="9"/></g></svg>'+
+    '<div class="read" aria-hidden="true"><span class="k">до</span><span class="v">350<small>°C</small></span></div></div>'+
+    '<p class="gcap">Скарата работи при <b>около 250 - 350 °C</b>,<br>равномерно в цялата фурна.</p>';
+}
+
+/* ---------- oven cross-section (how the heat travels) ---------- */
+function diagram(){
+  var s = '<svg viewBox="22 6 356 284" role="img" aria-labelledby="dtitle ddesc">'+
+    '<title id="dtitle">Как минава топлината във фурната Bertha</title>'+
+    '<desc id="ddesc">Разрез на затворена фурна. Отдолу горят дървени въглища. Топлината се качва по стените и тавана и оттам се връща към месото на скарата отгоре, отстрани и отдолу. Над месото се вдига лек дим, който дава опушения вкус.</desc>'+
+    '<defs><radialGradient id="coalglow" cx=".5" cy=".7" r=".6"><stop offset="0" style="stop-color:var(--ember);stop-opacity:.75"/><stop offset=".55" style="stop-color:var(--red);stop-opacity:.25"/><stop offset="1" style="stop-color:var(--red);stop-opacity:0"/></radialGradient>'+
+    '<filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter></defs>';
+  /* body: flue, shell, legs, chamber */
+  s += '<rect class="d-body" x="88" y="12" width="30" height="50" rx="5"/><rect class="d-edge" x="88" y="12" width="30" height="50" rx="5"/>'+
+       '<rect class="d-body" x="72" y="250" width="16" height="34" rx="4"/><rect class="d-body" x="312" y="250" width="16" height="34" rx="4"/>'+
+       '<rect class="d-body" x="30" y="54" width="340" height="200" rx="24"/><rect class="d-edge" x="30" y="54" width="340" height="200" rx="24"/>'+
+       '<rect class="d-cav" x="52" y="80" width="296" height="152" rx="12"/>';
+  /* L2: walls and ceiling heat up */
+  var ch = "";
+  var up = [[64,206],[64,182],[64,158],[64,134],[64,110]], upR = [[336,206],[336,182],[336,158],[336,134],[336,110]];
+  var ceilL = [[86,94],[112,94],[138,94],[164,94]], ceilR = [[314,94],[288,94],[262,94],[236,94]];
+  function chev(x,y,rot,d){ return '<path class="d-chev" style="animation-delay:'+d.toFixed(2)+'s" transform="translate('+x+' '+y+') rotate('+rot+')" d="M-5 3 L0 -2.5 L5 3"/>'; }
+  up.forEach(function(p,i){ ch += chev(p[0],p[1],0,i*.2); });
+  upR.forEach(function(p,i){ ch += chev(p[0],p[1],0,i*.2); });
+  ceilL.forEach(function(p,i){ ch += chev(p[0],p[1],90,1+i*.2); });
+  ceilR.forEach(function(p,i){ ch += chev(p[0],p[1],-90,1+i*.2); });
+  s += '<g class="layer l2"><rect class="d-wallglow" x="56" y="84" width="288" height="144" rx="10"/><path class="d-wall" d="M54 226 V94 Q54 82 66 82 H334 Q346 82 346 94 V226"/>'+ch+'</g>';
+  /* L1: closed fire on the floor */
+  var coals = [[80,222,9,"a"],[96,218,8,"b"],[112,223,9,"c"],[128,217,8,"a"],[146,222,10,"b"],[164,218,8,"c"],[180,223,9,"a"],[198,217,9,"b"],[216,222,10,"a"],[234,218,8,"c"],[252,223,9,"b"],[270,217,8,"a"],[288,222,10,"c"],[306,218,8,"b"],[322,223,8,"a"]];
+  var flames = [[104,208,"",.0],[150,206,"r",.4],[196,204,"",.8],[242,206,"r",.2],[290,208,"",.6]];
+  s += '<g class="layer l1"><ellipse cx="200" cy="214" rx="160" ry="44" fill="url(#coalglow)"/>'+
+       flames.map(function(f){ return '<path class="d-flame '+f[2]+'" style="animation-delay:'+f[3]+'s" d="M'+f[0]+' '+f[1]+' c-8 -6 -8 -16 0 -26 c2 8 10 10 8 18 c-1 5 -4 8 -8 8z"/>'; }).join("")+
+       coals.map(function(c){ return '<circle class="d-coal-'+c[3]+'" cx="'+c[0]+'" cy="'+c[1]+'" r="'+c[2]+'"/>'; }).join("")+'</g>';
+  /* base: grill rack with meat */
+  s += '<line class="d-rack" x1="74" y1="152" x2="326" y2="152"/>';
+  for (var k=0;k<11;k++) s += '<line class="d-rack-s" x1="'+(84+k*23.2)+'" y1="152" x2="'+(84+k*23.2)+'" y2="158"/>';
+  s += '<rect class="d-meat" x="110" y="134" width="80" height="18" rx="9"/><rect class="d-meat" x="210" y="134" width="80" height="18" rx="9"/>';
+  for (k=0;k<4;k++){ s += '<line class="d-sear" x1="'+(124+k*16)+'" y1="137" x2="'+(130+k*16)+'" y2="149"/><line class="d-sear" x1="'+(224+k*16)+'" y1="137" x2="'+(230+k*16)+'" y2="149"/>'; }
+  /* L3: even heat from every side + temperature */
+  function ray(d, delay){ return '<path class="d-ray" style="animation-delay:'+delay+'s" d="'+d+'"/>'; }
+  s += '<g class="layer l3">'+
+    ray("M150 98 q5 6 0 12 q-5 6 0 12 M145 118 l5 7 l5 -7", 0)+ray("M250 98 q5 6 0 12 q-5 6 0 12 M245 118 l5 7 l5 -7", .3)+
+    ray("M62 143 q6 -5 12 0 q6 5 12 0 q6 -5 12 0 M92 138 l7 5 l-7 5", .6)+ray("M338 143 q-6 -5 -12 0 q-6 5 -12 0 q-6 -5 -12 0 M308 138 l-7 5 l7 5", .9)+
+    ray("M150 196 q5 -6 0 -12 q-5 -6 0 -12 M145 176 l5 -7 l5 7", 1.2)+ray("M250 196 q5 -6 0 -12 q-5 -6 0 -12 M245 176 l5 -7 l5 7", 1.5)+
+    '<text class="d-temp" x="200" y="72" text-anchor="middle">250 - 350 °C</text></g>';
+  /* L4: smoke = flavour */
+  var wisps = [[128,0],[166,1.1],[232,.5],[272,1.6]];
+  s += '<g class="layer l4">'+wisps.map(function(w){ return '<path class="d-smoke" style="animation-delay:'+w[1]+'s" d="M'+w[0]+' 128 c-7 -6 5 -11 0 -17 c-6 -6 5 -10 0 -16"/>'; }).join("")+'</g>';
+  /* numbered markers matching the list */
+  var nums = [[200,243,1],[54,82,2],[200,116,3],[316,118,4]];
+  s += nums.map(function(n){ return '<g class="d-num n'+n[2]+'" aria-hidden="true"><circle cx="'+n[0]+'" cy="'+n[1]+'" r="11"/><text x="'+n[0]+'" y="'+(n[1]+4.5)+'" text-anchor="middle">'+n[2]+'</text></g>'; }).join("");
+  return s + '</svg>';
+}
+
+/* ---------- service note (time-dependent, reads SC.state()) ---------- */
+function service(){
+  var m = st.m;
+  if (demo === "offline" || (navigator.onLine === false)) return '<div class="svc err" role="status">'+ic("warning-circle",24)+'<div><b>Няма връзка с интернет</b><p>Може да добавяте ястия в количката. Поръчката ви е запазена, изпратете я, щом връзката се върне.</p></div></div>';
+  if (m < 600) return '<div class="svc off">'+ic("moon",24)+'<div><b>Затворено · отваряме в '+R.open+'</b><p>Кухнята приема поръчки от '+R.open+' до '+R.kitchen+'. Добавете ястията сега и поръчайте по-късно.</p></div></div>';
+  if (!st.kitchen) return '<div class="svc off">'+ic("moon",24)+'<div><b>Кухнята приема поръчки до '+R.kitchen+'</b><p>Поръчай за утре? Добавете ястията в количката и изберете час от '+R.open+' нататък.</p><a class="pill pill-line" href="cart.html">'+ic("shopping-bag",20)+'Поръчай за утре</a></div></div>';
+  if (!st.delivery) return '<div class="svc warn">'+ic("storefront",24)+'<div><b>Доставката приключи за днес · Вземане до '+R.kitchen+'</b><p>Скарата е готова за вземане след около 20 мин.</p><a class="pill pill-line" href="pickup.html">'+ic("storefront",20)+'Вземи от място</a></div></div>';
+  var e = SC.eta();
+  return '<div class="svc ok">'+ic("check-circle",24)+'<div class="lines"><span>'+(e.busy ? '<b>Доставка сега:</b> '+e.text : '<b>Доставка сега:</b> '+e.text)+'</span><span><b>Вземане от място:</b> след около 20 мин</span></div></div>';
+}
+
+function skeleton(n){ var s=""; for (var i=0;i<n;i++) s+='<div class="skcard" aria-hidden="true"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>'; return s; }
+function dishesBody(){
+  if (demo === "loading") return '<p class="vh" role="status">Зареждаме ястията от фурната</p><div class="grid-dishes">'+skeleton(4)+'</div>';
+  if (demo === "error" || !dishes.length) return '<div class="empty err-box" role="alert"><div class="ill">'+ic("warning-circle",44)+'</div><h3 class="h3">Не успяхме да заредим ястията</h3><p class="muted" style="margin:0;max-width:26em">Проверете връзката и опитайте пак. Може да поръчате и по телефона.</p><div class="row"><button class="pill pill-red" type="button" data-retry>'+ic("arrow-up-right",20)+'Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div></div>';
+  return '<div class="grid-dishes">'+dishes.map(function(x){ return SC.dishCard(x); }).join("")+'</div>';
+}
+
+/* ---------- page ---------- */
+var kitchenOpen = st.kitchen;
+var ctaText = kitchenOpen ? "Поръчай от скарата" : "Виж ястията от скарата";
+var nOut = dishes.filter(SC.isOut).length;
+
+main.innerHTML =
+  /* breadcrumbs + hero */
+  '<div class="wrap"><nav class="crumbs" aria-label="Къде сте"><a href="home.html">Начало</a>'+ic("caret-right",14)+'<span aria-current="page">Нашата фурна Bertha</span></nav>'+
+  '<section class="fire hero" aria-labelledby="h1"><div class="glow"></div>'+
+    '<div class="txt"><span class="eyebrow">'+ic("fire",18)+'Нашата фурна Bertha</span>'+
+    '<h1 class="h1" id="h1" style="margin-top:16px">Скара на дървени въглища във фурна Bertha</h1>'+
+    '<p class="lead">Bertha е британска затворена фурна. Огънят нагрява стените и тавана, затова месото се пече равномерно и поема опушения вкус на въглищата.</p></div>'+
+    '<div class="vis">'+gauge()+'</div>'+
+    '<div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">'+ctaText+'<span class="knob">'+ic("arrow-right",22)+'</span></button>'+
+    '<a class="pill pill-line pill-lg" href="reservation.html">'+ic("calendar-blank",20)+'Резервирай маса</a></div>'+
+  '</section></div>'+
+
+  /* how it works */
+  '<section class="sec rv" aria-labelledby="h-how"><div class="sec-h" style="display:block"><h2 class="h2" id="h-how">Как минава топлината</h2><p class="lead" style="margin-top:8px">Четири стъпки от въглищата до чинията.</p></div>'+
+  '<div class="fire dia"><div class="glow"></div><div class="dtools"><button class="pill" type="button" data-play>'+ic("pause",18)+'<span>Пауза</span></button></div><div class="stage" data-step="1">'+diagram()+'</div>'+
+  '<ol class="steps" aria-label="Стъпките на диаграмата">'+STEPS.map(function(s,i){ return '<li><button class="step" type="button" data-step="'+(i+1)+'" aria-pressed="'+(i===0)+'"><span class="no">'+(i+1)+'</span><span><b>'+s[0]+'</b><span class="t">'+s[1]+'</span></span></button></li>'; }).join("")+'</ol></div></section>'+
+
+  /* video slot */
+  '<section class="sec rv" aria-labelledby="h-vid"><div class="sec-h" style="display:block"><h2 class="h2" id="h-vid">Фурната в действие</h2><p class="lead" style="margin-top:8px">Въглищата, скарата и готовите ястия отблизо.</p></div>'+
+  '<div class="shell"><div class="slot v pic"><span class="ring red">'+ic("play",30)+'</span><span class="missing">[ЛИПСВА: видео от фурната Bertha от новата фотосесия]</span><span class="tag">'+ic("video-camera",16)+'Видео</span></div></div>'+
+  '<p class="vnote"><span>'+ic("info",16)+'Без звук, с постер и бутон „Пауза“</span><span>'+ic("eye",16)+'Зарежда се, когато стигнете до него</span></p></section>'+
+
+  /* dishes */
+  '<section class="sec rv anchor" id="yastia" aria-labelledby="h-dish"><div class="sec-h"><h2 class="h2" id="h-dish">Ястията от фурната</h2><a class="link" href="category.html#skara-bertha">Категорията'+ic("caret-right",18)+'</a></div>'+
+  '<p class="count">'+SC.plural(dishes.length,"ястие","ястия")+' от скарата на дървени въглища'+(nOut?' · '+nOut+' изчерпано днес':'')+'. Цените са с ДДС.</p>'+
+  '<div data-svc>'+service()+'</div><div data-dishes aria-live="polite">'+dishesBody()+'</div></section>'+
+
+  /* sides */
+  '<section class="sec rv side" aria-labelledby="h-side"><div class="sec-h"><h2 class="h2" id="h-side">Към скарата</h2><a class="link" href="category.html#garnituri">Гарнитури'+ic("caret-right",18)+'</a></div>'+
+  '<p class="lead">Гарнитура и сос, за да е пълна чинията.</p><div class="rail">'+sides.map(function(x){ return SC.dishCard(x); }).join("")+'</div>'+
+  '<p class="muted small" style="margin:10px 0 0">Сосовете са в <a class="link" style="min-height:0;display:inline" href="category.html#sosove">категория Сосове</a>.</p></section>'+
+
+  /* passport */
+  '<section class="sec rv" aria-labelledby="h-pp"><div class="sec-h" style="display:block"><h2 class="h2" id="h-pp">Фурната накратко</h2></div>'+
+  '<div class="pp"><div class="shell"><div class="slot p pic"><span class="ring">'+ic("image",30)+'</span><span class="missing">[ЛИПСВА: снимка на нашата Bertha от новата фотосесия]</span><span class="tag">'+ic("images",16)+'Снимка</span></div></div>'+
+  '<div class="shell"><div class="core"><dl>'+
+    '<div class="kv"><dt>Вид</dt><dd>Затворена фурна на дървени въглища</dd></div>'+
+    '<div class="kv"><dt>Марка</dt><dd>Bertha, Великобритания</dd></div>'+
+    '<div class="kv"><dt>Модел</dt><dd><span class="missing">[ЛИПСВА: модел на фурната]</span></dd></div>'+
+    '<div class="kv"><dt>Гориво</dt><dd>Дървени въглища</dd></div>'+
+    '<div class="kv"><dt>Температура</dt><dd class="price">около 250 - 350 °C</dd></div>'+
+    '<div class="kv"><dt>Топлина</dt><dd>Равномерна, от стените и тавана</dd></div>'+
+    '<div class="kv"><dt>Вкус</dt><dd>Опушен, от въглищата</dd></div>'+
+  '</dl></div></div></div></section>'+
+
+  /* FAQ */
+  '<section class="sec rv faqwrap" aria-labelledby="h-faq"><div class="sec-h"><div><h2 class="h2" id="h-faq">Често задавани въпроси</h2><p class="lead" style="margin-top:8px">За фурната, скарата и поръчките.</p></div></div>'+
+  '<div class="shell faq"><div class="core">'+FAQ.map(function(q,i){ return '<details'+(i===0?' open':'')+'><summary>'+esc(q[0])+ic("caret-down",22)+'</summary><p class="ans">'+esc(q[1])+'</p></details>'; }).join("")+'</div></div></section>'+
+
+  /* closing */
+  '<section class="sec rv" aria-labelledby="h-close"><div class="fire close"><div class="glow"></div><div><h2 class="h2" id="h-close">Опитайте скарата Bertha</h2><p class="lead" style="margin-top:10px">Поръчайте за вкъщи или елате на маса в Дружба 2. Салонът и отоплената градина работят всеки ден.</p></div>'+
+  '<div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">'+ctaText+'<span class="knob">'+ic("arrow-up-right",22)+'</span></button><a class="pill pill-line pill-lg" href="reservation.html">'+ic("calendar-blank",20)+'Резервирай маса</a></div></div></section>';
+
+/* ---------- FAQ structured data (built from the same array as the visible answers) ---------- */
+var ld = document.createElement("script"); ld.type = "application/ld+json";
+ld.textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":FAQ.map(function(q){ return {"@type":"Question","name":q[0],"acceptedAnswer":{"@type":"Answer","text":q[1]}}; })});
+document.head.appendChild(ld);
+
+/* ---------- interactions ---------- */
+var scroller = SC.scroller;
+function goTo(id){ var el = document.getElementById(id); if (el) el.scrollIntoView({behavior: SC.reduce ? "auto" : "smooth", block:"start"}); }
+main.addEventListener("click", function(e){
+  var t = e.target.closest("[data-to],[data-retry]"); if (!t) return;
+  if (t.dataset.to) goTo(t.dataset.to);
+  if (t.hasAttribute("data-retry")){ demo = ""; var box = main.querySelector("[data-dishes]"); box.innerHTML = '<div class="grid-dishes">'+skeleton(4)+'</div>'; setTimeout(function(){ box.innerHTML = dishesBody(); }, 500); }
+});
+
+/* diagram: auto-advances while visible; tap a step to stop on it; "Пауза" stops motion (WCAG 2.2.2) */
+var stage = main.querySelector(".stage"), stepBtns = main.querySelectorAll(".step"), playBtn = main.querySelector("[data-play]");
+var cur = 1, playing = !SC.reduce, timer = null, visible = false;
+function setStep(n){ cur = n; stage.dataset.step = n; stepBtns.forEach(function(b){ b.setAttribute("aria-pressed", String(+b.dataset.step === n)); }); }
+function renderPlay(){ playBtn.innerHTML = ic(playing ? "pause" : "play", 18) + "<span>" + (playing ? "Пауза" : "Пусни") + "</span>"; playBtn.setAttribute("aria-label", playing ? "Пауза на анимацията" : "Пусни анимацията"); stage.classList.toggle("paused", !playing); }
+function tick(){ clearTimeout(timer); if (playing && visible) timer = setTimeout(function(){ setStep(cur % 4 + 1); tick(); }, 3800); }
+stepBtns.forEach(function(b){ b.addEventListener("click", function(){ playing = false; renderPlay(); clearTimeout(timer); setStep(+b.dataset.step); }); });
+playBtn.addEventListener("click", function(){ playing = !playing; renderPlay(); tick(); });
+renderPlay();
+if ("IntersectionObserver" in window){
+  new IntersectionObserver(function(es){ visible = es[0].isIntersecting; stage.classList.toggle("live", visible); tick(); }, {root:scroller, threshold:.35}).observe(stage);
+} else { visible = true; stage.classList.add("live"); tick(); }
+
+/* live connection state */
+function refreshSvc(){ var b = main.querySelector("[data-svc]"); if (b) b.innerHTML = service(); }
+window.addEventListener("offline", refreshSvc); window.addEventListener("online", refreshSvc);
+
+SC.reveal();
+if (demo === "yastia") setTimeout(function(){ goTo("yastia"); }, 60);
+})();
+</script>
+</body>
+</html>

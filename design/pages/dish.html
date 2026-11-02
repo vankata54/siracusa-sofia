@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ястие | Siracusa Bar & Grill</title>
+<meta name="description" content="Ястие от менюто на Siracusa Bar & Grill, Дружба 2: състав, алергени, добавки и поръчка с доставка или вземане.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* ---------- dish page (page-only styles, tokens only) ---------- */
+
+/* header: the dish name fades into the back bar once the H1 scrolls away */
+.top.back .ttl{opacity:0; transform:translateY(6px); transition:opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease)}
+.top.back .ttl.on{opacity:1; transform:none}
+
+.dish{padding:12px 16px 0}
+.dgrid{display:grid; gap:20px}
+
+/* hero visual */
+.hero{position:relative}
+.hero .core{position:relative}
+.hero .pic{aspect-ratio:4/3; border-radius:var(--r-img); touch-action:pan-y}
+.hero .pic::before{content:""; position:absolute; inset:0; background:radial-gradient(60% 55% at 50% 52%, var(--ember-soft), transparent 70%); pointer-events:none}
+.hero .pic > svg{inset:4% 0; width:100%; height:92%; transform-origin:50% 50%; animation:arrive 900ms var(--ease) both}
+@keyframes arrive{from{opacity:0; transform:rotate(-28deg) scale(.9)} to{opacity:1; transform:none}}
+.hero .badges.onpic{top:14px; right:14px}
+.hero .badges.onpic .badge{min-height:32px; padding:7px 12px 7px 10px}
+.v3d{position:absolute; left:12px; bottom:12px; z-index:3; display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:0 18px 0 14px; border:0; border-radius:var(--r-pill); background:var(--glass); color:var(--ink); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-weight:700; font-size:16px; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.v3d:active{transform:scale(.96)}
+.v3d[aria-busy="true"]{cursor:progress}
+.v3d .spin{width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 2.5px var(--line-strong); border-top:2.5px solid var(--ink); animation:spin 800ms linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero .pic.loading > svg{animation:breathe 900ms var(--ease) infinite alternate}
+@keyframes breathe{from{opacity:1} to{opacity:.55}}
+.hero .pic.is3d{cursor:grab}
+.hero .pic.is3d:active{cursor:grabbing}
+.hero .pic.is3d > svg{animation:none}
+.hint3d{position:absolute; left:50%; top:14px; z-index:3; transform:translate(-50%,-8px); opacity:0; display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 14px; border-radius:var(--r-pill); background:var(--chip-dark); color:var(--on-chip-dark); font-size:14px; font-weight:700; pointer-events:none; transition:opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease); white-space:nowrap}
+.hint3d.on{opacity:1; transform:translate(-50%,0)}
+.note3d{margin:10px 6px 2px; font-size:14px}
+
+/* info column */
+.crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:2px; list-style:none; margin:0 0 2px; padding:0; font-size:15px; font-weight:700; color:var(--muted)}
+.crumbs li{display:flex; align-items:center; gap:2px}
+.crumbs a{min-height:44px; display:inline-flex; align-items:center; text-decoration:none; color:var(--muted); padding:0 2px}
+.crumbs a:hover{color:var(--ink)}
+.crumbs .ic{opacity:.6}
+.dish .h1{font-size:36px}
+.prow2{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px}
+.prow2 .pg{display:flex; align-items:baseline; gap:12px; min-width:0}
+.prow2 .price{font-size:30px; letter-spacing:-.03em}
+.prow2 .g{font-size:17px; color:var(--muted); font-weight:600; white-space:nowrap}
+.sharebtn{min-height:48px; padding:0 4px 0 12px; color:var(--ink)}
+.prow2 .badges{justify-content:flex-end}
+.dietlbl{margin:0 0 8px; font-size:14px; font-weight:700; color:var(--muted)}
+.desc{margin:14px 0 0; font-size:16px}
+.closednote{margin-top:14px; padding:12px 16px; border-radius:var(--r-field); background:var(--surface-2); color:var(--ink); font-size:15px; font-weight:600; display:flex; gap:10px; align-items:flex-start}
+.closednote .ic{color:var(--warn); margin-top:1px}
+
+/* "Добавки и промени" opener */
+.modbtn{margin-top:18px; width:100%; display:grid; grid-template-columns:52px 1fr 20px; align-items:center; gap:14px; min-height:72px; padding:10px 20px 10px 10px; border:0; border-radius:var(--r-pill); background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.modbtn:active{transform:scale(.985)}
+.modbtn .ico{width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.modbtn .tl{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.modbtn b{display:block; font-size:17px; line-height:1.25}
+.modbtn .xp{display:block; margin-top:2px; font-weight:800; font-size:15px; font-variant-numeric:tabular-nums; white-space:nowrap}
+.modbtn .sub{display:block; font-size:14px; color:var(--muted); font-weight:600; line-height:1.35; margin-top:2px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+.modbtn.has .sub{color:var(--ink)}
+.modbtn .end{display:grid; place-items:center; color:var(--muted)}
+
+/* sold out notice */
+.soldout{margin-top:18px; display:flex; gap:14px; align-items:center; padding:14px 18px 14px 14px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.soldout .ico{width:48px; height:48px; flex:none; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--warn)}
+.soldout b{display:block; font-size:17px; color:var(--warn)}
+.soldout span{font-size:15px; color:var(--muted)}
+
+/* inline buy box (desktop only; phone uses the floating .abar) */
+.buy{display:none; margin-top:14px; gap:10px; align-items:center}
+.buy .pill{flex:1}
+
+/* facts card: composition, allergens, nutrition */
+.fcard{margin-top:24px}
+.fcard .core{padding:4px 20px}
+.fblk{padding:18px 0}
+.fblk + .fblk{border-top:1px solid var(--line)}
+.fblk .h3{margin-bottom:10px}
+.comp{margin:0; font-size:17px; line-height:1.6}
+.comp .dot{color:var(--muted); padding:0 7px; font-weight:800}
+.algs{display:flex; flex-wrap:wrap; gap:10px 18px; margin:2px 0 12px}
+.alg{display:inline-flex; align-items:center; gap:10px; font-weight:700; font-size:16px}
+.alg .ico{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.alg.diet .ico{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line)}
+.alg.diet .ic{color:var(--ok)}
+.alg.diet .ico{width:36px; height:36px}
+.algnone{margin:0 0 12px; font-size:16px; font-weight:600}
+.fblk .link{min-height:44px; margin-top:4px}
+.ask{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+details.nutr{padding:0}
+details.nutr summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; cursor:pointer; font-weight:800; font-size:20px; letter-spacing:-.02em}
+details.nutr summary::-webkit-details-marker{display:none}
+details.nutr summary .ic{transition:transform var(--t-base) var(--ease)}
+details.nutr[open] summary .ic{transform:rotate(180deg)}
+details.nutr .kv{font-size:16px}
+details.nutr .kv span:first-child{font-weight:600}
+.nbody{padding-bottom:16px}
+
+/* pairing / similar cards */
+.pairs{display:grid; gap:10px}
+.pcard{display:grid; grid-template-columns:76px 1fr 48px; gap:14px; align-items:center; padding:10px 12px 10px 10px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.pcard .open{display:contents; color:inherit; text-decoration:none}
+.pcard .pic{width:76px; height:76px; border-radius:18px}
+.pcard .eb{display:block; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.pcard .nm{display:block; font-weight:700; font-size:16px; line-height:1.25; margin-top:2px}
+.pcard .meta{display:flex; gap:10px; align-items:baseline; margin-top:4px; font-size:15px}
+.subsec{margin-top:28px}
+.subsec .h3{margin-bottom:12px}
+
+/* modifier sheet */
+.mgrp{padding:6px 0 14px}
+.mgrp + .mgrp{border-top:1px solid var(--line); padding-top:16px}
+.mgrp-h{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:4px}
+.mgrp-h h3{margin:0; font-size:19px; letter-spacing:-.02em}
+.mgrp-h span{font-size:14px; color:var(--muted); font-weight:600}
+.mrow{display:grid; grid-template-columns:24px 1fr auto; gap:14px; align-items:center; min-height:52px; padding:4px 0; cursor:pointer; font-size:16px; font-weight:600}
+.mrow + .mrow{border-top:1px solid var(--line)}
+.mrow input{width:24px; height:24px; margin:0; accent-color:var(--red)}
+.mrow .pr{font-variant-numeric:tabular-nums; font-weight:700; color:var(--muted); white-space:nowrap}
+.mrow input:checked ~ .pr{color:var(--ink)}
+.mrow input:checked + span{font-weight:800}
+.mempty{margin:6px 0 0; font-size:15px; color:var(--muted)}
+.mfoot{flex:none; display:grid; gap:8px; padding-top:12px; border-top:1px solid var(--line); margin:0 -18px; padding-left:18px; padding-right:18px}
+.mfoot .tot{display:flex; justify-content:space-between; font-size:15px; font-weight:700; color:var(--muted)}
+.mfoot .tot b{color:var(--ink); font-variant-numeric:tabular-nums}
+.mfoot .row .pill{flex:1}
+.mfoot .link{min-height:48px; justify-content:center; color:var(--muted)}
+.mfoot .link[hidden]{display:none}
+
+/* sticky action bar */
+.dish-abar .counter{background:var(--surface-2)}
+.dish-abar .pill .q, .buy .pill .q{opacity:.85; font-weight:700}
+.pill.done{background:var(--ok); color:#fff}
+.abar.out .soldlbl{flex:none; display:inline-flex; align-items:center; gap:8px; padding:0 6px 0 12px; font-weight:800; font-size:16px; color:var(--warn); white-space:nowrap}
+
+/* not found */
+.nf{padding:40px 16px 0}
+.nf .empty{padding:24px 0 8px}
+.nf .ill{width:132px; height:132px; color:var(--muted); background:var(--surface); box-shadow:0 0 0 14px var(--surface-2), inset 0 0 0 1px var(--line); margin-bottom:18px}
+.nf .btns{display:grid; gap:10px; width:100%; max-width:360px; margin-top:6px}
+
+@container app (max-width:899px){
+  .device[data-page="dish"] .foot{padding-bottom:200px}
+}
+@container app (min-width:700px){
+  .pairs.cols{grid-template-columns:repeat(3,1fr)}
+}
+@container app (min-width:900px){
+  .dish{padding:28px max(40px, calc((100% - 1200px)/2)) 0}
+  .dgrid{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr); gap:56px; align-items:start}
+  .hero{position:sticky; top:176px}
+  .dish .h1{font-size:52px}
+  .prow2 .price{font-size:34px}
+  .buy{display:flex}
+  .dish-abar{display:none}
+  .aifab.up{bottom:24px}
+  .nf{padding-top:72px}
+  .sheet .mfoot{margin:0 -18px}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var esc = SC.esc, ic = SC.ic, fmt = SC.fmt;
+/* Categories where "Добави" makes sense (pizza toppings, cheese, prosciutto...). Owner to confirm (see review). */
+var ADDON_CATS = ["pitsi","burgeri","pasta-i-rizoto","salati","zakuski"];
+var ADDONS = SC.inCat("dobavki").slice().sort(function(a,b){ return b.p-a.p; });
+var ICON_OF = {}; SC.ALLERGENS.forEach(function(a){ ICON_OF[a[0]] = a[2]; });
+
+var main = SC.mount({page:"dish", nav:"menu", back:{href:"menu.html", label:"Меню"}, title:"", actionBar:true});
+var top = SC.scroller.querySelector(".top.back"), ttl = top.querySelector(".ttl"), backA = top.querySelector("a.hb");
+/* share as icon + word (rule: icon always with a word) */
+top.querySelector(".hact").innerHTML = '<button class="hb" type="button" data-share>'+ic("export",20)+'Сподели</button>';
+
+var x, cat, qty, rem, add, ttlObs;
+
+function catOf(d){ if (d.cat==="obedno") return {id:"obedno", n:"Обедно меню", href:"lunch.html", back:"lunch.html"};
+  var c = SC.catById[d.cat] || {id:d.cat, n:"Меню"}; return {id:c.id, n:c.n, href:"category.html#"+c.id, back:"menu.html#"+c.id}; }
+function compList(d){ return d.comp ? d.comp.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : []; }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function canAdd(d){ return ADDON_CATS.indexOf(d.cat)>-1; }
+function hasMods(d){ return !SC.isOut(d) && (compList(d).length>0 || canAdd(d)); }
+function extra(){ return ADDONS.filter(function(a){ return add[a.id]; }).reduce(function(s,a){ return s+a.p; },0); }
+function modsList(){ var m = [];
+  compList(x).forEach(function(c,i){ if (rem[i]) m.push("без "+c); });
+  ADDONS.forEach(function(a){ if (add[a.id]) m.push("+ "+a.n); });
+  return m; }
+function unit(){ return x.p + extra(); }
+
+/* ---------- small components ---------- */
+function pairCard(d, label){
+  return '<div class="pcard"><a class="open" href="dish.html#'+d.id+'">'+SC.pic(d)+'<span><span class="eb">'+esc(label)+'</span><span class="nm">'+esc(d.n)+'</span><span class="meta"><span class="price">'+fmt(d.p)+'</span><span class="muted small">'+esc(d.g)+'</span></span></span></a>'+SC.plusBtn(d)+'</div>'; }
+function similar(d){ var pool = SC.inCat(d.cat).filter(function(z){ return z.id!==d.id && !SC.isOut(z); });
+  if (pool.length < 3) pool = pool.concat(SC.items.filter(function(z){ return z.id!==d.id && !SC.isOut(z) && z.course===d.course && z.cat!==d.cat && pool.indexOf(z)<0; }));
+  return pool.sort(function(a,b){ return Math.abs(a.p-d.p)-Math.abs(b.p-d.p); }).slice(0,3); }
+
+function modSummary(){ var m = modsList(), e = extra();
+  if (!m.length) return {has:false, sub: compList(x).length && canAdd(x) ? "Махнете съставка или добавете още сирене, прошуто, гъби" : compList(x).length ? "Махнете съставка, която не искате. Безплатно." : "Добавете сирене, прошуто, гъби и още", xp:""};
+  return {has:true, sub:cap(m.join(" · ")), xp:e?'+'+fmt(e):''}; }
+
+function allergenBlock(d){ var al = d.al || [], diet = [];
+  if (d.t.indexOf("veg")>-1) diet.push(["leaf","Вегетарианско"]);
+  if (d.noOnion) diet.push(["check","Без лук"]);
+  var items = al.map(function(k){ return '<li class="alg"><span class="ico">'+ic(ICON_OF[k]||"info",22)+'</span>'+esc(SC.allergenName(k))+'</li>'; }).join("");
+  var h = '<div class="fblk"><h2 class="h3">Алергени</h2>';
+  if (!d.comp){
+    h += (al.length ? '<p class="algnone" style="margin-bottom:8px">Съдържа поне:</p><ul class="algs" style="list-style:none;padding:0">'+items+'</ul>' : '')+
+      '<p class="algnone">'+(al.length?'Пълни данни за алергените още нямаме.':'Няма данни за алергени, попитайте ни.')+'</p>'+
+      '<p class="note-auto" style="margin:0">'+ic("info",18)+'<span>Кухнята въвежда състава и алергените на това ястие. Дотогава ви казваме по телефона.</span></p>'+
+      '<div class="ask"><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Попитай: 0894 36 55 77</a></div>';
+  } else {
+    h += (al.length ? '<ul class="algs" style="list-style:none;padding:0" aria-label="Съдържа">'+items+'</ul>' : '<p class="algnone">По състава не открихме от 14-те основни алергена.</p>')+
+      (diet.length ? '<p class="dietlbl">Също по състава:</p><ul class="algs" style="list-style:none;padding:0" aria-label="По състава">'+diet.map(function(z){ return '<li class="alg diet"><span class="ico">'+ic(z[0],20)+'</span>'+z[1]+'</li>'; }).join("")+'</ul>' : '')+
+      '<p class="note-auto" style="margin:0">'+ic("info",18)+'<span>Предварително, от състава. Потвърждава се от кухнята.</span></p>';
+  }
+  return h + '<a class="link" href="allergens.html">Всички алергени в менюто'+ic("caret-right",18)+'</a></div>'; }
+
+function factsCard(d){ var c = compList(d);
+  return '<div class="shell fcard"><div class="core">'+
+    '<div class="fblk"><h2 class="h3">Състав</h2>'+(c.length ? '<p class="comp">'+c.map(function(s,i){ return esc(i?s:cap(s)); }).join('<span class="dot" aria-hidden="true">·</span>')+'</p>' : '<p class="comp"><span class="missing">[ЛИПСВА: състав от кухнята]</span></p>')+'</div>'+
+    allergenBlock(d)+
+    '<div class="fblk"><details class="nutr"><summary>Хранителна информация'+ic("caret-down",22)+'</summary><div class="nbody">'+
+      [["Енергия","ккал"],["Белтъчини","г"],["Въглехидрати","г"],["от тях захари","г"],["Мазнини","г"],["Сол","г"]].map(function(r){ return '<div class="kv"><span>'+r[0]+'</span><span class="missing">[ЛИПСВА]</span></div>'; }).join("")+
+      '<p class="note-auto" style="margin-top:8px">'+ic("info",18)+'<span>На порция '+esc(d.g||"")+'. Стойностите идват, когато кухнята ги въведе.</span></p></div></details></div>'+
+  '</div></div>'; }
+
+function buyHTML(){ var t = unit()*qty;
+  return '<div class="counter" role="group" aria-label="Брой"><button type="button" data-q="-1" aria-label="Едно по-малко"'+(qty<=1?' disabled style="opacity:.4;cursor:not-allowed"':'')+'>'+ic("minus",20)+'</button><output aria-live="polite">'+qty+'</output><button type="button" data-q="1" aria-label="Едно повече">'+ic("plus",20)+'</button></div>'+
+    '<button class="pill pill-red pill-lg" type="button" data-buy><span>Добави'+(qty>1?' <span class="q">'+qty+' бр.</span>':'')+' · <span class="price">'+fmt(t)+'</span></span></button>'; }
+
+/* ---------- render ---------- */
+function render(){
+  var id = decodeURIComponent((location.hash||"").slice(1));
+  x = id ? SC.byId[id] : null; qty = 1; rem = {}; add = {};
+  SC.ov.querySelectorAll(".dish-abar, .sheetwrap").forEach(function(n){ n.remove(); });
+  if (ttlObs) ttlObs.disconnect();
+  var fab = SC.ov.querySelector(".aifab"); if (fab) fab.classList.toggle("up", !!x);
+  if (!x) return notFound(id);
+  cat = catOf(x);
+  var out = SC.isOut(x), sug = out ? [] : SC.suggest(x.id, SC.cart.lines().map(function(l){ return l.id; }));
+  ttl.textContent = x.n; backA.href = cat.back;
+  backA.innerHTML = ic("arrow-left",20)+"Меню";
+  document.title = x.n + " | " + cat.n + " | Siracusa Bar & Grill";
+  setMeta(x);
+
+  var facts = [];
+  if (x.share) facts.push('<span class="badge">'+ic("users-three",16)+'За споделяне</span>');
+  if (x.cat==="skara-bertha") facts.push('<span class="badge">'+ic("fire",16)+'От фурната Bertha</span>');
+
+  var st = SC.state(), closed = !st.kitchen;
+  var info =
+    '<nav aria-label="Хлебни трохи"><ol class="crumbs"><li><a href="menu.html">Меню</a></li><li>'+ic("caret-right",16)+'<a href="'+cat.href+'">'+esc(cat.n)+'</a></li></ol></nav>'+
+    '<h1 class="h1" data-h1>'+esc(x.n)+'</h1>'+
+    '<div class="prow2"><span class="pg"><span class="price">'+fmt(x.p)+'</span>'+(x.g?'<span class="g">'+esc(x.g)+'</span>':'')+'</span>'+(facts.length ? '<span class="badges">'+facts.join("")+'</span>' : '')+'</div>'+
+    (closed && !out ? '<div class="closednote">'+ic("clock",20)+'<span>'+(st.m<600?'Кухнята отваря в 10:00. Добавете сега и поръчайте, когато отворим.':'Кухнята приема поръчки до 22:30. Добавете сега и поръчайте за утре.')+'</span></div>' : '')+
+    (out
+      ? '<div class="soldout" role="status"><span class="ico">'+ic("clock",24)+'</span><span><b>Изчерпано днес</b><span>Вижте подобни ястия, които имаме сега.</span></span></div>'+
+        '<section class="subsec" id="similar" aria-labelledby="simh"><h2 class="h3" id="simh">Вижте подобни</h2><div class="pairs">'+similar(x).map(function(z){ return pairCard(z, SC.catById[z.cat] ? SC.catById[z.cat].n : ""); }).join("")+'</div></section>'
+      : (hasMods(x) ? '<button class="modbtn" type="button" data-mods aria-haspopup="dialog"></button>' : '')+
+        '<div class="buy" data-buybox></div>')+
+    '<p class="desc"><span class="missing">[ЛИПСВА: описание на ястието - как се приготвя и с какво върви]</span></p>'+
+    factsCard(x);
+
+  main.innerHTML =
+    '<article class="dish" itemscope>'+
+      '<div class="dgrid">'+
+        '<div class="hero"><div class="shell"><div class="core">'+SC.pic(x)+SC.badges(x,true)+
+          (out ? '' : '<button class="v3d" type="button" data-3d>'+ic("cube",20)+'Виж в 3D</button>')+
+          '<span class="hint3d" aria-hidden="true">'+ic("hand-waving",18)+'Завъртете с пръст</span>'+
+        '</div></div><p class="note3d muted" data-note3d hidden>Прототип: истинският 3D модел идва след фотосесията. <span class="missing">[ЛИПСВА: 3D модел]</span></p></div>'+
+        '<div class="info">'+info+'</div>'+
+      '</div>'+
+    '</article>'+
+    (sug.length ? '<section class="sec" aria-labelledby="pairh"><div class="sec-h"><h2 class="h2" id="pairh">Върви добре с</h2></div><div class="pairs cols">'+sug.map(function(s){ return pairCard(SC.byId[s.id], SC.COURSE_NAME[s.c]||""); }).join("")+'</div></section>' : '');
+
+  /* floating action bar (phone); desktop uses the inline .buy box */
+  var bar = document.createElement("div");
+  bar.className = "abar dish-abar"+(out?" out":"");
+  if (out) bar.innerHTML = '<span class="soldlbl">'+ic("clock",20)+'Изчерпано днес</span><a class="pill pill-red" href="#similar" data-tosim>Вижте подобни</a>';
+  SC.ov.insertBefore(bar, SC.ov.firstChild);
+  if (out) bar.querySelector("[data-tosim]").onclick = function(e){ e.preventDefault(); var s = main.querySelector("#similar"); if (s) SC.scroller.scrollTo({top:s.getBoundingClientRect().top - SC.scroller.getBoundingClientRect().top + SC.scroller.scrollTop - 150, behavior:SC.reduce?"auto":"smooth"}); };
+  paint();
+  SC.scroller.scrollTop = 0;
+  watchTitle();
+  jsonLd(x);
+}
+
+function paint(){
+  if (!x || SC.isOut(x)) return;
+  var mb = main.querySelector("[data-mods]");
+  if (mb){ var s = modSummary(); mb.classList.toggle("has", s.has);
+    mb.innerHTML = '<span class="ico">'+ic("sliders-horizontal",24)+'</span><span><b>Добавки и промени</b><span class="sub">'+esc(s.sub)+'</span>'+(s.xp?'<span class="xp">'+s.xp+' на брой</span>':'')+'</span><span class="end">'+ic("caret-right",20)+'</span>'; }
+  var h = buyHTML();
+  var bx = main.querySelector("[data-buybox]"); if (bx) bx.innerHTML = h;
+  var bar = SC.ov.querySelector(".dish-abar"); if (bar) bar.innerHTML = h;
+}
+
+/* ---------- add to cart ---------- */
+function buy(btn){
+  var m = modsList(), opts = m.length ? {mods:m, extra:Math.round(extra()*100)/100} : {};
+  var key = x.id + (m.length ? "|"+m.join(",") : "");
+  var prev = SC.cart.lines().filter(function(l){ return l.key===key; })[0], prevQ = prev ? prev.q : 0, n = qty, t = unit()*qty;
+  SC.cart.add(x.id, qty, opts);
+  SC.fly(btn, x.id); SC.haptic();
+  document.querySelectorAll("[data-buy]").forEach(function(b){ b.classList.add("done"); b.innerHTML = ic("check",22)+"Добавено"+(n>1?" "+n+" бр.":"")+" · "+fmt(t); });
+  setTimeout(paint, 1400);
+  SC.toast("Добавено ✓"+(n>1?" · "+n+" бр.":""), function(){ SC.cart.setQty(key, prevQ); });
+}
+
+/* ---------- modifiers sheet ---------- */
+function openMods(){
+  var c = compList(x);
+  var html = '<p class="muted" style="margin:0 0 10px;font-size:15px">'+esc(x.n)+' · '+fmt(x.p)+'</p>';
+  html += '<div class="mgrp"><div class="mgrp-h"><h3>Махни</h3><span>безплатно</span></div>'+
+    (c.length ? c.map(function(s,i){ return '<label class="mrow"><input type="checkbox" data-rem="'+i+'"'+(rem[i]?' checked':'')+'><span>Без '+esc(s)+'</span><span class="pr"></span></label>'; }).join("")
+      : '<p class="mempty">Нямаме още състава на това ястие. Ако искате да махнем нещо, напишете го в бележката към поръчката.</p>')+'</div>';
+  if (canAdd(x)) html += '<div class="mgrp"><div class="mgrp-h"><h3>Добави</h3><span>цената се добавя</span></div>'+
+    ADDONS.map(function(a){ return '<label class="mrow"><input type="checkbox" data-addon="'+a.id+'"'+(add[a.id]?' checked':'')+'><span>'+esc(a.n)+'</span><span class="pr">+'+fmt(a.p)+'</span></label>'; }).join("")+'</div>';
+  /* "Смени" (swap one ingredient for another) stays hidden until the owner switches it on (hand-off 6.3, master 7 q_swap). */
+  var s = SC.sheet({title:"Добавки и промени", html:html, onClose:paint});
+  var sheet = s.el.querySelector(".sheet");
+  sheet.insertAdjacentHTML("beforeend", '<div class="mfoot"><div class="tot"><span data-totl></span><b data-tot></b></div><div class="row"><button class="pill pill-red pill-lg" type="button" data-sbuy></button></div><button class="link" type="button" data-sreset hidden>Изчисти промените</button></div>');
+  function upd(){ var t = unit()*qty, has = modsList().length;
+    sheet.querySelector("[data-tot]").textContent = fmt(t);
+    sheet.querySelector("[data-totl]").textContent = (has ? "С промените, " : "Общо, ") + qty + " бр.";
+    sheet.querySelector("[data-sbuy]").innerHTML = '<span>Добави в количката · <span class="price">'+fmt(t)+'</span></span>';
+    sheet.querySelector("[data-sreset]").hidden = !has; }
+  upd();
+  sheet.addEventListener("change", function(e){ var el = e.target;
+    if (el.dataset.rem!=null) rem[el.dataset.rem] = el.checked;
+    if (el.dataset.addon) add[el.dataset.addon] = el.checked;
+    upd(); });
+  sheet.querySelector("[data-sreset]").onclick = function(){ rem = {}; add = {}; sheet.querySelectorAll("input[type=checkbox]").forEach(function(i){ i.checked = false; }); upd(); };
+  sheet.querySelector("[data-sbuy]").onclick = function(){ var b = this; s.close(); setTimeout(function(){ var t = document.querySelector(".dish-abar [data-buy]"); if (!t || !t.offsetParent) t = main.querySelector("[data-buybox] [data-buy]"); buy(t || b); }, 60); };
+}
+
+/* ---------- 3D (prototype simulation of the slow-device path: photo first, 3D only on tap) ---------- */
+var ang = 0, tilt = 54, drag = null, spin = null;
+function set3d(svg){ svg.style.transform = "perspective(900px) rotateX("+tilt+"deg) rotateZ("+ang+"deg)"; }
+function toggle3d(btn){
+  var pic = main.querySelector(".hero .pic"), svg = pic.querySelector("svg"), note = main.querySelector("[data-note3d]"), hint = main.querySelector(".hint3d");
+  if (pic.classList.contains("is3d")){
+    pic.classList.remove("is3d"); pic.removeAttribute("tabindex"); svg.style.transition = "transform var(--t-slow) var(--ease)"; svg.style.transform = "none";
+    btn.innerHTML = ic("cube",20)+"Виж в 3D"; note.hidden = true; return; }
+  btn.setAttribute("aria-busy","true"); btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Зарежда 3D'; pic.classList.add("loading");
+  setTimeout(function(){
+    pic.classList.remove("loading"); pic.classList.add("is3d"); pic.tabIndex = 0;
+    pic.setAttribute("aria-label", x.n+", 3D изглед. Завъртете с плъзгане или със стрелките.");
+    btn.removeAttribute("aria-busy"); btn.innerHTML = ic("image",20)+"Снимка"; note.hidden = false;
+    ang = 0; tilt = 54; svg.style.transition = "transform 700ms var(--ease)"; set3d(svg);
+    if (!SC.reduce) setTimeout(function(){ if (!pic.classList.contains("is3d")) return; svg.style.transition = "transform 2200ms var(--ease)"; ang = 360; set3d(svg); }, 720);
+    hint.classList.add("on"); setTimeout(function(){ hint.classList.remove("on"); }, 2600);
+  }, 900);
+}
+main.addEventListener("pointerdown", function(e){ var pic = e.target.closest(".hero .pic.is3d"); if (!pic || e.target.closest("button")) return;
+  drag = {x:e.clientX, y:e.clientY, a:ang, t:tilt, svg:pic.querySelector("svg")}; drag.svg.style.transition = "none"; pic.setPointerCapture && pic.setPointerCapture(e.pointerId); });
+main.addEventListener("pointermove", function(e){ if (!drag) return; ang = drag.a + (e.clientX-drag.x)*.7; tilt = Math.max(15, Math.min(66, drag.t - (e.clientY-drag.y)*.25)); set3d(drag.svg); });
+["pointerup","pointercancel"].forEach(function(ev){ main.addEventListener(ev, function(){ drag = null; }); });
+main.addEventListener("keydown", function(e){ var pic = e.target.closest && e.target.closest(".hero .pic.is3d"); if (!pic) return;
+  var k = {ArrowLeft:[-15,0], ArrowRight:[15,0], ArrowUp:[0,-6], ArrowDown:[0,6]}[e.key]; if (!k) return; e.preventDefault();
+  ang += k[0]; tilt = Math.max(15, Math.min(66, tilt+k[1])); var svg = pic.querySelector("svg"); svg.style.transition = "transform var(--t-base) var(--ease)"; set3d(svg); });
+
+/* ---------- events ---------- */
+function onClick(e){ var t = e.target.closest("button, a"); if (!t || !x) return;
+  if (t.dataset.q){ qty = Math.max(1, Math.min(20, qty + (+t.dataset.q))); paint(); var o = document.querySelector(".dish-abar output"); return; }
+  if (t.hasAttribute("data-buy")){ buy(t); return; }
+  if (t.hasAttribute("data-mods")){ openMods(); return; }
+  if (t.hasAttribute("data-3d")){ if (!t.hasAttribute("aria-busy")) toggle3d(t); return; }
+}
+main.addEventListener("click", onClick);
+SC.ov.addEventListener("click", function(e){ if (e.target.closest(".dish-abar")) onClick(e); });
+window.addEventListener("hashchange", render);
+
+/* dish name slides into the back bar once the H1 is out of view */
+function watchTitle(){ var h = main.querySelector("[data-h1]"); ttl.classList.remove("on"); if (!h || !("IntersectionObserver" in window)) return;
+  ttlObs = new IntersectionObserver(function(es){ var en = es[0]; ttl.classList.toggle("on", !en.isIntersecting && en.boundingClientRect.top < 200); }, {root:SC.scroller, rootMargin:"-150px 0px 0px 0px"});
+  ttlObs.observe(h); }
+
+/* ---------- SEO helpers ---------- */
+function setMeta(d){ var m = document.querySelector('meta[name="description"]');
+  m.setAttribute("content", d.n+" от Siracusa Bar & Grill, Дружба 2: "+(d.comp?d.comp+". ":"")+(d.g?d.g+", ":"")+fmt(d.p)+". Поръчайте с доставка или вземете от място."); }
+function jsonLd(d){ var old = document.getElementById("ld"); if (old) old.remove();
+  var data = {"@context":"https://schema.org","@type":"MenuItem","name":d.n,"description":d.comp||undefined,"menuAddOn":undefined,
+    "offers":{"@type":"Offer","price":d.p.toFixed(2),"priceCurrency":"EUR","availability":SC.isOut(d)?"https://schema.org/OutOfStock":"https://schema.org/InStock"},
+    "suitableForDiet":d.t.indexOf("veg")>-1?"https://schema.org/VegetarianDiet":undefined};
+  var s = document.createElement("script"); s.type = "application/ld+json"; s.id = "ld"; s.textContent = JSON.stringify(data); document.head.appendChild(s); }
+
+/* ---------- not found ---------- */
+function notFound(id){
+  ttl.textContent = ""; backA.href = "menu.html"; document.title = "Ястието не е намерено | Siracusa Bar & Grill";
+  var picks = SC.items.filter(function(z){ return (z.t.indexOf("hit")>-1 || z.t.indexOf("new")>-1) && !SC.isOut(z); })
+    .concat(SC.inCat("skara-bertha").filter(function(z){ return !SC.isOut(z); }).sort(function(a,b){ return b.p-a.p; }).slice(0,1));
+  main.innerHTML = '<section class="nf"><div class="empty">'+
+    '<div class="ill" aria-hidden="true">'+ic("fork-knife",56)+'</div>'+
+    '<h1 class="h2">'+(id ? 'Това ястие го няма в менюто' : 'Не е избрано ястие')+'</h1>'+
+    '<p class="lead" style="max-width:34ch">'+(id ? 'Може да е сменило името си или връзката да е непълна. Всичко, което готвим днес, е в менюто.' : 'Изберете ястие от менюто и ще ви покажем състава, алергените и цената.')+'</p>'+
+    '<div class="btns"><a class="pill pill-red pill-lg pill-block" href="menu.html">'+ic("fork-knife",20)+'Към менюто</a><a class="pill pill-line pill-block" href="tel:+359894365577">'+ic("phone",20)+'Обади се: 0894 36 55 77</a></div>'+
+    '</div></section>'+
+    (picks.length ? '<section class="sec" aria-labelledby="nfh"><div class="sec-h"><h2 class="h2" id="nfh">Може да ви хареса</h2></div><div class="pairs cols">'+picks.slice(0,3).map(function(z){ return pairCard(z, SC.catById[z.cat].n); }).join("")+'</div></section>' : '');
+  SC.scroller.scrollTop = 0;
+}
+
+render();
+SC.reveal();
+})();
+</script>
+</body>
+</html>

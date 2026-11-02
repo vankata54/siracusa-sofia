@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Събития и поводи | Siracusa Bar & Grill</title>
+<meta name="description" content="Тематични вечери всяка последна събота от месеца, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, юбилей, фирмено парти. -5% при ранна резервация.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* events.html: page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.ev-top{padding-top:24px}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.eyebrow .ic{color:var(--ink)}
+.hero .lead{margin-top:10px; max-width:34em}
+.hfacts{display:none; list-style:none; margin:28px 0 0; padding:0; gap:14px}
+.hfacts li{display:flex; align-items:center; gap:14px; font-weight:600}
+.hfacts .ic-c{width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.hfacts .ofr .ic-c{background:var(--ember); color:var(--on-ember); box-shadow:none}
+.hcal{display:none}
+.hcal-l{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--muted)}
+
+/* ---------- tabs + chips ---------- */
+.ctrl{display:grid; gap:14px; margin-top:24px}
+.tabs{max-width:440px}
+.tabs [role="tab"]{min-height:52px; border:0; border-radius:16px; background:transparent; color:var(--muted); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform var(--t-fast) var(--ease)}
+.tabs [role="tab"]:active{transform:scale(.97)}
+.tabs [role="tab"][aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.tabs [role="tab"][aria-selected="true"] .ic{color:var(--red)}
+.evchips .chip .ic{opacity:.8}
+.evchips .chip[aria-pressed="true"] .ic{opacity:1}
+.evchips .cdiv{flex:none; align-self:center; width:1.5px; height:26px; margin:0 6px; border-radius:1px; background:var(--line-strong)}
+.cnt-line{margin:0; min-height:24px; font-size:15px; font-weight:600; color:var(--muted)}
+.cnt-line b{color:var(--ink)}
+
+/* ---------- event cards ---------- */
+.evlist{display:grid; gap:16px; margin-top:6px}
+.ev-grid{display:grid; gap:16px}
+.ev{min-width:0; height:100%}
+.ev > .core{display:flex; flex-direction:column; height:100%}
+.ev-media{position:relative; aspect-ratio:16/10; flex:none}
+.ev.feat .ev-media{aspect-ratio:4/3}
+.ev-body{flex:1; display:flex; flex-direction:column; gap:10px; padding:18px 18px 20px}
+.ev-cat{display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:800; color:var(--muted)}
+.ev-ttl{margin:0}
+.ev-ttl a{text-decoration:none; color:inherit}
+.ev-ttl a:hover{text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px}
+.ev-txt{margin:0}
+.ev-facts{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.ev-facts li{display:flex; align-items:center; gap:10px; min-height:30px; font-weight:600}
+.ev-facts .ic{color:var(--muted)}
+.ev-facts .seats{color:var(--warn); font-weight:800}
+.ev-act{display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:8px}
+.ev-act .pill-red{flex:1 1 auto}
+.ev.soon .ev-body{gap:8px}
+.ev.soon .ev-act .pill{width:100%}
+
+/* photo slot ([ЛИПСВА] until the new photo shoot) */
+.slot{position:relative; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
+.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.1; color:var(--ink)}
+.slot .big{position:relative; width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.ev.soon .slot .big{width:68px; height:68px}
+.slot .cap{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 24px); display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; line-height:1.25; color:var(--muted)}
+.slot .cap .missing{text-decoration:none}
+.slot .cap .ic{color:var(--muted)}
+
+/* calendar tile */
+.ctile{position:absolute; top:14px; left:14px; z-index:2; width:76px; border-radius:18px; overflow:hidden; display:grid; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.ctile .m{padding:5px 0 4px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.08em; line-height:1.2}
+.ctile .d{padding-top:6px; font-size:34px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+.ctile .w{padding:3px 0 8px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.ev.soon .ctile{width:66px; top:12px; left:12px}
+.ev.soon .ctile .d{font-size:28px}
+.flag{position:absolute; top:14px; right:14px; z-index:2; display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px 0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap; background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 2px 8px var(--line)}
+.flag .ic{color:var(--ember)}
+.flag.soft{background:var(--surface); color:var(--ink)}
+.flag.soft .ic{color:var(--muted)}
+.ev.soon .flag{top:12px; right:12px}
+
+/* occasion panel (private celebration categories) */
+.occ .core{display:grid; gap:12px; padding:24px 20px; justify-items:start}
+.occ .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.occ p{margin:0}
+.occ .pill{margin-top:6px}
+
+/* states */
+.ev-empty{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:36px 20px}
+.ev-empty .h3{max-width:22em}
+.ev-empty p{margin:0; max-width:30em}
+.ev-empty .row{flex-wrap:wrap; justify-content:center}
+.ev-empty .ill.warn{color:var(--warn)}
+.sk-media{aspect-ratio:4/3; border-radius:0}
+.sk-l{height:16px; border-radius:8px}
+
+/* ---------- past: gallery + internal reviews ---------- */
+.past-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:8px 0 14px}
+.gal{columns:2; column-gap:12px}
+.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img); display:block}
+.gtile .big{width:56px; height:56px}
+.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px 0 8px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gtile .cap{left:10px; bottom:10px; max-width:calc(100% - 20px); padding:4px 10px}
+.revs{display:grid; gap:12px}
+.rev{display:grid; gap:10px; padding:18px}
+.rev p{margin:0}
+.stars{display:flex; gap:2px; color:var(--line-strong)}
+.rev .who{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.rev-note{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; font-size:15px; color:var(--muted)}
+.rev-note .ic{margin-top:2px}
+
+/* ---------- calendar ---------- */
+.calbox .core{padding:14px 6px 8px}
+.calbox .seg{margin:0 8px}
+.calbox .seg button{min-height:48px; font-size:15px}
+.cal-y{margin:12px 12px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.cal-wd,.cal-days{display:grid; grid-template-columns:repeat(7,1fr)}
+.cal-wd span{text-align:center; font-size:14px; font-weight:700; color:var(--muted); padding:6px 0}
+.cal-days{row-gap:2px}
+.cd{position:relative; justify-self:center; width:100%; max-width:48px; height:48px; display:grid; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; text-decoration:none; padding:0}
+.cd.past{color:var(--muted); font-weight:500}
+.cd.today{box-shadow:inset 0 0 0 1.5px var(--ink); font-weight:800}
+.cd.ev{background:var(--ink); color:var(--bg); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev::after{content:""; position:absolute; bottom:6px; left:50%; width:6px; height:6px; margin-left:-3px; border-radius:50%; background:var(--ember)}
+.cd.soon{border:2px dashed var(--line-strong); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev:active,.cd.soon:active{transform:scale(.92)}
+.cal-list{list-style:none; margin:10px 8px 0; padding:0; border-top:1px solid var(--line)}
+.cal-list li + li{border-top:1px solid var(--line)}
+.cal-list a,.cal-list button{width:100%; min-height:56px; display:grid; grid-template-columns:48px 1fr auto; gap:12px; align-items:center; padding:6px 4px; border:0; background:transparent; color:inherit; font:inherit; text-align:left; text-decoration:none; cursor:pointer; border-radius:16px}
+.cal-list .dd{display:grid; justify-items:center; line-height:1.1}
+.cal-list .dd b{font-size:20px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.cal-list .dd small{font-size:14px; color:var(--muted); font-weight:700}
+.cal-list .tt{display:grid; line-height:1.3}
+.cal-list .tt b{font-weight:800}
+.cal-list .tt small{font-size:14px; color:var(--muted); font-weight:600}
+.cal-list .ic{color:var(--muted)}
+.cal-none{margin:12px 12px 6px; color:var(--muted)}
+.cal-leg{display:flex; flex-wrap:wrap; gap:6px 16px; margin:8px 12px 6px; font-size:14px; color:var(--muted); font-weight:600}
+.cal-leg span{display:inline-flex; align-items:center; gap:8px}
+.cal-leg i{width:16px; height:16px; border-radius:50%; flex:none}
+.cal-leg .l-ev{background:var(--ink); position:relative}
+.cal-leg .l-ev::after{content:""; position:absolute; left:5px; top:5px; width:6px; height:6px; border-radius:50%; background:var(--ember)}
+.cal-leg .l-soon{border:2px dashed var(--line-strong)}
+.cal-leg .l-today{box-shadow:inset 0 0 0 1.5px var(--ink)}
+
+/* ---------- "Празник при нас" ---------- */
+.party > .core{display:grid}
+.party-art{position:relative; aspect-ratio:16/10; background:radial-gradient(120% 100% at 50% 40%, var(--plate-1), var(--plate-2))}
+.party-art svg.tbl{position:absolute; inset:0; width:100%; height:100%; display:block}
+.party-art .pl{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art:not(.in) .pl{opacity:0; transform:translateY(-18px) scale(1.08)}
+.rv-on .party-art:not(.in) .cf{opacity:0; transform:scale(.4)}
+.party-art .cf{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art .pl,.rv-on .party-art .cf{transition:transform 640ms var(--ease), opacity 480ms var(--ease); transition-delay:calc(160ms + var(--i,0) * 90ms)}
+.party-art.rv{transform:none!important; opacity:1!important}
+.party-body{display:grid; gap:14px; padding:22px 18px 22px; align-content:start}
+.party-body p{margin:0}
+.offer{justify-self:start; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 14px 0 10px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.types{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px}
+.type{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; min-height:92px; padding:12px 14px; border-radius:var(--r-core); background:var(--surface-2); color:var(--ink); font-weight:800; text-decoration:none; line-height:1.2; transition:transform var(--t-fast) var(--ease)}
+.type:active{transform:scale(.97)}
+.type .ic-c{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi)}
+.zones{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.zones li{display:flex; align-items:center; gap:10px; min-height:32px; font-weight:600}
+.zones .ic{color:var(--muted)}
+.party .go{margin-top:6px}
+.party .fine{font-size:15px; color:var(--muted)}
+
+/* ---------- subscribe ---------- */
+.sub > .core{display:grid; gap:20px; padding:22px 18px}
+.sub-h{display:grid; gap:12px; justify-items:start}
+.sub-h .ic-c{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.sub-h p{margin:0}
+.sub form{display:grid; gap:16px}
+.sub fieldset{border:0; margin:0; padding:0; display:grid; gap:8px; min-width:0}
+.sub legend{padding:0; margin-bottom:8px}
+.wrapchips{display:flex; flex-wrap:wrap; gap:8px}
+.sub .check{padding:4px 0}
+.sub .check span{line-height:1.4}
+.neterr{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.neterr .ic{color:var(--warn); margin-top:1px}
+.neterr p{margin:0}
+.sub-ok{display:grid; gap:12px; justify-items:start}
+.sub-ok .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.sub-ok p{margin:0}
+
+/* ---------- FAQ ---------- */
+.faq .core{padding:4px 18px}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{list-style:none; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; font-weight:800; font-size:17px; line-height:1.3; cursor:pointer}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{margin:0 0 18px; color:var(--muted); max-width:44em}
+
+/* ---------- prototype-only state switcher ---------- */
+.proto{border-radius:var(--r-core); padding:16px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:12px}
+.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.proto .chip{min-height:44px}
+
+/* ---------- tablet / desktop ---------- */
+@container app (min-width:700px){
+  .ev-grid{grid-template-columns:1fr 1fr}
+  .ev.feat > .core{display:grid; grid-template-columns:1.12fr 1fr}
+  .ev.feat .ev-media{aspect-ratio:auto; min-height:360px}
+  .ev.feat .ev-body{padding:30px 30px 30px 32px; justify-content:center}
+  .ev.feat .ev-act{margin-top:12px}
+  .gal{columns:3}
+  .revs{grid-template-columns:repeat(3,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+@container app (min-width:900px){
+  .ev-top{padding-top:56px}
+  .hero{display:grid; grid-template-columns:1fr 400px; gap:64px; align-items:start}
+  .hero .h1{font-size:60px; margin-top:6px}
+  .hero .lead{font-size:19px; margin-top:16px}
+  .hfacts{display:grid}
+  .hcal{display:block}
+  .cal-m{display:none}
+  .ctrl{margin-top:48px}
+  .evchips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .ev.feat .ev-media{min-height:420px}
+  .ev.feat .ev-body{padding:40px}
+  .ev.feat .ev-ttl{font-size:44px}
+  .ev.feat .ctile{top:20px; left:20px; width:88px}
+  .ev.feat .ctile .d{font-size:40px}
+  .ev.feat .flag{top:20px; right:20px}
+  .party > .core{grid-template-columns:1fr 1.05fr}
+  .party-art{order:2; aspect-ratio:auto; min-height:100%}
+  .party-body{padding:44px 40px; gap:16px}
+  .party-body .h1{font-size:48px}
+  .party .go{max-width:420px}
+  .sub > .core{grid-template-columns:1fr 1.1fr; gap:48px; padding:40px}
+  .sub-h{align-content:start}
+  .faq-wrap{display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:start}
+  .faq-wrap .h2{position:sticky; top:180px}
+}
+@container app (min-width:1100px){
+  .ev-grid{grid-template-columns:repeat(4,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var main = SC.mount({page:"events", nav:"events", title:"Събития и поводи"});
+var R = SC.RESTAURANT, esc = SC.esc, ic = SC.ic;
+
+/* ---------- dates (calendar dates are real; the clock override in the preview bar only changes the hour) ---------- */
+var now = new Date(), TODAY = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+var WD = ["нд","пн","вт","ср","чт","пт","сб"];
+function pad(n){ return (n<10?"0":"")+n; }
+function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function lastSat(y, mo){ var d = new Date(y, mo+1, 0); while (d.getDay()!==6) d.setDate(d.getDate()-1); return d; }
+function daysTo(d){ return Math.round((d - TODAY)/864e5); }
+function inDays(n){ return n===0 ? "Днес" : n===1 ? "Утре" : "След "+SC.plural(n,"ден","дни"); }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function longDate(d){ return cap(SC.DAYS[d.getDay()])+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
+
+/* ---------- categories ---------- */
+var PUBLIC = ["Жива музика","Тематични вечери","Празници"];
+var CATI = {"Жива музика":"music-notes","Тематични вечери":"globe","Празници":"confetti","Рождени дни":"cake","Кръщенета":"baby","Юбилеи":"heart",
+  "Фирмени партита":"briefcase","Абитуриентски":"star","Детски":"balloon","Частни партита":"users-three"};
+var SLUG = {"Жива музика":"zhiva-muzika","Тематични вечери":"tematichni-vecheri","Празници":"praznitsi","Рождени дни":"rozhdeni-dni","Кръщенета":"krashteneta",
+  "Юбилеи":"yubilei","Фирмени партита":"firmeni-partita","Абитуриентски":"abiturientski","Детски":"detski","Частни партита":"chastni-partita"};
+var BYSLUG = {}; Object.keys(SLUG).forEach(function(k){ BYSLUG[SLUG[k]] = k; });
+/* private categories open the celebration calculator with the type preselected (celebration.html#<type>) */
+var OCC = {"Рождени дни":["Рожден ден при нас","Планирай рожден ден","rozhden-den"],"Кръщенета":["Кръщене при нас","Планирай кръщене","krashtene"],
+  "Юбилеи":["Юбилей при нас","Планирай юбилей","yubiley"],"Фирмени партита":["Фирмено парти при нас","Планирай фирмено парти","firmeno-parti"],
+  "Абитуриентски":["Абитуриентска вечер при нас","Планирай абитуриентска вечер","abiturientski"],"Детски":["Детски празник при нас","Планирай детски празник","detski"],
+  "Частни партита":["Частно парти при нас","Планирай частно парти","drugo"]};
+var CATS = SC.EVENT_CATS.filter(function(c){ return PUBLIC.indexOf(c)>-1; }).concat(SC.EVENT_CATS.filter(function(c){ return PUBLIC.indexOf(c)<0; }));
+
+/* ---------- events: real ones from SC.events(); the rest are honest "Скоро" placeholders ---------- */
+var REAL = SC.events().map(function(e){ return {key:e.id, kind:"real", cat:e.cat, date:e.date, e:e}; });
+var SOON = [];
+/* themed nights repeat every last Saturday of the month (data text); next dates are computed, the cuisine is not known yet */
+REAL.filter(function(x){ return x.cat==="Тематични вечери"; }).slice(0,1).forEach(function(x){
+  for (var k=1;k<=2;k++){ var d = lastSat(x.date.getFullYear(), x.date.getMonth()+k);
+    SOON.push({key:"tema-"+iso(d), kind:"soon", cat:"Тематични вечери", date:d, n:"Тематична вечер",
+      text:"Последната събота на "+SC.MONTHS[d.getMonth()]+". Коя кухня ще бъде, обявяваме скоро.", miss:"[ЛИПСВА: кухня, програма и цена]"}); } });
+SOON.push({key:"muzika", kind:"soon", cat:"Жива музика", date:null, n:"Жива музика", text:"", miss:"[ЛИПСВА: дата, изпълнител и програма]"});
+SOON.push({key:"praznik", kind:"soon", cat:"Празници", date:null, n:"Празнични вечери", text:"", miss:"[ЛИПСВА: Коледа и Нова година, дати и меню]"});
+function byDate(a,b){ if (!a.date) return 1; if (!b.date) return -1; return a.date - b.date; }
+
+/* past events: gallery and internal reviews are not available yet ([ЛИПСВА]) */
+var GAL = [{cat:"Тематични вечери",ar:"4/5"},{cat:"Жива музика",ar:"1/1"},{cat:"Празници",ar:"4/3"},{cat:"Рождени дни",ar:"1/1"},{cat:"Тематични вечери",ar:"4/3"},{cat:"Фирмени партита",ar:"4/5"}];
+var REVS = [{cat:"Тематични вечери",n:"Тематична вечер"},{cat:"Празници",n:"Празнична вечер"},{cat:"Рождени дни",n:"Рожден ден"}];
+
+/* ---------- state (tab and category live in the address: #minali/zhiva-muzika) ---------- */
+var st = {tab:"up", cat:null, mode:"ok", offline:false, calM:0, want:[], subDone:null};
+function readHash(){ var parts = decodeURIComponent(location.hash.slice(1)).split("/");
+  st.tab = parts.indexOf("minali")>-1 ? "past" : "up"; st.cat = null;
+  parts.forEach(function(p){ if (BYSLUG[p]) st.cat = BYSLUG[p]; }); return parts; }
+function writeHash(){ var p = []; if (st.tab==="past") p.push("minali"); if (st.cat) p.push(SLUG[st.cat]);
+  try{ history.replaceState(null, "", location.href.split("#")[0] + (p.length ? "#"+p.join("/") : "")); }catch(e){} }
+
+function upcoming(){ return st.mode==="ok" ? REAL.concat(SOON).filter(function(x){ return !x.date || daysTo(x.date)>=0; }).sort(byDate) : []; }
+
+/* ---------- pieces ---------- */
+var MEANDER = '<svg class="tex" aria-hidden="true"><defs><pattern id="meander" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M0 25H28M25 25V3H6V19H19V9H12" fill="none" stroke="currentColor" stroke-width="3"/></pattern></defs><rect width="100%" height="100%" fill="url(#meander)"/></svg>';
+function ctile(d){ return '<span class="ctile" aria-hidden="true"><span class="m">'+SC.MON[d.getMonth()].toUpperCase()+'</span><span class="d">'+d.getDate()+'</span><span class="w">'+SC.DAYS[d.getDay()]+'</span></span>'; }
+function slot(icon, missing, extra, label){
+  return '<div class="slot ev-media" role="img" aria-label="'+esc(label)+'">'+(extra||"")+'<span class="big">'+ic(icon,36)+'</span><span class="cap">'+ic("image",16)+'<span class="missing">'+esc(missing)+'</span></span></div>'; }
+
+function realCard(x, feat){ var e = x.e, d = x.date, n = daysTo(d);
+  var price = e.price!=null ? '<span class="price">'+SC.fmt(e.price)+'</span>' : e.free ? "Вход свободен" : '<span class="missing">[ЛИПСВА: цена или вход свободен]</span>';
+  var media = '<div class="slot ev-media" role="img" aria-label="Място за снимка от '+esc(e.n)+'">'+(x.cat==="Тематични вечери"?MEANDER:"")+ctile(d)+
+    '<span class="flag">'+ic("clock",16)+inDays(n)+'</span><span class="big">'+ic(CATI[x.cat]||"calendar-blank",36)+'</span><span class="cap">'+ic("image",16)+'<span class="missing">[ЛИПСВА: снимка от '+esc(e.n)+']</span></span></div>';
+  return '<article class="ev shell'+(feat?" feat":"")+'" id="ev-'+x.key+'" aria-labelledby="t-'+x.key+'"><div class="core">'+media+
+    '<div class="ev-body"><span class="ev-cat">'+ic(CATI[x.cat],18)+esc(x.cat)+'</span>'+
+    '<h3 class="ev-ttl '+(feat?"h1":"h2")+'" id="t-'+x.key+'"><a href="event.html#'+x.key+'">'+esc(e.n)+'</a></h3>'+
+    '<p class="ev-txt'+(feat?" lead":"")+'">'+esc(e.text)+'</p>'+
+    '<ul class="ev-facts"><li>'+ic("calendar-blank",20)+'<span>'+longDate(d)+'</span></li><li>'+ic("clock",20)+'<span>'+esc(e.time)+' ч.</span></li><li>'+ic("ticket",20)+'<span>'+price+'</span></li>'+
+    (e.seatsLeft!=null ? '<li class="seats">'+ic("users",20)+'Остават '+SC.plural(e.seatsLeft,"място","места")+'</li>' : '')+'</ul>'+
+    '<div class="ev-act"><a class="pill pill-red pill-lg" href="reservation.html#'+iso(d)+'">'+ic("calendar-check",22)+'Запази място</a><a class="pill pill-soft pill-lg" href="event.html#'+x.key+'">Подробности'+ic("caret-right",18)+'</a></div>'+
+    '</div></div></article>'; }
+
+function soonCard(x){ var label = x.date ? x.n+", "+longDate(x.date) : x.n;
+  var media = '<div class="slot ev-media" role="img" aria-label="Място за снимка: '+esc(label)+'">'+(x.date?ctile(x.date):"")+
+    '<span class="flag soft">'+ic("hourglass",16)+'Скоро</span><span class="big">'+ic(CATI[x.cat],30)+'</span></div>';
+  return '<article class="ev soon shell" id="ev-'+x.key+'" aria-labelledby="t-'+x.key+'"><div class="core">'+media+
+    '<div class="ev-body"><span class="ev-cat">'+ic(CATI[x.cat],18)+esc(x.cat)+'</span><h3 class="ev-ttl h3" id="t-'+x.key+'">'+esc(x.n)+'</h3>'+
+    (x.text ? '<p class="ev-txt">'+esc(x.text)+'</p>' : '')+'<p class="ev-txt missing">'+esc(x.miss)+'</p>'+
+    '<div class="ev-act"><button class="pill pill-line" type="button" data-notify="'+esc(x.cat)+'">'+ic("bell",20)+'Уведоми ме</button></div></div></div></article>'; }
+
+function occPanel(cat){ var o = OCC[cat];
+  return '<div class="occ shell"><div class="core"><span class="ic-c">'+ic(CATI[cat],32)+'</span><h3 class="h2">'+o[0]+'</h3>'+
+    '<p class="lead">Това е ваш празник и датата я избирате вие. Изберете меню от нашите ястия, торта и място, а ние ще ви изпратим оферта.</p>'+
+    '<span class="offer">'+ic("seal-percent",18)+'-5% при ранна резервация</span>'+
+    '<a class="pill pill-red pill-lg go" href="celebration.html#'+o[2]+'">'+o[1]+'<span class="knob">'+ic("arrow-right",22)+'</span></a></div></div>'; }
+
+function emptyBox(icon, title, text, btns, warn){
+  return '<div class="ev-empty empty"><span class="ill'+(warn?" warn":"")+'">'+ic(icon,44)+'</span><h3 class="h3">'+title+'</h3><p class="muted">'+text+'</p><div class="row">'+btns+'</div></div>'; }
+
+function skeleton(){
+  var big = '<div class="ev shell feat" aria-hidden="true"><div class="core"><div class="skel sk-media"></div><div class="ev-body"><div class="skel sk-l" style="width:40%"></div><div class="skel" style="height:36px;width:70%;border-radius:12px"></div><div class="skel sk-l" style="width:92%"></div><div class="skel sk-l" style="width:60%"></div><div class="skel" style="height:56px;border-radius:999px;margin-top:8px"></div></div></div></div>';
+  var sm = '<div class="ev shell soon" aria-hidden="true"><div class="core"><div class="skel ev-media" style="border-radius:0"></div><div class="ev-body"><div class="skel sk-l" style="width:50%"></div><div class="skel sk-l" style="width:80%"></div><div class="skel" style="height:48px;border-radius:999px;margin-top:8px"></div></div></div></div>';
+  return '<p class="vh" role="status">Зареждаме събитията</p>'+big+'<div class="ev-grid">'+sm+sm+'</div>'; }
+
+/* ---------- list rendering ---------- */
+var listEl, countEl;
+function renderList(){
+  var html = "", count = "";
+  if (st.mode==="loading"){ html = skeleton(); count = "Зареждаме..."; }
+  else if (st.mode==="error"){
+    html = emptyBox("warning-circle","Не успяхме да заредим събитията","Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите на "+R.phone+".",
+      '<button class="pill pill-red pill-lg" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>', true);
+  }
+  else if (st.tab==="up"){
+    if (st.cat && OCC[st.cat]){ html = occPanel(st.cat); count = "Празник по ваш избор: вие избирате датата"; }
+    else {
+      var L = upcoming().filter(function(x){ return !st.cat || x.cat===st.cat; });
+      if (!L.length){
+        html = st.mode==="none"
+          ? emptyBox("calendar-blank","Засега няма обявени събития","Следващата вечер обявяваме скоро. Искате ли да ви пишем, когато я обявим?",
+              '<button class="pill pill-red pill-lg" type="button" data-notify="">'+ic("bell",20)+'Уведоми ме</button><a class="pill pill-line pill-lg" href="#praznik" data-jump="praznik">'+ic("confetti",20)+'Празник при нас</a>')
+          : emptyBox(CATI[st.cat]||"calendar-blank","Още няма обявени събития тук","Ще ви пишем, щом обявим нещо в „"+esc(st.cat)+"“.",
+              '<button class="pill pill-red pill-lg" type="button" data-notify="'+esc(st.cat)+'">'+ic("bell",20)+'Уведоми ме</button><button class="pill pill-line pill-lg" type="button" data-cat="">Всички събития</button>');
+        count = st.mode==="none" ? "Няма обявени събития" : "Нищо в тази категория";
+      } else {
+        var real = L.filter(function(x){ return x.kind==="real"; }), rest = L.filter(function(x){ return x !== real[0]; });
+        html = (real[0] ? realCard(real[0], true) : "") + (rest.length ? '<div class="ev-grid">'+rest.map(function(x){ return x.kind==="real" ? realCard(x) : soonCard(x); }).join("")+'</div>' : "");
+        var nr = real.length, ns = L.length - nr;
+        count = (nr ? '<b>'+SC.plural(nr,"обявено събитие","обявени събития")+'</b>' : '') + (nr && ns ? ' · ' : '') + (ns ? ns+' скоро' : '');
+      }
+    }
+  }
+  else {
+    var G = GAL.filter(function(g){ return !st.cat || g.cat===st.cat; }), V = REVS.filter(function(r){ return !st.cat || r.cat===st.cat; });
+    if (!G.length && !V.length){
+      html = emptyBox(CATI[st.cat]||"images","Още няма снимки и оценки оттук","Ще ги покажем след първите вечери с новата фотосесия.",
+        '<button class="pill pill-line pill-lg" type="button" data-cat="">Всички минали</button>'+(OCC[st.cat]?'<a class="pill pill-red pill-lg" href="celebration.html#'+OCC[st.cat][2]+'">'+OCC[st.cat][1]+'</a>':''));
+      count = "Нищо в тази категория";
+    } else {
+      html = (G.length ? '<div class="past-h"><h3 class="h2">Снимки от минали вечери</h3><a class="link" href="gallery.html">Галерия'+ic("caret-right",18)+'</a></div><div class="gal">'+
+          G.map(function(g){ return '<div class="gtile slot" style="aspect-ratio:'+g.ar+'" role="img" aria-label="Място за снимка: '+esc(g.cat)+'"><span class="gl">'+ic(CATI[g.cat],16)+esc(g.cat)+'</span><span class="big">'+ic("image",26)+'</span><span class="cap"><span class="missing">[ЛИПСВА: снимка]</span></span></div>'; }).join("")+'</div>' : '')+
+        (V.length ? '<div class="past-h" style="margin-top:28px"><h3 class="h2">Какво казаха гостите</h3></div><div class="revs">'+
+          V.map(function(r){ return '<figure class="rev card" style="margin:0"><span class="stars" role="img" aria-label="Оценка: липсва">'+[0,1,2,3,4].map(function(){ return ic("star",20); }).join("")+'</span><blockquote style="margin:0"><p class="missing">[ЛИПСВА: отзив от гост след вечерта]</p></blockquote><figcaption class="who">'+ic(CATI[r.cat],16)+esc(r.n)+' · <span class="missing">[ЛИПСВА: име и дата]</span></figcaption></figure>'; }).join("")+
+          '</div><p class="rev-note">'+ic("info",20)+'<span>Оценките са от кратката ни анкета след вечерта, не от Google. Показваме ги без подбор.</span></p>' : '');
+      count = "Минали вечери: <span class=\"missing\">[ЛИПСВА: архив]</span>";
+    }
+  }
+  listEl.innerHTML = html; countEl.innerHTML = count;
+}
+
+function renderCtrl(){
+  main.querySelectorAll("[data-tab]").forEach(function(b){ var on = b.dataset.tab===st.tab; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+  main.querySelectorAll(".evchips [data-cat]").forEach(function(b){ b.setAttribute("aria-pressed", (b.dataset.cat||null)===(st.cat?SLUG[st.cat]:null)); });
+}
+function update(){ renderCtrl(); renderList(); writeHash(); }
+
+/* ---------- calendar ---------- */
+function calHTML(){
+  var base = new Date(TODAY.getFullYear(), TODAY.getMonth()+st.calM, 1), y = base.getFullYear(), mo = base.getMonth();
+  var ev = upcoming().filter(function(x){ return x.date && x.date.getFullYear()===y && x.date.getMonth()===mo; });
+  var seg = '<div class="seg" role="group" aria-label="Месец">'+[0,1,2].map(function(k){ var m = new Date(TODAY.getFullYear(), TODAY.getMonth()+k, 1);
+    return '<button type="button" data-calm="'+k+'" aria-pressed="'+(k===st.calM)+'">'+cap(SC.MONTHS[m.getMonth()])+'</button>'; }).join("")+'</div>';
+  var first = (base.getDay()+6)%7, dim = new Date(y, mo+1, 0).getDate(), cells = "";
+  for (var i=0;i<first;i++) cells += '<span aria-hidden="true"></span>';
+  for (var d=1; d<=dim; d++){ var dt = new Date(y, mo, d), e = ev.filter(function(x){ return x.date.getDate()===d; })[0];
+    var cls = "cd"+(dt<TODAY?" past":"")+(dt.getTime()===TODAY.getTime()?" today":""), lbl = d+" "+SC.MONTHS[mo];
+    if (e && e.kind==="real") cells += '<a class="'+cls+' ev" href="event.html#'+e.key+'" aria-label="'+lbl+': '+esc(e.e.n)+', '+esc(e.e.time)+' ч.">'+d+'</a>';
+    else if (e) cells += '<button class="'+cls+' soon" type="button" data-goto="'+e.key+'" aria-label="'+lbl+': '+esc(e.n)+', скоро обявяваме">'+d+'</button>';
+    else cells += '<span class="'+cls+'"'+(dt.getTime()===TODAY.getTime()?' aria-label="Днес, '+lbl+'"':'')+'>'+d+'</span>'; }
+  var list = ev.length ? '<ul class="cal-list">'+ev.map(function(x){ var dd = '<span class="dd"><b>'+x.date.getDate()+'</b><small>'+WD[x.date.getDay()]+'</small></span>';
+      return x.kind==="real"
+        ? '<li><a href="event.html#'+x.key+'">'+dd+'<span class="tt"><b>'+esc(x.e.n)+'</b><small>'+esc(x.e.time)+' ч. · '+inDays(daysTo(x.date))+'</small></span>'+ic("caret-right",20)+'</a></li>'
+        : '<li><button type="button" data-goto="'+x.key+'">'+dd+'<span class="tt"><b>'+esc(x.n)+'</b><small>Скоро обявяваме</small></span>'+ic("caret-right",20)+'</button></li>'; }).join("")+'</ul>'
+    : '<p class="cal-none">Няма обявени събития през '+SC.MONTHS[mo]+'.</p>';
+  return '<div class="shell calbox"><div class="core">'+seg+'<p class="cal-y">'+cap(SC.MONTHS[mo])+' '+y+'</p>'+
+    '<div class="cal-wd" aria-hidden="true"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>нд</span></div><div class="cal-days">'+cells+'</div>'+list+
+    '<div class="cal-leg" aria-hidden="true"><span><i class="l-ev"></i>Събитие</span><span><i class="l-soon"></i>Скоро обявяваме</span><span><i class="l-today"></i>Днес</span></div></div></div>'; }
+function renderCal(){ main.querySelectorAll("[data-cal]").forEach(function(el){ el.innerHTML = calHTML(); }); }
+
+/* ---------- "Празник при нас" table illustration (real dishes, top view) ---------- */
+function pick(id, cat){ return SC.byId[id] || SC.inCat(cat)[0]; }
+function partyArt(){
+  var D = [pick("pitsa-s-burata-i-proshuto-krudo","pitsi"), pick("gratska-salata","salati"), pick("svinski-rebra","skara-bertha"),
+           pick("set-ot-balgarski-kolbasi","studeni-predyastia"), pick("tiramisu","deserti"), pick("ribay-stek-ot-blek-angas","skara-bertha")];
+  var P = [[190,140],[320,140],[450,140],[190,262],[320,262],[450,262]], s = "";
+  [[150,22],[280,22],[410,22],[150,338],[280,338],[410,338]].forEach(function(c){ s += '<rect x="'+c[0]+'" y="'+c[1]+'" width="80" height="40" rx="16" style="fill:var(--surface-3)"/>'; });
+  s += '<rect x="38" y="160" width="40" height="80" rx="16" style="fill:var(--surface-3)"/><rect x="562" y="160" width="40" height="80" rx="16" style="fill:var(--surface-3)"/>';
+  s += '<rect x="70" y="48" width="500" height="304" rx="72" style="fill:var(--surface);stroke:var(--line-strong);stroke-width:1.5"/>';
+  [[108,200],[532,200]].forEach(function(g){ s += '<circle cx="'+g[0]+'" cy="'+g[1]+'" r="15" style="fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1.5"/><circle cx="'+g[0]+'" cy="'+g[1]+'" r="8" style="fill:var(--ember);opacity:.55"/>'; });
+  D.forEach(function(x, i){ if (!x) return; var c = P[i];
+    s += '<g class="pl" style="--i:'+i+'"><ellipse cx="'+c[0]+'" cy="'+(c[1]+6)+'" rx="54" ry="52" style="fill:var(--line)"/>'+SC.art(x,'x="'+(c[0]-60)+'" y="'+(c[1]-60)+'" width="120" height="120"')+'</g>'; });
+  var C = [[26,40,-20,"--ember"],[96,330,30,"--ok"],[600,52,15,"--ok"],[612,330,-35,"--ember"],[24,300,40,"--muted"],[560,16,-10,"--muted"],[118,14,22,"--ember"],[620,180,60,"--ember"],[14,190,-50,"--ok"],[520,380,12,"--ember"],[250,384,-25,"--muted"],[370,8,35,"--ok"]];
+  C.forEach(function(c, i){ s += '<rect class="cf" style="--i:'+(i%6)+';fill:var('+c[3]+')" x="'+c[0]+'" y="'+c[1]+'" width="14" height="7" rx="2" transform="rotate('+c[2]+' '+(c[0]+7)+' '+(c[1]+3)+')"/>'; });
+  return '<div class="party-art rv" role="img" aria-label="Празнична маса отгоре с ястия от менюто: '+D.filter(Boolean).map(function(x){ return esc(x.n); }).join(", ")+' (илюстрация)"><svg class="tbl" viewBox="0 0 640 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+s+'</svg></div>'; }
+
+/* ---------- page ---------- */
+var greek = REAL[0];
+var TYPES = [["Рожден ден","cake","rozhden-den"],["Кръщене","baby","krashtene"],["Юбилей","heart","yubiley"],["Фирмено парти","briefcase","firmeno-parti"],["Абитуриентски","star","abiturientski"],["Детски празник","balloon","detski"]];
+main.innerHTML =
+  /* hero + controls + list */
+  '<section class="sec ev-top" aria-labelledby="h-ev">'+
+    '<div class="hero"><div>'+
+      '<p class="eyebrow">'+ic("map-pin",18)+'Дружба 2 · салон и отоплявана градина</p>'+
+      '<h1 class="h1" id="h-ev">Събития и поводи</h1>'+
+      '<p class="lead">Тематична вечер всяка последна събота от месеца, празници и вашите поводи: рожден ден, кръщене, фирмено парти.</p>'+
+      '<ul class="hfacts">'+
+        (greek ? '<li><span class="ic-c">'+ic("globe",22)+'</span><span>Следваща тематична вечер: <b>'+greek.e.n+'</b>, '+greek.date.getDate()+' '+SC.MONTHS[greek.date.getMonth()]+'</span></li>' : '')+
+        '<li><span class="ic-c">'+ic("tree",22)+'</span><span>Салон и отоплявана градина за празника ви</span></li>'+
+        '<li class="ofr"><span class="ic-c">'+ic("seal-percent",22)+'</span><span><b>-5%</b> за празник при ранна резервация</span></li>'+
+      '</ul></div>'+
+      '<div class="hcal"><h2 class="hcal-l">Календар</h2><div data-cal></div></div>'+
+    '</div>'+
+    '<div class="ctrl">'+
+      '<div class="seg tabs" role="tablist" aria-label="Събития"><button type="button" role="tab" id="tab-up" data-tab="up" aria-controls="evpanel">'+ic("calendar-dots",20)+'Предстоящи</button><button type="button" role="tab" id="tab-past" data-tab="past" aria-controls="evpanel">'+ic("images",20)+'Минали</button></div>'+
+      '<div class="chips evchips" role="group" aria-label="Категории"><button class="chip" type="button" data-cat="">Всички</button>'+
+        CATS.map(function(c, i){ return (c===CATS[PUBLIC.length] ? '<span class="cdiv" aria-hidden="true"></span>' : '')+'<button class="chip" type="button" data-cat="'+SLUG[c]+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div>'+
+      '<p class="cnt-line" data-count aria-live="polite"></p>'+
+    '</div>'+
+    '<div class="evlist" id="evpanel" role="tabpanel" aria-labelledby="tab-up" data-list></div>'+
+  '</section>'+
+
+  /* calendar (phone; on desktop it sits in the hero) */
+  '<section class="sec cal-m rv" id="kalendar" aria-labelledby="h-cal"><div class="sec-h"><h2 class="h2" id="h-cal">Календар</h2></div><div data-cal></div></section>'+
+
+  /* celebration */
+  '<section class="sec rv" id="praznik" aria-labelledby="h-party"><div class="party shell"><div class="core">'+partyArt()+
+    '<div class="party-body"><span class="offer">'+ic("seal-percent",18)+'-5% при ранна резервация</span>'+
+      '<h2 class="h1" id="h-party">Празник при нас</h2>'+
+      '<p class="lead">Изберете повода, броя на гостите и меню от нашите ястия. Добавете торта, украса и място, а ние ще ви изпратим оферта.</p>'+
+      '<div class="types">'+TYPES.map(function(t){ return '<a class="type" href="celebration.html#'+t[2]+'"><span class="ic-c">'+ic(t[1],22)+'</span>'+t[0]+'</a>'; }).join("")+'</div>'+
+      '<ul class="zones"><li>'+ic("chair",20)+'Салон</li><li>'+ic("tree",20)+'Отоплявана градина, работи целогодишно</li><li>'+ic("house",20)+'Цялото място за вашия празник</li></ul>'+
+      '<a class="pill pill-red go" href="celebration.html">Сметни своя празник<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
+      '<p class="fine">Запитването е без задължение. Управителят ви се обажда за подробностите. Ранна резервация: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>.</p>'+
+    '</div></div></div></section>'+
+
+  /* subscribe */
+  '<section class="sec rv" id="uvedomi" aria-labelledby="h-sub"><div class="sub shell"><div class="core">'+
+    '<div class="sub-h"><span class="ic-c">'+ic("bell-ringing",28)+'</span><h2 class="h2" id="h-sub">Уведоми ме за нови събития</h2><p class="lead">Пишем само когато обявим нова вечер или празник. По един имейл, без досаждане.</p></div>'+
+    '<div data-sub></div></div></div></section>'+
+
+  /* FAQ */
+  '<section class="sec rv" aria-labelledby="h-faq"><div class="faq-wrap"><h2 class="h2" id="h-faq" style="margin-bottom:14px">Често питани</h2><div class="faq shell"><div class="core">'+
+    '<details><summary>Как да запазя място за тематичната вечер?'+ic("caret-down",22)+'</summary><p>Натиснете „Запази място“ на картата на вечерта и изберете час и брой хора. Можете и да се обадите на '+R.phone+'.</p></details>'+
+    '<details><summary>Може ли да празнуваме в градината през зимата?'+ic("caret-down",22)+'</summary><p>Да. Градината е отоплявана и работи целогодишно. Изберете я като място в калкулатора на празника.</p></details>'+
+    '<details><summary>Колко гости събира мястото за частно парти?'+ic("caret-down",22)+'</summary><p><span class="missing">[ЛИПСВА: капацитет на салона, градината и цялото място]</span></p></details>'+
+    '<details><summary>Как работи отстъпката за ранна резервация?'+ic("caret-down",22)+'</summary><p>При ранна резервация на празник получавате -5% от крайната сума. <span class="missing">[ЛИПСВА: колко дни по-рано и за кои поводи]</span></p></details>'+
+    '<details><summary>Мога ли да донеса своя торта?'+ic("caret-down",22)+'</summary><p><span class="missing">[ЛИПСВА: правило за собствена торта и такса]</span></p></details>'+
+  '</div></div></div></section>'+
+
+  /* prototype-only state switcher */
+  '<section class="sec" aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>'+ic("eye",18)+'Само в прототипа: покажи състояние</p><div class="wrapchips">'+
+    [["ok","Обичайно"],["loading","Зареждане"],["none","Няма събития"],["error","Грешка при зареждане"]].map(function(m){ return '<button class="chip" type="button" data-mode="'+m[0]+'" aria-pressed="'+(m[0]==="ok")+'">'+m[1]+'</button>'; }).join("")+
+    '<button class="chip" type="button" data-offline aria-pressed="false">'+ic("globe",18)+'Без интернет при абонамент</button></div></div></section>';
+
+listEl = main.querySelector("[data-list]"); countEl = main.querySelector("[data-count]");
+
+/* ---------- subscribe form ---------- */
+var subEl = main.querySelector("[data-sub]"), draft = "";
+function renderSub(){
+  if (st.subDone){ subEl.innerHTML = '<div class="sub-ok" role="status"><span class="ic-c">'+ic("check",32)+'</span><h3 class="h2">Готово, ще ви пишем</h3><p class="lead">Ще получите имейл на <b>'+esc(st.subDone)+'</b>, когато обявим '+(st.want.length ? "ново събитие в: "+st.want.map(esc).join(", ") : "ново събитие")+'.</p><button class="pill pill-line" type="button" data-subreset>'+ic("pencil-simple",20)+'Смени имейла</button></div>'; return; }
+  subEl.innerHTML = '<form novalidate data-subform>'+
+    '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">'+PUBLIC.map(function(c){ return '<button class="chip" type="button" data-want="'+esc(c)+'" aria-pressed="'+(st.want.indexOf(c)>-1)+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>'+
+    '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" type="email" inputmode="email" autocomplete="email" placeholder="например ime@abv.bg" aria-describedby="sub-email-err" value="'+esc(draft)+'"><p class="err" id="sub-email-err" hidden></p></div>'+
+    '<div><label class="check"><input type="checkbox" id="sub-ok" aria-describedby="sub-ok-err"><span>Искам да получавам имейли от Siracusa за нови събития. <span class="muted">Отписвате се с едно натискане от всеки имейл.</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>'+
+    '<div class="neterr" role="alert" data-neterr hidden>'+ic("warning",22)+'<p><b>Няма връзка с интернет.</b> Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>'+
+    '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("bell",20)+'Уведомявайте ме за събитията</button>'+
+  '</form>'; }
+function fieldErr(input, errEl, msg){ errEl.textContent = msg || ""; errEl.hidden = !msg; if (input) input.setAttribute("aria-invalid", msg ? "true" : "false"); }
+subEl.addEventListener("input", function(e){ if (e.target.id==="sub-email"){ draft = e.target.value; if (e.target.getAttribute("aria-invalid")==="true") fieldErr(e.target, subEl.querySelector("#sub-email-err"), ""); } });
+subEl.addEventListener("change", function(e){ if (e.target.id==="sub-ok" && e.target.checked) fieldErr(e.target, subEl.querySelector("#sub-ok-err"), ""); });
+subEl.addEventListener("submit", function(e){ e.preventDefault();
+  var em = subEl.querySelector("#sub-email"), ok = subEl.querySelector("#sub-ok"), v = em.value.trim(), bad = null;
+  if (!v) fieldErr(em, subEl.querySelector("#sub-email-err"), "Напишете имейла си, за да ви пишем.");
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) fieldErr(em, subEl.querySelector("#sub-email-err"), "Проверете имейла. Трябва да е като ime@abv.bg.");
+  else fieldErr(em, subEl.querySelector("#sub-email-err"), "");
+  if (!ok.checked) fieldErr(ok, subEl.querySelector("#sub-ok-err"), "Отметнете съгласието, за да можем да ви пишем.");
+  if (em.getAttribute("aria-invalid")==="true") bad = em; else if (!ok.checked) bad = ok;
+  if (bad){ bad.focus(); return; }
+  var ne = subEl.querySelector("[data-neterr]");
+  if (st.offline || navigator.onLine===false){ ne.hidden = false; return; }
+  ne.hidden = true; var btn = subEl.querySelector("[type=submit]"); btn.disabled = true; btn.innerHTML = "Записваме...";
+  setTimeout(function(){ st.subDone = v; renderSub(); var h = subEl.querySelector(".sub-ok h3"); if (h){ h.tabIndex = -1; h.focus({preventScroll:true}); } }, SC.reduce ? 0 : 500); });
+
+/* ---------- scrolling helpers ---------- */
+function scrollToEl(el, focusEl){ if (!el) return; var s = SC.scroller, off = SC.device.clientWidth >= 900 ? 120 : 148;
+  s.scrollTo({top: el.getBoundingClientRect().top - s.getBoundingClientRect().top + s.scrollTop - off, behavior: SC.reduce ? "auto" : "smooth"});
+  if (focusEl) setTimeout(function(){ focusEl.focus({preventScroll:true}); }, SC.reduce ? 0 : 450); }
+function notify(cat){ if (cat && PUBLIC.indexOf(cat)>-1 && st.want.indexOf(cat)<0) st.want.push(cat);
+  if (st.subDone){ scrollToEl(main.querySelector("#uvedomi")); return; }
+  renderSub(); scrollToEl(main.querySelector("#uvedomi"), subEl.querySelector("#sub-email")); }
+
+/* ---------- events ---------- */
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t || !main.contains(t)) return;
+  if (t.dataset.tab){ st.tab = t.dataset.tab; update(); return; }
+  if (t.hasAttribute("data-cat")){ var c = BYSLUG[t.dataset.cat] || null; st.cat = c; update();
+    if (t.closest(".evchips")) try{ t.scrollIntoView({block:"nearest", inline:"center", behavior:SC.reduce?"auto":"smooth"}); }catch(x){}
+    else scrollToEl(main.querySelector(".ctrl")); return; }
+  if (t.dataset.calm){ st.calM = +t.dataset.calm; renderCal(); var b = main.querySelector('[data-cal] [data-calm="'+st.calM+'"]'); return; }
+  if (t.dataset.goto){ st.tab = "up"; st.cat = null; st.mode = "ok"; update(); syncMode(); var card = main.querySelector("#ev-"+t.dataset.goto);
+    scrollToEl(card, card && card.querySelector("button, a")); return; }
+  if (t.hasAttribute("data-notify")){ notify(t.dataset.notify); return; }
+  if (t.dataset.jump){ e.preventDefault(); scrollToEl(main.querySelector("#"+t.dataset.jump)); return; }
+  if (t.hasAttribute("data-retry")){ st.mode = "loading"; syncMode(); renderList(); setTimeout(function(){ st.mode = "ok"; syncMode(); renderList(); renderCal(); }, 900); return; }
+  if (t.dataset.mode){ st.mode = t.dataset.mode; syncMode(); renderList(); renderCal(); return; }
+  if (t.hasAttribute("data-offline")){ st.offline = !st.offline; t.setAttribute("aria-pressed", st.offline); if (st.subDone){ st.subDone = null; renderSub(); } SC.toast(st.offline ? "Абонаментът ще покаже „Няма връзка“" : "Връзката е възстановена"); return; }
+  if (t.dataset.want){ var w = t.dataset.want, i = st.want.indexOf(w); if (i>-1) st.want.splice(i,1); else st.want.push(w); t.setAttribute("aria-pressed", i<0); return; }
+  if (t.hasAttribute("data-subreset")){ draft = st.subDone || draft; st.subDone = null; renderSub(); var inp = subEl.querySelector("#sub-email"); inp && inp.focus(); return; }
+});
+function syncMode(){ main.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.mode===st.mode); }); }
+/* arrow keys move between the two tabs */
+main.querySelector("[role=tablist]").addEventListener("keydown", function(e){ if (e.key!=="ArrowLeft" && e.key!=="ArrowRight") return; e.preventDefault();
+  st.tab = st.tab==="up" ? "past" : "up"; update(); main.querySelector('[data-tab="'+st.tab+'"]').focus(); });
+window.addEventListener("hashchange", function(){ readHash(); renderCtrl(); renderList(); });
+
+/* ---------- structured data for search (Event) ---------- */
+REAL.forEach(function(x){ var e = x.e, s = document.createElement("script"); s.type = "application/ld+json";
+  s.textContent = JSON.stringify({"@context":"https://schema.org","@type":"Event","name":e.n,"startDate":iso(x.date)+"T"+e.time,"description":e.text,
+    "eventStatus":"https://schema.org/EventScheduled","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode",
+    "location":{"@type":"Restaurant","name":R.name,"address":R.address,"telephone":R.phone}});
+  document.head.appendChild(s); });
+
+/* ---------- start ---------- */
+var parts = readHash(); renderCtrl(); renderList(); renderCal(); renderSub();
+var anchor = ["uvedomi","praznik","kalendar"].filter(function(a){ return parts.indexOf(a)>-1; })[0];
+if (anchor) setTimeout(function(){ scrollToEl(main.querySelector("#"+anchor)); }, 60);
+SC.reveal();
+})();
+</script>
+</body>
+</html>

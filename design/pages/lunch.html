@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Обедно меню днес | Siracusa Bar & Grill</title>
+<meta name="description" content="Обедното меню на Siracusa в Дружба 2: ново всеки ден, с доставка до 15:00 и -30% при вземане от място след 15:00.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* lunch.html - page-only styles, tokens from sc.css only */
+
+/* ---------- layout ---------- */
+.lgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:0}
+.lhero{padding-top:24px}
+.lmain{padding-top:40px}
+@container app (min-width:900px){
+  .lgrid{grid-template-columns:minmax(0,380px) minmax(0,1fr); gap:56px; align-items:start; padding:48px max(40px, calc((100% - 1200px)/2)) 0}
+  .lgrid > .sec{padding-left:0; padding-right:0; padding-top:0}
+  .lhero.stick{position:sticky; top:168px}
+  .lmain{padding-top:0}
+}
+@container app (min-width:1100px){ .lgrid{grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:64px} }
+
+/* ---------- hero ---------- */
+.eb{display:flex; align-items:center; gap:8px; font-size:15px; line-height:1.2; letter-spacing:0; font-weight:800; color:var(--muted); margin-bottom:12px}
+.eb .ic{color:var(--red)}
+.h1 .dt{display:block}
+.lhero .lead{margin-top:12px; max-width:34ch}
+
+/* ---------- -30% banner (ember) ---------- */
+.deal{margin-top:22px; border-radius:var(--r-shell); padding:20px 20px 22px; box-shadow:var(--shadow)}
+.deal .top2{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.deal .big{font-size:60px; line-height:.9; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums}
+.deal .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.35); flex:none}
+.deal b{display:block; margin-top:10px; font-size:22px; line-height:1.15; letter-spacing:-.025em}
+.deal p{margin:8px 0 0; font-size:16px; line-height:1.4}
+
+/* ---------- "today" card with day timeline ---------- */
+.today{margin-top:18px}
+.today .core{padding:18px 18px 16px}
+.now-h{display:flex; align-items:flex-start; gap:10px}
+.now-h .dot{width:10px; height:10px; border-radius:50%; background:var(--off); flex:none; margin-top:7px}
+.now-h .dot.ok{background:var(--ok)} .now-h .dot.warn{background:var(--ember)}
+.now-h b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.now-h span.sub{display:block; color:var(--muted); font-size:15px; line-height:1.35; margin-top:2px}
+.now-h .clock{margin-left:auto; flex:none; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; padding:5px 10px; border-radius:999px; background:var(--surface-2)}
+
+.tl{margin-top:18px}
+.tl-bar{position:relative; height:12px; display:flex; gap:3px}
+.tl-bar > span{display:block; height:100%; border-radius:6px}
+.tl-bar .a{flex:300 1 0; background:var(--ok)}
+.tl-bar .b{flex:450 1 0; background:var(--ember)}
+.tl-past{position:absolute; inset:0; border-radius:6px; background:var(--surface); opacity:.62; transform-origin:left center; transform:scaleX(var(--x,0))}
+.tl-now{position:absolute; top:50%; left:calc(var(--x,0) * 100%); width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 4px var(--surface), 0 4px 10px rgba(0,0,0,.25)}
+.tl-l{position:relative; height:22px; margin-top:8px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.tl-l span{position:absolute; top:0}
+.tl-l span:nth-child(1){left:0}
+.tl-l span:nth-child(2){left:40%; transform:translateX(-50%)}
+.tl-l span:nth-child(3){right:0}
+.tl-k{display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:6px; font-size:14px; font-weight:600}
+.tl-k span{display:inline-flex; align-items:center; gap:7px}
+.tl-k i{width:10px; height:10px; border-radius:50%; flex:none}
+.tl-k .ka{background:var(--ok)} .tl-k .kb{background:var(--ember)}
+.tl.off .tl-bar,.tl.off .tl-k i{opacity:.45}
+/* the one strong motion on the page: the elapsed part of the day fills in, then the "now" dot lands */
+.tl.anim .tl-past{animation:tlfill 1100ms var(--ease) both}
+.tl.anim .tl-now{animation:tlpop 420ms var(--ease) 820ms both}
+@keyframes tlfill{from{transform:scaleX(0)}}
+@keyframes tlpop{from{transform:scale(0); opacity:0}}
+
+.today .seg{margin-top:18px; grid-auto-columns:auto}
+.today .seg button{white-space:nowrap; padding:0 12px; gap:8px}
+.modeinfo{display:flex; gap:12px; align-items:flex-start; margin-top:14px; font-size:15px; line-height:1.4}
+.modeinfo .ic{margin-top:1px; color:var(--muted)}
+.modeinfo b{display:block; font-size:16px}
+.modeinfo .muted{display:block}
+.modeinfo.busy .ic{color:var(--warn)}
+.modeinfo a{color:var(--ink); font-weight:700; text-underline-offset:3px}
+
+/* tomorrow slot (closed hours) */
+.tmrw{margin-top:14px; display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:center; padding:14px; border-radius:var(--r-core); background:var(--surface-2)}
+.tmrw .ill{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--muted)}
+.tmrw b{display:block}
+
+/* ---------- jump chips ---------- */
+.jump{margin-bottom:8px}
+@container app (min-width:900px){ .jump.chips{margin:0 0 8px; padding:2px 0; flex-wrap:wrap; overflow:visible} }
+.jump .chip .ic{color:var(--muted)}
+
+.lnote{display:flex; gap:12px; align-items:flex-start; margin:8px 0 0; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2); font-size:15px; line-height:1.4}
+.lnote .ic{margin-top:1px; flex:none}
+.lnote b{display:block; font-size:16px}
+.lnote.warn .ic{color:var(--warn)}
+
+/* ---------- groups ---------- */
+.grp{scroll-margin-top:150px}
+.grp + .grp{margin-top:32px}
+.grp-h{display:flex; align-items:center; gap:12px; margin:0 4px 12px}
+.grp-h .gi{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi), var(--shadow); flex:none}
+.grp-h h2{flex:1; min-width:0}
+.grp-h .n{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.grp-h .n.disc{color:var(--on-ember); background:var(--ember); padding:5px 10px; border-radius:999px}
+.lrows{list-style:none; margin:0; padding:0 16px}
+.lrow{display:grid; grid-template-columns:64px minmax(0,1fr) 48px; gap:14px; align-items:center; padding:12px 0; min-height:88px}
+.lrow + .lrow{border-top:1px solid var(--line)}
+.lrow .pic{width:64px; height:64px; border-radius:18px}
+.lrow .nm{display:block; font-weight:700; font-size:16px; line-height:1.3; letter-spacing:-.005em; text-wrap:pretty}
+.lrow .meta{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin-top:4px}
+.lrow .meta .price{font-size:17px}
+.lrow .meta .old{font-size:15px; font-variant-numeric:tabular-nums}
+.lrow.out .nm{color:var(--muted)}
+.lrow.out .meta .price{color:var(--muted); font-weight:700}
+.lrow .meta .badge{align-self:center}
+.lrow .slot{width:48px; height:48px}
+.lrow.locked .meta .when{font-size:14px; color:var(--muted); font-weight:600}
+@container app (min-width:900px){
+  .grp{scroll-margin-top:170px}
+  .lrows{padding:0 22px}
+  .lrow{grid-template-columns:72px minmax(0,1fr) 48px; gap:18px; min-height:96px}
+  .lrow .pic{width:72px; height:72px; border-radius:20px}
+  .lrow .nm{font-size:17px}
+  .lrow .lt{display:flex; align-items:center; justify-content:space-between; gap:24px}
+  .lrow .meta{margin-top:0; flex:none; flex-direction:row-reverse; flex-wrap:nowrap; align-items:center}
+  .lrow .meta .price{font-size:18px}
+}
+
+/* skeleton rows */
+.sk-row{display:grid; grid-template-columns:64px 1fr; gap:14px; align-items:center; padding:12px 0; min-height:88px}
+.sk-row + .sk-row{border-top:1px solid var(--line)}
+.sk-row .skel.p{width:64px; height:64px; border-radius:18px}
+.sk-row .skel.l1{height:16px; width:78%}
+.sk-row .skel.l2{height:14px; width:34%; margin-top:10px}
+
+/* ---------- week ---------- */
+.week{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; padding:2px 16px 8px; margin:0 -16px; scroll-padding:0 16px}
+.week::-webkit-scrollbar{display:none}
+.day{flex:0 0 156px; scroll-snap-align:start; display:flex; flex-direction:column; gap:8px; min-height:164px; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.day .dn{display:flex; align-items:baseline; justify-content:space-between; gap:6px}
+.day .dn b{font-size:20px; letter-spacing:-.03em}
+.day .dn span{font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.day .cnt2{font-size:22px; font-weight:800; letter-spacing:-.03em; line-height:1.1; margin-top:auto}
+.day .from{font-size:16px; font-weight:600; opacity:.75}
+.day.empty-day{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.day.empty-day .ic{margin-top:auto; color:var(--muted)}
+.day .missing{font-size:14px; line-height:1.35}
+.day .tag{align-self:flex-start; font-size:13px; font-weight:800; padding:4px 9px; border-radius:999px; background:var(--surface-2)}
+.day.is-today{background:var(--chip-dark); color:var(--on-chip-dark)}
+.day.is-today .dn span{color:var(--on-chip-dark); opacity:.7}
+.day.is-today .tag{background:var(--ember); color:var(--on-ember)}
+.day.past{opacity:.6}
+@container app (min-width:900px){
+  .week{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); overflow:visible; margin:0; padding:2px 0}
+  .day{min-height:210px}
+}
+
+/* ---------- office + faq ---------- */
+.duo{display:grid; gap:16px}
+@container app (min-width:900px){ .duo{grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:24px; align-items:start} }
+.office .core{padding:22px; display:grid; gap:12px}
+.office .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.office p{margin:0}
+.office ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s}
+.office li{display:grid; grid-template-columns:28px 1fr; gap:10px; align-items:start; counter-increment:s; font-size:15px; line-height:1.4}
+.office li::before{content:counter(s); width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:14px}
+.office .pill{margin-top:6px; justify-self:start}
+
+.faq .core{padding:4px 20px}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:12px 0; font-weight:700; font-size:16px; line-height:1.3; cursor:pointer}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{margin:0 0 16px; color:var(--muted); font-size:16px; line-height:1.5}
+
+/* ---------- prototype-only state switcher ---------- */
+.proto{margin-top:8px; padding:16px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent}
+.proto .label{display:flex; align-items:center; gap:8px; color:var(--muted); margin-bottom:10px}
+.proto .chips{margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
+
+/* ---------- action bar ---------- */
+.abar .asum{flex:none; padding:0 6px 0 14px; display:grid; line-height:1.2}
+.abar .asum b{font-size:16px; font-variant-numeric:tabular-nums}
+.abar .asum small{font-size:13px; font-weight:600; color:var(--muted)}
+.abar .asum[hidden]{display:none}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var L = SC.menu.lunch, R = SC.RESTAURANT, st = SC.state(), m = st.m;
+/* phase of the lunch day (hand-off 6.4, decision 4): before 10:00 | 10:00-15:00 | 15:00-22:30 (pickup -30%) | after 22:30 */
+var phase = m < 600 ? "before" : st.lunch ? "lunch" : st.lunchDiscount ? "discount" : "after";
+var canOrder = phase === "lunch" || phase === "discount";
+var DISC = 0.30;
+
+/* MOCK (макет): демонстрира „Изчерпано днес“. В истинския сайт идва от модула за наличност на обедното меню. */
+var MOCK_OUT = ["l-teleshko-sas-spanak-i-oriz"];
+MOCK_OUT.forEach(function(id){ var x = SC.byId[id]; if (x && x.t.indexOf("out") < 0) x.t.push("out"); });
+
+var GROUP_ICON = {"Супи":"bowl-food", "Салати":"leaf", "Скара на дървени въглища":"fire", "Основни":"cooking-pot", "Десерти":"cake"};
+var GROUP_ID = {"Супи":"supi", "Салати":"salati", "Скара на дървени въглища":"skara", "Основни":"osnovni", "Десерти":"deserti"};
+var groups = [];
+SC.lunch.forEach(function(x){ var g = groups.filter(function(z){ return z.n === x.group; })[0]; if (!g){ g = {n:x.group, items:[]}; groups.push(g); } g.items.push(x); });
+/* sold-out stay visible, always last in their group (decision 2) */
+groups.forEach(function(g){ g.items.sort(function(a,b){ return SC.isOut(a) - SC.isOut(b); }); });
+
+var dd = new Date(L.date + "T12:00:00"), today = new Date();
+var isToday = dd.toDateString() === today.toDateString();
+var dayName = L.dayName || (SC.DAYS[dd.getDay()].charAt(0).toUpperCase() + SC.DAYS[dd.getDay()].slice(1));
+var dateText = dayName + ", " + dd.getDate() + " " + SC.MONTHS[dd.getMonth()];
+var minP = Math.min.apply(null, SC.lunch.map(function(x){ return x.p; }));
+var cut = function(p){ return Math.round(p * (1 - DISC) * 100) / 100; };
+
+function pad(n){ return (n < 10 ? "0" : "") + n; }
+function left(min){ var h = Math.floor(min / 60), mm = min % 60; return (h ? h + "\u00a0ч" : "") + (h && mm ? "\u00a0" : "") + (mm ? mm + "\u00a0мин" : ""); }
+var now = SC.now(), clock = pad(now.h) + ":" + pad(now.m);
+
+var main = SC.mount({page:"lunch", nav:"lunch", title:"Обедно меню", docTitle:"Обедно меню днес", actionBar:canOrder});
+/* lunch lives under "Меню" in the phone tab bar; SC.mount marks only one key, so mark the tab here (see report) */
+var tab = SC.ov.querySelector('.nav a[href="menu.html"]'); if (tab) tab.setAttribute("aria-current", "page");
+
+/* ---------- hero ---------- */
+function timeline(){ var x = Math.max(0, Math.min(1, (m - 600) / 750)), show = canOrder;
+  return '<div class="tl'+(show ? (SC.reduce ? "" : " anim") : " off")+'" style="--x:'+(show ? x.toFixed(4) : 0)+'">'+
+    '<div class="tl-bar" aria-hidden="true"><span class="a"></span><span class="b"></span>'+(show ? '<span class="tl-past"></span><i class="tl-now"></i>' : '')+'</div>'+
+    '<div class="tl-l" aria-hidden="true"><span>10:00</span><span>15:00</span><span>22:30</span></div>'+
+    '<div class="tl-k"><span><i class="ka"></i>10:00 - 15:00 доставка и вземане</span><span><i class="kb"></i>15:00 - 22:30 само вземане, -30%</span></div></div>'; }
+
+function modeInfo(){ var mode = SC.cart.mode(), eta = SC.eta();
+  if (phase !== "lunch" || mode === "pickup") return '<div class="modeinfo">'+SC.ic("storefront",22)+'<span><b>Готово веднага след поръчката</b><span class="muted">Вземате от ресторанта: '+SC.esc(R.address)+'</span></span></div>';
+  return '<div class="modeinfo'+(eta.busy ? " busy" : "")+'">'+SC.ic(eta.busy ? "warning" : "moped",22)+'<span><b>'+(eta.busy ? "Възможни са закъснения · около "+eta.min+" мин" : "Доставка за около "+eta.min+" мин")+'</b>'+
+    '<span class="muted">Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. <a href="delivery.html">Зони за доставка</a></span></span></div>'; }
+
+function todayCard(){
+  var head;
+  if (phase === "lunch") head = '<span class="dot ok"></span><span><b>Сега: доставка и вземане</b><span class="sub">Поръчайте до 15:00 · остават '+left(900 - m)+'</span></span>';
+  else if (phase === "discount") head = '<span class="dot warn"></span><span><b>Сега: само вземане от място</b><span class="sub">До 22:30 · остават '+left(1350 - m)+'</span></span>';
+  else head = '<span class="dot"></span><span><b>Обедното меню е от 10:00 до 15:00</b><span class="sub">'+(phase === "before" ? "Отваряме в 10:00. Тогава можете да поръчате." : "Кухнята затвори за днес. Утре сме тук от 10:00.")+'</span></span>';
+  var seg = phase === "lunch"
+    ? '<div class="seg" role="group" aria-label="Как да получите обеда"><button type="button" data-mode="delivery" aria-pressed="'+(SC.cart.mode() !== "pickup")+'">'+SC.ic("moped",20)+'Доставка</button><button type="button" data-mode="pickup" aria-pressed="'+(SC.cart.mode() === "pickup")+'">'+SC.ic("storefront",20)+'Вземи от място</button></div>'
+    : "";
+  var tail = canOrder ? seg + '<div data-modeinfo>' + modeInfo() + '</div>'
+    : '<div class="tmrw"><span class="ill">'+SC.ic("calendar-blank",24)+'</span><span><b>Утрешното обедно меню</b><span class="missing">[ЛИПСВА: утрешното меню от седмичния график]</span></span></div><a class="pill pill-line pill-block" href="menu.html" style="margin-top:12px">Към основното меню'+SC.ic("arrow-right",20)+'</a>';
+  return '<div class="shell today"><div class="core"><div class="now-h">'+head+(canOrder ? '<span class="clock" title="Часът сега">'+clock+'</span>' : '')+'</div>'+timeline()+tail+'</div></div>'; }
+
+function dealBanner(){ if (phase !== "discount") return "";
+  return '<div class="deal ember-card" role="note"><div class="top2"><span class="big">-30%</span><span class="ill">'+SC.ic("storefront",28)+'</span></div><b>при вземане от място</b>'+
+    '<p>След 15:00 обедното меню е само за вземане от място. Отстъпката се смята сама в количката.</p></div>'; }
+
+var hero = '<section class="sec lhero" aria-labelledby="lh1">'+
+  '<h1 class="h1" id="lh1"><span class="eb">'+SC.ic("fork-knife",18)+'Обедно меню'+(isToday ? ' · днес' : '')+'</span><span class="dt">'+dateText+'</span></h1>'+
+  '<p class="lead">'+SC.plural(SC.lunch.length, "ястие", "ястия")+', от '+SC.fmt(minP)+'. Ново меню всеки ден.'+(canOrder ? ' При вземане от място е готово веднага.' : '')+'</p>'+
+  dealBanner() + todayCard() + '</section>';
+
+/* ---------- list ---------- */
+function priceHTML(x){
+  if (phase === "discount" && !SC.isOut(x)) return '<span class="price">'+SC.fmt(cut(x.p))+'</span><span class="old"><span class="vh">вместо </span>'+SC.fmt(x.p)+'</span>';
+  return '<span class="price">'+SC.fmt(x.p)+'</span>'; }
+function row(x){ var out = SC.isOut(x);
+  var right = out || !canOrder ? '<span class="slot" aria-hidden="true"></span>' : SC.plusBtn(x);
+  return '<li class="lrow'+(out ? " out" : "")+(!canOrder ? " locked" : "")+'">'+SC.pic(x)+'<span class="lt"><span class="nm">'+SC.esc(x.n)+'</span><span class="meta">'+priceHTML(x)+
+    (out ? '<span class="badge out">'+SC.ic("clock",16)+'Изчерпано днес</span>' : '')+'</span></span>'+right+'</li>'; }
+function groupHTML(g, i){ var avail = g.items.filter(function(x){ return !SC.isOut(x); }).length;
+  return '<section class="grp rv" id="g-'+GROUP_ID[g.n]+'" aria-labelledby="gh'+i+'"><div class="grp-h"><span class="gi">'+SC.ic(GROUP_ICON[g.n] || "fork-knife",22)+'</span><h2 class="h3" id="gh'+i+'">'+SC.esc(g.n)+'</h2>'+
+    '<span class="n">'+SC.plural(g.items.length, "ястие", "ястия")+'</span></div><div class="shell"><div class="core"><ul class="lrows">'+g.items.map(row).join("")+'</ul></div></div></section>'; }
+function jumpChips(){ return '<div class="chips jump" role="navigation" aria-label="Групи в обедното меню">'+groups.map(function(g){
+  return '<button class="chip" type="button" data-jump="g-'+GROUP_ID[g.n]+'">'+SC.ic(GROUP_ICON[g.n] || "fork-knife",18)+SC.esc(g.n === "Скара на дървени въглища" ? "Скара" : g.n)+' <span class="n">'+g.items.length+'</span></button>'; }).join("")+'</div>'; }
+function allergenNote(){ return '<div class="lnote">'+SC.ic("info",22)+'<span><b>Алергени и грамаж</b>Съставът на обедните ястия още не е въведен. Ако имате алергия, попитайте ни на <a href="tel:+359894365577" style="color:var(--ink);font-weight:700">'+R.phone+'</a> преди да поръчате. <span class="missing">[ЛИПСВА: грамаж, състав и алергени от кухнята]</span></span></div>'; }
+function lockedNote(){ if (canOrder) return "";
+  return '<div class="lnote" style="margin:0 0 20px">'+SC.ic("clock",22)+'<span><b>'+(phase === "before" ? "Днешното меню, поръчки от 10:00" : "Днешното меню приключи")+'</b>'+(phase === "before" ? "Разгледайте го сега. Бутоните за поръчка се появяват в 10:00." : "Оставяме го за справка. Поръчки отново утре от 10:00.")+'</span></div>'; }
+
+function skeleton(){ var g = '<div class="shell"><div class="core"><div class="lrows">'+[0,1,2,3].map(function(){ return '<div class="sk-row"><span class="skel p"></span><span><span class="skel l1" style="display:block"></span><span class="skel l2" style="display:block"></span></span></div>'; }).join("")+'</div></div></div>';
+  return '<div aria-busy="true" aria-live="polite"><span class="vh">Зареждаме обедното меню</span><div class="grp-h"><span class="skel" style="width:44px;height:44px;border-radius:50%"></span><span class="skel" style="height:22px;width:120px"></span></div>'+g+'<div class="grp-h" style="margin-top:32px"><span class="skel" style="width:44px;height:44px;border-radius:50%"></span><span class="skel" style="height:22px;width:160px"></span></div>'+g+'</div>'; }
+function emptyState(){ return '<div class="shell"><div class="core empty"><span class="ill">'+SC.ic("bowl-food",44)+'</span><h2 class="h3">Обедното меню за днес още не е качено</h2><p class="muted" style="margin:0;max-width:34ch">Проверете пак след малко или поръчайте от основното меню.</p>'+
+  '<a class="pill pill-red pill-lg" href="menu.html">Към основното меню'+SC.ic("arrow-right",20)+'</a><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се</a></div></div>'; }
+function errorState(){ return '<div class="shell"><div class="core empty" role="alert"><span class="ill">'+SC.ic("warning-circle",44)+'</span><h2 class="h3">Не успяхме да заредим обедното меню</h2><p class="muted" style="margin:0;max-width:34ch">Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има днес.</p>'+
+  '<button class="pill pill-red pill-lg" type="button" data-demo="">'+SC.ic("arrow-right",20)+'Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се · '+R.phone+'</a></div></div>'; }
+function offlineNote(){ return '<div class="lnote warn" role="status" style="margin:0 0 20px">'+SC.ic("warning",22)+'<span><b>Няма връзка</b>Показваме менюто, което заредихме последно. Количката ви е запазена, поръчайте, щом връзката се върне.</span></div>'; }
+
+/* ---------- week (preview only) ---------- */
+function weekHTML(){ var dow = (dd.getDay() + 6) % 7, mon = new Date(dd); mon.setDate(dd.getDate() - dow);
+  var ABBR = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"], FULL = ["понеделник","вторник","сряда","четвъртък","петък","събота","неделя"];
+  return '<div class="week" role="list">'+ABBR.map(function(a, i){ var d = new Date(mon); d.setDate(mon.getDate() + i); var me = i === dow, past = i < dow;
+    var body = me ? '<span class="tag">'+(isToday ? "Днес" : "В менюто")+'</span><span class="cnt2">'+SC.plural(SC.lunch.length, "ястие", "ястия")+'</span><span class="from">от '+SC.fmt(minP)+'</span>'
+      : '<span class="missing">[ЛИПСВА: меню за '+FULL[i]+']</span>'+SC.ic("calendar-dots",22);
+    return '<div class="day'+(me ? " is-today" : " empty-day")+(past ? " past" : "")+'" role="listitem" aria-label="'+FULL[i]+', '+d.getDate()+' '+SC.MONTHS[d.getMonth()]+'"><span class="dn"><b>'+a+'</b><span>'+d.getDate()+'.'+pad(d.getMonth() + 1)+'</span></span>'+body+'</div>'; }).join("")+'</div>'; }
+
+/* ---------- office + faq ---------- */
+var FAQ = [
+  ["До колко часа доставяте обедното меню?", "До 15:00. След 15:00 обедното меню е само за вземане от място, с -30% от цената."],
+  ["Колко бързо е готово, ако го взема от ресторанта?", "Обедните ястия са готови веднага след поръчката. Ако добавите и от основното меню, поръчката е готова най-рано след 20 минути."],
+  ["Къде доставяте безплатно?", "В Дружба 1 и 2, НПЗ Искър и Бусманци. До Горубляне и Гара Искър доставяме по тарифа. <span class=\"missing\">[ЛИПСВА: такса в €]</span>"],
+  ["Менюто различно ли е всеки ден?", "Да. Менюто се сменя всеки ден и едно и също меню не се повтаря два поредни дни."],
+  ["Как ще разбера какви алергени има?", "Съставът на обедните ястия още не е въведен на сайта. Обадете ни се на "+R.phone+" и ще ви кажем преди да поръчате."]];
+function bottomHTML(){
+  return '<section class="sec" aria-labelledby="wk"><div class="sec-h"><h2 class="h2" id="wk">Цялата седмица</h2></div><p class="muted" style="margin:-4px 0 16px">Само за преглед. Всеки ден поръчвате от менюто за деня.</p>'+weekHTML()+'</section>'+
+  '<section class="sec"><div class="duo">'+
+    '<div class="shell office"><div class="core"><span class="ill">'+SC.ic("briefcase",28)+'</span><h2 class="h3">Обедна поръчка за офиса</h2><p class="muted">Без събиране на поръчки по телефона.</p>'+
+      '<ol><li><span>Един колега отваря поръчка и праща връзка в чата.</span></li><li><span>Всеки добавя своето от обедното меню до 11:30.</span></li><li><span>Всичко пристига заедно, с обща сметка или поотделно.</span></li></ol>'+
+      '<a class="pill pill-line" href="office.html">'+SC.ic("users-three",20)+'Организирай за офиса</a></div></div>'+
+    '<div class="faq"><h2 class="h3" style="margin:0 4px 12px">Често питани</h2><div class="shell"><div class="core">'+FAQ.map(function(q){ return '<details><summary>'+q[0]+SC.ic("caret-down",20)+'</summary><p>'+q[1]+'</p></details>'; }).join("")+'</div></div></div>'+
+  '</div></section>'+
+  '<section class="sec" style="padding-top:40px"><div class="proto"><div class="label small">'+SC.ic("eye",18)+'<b>Само в прототипа:</b>покажи състояние</div><div class="chips" data-demos></div></div></section>'; }
+
+/* ---------- render ---------- */
+var DEMOS = [["","Нормално"],["loading","Зарежда"],["empty","Не е качено"],["error","Грешка"],["offline","Без интернет"]];
+function demo(){ var h = (location.hash || "").replace("#",""); return DEMOS.some(function(d){ return d[0] === h; }) ? h : ""; }
+function listHTML(){ var d = demo();
+  if (d === "loading") return skeleton();
+  if (d === "empty") return emptyState();
+  if (d === "error") return errorState();
+  return (d === "offline" || (navigator.onLine === false) ? offlineNote() : "") + lockedNote() + jumpChips() +
+    '<div style="margin-top:12px">'+groups.map(groupHTML).join("")+'</div>' + allergenNote(); }
+
+main.innerHTML = '<div class="lgrid">' + hero + '<div class="sec lmain" data-list aria-label="Ястията днес"></div></div>' + bottomHTML();
+var listEl = main.querySelector("[data-list]");
+function renderList(){ listEl.innerHTML = listHTML(); var d = demo();
+  main.querySelector("[data-demos]").innerHTML = DEMOS.map(function(x){ return '<button class="chip" type="button" data-demo="'+x[0]+'" aria-pressed="'+(d === x[0])+'">'+x[1]+'</button>'; }).join("");
+  if (abar) abar.hidden = d === "loading" || d === "empty" || d === "error";
+  SC.reveal(); }
+
+/* ---------- action bar: one main action ---------- */
+var abar = null;
+if (canOrder){
+  SC.ov.insertAdjacentHTML("beforeend", '<div class="abar" data-abar><span class="asum" hidden data-asum></span><span data-cta style="flex:1;display:flex"></span></div>');
+  abar = SC.ov.querySelector("[data-abar]");
+}
+function total(){ return SC.cart.lines().reduce(function(a, l){ var x = SC.byId[l.id]; if (!x) return a; var p = x.p + (l.extra || 0); if (phase === "discount" && x.lunch) p = cut(x.p) + (l.extra || 0); return a + p * l.q; }, 0); }
+function updateBar(){ if (!abar) return; var n = SC.cart.count(), sum = abar.querySelector("[data-asum]"), cta = abar.querySelector("[data-cta]");
+  var verb = phase === "discount" ? "Вземи от място" : "Поръчай";
+  sum.hidden = !n; sum.innerHTML = n ? '<b>'+SC.plural(n, "ястие", "ястия")+'</b><small>в количката</small>' : "";
+  cta.innerHTML = n ? '<a class="pill pill-red" href="cart.html">'+verb+' · '+SC.fmt(total())+SC.ic("arrow-right",20)+'</a>'
+    : '<button class="pill pill-red" type="button" data-jump="first">'+(phase === "discount" ? "Вземи от място · -30%" : "Поръчай обедно меню")+SC.ic("caret-down",20)+'</button>'; }
+
+/* after 15:00 the lunch menu is pickup only (decision 4): a lunch item in the cart switches the cart to pickup */
+SC.cart.on(function(){ if (phase === "discount" && SC.cart.mode() !== "pickup" && SC.cart.lines().some(function(l){ return SC.byId[l.id] && SC.byId[l.id].lunch; })) SC.cart.mode("pickup"); updateBar(); });
+
+function jumpTo(id){ var el = id === "first" ? listEl.querySelector(".grp") : document.getElementById(id); if (!el) return;
+  var top = SC.scroller.querySelector(".row2").getBoundingClientRect().bottom - SC.scroller.getBoundingClientRect().top + 12;
+  SC.scroller.scrollTo({top: SC.scroller.scrollTop + el.getBoundingClientRect().top - SC.scroller.getBoundingClientRect().top - top, behavior: SC.reduce ? "auto" : "smooth"});
+  if (id === "first"){ var p = el.querySelector(".plus"); setTimeout(function(){ p && p.focus({preventScroll:true}); }, SC.reduce ? 0 : 500); } }
+
+main.addEventListener("click", function(e){ var t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.mode){ SC.cart.mode(t.dataset.mode); main.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed", b === t); }); var mi = main.querySelector("[data-modeinfo]"); if (mi) mi.innerHTML = modeInfo(); return; }
+  if (t.dataset.jump){ jumpTo(t.dataset.jump); return; }
+  if (t.hasAttribute("data-demo")){ var v = t.dataset.demo; history.replaceState(null, "", v ? "#" + v : location.pathname); renderList(); return; }
+});
+if (abar) abar.addEventListener("click", function(e){ var t = e.target.closest("[data-jump]"); if (t) jumpTo(t.dataset.jump); });
+window.addEventListener("hashchange", renderList);
+window.addEventListener("offline", renderList); window.addEventListener("online", renderList);
+
+renderList(); updateBar();
+/* desktop: keep the day card in view while scrolling the list, but only when it fits the screen */
+var heroEl = main.querySelector(".lhero");
+function fitSticky(){ heroEl.classList.toggle("stick", heroEl.offsetHeight + 190 < SC.scroller.clientHeight); }
+fitSticky(); window.addEventListener("resize", fitSticky);
+
+/* ---------- SEO: the lunch menu as structured data (Menu), so Google reads it as text, not a picture ---------- */
+var ld = {"@context":"https://schema.org", "@type":"Menu", "name":"Обедно меню · " + dateText, "inLanguage":"bg",
+  "hasMenuSection": groups.map(function(g){ return {"@type":"MenuSection", "name":g.n, "hasMenuItem": g.items.map(function(x){
+    return {"@type":"MenuItem", "name":x.n, "offers":{"@type":"Offer", "price":x.p.toFixed(2), "priceCurrency":"EUR", "availability": SC.isOut(x) ? "https://schema.org/SoldOut" : "https://schema.org/InStock"}}; })}; })};
+var s = document.createElement("script"); s.type = "application/ld+json"; s.textContent = JSON.stringify(ld); document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
