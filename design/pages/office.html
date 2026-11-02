@@ -267,7 +267,8 @@
 .o-proto h3{margin:4px 0 0; font-size:14px; font-weight:700; color:var(--muted)}
 
 /* ---------- action bar ---------- */
-.abar .pill .o-dots{margin-left:2px}
+.pill[data-busy]{pointer-events:none}
+.pill .o-dots{margin-left:2px}
 @container app (min-width:900px){ .abar.o-bar{display:none} .aifab.up{bottom:24px} }
 </style>
 </head>
@@ -588,10 +589,11 @@ function viewMine(){ var p = G.mine, s = sum(p);
   var html = '<section class="sec o-top">'+back("#list", "Назад: общият списък")+
     '<div class="o-lay"><div class="o-col"><div><h1 class="h1" style="font-size:clamp(30px,8cqi,44px)">Вашият обяд</h1><p class="lead o-sub">Изберете какво искате и вие. Колегите го виждат в общия списък.</p></div>'+pickerHTML(p)+'</div>'+
     '<aside class="o-aside o-col o-onlydesk"><div class="shell"><div class="core o-card"><h2 class="o-h3">Вашият избор</h2><div data-mine>'+minePicks(p)+'</div>'+
-    '<button class="pill pill-red pill-lg pill-block" type="button" data-act="savemine" style="margin-top:16px" data-savebtn>'+saveLbl(p, "Запази моя избор")+'</button></div></div></aside></div></section>';
-  bar('<button class="pill pill-red" type="button" data-act="savemine" data-savebtn>'+saveLbl(p, "Запази моя избор")+'</button>');
+    '<button class="pill pill-red pill-lg pill-block" type="button" data-act="savemine" style="margin-top:16px" data-savebtn'+saveDis(p)+'>'+saveLbl(p, "Запази моя избор")+'</button></div></div></aside></div></section>';
+  bar('<button class="pill pill-red" type="button" data-act="savemine" data-savebtn'+saveDis(p)+'>'+saveLbl(p, "Запази моя избор")+'</button>');
   return html; }
 function saveLbl(p, verb){ var s = sum(p); return s ? verb+" · "+fmt(s) : "Изберете ястие от менюто"; }
+function saveDis(p){ return sum(p) ? '' : ' aria-disabled="true"'; }
 
 function viewJoin(rt){ var c = ctx(); var valid = !rt.code || rt.code === DEMO_CODE || rt.code === G.code;
   var org = G.name.trim() || DEMO_ORG;
@@ -608,7 +610,7 @@ function viewJoin(rt){ var c = ctx(); var valid = !rt.code || rt.code === DEMO_C
       (G.office.trim() ? '<div class="kv"><span>Офис</span><b>'+esc(G.office.trim())+'</b></div>' : '')+
       '<div class="kv"><span>'+(G.mode==="pickup"?"Вземане":"Доставка до")+'</span><b>'+esc(whereText(c))+'</b></div>'+
       '<div class="kv"><span>Плаща</span><b>'+(G.pays==="one" ? esc(org)+" за всички" : "всеки своето")+'</b></div></div>'+
-    '<div class="row" style="flex-wrap:wrap;margin-top:14px"><span class="o-pill-time">'+ic("timer",18)+'Изберете до '+clock(c.dl)+' '+c.dayWord+'</span><span class="muted small" style="font-weight:700">остават <span data-leftw>'+leftWords(c.remain)+'</span></span></div>'+
+    '<div style="margin-top:16px"><span class="o-pill-time">'+ic("timer",18)+'<span>Изберете до '+clock(c.dl)+' '+c.dayWord+' <span class="muted">· остават <span data-leftw>'+leftWords(c.remain)+'</span></span></span></span></div>'+
   '</div></div>';
 
   if (G.guest.done){
@@ -625,9 +627,9 @@ function viewJoin(rt){ var c = ctx(); var valid = !rt.code || rt.code === DEMO_C
     '<div class="field"><label for="o-gname">Вашето име</label><input class="input" id="o-gname" autocomplete="given-name" placeholder="Например: Николай" value="'+esc(G.guest.name)+'" aria-describedby="o-gname-h o-gname-e"><span class="help" id="o-gname-h">Така '+esc(org)+' ще знае чие е ястието. Без профил.</span><span class="err" id="o-gname-e" data-err="gname" hidden></span></div>'+
     pickerHTML(gp, true)+'</div>'+
     '<aside class="o-aside o-col o-onlydesk"><div class="shell"><div class="core o-card"><h2 class="o-h3">Вашият избор</h2><div data-mine>'+minePicks(gp)+'</div>'+
-      '<button class="pill pill-red pill-lg pill-block" type="button" data-act="guestsave" data-savebtn style="margin-top:16px">'+saveLbl(gp, "Добави към поръчката")+'</button>'+
+      '<button class="pill pill-red pill-lg pill-block" type="button" data-act="guestsave" data-savebtn'+saveDis(gp)+' style="margin-top:16px">'+saveLbl(gp, "Добави към поръчката")+'</button>'+
       '<p class="o-fine" style="margin-top:12px">'+ic("info",18)+'<span>'+(G.pays==="one" ? esc(org)+" плаща за всички. После си уреждате сметката." : "Плащате своето при получаване, в брой или с карта.")+'</span></p></div></div></aside></div></section>';
-  bar('<button class="pill pill-red" type="button" data-act="guestsave" data-savebtn>'+saveLbl(gp, "Добави към поръчката")+'</button>');
+  bar('<button class="pill pill-red" type="button" data-act="guestsave" data-savebtn'+saveDis(gp)+'>'+saveLbl(gp, "Добави към поръчката")+'</button>');
   return html2; }
 
 function viewSent(){ var c = ctx(); var T = total(), list = eaters();
@@ -687,7 +689,7 @@ function updPicker(id){ var picks = pickTarget(), row = main.querySelector('[dat
     var f = nr.querySelector('[data-id="'+id+'"][data-q="1"]') || nr.querySelector(".plus"); }
   var m = main.querySelector("[data-mine]"); if (m) m.innerHTML = minePicks(picks);
   var verb = route().v === "mine" ? "Запази моя избор" : "Добави към поръчката";
-  document.querySelectorAll("[data-savebtn]").forEach(function(b){ b.innerHTML = saveLbl(picks, verb); });
+  document.querySelectorAll("[data-savebtn]").forEach(function(b){ b.innerHTML = saveLbl(picks, verb); if (sum(picks)) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled","true"); });
   return nr; }
 
 main.addEventListener("input", function(e){ var t = e.target;
@@ -742,7 +744,7 @@ function onClick(e){ var t = e.target.closest("button, a"); if (!t) return;
     case "guestedit": G.guest.done = false; save(); render(); return;
     case "restart": e.preventDefault(); G = Object.assign({}, DEF, {office:G.office, name:G.name, addr:G.addr, mode:G.mode, pays:G.pays, phone:G.phone, guest:Object.assign({}, DEF.guest), mine:{}, removed:[]}); save(); sim.closed = false; if (location.hash) location.hash = ""; else render(); return;
     case "reset": G = JSON.parse(JSON.stringify(DEF)); save(); sim = {empty:false, closed:false, offline:false, loading:false}; SC.toast("Данните на прототипа са изчистени"); if (location.hash) location.hash = ""; else render(); return;
-    case "send": send(t); return; } }
+    case "send": if (!t.hasAttribute("data-busy")) send(t); return; } }
 main.addEventListener("click", onClick);
 SC.ov.addEventListener("click", function(e){ if (e.target.closest(".o-bar")) onClick(e); });
 
@@ -750,9 +752,9 @@ function send(btn){ var ok = /^(\+359|0)8[789]\d{7}$/.test(G.phone.replace(/[\s-
   var errBox = main.querySelector("[data-senderr]"); if (errBox) errBox.innerHTML = "";
   if (!ok){ setErr("phone", G.phone.trim() ? "Проверете номера: например 0888 123 456." : "Напишете телефон, за да ви се обадим, ако има въпрос."); var p = document.getElementById("o-phone"); scrollToEl(p); setTimeout(function(){ p.focus({preventScroll:true}); }, SC.reduce ? 0 : 350); return; }
   var btns = document.querySelectorAll('[data-act="send"]'), label = btn.innerHTML;
-  btns.forEach(function(b){ b.setAttribute("aria-disabled","true"); b.innerHTML = "Изпращаме<span class=\"o-dots\" aria-hidden=\"true\"><i></i><i></i><i></i></span>"; });
+  btns.forEach(function(b){ b.setAttribute("data-busy",""); b.innerHTML = label + '<span class="o-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh" role="status">Изпращаме</span>'; });
   setTimeout(function(){
-    if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("aria-disabled"); b.innerHTML = label; });
+    if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("data-busy"); b.innerHTML = label; });
       var box = main.querySelector("[data-senderr]"); if (box) box.innerHTML = '<div class="o-note bad" role="alert">'+ic("warning-circle",22)+'<div><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button></div></div>';
       SC.toast("Няма връзка. Поръчката ви е запазена."); scrollToEl(box); return; }
     G.sentAt = Date.now(); save(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }

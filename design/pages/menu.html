@@ -293,7 +293,7 @@ var heroArt = SC.byId["pitsa-s-burata-i-proshuto-krudo"] || SC.inCat("pitsi")[0]
 function segSub(kind){
   if (kind === "main") return plural(MAIN_ITEMS.length);
   if (kind === "lunch"){ if (S.lunch) return "до 15:00"; if (S.lunchDiscount) return '<span class="tg"><i>-30%</i>вземане</span>'; return S.m < 600 ? "от 10:00" : "утре от 10:00"; }
-  if (S.breakfast) return "до 11:30"; return S.m < 600 ? "от 10:00" : "утре";
+  if (S.breakfast) return "до 11:30"; return S.m < 600 ? "от 10:00" : "утре от 10:00";
 }
 function etaLine(){ var e = SC.eta();
   if (S.delivery) return '<p class="eta'+(e.busy?" warn":"")+'">'+SC.ic("moped",20)+'<b>'+(e.busy ? "Доставка: "+e.text.charAt(0).toLowerCase()+e.text.slice(1) : "Доставка сега: "+e.text)+'</b></p>';
@@ -303,7 +303,7 @@ main.innerHTML =
   '<section class="sec mhero" aria-labelledby="mh1">'+
     '<div class="mtop"><div class="hero-art" aria-hidden="true"><div class="pic">'+SC.art(heroArt)+'</div></div>'+
       '<h1 class="h1" id="mh1">Меню</h1>'+
-      '<p class="lead">Пица на пещ и скара на дървени въглища. Цените са в евро с ДДС.</p>'+etaLine()+'</div>'+
+      '<p class="lead">Пица на пещ и скара на дървени въглища. Цени в евро с ДДС.</p>'+etaLine()+'</div>'+
     '<div class="mctl">'+
       '<div class="seg mseg" role="group" aria-label="Кое меню">'+
         '<button type="button" data-menu="main"><b>Основно</b><small>'+segSub("main")+'</small></button>'+
@@ -346,7 +346,7 @@ function notices(){ var h = '';
   if (st.view === "offline") h += '<div class="notice off" role="status"><span class="nic">'+SC.ic("warning-circle",24)+'</span><b>Няма връзка с интернет</b><p>Менюто е заредено, а количката ви е запазена. Поръчайте, когато връзката се върне.</p><div class="acts"><button class="pill pill-line" type="button" data-retry>'+SC.ic("arrow-up-right",20)+'Опитай пак</button></div></div>';
   if (!S.kitchen) h += '<div class="notice warn"><span class="nic">'+SC.ic("clock",24)+'</span><b>Кухнята приема поръчки до 22:30. Поръчай за утре?</b><p>Изберете ястията сега, а в количката посочете час утре след 10:00.</p></div>';
   if (st.menu === "bf"){
-    if (S.breakfast){ var left = 690 - S.m; h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуски всеки ден до 11:30</b><p>Остават '+(left >= 60 ? "1 ч. и "+(left-60)+" мин" : left+" мин")+' за днес.</p></div>'; }
+    if (S.breakfast){ var left = 690 - S.m; h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуски всеки ден до 11:30</b><p>Остават '+(left >= 60 ? "1 ч."+(left > 60 ? " и "+(left-60)+" мин" : "") : left+" мин")+' за днес.</p></div>'; }
     else if (S.m < 600) h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуските са от 10:00 до 11:30</b><p>Разгледайте ги сега и поръчайте, щом отворим.</p></div>';
     else h += '<div class="notice"><span class="nic">'+SC.ic("moon",24)+'</span><b>Закуските свършиха за днес</b><p>Очакваме ви утре от 10:00 до 11:30. Междувременно цялото меню е тук.</p><div class="acts"><button class="pill pill-line" type="button" data-menu="main">Към основното меню</button></div></div>';
   }

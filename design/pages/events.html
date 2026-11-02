@@ -536,7 +536,8 @@ subEl.addEventListener("submit", function(e){ e.preventDefault();
   setTimeout(function(){ st.subDone = v; renderSub(); var h = subEl.querySelector(".sub-ok h3"); if (h){ h.tabIndex = -1; h.focus({preventScroll:true}); } }, SC.reduce ? 0 : 500); });
 
 /* ---------- scrolling helpers ---------- */
-function scrollToEl(el, focusEl){ if (!el) return; var s = SC.scroller, off = SC.device.clientWidth >= 900 ? 120 : 148;
+function scrollToEl(el, focusEl){ if (!el) return; if (el.matches("section")) el = el.querySelector(".shell, .sec-h") || el;
+  var s = SC.scroller, off = SC.device.clientWidth >= 900 ? 130 : 150;
   s.scrollTo({top: el.getBoundingClientRect().top - s.getBoundingClientRect().top + s.scrollTop - off, behavior: SC.reduce ? "auto" : "smooth"});
   if (focusEl) setTimeout(function(){ focusEl.focus({preventScroll:true}); }, SC.reduce ? 0 : 450); }
 function notify(cat){ if (cat && PUBLIC.indexOf(cat)>-1 && st.want.indexOf(cat)<0) st.want.push(cat);
@@ -576,7 +577,8 @@ REAL.forEach(function(x){ var e = x.e, s = document.createElement("script"); s.t
 /* ---------- start ---------- */
 var parts = readHash(); renderCtrl(); renderList(); renderCal(); renderSub();
 var anchor = ["uvedomi","praznik","kalendar"].filter(function(a){ return parts.indexOf(a)>-1; })[0];
-if (anchor) setTimeout(function(){ scrollToEl(main.querySelector("#"+anchor)); }, 60);
+if (anchor){ var go = function(){ setTimeout(function(){ scrollToEl(main.querySelector("#"+anchor)); }, 80); };
+  try{ document.fonts.ready.then(go, go); }catch(e){ go(); } }
 SC.reveal();
 })();
 </script>

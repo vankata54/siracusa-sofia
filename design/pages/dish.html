@@ -279,7 +279,7 @@ function render(){
     factsCard(x);
 
   main.innerHTML =
-    '<article class="dish" itemscope>'+
+    '<article class="dish">'+
       '<div class="dgrid">'+
         '<div class="hero"><div class="shell"><div class="core">'+SC.pic(x)+SC.badges(x,true)+
           (out ? '' : '<button class="v3d" type="button" data-3d>'+ic("cube",20)+'Виж в 3D</button>')+
@@ -379,7 +379,7 @@ main.addEventListener("keydown", function(e){ var pic = e.target.closest && e.ta
 
 /* ---------- events ---------- */
 function onClick(e){ var t = e.target.closest("button, a"); if (!t || !x) return;
-  if (t.dataset.q){ qty = Math.max(1, Math.min(20, qty + (+t.dataset.q))); paint(); var o = document.querySelector(".dish-abar output"); return; }
+  if (t.dataset.q){ qty = Math.max(1, Math.min(20, qty + (+t.dataset.q))); paint(); return; }
   if (t.hasAttribute("data-buy")){ buy(t); return; }
   if (t.hasAttribute("data-mods")){ openMods(); return; }
   if (t.hasAttribute("data-3d")){ if (!t.hasAttribute("aria-busy")) toggle3d(t); return; }
@@ -397,7 +397,7 @@ function watchTitle(){ var h = main.querySelector("[data-h1]"); ttl.classList.re
 function setMeta(d){ var m = document.querySelector('meta[name="description"]');
   m.setAttribute("content", d.n+" от Siracusa Bar & Grill, Дружба 2: "+(d.comp?d.comp+". ":"")+(d.g?d.g+", ":"")+fmt(d.p)+". Поръчайте с доставка или вземете от място."); }
 function jsonLd(d){ var old = document.getElementById("ld"); if (old) old.remove();
-  var data = {"@context":"https://schema.org","@type":"MenuItem","name":d.n,"description":d.comp||undefined,"menuAddOn":undefined,
+  var data = {"@context":"https://schema.org","@type":"MenuItem","name":d.n,"description":d.comp||undefined,
     "offers":{"@type":"Offer","price":d.p.toFixed(2),"priceCurrency":"EUR","availability":SC.isOut(d)?"https://schema.org/OutOfStock":"https://schema.org/InStock"},
     "suitableForDiet":d.t.indexOf("veg")>-1?"https://schema.org/VegetarianDiet":undefined};
   var s = document.createElement("script"); s.type = "application/ld+json"; s.id = "ld"; s.textContent = JSON.stringify(data); document.head.appendChild(s); }

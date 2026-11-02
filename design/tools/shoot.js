@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
 const args = process.argv.slice(2); const page = args[0]; const out = (args[1] && !args[1].startsWith('--')) ? args[1] : 'shots';
-const opt = Object.fromEntries(args.filter(a=>a.startsWith('--')).map(a=>a.slice(2).split('=')));
+const opt = Object.fromEntries(args.filter(a=>a.startsWith('--')).map(a=>{ const i=a.indexOf('='); return [a.slice(2,i), a.slice(i+1)]; }));
 fs.mkdirSync(out, {recursive:true});
 const url = 'file://' + path.resolve(__dirname, '..', page.split('#')[0]) + (page.includes('#') ? '#'+page.split('#')[1] : '');
 const name = path.basename(page).replace(/[#.]/g,'_');

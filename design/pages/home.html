@@ -19,7 +19,7 @@
 .eyebrow{margin:0 0 10px; font-size:14px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
 
 /* ---------- hero: simulated 8 - 15 s clip under the floating header ---------- */
-.hero{display:grid; grid-template-areas:"stage" "acts"}
+.hero{display:grid; grid-template-columns:minmax(0,1fr); grid-template-areas:"stage" "acts"}
 .stage{grid-area:stage; position:relative; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
   margin-top:calc(var(--pull,130px) * -1); min-height:calc(var(--pull,130px) + 300px); padding:calc(var(--pull,130px) + 24px) 20px 24px;
   border-radius:0 0 36px 36px; color:var(--on-chip-dark)}
@@ -50,10 +50,10 @@
 .vtag{font-size:14px; line-height:1.3; color:color-mix(in srgb, var(--on-chip-dark) 62%, transparent); font-style:italic; text-decoration:underline dashed 1px; text-underline-offset:4px}
 
 /* hero actions */
-.acts{grid-area:acts; display:grid; gap:10px; padding:16px 16px 0}
-.go .gol{display:grid; text-align:left; line-height:1.15}
+.acts{grid-area:acts; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding:16px 16px 0}
+.go .gol{display:grid; min-width:0; text-align:left; line-height:1.15; white-space:normal}
 .go .gol small{font-size:14px; font-weight:600; opacity:.86; margin-top:3px}
-.tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.tiles{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
 .tile{position:relative; display:grid; align-content:start; gap:10px; min-height:104px; padding:12px 12px 14px 14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow);
   text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
 .tile:active{transform:scale(.97)}
@@ -284,7 +284,7 @@ var isOffline = demo === "offline" || (navigator.onLine === false);
 /* ---------- time-dependent copy (everything reads SC.state()) ---------- */
 var order, etaRow, lunchSub;
 if (st.delivery) order = {t:"Поръчай", s:"Доставка или вземане от място", href:"menu.html"};
-else if (st.kitchen) order = {t:"Поръчай за вземане", s:"Доставката приключи · Вземане до 22:30", href:"menu.html", pickup:true};
+else if (st.kitchen) order = {t:"Поръчай за вземане", s:"Вземане от място до 22:30", href:"menu.html", pickup:true};
 else order = {t:"Поръчай за утре", s:st.m < 600 ? "Отваряме в 10:00" : "Кухнята приема поръчки до 22:30", href:"menu.html"};
 
 if (st.delivery && !eta.busy) etaRow = {dot:"ok", html:"<b>Доставка сега: "+eta.text+"</b>"};
