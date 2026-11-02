@@ -394,9 +394,8 @@ function topNotes(I, step){ var h = "";
     : note("info","clock","Кухнята приема поръчки до 22:30","Поръчай за утре? Изберете час и ще я приготвим точно тогава.");
   else if (I.sched) h += note("info","calendar-blank","Поръчвате за "+(I.sched==="утре"?"утре, "+tomorrowLabel():"днес"),"Ще я приготвим за часа, който изберете.");
   if (I.conflict==="delivery") h += note("warn","warning-circle","Обедното меню след 15:00 е само за вземане от място (-30%)","Вземете я от ресторанта и отстъпката се смята сама. Или махнете обедните ястия и я доставяме.",
-    '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Смени на вземане</button><button class="pill pill-line" type="button" data-act="rmlunch">Махни обедните</button>');
-  if (I.conflict==="sched") h += note("warn","warning-circle","Обедното меню е само за днес, до 15:00","Махнете обедните ястия, за да поръчате предварително.",
-    '<button class="pill pill-ink" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>');
+    '<button class="pill pill-line" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>');
+  if (I.conflict==="sched") h += note("warn","warning-circle","Обедното меню е само за днес, до 15:00","Махнете обедните ястия, за да поръчате предварително. Другото остава в количката.");
   if (step===1 && I.n===0 && I.outN) h += note("warn","warning-circle","Всичко в количката е изчерпано днес","Сменете ястията с подобни или изберете нещо друго от менюто.");
   return h; }
 
@@ -427,7 +426,7 @@ function suggestions(I){ var ids = SC.cart.lines().map(function(l){ return l.id;
   return out; }
 
 function ffHTML(I){ var s = I.s, e = SC.eta();
-  var dSmall = !I.delivOK ? "до 21:00" : I.today ? (e.busy ? "около 55 мин, натоварено" : "около "+e.min+" мин") : "по избран час";
+  var dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около "+e.min+" мин") : "по избран час";
   var pSmall = I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
   var h = '<div class="seg ff" role="group" aria-label="Как да получите поръчката">'+
     '<button type="button" data-act="mode" data-v="delivery" aria-pressed="'+(I.mode==="delivery")+'"'+(I.delivOK?"":" disabled")+'>'+ic("moped",26)+'<b>Доставка</b><small>'+dSmall+'</small></button>'+
@@ -443,6 +442,8 @@ function ctaLabel(I, step){
   return P.err==="offline" ? "Опитай пак" : "Поръчай"; }
 function ctaBtn(I, step, block){ var lbl = ctaLabel(I, step) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "");
   if (step===3 && P.sending) return '<button class="pill pill-red pill-lg'+(block?" pill-block":"")+'" type="button" aria-busy="true" aria-disabled="true">'+esc(lbl)+'<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
+  if (step===1 && I.conflict==="delivery") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Смени на вземане · -30%</button>';
+  if (step===1 && I.conflict==="sched") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>';
   return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="next" data-n="'+step+'">'+esc(lbl)+'</button>'; }
 
 function summaryHTML(I, step){ var e = etaText(I), zoneName = D.zone || "";

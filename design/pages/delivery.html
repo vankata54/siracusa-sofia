@@ -117,6 +117,7 @@
 .zcard dd{margin:0; font-weight:800; text-align:right}
 .zcard dd.missing{font-weight:600; white-space:nowrap}
 .zcard .busy{color:var(--warn)}
+.zcard .busy small{display:block; font-size:14px; font-weight:700}
 .zcard .note{margin:12px 0 0; font-size:15px; color:var(--muted)}
 .zswap{animation:rin var(--t-slow) var(--ease)}
 
@@ -391,7 +392,7 @@ function zoneCardHTML(z){
   return '<div class="zswap"><div class="zt"><h3 class="h3">'+z.n+'</h3>'+(z.free?'<span class="ztag free">'+ic("check",16)+'Безплатна доставка</span>':'<span class="ztag paid">'+ic("tag",16)+'По тарифа</span>')+'</div>'+
     (z.slug==="druzhba-2"?'<p class="here">'+ic("map-pin",18)+'Тук сме: срещу бл. 311</p>':'')+
     '<dl>'+
-      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"":"утре, ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин · натоварено</span>':'около '+mins+' мин')+'</dd></div>'+
+      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"":"утре, ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин<small>натоварено сега</small></span>':'около '+mins+' мин')+'</dd></div>'+
       '<div class="kv"><dt>Такса</dt><dd'+(z.free||z.fee!=null?'':' class="missing"')+'>'+(z.free?"Безплатно":(z.fee!=null?SC.fmt(z.fee):MISS_FEE))+'</dd></div>'+
       '<div class="kv"><dt>Минимална поръчка</dt><dd class="missing">[ЛИПСВА: сума в €]</dd></div>'+
       '<div class="kv"><dt>Днес</dt><dd>'+(S.delivery?"до 21:00":S.m<600?"от 10:00 до 21:00":"не доставяме")+'</dd></div>'+
@@ -410,7 +411,8 @@ function select(slug, opts){ opts = opts || {};
   zcard.innerHTML = zoneCardHTML(z);
   if (!opts.quiet){ try{ history.replaceState(null, "", "#"+(slug||"izvan-zonite")); }catch(e){} }
   if (opts.reveal){ var r = zcard.getBoundingClientRect(), s = SC.scroller.getBoundingClientRect();
-    if (r.top < s.top + 140 || r.bottom > s.bottom - 90) zcard.scrollIntoView({behavior: SC.reduce ? "auto" : "smooth", block:"center"}); }
+    var dy = 0; if (r.bottom > s.bottom - 100) dy = r.bottom - (s.bottom - 100); if (r.top - dy < s.top + 150) dy = r.top - (s.top + 150);
+    if (Math.abs(dy) > 4) SC.scroller.scrollBy({top:dy, behavior: SC.reduce ? "auto" : "smooth"}); }
 }
 svg.addEventListener("click", function(e){ var g = e.target.closest(".z"); if (g) select(g.dataset.zone, {reveal:true}); else if (!e.target.closest(".air")) select(null, {reveal:true}); });
 main.addEventListener("click", function(e){
