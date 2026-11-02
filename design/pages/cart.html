@@ -208,8 +208,6 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .form{display:grid; gap:18px}
 .field .err{display:flex; gap:6px; align-items:flex-start; margin:0}
 .field .err[hidden]{display:none}
-/* local fix: the shared toast shrinks to half the width because of left:50% (request to the lead) */
-.toast{width:max-content}
 .field .err .ic{margin-top:1px}
 .opt-tag{font-weight:600; color:var(--muted); font-size:14px; margin-left:4px}
 .recap{padding:6px 18px}
@@ -279,7 +277,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .big-eta .t{font-size:44px; line-height:1.05; font-weight:800; letter-spacing:-.045em; font-variant-numeric:tabular-nums; margin:4px 0 8px}
 .big-eta p{margin:0}
 .big-eta .kvs{margin-top:14px; border-top:1px solid var(--line)}
-.big-eta .kv span:first-child{color:var(--muted)}
+.big-eta .kv span:first-child{color:var(--muted); white-space:nowrap}
 .big-eta .kv span:last-child{text-align:right; font-weight:700; min-width:0}
 .offer{padding:20px; border-radius:var(--r-shell); display:grid; gap:12px}
 .offer b{font-size:20px; letter-spacing:-.02em; line-height:1.2; display:block}
@@ -318,8 +316,12 @@ var hdrBack = dev.querySelector(".top.back > a.hb"), hdrTitle = dev.querySelecto
 var DKEY = "sc-checkout", OKEY = "sc-last-order";
 var D = Object.assign({addr:"", zone:"", zk:"", addrMore:"", slot:"", name:"", phone:"", email:"", note:"", pay:"cash", sched:""}, SC.load(DKEY, {}));
 D.consent = false; /* marketing consent is never pre-ticked and never restored */
-(function(){ var pk = SC.load("sc-pickup", null); if (!pk || D.slot || pk.day!=="today") return; /* time chosen on pickup.html */
-  D.slot = pk.t==null ? "asap" : t2(pk.t); SC.store("sc-pickup", null); })();
+(function(){ /* time chosen on pickup.html: SC.store("sc-pickup", {kind, day, t}); t = "16:45" (or minutes), null = as soon as possible */
+  var pk = SC.load("sc-pickup", null); if (!pk || typeof pk!=="object") return;
+  if (pk.day && pk.day!=="today") return;
+  var t = pk.t!==undefined ? pk.t : pk.slot!==undefined ? pk.slot : (pk.asap ? null : undefined); if (t===undefined) return;
+  D.slot = t==null ? "asap" : typeof t==="number" ? t2(t) : /^\d{1,2}:\d{2}$/.test(t) ? (t.length===4 ? "0"+t : t) : "";
+  SC.store("sc-pickup", null); })();
 function save(){ var c = Object.assign({}, D); delete c.consent; SC.store(DKEY, c); }
 /* page-only UI state (prototype switches included) */
 var P = {offline:false, loading:false, sending:false, err:"", placing:false, allSlots:false, bday:false, errs:{}, touched:{}};
@@ -583,7 +585,7 @@ function viewDone(o){
   var h = '<div class="ck"><div class="done-wrap enter">'+
     '<div class="okhead"><div class="okmark" aria-hidden="true">'+ic("check",64)+'</div><p class="ono">Поръчка <b>№ '+o.no+'</b></p><h1 class="h1 ck-title" tabindex="-1">Благодарим! Поръчката е приета.</h1><p class="lead">'+(o.name?esc(o.name.split(" ")[0])+", ":"")+''+(deliv?"вече я подготвяме.":"ще я приготвим навреме.")+'</p></div>'+
     '<div class="shell"><div class="core big-eta"><div class="lbl">'+lbl+'</div><div class="t">'+esc(big)+'</div>'+(sub?'<p class="muted">'+sub+'</p>':'')+
-      '<div class="kvs"><div class="kv"><span>'+(deliv?"Адрес":"Вземане от")+'</span><span>'+esc(deliv?o.addr:R.address)+'</span></div>'+
+      '<div class="kvs"><div class="kv"><span>'+(deliv?"Адрес":"Къде")+'</span><span>'+esc(deliv?o.addr:"Siracusa, Дружба 2, срещу бл. 311")+'</span></div>'+
       '<div class="kv"><span>'+dishWord(o.n)+'</span><span class="price">'+fmt(o.total)+(o.feeUnknown?' + доставка':'')+'</span></div>'+
       '<div class="kv"><span>Плащане</span><span>'+esc(o.pay)+'</span></div></div></div></div>'+
     '<a class="pill pill-red go" href="tracking.html#'+o.no+'">Следи поръчката<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
@@ -687,12 +689,13 @@ function place(I){
   var deliv = I.mode==="delivery", e = etaText(I);
   var at = I.sched ? D.slot : deliv ? t2(round5(I.m+I.dMin)) : (D.slot==="asap" ? (I.hasTrad ? t2(round5(I.earliest)) : "веднага") : D.slot);
   var payName = {cash:"В брой", card:deliv?"Карта при доставка":"Карта в ресторанта", voucher:"Ваучер"}[D.pay] || "В брой";
-  var o = {no:128, mode:I.mode, addr:D.addr+(D.addrMore?", "+D.addrMore:""), zone:D.zone, mins:I.dMin, at:at, sched:I.sched, total:I.total, feeUnknown:I.feeUnknown, n:I.n, pay:payName, name:String(D.name||"").trim()};
+  var o = {no:1042, mode:I.mode, addr:D.addr+(D.addrMore?", "+D.addrMore:""), zone:D.zone, mins:I.dMin, at:at, sched:I.sched, total:I.total, feeUnknown:I.feeUnknown, n:I.n, pay:payName, name:String(D.name||"").trim()};
   SC.store(OKEY, o);
   /* hand-off to tracking.html (it reads sc-order) */
   var ls = I.rows.filter(function(r){ return !r.out; });
-  SC.store("sc-order", {no:String(o.no), mode:o.mode, zone:o.zone, pay:o.pay, at:o.at, sched:o.sched, total:o.total,
-    lines:ls.map(function(r){ return {id:r.x.id, q:r.l.q, mods:r.l.mods||[], extra:r.l.extra||0}; }), lunchOnly:ls.every(function(r){ return r.x.lunch; })});
+  SC.store("sc-order", {no:String(o.no), mode:o.mode, lines:ls.map(function(r){ return {id:r.x.id, q:r.l.q, mods:r.l.mods||[], extra:r.l.extra||0}; }),
+    lunchOnly:ls.every(function(r){ return r.x.lunch; }), zone:deliv ? o.zone : "", pay:D.pay||"cash", total:o.total,
+    eta: deliv ? I.dMin : Math.max(0, (D.slot && D.slot!=="asap" ? (+D.slot.slice(0,2)*60 + +D.slot.slice(3)) : I.earliest) - I.m), ts:Date.now()});
   P.sending = false; P.placing = true; SC.cart.clear(); D.slot = ""; D.sched = ""; D.note = ""; save(); P.placing = false; P.bday = false;
   location.hash = "gotovo"; }
 
@@ -750,7 +753,7 @@ dev.addEventListener("focusout", function(e){ var t = e.target, f = t.dataset &&
 
 function removeLine(key){ var ls = SC.cart.lines(), idx = -1; ls.forEach(function(l,k){ if (l.key===key) idx = k; });
   var gone = SC.cart.remove(key); if (!gone) return; var x = SC.byId[gone.id];
-  SC.toast("Махнахте: "+(x?x.n:"ястие"), function(){ var c = SC.cart.get(); c.lines.splice(Math.min(idx, c.lines.length), 0, gone); SC.cart.mode(c.mode); }); }
+  SC.toast(x && x.n.length<=22 ? "Махнахте: "+x.n : "Махнахте ястието", function(){ var c = SC.cart.get(); c.lines.splice(Math.min(idx, c.lines.length), 0, gone); SC.cart.mode(c.mode); }); }
 
 SC.cart.on(function(){ render(); });
 window.addEventListener("hashchange", function(){ render(); });

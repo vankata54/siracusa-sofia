@@ -298,8 +298,8 @@ function segSub(kind){
   if (S.breakfast) return "до 11:30"; return S.m < 600 ? "от 10:00" : "утре от 10:00";
 }
 function etaLine(){ var e = SC.eta();
-  if (S.delivery) return '<p class="eta'+(e.busy?" warn":"")+'">'+SC.ic("moped",20)+'<b>'+(e.busy ? "Доставка: "+e.text.charAt(0).toLowerCase()+e.text.slice(1) : "Доставка сега: "+e.text)+'</b></p>';
-  if (S.kitchen) return '<p class="eta warn">'+SC.ic("storefront",20)+'<b>Вземане от място <span>· готово след около 20 мин</span></b></p>';
+  if (S.delivery) return '<p class="eta'+(e.busy?" warn":"")+'">'+SC.ic("moped",20)+'<b>'+(e.busy ? "Доставка: "+e.text.charAt(0).toLowerCase()+e.text.slice(1) : "Доставка сега: "+e.text).replace(/около (\d+) мин/, "около&nbsp;$1&nbsp;мин")+'</b></p>';
+  if (S.kitchen) return '<p class="eta warn">'+SC.ic("storefront",20)+'<b>Вземане от място <span>· готово след около&nbsp;20&nbsp;мин</span></b></p>';
   return ""; }
 main.innerHTML =
   '<section class="sec mhero" aria-labelledby="mh1">'+
@@ -398,7 +398,7 @@ function render(){ R = results();
 /* ---------- scrollspy: sticky chips (phone) and sidebar (desktop) ---------- */
 var active = null, lockUntil = 0;
 function isDesk(){ return SC.device.clientWidth >= 900; }
-function offset(){ return isDesk() ? 120 : 146; }
+function offset(){ return isDesk() ? 128 : 146; }
 function topOf(el){ return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top; }
 function setActive(id, jump){ if (id === active) return; active = id;
   elCat.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });

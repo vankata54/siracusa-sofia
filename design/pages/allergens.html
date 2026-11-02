@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Алергени в менюто | Siracusa Bar & Grill</title>
+<meta name="description" content="Алергени във всички ястия на Siracusa Bar & Grill, Дружба 2: 14-те основни алергена по Регламент (ЕС) 1169/2011, търсене и филтър „Без глутен“, „Без мляко“ и други.">
+<link rel="canonical" href="allergens.html">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* allergens.html - page-only styles; tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.hero{padding-top:24px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; align-items:center}
+.hero .hh{grid-column:1; grid-row:1}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.eyebrow .ic{color:var(--ok)}
+.hero .lead{grid-column:1 / -1; margin-top:14px; max-width:46ch}
+.hero .notice{grid-column:1 / -1; margin-top:22px}
+
+/* the ring: 14 allergen tokens around "14" (decorative; the page's one strong motion) */
+.ring{grid-column:2; grid-row:1; position:relative; width:136px; aspect-ratio:1; margin-right:-4px}
+.ring::before{content:""; position:absolute; inset:15px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--line); background:radial-gradient(closest-side, var(--surface), transparent)}
+.ring .ctr{position:absolute; inset:0; display:grid; place-content:center; text-align:center; line-height:1}
+.ring .ctr b{display:block; font-size:38px; font-weight:800; letter-spacing:-.06em}
+.ring .ctr span{display:block; margin-top:3px; font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.01em}
+.ring .t{position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line), 0 4px 10px -4px rgba(0,0,0,.25); transform:translate(var(--x),var(--y)); transition:opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease)}
+.ring .t .ic{width:14px; height:14px}
+.ring .t::after{content:""; position:absolute; left:3px; right:3px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--ink); transform:rotate(-45deg) scaleX(0); transition:transform var(--t-slow) var(--ease)}
+.ring .t.off{opacity:.45; transform:translate(var(--x),var(--y)) scale(.86)}
+.ring .t.off::after{transform:rotate(-45deg) scaleX(1)}
+.ring.go .t{animation:ringout 900ms var(--ease) both; animation-delay:calc(var(--i) * 34ms + 120ms)}
+.ring.go .ctr{animation:ctrin 700ms var(--ease) both}
+@keyframes ringout{from{transform:translate(0,0) scale(.3) rotate(-90deg); opacity:0}}
+@keyframes ctrin{from{transform:scale(.7); opacity:0}}
+
+/* notice: preliminary data + coverage meter + call */
+.notice .core{padding:18px}
+.nt{display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:start}
+.nt .wi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--warn)}
+.nt .ntt{margin:0; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.nt .ntx{margin:4px 0 0; color:var(--muted)}
+.meter{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+.meter .mt{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 12px; align-items:baseline}
+.meter .mt b{font-variant-numeric:tabular-nums}
+.meter .mt .muted{font-size:14px}
+.meter .bar{margin-top:10px; height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden}
+.meter .bar span{display:block; height:100%; border-radius:4px; background:var(--ok); transform-origin:left}
+.meter .chk{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.notice .acts{display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; margin-top:16px}
+.notice .acts .pill{flex:1 1 auto}
+
+/* ---------- controls ---------- */
+.ctl{padding-top:40px; display:grid; gap:22px}
+.search{display:grid; gap:6px}
+.search label,.flbl{font-weight:700; font-size:15px; margin:0}
+.sbox{position:relative}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:56px; padding:0 58px 0 50px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong), var(--hi); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input::placeholder{color:var(--muted)}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sbox .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.sbox .clr[hidden]{display:none}
+.fgrp{display:grid; gap:4px}
+.fgrp .help{margin:0 0 8px; font-size:14px; color:var(--muted)}
+.achips{display:flex; flex-wrap:wrap; gap:8px}
+.achips .chip{min-height:48px; padding:0 16px 0 8px; gap:8px; font-size:15px}
+.achips .chip .ai{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.achips .chip[aria-pressed="true"] .ai{background:var(--bg); color:var(--ink)}
+.achips .chip .ck{display:none}
+.achips .chip[aria-pressed="true"] .ck{display:block}
+.achips .chip[aria-pressed="true"] .ai .al{display:none}
+.frow{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 16px}
+.frow .check{padding:6px 0; align-items:center}
+.frow .check b{font-weight:700}
+.frow .check small{display:block; font-size:14px; color:var(--muted)}
+.frow .link[hidden]{display:none}
+
+/* ---------- results ---------- */
+.res{padding-top:28px}
+.sum{position:sticky; top:76px; z-index:18; margin:0 60px 0 0; width:fit-content; max-width:calc(100% - 60px); min-height:52px; display:flex; align-items:center; gap:10px; padding:4px 4px 4px 18px; border-radius:26px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.sum .st{margin:0; min-width:0; font-size:15px; line-height:1.3; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.sum .st b{color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+.sum .pill{min-height:44px; padding:0 16px 0 14px; font-size:15px; flex:none}
+
+/* one markup: cards on the phone, a real table on the computer */
+.atbl{width:100%; margin-top:8px; border-collapse:separate; border-spacing:0}
+.atbl caption{text-align:left}
+.atbl,.atbl tbody,.atbl tr,.atbl th,.atbl td{display:block}
+.atbl thead,.atbl colgroup{display:none}
+.atbl .cath th{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:32px 4px 12px; text-align:left; font-weight:400}
+.atbl .cath h3{margin:0; font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800}
+.atbl .cath .cn{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+.atbl .grp{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.atbl .dish{display:flex; flex-wrap:wrap; gap:8px; padding:16px 16px 18px 18px}
+.atbl .dish + .dish{border-top:1px solid var(--line)}
+.atbl .dish > *{padding:0}
+.atbl .nm{flex:0 0 100%; min-width:0; text-align:left; font-weight:400}
+.nm a{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; color:inherit; text-decoration:none; min-height:28px}
+.nm a b{font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.nm a .ic{margin-top:3px; color:var(--muted); transition:transform var(--t-fast) var(--ease)}
+.nm a:hover b{text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:3px}
+.nm a:hover .ic{transform:translateX(3px)}
+.nm .comp{margin:4px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
+.nm .badge{margin-top:8px}
+.nm .ndn{display:none}
+.atbl .a.n{display:none}
+.tk{display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 12px 0 5px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1; white-space:nowrap}
+.tk i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-style:normal}
+.tk i .ic{width:15px; height:15px}
+.none,.nd{flex:0 0 100%}
+.none p,.nd p{margin:0; display:flex; align-items:flex-start; gap:8px; font-size:15px; font-weight:600; line-height:1.35}
+.none .ic{color:var(--ok)}
+.nd p{color:var(--muted)}
+.nd p .ic{margin-top:0}
+.nd p span b{color:var(--ink); font-weight:700}
+.atbl .out .nm a b{color:var(--muted)}
+
+/* lunch note */
+.lunchnote{margin-top:32px}
+.lunchnote .core{padding:18px; display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start}
+.lunchnote .li{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--ember-soft); color:var(--ink)}
+.lunchnote h3{margin:2px 0 4px; font-size:18px; letter-spacing:-.02em}
+.lunchnote p{margin:0; color:var(--muted)}
+.lunchnote .link{margin-top:2px}
+
+/* states */
+.state{margin-top:16px}
+.state .core{padding:28px 20px}
+.state .empty{padding:8px 0}
+.state .empty .ill{color:var(--ink)}
+.state .empty .ill.warn{color:var(--warn)}
+.state .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:4px}
+.skrow{display:grid; gap:10px; padding:18px}
+.skrow + .skrow{border-top:1px solid var(--line)}
+.skrow .tks{display:flex; gap:8px}
+
+/* ---------- reference: the 14 allergens ---------- */
+.ref .lead{margin-top:10px; max-width:52ch}
+.rgrid{margin-top:22px; display:grid; gap:10px}
+.rcard{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.rcard .ri{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg)}
+.rcard h3{margin:0; display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; font-size:18px; letter-spacing:-.02em}
+.rcard h3 small{font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0; font-variant-numeric:tabular-nums}
+.rcard h3 small.z{color:var(--ok)}
+.rcard p{margin:4px 0 0; color:var(--muted); line-height:1.45}
+
+/* ---------- FAQ ---------- */
+.faqbox{margin-top:18px}
+.faq summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:12px 18px; cursor:pointer; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .tg{width:36px; height:36px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-base) var(--ease)}
+.faq details[open] summary .tg{transform:rotate(45deg)}
+.faq details + details{border-top:1px solid var(--line)}
+.faq .a{padding:0 18px 18px; color:var(--muted); line-height:1.55}
+.faq .a p{margin:0 0 8px} .faq .a p:last-child{margin:0}
+.faq .a a{color:var(--ink); font-weight:700}
+
+/* ---------- prototype-only states ---------- */
+.proto{margin-top:48px; padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.proto .lbl{display:flex; align-items:center; gap:8px; margin:0 0 4px; font-weight:800; font-size:15px}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+.proto .chips{margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
+
+/* ---------- tablet: cards in two columns ---------- */
+@container app (min-width:700px){
+  .hero .lead{font-size:18px}
+  .atbl .grp{display:grid; grid-template-columns:1fr 1fr}
+  .atbl .dish + .dish{border-top:0}
+  .atbl .dish{box-shadow:inset 0 1px 0 var(--line)}
+  .atbl .dish:nth-child(-n+2){box-shadow:none}
+  .atbl .dish:nth-child(even){box-shadow:inset 1px 0 0 var(--line), inset 0 1px 0 var(--line)}
+  .atbl .dish:nth-child(2){box-shadow:inset 1px 0 0 var(--line)}
+  .rgrid{grid-template-columns:1fr 1fr}
+}
+
+/* ---------- computer ---------- */
+@container app (min-width:900px){
+  .hero{padding-top:40px; grid-template-columns:minmax(0,1fr) 380px; gap:0 64px; align-items:start}
+  .hero .hh{grid-row:1}
+  .hero .lead{grid-column:1; font-size:19px}
+  .hero .notice{grid-column:1; max-width:720px}
+  .ring{grid-column:2; grid-row:1 / span 3; width:380px; margin:0; align-self:center}
+  .ring::before{inset:44px}
+  .ring .t{width:52px; height:52px; margin:-26px 0 0 -26px}
+  .ring .t .ic{width:24px; height:24px}
+  .ring .t::after{left:8px; right:8px; height:2.5px}
+  .ring .ctr b{font-size:112px}
+  .ring .ctr span{font-size:16px; margin-top:6px}
+  .ctl{padding-top:56px; grid-template-columns:minmax(0,1fr) auto; gap:24px 40px; align-items:end}
+  .ctl .search{max-width:560px}
+  .ctl .fgrp{grid-column:1 / -1}
+  .ctl .frow{grid-column:2; grid-row:1; justify-content:flex-end; gap:4px 24px}
+  .sum{top:90px; margin-right:0}
+  .rgrid{grid-template-columns:repeat(3,1fr); gap:14px}
+  .faqwrap{display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:56px; align-items:start}
+  .faqbox{margin-top:0}
+}
+@container app (min-width:1100px){
+  .res{padding-top:36px}
+  .atbl{display:table; table-layout:fixed; margin-top:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+  .atbl colgroup{display:table-column-group}
+  .atbl col{display:table-column}
+  .atbl col.ca{width:58px}
+  .atbl thead{display:table-header-group}
+  .atbl tbody{display:table-row-group}
+  .atbl tr{display:table-row}
+  .atbl th,.atbl td{display:table-cell}
+  .atbl .grp{display:table-row-group; border-radius:0; background:none; box-shadow:none; overflow:visible}
+  /* sticky header row, below the floating top bar and the results summary */
+  .atbl thead th{position:sticky; top:150px; z-index:6; background:var(--surface); vertical-align:bottom; padding:14px 2px 12px; border-bottom:1px solid var(--line-strong); box-shadow:0 10px 18px -16px rgba(0,0,0,.5)}
+  .atbl thead th:first-child{border-top-left-radius:var(--r-core); padding:18px 16px 12px 22px; text-align:left}
+  .atbl thead th:last-child{border-top-right-radius:var(--r-core)}
+  .th-d b{display:block; font-size:20px; letter-spacing:-.02em; font-weight:800}
+  .legend{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; font-size:14px; font-weight:600; color:var(--muted)}
+  .legend span{display:inline-flex; align-items:center; gap:7px}
+  .ah{display:grid; justify-items:center; gap:8px; font-size:14px; font-weight:700; line-height:1.15; text-align:center; -webkit-hyphens:manual; hyphens:manual}
+  .ah i{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); font-style:normal; transition:background-color var(--t-base) var(--ease), color var(--t-base) var(--ease)}
+  .ah i .ic{width:20px; height:20px}
+  .ah .hn{display:block; min-height:2.3em; display:flex; align-items:flex-end; justify-content:center}
+  .atbl .cath th{display:table-cell; padding:0}
+  .atbl .cath .ch{display:flex; align-items:baseline; gap:12px; padding:30px 22px 10px; border-bottom:1px solid var(--line-strong)}
+  .atbl .cath h3{font-size:20px}
+  .atbl .grp .dish{display:table-row; padding:0; box-shadow:none}
+  .atbl .dish > *{border-top:1px solid var(--line); vertical-align:middle; transition:background-color var(--t-fast) var(--ease)}
+  .atbl .grp .dish:first-child > *{border-top:0}
+  .atbl .dish:hover > *{background:var(--bg)}
+  .atbl .nm{padding:14px 16px 14px 22px}
+  .nm a{justify-content:flex-start; min-height:0}
+  .nm a b{font-size:16px}
+  .nm a .ic{display:none}
+  .nm .comp{font-size:15px; margin-top:2px}
+  .nm .badge{margin:6px 0 0}
+  .nm .ndn{display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:14px; font-weight:600; color:var(--muted)}
+  .atbl .a{text-align:center; padding:10px 2px}
+  .atbl .a.n{display:table-cell}
+  .tk{width:32px; height:32px; min-height:0; padding:0; justify-content:center; background:var(--ink); color:var(--bg); vertical-align:middle}
+  .tk i{width:auto; height:auto; background:none; color:inherit}
+  .tk i .ic{width:18px; height:18px}
+  .tk .w{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+  .no{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--line-strong); vertical-align:middle}
+  .atbl .none{display:none}
+  .atbl .nd{padding:8px 10px}
+  .nd p{justify-content:center; align-items:center; min-height:40px; border-radius:999px; font-size:14px; background:repeating-linear-gradient(135deg, var(--surface-2) 0 7px, transparent 7px 14px); box-shadow:inset 0 0 0 1px var(--line)}
+  .nd p span{padding:4px 12px; border-radius:999px; background:var(--surface)}
+  .nd p .ic{display:none}
+  .lgnd{display:inline-block; width:22px; height:14px; border-radius:7px; background:repeating-linear-gradient(135deg, var(--surface-2) 0 4px, transparent 4px 8px); box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .lgtk{width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg)}
+  .lgtk .ic{width:13px; height:13px}
+  .atbl tbody.grp:last-child .dish:last-child > :first-child{border-bottom-left-radius:var(--r-core)}
+  .atbl tbody.grp:last-child .dish:last-child > :last-child{border-bottom-right-radius:var(--r-core)}
+}
+@container app (min-width:1280px){ .atbl col.ca{width:64px} }
+@container app (max-width:1099px){ .legend,.th-d{display:none} }
+@container app (max-width:370px){ .ring{width:116px} .ring .t{width:22px; height:22px; margin:-11px 0 0 -11px} .ring .t .ic{width:12px; height:12px} .ring .ctr b{font-size:32px} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+(function(){
+"use strict";
+var esc = SC.esc, ic = SC.ic, R = SC.RESTAURANT, reduce = SC.reduce;
+var TEL = "tel:+"+("359"+R.phone.replace(/\D/g,"").replace(/^0/,""));
+var AL = SC.ALLERGENS;                 /* [id, name, icon] in the order of Annex II, Reg. (EU) 1169/2011 */
+var ICON = {}; AL.forEach(function(a){ ICON[a[0]] = a[2]; });
+/* soft hyphens so long names fit the narrow table columns */
+var HY = {crustaceans:"Ракооб&shy;разни", peanuts:"Фъс&shy;тъци", molluscs:"Меко&shy;тели", sulphites:"Сул&shy;фити"};
+/* what each allergen covers (Annex II of Reg. (EU) 1169/2011, shortened) */
+var DESC = {
+  gluten:"Пшеница (и спелта), ръж, ечемик, овес и продуктите от тях: хляб, паста, брашно, панировка.",
+  crustaceans:"Скариди, раци, омари и продуктите от тях.",
+  eggs:"Яйца и продуктите от тях: майонеза, някои сосове и тестени изделия.",
+  fish:"Риба и продуктите от нея.",
+  peanuts:"Фъстъци и продуктите от тях.",
+  soy:"Соя и продуктите от нея, например соев сос.",
+  milk:"Мляко и продуктите от него, включително лактоза: сирене, кашкавал, масло, сметана.",
+  nuts:"Бадеми, лешници, орехи, кашу, пекан, бразилски орех, шам фъстък, макадамия.",
+  celery:"Целина (корен и стрък) и продуктите от нея.",
+  mustard:"Синап и продуктите от него, например горчица.",
+  sesame:"Сусамово семе и продуктите от него, например тахан.",
+  sulphites:"Серен диоксид и сулфити над 10 mg/kg или 10 mg/l, например във вино.",
+  lupin:"Лупина и продуктите от нея.",
+  molluscs:"Миди, калмари, октопод, охлюви и продуктите от тях."};
+
+var ITEMS = SC.items.slice();          /* every dish on the menu, breakfasts, sauces and add-ons included */
+var N = ITEMS.length, WITH = ITEMS.filter(function(x){ return x.comp; }).length, NODATA = N - WITH;
+var COUNT = {}; AL.forEach(function(a){ COUNT[a[0]] = ITEMS.filter(function(x){ return x.al.indexOf(a[0]) > -1; }).length; });
+var UPD = (SC.menu.updated || "").split("-").reverse().join(".");
+function plural(n){ return SC.plural(n, "ястие", "ястия"); }
+function cap(s){ s = String(s).trim(); return s.charAt(0).toUpperCase() + s.slice(1); }
+function low(s){ return s.charAt(0).toLowerCase() + s.slice(1); }
+
+/* ---------- state (kept in the address: #a=gluten.milk&q=пица&nd=1&state=loading) ---------- */
+var st = {a:[], q:"", nd:false, view:"ok"};
+function readHash(){ var h = ""; try{ h = decodeURIComponent(location.hash.slice(1)); }catch(e){ h = location.hash.slice(1); }
+  h.split("&").forEach(function(p){ var i = p.indexOf("="); if (i < 0) return; var k = p.slice(0,i), v = p.slice(i+1);
+    if (k === "a") st.a = v.split(".").filter(function(id){ return !!ICON[id]; });
+    if (k === "q") st.q = v;
+    if (k === "nd") st.nd = v === "1";
+    if (k === "state" && /^(loading|error|offline)$/.test(v)) st.view = v; }); }
+function writeHash(){ var p = [];
+  if (st.a.length) p.push("a="+st.a.join(".")); if (st.q) p.push("q="+encodeURIComponent(st.q)); if (st.nd) p.push("nd=1"); if (st.view !== "ok") p.push("state="+st.view);
+  try{ history.replaceState(null, "", p.length ? "#"+p.join("&") : location.pathname); }catch(e){} }
+readHash();
+
+/* ---------- search: same rules as the menu (case-insensitive, Latin input, one typo in words over 4 letters) ---------- */
+var LAT = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya","ѝ":"i"};
+function latin(s){ return String(s).toLowerCase().replace(/[а-яѝ]/g, function(c){ return LAT[c] || c; }); }
+function squash(s){ return s.replace(/(.)\1+/g, "$1"); }
+function words(s){ return s.split(/[^a-z0-9]+/).filter(Boolean); }
+function qVariants(raw){ var s = latin(raw).replace(/4/g,"ch").replace(/6/g,"sh").replace(/w/g,"v").replace(/x/g,"ks").replace(/kh/g,"h")
+    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts");
+  var a = s.replace(/ch/g,"\u0001").replace(/c/g,"ts").replace(/\u0001/g,"ch"), b = s.replace(/ch/g,"\u0001").replace(/c/g,"k").replace(/\u0001/g,"ch");
+  return (a === b ? [a] : [a,b]).map(function(v){ return words(squash(v)); }); }
+function dl(a, b){ var m = a.length, n = b.length, d = [], i, j; for (i=0;i<=m;i++){ d[i] = [i]; } for (j=0;j<=n;j++) d[0][j] = j;
+  for (i=1;i<=m;i++) for (j=1;j<=n;j++){ var c = a[i-1]===b[j-1] ? 0 : 1; d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+c);
+    if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1); } return d[m][n]; }
+function wordScore(q, t){ if (t.indexOf(q) === 0) return 3; if (q.length >= 3 && t.indexOf(q) > 0) return 2;
+  var k = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0; if (!k) return 0;
+  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 1; } return 0; }
+var IDX = {}; ITEMS.forEach(function(x){ var c = SC.catById[x.cat];
+  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:""))))}; });
+function score(x, qv){ var best = 0;
+  qv.forEach(function(qw){ var total = 0;
+    for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0, w = IDX[x.id];
+      w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
+      if (!s) return; total += s; }
+    best = Math.max(best, total); });
+  return best; }
+
+/* ---------- filtering ---------- */
+function results(){ var qv = st.q.trim() ? qVariants(st.q.trim()) : null, sc = {};
+  var list = ITEMS.filter(function(x){
+    if (st.nd && !x.comp) return false;
+    for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; }
+    if (!qv) return true; var s = score(x, qv); sc[x.id] = s; return s > 0; });
+  /* order inside a category: dishes we can check first, then "no data", sold out always last */
+  var rank = function(x){ return (SC.isOut(x) ? 2 : 0) + (x.comp ? 0 : 1); };
+  var groups = SC.cats.map(function(c){ var it = list.filter(function(x){ return x.cat === c.id; })
+      .map(function(x,i){ return [x,i]; }).sort(function(a,b){ return (rank(a[0]) - rank(b[0])) || (qv ? sc[b[0].id]-sc[a[0].id] : 0) || (a[1]-b[1]); }).map(function(z){ return z[0]; });
+    return {c:c, items:it, top: qv ? Math.max.apply(null, it.map(function(x){ return sc[x.id]; }).concat([0])) : 0}; }).filter(function(g){ return g.items.length; });
+  if (qv) groups.sort(function(a,b){ return b.top - a.top; });
+  return {list:list, groups:groups}; }
+function active(){ return st.a.length > 0 || !!st.q.trim() || st.nd; }
+function summaryText(n){ var bits = [];
+  if (st.a.length) bits.push("без "+st.a.map(function(k){ return SC.allergenName(k).toLowerCase(); }).join(", "));
+  if (st.q.trim()) bits.push("„"+esc(st.q.trim())+"“");
+  if (st.nd) bits.push("само с данни");
+  return '<b>'+plural(n)+'</b>'+(bits.length ? ' · '+bits.join(" · ") : ' · всички от менюто'); }
+
+/* ---------- pieces ---------- */
+function ringHTML(){ var h = '<div class="ring" aria-hidden="true"><div class="ctr"><b>14</b><span>алергена</span></div>';
+  AL.forEach(function(a, i){ var ang = (i/AL.length)*Math.PI*2 - Math.PI/2;
+    h += '<span class="t" data-ring="'+a[0]+'" style="--i:'+i+';--x:calc(var(--r) * '+Math.cos(ang).toFixed(4)+');--y:calc(var(--r) * '+Math.sin(ang).toFixed(4)+')">'+ic(a[2],24)+'</span>'; });
+  return h + '</div>'; }
+
+function noticeHTML(){ var pct = WITH / N;
+  return '<div class="shell notice"><div class="core">'+
+    '<div class="nt"><span class="wi">'+ic("warning-circle",24)+'</span><div><p class="ntt">Алергените са предварителни, от състава. Кухнята ги потвърждава.</p>'+
+    '<p class="ntx">Извлечени са автоматично от състава в менюто ('+UPD+'). Ако имате алергия, кажете ни при поръчка или се обадете преди това.</p></div></div>'+
+    '<div class="meter"><div class="mt"><b>Състав имаме за '+WITH+' от '+N+' ястия</b><span class="muted">За останалите '+NODATA+' попитайте ни</span></div>'+
+    '<div class="bar" role="img" aria-label="'+WITH+' от '+N+' ястия имат състав"><span style="transform:scaleX('+pct.toFixed(3)+')"></span></div>'+
+    '<p class="chk">Проверка от кухнята: <span class="missing">[ЛИПСВА: дата на проверката и подпис на шеф-готвача]</span></p></div>'+
+    '<div class="acts"><a class="pill pill-ink" href="'+TEL+'">'+ic("phone",20)+'Обади се: '+R.phone+'</a><button class="link" type="button" data-goto="ref">Какво включва всеки алерген'+ic("caret-down",18)+'</button></div>'+
+  '</div></div>'; }
+
+function chipsHTML(){ return AL.map(function(a){ var on = st.a.indexOf(a[0]) > -1;
+    return '<button class="chip" type="button" data-al="'+a[0]+'" aria-pressed="'+on+'"><span class="ai">'+ic(a[2],20).replace('class="ic"','class="ic al"')+ic("check",20).replace('class="ic"','class="ic ck"')+'</span>Без '+a[1].toLowerCase()+'</button>'; }).join(""); }
+
+function controlsHTML(){
+  return '<section class="sec ctl" id="filters" aria-labelledby="ctl-h"><h2 class="vh" id="ctl-h">Търсене и филтри</h2>'+
+    '<div class="search"><label for="q">Търсете ястие или съставка</label><div class="sbox">'+ic("magnifying-glass",22)+
+      '<input id="q" type="search" placeholder="пица, моцарела, karbonara" autocomplete="off" enterkeyhint="search" value="'+esc(st.q)+'">'+
+      '<button class="clr" type="button" data-clrq aria-label="Изчисти търсенето"'+(st.q?'':' hidden')+'>'+ic("x",20)+'</button></div></div>'+
+    '<div class="frow"><label class="check"><input type="checkbox" id="nd"'+(st.nd?' checked':'')+'><span><b>Скрий ястията без данни</b><small>'+plural(NODATA)+' още нямат състав</small></span></label>'+
+      '<button class="link" type="button" data-clear'+(active()?'':' hidden')+'>'+ic("x",18)+'Изчисти всичко</button></div>'+
+    '<div class="fgrp" role="group" aria-labelledby="al-l"><p class="flbl" id="al-l">Изключете алерген</p><p class="help">Скриваме ястията, които го съдържат по състава. Може няколко наведнъж.</p><div class="achips">'+chipsHTML()+'</div></div>'+
+  '</section>'; }
+
+function thead(){ return '<thead><tr><th scope="col" class="th-dish"><span class="th-d"><b>Ястие</b>'+
+    '<span class="legend"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></span>'+
+    '<span class="vh">Ястие</span></th>'+
+  AL.map(function(a){ return '<th scope="col" class="c-'+a[0]+'"><span class="ah"><i>'+ic(a[2],20)+'</i><span class="hn">'+(HY[a[0]]||a[1])+'</span></span></th>'; }).join("")+'</tr></thead>'; }
+
+function rowHTML(x){ var out = SC.isOut(x), has = !!x.comp;
+  var name = '<th scope="row" class="nm"><a href="dish.html#'+x.id+'"><b>'+esc(x.n)+'</b>'+ic("caret-right",18)+'</a>'+
+    (has ? '<p class="comp">'+esc(cap(x.comp))+'</p>' : '')+
+    (!has && x.al.length ? '<p class="ndn">'+ic("info",16)+'Пълни данни още нямаме, попитайте ни</p>' : '')+
+    (out ? '<span class="badge out">'+ic("clock",16)+'Изчерпано днес</span>' : '')+'</th>';
+  var cells;
+  if (!has && !x.al.length){
+    cells = '<td class="nd" colspan="'+AL.length+'"><p>'+ic("info",20)+'<span><b>Няма данни за алергени,</b> попитайте ни</span></p></td>';
+  } else {
+    cells = AL.map(function(a){ var y = x.al.indexOf(a[0]) > -1;
+      return y ? '<td class="a y c-'+a[0]+'"><span class="tk"><i>'+ic(a[2],16)+'</i><span class="w">'+a[1]+'</span></span></td>'
+               : '<td class="a n c-'+a[0]+'"><span class="no"></span><span class="vh">Не</span></td>'; }).join("");
+    if (has && !x.al.length) cells += '<td class="none"><p>'+ic("check-circle",20)+'По състава не открихме от 14-те алергена</p></td>';
+  }
+  return '<tr class="dish'+(out?' out':'')+'">'+name+cells+'</tr>'; }
+
+function tableHTML(r){
+  return '<table class="atbl"><caption class="vh">Ястия и 14-те алергена. „Съдържа“ означава, че алергенът е открит в състава.</caption>'+
+    '<colgroup><col>'+AL.map(function(){ return '<col class="ca">'; }).join("")+'</colgroup>'+thead()+
+    r.groups.map(function(g){
+      return '<tbody class="cath"><tr><th colspan="'+(AL.length+1)+'" scope="colgroup"><span class="ch"><h3>'+esc(g.c.n)+'</h3><span class="cn">'+plural(g.items.length)+'</span></span></th></tr></tbody>'+
+        '<tbody class="grp">'+g.items.map(rowHTML).join("")+'</tbody>'; }).join("")+
+  '</table>'; }
+
+function emptyHTML(){ var q = st.q.trim();
+  if (q) return stateBox("magnifying-glass", "", "Не намерихме „"+esc(q)+"“", "Проверете думата или потърсете по съставка, например „моцарела“ или „скариди“."+(st.a.length?" Включени са и филтрите за алергени.":""),
+    '<button class="pill pill-red" type="button" data-clrq>'+ic("x",20)+'Изчисти търсенето</button>'+(st.a.length||st.nd?'<button class="pill pill-line" type="button" data-clear>Изчисти всичко</button>':''));
+  return stateBox("funnel", "", "Няма ястия с тези филтри", "Всяко ястие съдържа поне един от избраните алергени. Махнете някой от тях, за да видите повече.",
+    '<button class="pill pill-red" type="button" data-clear>'+ic("x",20)+'Изчисти филтрите</button>'); }
+function stateBox(icon, cls, title, text, acts){
+  return '<div class="shell state"><div class="core"><div class="empty"><span class="ill '+cls+'">'+ic(icon,44)+'</span><h3 class="h2">'+title+'</h3><p class="muted" style="margin:0;max-width:38ch">'+text+'</p><div class="acts">'+acts+'</div></div></div></div>'; }
+function loadingHTML(){ var rows = "";
+  for (var i=0;i<5;i++) rows += '<div class="skrow"><div class="skel" style="height:20px;width:'+[70,55,82,62,48][i]+'%"></div><div class="skel" style="height:16px;width:'+[90,76,60,84,70][i]+'%"></div><div class="tks"><div class="skel" style="height:34px;width:96px;border-radius:999px"></div><div class="skel" style="height:34px;width:84px;border-radius:999px"></div></div></div>';
+  return '<div aria-busy="true" aria-label="Зареждаме алергените"><div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">'+rows+'</div></div></div>'; }
+function lunchHTML(){ var L = SC.lunch, d = SC.menu.lunch;
+  return '<div class="shell lunchnote"><div class="core"><span class="li">'+ic("bowl-food",24)+'</span><div><h3>Обедното меню се сменя всеки ден</h3>'+
+    '<p>Днес '+(d.dayName ? low(d.dayName) : "")+' има '+plural(L.length)+'. Тях ги няма в таблицата: <span class="missing">[ЛИПСВА: състав и алергени на дневните ястия от кухнята]</span>. Дотогава попитайте ни.</p>'+
+    '<a class="link" href="lunch.html">Обедно меню днес'+ic("caret-right",18)+'</a></div></div></div>'; }
+
+function refHTML(){
+  return '<section class="sec ref" id="ref" aria-labelledby="ref-h"><h2 class="h2" id="ref-h">Какво включва всеки алерген</h2>'+
+    '<p class="lead">Регламент (ЕС) 1169/2011 задължава ресторантите да посочват тези 14 алергена. До всеки е колко ястия от менюто го съдържат по състава.</p>'+
+    '<div class="rgrid">'+AL.map(function(a){ var n = COUNT[a[0]];
+      return '<div class="rcard rv"><span class="ri">'+ic(a[2],24)+'</span><div><h3>'+a[1]+(n ? '<small>в '+plural(n)+'</small>' : '<small class="z">не е открит</small>')+'</h3><p>'+DESC[a[0]]+'</p></div></div>'; }).join("")+'</div></section>'; }
+
+function faqData(){ return [
+  ["Колко точни са тези данни?", '<p>Алергените са извлечени автоматично от състава в менюто ('+UPD+'). Кухнята ги проверява едно по едно. Дотогава ги приемайте като ориентир, а не като гаранция.</p>'],
+  ["Имам силна алергия. Какво да направя?", '<p>Обадете ни се на <a href="'+TEL+'">'+R.phone+'</a> преди да поръчате или кажете на сервитьора. При поръчка онлайн напишете алергията в бележката към поръчката.</p><p><span class="missing">[ЛИПСВА: как кухнята предпазва от смесване, например обща фурна и фритюрник]</span></p>'],
+  ["Защо при някои ястия пише „Няма данни“?", '<p>За тях още нямаме пълен състав в менюто. Кухнята го въвежда. Попитайте ни и ще ви кажем веднага.</p>'],
+  ["Къде още виждам алергените?", '<p>На страницата на всяко ястие и в количката, преди да поръчате.</p>'],
+  ["Какво е Регламент (ЕС) 1169/2011?", '<p>Европейското правило за информацията за храните. По него всеки ресторант посочва 14-те основни алергена в ястията си.</p>']]; }
+function faqHTML(){ var q = faqData();
+  return '<section class="sec" aria-labelledby="faq-h"><div class="faqwrap"><div><h2 class="h2" id="faq-h">Често задавани въпроси</h2></div>'+
+    '<div class="shell faqbox"><div class="core faq">'+q.map(function(z,i){ return '<details'+(i===0?' open':'')+'><summary>'+z[0]+'<span class="tg" aria-hidden="true">'+ic("plus",18)+'</span></summary><div class="a">'+z[1]+'</div></details>'; }).join("")+'</div></div></div>'+
+    '<div class="proto"><p class="lbl">'+ic("eye",18)+'Само в прототипа</p><p>Покажете как изглежда таблицата в другите състояния. Не влиза в сайта.</p>'+
+      '<div class="chips" role="group" aria-label="Състояние за прототипа">'+[["ok","Нормално"],["loading","Зареждане"],["error","Грешка"],["offline","Без интернет"],["empty","Без резултати"]].map(function(z){ return '<button class="chip" type="button" data-view="'+z[0]+'" aria-pressed="'+(st.view===z[0])+'">'+z[1]+'</button>'; }).join("")+'</div></div>'+
+  '</section>'; }
+
+/* ---------- mount ---------- */
+var main = SC.mount({page:"allergens", nav:null, title:"Алергени", docTitle:"Алергени в менюто"});
+main.innerHTML =
+  '<section class="sec hero"><div class="hh"><p class="eyebrow">'+ic("shield-check",18)+'Информация за храната</p><h1 class="h1">Алергени в менюто</h1></div>'+ringHTML()+
+    '<p class="lead">Всички '+N+' ястия и 14-те основни алергена по Регламент (ЕС) 1169/2011. Изберете какво не ядете и ще скрием ястията, които го съдържат.</p>'+
+    '<div class="notice">'+noticeHTML()+'</div></section>'+
+  controlsHTML()+
+  '<section class="sec res" id="res" aria-labelledby="res-h"><h2 class="vh" id="res-h">Ястия и алергени</h2>'+
+    '<div class="sum"><p class="st" data-sum aria-live="polite"></p><button class="pill pill-soft" type="button" data-goto="filters">'+ic("sliders-horizontal",20)+'Филтри</button></div>'+
+    '<div data-list></div>'+lunchHTML()+'</section>'+
+  refHTML()+faqHTML();
+
+var list = main.querySelector("[data-list]"), sum = main.querySelector("[data-sum]"), qIn = main.querySelector("#q"), ring = main.querySelector(".ring");
+/* ring radius follows the ring size (phone / computer) */
+function ringR(){ var w = ring.getBoundingClientRect().width; ring.style.setProperty("--r", ((w/2) - (w > 200 ? 30 : 14)).toFixed(1)+"px"); }
+ringR(); if ("ResizeObserver" in window) new ResizeObserver(ringR).observe(ring);
+if (!reduce) ring.classList.add("go");
+
+/* column highlight for excluded allergens on the computer table (one rule per allergen) */
+(function(){ var css = AL.map(function(a){ return '.atbl.x-'+a[0]+' td.c-'+a[0]+'{background:var(--ember-soft)}.atbl.x-'+a[0]+' th.c-'+a[0]+' .ah i{background:var(--ink);color:var(--bg)}'; }).join("");
+  var s = document.createElement("style"); s.textContent = '@container app (min-width:1100px){'+css+'}'; document.head.appendChild(s); })();
+
+var loadT;
+function render(){
+  main.querySelectorAll("[data-al]").forEach(function(b){ b.setAttribute("aria-pressed", st.a.indexOf(b.dataset.al) > -1); });
+  ring.querySelectorAll("[data-ring]").forEach(function(t){ t.classList.toggle("off", st.a.indexOf(t.dataset.ring) > -1); });
+  main.querySelector("[data-clear]").hidden = !active();
+  main.querySelector("[data-clrq]").hidden = !st.q;
+  main.querySelectorAll("[data-view]").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.view === st.view || (b.dataset.view==="empty" && st.view==="ok" && st.q==="ястие-което-го-няма")); });
+  if (st.view === "loading"){ sum.innerHTML = '<b>Зареждаме алергените</b>'; list.innerHTML = loadingHTML(); return; }
+  if (st.view === "error"){ sum.innerHTML = '<b>Не успяхме да заредим</b>'; list.innerHTML = stateBox("warning-circle", "warn", "Не успяхме да заредим алергените", "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона.",
+    '<button class="pill pill-red" type="button" data-retry>'+ic("arrow-up-right",20)+'Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
+  if (st.view === "offline"){ sum.innerHTML = '<b>Няма връзка</b>'; list.innerHTML = stateBox("globe", "warn", "Няма връзка с интернет", "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите: "+R.phone+".",
+    '<button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
+  var r = results();
+  sum.innerHTML = summaryText(r.list.length);
+  if (!r.list.length){ list.innerHTML = emptyHTML(); return; }
+  list.innerHTML = tableHTML(r);
+  var t = list.querySelector(".atbl"); st.a.forEach(function(k){ t.classList.add("x-"+k); });
+}
+function update(){ writeHash(); render(); }
+
+/* ---------- events ---------- */
+var qT;
+qIn.addEventListener("input", function(){ clearTimeout(qT); qT = setTimeout(function(){ st.q = qIn.value; if (st.view !== "ok") st.view = "ok"; update(); }, 120); });
+qIn.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); qIn.blur(); goto("res"); } });
+main.querySelector("#nd").addEventListener("change", function(e){ st.nd = e.target.checked; update(); });
+function goto(id){ var el = main.querySelector("#"+id); if (!el) return; var sc = SC.scroller;
+  var y = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - (id === "res" ? 80 : 140);
+  sc.scrollTo({top:Math.max(0,y), behavior:reduce?"auto":"smooth"}); }
+main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.al){ var k = b.dataset.al; st.a = st.a.indexOf(k) > -1 ? st.a.filter(function(z){ return z!==k; }) : st.a.concat([k]); SC.haptic(); update(); return; }
+  if (b.hasAttribute("data-clrq")){ st.q = ""; qIn.value = ""; update(); qIn.focus({preventScroll:true}); return; }
+  if (b.hasAttribute("data-clear")){ st.a = []; st.q = ""; st.nd = false; qIn.value = ""; main.querySelector("#nd").checked = false; update(); return; }
+  if (b.dataset.goto){ goto(b.dataset.goto); if (b.dataset.goto === "filters") setTimeout(function(){ qIn.focus({preventScroll:true}); }, reduce?0:450); return; }
+  if (b.hasAttribute("data-retry")){ st.view = "loading"; update(); clearTimeout(loadT); loadT = setTimeout(function(){ st.view = "ok"; update(); }, 900); return; }
+  if (b.dataset.view){ var v = b.dataset.view; clearTimeout(loadT);
+    if (v === "empty"){ st.view = "ok"; st.q = "ястие-което-го-няма"; qIn.value = st.q; }
+    else { st.view = v; if (st.q === "ястие-което-го-няма"){ st.q = ""; qIn.value = ""; } }
+    update(); goto("res"); return; }
+});
+window.addEventListener("hashchange", function(){ st = {a:[], q:"", nd:false, view:"ok"}; readHash(); qIn.value = st.q; main.querySelector("#nd").checked = st.nd; render(); });
+
+/* ---------- SEO: FAQ as structured data ---------- */
+(function(){ var ld = {"@context":"https://schema.org","@type":"FAQPage","mainEntity":faqData().map(function(z){ return {"@type":"Question","name":z[0],"acceptedAnswer":{"@type":"Answer","text":z[1].replace(/<[^>]+>/g," ").replace(/\[ЛИПСВА[^\]]*\]/g,"").replace(/\s+/g," ").trim()}}; })};
+  var s = document.createElement("script"); s.type = "application/ld+json"; s.textContent = JSON.stringify(ld); document.head.appendChild(s); })();
+
+render();
+SC.reveal();
+})();
+</script>
+</body>
+</html>

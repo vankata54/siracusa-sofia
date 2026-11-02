@@ -136,7 +136,7 @@ var DEMO_PHONE = "0888123456";        /* prototype: sample number for the #kod /
 function get(k){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
 function put(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 
-var S = {step:"phone", phone:"", tries:0, offline:false, name:"", mkt:false, isNew:true, timer:null, left:0};
+var S = {ready:false, step:"phone", phone:"", tries:0, offline:false, name:"", mkt:false, isNew:true, timer:null, left:0};
 
 /* ---------- phone helpers ---------- */
 function digits(v){ var d = String(v||"").replace(/\D/g,"");
@@ -171,7 +171,10 @@ var box = main.querySelector("[data-box]");
 
 function stepper(n, label){ return '<div class="stepper" style="--n:3"><div class="bar">'+[1,2,3].map(function(i){ return '<span'+(i<=n?' class="on"':'')+'></span>'; }).join("")+'</div><div class="t"><b>Стъпка '+n+' от 3</b><span>'+label+'</span></div></div>'; }
 function show(html, focusSel){ clearInterval(S.timer); box.innerHTML = '<div class="view'+(SC.reduce?'':' in')+'">'+html+'</div>';
-  if (focusSel){ var f = box.querySelector(focusSel); if (f) setTimeout(function(){ f.focus({preventScroll:true}); }, 30); } }
+  if (focusSel){ var f = box.querySelector(focusSel); if (f) setTimeout(function(){ f.focus({preventScroll:true}); }, 30); }
+  /* after the first view, bring the card's top under the floating header so the new step is in sight */
+  if (S.ready){ var sc = SC.scroller, top = box.getBoundingClientRect().top - sc.getBoundingClientRect().top;
+    if (top < 120 || top > sc.clientHeight*0.45) sc.scrollTo({top:Math.max(0, sc.scrollTop + top - 150), behavior:SC.reduce?"auto":"smooth"}); } }
 function busy(btn, text){ btn.classList.add("busy"); btn.setAttribute("aria-busy","true"); btn.innerHTML = '<span class="spin" aria-hidden="true"></span>'+text; }
 
 /* ---------- already signed in ---------- */
@@ -333,6 +336,7 @@ function route(){ var h = location.hash.slice(1), me = get("sc-user");
   else viewPhone(); }
 window.addEventListener("hashchange", route);
 route();
+S.ready = true;
 })();
 </script>
 </body>

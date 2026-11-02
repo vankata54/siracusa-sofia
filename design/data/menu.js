@@ -397,7 +397,7 @@ window.SC_MENU={
 "site_eur": 11.19,
 "t": [],
 "al": [],
-"noOnion": false,
+"noOnion": true,
 "share": true
 },
 {
@@ -1171,7 +1171,7 @@ window.SC_MENU={
 "gluten",
 "milk"
 ],
-"noOnion": false,
+"noOnion": true,
 "share": true
 },
 {
@@ -1500,7 +1500,8 @@ window.SC_MENU={
 "t": [],
 "al": [],
 "noOnion": false,
-"share": false
+"share": false,
+"per100": true
 },
 {
 "id": "teleshki-kyufteta-ot-blek-angas",
@@ -1515,7 +1516,8 @@ window.SC_MENU={
 "t": [],
 "al": [],
 "noOnion": false,
-"share": false
+"share": false,
+"per100": true
 },
 {
 "id": "ribay-stek-ot-blek-angas",
@@ -1530,7 +1532,8 @@ window.SC_MENU={
 "t": [],
 "al": [],
 "noOnion": false,
-"share": false
+"share": false,
+"per100": true
 },
 {
 "id": "marinovani-lyuti-chushki",
