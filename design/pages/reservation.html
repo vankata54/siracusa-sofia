@@ -20,7 +20,8 @@
 
 /* ---------- flow layout ---------- */
 .flowsec{padding-top:24px}
-.fgrid{display:grid; gap:0}
+.fgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:0}
+.fmain{min-width:0}
 .aside{display:none}
 .enter{animation:rIn var(--t-slow) var(--ease-std) both}
 @keyframes rIn{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
@@ -149,7 +150,9 @@
 .needs .chip .ic{color:var(--muted)}
 .needs .chip[aria-pressed="true"] .ic{color:inherit}
 .selc{margin-top:20px}
-.selc .core{display:grid; gap:14px; padding:16px}
+.selc .core{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:16px}
+.alert > div{min-width:0}
+.alert .acts .pill{white-space:normal; text-align:center; line-height:1.2}
 .selrow{display:grid; grid-template-columns:52px 1fr; gap:14px; align-items:center}
 .tno{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; font-weight:800; font-size:20px; background:var(--surface-2); color:var(--ink); font-variant-numeric:tabular-nums}
 .tno.on{background:var(--red); color:var(--on-red)}
@@ -309,6 +312,7 @@
   .rabar .back{padding:0 12px 0 10px}
   .slot{font-size:16px}
   .recap span{font-size:14px}
+  .hold{font-size:14px; padding:0 12px 0 10px}
 }
 
 /* ---------- tablet / desktop ---------- */
@@ -526,7 +530,7 @@ function plan(z){ var T = zoneTables(z), rows = z==="salon" ? 3 : 2, RH = 104, t
   h += '<rect class="wall" x="6" y="6" width="'+(W-12)+'" height="'+(wallB-6)+'" rx="20"/>';
   if (z==="salon"){ for (var c=0;c<4;c++){ var wx = 60+c*80; h += '<rect class="win" x="'+(wx-26)+'" y="2" width="52" height="8" rx="2"/>'; }
     h += '<line class="gap" x1="34" y1="'+wallB+'" x2="96" y2="'+wallB+'"/><line class="gap" x1="266" y1="'+wallB+'" x2="326" y2="'+wallB+'"/>'+
-      '<path class="door" d="M34 '+wallB+' A 30 30 0 0 0 64 '+(wallB-30)+'"/>'+
+      
       '<text class="lbl" x="65" y="'+(wallB+24)+'" text-anchor="middle">Вход</text><text class="lbl" x="296" y="'+(wallB+24)+'" text-anchor="middle">Градина</text>'; }
   else { h += '<line class="gap" x1="34" y1="'+wallB+'" x2="96" y2="'+wallB+'"/><text class="lbl" x="65" y="'+(wallB+24)+'" text-anchor="middle">Салон</text>'; }
   T.forEach(function(t){ var cx = 60+t.x*80, cy = top+38+t.y*RH, s = tState(t);
@@ -653,14 +657,15 @@ function done(){ var b = st.booking, ev = isEvent(b.date);
     '<div class="row" style="flex-wrap:wrap;gap:8px 20px;margin-top:20px"><button class="link" type="button" data-manage="ok" data-fk="mg">'+ic("pencil-simple",20)+'Промени или откажи</button><a class="link" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a><button class="link" type="button" data-new data-fk="nw">'+ic("plus",20)+'Нова резервация</button></div></div></section>'; }
 function openManage(late){ var b = st.booking;
   if (!b){ b = {date:addDays(TODAY,1), slot:1170, n:4, selLabel:"Маса 5 · Салон", name:"", phone:"0888 123 456"}; }
-  if (late){ var m = Math.ceil((SC.minutes()+25)/30)*30; if (m>1290){ m = 1170; b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone, fake:80}; } else b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone}; }
+  if (late){ var now = SC.minutes(), m = Math.ceil((now+40)/10)*10;
+    b = m <= 1350 ? {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone} : {date:TODAY, slot:1170, n:b.n, selLabel:b.selLabel, phone:b.phone, fake:80}; }
   st.manage = {b:b, late:!!late, cancelled:false}; st.view = "manage"; st.confirmCancel = false; st.anim = true; }
 function manage(){ var M = st.manage, b = M.b, left = M.late ? (b.fake || (b.slot - SC.minutes())) : null, lim = b.slot>=EVENING ? 120 : 60;
   if (M.cancelled) return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">'+ic("calendar-blank",44)+'</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.</p>'+
     '<button class="pill pill-red pill-lg" type="button" data-new data-fk="nw" style="margin-top:12px">'+ic("calendar-blank",22)+'Резервирай нова маса</button></div></div></section>';
   var h = '<section class="sec rdone"><div class="done-in" style="max-width:640px"><p class="steps-t" style="margin:0 0 6px">От линка в SMS</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>'+
     '<div class="shell dcard" style="margin-top:20px"><div class="core">'+kvRows(b)+'</div></div><div style="margin-top:16px">';
-  if (M.late) h += '<div class="alert warn">'+ic("lock",22)+'<div><b>Онлайн промяна вече не е възможна</b><p>До резервацията остават '+(left>=60?Math.floor(left/60)+" ч "+(left%60?left%60+" мин":""):left+" мин")+'. Онлайн промяна и отказ има до '+(lim===120?"2 часа преди резервация след 17:00":"1 час преди резервация през деня")+', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></div>';
+  if (M.late) h += '<div class="alert warn">'+ic("lock",22)+'<div><b>Онлайн промяна вече не е възможна</b>'+(b.fake?'<p class="small">(В прототипа: представете си, че сега е 18:10.)</p>':'')+'<p>До резервацията остават '+(left>=60?Math.floor(left/60)+" ч "+(left%60?left%60+" мин":""):left+" мин")+'. Онлайн промяна и отказ има до '+(lim===120?"2 часа преди резервация след 17:00":"1 час преди резервация през деня")+', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></div>';
   else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><b id="cfh">Да откажем ли резервацията за '+fShort(b.date)+', '+hm(b.slot)+'?</b><p>Масата ще се освободи за други гости.</p><div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy">'+ic("x",20)+'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
   else h += '<div class="mng acts" style="display:grid;gap:8px"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">'+ic("pencil-simple",22)+'Промени деня, часа или масата</button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">'+ic("x",22)+'Откажи резервацията</button>'+
     '<p class="rules" style="margin-top:8px">'+ic("info",20)+'<span>Можете да промените или откажете до '+(lim===120?"2 часа преди (резервация след 17:00)":"1 час преди (резервация през деня)")+'.</span></p></div>';

@@ -422,7 +422,7 @@ function lineHTML(r, I){ var x = r.x, l = r.l, out = r.out;
     '<a class="ln-pic" href="'+lineHref(x)+'" tabindex="-1" aria-hidden="true">'+SC.pic(x)+'</a>'+
     '<div class="ln-info"><a class="ln-name" href="'+lineHref(x)+'">'+esc(x.n)+'</a><span class="ln-sub">'+sub+'</span>'+(tags?'<div class="ln-tags">'+tags+'</div>':'')+'</div>'+
     '<div class="ln-act">'+(out?'':counter)+'<button class="ln-rm" type="button" data-act="rm" data-key="'+esc(l.key)+'" data-fk="rm-'+esc(l.key)+'">'+ic("trash",18)+'Махни<span class="vh"> '+esc(x.n)+'</span></button><span class="ln-tot">'+price+'</span></div>'+
-    (out?'<div class="ln-outmsg">'+ic("clock",18)+'<span><b>Изчерпано днес.</b> Няма да го включим в поръчката.</span>'+(sim?'<button class="pill pill-ink" type="button" data-act="swap" data-key="'+esc(l.key)+'" data-id="'+sim.id+'">Смени с '+esc(sim.n)+' · '+fmt(sim.p)+'</button>':'')+'</div>':'')+
+    (out?'<div class="ln-outmsg">'+ic("clock",18)+'<span><b>Изчерпано днес.</b> Няма да го включим в поръчката.'+(sim?' Подобно: '+esc(sim.n)+', <span class="price">'+fmt(sim.p)+'</span>.':'')+'</span>'+(sim?'<button class="pill pill-ink" type="button" data-act="swap" data-key="'+esc(l.key)+'" data-id="'+sim.id+'">'+ic("arrow-right",18)+'Смени с '+esc(sim.n)+'</button>':'')+'</div>':'')+
     '</li>'; }
 
 function similar(x){ return SC.items.filter(function(y){ return y.cat===x.cat && y.id!==x.id && !SC.isOut(y); }).sort(function(a,b){ return Math.abs(a.p-x.p)-Math.abs(b.p-x.p); })[0] || null; }
@@ -648,7 +648,13 @@ function renderBar(view, st, I){
 /* refresh only the summary and bar (keeps the caret in text fields) */
 function refreshSide(){ var I = info(), st = hashStep(), side = main.querySelector(".ck-side"); if (side && lastView==="cart") side.innerHTML = summaryHTML(I, st); renderBar(lastView, st, I); }
 
-function go(n){ var h = STEPS[n-1][0]; if (location.hash.slice(1)===h || (n===1 && !location.hash)) render(); else location.hash = h; }
+/* forward steps push a history entry; going back pops it, so the phone's own "back" and our "Назад" agree */
+var pushed = [];
+function go(n){ var h = STEPS[n-1][0], cur = hashStep();
+  if (location.hash.slice(1)===h || (n===1 && !location.hash)){ render(); return; }
+  if (n < cur && pushed.length && pushed[pushed.length-1]===cur && (pushed.length<2 ? n===1 : pushed[pushed.length-2]===n)){ pushed.pop(); history.back(); return; }
+  if (n > cur) pushed.push(n); else pushed = [];
+  location.hash = h; }
 
 /* ---------- step 2: address combobox ---------- */
 var aIdx = -1;

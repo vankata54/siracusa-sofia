@@ -248,7 +248,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .sheetwrap.on .sheet{transform:none}
 .handle{width:42px; height:5px; border-radius:3px; background:var(--line-strong); margin:4px auto 10px; flex:none}
 .sheet-h{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; flex:none}
-.sheet-h h2{margin:0; font-size:24px; letter-spacing:-.03em}
+.sheet-h h2{margin:0; font-size:24px; letter-spacing:-.03em; min-width:0; flex:1}
 @container app (min-width:900px){ .sheet{left:auto; right:24px; bottom:24px; top:24px; width:440px; max-height:none; transform:translateX(110%)} }
 
 /* ---------- dish visuals (illustrations stand in for new photos) ---------- */

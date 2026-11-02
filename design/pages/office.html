@@ -176,11 +176,11 @@
 .o-time small{font-size:20px; letter-spacing:-.02em; margin-left:2px}
 .o-until{text-align:right; font-weight:700; line-height:1.35}
 .o-until > span:not(.o-live){display:block; color:var(--muted); font-weight:600; font-size:15px}
-.o-until .o-closed{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:center}
+.o-closed{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:center}
 .o-closed .o-fi{background:var(--surface-2); box-shadow:none}
 .o-closed b{display:block; font-size:19px; letter-spacing:-.02em; line-height:1.25}
 .o-closed div span{display:block; color:var(--muted); font-weight:600; font-size:15px; margin-top:2px}
-.o-live{margin-bottom:4px}
+.o-until .o-live{margin-bottom:4px}
 .o-track{height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; margin-top:18px}
 .o-track span{display:block; height:100%; border-radius:3px; background:var(--ink); transform-origin:left center; transition:transform 1s linear}
 .o-live{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--ok)}
@@ -259,7 +259,8 @@
 .o-faq summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
 .o-faq details[open] summary .ic{transform:rotate(180deg)}
 .o-faq p{margin:0 0 18px; color:var(--muted); max-width:62ch}
-.o-split{display:grid; gap:56px}
+.o-split{display:grid; grid-template-columns:minmax(0,1fr); gap:56px}
+.o-split > *{min-width:0}
 @container app (min-width:900px){
   .o-split{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:56px; align-items:start}
 }
@@ -398,7 +399,7 @@ function person(p, opts){ opts = opts || {}; var n = cnt(p.picks);
   if (opts.edit && p.me) acts = '<div class="acts"><a class="link" href="#mine">'+ic(n ? "pencil-simple" : "plus",18)+(n ? "Промени моя избор" : "Избери своето")+'</a></div>';
   else if (opts.edit && !opts.closed) acts = '<div class="acts"><button class="link mutedl" type="button" data-act="drop" data-who="'+esc(p.n)+'" aria-label="Махни '+esc(p.n)+' от поръчката">'+ic("x",18)+'Махни</button></div>';
   return '<div class="o-person'+(opts.fresh && p.guest ? " new" : "")+'"><span class="o-ava '+(p.me ? "me" : (p.cls||"a3"))+'" aria-hidden="true">'+initial(p.me && !G.name.trim() && !opts.guestView ? "В" : p.n)+'</span>'+
-    '<div><div class="nm">'+esc(p.n)+tag+'</div>'+(n ? '<ul>'+items+'</ul>' : '<p class="muted" style="margin:4px 0 0;font-size:15px">'+(p.me ? "Още не сте избрали" : "Още избира")+'</p>')+acts+'</div>'+
+    '<div><div class="nm">'+esc(p.n)+tag+'</div>'+(n ? '<ul>'+items+'</ul>' : '<p class="muted" style="margin:4px 0 0;font-size:15px">'+(p.me && !opts.guestView ? "Още не сте избрали" : "Още избира")+'</p>')+acts+'</div>'+
     '<div class="sum">'+(n ? '<span class="price">'+fmt(sum(p.picks))+'</span>' : '')+'</div></div>'; }
 
 /* ---------- views ---------- */
@@ -432,7 +433,7 @@ function viewStart(){ var p = syncPlan(), c = ctx(); save();
     '<li class="rv"><span class="o-num">3</span><div><h3 class="h3">Всеки избира, вие изпращате</h3><p>Виждате кой какво поръча и колко дължи. Изпращате на ресторанта с едно докосване и ние носим всичко заедно.</p></div></li>'+
   '</ol></section>';
 
-  var tomNote = p.tomorrow ? '<div class="o-note warn" role="status">'+ic("info",22)+'<p>За днес е късно: обедното меню се доставя до 15:00. Отворете поръчката за <b>утре, '+esc(dateLabel(tomorrowDate()))+'</b>.</p></div>' : '';
+  var tomNote = p.tomorrow ? '<div class="o-note warn" role="status">'+ic("info",22)+'<div><p>За днес е късно: обедното меню се доставя до 15:00. Отворете поръчката за <b>утре, '+esc(dateLabel(tomorrowDate()))+'</b>.</p>'+(SC.state().lunchDiscount ? '<a class="link" href="lunch.html">Днес вземете от място с -30%'+ic("caret-right",18)+'</a>' : '')+'</div></div>' : '';
   var slots = p.slots.map(function(s){ var on = s.t === G.deadline;
     return '<button class="o-slot" type="button" data-slot="'+s.t+'" aria-pressed="'+on+'"'+(s.off ? ' disabled' : '')+'>'+clock(s.t)+(s.off ? '<span class="vh"> (мина)</span>' : '')+'</button>'; }).join("");
   var anyOff = p.slots.some(function(s){ return s.off; });
@@ -461,7 +462,7 @@ function viewStart(){ var p = syncPlan(), c = ctx(); save();
     '<div class="o-sub-card shell rv"><div class="core"><span class="o-tag">Скоро</span><h2 class="h3" style="font-size:24px;letter-spacing:-.03em">Обяд за офиса всеки ден</h2>'+
       '<p class="muted" style="margin:0">Абонамент за обедното меню: седмичен план с доставка в избран час и фактура.</p>'+
       '<p class="missing small" style="margin:0">[ЛИПСВА: условия и цени на абонамента за офиси]</p>'+
-      '<a class="pill pill-line" href="tel:+359894365577" style="justify-self:start">'+ic("phone",20)+'Попитайте ни: '+R.phone+'</a></div></div>'+
+      '<p style="margin:0;font-weight:600">Интересува ли ви? Обадете ни се:</p><a class="pill pill-line" href="tel:+359894365577" style="justify-self:start" aria-label="Обади се на '+R.phone+'">'+ic("phone",20)+R.phone+'</a></div></div>'+
     '<div><h2 class="h2" style="margin-bottom:10px">Въпроси</h2><div class="o-faq">'+
       faq("До колко часа може да е крайният час?", "До 14:00. Обедното меню се доставя до 15:00, а след крайния час ние приготвяме и тръгваме към вас.")+
       faq("Как плащаме?", "В брой или с карта при получаване, без онлайн плащане. Може да плати един за всички или всеки своето.")+
@@ -492,14 +493,14 @@ function updAddr(keepFocus){ var box = main.querySelector("[data-addrbox]"); if 
 function updEta(){ var c = ctx(), el = main.querySelector("[data-eta]");
   if (el) el.innerHTML = ic(G.mode === "pickup" ? "storefront" : "truck",20)+'<span>'+(G.mode === "pickup" ? "Готово за вземане "+c.dayWord+" в "+clock(c.dl) : "Доставка "+c.dayWord+" около "+clock(c.eta))+'</span>';
   var pv = main.querySelector("[data-preview]"); if (pv) pv.innerHTML = previewHTML(c); }
-function previewHTML(c){ var nm = G.name.trim() || "Вашето име";
+function previewHTML(c){ var nm = G.name.trim() || "Вие";
   return '<div class="o-bubble"><span class="who">'+esc(nm)+'</span>Поръчваме обяд от Siracusa. Изберете си до '+clock(c.dl)+(c.day==="tomorrow"?" утре":"")+'.<br><span class="o-linkchip">'+ic("arrow-up-right",16)+'<span>'+SITE+code()+'</span></span></div>'+
     '<div class="o-kv">'+
     '<div class="kv"><span>Офис</span><b>'+esc(G.office.trim() || "Без име")+'</b></div>'+
     '<div class="kv"><span>'+(G.mode==="pickup"?"Вземане":"Доставка до")+'</span><b>'+esc(whereText(c))+'</b></div>'+
     '<div class="kv"><span>Избор до</span><b>'+c.dayWord+', '+clock(c.dl)+'</b></div>'+
     '<div class="kv"><span>'+(G.mode==="pickup"?"Готово":"Пристига около")+'</span><b>'+clock(c.eta)+'</b></div>'+
-    '<div class="kv"><span>Плаща</span><b>'+(G.pays==="one" ? esc(nm) : "всеки своето")+'</b></div></div>'; }
+    '<div class="kv"><span>Плаща</span><b>'+(G.pays==="one" ? (G.name.trim() ? esc(nm)+" за всички" : "вие, за всички") : "всеки своето")+'</b></div></div>'; }
 
 function viewShare(){ var c = ctx(); var msg = chatMsg(c);
   return '<section class="sec o-top"><div class="o-lay"><div class="o-col">'+
