@@ -164,9 +164,9 @@
 /* ---------- share ---------- */
 .o-done-ic{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:#fff; margin-bottom:18px}
 .o-linkwrap{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:20px}
-.o-link{display:flex; align-items:center; gap:10px; min-height:56px; padding:0 18px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:16px}
+.o-link{display:flex; align-items:center; gap:10px; min-height:56px; padding:12px 18px; border-radius:20px; background:var(--surface-2); font-weight:700; font-size:16px}
 .o-link .ic{color:var(--muted)}
-.o-link output{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.o-link output{flex:1; min-width:0; overflow-wrap:anywhere; line-height:1.35}
 
 /* ---------- shared list ---------- */
 .o-timer{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap}
@@ -268,7 +268,7 @@
 
 /* ---------- action bar ---------- */
 .abar .pill .o-dots{margin-left:2px}
-@container app (min-width:900px){ .abar.o-bar{display:none} }
+@container app (min-width:900px){ .abar.o-bar{display:none} .aifab.up{bottom:24px} }
 </style>
 </head>
 <body>

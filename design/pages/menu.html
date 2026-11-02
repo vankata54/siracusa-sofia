@@ -108,8 +108,8 @@
 .qhead{padding-top:28px}
 .qhead .h3{font-size:22px}
 .qhead p{margin:4px 0 0; color:var(--muted)}
-.dcard .nodata{display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; line-height:1.3; color:var(--warn)}
-.dcard .nodata .ic{margin-top:1px}
+.dcard .nodata{display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; line-height:1.3; color:var(--muted)}
+.dcard .nodata .ic{margin-top:1px; color:var(--warn)}
 .dcard .later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
 .mcat .grid-dishes{animation:gridIn var(--t-slow) var(--ease) both}
 @keyframes gridIn{from{opacity:0}to{opacity:1}}
@@ -272,7 +272,7 @@ function results(){ var qv = st.q.trim() || null, list = scopeItems().filter(pas
 
 /* ---------- small helpers ---------- */
 function noun(cat, n){ var w = NOUN[cat] || ["ястие","ястия"]; return n + " " + (n===1 ? w[0] : w[1]); }
-function catDesc(c){ var it = SC.inCat(c.id), parts = [noun(c.id, it.length)];
+function catDesc(c, shown){ var it = SC.inCat(c.id), parts = [(shown < it.length ? shown+" от " : "")+noun(c.id, it.length)];
   var g = it.map(function(x){ var m = /(\d+)\s*(гр|мл)/.exec(x.g); return m ? [+m[1], m[2]] : null; }).filter(Boolean);
   if (g.length){ var lo = Math.min.apply(null, g.map(function(z){ return z[0]; })), hi = Math.max.apply(null, g.map(function(z){ return z[0]; }));
     parts.push((lo===hi ? lo : lo+" - "+hi)+" "+g[0][1]+"."); }
@@ -315,7 +315,7 @@ main.innerHTML =
         '<button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden>'+SC.ic("x",20)+'</button></div></div>'+
       '<div class="chips fchips" data-fchips role="group" aria-label="Филтри"></div>'+
     '</div>'+
-    '<div class="mstat"><p class="cnt-t" data-count aria-live="polite" style="margin:0"></p><button class="link" type="button" data-clearall hidden>'+SC.ic("x",18)+'Изчисти филтрите</button></div>'+
+    '<div class="mstat"><p class="cnt-t" data-count aria-live="polite" style="margin:0"></p><button class="link" type="button" data-clearall hidden>'+SC.ic("x",18)+'Изчисти</button></div>'+
     '<p class="note-auto alnote">'+SC.ic("info",18)+'<span>Алергените са предварителни, от състава. Кухнята ги потвърждава.</span></p>'+
     '<div class="notices" data-notices></div>'+
   '</section>'+
@@ -337,7 +337,7 @@ elQ.value = st.q;
 var R = {groups:[], list:[]};
 function filterChips(){ var items = scopeItems(), h = '';
   var aOn = st.a.length;
-  h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+(aOn === 1 ? 'Без '+SC.allergenName(st.a[0]).toLowerCase() : aOn ? 'Без '+aOn+' алергена' : 'Алергени')+'</button>';
+  h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+'Алергени'+(aOn ? ' <span class="dot" aria-label="избрани '+aOn+'">'+aOn+'</span>' : '')+'</button>';
   SC.FILTERS.forEach(function(f){ if (f.needs) return; var n = items.filter(f.test).length; if (!n) return; var on = st.f.indexOf(f.id) > -1;
     h += '<button class="chip '+(FICON[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+on+'">'+SC.ic(f.icon,20)+f.n+' <span class="n">'+n+'</span></button>'; });
   h += '<button class="chip more" type="button" data-sheet="more" aria-haspopup="dialog">'+SC.ic("sliders-horizontal",20)+'Още филтри</button>';
@@ -386,7 +386,7 @@ function render(){ R = results();
   elRes.innerHTML = R.groups.map(function(g){ var c = g.c;
     return '<section class="mcat" id="c-'+c.id+'" data-cat="'+c.id+'" aria-labelledby="h-'+c.id+'">'+
       '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">'+SC.esc(c.n)+'</h2>'+(st.menu==="main" ? '<a class="link" href="category.html#'+c.id+'" aria-label="Повече за '+SC.esc(c.n)+'">Повече'+SC.ic("caret-right",18)+'</a>' : '')+'</div>'+
-      '<p class="cdesc">'+catDesc(c)+'</p>'+
+      '<p class="cdesc">'+catDesc(c, g.items.length)+'</p>'+
       (q ? '' : '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>')+
       '<div class="grid-dishes">'+g.items.map(card).join("")+'</div></section>'; }).join("");
   requestAnimationFrame(spy); }

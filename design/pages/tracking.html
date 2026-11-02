@@ -132,7 +132,7 @@
 .okv .disc span:last-child{color:var(--ok)}
 
 /* banners & states */
-.banner{display:flex; gap:12px; align-items:flex-start; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 4px 0 0 var(--warn)}
+.banner{display:flex; gap:12px; align-items:flex-start; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .banner .ic{color:var(--warn); margin-top:2px}
 .banner b{display:block}
 .banner p{margin:2px 0 10px; color:var(--muted); font-size:15px}
@@ -154,6 +154,8 @@
 .pbtns .pill{padding:0 16px; font-size:15px}
 .proto .help{margin:0; font-size:14px; color:var(--muted)}
 
+/* the shared toast shrinks to half the width and wraps short phrases; keep it on one line (see report) */
+.device .toast{width:max-content}
 @keyframes halo{0%{transform:scale(1); opacity:.45}100%{transform:scale(2.4); opacity:0}}
 @keyframes halo2{0%{transform:scale(1); opacity:.5}100%{transform:scale(1.45); opacity:0}}
 @keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
@@ -179,6 +181,7 @@
 @container app (min-width:900px){
   .trk-s{padding-top:40px}
   .trk{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:28px; align-items:start}
+  .trk-l{position:sticky; top:150px}
   .trk-title h1{font-size:40px}
   .trk-title{margin-bottom:22px}
   .viz{width:248px; height:248px}
@@ -313,7 +316,7 @@ function actsHTML(){ var D = isD(), c = cur();
   return '<div class="acts"><a class="pill pill-line pill-lg pill-block" href="'+TEL+'" aria-label="Обади се в ресторанта на '+R.phone+'">'+ic("phone",20)+'Обади се в ресторанта</a>'+route+'</div>'; }
 
 function offlineHTML(){ if (!S.offline) return "";
-  return '<div class="banner" role="alert">'+ic("warning-circle",24)+'<div><b>Няма връзка с интернет</b><p>Показваме последното, което знаем (от '+clock(S.updated)+'). Поръчката ви си върви и ще обновим сами, щом връзката се върне.</p><button class="pill pill-ink" type="button" data-retry>'+ic("arrow-up-right",18)+'Опитай пак</button></div></div>'; }
+  return '<div class="banner" role="alert">'+ic("warning-circle",24)+'<div><b>Няма връзка с интернет</b><p>Показваме последното, което знаем (от '+clock(S.updated)+'). Поръчката ви си върви и ще обновим сами, щом връзката се върне.</p><button class="pill pill-ink" type="button" data-retry>Опитай пак</button></div></div>'; }
 
 function notifyHTML(){ var D = isD();
   if (finished()) return "";
@@ -426,7 +429,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
     if (navigator.share){ navigator.share({title:"Поръчка № "+S.no+" от Siracusa", url:url}).catch(function(){}); }
     else { try{ navigator.clipboard.writeText(url).catch(function(){}); }catch(x){} SC.toast("Връзката е копирана"); }
     return; }
-  if (ds.sim){ var k = ds.sim;
+  if (ds.sim){ var k = ds.sim; if (k!=="loading" && k!=="notfound" && k!=="none") S.view = "order";
     if (k==="next"){ S.k = Math.min(S.k+1, isD() ? stages().length-1 : stages().length); S.updated = SC.minutes(); render(); stepToast(); if (finished()) setTimeout(focusRate, 450); return; }
     if (k==="done"){ S.k = isD() ? stages().length-1 : stages().length; S.view = "order"; render(); stepToast(); setTimeout(focusRate, 450); return; }
     if (k==="late"){ S.late = !S.late; if (finished()) S.k = 1; render(); return; }
@@ -434,8 +437,8 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
     if (k==="loading"){ S.view = "loading"; render(); setTimeout(function(){ S.view = "order"; S.first = true; render(); }, 1600); return; }
     if (k==="notfound" || k==="none"){ S.view = k; render(); SC.scroller.scrollTop = 0; return; }
     if (k==="reset"){ S.view = "order"; S.k = 1; S.late = false; S.offline = false; S.rating = null; S.fbSent = false; S.fb = ""; S.fbErr = ""; S.notify = null; S.first = true; lastFill = 0; render(); SC.scroller.scrollTop = 0; return; } }
-  if (ds.mode){ if (t.disabled) return; S.mode = ds.mode; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
-  if (ds.lunch){ S.lunch = ds.lunch==="1"; S.sampleSwap = true; if (lunchPickupOnly()) S.mode = "pickup"; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
+  if (ds.mode){ if (t.disabled) return; S.view = "order"; S.mode = ds.mode; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
+  if (ds.lunch){ S.view = "order"; S.lunch = ds.lunch==="1"; S.sampleSwap = true; if (lunchPickupOnly()) S.mode = "pickup"; S.k = Math.min(S.k, isD() ? stages().length-1 : stages().length); lastFill = 0; render(); return; }
   if (ds.ch){ S.ch = ds.ch; render(); var b = main.querySelector('[data-ch="'+S.ch+'"]'); b && b.focus({preventScroll:true}); return; }
   if (t.hasAttribute("data-notify")){ var btn = t; btn.disabled = true; btn.innerHTML = ic("hourglass",20)+"Включваме..."; setTimeout(function(){ S.notify = S.ch; render(); SC.toast("Известията са включени"); }, 650); return; }
   if (t.hasAttribute("data-notify-off")){ S.notify = null; render(); return; }

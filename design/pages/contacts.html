@@ -188,7 +188,7 @@ a.ct-scard:active{transform:scale(.98)}
 @keyframes ctspin{to{transform:rotate(360deg)}}
 .pill.is-busy{opacity:.85; pointer-events:none}
 
-.ct-ok{padding:28px 20px 22px; display:grid; gap:14px; justify-items:start}
+.ct-ok{scroll-margin-top:150px; padding:28px 20px 22px; display:grid; gap:14px; justify-items:start}
 .ct-ok .badge-ok{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
 .ct-ok .h3{font-size:26px; letter-spacing:-.03em; outline:none}
 .ct-ok p{margin:0}
@@ -267,7 +267,7 @@ var TEL1 = "+359894365577", TEL2 = "070019955";
 var FB = "https://www.facebook.com/BarGrillSiracusa";
 var Q = "Siracusa Bar & Grill, " + R.address;
 var WAZE = "https://waze.com/ul?q=" + encodeURIComponent("Siracusa Bar & Grill Дружба 2 София") + "&navigate=yes";
-var EMBED = "https://www.google.com/maps?q=" + encodeURIComponent(Q) + "&z=16&output=embed";
+var EMBED = "https://www.google.com/maps?q=" + encodeURIComponent("Siracusa Bar & Grill, Дружба 2, София") + "&z=16&output=embed";
 var ADDR = esc(R.address).replace("Дружба 2","Дружба&nbsp;2").replace("бл. 311","бл.&nbsp;311").replace("1582 София","1582&nbsp;София");
 var DAYS = ["Понеделник","Вторник","Сряда","Четвъртък","Петък","Събота","Неделя"];
 var hash = (location.hash || "").slice(1);
@@ -376,9 +376,9 @@ var TRACKS = [
   {n:"Обедно меню", rg:"10:00 - 15:00", seg:[[600,900,"ok"],[900,1350,"em"]]}
 ];
 function pct(x){ return ((x-600)/780*100).toFixed(3)+"%"; }
-function bar(t, m){ var h = "";
+function bar(t, m){ var h = "", a0 = t.seg[0][0], b1 = t.seg[t.seg.length-1][1];
+  if (m > a0){ var e = Math.min(b1, m); h += '<i class="ct-seg past" style="left:'+pct(a0)+';width:calc('+pct(e)+' - '+pct(a0)+')"></i>'; }
   t.seg.forEach(function(s){ var a=s[0], b=s[1];
-    if (m > a){ var e = Math.min(b, m); h += '<i class="ct-seg past" style="left:'+pct(a)+';width:calc('+pct(e)+' - '+pct(a)+')"></i>'; }
     if (m < b){ var st = Math.max(a, m); h += '<i class="ct-seg '+s[2]+'" style="left:'+pct(st)+';width:calc('+pct(b)+' - '+pct(st)+')"></i>'; } });
   if (m >= 600 && m < 1380) h += '<i class="ct-tick" style="left:'+pct(m)+'"></i>';
   return '<div class="ct-bar" aria-hidden="true">'+h+'</div>'; }
@@ -410,8 +410,8 @@ function renderLive(){
       TRACKS.map(function(t){ return '<div class="ct-trk"><div class="top"><span class="nm">'+t.n+'</span><span class="rg">'+t.rg+'</span></div>'+bar(t,m)+'<span class="vh">, '+srState(t,m)+'.</span></div>'; }).join("")+
     '</div>'+
     '<ul class="ct-legend" aria-hidden="true">'+
-      '<li><i class="ok"></i>Остава днес</li>'+(m > 600 ? '<li><i class="past"></i>Мина</li>' : '')+
-      '<li><i class="em"></i>-30% за вземане</li></ul>';
+      (m < 1380 ? '<li><i class="ok"></i>Остава днес</li>' : '')+(m > 600 ? '<li><i class="past"></i>Мина</li>' : '')+
+      (m < 1350 ? '<li><i class="em"></i>-30% за вземане</li>' : '')+'</ul>';
   if (was) tc.classList.add("in");
 
   main.querySelector("[data-week]").innerHTML =

@@ -144,6 +144,7 @@
 .tl{padding:20px 18px 18px}
 .hours-grid{display:grid; gap:56px}
 .tl-body{position:relative; display:grid; gap:18px; padding-top:34px}
+.tl-body.closed{padding-top:4px}
 .tl-row .lab{display:flex; justify-content:space-between; gap:12px; font-weight:800; font-size:16px; margin-bottom:8px}
 .tl-row .lab span{font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
 .track{position:relative; height:14px; border-radius:999px; background:var(--surface-2)}
@@ -372,7 +373,7 @@ function timelineHTML(){
   else if (S.kitchen) say = ['warn',"clock","Доставката приключи за днес · Вземане до 22:30."];
   else if (m < 600) say = ['',"moon","Сега сме затворени. Доставката започва в 10:00."];
   else say = ['',"moon","Кухнята приема поръчки до 22:30. Утре доставяме от 10:00."];
-  return '<div class="tl-body">'+(inDay?'<div class="now'+side+'" style="left:'+pos.toFixed(2)+'%" aria-hidden="true"><b>Сега '+hh+'</b></div>':'')+
+  return '<div class="tl-body'+(inDay?'':' closed')+'">'+(inDay?'<div class="now'+side+'" style="left:'+pos.toFixed(2)+'%" aria-hidden="true"><b>Сега '+hh+'</b></div>':'')+
     rows.map(function(r){ return '<div class="tl-row"><div class="lab">'+r[0]+'<span>'+r[1]+'</span></div><div class="track" aria-hidden="true"><i class="'+r[2]+'" style="width:'+pc(r[3]).toFixed(2)+'%"></i>'+(inDay?'<b class="tick" style="left:'+pos.toFixed(2)+'%"></b>':'')+'</div></div>'; }).join("")+
     '</div><div class="axis" aria-hidden="true"><span style="left:0">10:00</span><span style="left:'+pc(900).toFixed(2)+'%">15:00</span><span style="left:'+pc(1260).toFixed(2)+'%">21:00</span></div>'+
     '<p class="tl-say '+say[0]+'">'+ic(say[1],20)+'<span>'+say[2]+'</span></p>';
@@ -484,7 +485,7 @@ res.addEventListener("click", function(e){
     : S.m < 600 ? "Разгледайте менюто отсега. Кухнята приема поръчки до 22:30." : "Кухнята приема поръчки до 22:30. Можете да изберете отсега.";
   el.innerHTML = '<div><h2 class="h2">'+title+'</h2><p class="lead" style="margin-top:10px">'+lead+'</p></div>'+
     '<div class="btns"><a class="pill pill-red go" href="'+a.href+'" data-mode="'+a.mode+'">'+esc(a.label)+'<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
-    (a.mode==="pickup" ? '<a class="pill pill-line pill-lg" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a>' : '<a class="pill pill-line pill-lg" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>')+'</div>';
+    (a.mode==="pickup" ? '<a class="pill pill-line pill-lg" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a>' : S.delivery ? '<a class="pill pill-line pill-lg" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>' : '')+'</div>';
 })();
 
 /* ---------- start: zone or demo state from the address (#druzhba-1, #adres=..., #offline, #greshka) ---------- */
