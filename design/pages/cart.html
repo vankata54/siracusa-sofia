@@ -518,8 +518,8 @@ function addrResult(I){
 function slotsHTML(I, title){ var sl = I.slots, lim = (I.sched && !P.allSlots) ? 12 : 99, any = sl.some(function(s){ return s.busy; });
   if (!sl.length) return '<p class="slots-h">'+title+'</p>'+note("info","clock","Няма свободни часове днес","Кухнята приема до 22:30. Поръчайте за утре или се обадете на "+R.phone+".");
   return '<p class="slots-h" id="slh">'+title+'</p><div class="slots" role="group" aria-labelledby="slh">'+sl.slice(0,lim).map(function(s){
-    return '<button class="slot" type="button" data-act="slot" data-v="'+s.v+'" data-fk="slot-'+s.v+'" aria-pressed="'+(D.slot===s.v)+'"'+(s.busy?' disabled aria-label="'+s.v+', заето"':'')+'>'+s.v+(s.busy?'<small>заето</small>':'')+'</button>'; }).join("")+'</div>'+
-    (sl.length>lim?'<button class="pill pill-soft pill-block more-slots" type="button" data-act="allslots">'+ic("caret-down",20)+'Още '+(sl.length-lim)+' часа</button>':'')+
+    return '<button class="slot" type="button" data-act="slot" data-v="'+s.v+'" data-fk="slot-'+s.v+'" aria-pressed="'+(D.slot===s.v)+'"'+(s.busy?' disabled aria-label="'+s.v+', заето"':'')+'>'+(D.slot===s.v?'<span class="row" style="gap:5px">'+ic("check",16)+s.v+'</span>':s.v)+(s.busy?'<small>заето</small>':'')+'</button>'; }).join("")+'</div>'+
+    (sl.length>lim?'<button class="pill pill-soft pill-block more-slots" type="button" data-act="allslots">'+ic("caret-down",20)+'Покажи часовете до '+sl[sl.length-1].v+'</button>':'')+
     (any?'<p class="slot-why">Зачеркнатите часове са заети: кухнята е пълна. Изберете друг.</p>':''); }
 
 function viewStep2(I){ var h;
@@ -724,7 +724,7 @@ dev.addEventListener("click", function(e){
   if (a==="inc"){ var l = SC.cart.lines().filter(function(z){ return z.key===key; })[0]; if (l) SC.cart.setQty(key, l.q+1); return; }
   if (a==="dec"){ var l2 = SC.cart.lines().filter(function(z){ return z.key===key; })[0]; if (!l2) return; if (l2.q>1) SC.cart.setQty(key, l2.q-1); else removeLine(key); return; }
   if (a==="rm"){ removeLine(key); return; }
-  if (a==="swap"){ var l3 = SC.cart.lines().filter(function(z){ return z.key===key; })[0], nx = SC.byId[b.dataset.id]; if (!l3 || !nx) return; SC.cart.remove(key); SC.cart.add(nx.id, l3.q); SC.toast("Сменихме с "+nx.n); return; }
+  if (a==="swap"){ var l3 = SC.cart.lines().filter(function(z){ return z.key===key; })[0], nx = SC.byId[b.dataset.id]; if (!l3 || !nx) return; SC.cart.remove(key); SC.cart.add(nx.id, l3.q); SC.toast("Готово, сменихме го"); return; }
   if (a==="rmlunch"){ var gone = SC.cart.lines().filter(function(z){ var x = SC.byId[z.id]; return x && x.lunch; }); var c = SC.cart.get(); var before = c.lines.slice();
     c.lines = c.lines.filter(function(z){ return gone.indexOf(z)<0; }); SC.cart.mode(c.mode);
     SC.toast("Махнахме обедните ястия", function(){ SC.cart.get().lines = before; SC.cart.mode(SC.cart.get().mode); }); return; }
@@ -736,7 +736,7 @@ dev.addEventListener("click", function(e){
   /* prototype switches */
   if (a==="demo"){ fillDemo(); if (location.hash) location.hash = "kolichka"; SC.toast("Готово: примерна количка"); return; }
   if (a==="clear"){ SC.cart.clear(); return; }
-  if (a==="addout"){ SC.cart.add("pleskavitsa", 1); SC.toast("Добавихме Плескавица (изчерпана днес)"); if (hashStep()!==1) go(1); return; }
+  if (a==="addout"){ SC.cart.add("pleskavitsa", 1); SC.toast("Добавено: изчерпано ястие"); if (hashStep()!==1) go(1); setTimeout(function(){ var o = main.querySelector(".ln.out"); o && o.scrollIntoView({block:"center", behavior:SC.reduce?"auto":"smooth"}); }, 60); return; }
   if (a==="loading"){ P.loading = true; render(); setTimeout(function(){ P.loading = false; lastView = ""; render(); }, 1600); return; }
   if (a==="offline"){ P.offline = !P.offline; if (!P.offline && P.err==="offline") P.err = ""; render({keepScroll:true}); return; }
 });

@@ -357,7 +357,7 @@ function notices(){ var h = '';
 function count(){ var total = scopeItems().length, n = R.list.length, q = st.q.trim();
   if (st.view === "loading") elCount.innerHTML = 'Зареждаме менюто…';
   else if (st.view === "error") elCount.innerHTML = '';
-  else if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“';
+  else if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“'+(st.f.length || st.a.length ? ' <span>с тези филтри</span>' : '');
   else if (st.f.length || st.a.length) elCount.innerHTML = 'Показваме '+n+' <span>от '+plural(total)+'</span>';
   else elCount.innerHTML = plural(total)+' <span>· '+(st.menu==="bf" ? "закуски" : MAIN_CATS.length+" категории")+'</span>';
   $("[data-clearall]").hidden = !(st.f.length || st.a.length); }
