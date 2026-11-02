@@ -452,6 +452,7 @@ function validate(){ var f = st.f, e = {};
   else if (!normPhone(f.phone)) e.phone = "Проверете номера. Например: 0888 123 456";
   if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) e.email = "Проверете имейла. Например: ime@primer.bg";
   return e; }
+function fmtPhone(p){ var n = normPhone(p); return n && n.length===10 ? n.slice(0,4)+" "+n.slice(4,7)+" "+n.slice(7) : (p||"").trim(); }
 function isBlocked(p){ return normPhone(p)==="0888000000"; }
 
 /* ---------- pieces ---------- */
@@ -585,9 +586,9 @@ function inp(id, type, attrs){ var e = st.err[id]; return '<input class="input" 
 var OCC = ["Рожден ден","Имен ден","Годишнина","Делова среща","Друго"];
 function step3(){ var s = selInfo(), h = '';
   h += '<div class="rc"><div class="shell"><div class="core"><span class="li">'+ic("calendar-blank",20)+fShort(st.date)+' · '+hm(st.slot)+'</span><span class="li">'+ic("users",20)+ppl(st.n)+'</span><span class="li">'+ic("chair",20)+s.label+' · '+zoneName(s.zone)+'</span>'+
-    (st.expired?'':holdChip())+'<div class="acts"><button class="link" type="button" data-go="1" data-fk="rc1">Промени деня или часа</button><button class="link" type="button" data-go="2" data-fk="rc2">Смени масата</button></div></div></div></div>';
+    (st.expired?'':holdChip())+'<div class="acts"><button class="link" type="button" data-go="1" data-fk="rc1">Промени часа</button><button class="link" type="button" data-go="2" data-fk="rc2">Смени масата</button></div></div></div></div>';
   if (st.expired) h += '<div class="alert warn" role="alert" style="margin-top:14px">'+ic("timer",22)+'<div><b>Задържането изтече</b><p>'+s.label+' още е свободна. Задръжте я пак и довършете резервацията.</p><div class="acts"><button class="pill pill-red" type="button" data-rehold data-fk="rh">'+ic("timer",20)+'Задръж я пак за 10 мин</button></div></div></div>';
-  if (st.blocked) return h+'<div class="alert" role="alert" style="margin-top:20px">'+ic("phone",22)+'<div><b tabindex="-1" data-h>Тази резервация ще уредим по телефона</b><p>За номера '+esc(st.f.phone)+' не можем да потвърдим резервация онлайн. Обадете ни се и ще намерим маса заедно.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a><button class="pill pill-line" type="button" data-unblock data-fk="ub">'+ic("pencil-simple",20)+'Поправи номера</button></div></div></div>';
+  if (st.blocked) return h+'<div class="alert" role="alert" data-blocked style="margin-top:20px">'+ic("phone",22)+'<div><b tabindex="-1" data-h>Тази резервация ще уредим по телефона</b><p>За номера '+esc(st.f.phone)+' не можем да потвърдим резервация онлайн. Обадете ни се и ще намерим маса заедно.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a><button class="pill pill-line" type="button" data-unblock data-fk="ub">'+ic("pencil-simple",20)+'Поправи номера</button></div></div></div>';
   h += '<h2 class="h2" style="margin-top:26px" tabindex="-1" data-h>Вашите данни</h2><form class="form" novalidate data-form>';
   h += '<div class="two">'+field("name","Име",false,inp("name","text",'autocomplete="name" autocapitalize="words"'),"На това име е масата.")+
     field("phone","Телефон",false,inp("phone","tel",'autocomplete="tel" inputmode="tel" placeholder="0888 123 456"'),"Тук идва потвърждението по SMS или Viber.")+'</div>';
@@ -609,9 +610,11 @@ function cta(){ var s = selInfo();
   if (st.step===2){ if (!s) return {t:st.n>6?"Изберете зона":"Изберете маса", s:st.n>6?"Салон или градина":"Докоснете свободна маса"};
     if (st.expired) return {t:"Задръж "+s.label.toLowerCase()+" пак", s:"Задържането изтече", rehold:true};
     return {t:"Попълни данните", s:s.short+' · задържана <span data-hold>'+holdTxt()+'</span> мин'}; }
+  if (st.blocked) return {t:"Обади се", s:R.phone, tel:true};
   if (st.expired) return {t:"Задръж "+s.label.toLowerCase()+" пак", s:"Задържането изтече", rehold:true};
   return {t:"Резервирай маса за "+(st.n===1?"един":st.n), s:fShort(st.date)+" · "+hm(st.slot)}; }
 function ctaBtn(cls){ var c = cta(), solo = st.step===1;
+  if (c.tel) return '<a class="pill pill-red cta '+(cls||"")+'" href="tel:+359894365577"><span class="ct"><b>'+ic("phone",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-4px;margin-right:6px"')+c.t+'</b><small>'+c.s+'</small></span></a>';
   return '<button class="pill pill-red cta '+(cls||"")+(solo?" solo":"")+'" type="button" data-act="'+(c.rehold?"rehold":"next")+'"'+(st.busy?' aria-busy="true"':'')+'><span class="ct"><b>'+c.t+'</b><small>'+(st.busy?"Запазваме масата...":c.s)+'</small></span>'+(st.busy?'<span class="spin" aria-hidden="true"></span>':(solo||cls==="wide"?'<span class="knob">'+ic("arrow-right",22)+'</span>':''))+'</button>'; }
 var bar = document.createElement("div"); bar.className = "abar rabar"; bar.setAttribute("role","region"); bar.setAttribute("aria-label","Следваща стъпка"); SC.ov.appendChild(bar);
 function renderBar(){ if (st.view!=="flow"){ bar.hidden = true; SC.device.classList.remove("rfocus"); return; }
@@ -707,8 +710,8 @@ function next(){ if (st.busy) return;
   setTimeout(function(){ st.busy = false;
     if (st.proto.offline || navigator.onLine===false){ st.fail = "offline"; render(); scrollToEl(main.querySelector(".alert.bad")); return; }
     if (st.proto.fail){ st.fail = "error"; render(); scrollToEl(main.querySelector(".alert.bad")); return; }
-    if (isBlocked(st.f.phone)){ st.blocked = true; render(); toTop(true); return; }
-    var s = selInfo(); st.booking = {date:st.date, slot:st.slot, n:st.n, selLabel:s.label+" · "+zoneName(s.zone), name:st.f.name.trim(), phone:st.f.phone.trim(), occ:st.f.occ, note:st.f.note.trim(), changed:st.changing};
+    if (isBlocked(st.f.phone)){ st.blocked = true; render(); var bc = main.querySelector("[data-blocked]"); scrollToEl(bc); var bh = bc && bc.querySelector("[data-h]"); bh && bh.focus({preventScroll:true}); return; }
+    var s = selInfo(); st.booking = {date:st.date, slot:st.slot, n:st.n, selLabel:s.label+" · "+zoneName(s.zone), name:st.f.name.trim(), phone:fmtPhone(st.f.phone), occ:st.f.occ, note:st.f.note.trim(), changed:st.changing};
     st.view = "done"; st.changing = false; st.sel = null; st.anim = true; render(); toTop(true); }, 900); }
 function rehold(){ st.hold = Date.now()+600000; st.expired = false; SC.toast(selInfo().label+" е задържана пак за 10 минути"); render(); }
 function back(){ if (st.step>1) go(st.step-1); }
@@ -732,7 +735,7 @@ function waitSheet(m){ var d = st.date, near = openSlots(d).filter(function(x){ 
     '<div class="field"><label for="wl-phone">Телефон</label><input class="input" id="wl-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 123 456" value="'+esc(st.f.phone)+'"><span class="err" data-wlerr hidden></span></div>'+
     '<button class="pill pill-red pill-lg pill-block" type="button" data-wlgo="'+m+'">'+ic("bell",22)+'Запиши ме в списъка на чакащите</button>'+
     (near.length?'<p class="label" style="margin-top:4px">Или изберете свободен час:</p><div class="chips">'+near.map(function(x){ return '<button class="chip" type="button" data-wlslot="'+x+'">'+hm(x)+'</button>'; }).join("")+'</div>':'')+'</div>';
-  cur = SC.sheet({title:"Списък на чакащите", html:html}); }
+  cur = SC.sheet({title:"Няма свободна маса", html:html}); }
 
 /* ---------- events ---------- */
 document.addEventListener("click", function(e){ var t = e.target.closest("[data-day],[data-mon],[data-period],[data-slot],[data-full],[data-ppl],[data-go],[data-act],[data-zone],[data-t],[data-pick],[data-need],[data-list],[data-rehold],[data-occ],[data-unblock],[data-ics],[data-new],[data-manage],[data-change],[data-cancel],[data-proto],[data-waitlist],[data-wlgo],[data-wlslot]");
@@ -771,7 +774,7 @@ document.addEventListener("click", function(e){ var t = e.target.closest("[data-
     if (!normPhone(ph)){ er.hidden = false; er.textContent = ph ? "Проверете номера. Например: 0888 123 456" : "Напишете телефон, за да ви пишем, щом се освободи маса."; pin.setAttribute("aria-invalid","true"); pin.focus(); return; }
     if (nm) st.f.name = nm; st.f.phone = ph;
     if (isBlocked(ph)){ box.innerHTML = '<div class="alert" role="alert">'+ic("phone",22)+'<div><b>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts"><a class="pill pill-red" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></div></div>'; return; }
-    box.innerHTML = '<div class="okm" aria-hidden="true">'+ic("check",36)+'</div><p class="center" style="font-size:20px;font-weight:800;letter-spacing:-.02em" tabindex="-1" data-wlok>Записахме ви в списъка на чакащите</p><p class="center muted">Ако се освободи маса за '+ppl(st.n)+' в '+hm(+ds.wlgo)+' на '+fShort(st.date)+', ще ви пишем на '+esc(ph)+'. Без да е нужно да правите нищо друго.</p>';
+    box.innerHTML = '<div class="okm" aria-hidden="true">'+ic("check",36)+'</div><p class="center" style="font-size:20px;font-weight:800;letter-spacing:-.02em" tabindex="-1" data-wlok>Записахме ви в списъка на чакащите</p><p class="center muted">Ако се освободи маса за '+ppl(st.n)+' в '+hm(+ds.wlgo)+' на '+fShort(st.date)+', ще ви пишем на '+esc(fmtPhone(ph))+'. Не е нужно да правите нищо друго.</p>';
     var ok = box.querySelector("[data-wlok]"); ok && ok.focus({preventScroll:true}); return; }
   if (ds.proto){ var k = ds.proto; st.protoOpen = true;
     if (k==="offline"){ st.proto.offline = !st.proto.offline; render(); SC.toast(st.proto.offline?"Симулация: няма интернет":"Връзката е възстановена"); return; }

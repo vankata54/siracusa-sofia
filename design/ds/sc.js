@@ -54,7 +54,7 @@ SC.allergenName = function(k){ var a = SC.ALLERGENS.filter(function(x){ return x
 SC.FILTERS = [
   {id:"veg", n:"Вегетарианско", icon:"leaf", test:function(x){ return x.t.indexOf("veg")>-1; }},
   {id:"hot", n:"Люто", icon:"pepper", test:function(x){ return x.t.indexOf("hot")>-1; }},
-  {id:"noonion", n:"Без лук", icon:"x", test:function(x){ return x.noOnion; }},
+  {id:"noonion", n:"Без лук", icon:"plant", test:function(x){ return x.noOnion; }},
   {id:"share", n:"За споделяне", icon:"users-three", test:function(x){ return x.share; }},
   {id:"bertha", n:"От фурната Bertha", icon:"fire", test:function(x){ return x.cat==="skara-bertha"; }},
   {id:"nogluten", n:"Без глутен", icon:"grains", test:function(x){ return x.comp && x.al.indexOf("gluten")<0; }},
@@ -259,7 +259,7 @@ SC.PAGES = [["home.html","Начало"],["menu.html","Меню"],["lunch.html",
 function header(o){ var st = SC.status();
   var cartBtn = '<a class="cartbtn" href="cart.html" data-cartnav aria-label="Количка">'+SC.ic("shopping-bag",24)+'<span class="cnt" data-cnt hidden>0</span></a>';
   var row1 = o.back
-    ? '<header class="top back"><a class="hb" href="'+o.back.href+'">'+SC.ic("arrow-left",20)+SC.esc(o.back.label||"Назад")+'</a><span class="ttl">'+SC.esc(o.title||"")+'</span><div class="hact">'+(o.share?'<button class="hb" type="button" data-share>'+SC.ic("export",20)+'<span class="vh">Сподели</span></button>':'')+'</div></header>'
+    ? '<header class="top back"><a class="hb" href="'+o.back.href+'">'+SC.ic("arrow-left",20)+SC.esc(o.back.label||"Назад")+'</a><span class="ttl">'+SC.esc(o.title||"")+'</span><div class="hact">'+(o.share?'<button class="hb" type="button" data-share>'+SC.ic("export",20)+'Сподели</button>':'')+'</div></header>'
     : '<header class="top"><a class="word" href="home.html" title="Заместител до новото лого">Siracusa</a><nav class="dnav" aria-label="Раздели">'+DNAV.map(function(d){ return '<a href="'+d[2]+'"'+(o.nav===d[0]?' aria-current="page"':'')+'>'+d[1]+'</a>'; }).join("")+'</nav><div class="hact">'+
       '<a class="hb call" href="tel:+359894365577" aria-label="Обади се на 0894 36 55 77">'+SC.ic("phone",20)+'Обади се</a><button class="hb" type="button" data-lang aria-label="Смени езика на английски">BG</button><button class="hb more" type="button" data-more>'+SC.ic("list",20)+'Още</button></div></header>';
   var row2 = '<div class="row2">'+(o.status===false?'':'<div class="status"><span class="dot '+st.cls+'"></span><span>'+st.html+'</span></div>')+cartBtn+'</div>';
