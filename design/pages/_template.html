@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Шаблон | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+/* page-only styles go here; use tokens from sc.css, never literal colours */
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script>
+var main = SC.mount({page:"template", nav:"menu", title:"Шаблон"});
+main.innerHTML =
+  '<section class="sec" style="padding-top:28px"><h1 class="h1">Шаблон на страница</h1><p class="lead" style="margin-top:8px">Пример как се ползват общите компоненти.</p></section>'+
+  '<section class="sec"><div class="sec-h"><h2 class="h2">Пици на пещ</h2><a class="link" href="category.html#pitsi">Всички'+SC.ic("caret-right",18)+'</a></div><div class="rail">'+SC.inCat("pitsi").slice(0,6).map(function(x){ return SC.dishCard(x); }).join("")+'</div></section>'+
+  '<section class="sec"><h2 class="h2" style="margin-bottom:8px">Скара Bertha</h2>'+SC.inCat("skara-bertha").slice(0,4).map(function(x){ return SC.dishCard(x,"row"); }).join("")+'</section>';
+SC.reveal();
+</script>
+</body>
+</html>

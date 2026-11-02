@@ -1,0 +1,150 @@
+<title>Siracusa срещу конкурентите</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&display=swap">
+<style>
+/* Layout: one reading column (findings, measured speed, competitor table, proposals), proposals as a ranked list with status chips */
+:root{
+  --bg:#F2F2EF; --surface:#FBFBFA; --surface-2:#E7E7E2; --ink:#121211; --muted:#5C5C57; --line:rgba(18,18,17,.12);
+  --red:#CC2A1E; --ember:#F2B23A; --on-ember:#1F1D1B; --ok:#2E7D4F; --warn:#B45309;
+  --font:"Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.12); --red:#FF6B5E; --ok:#4CAF7A; --warn:#F59E0B; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.12); --red:#FF6B5E; --ok:#4CAF7A; --warn:#F59E0B; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); font-size:16px; line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:40px 80px}
+.wrap{max-width:860px; margin:0 auto; display:grid; gap:48px}
+h1{font-size:clamp(32px,5vw,52px); line-height:1.02; letter-spacing:-.04em; margin:0 0 12px; text-wrap:balance}
+h2{font-size:clamp(24px,3.4vw,32px); line-height:1.1; letter-spacing:-.03em; margin:0 0 14px; text-wrap:balance}
+h3{font-size:19px; letter-spacing:-.015em; margin:0 0 6px}
+p{margin:0 0 10px; max-width:68ch}
+.lead{font-size:18px; color:var(--muted)}
+a{color:var(--red)}
+.meta{font-size:14px; color:var(--muted)}
+.keys{display:grid; gap:12px; margin:0; padding:0; list-style:none}
+.keys li{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line)}
+.keys .n{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); font-weight:800; font-variant-numeric:tabular-nums}
+.keys b{display:block; margin-bottom:2px}
+/* speed chart */
+.chart{display:grid; gap:10px; padding:20px; border-radius:24px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line)}
+.bar{display:grid; grid-template-columns:120px 1fr 80px; gap:12px; align-items:center; font-size:15px}
+.bar .tr{height:22px; position:relative}
+.bar .fill{position:absolute; inset:0 auto 0 0; border-radius:6px; background:var(--muted); opacity:.55}
+.bar.us .fill{background:var(--ok); opacity:1}
+.bar.over .fill{background:var(--red); opacity:.75}
+.bar .v{font-weight:700; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+.goal{position:relative; height:0}
+.chart .note{font-size:13px; color:var(--muted); margin:6px 0 0}
+@media (max-width:520px){ .bar{grid-template-columns:96px 1fr 64px; font-size:14px} }
+/* table */
+.tbl{overflow-x:auto; border-radius:20px; box-shadow:inset 0 0 0 1px var(--line); background:var(--surface)}
+table{border-collapse:collapse; width:100%; min-width:760px; font-size:14.5px}
+th,td{padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line)}
+th{font-size:13px; color:var(--muted); font-weight:700}
+td:first-child{font-weight:700; white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.y{color:var(--ok); font-weight:700} .n0{color:var(--muted)}
+/* proposals */
+.props{display:grid; gap:14px}
+.prop{padding:18px 18px 16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line)}
+.prop .top{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px}
+.chip{display:inline-flex; align-items:center; min-height:26px; padding:0 10px; border-radius:999px; font-size:13px; font-weight:700; background:var(--surface-2)}
+.chip.done{background:var(--ok); color:#fff}
+.chip.new{background:var(--ember); color:var(--on-ember)}
+.chip.ask{background:transparent; box-shadow:inset 0 0 0 1.5px var(--warn); color:var(--warn)}
+.prop p{margin:0; color:var(--muted)}
+.prop .why{margin-top:6px; font-size:14.5px}
+.src{font-size:14px; color:var(--muted); display:grid; gap:4px; padding-left:18px; margin:0}
+.src a{word-break:break-word}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="meta">Проучване · 03.11.2026 · за проекта Siracusa Bar &amp; Grill</p>
+    <h1>Siracusa срещу конкурентите</h1>
+    <p class="lead">Десет ресторантски марки в България плюс най-новите практики навън. Разгледах сайтовете им на телефон, измерих скоростта им и записах какво правят добре и къде губят клиенти. Накрая са предложенията за Siracusa, подредени по ефект.</p>
+  </header>
+
+  <section>
+    <h2>Петте най-важни извода</h2>
+    <ol class="keys">
+      <li><span class="n">1</span><div><b>Всички са бавни на телефон.</b>При мобилна мрежа главното съдържание на конкурентите се показва след 8 до над 90 секунди. Siracusa може да е единственият ресторант в списъка, който се отваря под 2,5 секунди. Това е предимство, което клиентът усеща веднага.</div></li>
+      <li><span class="n">2</span><div><b>Никой не поръчва гладко в собствения си сайт.</b>Happy и Burrata прехвърлят към отделен сайт за доставка. Щастливеца праща към външни платформи, включително към Takeaway, който вече не работи в България. Victoria иска град и адрес още преди да покаже менюто.</div></li>
+      <li><span class="n">3</span><div><b>Ниагара има ресторант в Дружба.</b>Това е прекият съсед на Siracusa: същите категории (пица, барбекю, пърленки, обедно меню), онлайн меню и доставка. Местното SEO и „най-бързото и най-удобното в Дружба“ са ключови.</div></li>
+      <li><span class="n">4</span><div><b>Домино'с печели с прозрачност.</b>На началната си страница показва „Средно време за доставка в момента: 29 мин“. Това е точно нашият модул за натоварена кухня, но видим за всички.</div></li>
+      <li><span class="n">5</span><div><b>Никой местен конкурент няма AI асистент или групова поръчка.</b>Навън DoorDash вече прави количка по описание (06.2026), а Domino's показва статуса на поръчката на заключения екран. В България мястото е празно.</div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Скорост на телефон</h2>
+    <p>Време до главното съдържание (LCP) на началната страница. Целта ни е до 2,5 секунди. Колкото по-къса е лентата, толкова по-добре.</p>
+    <div class="chart" role="img" aria-label="Време до главното съдържание: Burrata 8,5 с, Happy 10,3 с, Domino's 14,6 с, Victoria 19,6 с, Ниагара 77,6 с, PizzaLab и Щастливеца над 90 с, целта на Siracusa до 2,5 с">
+      <div class="bar us"><span>Siracusa (цел)</span><span class="tr"><span class="fill" style="width:2.78%"></span></span><span class="v">≤ 2,5 с</span></div>
+      <div class="bar"><span>Burrata</span><span class="tr"><span class="fill" style="width:9.48%"></span></span><span class="v">8,5 с</span></div>
+      <div class="bar"><span>Happy</span><span class="tr"><span class="fill" style="width:11.44%"></span></span><span class="v">10,3 с</span></div>
+      <div class="bar"><span>Domino's</span><span class="tr"><span class="fill" style="width:16.21%"></span></span><span class="v">14,6 с</span></div>
+      <div class="bar"><span>Victoria</span><span class="tr"><span class="fill" style="width:21.79%"></span></span><span class="v">19,6 с</span></div>
+      <div class="bar"><span>Ниагара</span><span class="tr"><span class="fill" style="width:86.19%"></span></span><span class="v">77,6 с</span></div>
+      <div class="bar over"><span>PizzaLab</span><span class="tr"><span class="fill" style="width:100%"></span></span><span class="v">над 90 с</span></div>
+      <div class="bar over"><span>Щастливеца</span><span class="tr"><span class="fill" style="width:100%"></span></span><span class="v">над 90 с</span></div>
+      <p class="note">Скала от 0 до 90 секунди. Мое измерване в браузър, а не от PageSpeed (дневната квота на Google беше изчерпана): iPhone 13, мобилна мрежа 1,6 Mbps със 150 ms закъснение, процесор забавен 4 пъти. Числата са за сравнение помежду им, не са официални оценки. McDonald's, KFC и Skapto връщат защита срещу ботове и не са измерени. Сегашният сайт на Siracusa също показва такава проверка, затова не е в графиката.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Какво прави всеки</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Марка</th><th>Поръчка</th><th>Първи екран</th><th>Лоялност и оферти</th><th>Силно</th><th>Слабо</th><th>Тегло на страницата</th></tr></thead>
+        <tbody>
+          <tr><td>Happy</td><td>Отделен сайт dostavka.happy.bg</td><td>Видео (коктейл), отгоре награди</td><td>Игра с код, резервация с отстъпка, ваучер за подарък</td><td>Отделни менюта: обедно, суши, протеиново, коктейли</td><td>Банер за бисквитки на цял екран, CLS 0,21</td><td>2,4 MB, 76 заявки</td></tr>
+          <tr><td>Burrata</td><td>Платформата на Happy</td><td>Слайдер</td><td>„Резервирай с отстъпка“ (Rezzo)</td><td>Карето „Знаете ли, че“ за историята на пица Маргарита</td><td>12 MB, зарежда се около минута, CLS 0,31</td><td>12 MB, 191 заявки</td></tr>
+          <tr><td>Domino's</td><td>Собствен сайт и приложение</td><td>Оферта за седмицата</td><td>Domino's MORE точки, оферти за вземане от място</td><td>„Средно време за доставка в момента: 29 мин“</td><td>LCP 14,6 с, много заявки</td><td>1,8 MB, 131 заявки</td></tr>
+          <tr><td>PizzaLab</td><td>Собствен сайт и приложение</td><td>Слайдер с кампания</td><td>Оферти „Спестяваш до X €“</td><td>„Изобрети своята пица“ с една цена за всички съставки, поръчка за по-късно</td><td>Над 90 с, тежко видео</td><td>Над 90 MB при първото зареждане</td></tr>
+          <tr><td>Щастливеца</td><td>Външни платформи</td><td>Видео</td><td>Ваучер за подарък в първия екран</td><td>История „Farm to table“</td><td>Връзка към Takeaway, който вече не работи</td><td>Около 40 MB</td></tr>
+          <tr><td>Ниагара</td><td>Собствено дигитално меню по ресторант</td><td>Снимки на ресторантите</td><td>Обедно меню 09:00 - 16:30</td><td>Количка горе вдясно на всяко ястие (бързо добавяне)</td><td>LCP 77 с, CLS 0,53</td><td>15,7 MB, 105 заявки</td></tr>
+          <tr><td>Victoria</td><td>Собствен сайт за доставка</td><td>Град, после Доставка или Вземи от място</td><td>Вход и регистрация на видно място</td><td>Ясен избор доставка или вземане</td><td>Менюто не се вижда без адрес, 1,2 MB JavaScript</td><td>2,9 MB, 69 заявки</td></tr>
+          <tr><td>KFC</td><td>Приложение</td><td class="n0">не е разгледан</td><td>Клуб с точки до 12% отстъпка, кодове само в приложението</td><td>KFC Тракер в реално време</td><td class="n0">-</td><td class="n0">защита срещу ботове</td></tr>
+          <tr><td>McDonald's</td><td>Приложение</td><td class="n0">не е разгледан</td><td>Раздел „Оферти“ в долната лента (в други държави)</td><td>Поръчка предварително без опашка</td><td class="n0">-</td><td class="n0">защита срещу ботове</td></tr>
+          <tr><td>Skapto</td><td>Основно Wolt и Glovo</td><td class="n0">не е разгледан</td><td>Отстъпки на платформите</td><td>Силна марка</td><td>Без собствен канал за поръчка</td><td class="n0">защита срещу ботове</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Предложения за Siracusa</h2>
+    <p>Подредени по ефект. Зелено: вече е в прототипа. Жар: ново предложение. Рамка: трябва решение.</p>
+    <div class="props">
+      <article class="prop"><div class="top"><span class="chip done">В прототипа</span><h3>Най-бързият ресторантски сайт в квартала</h3></div><p>Под 2,5 секунди до първото ястие, без тежко видео, без банер за бисквитки на цял екран. Видеото в първия екран е кратко, без звук и тръгва след постера.</p><p class="why">Конкурентите губят клиента още преди менюто да се появи.</p></article>
+      <article class="prop"><div class="top"><span class="chip done">В прототипа</span><h3>Поръчка без прехвърляне и без адрес на входа</h3></div><p>Менюто, количката и проследяването са в същия сайт. Адресът се пита чак в количката, с отговор за зоната и таксата веднага.</p><p class="why">Happy и Burrata прехвърлят към друг сайт, а Victoria спира хората на адреса.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>„Доставка сега: около 35 мин“ на началната страница</h3></div><p>Живото време за доставка, смятано от натоварването на кухнята, стои под бутона „Поръчай“. Когато е натоварено, пише „Възможни са закъснения · около 55 мин“.</p><p class="why">Domino's го показва и това вдъхва доверие. Логиката я имаме в пакета (10.9).</p></article>
+      <article class="prop"><div class="top"><span class="chip done">В прототипа</span><h3>AI асистент за групови поръчки</h3></div><p>„Ние сме четирима, единият е вегетарианец без лук...“ води до предложение за всеки и бутон „Добави всичко“. Отговаря само от менюто и алергените.</p><p class="why">Никой местен конкурент няма такъв. Навън DoorDash го пусна през юни 2026.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>Групова обедна поръчка за офиса</h3></div><p>Един колега отваря поръчка и праща връзка в чата на офиса. Всеки добавя своето до 11:30 и всичко пристига заедно.</p><p class="why">Одобрена топ идея от мастър промпта (15.2). Никой конкурент я няма, а обедното меню е силата на Siracusa и на Ниагара.</p></article>
+      <article class="prop"><div class="top"><span class="chip done">В прототипа</span><h3>Раздел „Оферти“ и карта с печати</h3></div><p>Всички промоции на едно място в долната лента. Картата за лоялност започва с 2 от 10 печата.</p><p class="why">Същият модел като KFC (клуб с точки) и Domino's MORE, но без да се сваля приложение.</p></article>
+      <article class="prop"><div class="top"><span class="chip ask">Трябва решение</span><h3>Ваучер за подарък онлайн</h3></div><p>Happy и Щастливеца продават ваучери от сайта си. Без онлайн плащане може да е „Запитване за ваучер“ с плащане на място. С виртуален POS става истински онлайн подарък, особено преди Коледа и 8 март.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>Отделни „менюта“ като филтри</h3></div><p>Happy има протеиново и обедно меню. При нас това са чипове в менюто: „Протеиново“, „Леко до 500 ккал“, „За споделяне“, „Без лук“. Трябват хранителни данни от кухнята.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>Битка за Дружба</h3></div><p>Страници за Дружба 1 и 2 с истинско време за доставка, най-поръчваното в квартала и безплатната доставка. Ниагара Дружба е прекият конкурент, затова тук трябва да сме най-силни в Google.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>Проследяване като Domino's</h3></div><p>Статус на заключения екран (Live Activities) иска приложение. В сайта използваме Web Push: „Пицата е в пещта“, „Шофьорът е на 8 мин“. На iPhone работи, ако сайтът е добавен на началния екран.</p></article>
+      <article class="prop"><div class="top"><span class="chip ask">Трябва решение</span><h3>Резервация с отстъпка в слабите часове</h3></div><p>Happy и Burrata дават отстъпка за резервация чрез Rezzo. Ние можем без външна платформа: -10% за маса в слабите часове. Кои са те, ще покажат данните от таблото.</p></article>
+      <article class="prop"><div class="top"><span class="chip new">Ново</span><h3>„Направи си пица“ (версия 2)</h3></div><p>PizzaLab печели с една цена за пица с всякакви съставки. За Siracusa това може да е една седмична пица по избор на гостите, с гласуване в сайта.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Източници</h2>
+    <ol class="src">
+      <li>Сайтовете, разгледани на телефон (iPhone 13) на 03.11.2026: <a href="https://happy.bg/">happy.bg</a>, <a href="https://burrata.bg/">burrata.bg</a>, <a href="https://www.dominos.bg/">dominos.bg</a>, <a href="https://pizzalab.bg/">pizzalab.bg</a>, <a href="https://www.shtastliveca.com/">shtastliveca.com</a>, <a href="https://niagarabg.com/">niagarabg.com</a>, <a href="https://dostavka.victoria.bg/bg">dostavka.victoria.bg</a></li>
+      <li>KFC България в App Store: <a href="https://apps.apple.com/bg/app/id1475640145">KFC Доставки, Талони и Отстъпки</a></li>
+      <li>Skapto в Wolt: <a href="https://wolt.com/bg/bgr/sofia/brand/skapto">wolt.com/bg/bgr/sofia/brand/skapto</a></li>
+      <li>McDonald's, раздел „Deals“ в долната лента (САЩ): <a href="https://www.mcdonalds.com/us/en-us/mcdonalds-app/faqen.html">mcdonalds.com</a></li>
+      <li>Domino's обнови Tracker (03.2026): <a href="https://ir.dominos.com/node/24451">ir.dominos.com</a></li>
+      <li>DoorDash пусна AI чат, който прави количка (06.2026): <a href="https://techcrunch.com/2026/06/11/doordashs-new-ai-chatbot-lets-you-order-with-prompts-and-photos/">TechCrunch</a></li>
+      <li>Само 6% от ресторантите ползват AI за поръчки: <a href="https://www.supaorder.com/blog/restaurant-technology-trends-2026">Supaorder</a> (цитира National Restaurant Association)</li>
+      <li>Baymard, проучване на UX за доставка на храна: <a href="https://baymard.com/industries/food-delivery-and-takeout-ux">baymard.com</a></li>
+    </ol>
+  </section>
+</div>

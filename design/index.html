@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Siracusa дизайн v1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="ds/sc.css">
+<style>
+body{background:var(--bg); padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:40px 80px}
+.wrapx{max-width:1100px; margin:0 auto; display:grid; gap:40px}
+.hero h1{font-size:clamp(36px,6vw,64px); line-height:1; letter-spacing:-.05em; margin:0 0 12px; font-weight:800}
+.hero p{max-width:62ch; color:var(--muted); margin:0}
+.flows{display:grid; gap:28px}
+.flow h2{font-size:22px; letter-spacing:-.03em; margin:0 0 12px}
+.grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px}
+.tile{display:grid; gap:6px; padding:18px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; min-height:118px; align-content:space-between; transition:transform var(--t-fast) var(--ease)}
+.tile:active{transform:scale(.98)}
+.tile b{font-size:17px; letter-spacing:-.01em}
+.tile span{font-size:14px; color:var(--muted)}
+.tile .ic{color:var(--red)}
+.meta{display:flex; flex-wrap:wrap; gap:8px}
+.meta .badge{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrapx">
+  <header class="hero">
+    <div class="meta" style="margin-bottom:14px"><span class="badge new">Дизайн v1</span><span class="badge">Клиентски модул</span><span class="badge">Manrope · Посока В + жар</span></div>
+    <h1>Siracusa: всички страници</h1>
+    <p>Жив прототип на клиентския сайт. Всяка страница се отваря в рамка на телефон; горе има превключвател за „Компютър“, тема и час на деня (статусът, обедното меню и доставката се сменят според часа). Количката се пази между страниците.</p>
+  </header>
+  <div class="flows" id="flows"></div>
+</div>
+<script src="ds/icons.js"></script>
+<script>
+var I=window.SC_ICONS; function ic(n){ return '<svg class="ic" viewBox="0 0 256 256" width="24" height="24" fill="currentColor" aria-hidden="true">'+(I[n]||"")+'</svg>'; }
+var F=[
+ ["Поръчка",[["home","Начало","house","Видео, оферти, популярни, доставка"],["menu","Меню","fork-knife","Менюта, филтри, алергени, търсене"],["category","Категория","list","SEO страница: Пици на пещ","#pitsi"],["dish","Ястие","pizza","Добавки, алергени, върви добре с","#pitsa-s-burata-i-proshuto-krudo"],["lunch","Обедно меню","bowl-food","Днешното меню, -30% след 15:00"],["cart","Количка и поръчка","shopping-bag","3 стъпки, успех, състояния"],["tracking","Проследяване","moped","Статуси, време, оценка"],["office","Обедна поръчка за офиса","briefcase","Обща поръчка с краен час"]]],
+ ["Ела при нас",[["reservation","Резервирай маса","calendar-blank","Карта на залата, 3 стъпки"],["events","Събития и поводи","confetti","Предстоящи, минали, категории"],["event","Събитие","calendar-check","Гръцка вечер","#gratska-vecher"],["celebration","Празник при нас","cake","Калкулатор с пакети и собствено меню"]]],
+ ["Изгода и профил",[["offers","Оферти","seal-percent","Промоции, лоялност, ваучери"],["login","Вход","sign-in","Телефон и SMS код"],["profile","Профил","user","Поръчки, точки, съгласия"]]],
+ ["Информация",[["delivery","Доставка","truck","Зони, такси, проверка на адрес"],["pickup","Вземи от място","storefront","Click & collect"],["bertha","Фурната Bertha","fire","Технологията и ястията"],["about","За нас","users-three","Историята и мястото"],["gallery","Галерия","images","Ястия, салон, градина, събития"],["contacts","Контакти","map-pin","Адрес, часове, форма"],["allergens","Алергени","grains","14-те алергена по ястия"],["404","404","question","Страницата я няма"]]]];
+document.getElementById("flows").innerHTML=F.map(function(f){ return '<section class="flow"><h2>'+f[0]+'</h2><div class="grid">'+f[1].map(function(p){ return '<a class="tile" href="pages/'+p[0]+'.html'+(p[4]||"")+'">'+ic(p[2])+'<div><b>'+p[1]+'</b><br><span>'+p[3]+'</span></div></a>'; }).join("")+'</div></section>'; }).join("");
+</script>
+</body>
+</html>
