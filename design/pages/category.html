@@ -294,7 +294,7 @@ function resultsHTML(){ var res = sorted(apply(items, state.f, state.no)), any =
   return head + '<div class="grid-dishes'+(bfClosed()?" noadd":"")+'">'+grid+'</div>'; }
 
 function catsHTML(current){ return '<ul class="cats">'+SC.cats.filter(function(c){ return SC.inCat(c.id).length && c.id!==current; }).map(function(c){ var its = SC.inCat(c.id), h = hero(its), on = c.id===current;
-  return '<li><a class="cat" href="category.html#'+c.id+'"'+(on?' aria-current="page"':'')+'><span class="pic" aria-hidden="true">'+SC.art(h)+'</span><span><b>'+esc(c.n)+'</b><small>'+its.length+' '+(NOUN[c.id]||"ястия")+(c.id==="zakuski"?" · до 11:30":"")+'</small></span></a></li>'; }).join("")+'</ul>'; }
+  return '<li><a class="cat" href="category.html#'+c.id+'"'+(on?' aria-current="page"':'')+'><span class="pic" aria-hidden="true">'+SC.art(h)+'</span><span><b>'+esc(c.n)+'</b><small>'+(c.id==="zakuski" ? its.length+" · до 11:30" : its.length+" "+(NOUN[c.id]||"ястия"))+'</small></span></a></li>'; }).join("")+'</ul>'; }
 function othersHTML(){ return '<section class="sec" aria-labelledby="oc-h"><h2 class="h2" id="oc-h" style="margin-bottom:16px">Други категории</h2>'+catsHTML(cat.id)+'<a class="pill pill-line pill-block allmenu" href="menu.html">'+ic("fork-knife",20)+'Цялото меню на една страница</a></section>'; }
 
 function faqData(){ var q = [], veg = items.filter(function(x){ return x.t.indexOf("veg")>-1; }), gr = gramRange(items), noun = NOUN[cat.id] || "ястия";

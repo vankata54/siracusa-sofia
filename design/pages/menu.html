@@ -208,6 +208,8 @@ var MAIN_ITEMS = SC.items.filter(function(x){ return x.cat !== "zakuski"; });
 var BF_ITEMS = SC.inCat("zakuski");
 var NOUN = {supi:["супа","супи"], salati:["салата","салати"], pitsi:["пица","пици"], sosove:["сос","соса"], dobavki:["добавка","добавки"], garnituri:["гарнитура","гарнитури"], deserti:["десерт","десерта"], hlebcheta:["вид","вида"], zakuski:["закуска","закуски"]};
 var FICON = {veg:"leaf", hot:"pep"};
+var FIC = {noonion:"plant"}; /* "x" reads as "remove" on a chip; see the requests in reviews/menu.agent.md */
+function fic(f){ return FIC[f.id] || f.icon; }
 
 /* ---------- state (kept in the address: #pitsi&f=veg.hot&a=gluten&q=пица) ---------- */
 var st = {menu:"main", f:[], a:[], q:"", cat:null, view:"ok"};
@@ -339,11 +341,11 @@ function filterChips(){ var items = scopeItems(), h = '';
   var aOn = st.a.length;
   h += '<button class="chip" type="button" data-sheet="al" aria-pressed="'+(aOn?"true":"false")+'" aria-haspopup="dialog">'+SC.ic("shield-check",20)+'Алергени'+(aOn ? ' <span class="dot" aria-label="избрани '+aOn+'">'+aOn+'</span>' : '')+'</button>';
   SC.FILTERS.forEach(function(f){ if (f.needs) return; var n = items.filter(f.test).length; if (!n) return; var on = st.f.indexOf(f.id) > -1;
-    h += '<button class="chip '+(FICON[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+on+'">'+SC.ic(f.icon,20)+f.n+' <span class="n">'+n+'</span></button>'; });
+    h += '<button class="chip '+(FICON[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+on+'">'+SC.ic(fic(f),20)+f.n+' <span class="n">'+n+'</span></button>'; });
   h += '<button class="chip more" type="button" data-sheet="more" aria-haspopup="dialog">'+SC.ic("sliders-horizontal",20)+'Още филтри</button>';
   elF.innerHTML = h; }
 function notices(){ var h = '';
-  if (st.view === "offline") h += '<div class="notice off" role="status"><span class="nic">'+SC.ic("warning-circle",24)+'</span><b>Няма връзка с интернет</b><p>Менюто е заредено, а количката ви е запазена. Поръчайте, когато връзката се върне.</p><div class="acts"><button class="pill pill-line" type="button" data-retry>'+SC.ic("arrow-up-right",20)+'Опитай пак</button></div></div>';
+  if (st.view === "offline") h += '<div class="notice off" role="status"><span class="nic">'+SC.ic("warning-circle",24)+'</span><b>Няма връзка с интернет</b><p>Менюто е заредено, а количката ви е запазена. Поръчайте, когато връзката се върне.</p><div class="acts"><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div></div>';
   if (!S.kitchen) h += '<div class="notice warn"><span class="nic">'+SC.ic("clock",24)+'</span><b>Кухнята приема поръчки до 22:30. Поръчай за утре?</b><p>Изберете ястията сега, а в количката посочете час утре след 10:00.</p></div>';
   if (st.menu === "bf"){
     if (S.breakfast){ var left = 690 - S.m; h += '<div class="notice"><span class="nic">'+SC.ic("sun",24)+'</span><b>Закуски всеки ден до 11:30</b><p>Остават '+(left >= 60 ? "1 ч."+(left > 60 ? " и "+(left-60)+" мин" : "") : left+" мин")+' за днес.</p></div>'; }
@@ -352,7 +354,9 @@ function notices(){ var h = '';
   }
   elNot.innerHTML = h; }
 function count(){ var total = scopeItems().length, n = R.list.length, q = st.q.trim();
-  if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“';
+  if (st.view === "loading") elCount.innerHTML = 'Зареждаме менюто…';
+  else if (st.view === "error") elCount.innerHTML = '';
+  else if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“';
   else if (st.f.length || st.a.length) elCount.innerHTML = 'Показваме '+n+' <span>от '+plural(total)+'</span>';
   else elCount.innerHTML = plural(total)+' <span>· '+(st.menu==="bf" ? "закуски" : MAIN_CATS.length+" категории")+'</span>';
   $("[data-clearall]").hidden = !(st.f.length || st.a.length); }
@@ -399,7 +403,7 @@ function topOf(el){ return el.getBoundingClientRect().top - scroller.getBounding
 function setActive(id, jump){ if (id === active) return; active = id;
   elCat.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
   elSide.querySelectorAll("[data-go]").forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.go === id)); });
-  placeMarks(jump, true);
+  placeMarks(jump, true); if (!id) elCat.scrollLeft = 0;
   if (Date.now() > lockUntil){ st.cat = st.menu === "main" ? id : null; writeHash(); } }
 function placeMarks(jump, follow){ var id = active;
   var ind = elCat.querySelector(".ind"), chip = id && elCat.querySelector('[data-go="'+id+'"]');
@@ -444,7 +448,7 @@ function allergenSheet(){ var items = scopeItems();
   wireSheet(s, function(inp){ var id = inp.dataset.al; st.a = st.a.filter(function(k){ return k!==id; }); if (inp.checked) st.a.push(id); }, function(){ st.a = []; }); }
 function moreSheet(){ var items = scopeItems();
   var rows = SC.FILTERS.map(function(f){ var n = f.needs ? 0 : items.filter(f.test).length, on = st.f.indexOf(f.id) > -1, dis = !!f.needs || !n;
-    return '<label class="check'+(dis?" dis":"")+'"><input type="checkbox" data-fx="'+f.id+'"'+(on?" checked":"")+(dis?" disabled":"")+'><span class="fi '+(FICON[f.id]||"")+'">'+SC.ic(f.icon,22)+'</span><span class="ft"><b>'+f.n+'</b><small>'+(f.needs ? "Скоро. Чакаме "+f.needs+" от кухнята." : n ? plural(n) : "Няма такива в това меню")+'</small></span></label>'; }).join("");
+    return '<label class="check'+(dis?" dis":"")+'"><input type="checkbox" data-fx="'+f.id+'"'+(on?" checked":"")+(dis?" disabled":"")+'><span class="fi '+(FICON[f.id]||"")+'">'+SC.ic(fic(f),22)+'</span><span class="ft"><b>'+f.n+'</b><small>'+(f.needs ? "Скоро. Чакаме "+f.needs+" от кухнята." : n ? plural(n) : "Няма такива в това меню")+'</small></span></label>'; }).join("");
   var s = SC.sheet({title:"Филтри", html:
     '<p class="sh-intro">Изберете няколко. Показваме ястията, за които важат всички.</p>'+
     '<div class="flist">'+rows+'</div>'+

@@ -42,13 +42,16 @@
 
 /* ---------- step 1 ---------- */
 .qh{font-size:20px; line-height:1.2; font-weight:800; letter-spacing:-.02em; margin:0 0 12px}
-.q + .q{margin-top:30px}
+.q + .q, .qcol{margin-top:30px}
+.qcol{display:grid; gap:30px}
+.qcol .q + .q{margin-top:0}
 .cal{padding:12px 8px 10px}
 .cal-h{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 4px 6px 10px}
 .cal-m{margin:0; font-size:20px; font-weight:800; letter-spacing:-.025em}
 .cal-nav{display:flex; gap:6px}
 .mbtn{min-height:48px; padding:0 14px 0 10px; gap:4px; font-size:15px}
 .mbtn.nx{padding:0 10px 0 14px}
+.mbtn[disabled]{opacity:.45}
 .cal-g{display:grid; grid-template-columns:repeat(7,minmax(0,1fr))}
 .wd{font-size:14px; font-weight:700; color:var(--muted); text-align:center; padding:4px 0 6px}
 .day{position:relative; height:50px; padding:0; border:0; background:transparent; color:var(--ink); cursor:pointer; display:grid; place-items:center; font:inherit; font-weight:700; font-size:17px; font-variant-numeric:tabular-nums}
@@ -329,7 +332,7 @@
 @container app (min-width:1100px){
   .s1{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:32px; align-items:start}
   .s1 .q + .q{margin-top:0}
-  .s1 .qcol{display:grid; gap:30px; align-content:start}
+  .s1 .qcol{margin-top:0; align-content:start}
   .s2{display:grid; grid-template-columns:minmax(0,1fr) 210px; gap:28px; align-items:start}
   .s2 .side .needs{margin-top:0}
   .s2 .side .lgd{flex-direction:column; margin:0 0 22px}
@@ -352,9 +355,9 @@ var DS = ["нд","пн","вт","ср","чт","пт","сб"], WD = ["пн","вт"
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var MIN_M = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1), MAX_M = new Date(TODAY.getFullYear(), TODAY.getMonth()+2, 1);
 var LAST_DAY = new Date(TODAY.getFullYear(), TODAY.getMonth()+3, 0);
-/* reservation hours: prototype assumption 10:00 - 22:00 every 30 min (kitchen takes orders until 22:30). Real hours: [ЛИПСВА] */
-var PERIODS = [{id:"lunch", n:"Обед", from:600, to:870}, {id:"aft", n:"Следобед", from:900, to:1050}, {id:"eve", n:"Вечер", from:1080, to:1320}];
-var SLOTS = []; for (var m0=600; m0<=1320; m0+=30) SLOTS.push(m0);
+/* reservation hours: prototype assumption 11:00 - 21:30 every 30 min (kitchen takes orders until 22:30). Real hours: [ЛИПСВА] */
+var PERIODS = [{id:"lunch", n:"Обед", from:660, to:870}, {id:"aft", n:"Следобед", from:900, to:1050}, {id:"eve", n:"Вечер", from:1080, to:1290}];
+var SLOTS = []; for (var m0=660; m0<=1290; m0+=30) SLOTS.push(m0);
 var EVENING = 1020; /* after 17:00: change or cancel up to 2 h before, during the day up to 1 h */
 var EV = SC.events()[0];
 
@@ -644,7 +647,7 @@ function done(){ var b = st.booking, ev = isEvent(b.date);
     '<div class="row" style="flex-wrap:wrap;gap:8px 20px;margin-top:20px"><button class="link" type="button" data-manage="ok" data-fk="mg">'+ic("pencil-simple",20)+'Промени или откажи</button><a class="link" href="menu.html">'+ic("fork-knife",20)+'Разгледай менюто</a><button class="link" type="button" data-new data-fk="nw">'+ic("plus",20)+'Нова резервация</button></div></div></section>'; }
 function openManage(late){ var b = st.booking;
   if (!b){ b = {date:addDays(TODAY,1), slot:1170, n:4, selLabel:"Маса 5 · Салон", name:"", phone:"0888 123 456"}; }
-  if (late){ var m = Math.ceil((SC.minutes()+25)/30)*30; if (m>1320){ m = 1170; b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone, fake:80}; } else b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone}; }
+  if (late){ var m = Math.ceil((SC.minutes()+25)/30)*30; if (m>1290){ m = 1170; b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone, fake:80}; } else b = {date:TODAY, slot:m, n:b.n, selLabel:b.selLabel, phone:b.phone}; }
   st.manage = {b:b, late:!!late, cancelled:false}; st.view = "manage"; st.confirmCancel = false; st.anim = true; }
 function manage(){ var M = st.manage, b = M.b, left = M.late ? (b.fake || (b.slot - SC.minutes())) : null, lim = b.slot>=EVENING ? 120 : 60;
   if (M.cancelled) return '<section class="sec done"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">'+ic("calendar-blank",44)+'</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.</p>'+

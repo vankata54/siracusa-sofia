@@ -10,7 +10,8 @@
 <link rel="stylesheet" href="../ds/sc.css">
 <style>
 /* ---------- hero ---------- */
-.ch{display:grid; gap:22px; padding-top:12px}
+.ch{display:grid; grid-template-columns:minmax(0,1fr); gap:22px; padding-top:12px}
+.ch-text{min-width:0}
 .crumb{display:inline-flex; align-items:center; gap:6px; min-height:48px; margin-left:-2px; color:var(--muted); font-weight:700; font-size:15px; text-decoration:none}
 .eyebrow{display:block; font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--muted); margin:2px 0 8px}
 .ch .lead{margin-top:12px; max-width:36ch}

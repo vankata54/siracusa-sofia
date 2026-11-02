@@ -411,7 +411,7 @@ function select(slug, opts){ opts = opts || {};
   zcard.innerHTML = zoneCardHTML(z);
   if (!opts.quiet){ try{ history.replaceState(null, "", "#"+(slug||"izvan-zonite")); }catch(e){} }
   if (opts.reveal){ var r = zcard.getBoundingClientRect(), s = SC.scroller.getBoundingClientRect();
-    var dy = 0; if (r.bottom > s.bottom - 100) dy = r.bottom - (s.bottom - 100); if (r.top - dy < s.top + 150) dy = r.top - (s.top + 150);
+    var dy = 0; var pad = window.matchMedia && SC.device.clientWidth < 900 ? 150 : 40; if (r.bottom > s.bottom - pad) dy = r.bottom - (s.bottom - pad); if (r.top - dy < s.top + 150) dy = r.top - (s.top + 150);
     if (Math.abs(dy) > 4) SC.scroller.scrollBy({top:dy, behavior: SC.reduce ? "auto" : "smooth"}); }
 }
 svg.addEventListener("click", function(e){ var g = e.target.closest(".z"); if (g) select(g.dataset.zone, {reveal:true}); else if (!e.target.closest(".air")) select(null, {reveal:true}); });
