@@ -166,7 +166,8 @@
 .o-linkwrap{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:20px}
 .o-link{display:flex; align-items:center; gap:10px; min-height:56px; padding:12px 18px; border-radius:20px; background:var(--surface-2); font-weight:700; font-size:16px}
 .o-link .ic{color:var(--muted)}
-.o-link output{flex:1; min-width:0; overflow-wrap:anywhere; line-height:1.35}
+.o-link output{flex:1; min-width:0; line-height:1.35}
+.nw{white-space:nowrap}
 
 /* ---------- shared list ---------- */
 .o-timer{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap}
@@ -175,7 +176,11 @@
 .o-time small{font-size:20px; letter-spacing:-.02em; margin-left:2px}
 .o-until{text-align:right; font-weight:700; line-height:1.35}
 .o-until > span:not(.o-live){display:block; color:var(--muted); font-weight:600; font-size:15px}
-.o-until .o-live{margin-bottom:4px}
+.o-until .o-closed{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:center}
+.o-closed .o-fi{background:var(--surface-2); box-shadow:none}
+.o-closed b{display:block; font-size:19px; letter-spacing:-.02em; line-height:1.25}
+.o-closed span{display:block; color:var(--muted); font-weight:600; font-size:15px; margin-top:2px}
+.o-live{margin-bottom:4px}
 .o-track{height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; margin-top:18px}
 .o-track span{display:block; height:100%; border-radius:3px; background:var(--ink); transform-origin:left center; transition:transform 1s linear}
 .o-live{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--ok)}
@@ -207,7 +212,7 @@
 .o-invite .core{padding:20px}
 .o-invite-h{display:flex; gap:14px; align-items:center}
 .o-invite-h .h2{font-size:26px}
-.o-pill-time{display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums}
+.o-pill-time{display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:8px 16px 8px 14px; line-height:1.3; border-radius:22px; background:var(--surface-2); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums}
 .o-menu-h{display:grid; gap:12px; margin-bottom:6px}
 .o-grp{scroll-margin-top:150px}
 .o-grp h3{display:flex; align-items:baseline; gap:8px; margin:26px 0 2px}
@@ -232,7 +237,7 @@
 }
 
 /* ---------- states ---------- */
-.o-state{display:grid; justify-items:center; text-align:center; gap:10px; padding:36px 20px 30px}
+.o-state{display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; text-align:center; gap:10px; padding:36px 20px 30px}
 .o-state .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); margin-bottom:6px}
 .o-state .ill.ok{background:var(--ok); color:#fff}
 .o-state .ill.warn{color:var(--warn)}
@@ -322,6 +327,7 @@ function souls(n){ return n + " " + (n===1 ? "човек" : "души"); }
 function initial(n){ return esc((n||"?").trim().charAt(0).toUpperCase()); }
 function code(){ return G.code || DEMO_CODE; }
 function link(){ return SITE + code(); }
+function linkHTML(c){ return '<span class="nw">siracusa-sofia.com/office</span><wbr><span class="nw">#join-'+esc(c || code())+'</span>'; }
 function orgName(){ return G.name.trim() || "Вие"; }
 function dateLabel(d){ return SC.DAYS[d.getDay()] + ", " + d.getDate() + " " + SC.MONTHS[d.getMonth()]; }
 function tomorrowDate(){ var d = new Date(); d.setDate(d.getDate()+1); return d; }
@@ -503,11 +509,11 @@ function viewShare(){ var c = ctx(); var msg = chatMsg(c);
       '<h1 class="h2">Поръчката е отворена</h1>'+
       '<p class="lead o-sub">Пратете връзката в чата на офиса. Колегите избират до <b style="color:var(--ink)">'+clock(c.dl)+'</b> '+c.dayWord+'.</p>'+
       '<div class="o-linkwrap"><span class="label" id="o-link-l">Връзка за колегите</span>'+
-      '<div class="o-link">'+ic("arrow-up-right",20)+'<output aria-labelledby="o-link-l">'+link()+'</output></div>'+
+      '<div class="o-link">'+ic("arrow-up-right",20)+'<output aria-labelledby="o-link-l">'+linkHTML()+'</output></div>'+
       '<button class="pill pill-red pill-lg pill-block" type="button" data-act="copylink">'+ic("copy",22)+'Копирай връзката</button>'+
       '<div class="o-two"><a class="pill pill-line" href="viber://forward?text='+encodeURIComponent(msg)+'" data-act="viber">'+ic("chat-circle-dots",20)+'Във Viber</a><button class="pill pill-line" type="button" data-act="sharenative">'+ic("share-network",20)+'Друг начин</button></div></div>'+
     '</div></div>'+
-    '<div><h2 class="o-h3" style="margin-bottom:12px">Готово съобщение за чата</h2><div class="o-bubble"><span class="who">'+esc(G.name.trim() || "Вие")+'</span>'+esc(msg.replace(link(), "")).trim()+'<br><span class="o-linkchip">'+ic("arrow-up-right",16)+'<span>'+link()+'</span></span></div>'+
+    '<div><h2 class="o-h3" style="margin-bottom:12px">Готово съобщение за чата</h2><div class="o-bubble"><span class="who">'+esc(G.name.trim() || "Вие")+'</span>'+esc(msg.replace(link(), "")).trim()+'<br><span class="o-linkchip">'+ic("arrow-up-right",16)+'<span>'+linkHTML()+'</span></span></div>'+
       '<button class="link" type="button" data-act="copymsg">'+ic("copy",18)+'Копирай цялото съобщение</button></div>'+
   '</div>'+
   '<aside class="o-aside o-col">'+
@@ -538,7 +544,7 @@ function viewList(){ var c = ctx();
   var all = people(), list = eaters(), T = total(), N = totalCount();
   var timer;
   if (c.late && !sim.closed) timer = '<div class="o-note warn">'+ic("clock",22)+'<div><p>Обедното меню вече не се доставя днес (до 15:00). Отворете нова поръчка за утре.</p><button class="pill pill-line" type="button" data-act="restart">Нова поръчка за утре</button></div></div>';
-  else if (c.closed) timer = '<div class="o-timer"><div><span class="lbl">Изборът приключи</span><span class="o-time">'+clock(c.dl)+'</span></div><div class="o-until">Списъкът е затворен<span>Изпратете поръчката сега</span></div></div>';
+  else if (c.closed) timer = '<div class="o-closed"><span class="o-fi">'+ic("lock",22)+'</span><div><b>Изборът приключи в '+clock(c.dl)+'</b><span>Списъкът е затворен. Изпратете поръчката сега.</span></div></div>';
   else timer = '<div class="o-timer"><div><span class="lbl">Колегите избират още</span><span class="o-time" data-left>'+left(c.remain)+'</span></div><div class="o-until"><span class="o-live"><i></i>На живо</span><br>до '+clock(c.dl)+' '+c.dayWord+'</div></div>'+
     '<div class="o-track" aria-hidden="true"><span data-track style="transform:scaleX('+Math.min(1, Math.max(0, c.remain/(c.day==="today"?3600*2:3600*24))).toFixed(3)+')"></span></div>';
 
@@ -560,7 +566,7 @@ function viewList(){ var c = ctx();
     '<div class="o-lay"><div class="o-col">'+
       '<div><h1 class="h1" style="font-size:clamp(30px,8cqi,44px)">'+esc(G.office.trim() || "Общата поръчка")+'</h1><p class="lead o-sub">'+(G.mode==="pickup" ? "Вземане от ресторанта" : "Доставка до "+esc(whereText(c)))+' · '+(G.mode==="pickup" ? "готово в " : "около ")+clock(c.eta)+'</p></div>'+
       '<div class="shell"><div class="core o-card">'+timer+'</div></div>'+
-      '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between"><h2 class="o-h3">Кой какво поръча</h2><span class="muted small" style="font-weight:700">'+souls(list.length)+' · '+dishes(N)+'</span></div><div class="o-people">'+plist+'</div></div></div>'+
+      '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between"><h2 class="o-h3">Кой какво поръча</h2>'+(N ? '<span class="muted small" style="font-weight:700">'+souls(list.length)+' · '+dishes(N)+'</span>' : '')+'</div><div class="o-people">'+plist+'</div></div></div>'+
     '</div><aside class="o-aside o-col">'+
       '<div class="shell"><div class="core o-card"><h2 class="o-h3" style="margin-bottom:4px">Сметка</h2><div class="o-kv">'+
         '<div class="kv"><span>'+dishes(N)+'</span><span class="price">'+fmt(T)+'</span></div>'+
@@ -610,7 +616,7 @@ function viewJoin(rt){ var c = ctx(); var valid = !rt.code || rt.code === DEMO_C
       (G.office.trim() ? '<div class="kv"><span>Офис</span><b>'+esc(G.office.trim())+'</b></div>' : '')+
       '<div class="kv"><span>'+(G.mode==="pickup"?"Вземане":"Доставка до")+'</span><b>'+esc(whereText(c))+'</b></div>'+
       '<div class="kv"><span>Плаща</span><b>'+(G.pays==="one" ? esc(org)+" за всички" : "всеки своето")+'</b></div></div>'+
-    '<div style="margin-top:16px"><span class="o-pill-time">'+ic("timer",18)+'<span>Изберете до '+clock(c.dl)+' '+c.dayWord+' <span class="muted">· остават <span data-leftw>'+leftWords(c.remain)+'</span></span></span></span></div>'+
+    '<div style="margin-top:16px"><span class="o-pill-time">'+ic("timer",18)+'<span>'+(c.day==="tomorrow" ? "Утре до " : "До ")+clock(c.dl)+' <span class="muted">· остават <span data-leftw>'+leftWords(c.remain)+'</span></span></span></span></div>'+
   '</div></div>';
 
   if (G.guest.done){
@@ -640,7 +646,7 @@ function viewSent(){ var c = ctx(); var T = total(), list = eaters();
     '<div class="o-sentmeta"><div><span>Поръчка</span><b>№128</b></div><div><span>'+(G.mode==="pickup"?"Готова":"Пристига около")+'</span><b>'+(c.day==="tomorrow"?"утре ":"")+clock(c.eta)+'</b></div><div><span>Ястия</span><b>'+totalCount()+' за '+souls(list.length)+'</b></div><div><span>Общо</span><b class="price">'+fmt(T)+'</b></div></div>'+
     (G.pays === "one" && others.length ? '<div style="width:100%;max-width:420px;text-align:left"><h2 class="o-h3" style="font-size:17px;margin:12px 0 2px">Колегите ви дължат</h2><div class="o-owe">'+others.map(function(p){ return '<div class="kv"><span>'+esc(p.n)+'</span><span class="price">'+fmt(sum(p.picks))+'</span></div>'; }).join("")+'</div></div>' : '')+
     '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="tracking.html">Следи поръчката'+ic("arrow-right",20)+'</a>'+
-    '<button class="pill pill-line pill-block" type="button" data-act="copydone">'+ic("copy",20)+'Кажи в чата, че обядът е поръчан</button></div>'+
+    '<button class="pill pill-line pill-block" type="button" data-act="copydone">'+ic("copy",20)+'Копирай съобщение за чата</button></div>'+
     '<label class="check" style="text-align:left;max-width:420px;margin-top:6px"><input type="checkbox" id="o-news"><span><b>Искам да науча първа/първи за абонамента за офиси</b><br><span class="muted small">Обяд всеки ден в избран час. Пишем ви само за това.</span></span></label>'+
     '<a class="link" href="#" data-act="restart">Нова групова поръчка</a>'+
   '</div></div></section>'; }
@@ -756,7 +762,7 @@ function send(btn){ var ok = /^(\+359|0)8[789]\d{7}$/.test(G.phone.replace(/[\s-
   setTimeout(function(){
     if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("data-busy"); b.innerHTML = label; });
       var box = main.querySelector("[data-senderr]"); if (box) box.innerHTML = '<div class="o-note bad" role="alert">'+ic("warning-circle",22)+'<div><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button></div></div>';
-      SC.toast("Няма връзка. Поръчката ви е запазена."); scrollToEl(box); return; }
+      SC.toast("Няма връзка. Опитайте пак."); scrollToEl(box); return; }
     G.sentAt = Date.now(); save(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }
 
 window.addEventListener("hashchange", function(){ render(); });
