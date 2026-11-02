@@ -352,7 +352,7 @@ function openCalendar(e){
   var end = toMin(R.close), title = e.n + " в Siracusa", where = R.name + ", " + R.address;
   var g = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(title) + "&dates=" + stamp(e.date, e.start) + "/" + stamp(e.date, end) +
     "&ctz=Europe/Sofia&location=" + encodeURIComponent(where) + "&details=" + encodeURIComponent(e.text + "\nРезервации: " + R.phone);
-  var s = SC.sheet({title:"Добави в календара", html:'<p class="sh-p">Изберете своя календар. Той ще ви напомни за вечерта.</p><div class="sh-list">'+
+  var s = SC.sheet({title:"В календара", html:'<p class="sh-p">Изберете своя календар. Той ще ви напомни за вечерта.</p><div class="sh-list">'+
     '<a class="pill pill-line pill-lg pill-block" href="'+g+'" target="_blank" rel="noopener" data-calg>'+ic("calendar-check",22)+'Google Календар</a>'+
     '<button class="pill pill-line pill-lg pill-block" type="button" data-ics>'+ic("calendar-dots",22)+'Apple, Outlook и други</button></div>'+
     '<p class="sh-fine">Записваме: '+longDate(e.date)+', '+e.time+' - '+R.close+', '+esc(R.name)+', Дружба 2.</p>'});
