@@ -57,7 +57,7 @@
 .of-sum i{width:12px; height:12px; border-radius:4px; background:var(--ember)}
 .of-sum i.g{background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line-strong)}
 .of-all .sec-h{flex-wrap:wrap; align-items:flex-end}
-.of-grid{display:grid; gap:14px}
+.of-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:14px}
 .cp{position:relative; display:flex; scroll-margin-top:150px}
 .cp > .core{position:relative; display:flex; flex-direction:column; flex:1; min-width:0}
 .cp-top{display:flex; flex-direction:column; align-items:flex-start; gap:16px; padding:16px 18px 22px; background:var(--ember); color:var(--on-ember)}
@@ -82,7 +82,7 @@
 .cp-ex .now{font-size:18px}
 .cp-ex .nm{flex:1 1 100%; font-size:14px; font-weight:700; color:var(--muted)}
 .cp-act{margin-top:auto; padding-top:6px}
-.cp-act .pill{width:100%; justify-content:space-between; padding:0 14px 0 20px}
+.cp-act .pill{width:100%; justify-content:space-between; padding:10px 14px 10px 20px; white-space:normal; text-align:left; line-height:1.25}
 .cp.hl::after{content:""; position:absolute; inset:-5px; border-radius:33px; box-shadow:0 0 0 3px var(--ember); opacity:0; pointer-events:none; animation:hl 2.2s var(--ease-std) forwards}
 @keyframes hl{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
 @container app (min-width:700px){ .of-grid{grid-template-columns:1fr 1fr} }
