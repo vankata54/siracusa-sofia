@@ -40,7 +40,7 @@
 .ct-row{display:grid; gap:12px; padding:18px}
 .ct-row + .ct-row{border-top:1px solid var(--line)}
 .ct-row .lbl{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
-.ct-row .val{display:block; margin-top:4px; font-weight:800; letter-spacing:-.02em; line-height:1.2; color:var(--ink); text-decoration:none; overflow-wrap:break-word}
+.ct-row .val{display:flex; align-items:center; min-height:48px; margin-top:0; font-weight:800; letter-spacing:-.02em; line-height:1.2; color:var(--ink); text-decoration:none; overflow-wrap:break-word}
 .ct-row .val.tel{font-size:26px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
 .ct-row .val.mail{font-size:20px}
 .ct-row .val.addr{font-size:19px; letter-spacing:-.015em}
@@ -80,6 +80,7 @@
 .ct-legend{display:flex; flex-wrap:wrap; gap:8px 16px; margin:20px 0 0; padding:16px 0 0; border-top:1px solid var(--line); list-style:none; font-size:14px; font-weight:600; color:var(--muted)}
 .ct-legend li{display:inline-flex; align-items:center; gap:8px}
 .ct-legend i{width:18px; height:10px; border-radius:5px; flex:none}
+.ct-lunchnote{margin:10px 0 0; font-size:14px; color:var(--muted)}
 .ct-legend i.ok{background:var(--ok)} .ct-legend i.past{background:var(--line-strong)} .ct-legend i.em{background:var(--ember)}
 
 .ct-week{padding:10px}
@@ -97,26 +98,20 @@
 
 /* ---------- map + getting here ---------- */
 .ct-way{display:grid; grid-template-columns:minmax(0,1fr); gap:16px}
-.ct-map{position:relative; aspect-ratio:4/3; border-radius:var(--r-core); overflow:hidden; background:var(--surface-2); container-type:size}
-.ct-scene{position:absolute; left:50%; top:50%; width:max(100cqw, 133.334cqh); height:max(100cqh, 75cqw); transform:translate(-50%,-50%)}
+.ct-map{position:relative; aspect-ratio:4/3; border-radius:var(--r-core); overflow:hidden; background:var(--surface-2)}
 .ct-mapbtn{all:unset; position:absolute; inset:0; cursor:pointer; display:block}
 .ct-mapbtn:focus-visible{outline:3px solid var(--red); outline-offset:-3px; border-radius:var(--r-core)}
-.ct-scene svg.scene{position:absolute; inset:0; width:100%; height:100%; display:block}
-.m-bg{fill:var(--surface-2)}
-.m-blk{fill:var(--surface-3)}
-.m-311{fill:var(--surface-3); stroke:var(--ink); stroke-width:2.5; stroke-dasharray:6 5}
-.m-us{fill:var(--surface); stroke:var(--ink); stroke-width:3}
-.m-park{fill:var(--ok); opacity:.16}
-.m-road{stroke:var(--surface); fill:none; stroke-linecap:round}
-.ct-pin{position:absolute; width:46px; height:58px; transform:translate(-50%,-100%); pointer-events:none; filter:drop-shadow(0 8px 10px rgba(0,0,0,.25))}
+.ct-dots{position:absolute; inset:0; background-image:radial-gradient(var(--line-strong) 1.2px, transparent 1.4px); background-size:18px 18px; opacity:.55}
+.ct-missing{position:absolute; top:14px; left:14px; right:14px; font-size:14px; text-align:center}
+.ct-mark{position:absolute; left:50%; top:54%; width:0; height:0}
+.ct-pin{position:absolute; left:0; top:0; width:46px; height:58px; transform:translate(-50%,-100%); pointer-events:none}
 .ct-pin svg{display:block; width:100%; height:100%}
 .ct-pin .pb{fill:var(--ink)} .ct-pin .pd{fill:var(--bg)}
-.ct-pulse{position:absolute; width:64px; height:64px; margin:-32px 0 0 -32px; border-radius:50%; background:var(--ink); opacity:0; pointer-events:none; animation:ctpulse 2.4s var(--ease) 600ms 3}
+.ct-pulse{position:absolute; left:0; top:0; width:64px; height:64px; margin:-32px 0 0 -32px; border-radius:50%; background:var(--ink); opacity:0; pointer-events:none; animation:ctpulse 2.4s var(--ease) 600ms 3}
 @keyframes ctpulse{0%{transform:scale(.2); opacity:.28}100%{transform:scale(1.6); opacity:0}}
-.ct-flag{justify-items:start; position:absolute; transform:translate(28px, calc(-100% - 22px)); pointer-events:none; display:grid; justify-items:center; padding:8px 14px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); white-space:nowrap; line-height:1.2}
-.ct-flag b{font-size:15px; font-weight:800; letter-spacing:-.01em}
-.ct-flag span{font-size:14px; color:var(--muted); font-weight:600}
-.ct-blk-lbl{position:absolute; transform:translate(-50%,-50%); font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap; pointer-events:none}
+.ct-flag{position:absolute; left:0; top:0; transform:translate(30px, calc(-100% - 22px)); pointer-events:none; display:grid; justify-items:start; padding:8px 14px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); white-space:nowrap; line-height:1.25}
+.ct-flag b{font-size:16px; font-weight:800; letter-spacing:-.01em}
+.ct-flag span{font-size:14px; color:var(--muted); font-weight:700}
 .ct-show{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); pointer-events:none; box-shadow:var(--shadow)}
 .ct-map iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
 .ct-map .skel{position:absolute; inset:0; border-radius:0}
@@ -135,7 +130,17 @@
 .ct-info li + li{border-top:1px solid var(--line)}
 .ct-info b{display:block; line-height:1.3; margin-top:2px}
 .ct-info p{margin:2px 0 0; color:var(--muted)}
-.ct-info .link{min-height:44px}
+.ct-info .link{min-height:48px}
+
+/* ---------- FAQ ---------- */
+.ct-faq{padding:0 18px}
+.ct-q + .ct-q{border-top:1px solid var(--line)}
+.ct-q summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:10px 0; font-weight:700; cursor:pointer}
+.ct-q summary::-webkit-details-marker{display:none}
+.ct-q summary .ic{color:var(--muted); transition:transform var(--t-base) var(--ease)}
+.ct-q[open] summary .ic{transform:rotate(180deg)}
+.ct-q p{margin:0 0 18px; color:var(--muted); max-width:62ch}
+@container app (min-width:900px){ .ct-faq{padding:0 30px} }
 
 /* ---------- socials ---------- */
 .ct-soc{display:grid; gap:12px}
@@ -243,7 +248,7 @@ a.ct-scard:active{transform:scale(.98)}
   .ct-way{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:16px; align-items:stretch}
   .ct-way > .shell:first-child{display:flex}
   .ct-way > .shell:first-child .core{flex:1; display:flex}
-  .ct-map{aspect-ratio:auto; min-height:560px; flex:1}
+  .ct-map{aspect-ratio:auto; min-height:460px; flex:1}
   .ct-addr{padding:26px 26px 22px}
   .ct-addr .h3{font-size:26px}
   .ct-info{padding:0 26px 6px}
@@ -264,7 +269,7 @@ a.ct-scard:active{transform:scale(.98)}
 (function(){
 var main = SC.mount({page:"contacts", nav:null, title:"Контакти"});
 var R = SC.RESTAURANT, ic = SC.ic, esc = SC.esc;
-var TEL1 = "+359894365577", TEL2 = "070019955";
+var TEL1 = "+359894365577", TEL2 = "+35970019955";
 var FB = "https://www.facebook.com/BarGrillSiracusa";
 var WAZE = "https://waze.com/ul?q=" + encodeURIComponent("Siracusa Bar & Grill Дружба 2 София") + "&navigate=yes";
 var EMBED = "https://www.google.com/maps?q=" + encodeURIComponent("Siracusa Bar & Grill, Дружба 2, София") + "&z=16&output=embed";
@@ -285,11 +290,7 @@ main.innerHTML =
     '<div class="ct-hero">'+
       '<h1 class="h1">Контакти</h1>'+
       '<p class="lead">Обадете се, елате или ни пишете. Всеки ден от 10:00 до 23:00 в Дружба&nbsp;2.</p>'+
-      '<div class="ct-cta">'+
-        '<a class="pill pill-red pill-lg pill-block" href="tel:'+TEL1+'">'+ic("phone",22)+'<span>Обади се · <span class="num">'+R.phone+'</span></span></a>'+
-        '<div class="duo"><a class="pill pill-line" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("map-trifold",20)+'Маршрут</a>'+
-        '<a class="pill pill-line" href="#pishete" data-jump="pishete">'+ic("chat-circle-dots",20)+'Пишете ни</a></div>'+
-      '</div>'+
+      '<div class="ct-cta" data-cta></div>'+
       '<div data-heronote></div>'+
     '</div>'+
     '<div class="ct-contacts">'+
@@ -339,6 +340,17 @@ main.innerHTML =
   '</section>'+
 
   /* socials */
+  '<section class="sec" aria-labelledby="h-faq">'+
+    '<div class="sec-h"><h2 class="h2" id="h-faq">Често задавани въпроси</h2></div>'+
+    '<div class="shell"><div class="core ct-faq">'+
+      faq("Работите ли всеки ден?","Да, всеки ден от 10:00 до 23:00. Кухнята приема поръчки до 22:30.")+
+      faq("До колко часа доставяте?","Доставяме до 21:00. След това можете да вземете поръчката от ресторанта до 22:30.")+
+      faq("До кои квартали е безплатна доставката?","Безплатна е за Дружба 1 и 2, НПЗ Искър и Бусманци. За Горубляне и Гара Искър е по тарифа <span class=\"missing\">[ЛИПСВА: такса в €]</span>.")+
+      faq("Как мога да платя?","В брой, с карта на място или при получаване, с ваучер Sodexo или подаръчна карта. Онлайн плащане засега няма.")+
+      faq("Работи ли градината през зимата?","Да. Градината е затворена и се отоплява, работи целогодишно.")+
+      faq("Има ли къде да паркирам?",'<span class="missing">[ЛИПСВА: паркиране пред ресторанта]</span>')+
+    '</div></div>'+
+  '</section>'+
   '<section class="sec" aria-labelledby="h-soc">'+
     '<div class="sec-h"><h2 class="h2" id="h-soc">Последвайте ни</h2></div>'+
     '<div class="ct-soc">'+
@@ -364,6 +376,7 @@ main.innerHTML =
     '</div>'+
   '</section>';
 
+function faq(q, a){ return '<details class="ct-q"><summary>'+q+ic("caret-down",20)+'</summary><p>'+a+'</p></details>'; }
 function row(icon, label, valHTML, primary, copyText, msg){
   return '<div class="ct-row"><span class="ct-tile">'+ic(icon,22)+'</span><div><div class="lbl">'+ic(icon,18)+label+'</div>'+valHTML+'</div>'+
     '<div class="acts">'+primary+'<button class="pill pill-line cp" type="button" data-copy="'+esc(copyText)+'" data-msg="'+msg+'" aria-label="Копирай: '+esc(copyText)+'">'+ic("copy",20)+'Копирай</button></div></div>'; }
@@ -373,7 +386,7 @@ var TRACKS = [
   {n:"Ресторант", rg:"10:00 - 23:00", seg:[[600,1380,"ok"]]},
   {n:"Кухня", rg:"10:00 - 22:30", seg:[[600,1350,"ok"]]},
   {n:"Доставка", rg:"10:00 - 21:00", seg:[[600,1260,"ok"]]},
-  {n:"Обедно меню", rg:"10:00 - 15:00", seg:[[600,900,"ok"],[900,1350,"em"]]}
+  {n:"Обедно меню", rg:"10:00 - 15:00", seg:[[600,900,"ok"]]}
 ];
 function pct(x){ return ((x-600)/780*100).toFixed(3)+"%"; }
 function bar(t, m){ var h = "", a0 = t.seg[0][0], b1 = t.seg[t.seg.length-1][1];
@@ -394,6 +407,13 @@ function renderLive(){
   else { dot=""; st="Затворено сега"; sub="Отваряме утре, <b>"+DAYS[tm].toLowerCase()+"</b>, в 10:00."; }
 
   /* hero note: only when calling or ordering would not work now */
+  var closedNow = m < 600 || m >= 1380;
+  var callB = function(main){ return '<a class="pill '+(main?'pill-red pill-lg pill-block':'pill-line')+'" href="tel:'+TEL1+'">'+ic("phone",main?22:20)+'<span>Обади се'+(main?' · <span class="num">'+R.phone+'</span>':'')+'</span></a>'; };
+  var writeB = function(main){ return '<a class="pill '+(main?'pill-red pill-lg pill-block':'pill-line')+'" href="#pishete" data-jump="pishete">'+ic("chat-circle-dots",main?22:20)+'Пишете ни</a>'; };
+  var routeB = '<a class="pill pill-line" href="'+R.maps+'" target="_blank" rel="noopener">'+ic("map-trifold",20)+'Маршрут</a>';
+  main.querySelector("[data-cta]").innerHTML = closedNow
+    ? writeB(true)+'<div class="duo">'+callB(false)+routeB+'</div>'
+    : callB(true)+'<div class="duo">'+routeB+writeB(false)+'</div>';
   var hn = main.querySelector("[data-heronote]");
   hn.innerHTML = (m < 600 || m >= 1380)
     ? '<p class="ct-note">'+ic("clock",20)+'<span><b>Сега сме затворени.</b> Обадете се '+(m<600?"днес":"утре")+' след 10:00 или ни пишете.</span></p>'
@@ -411,7 +431,7 @@ function renderLive(){
     '</div>'+
     '<ul class="ct-legend" aria-hidden="true">'+
       (m < 1380 ? '<li><i class="ok"></i>Остава днес</li>' : '')+(m > 600 ? '<li><i class="past"></i>Мина</li>' : '')+
-      (m < 1350 ? '<li><i class="em"></i>-30% за вземане</li>' : '')+'</ul>';
+      '</ul><p class="ct-lunchnote">След 15:00 обедното меню е само за вземане от място, с -30%.</p>';
   if (was) tc.classList.add("in");
 
   main.querySelector("[data-week]").innerHTML =
@@ -426,34 +446,16 @@ renderLive();
 if (SC.prefs.time === "now" || !SC.prefs.time) setInterval(renderLive, 30000);
 
 /* ---------- map: schematic first, real map on tap ---------- */
-var ROT = -9, CX = 320, CY = 240;
-function rot(x, y){ var a = ROT*Math.PI/180, dx = x-CX, dy = y-CY;
-  return [CX + dx*Math.cos(a) - dy*Math.sin(a), CY + dx*Math.sin(a) + dy*Math.cos(a)]; }
-function P(p){ return 'left:'+(p[0]/640*100).toFixed(2)+'%;top:'+(p[1]/480*100).toFixed(2)+'%'; }
-var BLK = [[-90,10,170,34],[110,0,150,34],[-70,72,34,96],[0,86,170,34],[0,140,110,34],[330,-20,170,34],[338,40,34,92],[392,64,120,34],[392,120,90,34],
-  [550,-10,150,34],[556,60,34,110],[612,80,100,34],[150,150,120,34],
-  [-90,276,170,34],[110,276,160,34],[-60,336,34,90],[10,340,220,34],[340,340,34,70],[392,340,110,34],[340,440,170,34],[-90,450,180,34],[120,420,150,34],[560,276,150,34]];
-var US = [318,160,64,38], B311 = [330,272,170,38];
 function mapScene(){
-  var g = '<rect class="m-bg" x="0" y="0" width="640" height="480"/><g transform="rotate('+ROT+' '+CX+' '+CY+')">'+
-    '<rect class="m-park" x="540" y="330" width="240" height="240" rx="70"/>'+
-    '<path class="m-road" stroke-width="12" d="M-120 410 H520"/>'+
-    '<path class="m-road" stroke-width="12" d="M530 -120 V600"/>'+
-    '<path class="m-road" stroke-width="16" d="M300 -120 V600"/>'+
-    '<path class="m-road" stroke-width="10" d="M-120 130 H290"/>'+
-    BLK.map(function(b){ return '<rect class="m-blk" x="'+b[0]+'" y="'+b[1]+'" width="'+b[2]+'" height="'+b[3]+'" rx="6"/>'; }).join("")+
-    '<rect class="m-311" x="'+B311[0]+'" y="'+B311[1]+'" width="'+B311[2]+'" height="'+B311[3]+'" rx="6"/>'+
-    '<path class="m-road" stroke-width="34" d="M-160 236 H800"/>'+
-    '<rect class="m-us" x="'+US[0]+'" y="'+US[1]+'" width="'+US[2]+'" height="'+US[3]+'" rx="7"/>'+
-    '</g>';
-  var pin = rot(US[0]+US[2]/2, US[1]+US[3]/2), lb = rot(B311[0]+B311[2]/2, B311[1]+B311[3]/2);
-  return '<button class="ct-mapbtn" type="button" data-mapgo aria-label="Схема на района. Покажи истинската карта">'+
-    '<span class="ct-scene"><svg class="scene" viewBox="0 0 640 480" aria-hidden="true">'+g+'</svg>'+
-    '<span class="ct-pulse" style="'+P(pin)+'"></span>'+
-    '<span class="ct-pin" style="'+P(pin)+'"><svg viewBox="0 0 46 58"><path class="pb" d="M23 57C23 57 44 35.5 44 22A21 21 0 0 0 2 22C2 35.5 23 57 23 57Z"/><circle class="pd" cx="23" cy="22" r="8"/></svg></span>'+
-    '<span class="ct-flag" style="'+P(pin)+'"><b>Siracusa</b><span>Bar &amp; Grill</span></span>'+
-    '<span class="ct-blk-lbl" style="'+P(lb)+'">бл. 311</span></span>'+
-    '<span class="pill pill-ink ct-show">'+ic("map-trifold",20)+'Покажи истинската карта</span>'+
+  return '<button class="ct-mapbtn" type="button" data-mapgo aria-label="Покажи картата на Google">'+
+    '<span class="ct-dots" aria-hidden="true"></span>'+
+    '<span class="ct-missing missing">[ЛИПСВА: статична карта Google]</span>'+
+    '<span class="ct-mark">'+
+      '<span class="ct-pulse" aria-hidden="true"></span>'+
+      '<span class="ct-pin" aria-hidden="true"><svg viewBox="0 0 46 58"><path class="pb" d="M23 57C23 57 44 35.5 44 22A21 21 0 0 0 2 22C2 35.5 23 57 23 57Z"/><circle class="pd" cx="23" cy="22" r="8"/></svg></span>'+
+      '<span class="ct-flag"><b>Siracusa</b><span>срещу бл.&nbsp;311</span></span>'+
+    '</span>'+
+    '<span class="pill pill-ink ct-show">'+ic("map-trifold",20)+'Покажи картата</span>'+
   '</button>'; }
 var mapEl = main.querySelector("[data-map]");
 mapEl.innerHTML = mapScene();
@@ -480,15 +482,15 @@ function copyText(text, btn, msg){
 var fbox = main.querySelector("[data-fbox]");
 var TOPICS = ["Въпрос","Похвала","Нещо не беше наред","Друго"];
 var draft = SC.load("sc-contact-draft", {topic:"", name:"", mode:"phone", contact:"", msg:""});
-var MODES = {phone:{lbl:"Телефон", type:"tel", im:"tel", ac:"tel", ph:"0888 123 456", help:"Ще ви се обадим на този номер. Не го ползваме за реклами."},
-             email:{lbl:"Имейл", type:"email", im:"email", ac:"email", ph:"ime@abv.bg", help:"Ще ви отговорим на този имейл. Не го ползваме за реклами."}};
+var MODES = {phone:{lbl:"Телефон", type:"tel", im:"tel", ac:"tel", ph:"0888 12 34 56", help:"Ще ви се обадим на този номер. Не го ползваме за реклами."},
+             email:{lbl:"Имейл", type:"email", im:"email", ac:"email", ph:"ime@primer.bg", help:"Ще ви отговорим на този имейл. Не го ползваме за реклами."}};
 function saveDraft(){ SC.store("sc-contact-draft", draft); }
 
 function formHTML(){ var md = MODES[draft.mode] || MODES.phone;
   return '<form class="ct-form" novalidate data-form aria-labelledby="h-fb">'+
     '<fieldset><legend>За какво е? <span>(по желание)</span></legend><div class="chips" data-topics>'+
       TOPICS.map(function(t){ return '<button class="chip" type="button" aria-pressed="'+(draft.topic===t)+'">'+t+'</button>'; }).join("")+'</div>'+
-      '<p class="hint" data-tophint'+(draft.topic==="Нещо не беше наред"?'':' hidden')+'>'+ic("info",18)+'<span>Съжаляваме. Съобщението стига само до управителя.</span></p></fieldset>'+
+      '<p class="hint" data-tophint'+(draft.topic==="Нещо не беше наред"?'':' hidden')+'>'+ic("info",18)+'<span>Съжаляваме. <span class="missing">[ЛИПСВА: кой чете оплакванията]</span></span></p></fieldset>'+
     '<div class="two">'+
       '<div class="field"><label for="f-name">Вашето име</label><input class="input" id="f-name" name="name" autocomplete="name" maxlength="60" value="'+esc(draft.name)+'" aria-describedby="e-name"><p class="err" id="e-name" hidden></p></div>'+
       '<div class="field"><label for="f-contact" id="l-contact">Как да ви отговорим?</label>'+
@@ -524,9 +526,9 @@ function setErr(id, text){ var inp = fbox.querySelector("#f-"+id), e = fbox.quer
 function check(id){ var v = (fbox.querySelector("#f-"+id).value || "").trim(), err = "";
   if (id === "name"){ if (v.length < 2) err = "Напишете името си."; }
   if (id === "contact"){
-    if (draft.mode === "email"){ if (!v) err = "Напишете имейл, за да ви отговорим."; else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) err = "Имейлът изглежда непълен. Пример: ime@abv.bg"; }
+    if (draft.mode === "email"){ if (!v) err = "Напишете имейл, за да ви отговорим."; else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) err = "Имейлът изглежда непълен. Пример: ime@primer.bg"; }
     else { var dg = v.replace(/[\s\-().\/]/g,""); if (!v) err = "Напишете телефон, за да ви се обадим.";
-      else if (!/^(\+359|00359|0)\d{8,9}$/.test(dg)) err = "Номерът изглежда непълен. Пример: 0888 123 456"; } }
+      else if (!/^(0\d{9}|\+359\d{9})$/.test(dg)) err = "Номерът трябва да е 10 цифри, започващи с 0. Пример: 0888 12 34 56"; } }
   if (id === "msg"){ if (!v) err = "Напишете съобщението си."; else if (v.length < 10) err = "Напишете малко повече, поне 10 знака."; }
   setErr(id, err); return !err; }
 
@@ -535,7 +537,7 @@ function mountOk(d, focus){ fbox.innerHTML = okHTML(d); var ok = fbox.querySelec
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ ok.classList.add("on"); }); });
   if (focus){ ok.scrollIntoView({behavior:SC.reduce?"auto":"smooth", block:"start"}); setTimeout(function(){ var h = ok.querySelector("h3"); h && h.focus({preventScroll:true}); }, 400); } }
 
-if (hash === "form-ok") mountOk({topic:"Похвала", name:"Мария Петрова", mode:"phone", contact:"0888 123 456", msg:"Пицата с бурата беше чудесна, а градината е много уютна и топла. Благодарим на момичето, което ни обслужи!"}, false);
+if (hash === "form-ok") mountOk({topic:"Въпрос", name:"Мария", mode:"phone", contact:"0888 12 34 56", msg:"Имате ли места в събота вечер?"}, false);
 else mountForm();
 
 fbox.addEventListener("input", function(e){ var t = e.target;

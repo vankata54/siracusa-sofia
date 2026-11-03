@@ -30,7 +30,7 @@
   animation:flicker 3.4s ease-in-out infinite alternate}
 .film .spin{position:absolute; width:370px; height:370px; right:-96px; top:calc(var(--pull,130px) - 74px); animation:spin 60s linear infinite}
 .film .spin svg{width:100%; height:100%; display:block}
-.film .shade{position:absolute; width:340px; height:340px; right:-78px; top:calc(var(--pull,130px) - 40px); border-radius:50%; background:radial-gradient(closest-side, rgba(0,0,0,.55), transparent)}
+.film .shade{position:absolute; width:340px; height:340px; right:-78px; top:calc(var(--pull,130px) - 40px); border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--chip-dark) 70%, transparent), transparent)}
 .film .spark{position:absolute; left:var(--x); bottom:var(--b,40%); width:var(--s,5px); height:var(--s,5px); border-radius:50%; background:var(--ember); opacity:0;
   animation:rise var(--d,4.6s) linear var(--w,0s) infinite}
 .film .veil{position:absolute; inset:0; background:linear-gradient(to top, var(--chip-dark) 18%, color-mix(in srgb, var(--chip-dark) 72%, transparent) 46%, transparent 74%)}
@@ -89,7 +89,7 @@
 .slide .sl-ic{position:absolute; right:-34px; top:-26px; opacity:.1; pointer-events:none}
 .pctl{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 10px 10px 8px}
 .dots{display:flex}
-.dots button{width:40px; height:48px; border:0; background:transparent; cursor:pointer; display:grid; place-items:center; padding:0; color:inherit}
+.dots button{width:48px; height:48px; border:0; background:transparent; cursor:pointer; display:grid; place-items:center; padding:0; color:inherit}
 .dots .d{position:relative; display:block; width:8px; height:8px; border-radius:4px; background:color-mix(in srgb, var(--on-ember) 30%, transparent); overflow:hidden}
 .dots [aria-current="true"] .d{width:28px}
 .dots .d i{position:absolute; inset:0; background:var(--on-ember); transform:scaleX(0); transform-origin:left}
@@ -103,7 +103,7 @@
 .sec-note{margin:-6px 0 14px}
 
 /* ---------- Bertha ---------- */
-.bcore{background:var(--chip-dark); color:var(--on-chip-dark); padding:26px 22px 24px; display:grid; gap:26px; position:relative; isolation:isolate}
+.bcore{box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px color-mix(in srgb, var(--on-chip-dark) 12%, transparent); background:var(--chip-dark); color:var(--on-chip-dark); padding:26px 22px 24px; display:grid; gap:26px; position:relative; isolation:isolate}
 .bcore::before{content:""; position:absolute; z-index:-1; width:420px; height:420px; right:-200px; top:-190px; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--ember) 28%, transparent), transparent)}
 .bcore .eyebrow{color:var(--ember)}
 .bcore .h2{color:var(--on-chip-dark)}
@@ -186,6 +186,8 @@
 .res p{margin:4px 0 0; color:var(--muted); line-height:1.4}
 .res .pill{margin-top:10px; min-height:48px}
 .pay{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; color:var(--muted); font-size:15px}
+.chk label{font-size:16px}
+.offline .link{min-height:48px}
 
 /* ---------- how to get here ---------- */
 .where{display:grid; gap:16px}
@@ -212,6 +214,9 @@
 .skcard .a{aspect-ratio:1; border-radius:24px} .skcard .b{height:18px; width:80%} .skcard .c{height:18px; width:40%}
 .errbox{display:grid; justify-items:start; gap:10px; padding:20px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
 .errbox p{margin:0; color:var(--muted)}
+.proto{padding:16px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); border:0}
+.proto b{font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.proto .chip{text-decoration:none}
 
 /* ---------- desktop ---------- */
 @container app (min-width:700px){
@@ -286,7 +291,7 @@ var demo = (location.hash || "").slice(1);
 var isOffline = demo === "offline" || (navigator.onLine === false);
 
 /* ---------- time-dependent copy (everything reads SC.state()) ---------- */
-var order, etaRow, lunchSub;
+var order, etaRow, lunchSub, lunchToday = SC.lunchIsToday();
 if (st.delivery) order = {t:"Поръчай", s:"Доставка или вземане от място", href:"menu.html"};
 else if (st.kitchen) order = {t:"Поръчай за вземане", s:"Вземане от място до 22:30", href:"menu.html", pickup:true};
 else order = {t:"Поръчай за утре", s:st.m < 600 ? "Отваряме в 10:00" : "Кухнята приема поръчки до 22:30", href:"menu.html"};
@@ -297,7 +302,7 @@ else if (st.kitchen) etaRow = {dot:"warn", html:"<b>Доставката при�
 else if (st.open) etaRow = {dot:"", html:"<b>Кухнята затвори</b><span>Доставка утре от 10:00</span>"};
 else etaRow = {dot:"", html:"<b>Затворено</b><span>Доставка "+(st.m < 600 ? "днес" : "утре")+" от 10:00</span>"};
 
-if (st.lunch) lunchSub = '<small>До 15:00 · с доставка</small>';
+if (st.lunch) lunchSub = lunchToday ? '<small>До 15:00 · с доставка</small>' : '<small>Качва се всяка сутрин</small>';
 else if (st.lunchDiscount) lunchSub = '<small class="hot"><span>-30%</span>при вземане</small>';
 else lunchSub = '<small>От 10:00 до 15:00</small>';
 
@@ -317,7 +322,7 @@ var hero =
       '<a class="pill pill-red go" href="'+order.href+'"'+(order.pickup?' data-pickup':'')+'><span class="gol"><span>'+order.t+'</span><small>'+order.s+'</small></span><span class="knob">'+ic("arrow-right",22)+'</span></a>'+
       '<div class="tiles">'+
         '<a class="tile" href="reservation.html"><span class="ti">'+ic("calendar-check",22)+'</span><span><b>Резервирай маса</b><small>Салон и градина</small></span></a>'+
-        '<a class="tile" href="lunch.html"><span class="ti">'+ic("bowl-food",22)+'</span><span><b>Обедно меню днес</b>'+lunchSub+'</span></a>'+
+        '<a class="tile" href="lunch.html"><span class="ti">'+ic("bowl-food",22)+'</span><span><b>'+(lunchToday && st.open ? 'Обедно меню днес' : 'Обедно меню')+'</b>'+lunchSub+'</span></a>'+
       '</div>'+
       '<a class="eta" href="delivery.html"><span class="dot '+etaRow.dot+'"></span>'+ic("moped",22)+'<span class="tx">'+etaRow.html+'</span>'+ic("caret-right",18)+'</a>'+
     '</div>'+
@@ -325,7 +330,9 @@ var hero =
 
 /* ---------- promo banner (SC.offers, 6 s, pause, dots; first slide static) ---------- */
 var offers = SC.offers();
-var OFF_META = {lunch:["Днес до 15:00","bowl-food"], lunch30:["След 15:00","storefront"], tomorrow:["Утре от 10:00","clock"], greek:["Събитие","calendar-check"], birthday:["Празник","cake"], signup:["За нов профил","gift"]};
+/* the lunch tile sits right above: during lunch hours its slide goes last so the first frame says something new */
+if (st.lunch && offers.length > 1 && offers[0].id === "lunch") offers.push(offers.shift());
+var OFF_META = {lunch:[lunchToday ? "Днес до 15:00" : "До 15:00","bowl-food"], lunch30:["След 15:00","storefront"], tomorrow:["Утре от 10:00","clock"], greek:["Събитие","calendar-check"], birthday:["Празник","cake"], signup:["За нов профил","gift"]};
 var promo =
   '<section class="sec promo-sec" aria-label="Оферти">'+
     '<div class="promo" data-promo role="region" aria-roledescription="въртящ се банер" aria-label="Оферти">'+
@@ -392,9 +399,9 @@ var events = '<section class="sec" aria-labelledby="ev-h"><div class="sec-h"><h2
 /* ---------- office lunch ---------- */
 var office =
   '<section class="sec" aria-labelledby="off-h"><div class="card office rv">'+
-    '<div><div class="oh"><span class="oi">'+ic("briefcase",24)+'</span><h2 class="h3" id="off-h">Обедна поръчка за офиса</h2></div><p style="margin-top:10px">Една обща поръчка за целия офис, с една доставка до 15:00.</p></div>'+
+    '<div><div class="oh"><span class="oi">'+ic("briefcase",24)+'</span><h2 class="h3" id="off-h">Обща поръчка за офиса</h2></div><p style="margin-top:10px">Една обща поръчка за целия офис, с една доставка до 15:00.</p></div>'+
     '<ol class="steps"><li>Създавате обща връзка</li><li>Всеки колега избира сам</li><li>Доставяме всичко заедно</li></ol>'+
-    '<a class="pill pill-line" href="office.html">Направи обща поръчка'+ic("arrow-right",20)+'</a>'+
+    '<a class="pill pill-line" href="office.html">Започни обща поръчка'+ic("arrow-right",20)+'</a>'+
   '</div></section>';
 
 /* ---------- delivery zones + address check ---------- */
@@ -406,7 +413,7 @@ var delivery =
     '<div class="zgroup"><h3>Безплатна доставка</h3><ul class="ztags">'+free.map(function(z){ return '<li>'+ic("check-circle",20)+z.n+'</li>'; }).join("")+'</ul></div>'+
     '<div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">'+paid.map(function(z){ return '<li>'+ic("map-pin",20)+z.n+'</li>'; }).join("")+'</ul><span class="missing">[ЛИПСВА: такси за доставка в €]</span></div>'+
     '<a class="link" href="delivery.html">Карта на зоните'+ic("caret-right",18)+'</a>'+
-    '<p class="pay">'+ic("wallet",20)+'<span>Плащате при получаване: в брой, с карта или с ваучер.</span></p>'+
+    '<p class="pay">'+ic("wallet",20)+'<span>Плащане на място: В брой, Карта при получаване или Ваучер.</span></p>'+
   '</div>'+
   '<form class="card chk rv" data-chk novalidate><div class="field"><label for="addr">Провери адреса си</label>'+
     '<div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Квартал и блок" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>'+
@@ -435,7 +442,10 @@ var where =
       '<a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",22)+R.phone+'</a></div></div>'+
   '</div></section>';
 
-main.innerHTML = hero + promo + popular + bertha + visit + events + office + delivery + where;
+var proto = '<section class="sec" aria-label="Само в прототипа"><div class="proto"><b>Само в прототипа</b><div class="chips" style="margin:8px 0 0;padding:2px 0;flex-wrap:wrap">'+
+  [["","Нормално"],["loading","Зареждане"],["error","Грешка"],["offline","Без интернет"]].map(function(x){ return '<a class="chip" href="#'+x[0]+'" data-demo="'+x[0]+'"'+(demo===x[0]?' aria-current="true"':'')+'>'+x[1]+'</a>'; }).join("")+'</div></div></section>';
+main.innerHTML = hero + promo + popular + bertha + visit + events + office + delivery + where + proto;
+main.querySelectorAll("[data-demo]").forEach(function(a){ a.addEventListener("click", function(e){ e.preventDefault(); location.hash = a.dataset.demo; location.reload(); }); });
 
 /* ---------- hero: pull the clip under the floating header ---------- */
 var stage = main.querySelector(".stage");
