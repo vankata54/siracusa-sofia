@@ -146,6 +146,7 @@
 .needmail{display:grid; grid-template-columns:auto 1fr; gap:4px 10px; align-items:start; padding:12px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
 .needmail > .ic{color:var(--warn); margin-top:2px; grid-row:span 2}
 .needmail b{line-height:1.3}
+.needmail > :not(.ic){grid-column:2}
 .needmail .pill{justify-self:start; margin-top:6px}
 .legal{margin:12px 2px 0; font-size:14px; color:var(--muted)}
 .legal a{color:var(--ink); font-weight:700}
@@ -347,7 +348,7 @@ function loadOrders(delay, fail){ var box = main.querySelector("[data-orders]");
 function orderHTML(o, i){ var P = orderParts(o), n = count(P.ok);
   var pics = o.lines.slice(0,3).map(function(l){ return SC.pic(l[0]); }).join("");
   return '<article class="card ord" aria-labelledby="o'+o.no+'">'+
-    '<div class="ord-h"><span class="ord-pics" aria-hidden="true">'+pics+'</span><span class="ord-meta"><b id="o'+o.no+'">Поръчка #'+o.no+'</b><span class="d">'+dayStr(o.ago)+' · '+(o.mode==="pickup"?"Взета от място":"Доставка")+'</span><span class="st">'+ic("check-circle",18)+(o.mode==="pickup"?"Взета":"Доставена")+'</span></span></div>'+
+    '<div class="ord-h"><span class="ord-pics" aria-hidden="true">'+pics+'</span><span class="ord-meta"><b id="o'+o.no+'">Поръчка #'+o.no+'</b><span class="d">'+dayStr(o.ago)+' · '+(o.mode==="pickup"?"Вземане":"Доставка")+'</span><span class="st">'+ic("check-circle",18)+(o.mode==="pickup"?"Взета":"Доставена")+'</span></span></div>'+
     '<ul class="ord-l">'+o.lines.map(function(l){ var x = SC.byId[l[0]]; if (!x) return ""; var out = SC.isOut(x);
       return '<li'+(out?' class="out"':'')+'><span class="q">'+l[1]+' ×</span><span class="n">'+esc(x.n)+(out?'<br>'+SC.badges({t:["out"]}):'')+'</span><span class="price">'+fmt(x.p*l[1])+'</span></li>'; }).join("")+'</ul>'+
     (P.out.length ? '<p class="note">'+ic("info",18)+'<span>'+P.out.map(function(x){ return esc(x.n); }).join(", ")+(P.out.length>1?' са изчерпани':' е изчерпана')+' днес. Добавяме останалите '+SC.plural(n,"ястие","ястия")+'.</span></p>' : '')+
@@ -420,7 +421,7 @@ function toggle(btn){ var k = btn.dataset.sw.split("."), on = btn.getAttribute("
     "notif.push":["Известията на този телефон са включени.","Известията на този телефон са спрени."],
     "notif.remind":["Ще ви напомняме за резервацията.","Спряхме напомнянията за резервации."],
     "consent.marketing":["Благодарим! Ще научавате първи за офертите.","Спряхме офертите. Няма да ви пишем за тях."],
-    "consent.birthday":[U.email ? "Включено. Изберете деня, ако искате." : "Включено. Добавете имейл, за да ви изпратим подаръка.","Спряхме подаръка за рождения ден."]}[btn.dataset.sw];
+    "consent.birthday":[U.email ? "Включено. Изберете деня, ако искате." : "Включено. Добавете имейл за подаръка.","Спряхме подаръка за рождения ден."]}[btn.dataset.sw];
   if (k[0]==="consent" && k[1]==="birthday"){ if (!on) U.consent.bday = ""; saveUser(); refresh("[data-cons]", consHTML()); refresh("[data-cps]", couponsHTML()); renderProfileKeep();
     var nb = main.querySelector('[data-sw="consent.birthday"]'); nb && nb.focus({preventScroll:true}); }
   if (msg) SC.toast(on ? msg[0] : msg[1]); }

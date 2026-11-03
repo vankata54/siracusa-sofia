@@ -486,7 +486,7 @@ function birthdaySheet(){
      Signed in: saved straight into the profile. Guest: an e-mail to write to is needed as well. */
   var u = me(), days = '<option value="">Ден</option>'; for (var i=1;i<=31;i++) days += '<option value="'+i+'">'+i+'</option>';
   var mons = '<option value="">Месец</option>'+SC.MONTHS.map(function(m,i){ return '<option value="'+(i+1)+'">'+m+'</option>'; }).join("");
-  var s = SC.sheet({title:"Рожден ден при нас", html:
+  var s = SC.sheet({title:"Рожден ден", html:
     '<form class="of-form" novalidate>'+
     '<p class="intro">-10% от сметката или малка торта за рожденика, когато празнувате при нас. Пишем ви седмица преди празника.</p>'+
     '<div class="field"><label class="check" for="b-ok"><input type="checkbox" id="b-ok" name="ok" aria-describedby="e-ok"><span><b>Искам подарък за рождения си ден</b><span class="muted">-10% или малка торта. Пишем ви седмица преди празника.</span></span></label><span class="err" id="e-ok" hidden></span></div>'+

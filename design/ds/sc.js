@@ -76,11 +76,11 @@ SC.minutes = function(){ var n = SC.now(); return n.h*60 + n.m; };
 SC.state = function(){ var m = SC.minutes();
   return {open: m>=600 && m<1380, kitchen: m>=600 && m<1350, delivery: m>=600 && m<1260, lunch: m>=600 && m<900, lunchDiscount: m>=900 && m<1350, breakfast: m>=600 && m<690, m:m}; };
 SC.status = function(){ var m = SC.minutes();
-  if (m < 600) return {cls:"", html:"<b>Затворено</b> · отваряме в 10:00"};
-  if (m >= 1380) return {cls:"", html:"<b>Затворено</b> · отваряме утре в 10:00"};
-  if (m < 1260) return {cls:"ok", html:"<b>Отворено до 23:00</b> · Доставка до 21:00"};
-  if (m < 1350) return {cls:"warn", html:"<b>Доставката приключи за днес</b> · Вземане до 22:30"};
-  return {cls:"warn", html:"<b>Кухнята затвори</b> · Отворено до 23:00"};
+  if (m < 600) return {cls:"", html:"<b>Затворено</b> <span class=\"nw\">· отваряме в 10:00</span>"};
+  if (m >= 1380) return {cls:"", html:"<b>Затворено</b> <span class=\"nw\">· отваряме утре в 10:00</span>"};
+  if (m < 1260) return {cls:"ok", html:"<b>Отворено до 23:00</b> <span class=\"nw\">· Доставка до 21:00</span>"};
+  if (m < 1350) return {cls:"warn", html:"<b>Доставката приключи за днес</b> <span class=\"nw\">· Вземане до 22:30</span>"};
+  return {cls:"warn", html:"<b>Кухнята затвори</b> <span class=\"nw\">· Отворено до 23:00</span>"};
 };
 /* honest delivery estimate (prototype: fixed by hour; real one comes from the kitchen load) */
 SC.eta = function(){ var m = SC.minutes(); var busy = (m>=720 && m<810) || (m>=1140 && m<1230);
@@ -99,7 +99,7 @@ SC.events = function(){ var ls = SC.lastSaturday();
     text:"Всяка последна събота от месеца кухнята сменя посоката. Този път: Гърция.", note:"[ЛИПСВА: програма, меню и цена]"}]; };
 SC.EVENT_CATS = ["Жива музика","Тематични вечери","Празници","Рождени дни","Кръщенета","Юбилеи","Фирмени партита","Абитуриентски","Детски","Частни партита"];
 SC.offers = function(){ var s = SC.state(), ev = SC.lastSaturday(), o = [];
-  if (s.lunch) o.push({id:"lunch", t:"Обедно меню днес", p:"Поръчайте до 15:00 с доставка или вземане от място.", go:"Виж обедното меню", href:"lunch.html"});
+  if (s.lunch) o.push(SC.lunchIsToday() ? {id:"lunch", t:"Обедно меню днес", p:"Поръчайте до 15:00 с доставка или вземане от място.", go:"Виж обедното меню", href:"lunch.html"} : {id:"lunch", t:"Обедно меню", p:"Качва се всяка сутрин. Поръчка до 15:00 с доставка или вземане.", go:"Виж обедното меню", href:"lunch.html"});
   else if (s.lunchDiscount) o.push({id:"lunch30", t:"-30% на обедното меню", p:"След 15:00 при вземане от място. Отстъпката се смята сама.", go:"Вземи от място", href:"lunch.html"});
   else o.push({id:"tomorrow", t:"Поръчай за утре", p:"Кухнята приема поръчки всеки ден от 10:00 до 22:30.", go:"Към менюто", href:"menu.html"});
   o.push({id:"greek", t:"Гръцка вечер", p:(ev.days===0?"Днес":"След "+SC.plural(ev.days,"ден","дни"))+". Последната събота от месеца.", go:"Запази място", href:"event.html#gratska-vecher"});
@@ -271,7 +271,7 @@ function bottomNav(active){ return '<nav class="nav" aria-label="Основна 
 SC.footer = function(){ var R=SC.RESTAURANT;
   return '<footer class="foot"><div class="cols"><div><span class="word">Siracusa</span><p class="muted" style="margin:10px 0 0">Пица на пещ и скара на дървени въглища в Дружба 2.</p><p style="margin:12px 0 0">'+R.address+'<br>'+R.phone+' · '+R.email+'</p><p class="muted small" style="margin:8px 0 0">Всеки ден 10:00 - 23:00. Кухнята приема до 22:30, доставка до 21:00.</p></div>'+
     '<div><h3>Поръчай</h3><a href="menu.html">Меню</a><a href="lunch.html">Обедно меню</a><a href="delivery.html">Доставка</a><a href="pickup.html">Вземи от място</a><a href="office.html">За офиса</a></div>'+
-    '<div><h3>Ела при нас</h3><a href="reservation.html">Резервирай маса</a><a href="events.html">Събития и поводи</a><a href="celebration.html">Празник при нас</a><a href="bertha.html">Фурната Bertha</a><a href="gallery.html">Галерия</a></div>'+
+    '<div><h3>Елате при нас</h3><a href="reservation.html">Резервирай маса</a><a href="events.html">Събития и поводи</a><a href="celebration.html">Празник при нас</a><a href="bertha.html">Фурната Bertha</a><a href="gallery.html">Галерия</a></div>'+
     '<div><h3>Информация</h3><a href="about.html">За нас</a><a href="contacts.html">Контакти</a><a href="allergens.html">Алергени</a><a href="#" data-noop>Общи условия</a><a href="#" data-noop>Поверителност</a><a href="#" data-cookie-settings>Бисквитки</a></div></div>'+
     '<p class="legal">© '+new Date().getFullYear()+' Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p></footer>'; };
 function morePanel(){ return '<div class="stack" style="gap:2px">'+SC.PAGES.map(function(p){ return '<a class="kv" href="'+p[0]+'" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">'+p[1]+SC.ic("caret-right",18)+'</a>'; }).join("")+'</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'0894 36 55 77</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div>'; }
@@ -322,7 +322,7 @@ SC.mount = function(o){ o = o || {};
   scroller.innerHTML = header(o) + '<main id="main" data-main></main>' + (o.footer===false ? '<div class="end-space"></div>' : SC.footer());
   var showNav = o.bottomNav !== false;
   ov.insertAdjacentHTML("beforeend", (showNav ? bottomNav(o.nav) : "") + (o.ai===false ? "" : '<button class="aifab'+(o.actionBar?" up":"")+(showNav?"":" nonav")+'" type="button" data-ai aria-label="Асистент">'+SC.ic("sparkle",20)+'<span class="lbl">Асистент</span></button>') + cookieBanner());
-  if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); f && f.classList.toggle("mini", sc); }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
+  if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); if (f){ f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t=setTimeout(function(){ f.classList.add("mini"); }, 2600); } }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
   updateCartUI(false);
   document.title = (o.docTitle || o.title || "Siracusa") + (o.docTitle||o.title ? " | Siracusa Bar & Grill" : " Bar & Grill");
   return scroller.querySelector("[data-main]"); };

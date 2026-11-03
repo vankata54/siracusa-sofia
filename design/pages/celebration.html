@@ -514,7 +514,7 @@ function updSummary(){
 /* ---------- dynamic parts inside step 1 / 2 ---------- */
 function updEarly(){ var el = flow.querySelector("[data-early]"); if (!el) return;
   if (isEarly()){ el.className = "early on"; el.innerHTML = ic("seal-percent",22)+'<span><b>Ранна резервация: -5% от крайната цена.</b><br>Пример в прототипа. Колко дни по-рано: <span class="missing">[ЛИПСВА: колко дни по-рано]</span></span>'; }
-  else { el.className = "early"; el.innerHTML = ic("seal-percent",22)+'<span><b>-5% при ранна резервация.</b> Колко дни по-рано: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>. Управителят потвърждава отстъпката в офертата.</span>'; } }
+  else { el.className = "early"; el.innerHTML = ic("seal-percent",22)+'<span><b>-5% при ранна резервация за празник.</b><br>Колко дни по-рано: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>. Потвърждава се в офертата.</span>'; } }
 function updGuests(){ var inp = flow.querySelector("#guests"); if (inp && document.activeElement !== inp) inp.value = S.guests;
   flow.querySelectorAll("[data-gset]").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.dataset.gset===S.guests)); });
   var dn = flow.querySelector('[data-g="-1"]'), up = flow.querySelector('[data-g="1"]'); if (dn) dn.disabled = S.guests<=2; if (up) up.disabled = S.guests>=200;

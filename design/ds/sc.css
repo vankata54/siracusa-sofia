@@ -7,7 +7,7 @@
   --ink:#121211; --muted:#5C5C57; --line:rgba(18,18,17,.10); --line-strong:rgba(18,18,17,.30);
   --red:#CC2A1E; --red-press:#B3241A; --on-red:#FFFFFF;
   --ember:#F2B23A; --on-ember:#1F1D1B; --ember-soft:rgba(242,178,58,.16);
-  --ok:#2E7D4F; --warn:#B45309; --off:#75756F; --danger:#B3241A;
+  --ok:#2E7D4F; --on-ok:#FFFFFF; --warn:#B45309; --off:#75756F; --danger:#B3241A;
   --glass:rgba(251,251,250,.82); --glass-line:rgba(18,18,17,.08); --scrim:rgba(12,12,11,.45);
   --shadow:0 1px 1px rgba(18,18,17,.04), 0 14px 34px -14px rgba(18,18,17,.22);
   --shadow-lg:0 30px 60px -24px rgba(18,18,17,.35);
@@ -25,7 +25,7 @@
     --plate-1:#2B2B28; --plate-2:#161615;
     --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.10); --line-strong:rgba(242,242,239,.30);
     --red:#FF6B5E; --red-press:#E85A4F; --on-red:#121211;
-    --ok:#4CAF7A; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
+    --ok:#4CAF7A; --on-ok:#121211; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
     --glass:rgba(28,28,26,.76); --glass-line:rgba(242,242,239,.10); --scrim:rgba(0,0,0,.6);
     --shadow:0 0 0 1px rgba(242,242,239,.05), 0 18px 40px -18px rgba(0,0,0,.7);
     --shadow-lg:0 0 0 1px rgba(242,242,239,.06), 0 30px 60px -24px rgba(0,0,0,.8);
@@ -39,7 +39,7 @@
   --plate-1:#2B2B28; --plate-2:#161615;
   --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.10); --line-strong:rgba(242,242,239,.30);
   --red:#FF6B5E; --red-press:#E85A4F; --on-red:#121211;
-  --ok:#4CAF7A; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
+  --ok:#4CAF7A; --on-ok:#121211; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
   --glass:rgba(28,28,26,.76); --glass-line:rgba(242,242,239,.10); --scrim:rgba(0,0,0,.6);
   --shadow:0 0 0 1px rgba(242,242,239,.05), 0 18px 40px -18px rgba(0,0,0,.7);
   --shadow-lg:0 0 0 1px rgba(242,242,239,.06), 0 30px 60px -24px rgba(0,0,0,.8);
@@ -114,7 +114,7 @@ html.pv-phone .device{width:min(410px,100%); height:min(864px, calc(100dvh - 96p
 .pill-lg{min-height:56px; font-size:17px}
 .pill-block{width:100%}
 .pill[disabled],.pill[aria-disabled="true"]{background:var(--surface-2); color:var(--muted); cursor:not-allowed; box-shadow:none}
-.pill.done{background:var(--ok); color:#fff}
+.pill.done{background:var(--ok); color:var(--on-ok)}
 .go{width:100%; min-height:60px; justify-content:space-between; padding:0 8px 0 24px; font-size:18px}
 .go .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.2); transition:transform var(--t-slow) var(--ease)}
 .go:hover .knob{transform:translate(2px,-2px) scale(1.05)}
@@ -122,7 +122,7 @@ html.pv-phone .device{width:min(410px,100%); height:min(864px, calc(100dvh - 96p
 .iconbtn{width:48px; height:48px; border:0; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); cursor:pointer; flex:none}
 .plus{width:48px; height:48px; border-radius:50%; border:0; background:var(--red); color:var(--on-red); display:grid; place-items:center; cursor:pointer; flex:none; transition:transform var(--t-fast) var(--ease)}
 .plus:active{transform:scale(.9)}
-.plus.done{background:var(--ok); color:#fff}
+.plus.done{background:var(--ok); color:var(--on-ok)}
 
 /* ---------- containers ---------- */
 .shell{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
@@ -194,12 +194,13 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .row2 > *{pointer-events:auto}
 .status{flex:1; min-width:0; min-height:52px; display:flex; align-items:center; gap:8px; padding:8px 12px 8px 14px; letter-spacing:-.01em; border-radius:26px; background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:600; color:var(--muted); line-height:1.35; transition:transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease)}
 .status b{color:var(--ink)}
+.status .nw{white-space:nowrap}
 .status .dot{width:9px; height:9px; border-radius:50%; flex:none; background:var(--off)}
 .status .dot.ok{background:var(--ok)} .status .dot.warn{background:var(--warn)}
 .scrolled .status{transform:translateX(-24px) scale(.96); opacity:0; pointer-events:none}
 .cartbtn{position:relative; margin-left:auto; flex:none; width:52px; height:52px; border:0; border-radius:50%; display:grid; place-items:center; cursor:pointer; color:var(--ink); background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); text-decoration:none; transition:transform var(--t-fast) var(--ease)}
 .cartbtn:active{transform:scale(.94)}
-.cnt{position:absolute; top:-2px; right:-4px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:13px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.cnt{position:absolute; top:-2px; right:-4px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
 .cnt[hidden]{display:none}
 .bump{animation:bump var(--t-spring) var(--ease)}
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
@@ -232,7 +233,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .aifab{position:absolute; right:12px; bottom:92px; z-index:31; min-height:52px; display:inline-flex; align-items:center; gap:8px; padding:0 18px 0 14px; border:0; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:16px; cursor:pointer; box-shadow:0 10px 24px -8px rgba(0,0,0,.45); transition:transform var(--t-fast) var(--ease)}
 .aifab:active{transform:scale(.96)}
 /* collapses to a round button after the first scroll so it never sits on top of page actions */
-@container app (max-width:899px){ .aifab.mini{width:52px; padding:0; justify-content:center} .aifab.mini .lbl{display:none} }
+@container app (max-width:899px){ .aifab{transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)} .aifab.away{transform:translateY(24px) scale(.9); opacity:0; pointer-events:none} .aifab.mini{width:52px; padding:0; justify-content:center} .aifab.mini .lbl{display:none} }
 .aifab.up{bottom:160px}
 .aifab.nonav{bottom:14px}
 .aifab.nonav.up{bottom:84px}
