@@ -41,7 +41,7 @@
 @keyframes barGrow{from{transform:scaleX(0)}to{transform:none}}
 .steps ol{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
 .steps li{min-width:0}
-.steps .sl{display:flex; align-items:center; gap:5px; min-height:40px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2; padding:0; border:0; background:transparent; text-align:left; width:100%}
+.steps .sl{display:flex; align-items:center; gap:5px; min-height:48px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2; padding:0; border:0; background:transparent; text-align:left; width:100%}
 .steps li.cur .sl{color:var(--ink); font-weight:800}
 .steps button.sl{cursor:pointer; color:var(--ink); text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:4px; min-height:48px}
 .steps button.sl .ic{color:var(--ok)}
@@ -118,7 +118,6 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .seg.ff button[aria-pressed="true"] .ic{color:var(--red)}
 .seg.ff b{font-size:17px; font-weight:800}
 .seg.ff small{font-size:14px; font-weight:600; color:var(--muted)}
-.seg.ff button[aria-pressed="true"] b::after{content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--red); margin-left:7px; vertical-align:middle; transform:translateY(-1px)}
 .seg.ff button[disabled]{opacity:1}
 .seg.ff button[disabled] b, .seg.ff button[disabled] .ic{opacity:.5}
 .ff-note{margin-top:12px}
@@ -234,6 +233,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 /* ---------- action bar ---------- */
 .ck-bar[hidden]{display:none}
 .ck-bar .pill.back{flex:none; padding:0 16px 0 14px; gap:6px}
+.ck-bar .pill-red{min-width:0; overflow:hidden; text-overflow:ellipsis}
 .ck-bar .pill-red{padding:0 14px}
 @container app (min-width:900px){ .ck-bar{display:none} }
 @container app (max-width:370px){ .ck-bar .pill{font-size:16px} .ck-bar .pill.back{padding:0 12px 0 10px} }
@@ -267,7 +267,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 /* ---------- success ---------- */
 .done-wrap{display:grid; gap:16px; max-width:640px; margin:0 auto; padding-top:20px}
 .okhead{display:grid; justify-items:center; text-align:center; gap:10px; padding:12px 0 8px}
-.okmark{position:relative; width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface); animation:okPop 560ms var(--ease) both}
+.okmark{position:relative; width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}
 .okmark::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:okRing 1100ms 260ms var(--ease) both}
 .okmark .ic{position:relative; animation:okTick 460ms 200ms var(--ease) both}
 @keyframes okPop{from{transform:scale(.5); opacity:0}to{transform:none; opacity:1}}
@@ -310,7 +310,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 "use strict";
 var R = Object.assign({}, SC.RESTAURANT), esc = SC.esc, fmt = SC.fmt, ic = SC.ic;
 R.phone = R.phone.replace(/ /g, "\u00a0"); /* keep the number on one line */
-var main = SC.mount({page:"cart", nav:null, back:{href:"menu.html", label:"Меню"}, title:"Количка", docTitle:"Количка и поръчка", footer:false, ai:false, bottomNav:false, actionBar:true});
+var main = SC.mount({page:"cart", nav:null, back:{href:"menu.html", label:"Меню"}, title:"Количка", docTitle:"Количка и поръчка", footer:false, ai:false, bottomNav:false, actionBar:true, cart:false});
 var dev = SC.device, scroller = SC.scroller;
 var bar = document.createElement("div"); bar.className = "abar nonav ck-bar"; bar.hidden = true; SC.ov.appendChild(bar);
 var hdrBack = dev.querySelector(".top.back > a.hb"), hdrTitle = dev.querySelector(".top.back .ttl");
@@ -362,7 +362,7 @@ function info(){
   var lunchDisc = today && s.lunchDiscount && mode==="pickup", disc = 0;
   rows.forEach(function(r){ if (!r.out && r.x.lunch && lunchDisc){ r.disc = Math.round(r.tot*30)/100; disc += r.disc; } });
   var closed = today && !s.kitchen;
-  var conflict = closed || !hasLunch ? "" : sched ? "sched" : (mode==="delivery" && !s.lunch ? "delivery" : "");
+  var conflict = !hasLunch ? "" : (closed || sched) ? "sched" : (mode==="delivery" && !s.lunch ? "delivery" : "");
   var zone = mode==="delivery" && D.zk && D.zk!=="out" ? zoneOf(D.zone) : null;
   var eta = SC.eta();
   var dMin = zone ? zoneMin(zone) + (eta.busy ? 20 : 0) : eta.min;
@@ -388,7 +388,7 @@ function validSlot(I){ if (!D.slot) return false; if (D.slot==="asap") return I.
 
 function etaText(I){ /* returns {big, small} for the summary and success */
   if (I.sched){ if (D.slot && D.slot!=="asap") return {big:(I.sched==="утре"?"Утре":"Днес")+" в "+D.slot, small:I.mode==="delivery"?"Доставка в този час":"Готова за вземане"}; return {big:"Изберете час", small:"В следващата стъпка"}; }
-  if (I.mode==="delivery") return {big:"Пристига около "+t2(round5(I.m+I.dMin)), small:"около "+I.dMin+" мин"+(I.busy?", възможни са закъснения":"")};
+  if (I.mode==="delivery") return {big:"Пристига около "+t2(I.m+I.dMin), small:"около "+I.dMin+" мин"+(I.busy?", възможни са закъснения":"")};
   if (D.slot && D.slot!=="asap") return {big:"Готова в "+D.slot, small:"Вземане от ресторанта"};
   return I.hasTrad ? {big:"Готова около "+t2(round5(I.earliest)), small:"След около 20 мин"} : {big:"Готова веднага", small:"Обедното меню е приготвено"}; }
 
@@ -409,7 +409,7 @@ function topNotes(I, step){ var h = "";
   else if (I.sched) h += note("info","calendar-blank","Поръчвате за "+(I.sched==="утре"?"утре, "+tomorrowLabel():"днес"),"Ще я приготвим за часа, който изберете.");
   if (I.conflict==="delivery") h += note("warn","warning-circle","Обедното меню след 15:00 е само за вземане от място (-30%)","Вземете я от ресторанта и отстъпката се смята сама. Или махнете обедните ястия и я доставяме.",
     '<button class="pill pill-line" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>');
-  if (I.conflict==="sched") h += note("warn","warning-circle","Обедното меню е само за днес, до 15:00","Махнете обедните ястия, за да поръчате предварително. Другото остава в количката.");
+  if (I.conflict==="sched") h += note("warn","warning-circle","Обедното меню не се поръчва предварително","Поръчва се в деня, от 10:00 до 15:00. Махнете обедните ястия, за да поръчате за "+(I.m<600?"по-късно":"утре")+". Другото остава в количката.");
   if (step===1 && I.n===0 && I.outN) h += note("warn","warning-circle","Всичко в количката е изчерпано днес","Сменете ястията с подобни или изберете нещо друго от менюто.");
   return h; }
 
@@ -440,7 +440,7 @@ function suggestions(I){ var ids = SC.cart.lines().map(function(l){ return l.id;
   return out; }
 
 function ffHTML(I, step){ var s = I.s, e = SC.eta();
-  var dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около "+e.min+" мин") : "по избран час";
+  var dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около "+I.dMin+" мин") : "по избран час";
   var pSmall = I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
   var h = '<div class="seg ff" role="group" aria-label="Как да получите поръчката">'+
     '<button type="button" data-act="mode" data-v="delivery" aria-pressed="'+(I.mode==="delivery")+'"'+(I.delivOK?"":" disabled")+'>'+ic("moped",26)+'<b>Доставка</b><small>'+dSmall+'</small></button>'+
@@ -457,7 +457,7 @@ function ctaLabel(I, step){
 function ctaBtn(I, step, block){ var lbl = ctaLabel(I, step) + " · " + fmt(I.total) + (I.feeUnknown && block ? " + доставка" : "");
   if (step===3 && P.sending) return '<button class="pill pill-red pill-lg'+(block?" pill-block":"")+'" type="button" aria-busy="true" aria-disabled="true">'+esc(lbl)+'<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
   if (step===1 && I.conflict==="delivery") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Смени на вземане · -30%</button>';
-  if (step===2 && I.mode==="delivery" && D.zk==="out") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">'+ic("storefront",20)+'Вземи от място · '+fmt(I.total)+'</button>';
+  if (step===2 && I.mode==="delivery" && D.zk==="out") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="mode" data-v="pickup">Вземи от място · '+fmt(I.total)+'</button>';
   if (step===1 && I.conflict==="sched") return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="rmlunch">'+ic("trash",20)+'Махни обедните ястия</button>';
   return '<button class="pill pill-red pill-lg js-next'+(block?" pill-block":"")+'" type="button" data-act="next" data-n="'+step+'">'+esc(lbl)+'</button>'; }
 
@@ -465,7 +465,7 @@ function summaryHTML(I, step){ var e = etaText(I), zoneName = D.zone || "";
   var del = I.mode==="pickup" ? ['Вземане от място','<small>Дружба 2, срещу бл. 311</small>','Без такса']
     : D.zk==="free" ? ['Доставка','<small>'+esc(zoneName)+', в зоната ни</small>','Безплатна']
     : D.zk==="paid" ? ['Доставка','<small>'+esc(zoneName)+', по тарифа</small>','<span class="missing">[ЛИПСВА: такса]</span>']
-    : ['Доставка','<small>Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. Горубляне и Гара Искър по тарифа.</small>','Безплатна'];
+    : ['Доставка','<small>Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. Горубляне и Гара Искър по тарифа.</small>','<span class="muted">Според адреса</span>'];
   var list = step>1 ? '<details><summary>'+ic("receipt",20)+'Виж ястията ('+I.n+')'+ic("caret-down",18)+'</summary><ul>'+I.rows.filter(function(r){ return !r.out; }).map(function(r){ return '<li><span>'+r.l.q+' × '+esc(r.x.n)+'</span><span class="price">'+fmt(r.tot-r.disc)+'</span></li>'; }).join("")+'</ul></details>' : "";
   return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Сметка</h2>'+list+
     '<div class="kv"><span>Ястия · '+I.n+'</span><span class="price">'+fmt(I.sub)+'</span></div>'+
@@ -491,7 +491,7 @@ function viewEmpty(){ var s = SC.state();
   return '<div class="ck emp enter"><div class="empty"><div class="ill">'+ic("shopping-bag",56)+'</div>'+
     '<h1 class="h1 ck-title" tabindex="-1">Количката е празна</h1><p class="lead">Какво ви се хапва?</p>'+
     '<div class="btns"><a class="pill pill-red pill-lg pill-block" href="menu.html">'+ic("fork-knife",22)+'Към менюто</a>'+
-    ((s.lunch||s.lunchDiscount)?'<a class="pill pill-line pill-lg pill-block" href="lunch.html">'+ic("bowl-food",22)+'Обедно меню днес'+(s.lunchDiscount?' · -30% при вземане':'')+'</a>':'')+
+    ((s.lunch||s.lunchDiscount)?'<a class="pill pill-line pill-lg pill-block" href="lunch.html">'+ic("bowl-food",22)+(SC.lunchIsToday && SC.lunchIsToday() ? 'Обедно меню днес' : 'Обедно меню')+(s.lunchDiscount?' · -30% при вземане':'')+'</a>':'')+
     '<button class="pill pill-lg pill-block proto-pill" type="button" data-act="demo">'+ic("sparkle",20)+'Напълни примерна количка<span class="vh"> (само в прототипа)</span></button></div></div>'+
     '<section class="blk" style="margin-top:44px" aria-labelledby="hh"><div class="blk-h"><h2 class="h3 emp-h" id="hh">Хитове и новости</h2><a class="link" href="menu.html">Цялото меню'+ic("caret-right",18)+'</a></div>'+
     '<div class="rail">'+picks.map(function(x){ return SC.dishCard(x); }).join("")+'</div></section></div>'; }
@@ -541,7 +541,7 @@ function viewStep2(I){ var h;
       '<div class="try" aria-label="Пробни адреси в прототипа"><span>Пробни адреси:</span>'+[[0,"Дружба 2"],[6,"Горубляне"],[8,"Младост 1"]].map(function(a){ return '<button class="chip" type="button" data-act="addr-pick" data-i="'+a[0]+'">'+a[1]+'</button>'; }).join("")+'</div>'+
       '</div><div class="res" id="addr-res" aria-live="polite">'+addrResult(I)+'</div></section>'+
       ((D.zk==="free"||D.zk==="paid") ? '<section class="blk"><div class="field"><label for="more">Вход, етаж, апартамент <span class="opt-tag">по желание</span></label><input id="more" class="input" type="text" data-f="addrMore" value="'+esc(D.addrMore)+'" placeholder="Вх. Б, ет. 4, ап. 12" autocomplete="address-line2"><p class="help">За да ви намери шофьорът по-бързо.</p></div></section>'+
-        (I.today ? '<section class="blk"><div class="blk-h"><h2 class="h3">Кога?</h2></div><div class="card when">'+ic("clock",26)+'<span><b>Възможно най-скоро</b><span>Пристига около '+t2(round5(I.m+I.dMin))+' · около '+I.dMin+' мин</span></span></div></section>'
+        (I.today ? '<section class="blk"><div class="blk-h"><h2 class="h3">Кога?</h2></div><div class="card when">'+ic("clock",26)+'<span><b>Възможно най-скоро</b><span>Пристига около '+t2(I.m+I.dMin)+' · около '+I.dMin+' мин</span></span></div></section>'
           : '<section class="blk">'+slotsHTML(I, "Кога да я доставим "+(I.sched==="утре"?"утре":"днес")+"?")+'</section>') : '');
   } else {
     h = '<h1 class="h1 ck-title" tabindex="-1">Кога ще я вземете?</h1><p class="lead ck-lead">'+(I.today?(I.hasTrad?"Приготвяме я за около 20 минути.":"Обедното меню е готово веднага."):"Изберете час за "+(I.sched==="утре"?"утре":"днес")+".")+'</p>'+
@@ -562,16 +562,16 @@ function fieldHTML(id, label, type, extra, help, optional){ var e = P.errs[id];
 function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
   var where = deliv ? '<span><small>Доставка до</small><b>'+esc(D.addr)+(D.addrMore?', '+esc(D.addrMore):'')+'</b><span class="muted small">'+esc(e.big)+'</span></span>'
     : '<span><small>Вземане от ресторанта</small><b>'+(D.slot==="asap"?esc(e.big):(I.sched?esc(e.big):"В "+esc(D.slot)))+'</b><span class="muted small">Siracusa, Дружба 2, срещу бл. 311</span></span>';
-  var pays = [["cash","money","В брой",deliv?"На шофьора":"В ресторанта"],["card","credit-card",deliv?"Карта при доставка":"Карта в ресторанта","Visa или Mastercard"],["voucher","ticket","Ваучер","Sodexo или подаръчна карта"]];
+  var pays = [["cash","money","В брой",deliv?"На шофьора":"В ресторанта"],["card","credit-card",deliv?"Карта при получаване":"Карта в ресторанта","Visa или Mastercard"],["voucher","ticket","Ваучер","Sodexo или подаръчна карта"]];
   var h = stepper(3,true)+'<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">'+(U ? "Попълнихме ги от профила ви. Проверете ги." : "Без регистрация. Обаждаме се само ако нещо не е ясно.")+'</p>'+
     '<div style="margin-top:22px" id="topnotes">'+topNotes(I,3)+
     (P.err==="offline" ? note("bad","warning-circle","Няма връзка. Поръчката ви е запазена - опитайте пак.","Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: "+R.phone+".",'<a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>') : '')+
-    (P.err==="form" ? note("bad","warning-circle","Остава малко","Попълнете отбелязаните полета.") : '')+'</div>'+
+    (P.err==="form" ? note("bad","warning-circle","Попълнете отбелязаните полета","Името и телефонът са задължителни.") : '')+'</div>'+
     '<section class="blk"><div class="card recap"><div class="kv">'+where+'<button class="link" type="button" data-act="go" data-n="2">Промени</button></div>'+
     '<div class="kv"><span><small>Поръчка</small><b>'+dishWord(I.n)+' · '+fmt(I.total)+(I.feeUnknown?' + доставка':'')+'</b></span><button class="link" type="button" data-act="go" data-n="1">Промени</button></div></div></section>'+
     '<section class="blk" aria-labelledby="dh"><div class="blk-h"><h2 class="h3" id="dh">За връзка</h2></div><div class="form">'+
       fieldHTML("name","Име","text",'autocomplete="name" placeholder="Например: Мария"',"",false)+
-      fieldHTML("phone","Телефон","tel",'autocomplete="tel" inputmode="tel" placeholder="0888 123 456"',"Само за тази поръчка: ще ви пратим SMS, когато "+(deliv?"тръгне към вас.":"е готова."),false)+
+      fieldHTML("phone","Телефон","tel",'autocomplete="tel" inputmode="tel" placeholder="0888 12 34 56"',"Само за тази поръчка: ще ви пратим SMS, когато "+(deliv?"тръгне към вас.":"е готова."),false)+
       fieldHTML("email","Имейл","email",'autocomplete="email" inputmode="email" placeholder="ime@primer.bg"',"За касовата бележка.",true)+
       fieldHTML("note","Бележка към кухнята или шофьора","textarea",'rows="3" placeholder="Например: без прибори, звънецът не работи"',"",true)+
     '</div></section>'+
@@ -580,7 +580,7 @@ function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
     '</div><p class="legal">Не въвеждате карта онлайн. Плащате, когато получите поръчката.</p></section>'+
     '<section class="blk">'+(U && U.consent && U.consent.marketing ? '<div class="card consent"><p class="row" style="min-height:56px;margin:0">'+ic("check-circle",22)+'<span>Вече получавате нашите оферти. Променя се от <a href="profile.html">профила</a>.</span></p></div>'
       : '<div class="card consent"><label class="check"><input type="checkbox" data-f="consent" data-fk="consent"'+(D.consent?" checked":"")+'><span><b>Искам да получавам оферти и маркетингови предложения</b><span>Първи научавате за събитията и празничните менюта. Отписвате се с едно натискане.</span></span></label></div>')+
-    '<p class="legal">С натискане на „Поръчай“ приемате <a href="#" data-noop>Общите условия</a>. Храната не подлежи на връщане след доставка.</p></section>';
+    '<p class="legal">С натискане на „Поръчай“ приемате <a href="#" data-noop>Общите условия</a>.</p></section>';
   return '<div class="ck"><div class="ck-grid"><div class="ck-main">'+h+'</div><div class="ck-side">'+summaryHTML(I,3)+'</div></div>'+protoHTML("cart")+'</div>'; }
 
 function viewDone(o){
@@ -686,7 +686,7 @@ function pickAddr(i){ var a = ADDR[i]; if (!a) return; D.addr = a[0]+", Софи
 function validate(){ var e = {}, ph = String(D.phone||"").replace(/[\s\-()\/]/g,"");
   if (!String(D.name||"").trim()) e.name = "Напишете име, за да знаем кого да търсим.";
   if (!ph) e.phone = "Напишете телефон, за да ви се обадим при нужда.";
-  else if (!/^(\+359|00359|0)\d{8,9}$/.test(ph)) e.phone = "Проверете номера. Например: 0888 123 456.";
+  else if (!/^(0\d{9}|\+359\d{9})$/.test(ph)) e.phone = "Проверете номера: 10 цифри, започва с 0. Например: 0888 12 34 56.";
   if (D.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(D.email).trim())) e.email = "Проверете имейла. Например: ime@primer.bg.";
   return e; }
 function showErr(id){ var e = P.errs[id], inp = main.querySelector("#f-"+id), p = main.querySelector("#e-"+id); if (!inp || !p) return;
@@ -700,15 +700,18 @@ function submit(){ if (P.sending) return; var I = info();
   setTimeout(function(){ place(info()); }, 1100); }
 function place(I){
   var deliv = I.mode==="delivery", e = etaText(I);
-  var at = I.sched ? D.slot : deliv ? t2(round5(I.m+I.dMin)) : (D.slot==="asap" ? (I.hasTrad ? t2(round5(I.earliest)) : "веднага") : D.slot);
-  var payName = {cash:"В брой", card:deliv?"Карта при доставка":"Карта в ресторанта", voucher:"Ваучер"}[D.pay] || "В брой";
+  var atMin = I.sched ? null : deliv ? I.m+I.dMin : (D.slot==="asap" ? (I.hasTrad ? round5(I.earliest) : I.m) : (+D.slot.slice(0,2)*60 + +D.slot.slice(3)));
+  var at = I.sched ? D.slot : deliv ? t2(atMin) : (D.slot==="asap" && !I.hasTrad ? "веднага" : t2(atMin));
+  var payName = {cash:"В брой", card:"Карта при получаване", voucher:"Ваучер"}[D.pay] || "В брой";
   var o = {no:1042, mode:I.mode, addr:D.addr+(D.addrMore?", "+D.addrMore:""), zone:D.zone, mins:I.dMin, at:at, sched:I.sched, total:I.total, feeUnknown:I.feeUnknown, n:I.n, pay:payName, name:String(D.name||"").trim()};
   SC.store(OKEY, o);
   /* hand-off to tracking.html (it reads sc-order) */
   var ls = I.rows.filter(function(r){ return !r.out; });
   SC.store("sc-order", {no:String(o.no), mode:o.mode, lines:ls.map(function(r){ return {id:r.x.id, q:r.l.q, mods:r.l.mods||[], extra:r.l.extra||0}; }),
-    lunchOnly:ls.every(function(r){ return r.x.lunch; }), zone:deliv ? o.zone : "", pay:D.pay||"cash", total:o.total,
-    eta: deliv ? I.dMin : Math.max(0, (D.slot && D.slot!=="asap" ? (+D.slot.slice(0,2)*60 + +D.slot.slice(3)) : I.earliest) - I.m), ts:Date.now()});
+    lunchOnly:ls.every(function(r){ return r.x.lunch; }), zone:deliv ? o.zone : "", pay:D.pay||"cash", payLabel:payName, total:o.total,
+    /* exactly what the success screen promises: ts = order time on the prototype clock, eta = minutes until delivery / ready, at = "HH:MM" */
+    eta: atMin==null ? null : atMin - I.m, at: at, sched: I.sched || "", placedAt: t2(I.m),
+    ts: (function(){ var d = new Date(); d.setHours(Math.floor(I.m/60), I.m%60, 0, 0); return d.getTime(); })()});
   P.sending = false; P.placing = true; SC.cart.clear(); D.slot = ""; D.sched = ""; D.note = ""; save(); P.placing = false; P.bday = false;
   location.hash = "gotovo"; }
 
