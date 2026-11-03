@@ -16,15 +16,12 @@
 .eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
 .eyebrow .ic{color:var(--ink)}
 .hero .lead{margin-top:10px; max-width:34em}
-.hfacts{display:none; list-style:none; margin:28px 0 0; padding:0; gap:14px}
-.hfacts li{display:flex; align-items:center; gap:14px; font-weight:600}
-.hfacts .ic-c{width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
-.hfacts .ofr .ic-c{background:var(--ember); color:var(--on-ember); box-shadow:none}
 .hcal{display:none}
 .hcal-l{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--muted)}
 
 /* ---------- tabs + chips ---------- */
 .ctrl{display:grid; gap:14px; margin-top:24px}
+.lcol{margin-top:14px}
 .tabs{max-width:440px}
 .tabs [role="tab"]{min-height:52px; border:0; border-radius:16px; background:transparent; color:var(--muted); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform var(--t-fast) var(--ease)}
 .tabs [role="tab"]:active{transform:scale(.97)}
@@ -33,11 +30,11 @@
 .evchips .chip .ic{opacity:.8}
 .evchips .chip[aria-pressed="true"] .ic{opacity:1}
 .evchips .cdiv{flex:none; align-self:center; width:1.5px; height:26px; margin:0 6px; border-radius:1px; background:var(--line-strong)}
-.cnt-line{margin:0; min-height:24px; font-size:15px; font-weight:600; color:var(--muted)}
+.cnt-line{margin:0 0 10px; min-height:24px; font-size:15px; font-weight:600; color:var(--muted)}
 .cnt-line b{color:var(--ink)}
 
 /* ---------- event cards ---------- */
-.evlist{display:grid; gap:16px; margin-top:6px}
+.evlist{display:grid; gap:16px}
 .ev-grid{display:grid; gap:16px}
 .ev{min-width:0; height:100%}
 .ev > .core{display:flex; flex-direction:column; height:100%}
@@ -111,15 +108,16 @@
 .revs{display:grid; gap:12px}
 .rev{display:grid; gap:10px; padding:18px}
 .rev p{margin:0}
-.stars{display:flex; gap:2px; color:var(--line-strong)}
+.stars{display:inline-flex; align-items:center; gap:8px; font-size:15px; text-decoration:none}
+.stars .ic{color:var(--muted)}
 .rev .who{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
-.rev-note{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; font-size:15px; color:var(--muted)}
+.rev-note{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; font-size:16px; color:var(--muted)}
 .rev-note .ic{margin-top:2px}
 
 /* ---------- calendar ---------- */
 .calbox .core{padding:14px 6px 8px}
 .calbox .seg{margin:0 8px}
-.calbox .seg button{min-height:48px; font-size:15px}
+.calbox .seg button{min-height:48px; font-size:16px}
 .cal-y{margin:12px 12px 4px; font-size:14px; font-weight:700; color:var(--muted)}
 .cal-wd,.cal-days{display:grid; grid-template-columns:repeat(7,1fr)}
 .cal-wd span{text-align:center; font-size:14px; font-weight:700; color:var(--muted); padding:6px 0}
@@ -171,7 +169,7 @@
 .zones li{display:flex; align-items:center; gap:10px; min-height:32px; font-weight:600}
 .zones .ic{color:var(--muted)}
 .party .go{margin-top:6px}
-.party .fine{font-size:15px; color:var(--muted)}
+.party .fine{font-size:16px; color:var(--muted)}
 
 /* ---------- subscribe ---------- */
 .sub > .core{display:grid; grid-template-columns:minmax(0,1fr); gap:20px; padding:22px 18px}
@@ -222,17 +220,23 @@
   .types{grid-template-columns:repeat(3,1fr)}
 }
 @container app (min-width:900px){
-  .ev-top{padding-top:56px}
-  .hero{display:grid; grid-template-columns:1fr 400px; gap:64px; align-items:center}
-  .hero .h1{font-size:60px; margin-top:6px}
-  .hero .lead{font-size:19px; margin-top:16px}
-  .hfacts{display:grid}
+  .ev-top{padding-top:40px}
+  /* first screen on desktop: hero + Гръцка вечер on the left, filters and calendar on the right */
+  .lay{display:grid; grid-template-columns:minmax(0,1fr) 360px; grid-template-areas:"hero side" "list side"; column-gap:48px; align-items:start}
+  .hero{grid-area:hero}
+  .hero .h1{font-size:56px}
+  .hero .lead{font-size:18px; margin-top:12px; max-width:40em}
+  .side{grid-area:side; display:grid; gap:32px}
+  .lcol{grid-area:list; margin-top:22px}
+  .lcol .ev-grid{grid-template-columns:1fr 1fr}
   .hcal{display:block}
   .cal-m{display:none}
-  .ctrl{margin-top:48px}
+  .ctrl{margin-top:0}
   .evchips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
-  .ev.feat .ev-media{min-height:420px}
-  .ev.feat .ev-body{padding:40px}
+  .evchips .cdiv{flex-basis:100%; width:auto; height:1px; margin:4px 0; background:var(--line)}
+  .ev.feat .ev-media{min-height:380px}
+  .ev.feat .ev-body{padding:32px}
+  .ev.feat .ev-facts{display:flex; flex-wrap:wrap; gap:4px 22px}
   .ev.feat .ev-ttl{font-size:44px}
   .ev.feat .ctile{top:20px; left:20px; width:88px}
   .ev.feat .ctile .d{font-size:40px}
@@ -274,7 +278,7 @@ function lastSat(y, mo){ var d = new Date(y, mo+1, 0); while (d.getDay()!==6) d.
 function daysTo(d){ return Math.round((d - TODAY)/864e5); }
 function inDays(n){ return n===0 ? "Днес" : n===1 ? "Утре" : "След "+SC.plural(n,"ден","дни"); }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
-function longDate(d){ return cap(SC.DAYS[d.getDay()])+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
+function longDate(d){ return WD[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
 
 /* ---------- categories ---------- */
 var PUBLIC = ["Жива музика","Тематични вечери","Празници"];
@@ -330,7 +334,7 @@ function realCard(x, feat){ var e = x.e, d = x.date, n = daysTo(d);
     '<div class="ev-body"><span class="ev-cat">'+ic(CATI[x.cat],18)+esc(x.cat)+'</span>'+
     '<h3 class="ev-ttl '+(feat?"h1":"h2")+'" id="t-'+x.key+'"><a href="event.html#'+x.key+'">'+esc(e.n)+'</a></h3>'+
     '<p class="ev-txt'+(feat?" lead":"")+'">'+esc(e.text)+'</p>'+
-    '<ul class="ev-facts"><li>'+ic("calendar-blank",20)+'<span>'+longDate(d)+'</span></li><li>'+ic("clock",20)+'<span>'+esc(e.time)+' ч.</span></li><li>'+ic("ticket",20)+'<span>'+price+'</span></li>'+
+    '<ul class="ev-facts"><li>'+ic("calendar-blank",20)+'<span>'+longDate(d)+'</span></li><li>'+ic("clock",20)+'<span>'+esc(e.time)+'</span></li><li>'+ic("ticket",20)+'<span>'+price+'</span></li>'+
     (e.seatsLeft!=null ? '<li class="seats">'+ic("users",20)+'Остават '+SC.plural(e.seatsLeft,"място","места")+'</li>' : '')+'</ul>'+
     '<div class="ev-act"><a class="pill pill-red pill-lg" href="reservation.html#'+iso(d)+'">'+ic("calendar-check",22)+'Запази място</a><a class="link" href="event.html#'+x.key+'">Подробности за вечерта'+ic("caret-right",18)+'</a></div>'+
     '</div></div></article>'; }
@@ -394,7 +398,7 @@ function renderList(){
       html = (G.length ? '<div class="past-h"><h3 class="h2">Снимки от минали вечери</h3><a class="link" href="gallery.html">Галерия'+ic("caret-right",18)+'</a></div><div class="gal">'+
           G.map(function(g){ return '<div class="gtile slot" style="aspect-ratio:'+g.ar+'" role="img" aria-label="Място за снимка: '+esc(g.cat)+'"><span class="gl">'+esc(g.cat)+'</span><span class="big">'+ic("image",26)+'</span><span class="cap"><span class="missing">[ЛИПСВА: снимка]</span></span></div>'; }).join("")+'</div>' : '')+
         (V.length ? '<div class="past-h" style="margin-top:28px"><h3 class="h2">Какво казаха гостите</h3></div><div class="revs">'+
-          V.map(function(r){ return '<figure class="rev card" style="margin:0"><span class="stars" role="img" aria-label="Оценка: липсва">'+[0,1,2,3,4].map(function(){ return ic("star",20); }).join("")+'</span><blockquote style="margin:0"><p class="missing">[ЛИПСВА: отзив от гост след вечерта]</p></blockquote><figcaption class="who">'+ic(CATI[r.cat],16)+esc(r.n)+' · <span class="missing">[ЛИПСВА: име и дата]</span></figcaption></figure>'; }).join("")+
+          V.map(function(r){ return '<figure class="rev card" style="margin:0"><span class="stars missing">'+ic("chat-circle-dots",20)+'[ЛИПСВА: оценка]</span><blockquote style="margin:0"><p class="missing">[ЛИПСВА: отзив от гост след вечерта]</p></blockquote><figcaption class="who">'+ic(CATI[r.cat],16)+esc(r.n)+' · <span class="missing">[ЛИПСВА: име и дата]</span></figcaption></figure>'; }).join("")+
           '</div><p class="rev-note">'+ic("info",20)+'<span>Оценките са от кратката ни анкета след вечерта, не от Google. Показваме ги без подбор.</span></p>' : '');
       count = "Минали вечери: <span class=\"missing\">[ЛИПСВА: архив]</span>";
     }
@@ -418,12 +422,12 @@ function calHTML(){
   for (var i=0;i<first;i++) cells += '<span aria-hidden="true"></span>';
   for (var d=1; d<=dim; d++){ var dt = new Date(y, mo, d), e = ev.filter(function(x){ return x.date.getDate()===d; })[0];
     var cls = "cd"+(dt<TODAY?" past":"")+(dt.getTime()===TODAY.getTime()?" today":""), lbl = d+" "+SC.MONTHS[mo];
-    if (e && e.kind==="real") cells += '<a class="'+cls+' ev" href="event.html#'+e.key+'" aria-label="'+lbl+': '+esc(e.e.n)+', '+esc(e.e.time)+' ч.">'+d+'</a>';
+    if (e && e.kind==="real") cells += '<a class="'+cls+' ev" href="event.html#'+e.key+'" aria-label="'+lbl+': '+esc(e.e.n)+', '+esc(e.e.time)+'">'+d+'</a>';
     else if (e) cells += '<button class="'+cls+' soon" type="button" data-goto="'+e.key+'" aria-label="'+lbl+': '+esc(e.n)+', скоро обявяваме">'+d+'</button>';
     else cells += '<span class="'+cls+'"'+(dt.getTime()===TODAY.getTime()?' aria-label="Днес, '+lbl+'"':'')+'>'+d+'</span>'; }
   var list = ev.length ? '<ul class="cal-list">'+ev.map(function(x){ var dd = '<span class="dd"><b>'+x.date.getDate()+'</b><small>'+WD[x.date.getDay()]+'</small></span>';
       return x.kind==="real"
-        ? '<li><a href="event.html#'+x.key+'">'+dd+'<span class="tt"><b>'+esc(x.e.n)+'</b><small>'+esc(x.e.time)+' ч. · '+inDays(daysTo(x.date))+'</small></span>'+ic("caret-right",20)+'</a></li>'
+        ? '<li><a href="event.html#'+x.key+'">'+dd+'<span class="tt"><b>'+esc(x.e.n)+'</b><small>'+esc(x.e.time)+' · '+inDays(daysTo(x.date))+'</small></span>'+ic("caret-right",20)+'</a></li>'
         : '<li><button type="button" data-goto="'+x.key+'">'+dd+'<span class="tt"><b>'+esc(x.n)+'</b><small>Скоро обявяваме</small></span>'+ic("caret-right",20)+'</button></li>'; }).join("")+'</ul>'
     : '<p class="cal-none">Няма обявени събития през '+SC.MONTHS[mo]+'.</p>';
   return '<div class="shell calbox"><div class="core">'+seg+'<p class="cal-y">'+cap(SC.MONTHS[mo])+' '+y+'</p>'+
@@ -448,30 +452,23 @@ function partyArt(){
   return '<div class="party-art rv" role="img" aria-label="Празнична маса отгоре с ястия от менюто: '+D.filter(Boolean).map(function(x){ return esc(x.n); }).join(", ")+' (илюстрация)"><svg class="tbl" viewBox="20 0 600 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+s+'</svg></div>'; }
 
 /* ---------- page ---------- */
-var greek = REAL[0];
 var TYPES = [["Рожден ден","cake","rozhden-den"],["Кръщене","baby","krashtene"],["Юбилей","heart","yubiley"],["Фирмено парти","briefcase","firmeno-parti"],["Абитуриентски","star","abiturientski"],["Детски празник","balloon","detski"]];
 main.innerHTML =
   /* hero + controls + list */
   '<section class="sec ev-top" aria-labelledby="h-ev">'+
-    '<div class="hero"><div>'+
+    '<div class="lay"><div class="hero">'+
       '<p class="eyebrow">'+ic("map-pin",18)+'Дружба 2 · салон и отоплявана градина</p>'+
       '<h1 class="h1" id="h-ev">Събития и поводи</h1>'+
       '<p class="lead">Тематична вечер всяка последна събота от месеца, празници и вашите поводи: рожден ден, кръщене, фирмено парти.</p>'+
-      '<ul class="hfacts">'+
-        (greek ? '<li><span class="ic-c">'+ic("globe",22)+'</span><span>Следваща тематична вечер: <b>'+greek.e.n+'</b>, '+greek.date.getDate()+' '+SC.MONTHS[greek.date.getMonth()]+'</span></li>' : '')+
-        '<li><span class="ic-c">'+ic("tree",22)+'</span><span>Салон и отоплявана градина за празника ви</span></li>'+
-        '<li class="ofr"><span class="ic-c">'+ic("seal-percent",22)+'</span><span><b>-5%</b> за празник при ранна резервация</span></li>'+
-      '</ul></div>'+
-      '<div class="hcal"><h2 class="hcal-l">Календар</h2><div data-cal></div></div>'+
     '</div>'+
-    '<div class="ctrl">'+
+    '<div class="side"><div class="ctrl">'+
       '<div class="seg tabs" role="tablist" aria-label="Събития"><button type="button" role="tab" id="tab-up" data-tab="up" aria-controls="evpanel">'+ic("calendar-dots",20)+'Предстоящи</button><button type="button" role="tab" id="tab-past" data-tab="past" aria-controls="evpanel">'+ic("images",20)+'Минали</button></div>'+
       '<div class="chips evchips" role="group" aria-label="Категории"><button class="chip" type="button" data-cat="">Всички</button>'+
         CATS.map(function(c, i){ return (c===CATS[PUBLIC.length] ? '<span class="cdiv" aria-hidden="true"></span>' : '')+'<button class="chip" type="button" data-cat="'+SLUG[c]+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div>'+
-      '<p class="cnt-line" data-count aria-live="polite"></p>'+
-    '</div>'+
-    '<div class="evlist" id="evpanel" role="tabpanel" aria-labelledby="tab-up" data-list></div>'+
-  '</section>'+
+    '</div><div class="hcal"><h2 class="hcal-l">Календар</h2><div data-cal></div></div></div>'+
+    '<div class="lcol"><p class="cnt-line" data-count aria-live="polite"></p>'+
+    '<div class="evlist" id="evpanel" role="tabpanel" aria-labelledby="tab-up" data-list></div></div>'+
+  '</div></section>'+
 
   /* calendar (phone; on desktop it sits in the hero) */
   '<section class="sec cal-m rv" id="kalendar" aria-labelledby="h-cal"><div class="sec-h"><h2 class="h2" id="h-cal">Календар</h2></div><div data-cal></div></section>'+
@@ -514,7 +511,7 @@ function renderSub(){
   if (st.subDone){ subEl.innerHTML = '<div class="sub-ok" role="status"><span class="ic-c">'+ic("check",32)+'</span><h3 class="h2">Готово, ще ви пишем</h3><p class="lead">Ще получите имейл на <b>'+esc(st.subDone)+'</b>, когато обявим '+(st.want.length ? "ново събитие в: "+st.want.map(esc).join(", ") : "ново събитие")+'.</p><button class="pill pill-line" type="button" data-subreset>'+ic("pencil-simple",20)+'Смени имейла</button></div>'; return; }
   subEl.innerHTML = '<form novalidate data-subform>'+
     '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">'+["Тематични вечери","Жива музика","Празници"].map(function(c){ return '<button class="chip" type="button" data-want="'+esc(c)+'" aria-pressed="'+(st.want.indexOf(c)>-1)+'">'+ic(CATI[c],18)+esc(c)+'</button>'; }).join("")+'</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>'+
-    '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" type="email" inputmode="email" autocomplete="email" placeholder="например ime@abv.bg" aria-describedby="sub-email-err" value="'+esc(draft)+'"><p class="err" id="sub-email-err" hidden></p></div>'+
+    '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" type="email" inputmode="email" autocomplete="email" placeholder="например ime@primer.bg" aria-describedby="sub-email-err" value="'+esc(draft)+'"><p class="err" id="sub-email-err" hidden></p></div>'+
     '<div><label class="check"><input type="checkbox" id="sub-ok" aria-describedby="sub-ok-err"><span>Искам да получавам имейли от Siracusa за нови събития. <span class="muted">Отписвате се с едно натискане от всеки имейл.</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>'+
     '<div class="neterr" role="alert" data-neterr hidden>'+ic("warning",22)+'<p><b>Няма връзка с интернет.</b> Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>'+
     '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("bell",20)+'Пишете ми за събитията</button>'+
@@ -525,7 +522,7 @@ subEl.addEventListener("change", function(e){ if (e.target.id==="sub-ok" && e.ta
 subEl.addEventListener("submit", function(e){ e.preventDefault();
   var em = subEl.querySelector("#sub-email"), ok = subEl.querySelector("#sub-ok"), v = em.value.trim(), bad = null;
   if (!v) fieldErr(em, subEl.querySelector("#sub-email-err"), "Напишете имейла си, за да ви пишем.");
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) fieldErr(em, subEl.querySelector("#sub-email-err"), "Проверете имейла. Трябва да е като ime@abv.bg.");
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) fieldErr(em, subEl.querySelector("#sub-email-err"), "Проверете имейла. Трябва да е като ime@primer.bg.");
   else fieldErr(em, subEl.querySelector("#sub-email-err"), "");
   if (!ok.checked) fieldErr(ok, subEl.querySelector("#sub-ok-err"), "Отметнете съгласието, за да можем да ви пишем.");
   if (em.getAttribute("aria-invalid")==="true") bad = em; else if (!ok.checked) bad = ok;

@@ -12,7 +12,7 @@
 /* ---------- hero ---------- */
 .ch{display:grid; grid-template-columns:minmax(0,1fr); gap:22px; padding-top:12px}
 .ch-text{min-width:0}
-.crumb{display:inline-flex; align-items:center; gap:6px; min-height:48px; margin-left:-2px; color:var(--muted); font-weight:700; font-size:15px; text-decoration:none}
+.crumb{display:inline-flex; align-items:center; gap:6px; min-height:48px; margin-left:-2px; color:var(--muted); font-weight:700; font-size:16px; text-decoration:none}
 .eyebrow{display:block; font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--muted); margin:2px 0 8px}
 .ch .lead{margin-top:12px; max-width:36ch}
 .perks{display:flex; gap:8px; margin:18px -16px 0; padding:2px 16px; overflow-x:auto; scrollbar-width:none}
@@ -20,7 +20,7 @@
 .perk{flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 14px 0 10px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:14px; font-weight:700}
 .perk.ember{background:var(--ember); color:var(--on-ember); box-shadow:none}
 .feast{position:relative; height:156px; border-radius:var(--r-shell); overflow:hidden; background:radial-gradient(120% 120% at 50% 20%, var(--plate-1), var(--plate-2)); display:flex; align-items:center; justify-content:center}
-.feast .pl{flex:none; position:relative; filter:drop-shadow(0 12px 16px rgba(0,0,0,.26))}
+.feast .pl{flex:none; position:relative; border-radius:50%; box-shadow:var(--shadow)}
 .feast .pl svg{display:block; width:100%; height:100%}
 .feast .pl + .pl{margin-left:-20px}
 .feast .p1{width:112px; height:112px; transform:translateY(-10px)}
@@ -43,30 +43,17 @@
 .calc{padding-top:40px}
 .calc-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:24px; align-items:start}
 .flow{min-width:0}
-.draft{display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-bottom:12px; font-size:15px; color:var(--muted)}
+.draft{display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-bottom:12px; color:var(--muted)}
 
-/* stepper */
-.cs-top{display:flex; align-items:center; gap:12px; min-height:48px}
-.cs-count{font-size:15px; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums}
-.cs-back{color:var(--ink)}
-.cs-bar{list-style:none; margin:4px 0 0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
-.cs-bar li{display:grid; gap:6px; min-width:0}
-.cs-bar .ln{height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden}
-.cs-bar .ln i{display:block; height:100%; background:var(--red); transform:scaleX(0); transform-origin:left; transition:transform var(--t-spring) var(--ease)}
-.cs-bar li.on .ln i,.cs-bar li.done .ln i{transform:scaleX(1)}
-.cs-bar .nm{display:flex; align-items:center; gap:4px; min-height:40px; padding:0; border:0; background:transparent; font-size:14px; font-weight:700; color:var(--muted); text-align:left; line-height:1.2; cursor:default}
-.cs-bar li.on .nm{color:var(--ink)}
-.cs-bar li.done .nm{cursor:pointer; color:var(--ink)}
-.cs-bar li.done .nm .ic{color:var(--ok)}
-
+/* stepper: shared .stepper from sc.css */
+.flow > .stepper{margin-bottom:4px}
 /* step panel */
 .panel{padding-top:8px; outline:none}
 .panel.fwd{animation:stepIn var(--t-spring) var(--ease)}
 .panel.bwd{animation:stepBack var(--t-spring) var(--ease)}
 @keyframes stepIn{from{opacity:0; transform:translateX(32px)}to{opacity:1; transform:none}}
 @keyframes stepBack{from{opacity:0; transform:translateX(-32px)}to{opacity:1; transform:none}}
-.panel > .cs-count{display:block; margin-top:12px}
-.panel > .h2{margin-top:2px}
+.panel > .h2{margin-top:14px}
 .panel > .lead{margin-top:8px}
 .blk{margin-top:36px}
 .blk-h{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:14px}
@@ -107,12 +94,12 @@
 .selw select{appearance:none; -webkit-appearance:none; padding-right:40px; cursor:pointer}
 .selw .ic{position:absolute; right:14px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--muted)}
 input[type="date"].input{padding-right:12px; min-width:0}
-.early{display:flex; gap:12px; align-items:flex-start; margin-top:14px; padding:14px 16px; border-radius:20px; background:var(--surface-2); font-size:15px; line-height:1.45}
+.early{display:flex; gap:12px; align-items:flex-start; margin-top:14px; padding:14px 16px; border-radius:20px; background:var(--surface-2); line-height:1.45}
 .early .ic{margin-top:1px; color:var(--muted)}
 .early b{font-weight:800}
 .early.on{background:var(--ember); color:var(--on-ember)}
 .early.on .ic{color:var(--on-ember)}
-.early .missing{display:inline-block; font-size:14px}
+.early .missing{display:inline-block}
 
 /* zones */
 .zones{display:grid; gap:10px}
@@ -121,8 +108,6 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .zone .bub{width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
 .zone b{display:block; font-size:17px; font-weight:800; letter-spacing:-.01em; line-height:1.2}
 .zone small{display:block; font-size:14px; color:var(--muted); font-weight:600; margin-top:3px}
-.zone small.warn{color:var(--warn); display:flex; gap:5px; align-items:center}
-.zone small.warn[hidden]{display:none}
 .radio{width:26px; height:26px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--line-strong); display:grid; place-items:center; color:transparent; transition:transform var(--t-fast) var(--ease)}
 .zone.on{box-shadow:inset 0 0 0 2.5px var(--ink), var(--shadow)}
 .zone.on .radio,.pkg.on .radio{background:var(--ink); color:var(--bg); box-shadow:none}
@@ -133,9 +118,9 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .pkg.on{box-shadow:inset 0 0 0 2.5px var(--ink), var(--shadow)}
 .pkg-h{display:grid; grid-template-columns:1fr 26px; gap:12px; align-items:start}
 .pkg-h .h3{font-size:22px}
-.pkg-h p{margin:4px 0 0; color:var(--muted); font-size:15px; line-height:1.4}
+.pkg-h p{margin:4px 0 0; color:var(--muted); line-height:1.4}
 .minis{display:flex; align-items:center; height:60px}
-.minis .pl{width:58px; height:58px; flex:none; filter:drop-shadow(0 6px 8px rgba(0,0,0,.22))}
+.minis .pl{width:58px; height:58px; flex:none}
 .minis .pl + .pl{margin-left:-12px}
 .minis svg{display:block; width:100%; height:100%}
 .pkg dl{margin:0; display:grid; gap:10px}
@@ -156,7 +141,7 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .gtabs{display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px; border-radius:24px; background:var(--surface-2)}
 .gtabs button{min-height:52px; border:0; border-radius:18px; background:transparent; color:var(--ink); font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; padding:0 8px}
 .gtabs button[aria-selected="true"]{background:var(--surface); box-shadow:var(--shadow)}
-.gtabs .n{min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:13px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.gtabs .n{min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
 .picker .chips{margin-top:14px; margin-bottom:6px}
 .plist{display:grid; gap:2px}
 .pk{display:grid; grid-template-columns:64px minmax(0,1fr) 30px; gap:12px; align-items:center; width:100%; padding:10px; border:0; border-radius:20px; background:transparent; color:inherit; text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
@@ -180,7 +165,7 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .mine .it{display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid var(--line)}
 .mine .grp > small + .it{border-top:0}
 .mine .it span{font-weight:600; line-height:1.3; padding:6px 0}
-.mine .it .link{flex:none; font-size:15px}
+.mine .it .link{flex:none}
 .mine .empty{padding:16px 4px 6px}
 .mine .empty .ill{width:72px; height:72px}
 .callbox{display:grid; gap:12px; margin-top:16px; padding:18px; border-radius:var(--r-core); background:var(--surface-2)}
@@ -207,7 +192,7 @@ input[type="date"].input{padding-right:12px; min-width:0}
 /* summary */
 .sumcard .core{padding:18px 20px 20px}
 .sum-h{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px}
-.sum .kv{font-size:15px; padding:9px 0; align-items:baseline}
+.sum .kv{padding:9px 0; align-items:baseline}
 .sum .kv > span:first-child{color:var(--muted); font-weight:600; flex:none}
 .sum .kv > b{text-align:right; font-weight:700}
 .sum .kv .none{color:var(--muted); font-weight:600}
@@ -219,23 +204,29 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .sum-total .price{font-size:28px; letter-spacing:-.03em}
 .sum-offer{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-weight:700; line-height:1.4}
 .sum-note{margin:10px 0 0; font-size:14px; color:var(--muted); line-height:1.45}
-.sum-go{margin-top:16px}
 .sum-call{display:flex; justify-content:center; margin-top:4px}
 .aside{display:none}
 
 /* floating action bar (phone) */
-.cbar{padding:6px 6px 6px 4px}
-.sumbtn{flex:none; display:grid; gap:1px; min-height:52px; max-width:46%; padding:0 6px 0 14px; border:0; border-radius:var(--r-pill); background:transparent; color:var(--ink); text-align:left; cursor:pointer; line-height:1.15}
-.sumbtn small{display:flex; align-items:center; gap:3px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
-.sumbtn b{font-size:18px; font-weight:800; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.cbar .pill{min-width:0; overflow:hidden; padding:0 16px; gap:8px}
+.cbar{flex-direction:column; align-items:stretch; gap:2px; padding:4px 6px 6px; border-radius:var(--r-shell)}
+.sumbtn{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:0 12px 0 14px; border:0; border-radius:22px; background:transparent; color:var(--ink); text-align:left; cursor:pointer; line-height:1.2}
+.sumbtn small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.sumbtn b{display:flex; align-items:center; gap:6px; font-size:18px; font-weight:800; letter-spacing:-.02em; white-space:nowrap}
+.sumbtn b .ic{color:var(--muted)}
+.cbtns{display:flex; gap:8px}
+.cbtns .pill{min-width:0; min-height:52px; font-size:17px; padding:0 16px; gap:8px; overflow:hidden}
+.cbtns .pill-red{flex:1}
+.cbtns .pill-line{flex:none; background:var(--surface)}
+.cbtns .pill[hidden],.sum-btns .pill[hidden]{display:none}
+.sum-btns{display:flex; gap:8px; margin-top:16px}
+.sum-btns .pill-red{flex:1}
 .cbar[hidden]{display:none}
 
 /* success */
 .done{text-align:center}
 .done .core{padding:34px 20px 24px; display:grid; justify-items:center; gap:10px}
 .burst{position:relative; width:96px; height:96px; margin-bottom:10px}
-.burst .ok{position:absolute; inset:0; border-radius:50%; background:var(--ok); color:#fff; display:grid; place-items:center; animation:pop 520ms var(--ease) both}
+.burst .ok{position:absolute; inset:0; border-radius:50%; background:var(--ok); color:var(--bg); display:grid; place-items:center; animation:pop 520ms var(--ease) both}
 @keyframes pop{from{transform:scale(.4); opacity:0}to{transform:none; opacity:1}}
 .burst i{position:absolute; left:44px; top:42px; width:8px; height:12px; border-radius:2px; opacity:0; animation:conf 900ms var(--ease) 160ms forwards}
 .burst i.e{background:var(--ember)} .burst i.r{background:var(--red)} .burst i.o{background:var(--ok)} .burst i.k{background:var(--ink)}
@@ -259,9 +250,7 @@ input[type="date"].input{padding-right:12px; min-width:0}
 
 /* ---------- small phones (360) ---------- */
 @container app (max-width:380px){
-  .cbar .pill{font-size:16px; padding:0 12px}
-  .sumbtn{padding-left:10px}
-  .sumbtn b{font-size:17px}
+  .cbtns .pill{font-size:16px; padding:0 14px}
   .panel .seg button{font-size:15px; padding:0 6px; line-height:1.15}
 }
 /* ---------- wider screens ---------- */
@@ -314,9 +303,9 @@ var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
 /* ---------- data (only real dishes from SC.byId) ---------- */
 var TYPES = [
   {id:"rozhden-den", n:"Рожден ден", ic:"cake"}, {id:"krashtene", n:"Кръщене", ic:"baby"},
-  {id:"yubiley", n:"Юбилей", ic:"star"}, {id:"firmeno-parti", n:"Фирмено парти", ic:"briefcase"},
-  {id:"abiturientski", n:"Абитуриентски", ic:"confetti"}, {id:"detski", n:"Детски", ic:"balloon"},
-  {id:"drugo", n:"Друг повод", ic:"heart", wide:true}];
+  {id:"yubiley", n:"Юбилей", ic:"heart"}, {id:"firmeno-parti", n:"Фирмено парти", ic:"briefcase"},
+  {id:"abiturientski", n:"Абитуриентски", ic:"star"}, {id:"detski", n:"Детски празник", ic:"balloon"},
+  {id:"drugo", n:"Друг повод", ic:"confetti", wide:true}];
 var GROUP_NAMES = {app:"Апетайзери", starter:"Предястие", main:"Основно", dessert:"Десерт"};
 /* Packages: real dishes. "share" items are counted 1 portion per 4 guests (prototype rule until the admin sets the logic). */
 var PKGS = [
@@ -334,12 +323,11 @@ var GROUPS = [
   {id:"main", cats:["skara-bertha","pitsi","osnovni-yastia","pasta-i-rizoto","burgeri","garnituri"]},
   {id:"dessert", cats:["deserti","pitsi"]}];
 var R = SC.RESTAURANT;
-var seats = {salon:0, garden:0}; SC.TABLES.forEach(function(t){ seats[t.zone] += t.seats; }); seats.all = seats.salon + seats.garden;
 var ZONES = [
-  {id:"salon", n:"Салон", ic:"chair", sub:"до "+seats.salon+" места"},
-  {id:"garden", n:"Отоплявана градина", ic:"tree", sub:"до "+seats.garden+" места"},
-  {id:"all", n:"Цялото място", ic:"house", sub:"до "+seats.all+" места, само за вас"}];
-var EARLY_DAYS = 30; /* [ЛИПСВА] the owner sets what counts as "early" */
+  {id:"salon", n:"Салон", ic:"chair", sub:"В ресторанта"},
+  {id:"garden", n:"Отоплявана градина", ic:"tree", sub:"Отоплява се през зимата"},
+  {id:"all", n:"Цялото място", ic:"house", sub:"Салонът и градината само за вас"}];
+/* Early booking -5% (hand-off 10.5). How many days count as "early" is [ЛИПСВА]; in the prototype it is switched on by hand in "Само в прототипа", never computed from the date. */
 var CAKES = [["none","Без торта"],["ours","От нас"],["bring","Носим наша"]];
 var WISHES = ["Балони","Цветя","Надпис с име","В цветовете на повода"];
 var TIMES = []; for (var h=11; h<=20; h++){ TIMES.push((h<10?"0":"")+h+":00"); if (h<20) TIMES.push(h+":30"); }
@@ -348,7 +336,7 @@ var TIMES = []; for (var h=11; h<=20; h++){ TIMES.push((h<10?"0":"")+h+":00"); i
 var DRAFT_KEY = "sc-celebration-draft", PROTO_KEY = "sc-celebration-proto";
 function fresh(){ return {step:1, type:null, guests:20, date:"", time:"19:00", zone:"salon", menu:null, picks:[], pg:"app", pc:{}, cake:"none", cakeNote:"", decor:"no", wishes:[], name:"", phone:"", email:"", note:"", consent:false}; }
 var S = fresh(), restored = false, sent = false, sending = false, firstMenu = true;
-var P = SC.load(PROTO_KEY, {price:"show", send:"ok"});
+var P = SC.load(PROTO_KEY, {price:"show", send:"ok", early:false}); if (P.early == null) P.early = false;
 var saved = SC.load(DRAFT_KEY, null);
 if (saved && saved.v === 1 && saved.s){ for (var k in saved.s) S[k] = saved.s[k]; S.consent = false; restored = true; }
 function save(){ SC.store(DRAFT_KEY, {v:1, s:S}); }
@@ -359,8 +347,9 @@ function today0(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
 function iso(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
 function parse(s){ if (!s) return null; var a = s.split("-"); var d = new Date(+a[0], +a[1]-1, +a[2]); return isNaN(d) ? null : d; }
 function daysTo(){ var d = parse(S.date); return d ? Math.round((d - today0())/864e5) : null; }
-function isEarly(){ var n = daysTo(); return n != null && n >= EARLY_DAYS; }
-function dateText(){ var d = parse(S.date); return d ? SC.DAYS[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()] : ""; }
+function isEarly(){ return !!P.early; }
+var DSHORT = ["нд","пн","вт","ср","чт","пт","сб"];
+function dateText(){ var d = parse(S.date); return d ? DSHORT[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()] : ""; }
 function guestsText(n){ return n + " " + (n===1 ? "гост" : "гости"); }
 function typeName(){ var t = TYPES.filter(function(x){ return x.id===S.type; })[0]; return t ? t.n : ""; }
 function zoneName(){ var z = ZONES.filter(function(x){ return x.id===S.zone; })[0]; return z ? z.n : ""; }
@@ -391,37 +380,38 @@ main.innerHTML =
   '<section class="wrap ch"><div class="ch-text"><a class="crumb" href="events.html">'+ic("arrow-left",18)+'Събития и поводи</a>'+
     '<span class="eyebrow">Калкулатор на празник</span><h1 class="h1">Празник при нас</h1>'+
     '<p class="lead">Рожден ден, кръщене или фирмено парти. Изберете повод, гости и меню, а управителят ще ви изпрати оферта.</p>'+
-    '<div class="perks"><span class="perk ember">'+ic("seal-percent",18)+'-5% при ранна резервация</span><span class="perk">'+ic("fork-knife",18)+'Пакети от нашето меню</span><span class="perk">'+ic("map-pin",18)+'Салон, градина или цялото място</span></div></div>'+
+    '<div class="perks"><span class="perk ember">'+ic("seal-percent",18)+'-5% при ранна резервация за празник</span><span class="perk">'+ic("fork-knife",18)+'Пакети от нашето меню</span><span class="perk">'+ic("map-pin",18)+'Салон, градина или цялото място</span></div></div>'+
     feast+'</section>'+
   '<section class="wrap calc" id="calc" aria-label="Калкулатор на празник"><div class="calc-grid"><div class="flow" data-flow></div><aside class="aside" aria-label="Вашият празник"><div class="shell sumcard"><div class="core" data-aside></div></div></aside></div></section>'+
-  '<section class="wrap"><div class="proto" data-proto></div></section>'+
   '<section class="sec" aria-labelledby="how-h"><div class="sec-h"><h2 class="h2" id="how-h">Как става</h2></div><ol class="how">'+
     '<li><span class="num">1</span><span><b>Изпращате запитване</b><p>Повод, гости и меню. Без плащане и без ангажимент.</p></span></li>'+
     '<li><span class="num">2</span><span><b>Управителят ви се обажда</b><p>Уточнявате менюто, тортата, украсата и подредбата.</p></span></li>'+
     '<li><span class="num">3</span><span><b>Потвърждавате</b><p>Получавате окончателната оферта и пазим мястото за вас. Плащате на място.</p></span></li></ol>'+
-    '<div class="talk"><p>Предпочитате да поговорим?<span>Всеки ден от '+R.open+' до '+R.close+'.</span></p><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></section>';
+    '<div class="talk"><p>Предпочитате да поговорим?<span>Всеки ден от '+R.open+' до '+R.close+'.</span></p><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се · '+R.phone+'</a></div></section>'+
+  '<section class="wrap"><div class="proto" data-proto></div></section>';
 
-SC.ov.insertAdjacentHTML("beforeend", '<div class="abar nonav cbar" data-cbar><button class="sumbtn" type="button" data-sum aria-label="Виж какво включва празникът и цената"></button><button class="pill pill-red" type="button" data-next></button></div>');
+SC.ov.insertAdjacentHTML("beforeend", '<div class="abar nonav cbar" data-cbar><button class="sumbtn" type="button" data-sum aria-label="Виж какво включва празникът и цената"></button><div class="cbtns"><button class="pill pill-line" type="button" data-back hidden>'+ic("arrow-left",20)+'Назад</button><button class="pill pill-red" type="button" data-next></button></div></div>');
 var flow = main.querySelector("[data-flow]"), asideEl = main.querySelector("[data-aside]"), cbar = SC.ov.querySelector("[data-cbar]"), protoEl = main.querySelector("[data-proto]");
 
 /* ---------- prototype switch (admin decides whether guests see a price) ---------- */
 function renderProto(){
-  protoEl.innerHTML = '<div class="proto-h">'+ic("sliders-horizontal",20)+'<span><b>Само в прототипа.</b> Админът решава дали гостът вижда ориентировъчна цена. Пробвайте и двата варианта.</span></div>'+
+  protoEl.innerHTML = '<div class="proto-h">'+ic("sliders-horizontal",20)+'<span><b>Само в прототипа.</b> Тук пробвате решенията на админа и състоянията на страницата.</span></div>'+
     '<div class="proto-row"><span class="label" id="pp-l">Цена за госта</span><div class="seg" role="group" aria-labelledby="pp-l"><button type="button" data-pp="show" aria-pressed="'+(P.price==="show")+'">Ориентировъчна</button><button type="button" data-pp="offer" aria-pressed="'+(P.price==="offer")+'">Ще ви изпратим оферта</button></div></div>'+
-    '<div class="proto-row"><label class="label" for="ps">При изпращане</label><div class="selw"><select class="input" id="ps" data-ps><option value="ok"'+(P.send==="ok"?" selected":"")+'>Успешно</option><option value="error"'+(P.send==="error"?" selected":"")+'>Грешка</option><option value="offline"'+(P.send==="offline"?" selected":"")+'>Без интернет</option></select>'+ic("caret-down",18)+'</div></div>'; }
+    '<div class="proto-row"><label class="label" for="ps">При изпращане</label><div class="selw"><select class="input" id="ps" data-ps><option value="ok"'+(P.send==="ok"?" selected":"")+'>Успешно</option><option value="error"'+(P.send==="error"?" selected":"")+'>Грешка</option><option value="offline"'+(P.send==="offline"?" selected":"")+'>Без интернет</option></select>'+ic("caret-down",18)+'</div></div>'+
+    '<div class="proto-row"><span class="label" id="pe-l">Ранна резервация -5%</span><div class="seg" role="group" aria-labelledby="pe-l"><button type="button" data-pe="0" aria-pressed="'+(!P.early)+'">Не важи</button><button type="button" data-pe="1" aria-pressed="'+(!!P.early)+'">Важи (пример)</button></div></div>'; }
 
 /* ---------- stepper ---------- */
-var STEPS = ["Повод и гости","Меню","Детайли"];
+var STEPS = ["Повод и гости","Меню","Торта, украса и данни"];
+/* shared DS stepper (.stepper from sc.css): "Стъпка N от 3", what comes next, bars */
 function stepper(){
-  return '<div class="cs">'+(S.step>1 ? '<div class="cs-top"><button class="link cs-back" type="button" data-back>'+ic("arrow-left",20)+'Назад</button></div>' : '')+
-    '<ol class="cs-bar">'+STEPS.map(function(n,i){ var st = i+1 < S.step ? "done" : i+1 === S.step ? "on" : "";
-      var inner = (st==="done" ? ic("check-circle",18) : "")+n;
-      return '<li class="'+st+'"'+(st==="on"?' aria-current="step"':'')+'><span class="ln"><i></i></span>'+(st==="done" ? '<button class="nm" type="button" data-goto="'+(i+1)+'">'+inner+'<span class="vh"> (готово, върни се)</span></button>' : '<span class="nm">'+inner+'</span>')+'</li>'; }).join("")+'</ol></div>'; }
+  var next = S.step < 3 ? '<span>Следва: <b>'+STEPS[S.step]+'</b></span>' : '<b>Последна стъпка</b>';
+  return '<div class="stepper" style="--n:3"><div class="t"><span>Стъпка '+S.step+' от 3</span>'+next+'</div><div class="bar" aria-hidden="true">'+
+    STEPS.map(function(n,i){ return '<span class="'+(i+1 <= S.step ? "on" : "")+'"></span>'; }).join("")+'</div></div>'; }
 
 /* ---------- step 1: occasion, guests, date, place ---------- */
 function step1(){
   var minD = new Date(today0()); minD.setDate(minD.getDate()+1);
-  return '<span class="cs-count" aria-hidden="true">Стъпка 1 от 3</span><h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 1 от 3: </span>Повод и гости</h2>'+
+  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 1 от 3: </span>Повод и гости</h2>'+
   '<div class="blk" id="b-type"><div class="blk-h"><h3 class="h3" id="l-type">Какъв е поводът?</h3></div><div class="tiles" role="radiogroup" aria-labelledby="l-type">'+
     TYPES.map(function(t){ var on = S.type===t.id; return '<label class="tile'+(t.wide?" wide":"")+(on?" on":"")+'"><input class="vh" type="radio" name="ctype" value="'+t.id+'"'+(on?" checked":"")+'><span class="bub">'+ic(t.ic,24)+'</span><span>'+t.n+'</span></label>'; }).join("")+'</div>'+errHTML("e-type")+'</div>'+
   '<div class="blk"><div class="blk-h"><h3 class="h3"><label for="guests">Колко гости?</label></h3><span class="opt">заедно с децата</span></div><div class="guests">'+
@@ -432,8 +422,9 @@ function step1(){
     '<div class="field"><label for="cdate">Дата</label><input class="input" type="date" id="cdate" min="'+iso(minD)+'" value="'+esc(S.date)+'" aria-describedby="e-date early"></div>'+
     '<div class="field"><label for="ctime">Начален час</label><div class="selw"><select class="input" id="ctime">'+TIMES.map(function(t){ return '<option'+(S.time===t?" selected":"")+'>'+t+'</option>'; }).join("")+'</select>'+ic("caret-down",18)+'</div></div></div>'+
     errHTML("e-date")+'<div class="early" id="early" data-early aria-live="polite"></div></div>'+
-  '<div class="blk"><div class="blk-h"><h3 class="h3" id="l-zone">Къде?</h3><span class="missing small">[ЛИПСВА: реален капацитет]</span></div><div class="zones" role="radiogroup" aria-labelledby="l-zone">'+
-    ZONES.map(function(z){ var on = S.zone===z.id; return '<label class="zone'+(on?" on":"")+'"><input class="vh" type="radio" name="czone" value="'+z.id+'"'+(on?" checked":"")+'><span class="bub">'+ic(z.ic,24)+'</span><span><b>'+z.n+'</b><small>'+z.sub+'</small><small class="warn" data-zwarn="'+z.id+'" hidden></small></span><span class="radio">'+ic("check",16)+'</span></label>'; }).join("")+'</div></div>'; }
+  '<div class="blk"><div class="blk-h"><h3 class="h3" id="l-zone">Къде?</h3></div><div class="zones" role="radiogroup" aria-labelledby="l-zone">'+
+    ZONES.map(function(z){ var on = S.zone===z.id; return '<label class="zone'+(on?" on":"")+'"><input class="vh" type="radio" name="czone" value="'+z.id+'"'+(on?" checked":"")+'><span class="bub">'+ic(z.ic,24)+'</span><span><b>'+z.n+'</b><small>'+z.sub+'</small></span><span class="radio">'+ic("check",16)+'</span></label>'; }).join("")+'</div>'+
+    '<p class="note-auto" style="margin-top:14px">'+ic("info",18)+'<span>Колко гости събира всяка зона: <span class="missing">[ЛИПСВА: капацитет]</span>. Ще уточним мястото заедно според броя гости.</span></p></div>'; }
 
 /* ---------- step 2: menu ---------- */
 function pkgCard(p){ var on = S.menu===p.id, items = pkgItems(p), firsts = ["app","starter","main","dessert"].map(function(g){ return p.g[g][0][0]; });
@@ -444,9 +435,9 @@ function pkgCard(p){ var on = S.menu===p.id, items = pkgItems(p), firsts = ["app
       return '<div><dt>'+GROUP_NAMES[g]+(list.every(function(it){ return it.share; })?' <i>· за споделяне</i>':'')+'</dt><dd>'+list.map(function(it){ return esc(it.x.n); }).join(", ")+'</dd></div>'; }).join("")+'</dl>'+
     '<span class="pkg-f" data-pkgf="'+p.id+'"></span></label>'; }
 function pkgFoot(p){ if (!priceOn()) return '<span class="offer">Цена с оферта</span><span class="per">'+ic("receipt",18)+'</span>';
-  var tot = pkgTotal(p, S.guests); return '<span><span class="price">≈ '+fmt(tot/S.guests)+'</span> <span class="per">на гост</span></span><span class="tot">за '+guestsText(S.guests)+' ≈ '+fmt(tot)+'</span>'; }
+  var tot = pkgTotal(p, S.guests); return '<span><span class="price">≈ '+fmt(tot/S.guests)+'</span> <span class="per">на гост</span></span><span class="tot">за '+guestsText(S.guests)+' ≈ '+fmt(tot)+(isEarly() ? ', преди -5%' : '')+'</span>'; }
 function step2(){
-  return '<span class="cs-count" aria-hidden="true">Стъпка 2 от 3</span><h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 2 от 3: </span>Меню</h2><p class="lead">Изберете готов пакет от нашето меню или си направете собствено.</p>'+
+  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 2 от 3: </span>Меню</h2><p class="lead">Изберете готов пакет от нашето меню или си направете собствено.</p>'+
     '<div class="pkgs" role="radiogroup" aria-label="Меню за празника" id="b-menu" data-pkgs>'+(firstMenu ? skeletons() : pkgsHTML())+'</div>'+errHTML("e-menu")+
     '<div data-picker></div>'+
     '<p class="note-auto" style="margin-top:20px">'+ic("info",18)+'<span>Напитките не са включени. <span class="missing">[ЛИПСВА: бар и винена карта]</span> Вегетарианци и алергии напишете в бележката на следващата стъпка.</span></p>'; }
@@ -474,7 +465,7 @@ function mineHTML(){ if (!S.picks.length) return '<div class="empty"><span class
 /* ---------- step 3: cake, decor, contact ---------- */
 function seg(name, opts, val){ return '<div class="seg" role="group" aria-labelledby="l-'+name+'">'+opts.map(function(o){ return '<button type="button" data-seg="'+name+'" data-v="'+o[0]+'" aria-pressed="'+(val===o[0])+'">'+o[1]+'</button>'; }).join("")+'</div>'; }
 function step3(){
-  return '<span class="cs-count" aria-hidden="true">Стъпка 3 от 3</span><h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 3 от 3: </span>Торта, украса и данни</h2>'+
+  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 3 от 3: </span>Торта, украса и данни</h2>'+
   '<div class="blk"><div class="blk-h"><h3 class="h3" id="l-cake">Торта</h3></div>'+seg("cake", CAKES, S.cake)+
     '<div class="reveal-box" data-cakebox="ours"'+(S.cake==="ours"?"":" hidden")+'><div class="field"><label for="cakenote">Вкус и надпис <span class="opt">(по желание)</span></label><input class="input" id="cakenote" type="text" value="'+esc(S.cakeNote)+'" placeholder="Например шоколад, „Честит рожден ден, Мария“"></div><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: видове торти и цени]</span></p></div>'+
     '<div class="reveal-box" data-cakebox="bring"'+(S.cake==="bring"?"":" hidden")+'><p class="help" style="margin:0">Ще я съхраним и сервираме. <span class="missing">[ЛИПСВА: условия за собствена торта]</span></p></div></div>'+
@@ -482,8 +473,8 @@ function step3(){
     '<div class="reveal-box" data-decorbox'+(S.decor==="yes"?"":" hidden")+'><div class="wishes" role="group" aria-label="Какво си представяте">'+WISHES.map(function(w){ return '<button class="chip" type="button" data-wish="'+esc(w)+'" aria-pressed="'+(S.wishes.indexOf(w)>-1)+'">'+esc(w)+'</button>'; }).join("")+'</div><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: варианти и цени на украсата]</span></p></div></div>'+
   '<div class="blk"><div class="blk-h"><h3 class="h3">Вашите данни</h3><span class="opt">за да ви се обадим</span></div><div class="fields">'+
     '<div class="field"><label for="cname">Име</label><input class="input" id="cname" type="text" autocomplete="name" value="'+esc(S.name)+'" aria-describedby="e-name">'+errHTML("e-name")+'</div>'+
-    '<div class="field"><label for="cphone">Телефон</label><input class="input" id="cphone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(S.phone)+'" placeholder="0888 123 456" aria-describedby="e-phone">'+errHTML("e-phone")+'</div>'+
-    '<div class="field"><label for="cemail">Имейл <span class="opt">(по желание, за писмена оферта)</span></label><input class="input" id="cemail" type="email" autocomplete="email" value="'+esc(S.email)+'" aria-describedby="e-email">'+errHTML("e-email")+'</div>'+
+    '<div class="field"><label for="cphone">Телефон</label><input class="input" id="cphone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(S.phone)+'" placeholder="0888 12 34 56" aria-describedby="e-phone">'+errHTML("e-phone")+'</div>'+
+    '<div class="field"><label for="cemail">Имейл <span class="opt">(по желание, за писмена оферта)</span></label><input class="input" id="cemail" type="email" autocomplete="email" value="'+esc(S.email)+'" placeholder="ime@primer.bg" aria-describedby="e-email">'+errHTML("e-email")+'</div>'+
     '<div class="field"><label for="cnote">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="cnote" rows="3" placeholder="Вегетарианци, алергии, детски столчета, музика">'+esc(S.note)+'</textarea></div>'+
     '<label class="check"><input type="checkbox" id="cconsent"'+(S.consent?" checked":"")+'><span>Искам подарък за рождения си ден и първи да научавам за събитията.<br><span class="muted small">По желание. Можете да се откажете по всяко време.</span></span></label></div>'+
     '<p class="fine">'+ic("lock",18)+'<span>Запитването не ви задължава. Не плащате нищо онлайн. Телефонът ви е само за връзка за празника.</span></p>'+
@@ -494,41 +485,40 @@ function summaryHTML(forSheet){ var c = calc();
   function row(k, v){ return '<div class="kv"><span>'+k+'</span>'+(v ? '<b>'+v+'</b>' : '<b class="none">не е избрано</b>')+'</div>'; }
   var menuTxt = c.pkg ? c.pkg.n : c.custom ? "Собствено меню"+(S.picks.length?" · "+SC.plural(S.picks.length,"ястие","ястия"):"") : "";
   var h = (forSheet ? '' : '<div class="sum-h"><h3 class="h3">Вашият празник</h3></div>')+'<div class="sum">'+
-    row("Повод", typeName())+row("Гости", guestsText(S.guests))+row("Дата", S.date ? dateText()+", "+S.time : "")+row("Място", zoneName())+row("Меню", menuTxt)+
+    row("Повод", typeName())+row("Гости", guestsText(S.guests))+row("Дата", S.date ? dateText()+" · "+S.time : "")+row("Място", zoneName())+row("Меню", menuTxt)+
     (S.step===3 || sent ? row("Торта", cakeName())+row("Украса", S.decor==="yes" ? (S.wishes.length ? S.wishes.join(", ") : "Да") : "Без украса") : "");
   var pr = "";
   if (c.custom) pr = '<div class="sum-offer">'+ic("phone",20)+'<span>Собствено меню: свържете се с нас за оферта.</span></div>';
   else if (!priceOn()) pr = '<div class="sum-offer">'+ic("receipt",20)+'<span>Цена: ще ви изпратим оферта.</span></div>'+(c.early?'<p class="sum-note">'+ic("seal-percent",16).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px"')+' Ранна резервация: -5% от крайната цена.</p>':'');
   else if (c.pkg) pr = '<div class="kv"><span>Храна, '+S.guests+' × '+fmt(c.per)+'</span><b class="price">'+fmt(c.food)+'</b></div>'+
-      (c.early ? '<div class="kv disc"><span>Ранна резервация -5%</span><b class="price">-'+fmt(c.disc)+'</b></div>' : '')+
+      (c.early ? '<div class="kv disc"><span>Ранна резервация -5% (пример)</span><b class="price">-'+fmt(c.disc)+'</b></div>' : '')+
       '<div class="sum-total"><span>Ориентировъчно</span><span class="price">'+fmt(c.total)+'</span></div>';
   else pr = '<div class="sum-offer">'+ic("fork-knife",20)+'<span>Цената се появява, щом изберете меню.</span></div>'+(c.early?'<p class="sum-note">Ранна резервация: -5% от крайната цена.</p>':'');
   h += '<div class="sum-price">'+pr+'</div>';
-  if (c.pkg && priceOn()) h += '<p class="sum-note">Без напитки и торта. Апетайзерите са по 1 порция на '+SHARE_PER+' гости. Окончателната цена е в офертата.</p>';
+  if (c.pkg && priceOn()) h += '<p class="sum-note">Без напитки и торта. Ястията за споделяне са по 1 порция на '+SHARE_PER+' гости. Окончателната цена е в офертата.</p>';
   h += '</div>';
   return h; }
-function nextLabel(compact){ if (sending) return '<span class="spin" aria-hidden="true"></span>Изпращаме...'; return S.step===1 ? 'Към менюто'+ic("arrow-right",20) : S.step===2 ? 'Към детайлите'+ic("arrow-right",20) : 'Изпрати запитване'+(compact ? '' : ic("paper-plane-right",20)); }
-function barSummary(){ var c = calc(), up = ic("caret-down",14).replace('class="ic"','class="ic" style="transform:rotate(180deg)"');
-  if (c.custom) return '<small>Собствено меню</small><b>С оферта</b>';
-  if (c.pkg && priceOn()) return '<small>Ориентировъчно'+up+'</small><b class="price">'+fmt(c.total)+'</b>';
-  if (c.pkg) return '<small>Цена'+up+'</small><b>С оферта</b>';
-  return '<small>Вашият празник'+up+'</small><b>'+guestsText(S.guests)+'</b>'; }
+function nextLabel(compact){ if (sending) return '<span class="spin" aria-hidden="true"></span>Изпращаме...'; var arr = compact ? '' : ic("arrow-right",20); return S.step===1 ? 'Към менюто'+arr : S.step===2 ? 'Към детайлите'+arr : 'Изпрати запитване'+(compact ? '' : ic("paper-plane-right",20)); }
+function barSummary(){ var c = calc(), up = ic("caret-up",18);
+  if (c.custom) return '<span><small>Собствено меню</small></span><b>С оферта'+up+'</b>';
+  if (c.pkg && priceOn()) return '<span><small>Ориентировъчно'+(c.early?', с -5%':'')+'</small></span><b class="price">'+fmt(c.total)+up+'</b>';
+  if (c.pkg) return '<span><small>Цена</small></span><b>С оферта'+up+'</b>';
+  return '<span><small>Вашият празник</small></span><b>'+guestsText(S.guests)+up+'</b>'; }
 function updSummary(){
   main.querySelector(".calc-grid").classList.toggle("sent", sent);
   if (sent){ cbar.hidden = true; asideEl.closest(".aside").style.display = "none"; return; }
-  asideEl.innerHTML = summaryHTML(false)+'<button class="pill pill-red pill-lg pill-block sum-go" type="button" data-next'+(sending?' aria-busy="true"':'')+'>'+nextLabel()+'</button><div class="sum-call"><a class="link" href="tel:+359894365577">'+ic("phone",18)+'Или се обадете · '+R.phone+'</a></div>';
-  cbar.hidden = false; cbar.querySelector("[data-sum]").innerHTML = barSummary();
-  var nb = cbar.querySelector("[data-next]"); nb.innerHTML = nextLabel(true); if (sending) nb.setAttribute("aria-busy","true"); else nb.removeAttribute("aria-busy"); }
+  asideEl.innerHTML = summaryHTML(false)+'<div class="sum-btns"><button class="pill pill-line pill-lg" type="button" data-back'+(S.step>1?'':' hidden')+'>'+ic("arrow-left",20)+'Назад</button><button class="pill pill-red pill-lg" type="button" data-next'+(sending?' aria-busy="true"':'')+'>'+nextLabel(S.step>1)+'</button></div><div class="sum-call"><a class="link" href="tel:+359894365577">'+ic("phone",18)+'Или се обадете · '+R.phone+'</a></div>';
+  cbar.hidden = false; cbar.querySelector("[data-sum]").innerHTML = barSummary(); cbar.querySelector("[data-back]").hidden = S.step < 2;
+  var nb = cbar.querySelector("[data-next]"); nb.innerHTML = nextLabel(S.step>1); if (sending) nb.setAttribute("aria-busy","true"); else nb.removeAttribute("aria-busy"); }
 
 /* ---------- dynamic parts inside step 1 / 2 ---------- */
-function updEarly(){ var el = flow.querySelector("[data-early]"); if (!el) return; var n = daysTo();
-  if (n != null && n >= EARLY_DAYS){ el.className = "early on"; el.innerHTML = ic("seal-percent",22)+'<span><b>Ранна резервация: -5% от крайната цена.</b><br>До празника остават '+SC.plural(n,"ден","дни")+'.</span>'; }
-  else if (n != null && n >= 1){ el.className = "early"; el.innerHTML = ic("info",22)+'<span>До празника остават '+SC.plural(n,"ден","дни")+'. Отстъпката от 5% важи при запитване поне '+EARLY_DAYS+' дни по-рано. <span class="missing">[ЛИПСВА: точен срок]</span></span>'; }
-  else { el.className = "early"; el.innerHTML = ic("seal-percent",22)+'<span><b>-5% при ранна резервация,</b> поне '+EARLY_DAYS+' дни преди празника. <span class="missing">[ЛИПСВА: точен срок]</span></span>'; } }
+function updEarly(){ var el = flow.querySelector("[data-early]"); if (!el) return;
+  if (isEarly()){ el.className = "early on"; el.innerHTML = ic("seal-percent",22)+'<span><b>Ранна резервация: -5% от крайната цена.</b><br>Пример в прототипа. Колко дни по-рано: <span class="missing">[ЛИПСВА: колко дни по-рано]</span></span>'; }
+  else { el.className = "early"; el.innerHTML = ic("seal-percent",22)+'<span><b>-5% при ранна резервация.</b> Колко дни по-рано: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>. Управителят потвърждава отстъпката в офертата.</span>'; } }
 function updGuests(){ var inp = flow.querySelector("#guests"); if (inp && document.activeElement !== inp) inp.value = S.guests;
   flow.querySelectorAll("[data-gset]").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.dataset.gset===S.guests)); });
   var dn = flow.querySelector('[data-g="-1"]'), up = flow.querySelector('[data-g="1"]'); if (dn) dn.disabled = S.guests<=2; if (up) up.disabled = S.guests>=200;
-  flow.querySelectorAll("[data-zwarn]").forEach(function(w){ var cap = seats[w.dataset.zwarn]; if (S.guests > cap){ w.hidden = false; w.innerHTML = ic("warning",16)+(w.dataset.zwarn==="all" ? "За повече гости се обадете" : "Тясно е за "+guestsText(S.guests)); } else w.hidden = true; }); }
+}
 function updPkgs(){ flow.querySelectorAll("[data-pkgf]").forEach(function(f){ f.innerHTML = pkgFoot(PKG[f.dataset.pkgf]); }); }
 function updPicker(){ var box = flow.querySelector("[data-picker]"); if (box) box.innerHTML = pickerHTML(); }
 function updPickerLight(){ var box = flow.querySelector("[data-picker]"); if (!box) return;
@@ -563,10 +553,10 @@ function validate(){ var first = null;
     if (!S.menu) bad("e-menu", "Изберете пакет или „Собствено меню“.", 'input[name="cmenu"]');
     else if (S.menu==="custom" && !S.picks.length) bad("e-picks", "Изберете поне едно ястие или изберете готов пакет.", "[data-pick]"); }
   if (S.step===3){ ["e-name","e-phone","e-email"].forEach(function(i){ setErr(i); });
-    var digits = S.phone.replace(/\D/g,"");
+    var digits = S.phone.replace(/\D/g,""), compact = S.phone.replace(/[\s().-]/g,"");
     if (!S.name.trim()) bad("e-name", "Напишете име, за да знаем кого да търсим.", "#cname");
-    if (!digits) bad("e-phone", "Напишете телефон, на който да ви се обадим.", "#cphone"); else if (digits.length < 9 || digits.length > 13) bad("e-phone", "Телефонът изглежда непълен. Например 0888 123 456.", "#cphone");
-    if (S.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) bad("e-email", "Проверете имейла, например ime@abv.bg. Или го оставете празен.", "#cemail");
+    if (!digits) bad("e-phone", "Напишете телефон, на който да ви се обадим.", "#cphone"); else if (!/^0\d{9}$/.test(compact) && !/^\+359\d{9}$/.test(compact)) bad("e-phone", "Проверете телефона: 10 цифри, започва с 0. Например 0888 12 34 56.", "#cphone");
+    if (S.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) bad("e-email", "Проверете имейла, например ime@primer.bg. Или го оставете празен.", "#cemail");
     [["#cname","e-name"],["#cphone","e-phone"],["#cemail","e-email"]].forEach(function(p){ var el = flow.querySelector(p[0]); el && el.setAttribute("aria-invalid", String(!document.getElementById(p[1]).hidden)); }); }
   if (first){ scrollTo(first.el.closest(".blk, .field, .picker") || first.el); var f = flow.querySelector(first.f); f && f.focus({preventScroll:true}); return false; }
   return true; }
@@ -597,10 +587,10 @@ function onNext(){ if (sending) return; if (S.step < 3){ if (validate()) go(S.st
 document.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t || !SC.device.contains(t)) return;
   if (t.hasAttribute("data-next")){ var sw = t.closest(".sheetwrap"); if (sw) sw.querySelector("[data-close]").click(); onNext(); return; }
   if (t.hasAttribute("data-back")){ go(S.step-1); return; }
-  if (t.dataset.goto){ go(+t.dataset.goto); return; }
   if (t.hasAttribute("data-sum")){ SC.sheet({title:"Вашият празник", html:summaryHTML(true)+'<button class="pill pill-red pill-lg pill-block" type="button" data-next style="margin-top:16px">'+nextLabel()+'</button>'}); return; }
   if (t.dataset.g){ S.guests = Math.max(2, Math.min(200, S.guests + (+t.dataset.g))); setErr("e-guests"); changed(); return; }
   if (t.dataset.gset){ S.guests = +t.dataset.gset; setErr("e-guests"); changed(); return; }
+  if (t.dataset.pe){ P.early = t.dataset.pe==="1"; saveProto(); renderProto(); updEarly(); updPkgs(); updSummary(); var eb = protoEl.querySelector('[data-pe="'+t.dataset.pe+'"]'); eb && eb.focus(); return; }
   if (t.dataset.pp){ P.price = t.dataset.pp; saveProto(); renderProto(); updPkgs(); updSummary(); var pb = protoEl.querySelector('[data-pp="'+P.price+'"]'); pb && pb.focus(); return; }
   if (t.dataset.pg){ S.pg = t.dataset.pg; updPicker(); var tb = flow.querySelector('[data-pg="'+S.pg+'"]'); tb && tb.focus(); save(); return; }
   if (t.dataset.pc){ S.pc[S.pg] = t.dataset.pc; updPicker(); var cb = flow.querySelector('[data-pc="'+t.dataset.pc+'"]'); cb && cb.focus(); save(); return; }
@@ -640,12 +630,13 @@ main.addEventListener("input", function(e){ var t = e.target;
   toks.forEach(function(tk){
     if (TYPES.some(function(t){ return t.id===tk; })){ S.type = tk; restored = false; }
     if (tk==="offer") P.price = "offer";
+    if (tk==="early") P.early = true;
     if (tk==="error" || tk==="offline") P.send = tk;
     if (/^demo-/.test(tk)){ var d = new Date(today0()); d.setDate(d.getDate()+45);
       S = fresh(); S.type = "rozhden-den"; S.guests = 24; S.date = iso(d); S.time = "19:00"; S.zone = "salon"; S.menu = "pesht-i-skara"; restored = false; firstMenu = false;
       if (tk==="demo-2") S.step = 2;
       if (tk==="demo-custom"){ S.step = 2; S.menu = "custom"; S.picks = ["set-ot-balgarski-kolbasi","topeni-sirentsa-s-kornfleyks-i-domashno-sladko-o","shopska-salata","svinski-rebra","tiramisu"]; }
-      if (tk==="demo-3" || tk==="demo-sent"){ S.step = 3; S.cake = "ours"; S.cakeNote = "Шоколад, „Честит рожден ден, Мария“"; S.decor = "yes"; S.wishes = ["Балони"]; S.name = "Мария Петрова"; S.phone = "0888 123 456"; }
+      if (tk==="demo-3" || tk==="demo-sent"){ S.step = 3; S.cake = "ours"; S.cakeNote = "Шоколад, „Честит рожден ден, Мария“"; S.decor = "yes"; S.wishes = ["Балони"]; S.name = "Мария Петрова"; S.phone = "0888 12 34 56"; }
       if (tk==="demo-sent") sent = true; } });
 })();
 renderProto(); render();

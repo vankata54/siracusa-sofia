@@ -84,7 +84,7 @@
 .adr .l{display:block; font-size:15px; color:var(--muted); line-height:1.35; margin-top:2px}
 .adr .z{display:flex; gap:6px; align-items:center; font-size:14px; font-weight:700; margin-top:4px}
 .adr .z.ok{color:var(--ok)} .adr .z.tar{color:var(--warn)} .adr .z.no{color:var(--danger)}
-.tag{display:inline-flex; align-items:center; min-height:24px; padding:0 9px; border-radius:999px; background:var(--surface-2); font-size:13px; font-weight:800; color:var(--muted)}
+.tag{display:inline-flex; align-items:center; min-height:24px; padding:0 9px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:800; color:var(--muted)}
 .pill.sm{min-height:48px; padding:0 16px; font-size:15px}
 .addbtn{margin-top:12px}
 
@@ -121,7 +121,7 @@
 .ticket.off .big{color:var(--muted)}
 .ticket.off .s{color:var(--muted)}
 .ticket .state{display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:14px; font-weight:800}
-.ticket .link{min-height:44px; font-size:15px}
+.ticket .link{min-height:48px; font-size:15px}
 
 /* switches (ConsentCheckbox, toggle variant) */
 .box{padding:2px 18px}
@@ -131,7 +131,7 @@
 .sw .tx b{display:block; font-size:16px; line-height:1.3}
 .sw .tx .s{display:block; font-size:14px; color:var(--muted); line-height:1.4; margin-top:3px}
 .sw .tg{flex:none; display:grid; justify-items:center; gap:4px}
-.sw .st2{font-size:13px; font-weight:800; color:var(--muted)}
+.sw .st2{font-size:14px; font-weight:800; color:var(--muted)}
 .sw[aria-checked="true"] .st2{color:var(--ok)}
 .sw .tr{position:relative; width:56px; height:34px; border-radius:999px; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
 .sw .kn{position:absolute; top:4px; left:4px; width:26px; height:26px; border-radius:50%; background:var(--on-chip-dark); box-shadow:0 1px 3px var(--line-strong); transition:transform var(--t-base) var(--ease)}
@@ -143,6 +143,10 @@
 .ember-card .missing{color:inherit; opacity:.85}
 .selw{position:relative}
 .selw .ic{position:absolute; right:14px; top:50%; margin-top:-10px; pointer-events:none; color:var(--muted)}
+.needmail{display:grid; grid-template-columns:auto 1fr; gap:4px 10px; align-items:start; padding:12px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.needmail > .ic{color:var(--warn); margin-top:2px; grid-row:span 2}
+.needmail b{line-height:1.3}
+.needmail .pill{justify-self:start; margin-top:6px}
 .legal{margin:12px 2px 0; font-size:14px; color:var(--muted)}
 .legal a{color:var(--ink); font-weight:700}
 
@@ -202,7 +206,7 @@
 .zres{display:flex; gap:8px; align-items:flex-start; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; font-weight:600}
 .zres.ok .ic{color:var(--ok)} .zres.tar .ic{color:var(--warn)} .zres.no .ic{color:var(--danger)}
 
-@container app (max-width:370px){ .tiles a{padding:10px} .tiles b{font-size:22px} .who .h1{font-size:26px} .av{width:56px; height:56px; font-size:24px} }
+@container app (max-width:370px){ .ord-pics .pic:nth-child(3){display:none} .tiles a{padding:10px} .tiles b{font-size:22px} .who .h1{font-size:26px} .av{width:56px; height:56px; font-size:24px} }
 @container app (min-width:700px){ .olist{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @container app (min-width:1100px){ .olist{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @container app (min-width:900px){
@@ -243,7 +247,7 @@ var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
 /* ---------- storage: "sc-user" holds the signed-in user (prototype; real data lives on the server) ---------- */
 function getUser(){ try{ var v = localStorage.getItem("sc-user"); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
 function saveUser(){ try{ if (U) localStorage.setItem("sc-user", JSON.stringify(U)); else localStorage.removeItem("sc-user"); }catch(e){} }
-function pretty(d){ d = String(d||""); return d.length===10 ? d.slice(0,4)+" "+d.slice(4,7)+" "+d.slice(7) : d; }
+function pretty(d){ d = String(d||""); return d.length===10 ? d.slice(0,4)+" "+d.slice(4,6)+" "+d.slice(6,8)+" "+d.slice(8) : d; }
 
 /* sample customer for the prototype: real dishes and prices from the menu, order #128 with 3 dishes as in hand-off 14 */
 function demoUser(){ return {phone:"0888123456", name:"Мария", email:"", demo:true,
@@ -258,7 +262,8 @@ function fill(u){ var d = {name:"", email:"", orders:[], favs:[], addrs:[], stam
   ["notif","consent"].forEach(function(k){ Object.keys(d[k]).forEach(function(j){ if (u[k][j]==null) u[k][j] = d[k][j]; }); });
   return u; }
 
-var U = null;
+var U = null, OFF = false;
+function offline(){ if (OFF || navigator.onLine === false){ SC.toast("Няма връзка. Опитайте пак."); return true; } return false; }
 function boot(){ if (location.hash==="#demo"){ U = demoUser(); saveUser(); try{ history.replaceState(null, "", location.pathname); }catch(e){} }
   U = getUser(); if (U) fill(U); render(); }
 
@@ -285,7 +290,7 @@ function renderInvite(){
   main.innerHTML = '<section class="inv"><div class="shell"><div class="core">'+
     '<span class="ring">'+ic("user",32)+'</span>'+
     '<div><h1 class="h1">Вашият профил</h1><p class="lead" style="margin-top:8px">Влезте с телефона си. Без парола, с код по SMS.</p></div>'+
-    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил.</span></span></div>'+
+    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил.</span></span></div>'+
     '<a class="pill pill-red pill-lg pill-block" href="login.html">'+ic("sign-in",22)+'Влез с телефон</a>'+
     '<ul class="perks">'+PERKS.map(function(p){ return '<li><span class="i">'+ic(p[0],22)+'</span><span><b>'+p[1]+'</b><span class="s">'+p[2]+'</span></span></li>'; }).join("")+'</ul>'+
     '<p class="noacc">Поръчка без профил също става. <a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></p>'+
@@ -294,7 +299,7 @@ function renderInvite(){
 }
 
 function renderProfile(){
-  var u = U, nOrd = u.orders.length, cps = (u.coupons.signup?1:0) + (u.consent.birthday?1:0);
+  var u = U, nOrd = u.orders.length, cps = (u.coupons.signup?1:0) + (u.consent.birthday && u.email?1:0);
   var aside = '<nav class="pf-aside" aria-label="Раздели на профила">'+SECTIONS.map(function(s){ return '<a href="#'+s[0]+'" data-spy="'+s[0]+'" aria-current="'+(s[0]==="porachki")+'">'+ic(s[2],20)+s[1]+'</a>'; }).join("")+'<hr><button type="button" data-logout>'+ic("sign-out",20)+'Изход</button></nav>';
   var head = '<header class="ph"><span class="av" aria-hidden="true">'+esc((u.name||"?").trim().charAt(0).toUpperCase())+'</span><div class="who"><p class="eyebrow">Вашият профил</p><h1 class="h1">Здравейте'+(u.name?', '+esc(u.name):'')+'</h1><p class="tel">'+pretty(u.phone)+'</p></div></header>'+
     '<nav class="tiles" aria-label="Бързо към">'+
@@ -314,7 +319,7 @@ function renderProfile(){
     sw("notif.push","Известия на този телефон","Същото, но направо на екрана, без SMS.",u.notif.push)+
     sw("notif.remind","Напомняне за резервация","Ден преди и 3 часа преди резервацията.",u.notif.remind)+'</div></section>';
   var cons = '<section class="ps" id="saglasia" aria-labelledby="h-con"><div class="sec-h"><h2 class="h2" id="h-con">Съгласия</h2></div><div class="card box" data-cons>'+consHTML()+'</div>'+
-    '<p class="legal">Можете да оттеглите съгласие по всяко време, със същото докосване. <a href="#" data-noop>Политика за поверителност</a></p></section>';
+    '<p class="legal">Можете да оттеглите съгласие по всяко време, със същото докосване. <a href="#" data-noop>Политика за поверителност</a> <span class="missing">[ЛИПСВА: страница]</span></p></section>';
   var sets = '<section class="ps" id="nastroyki" aria-labelledby="h-set"><div class="sec-h"><h2 class="h2" id="h-set">Настройки</h2></div><div class="card box" data-sets>'+setsHTML()+'</div></section>';
   var data = '<section class="ps" id="danni" aria-labelledby="h-dat"><div class="sec-h"><h2 class="h2" id="h-dat">Вашите данни</h2></div><div class="card dbox">'+
     '<p class="muted">Вие решавате какво пазим. Можете да изтеглите всичко за вас или да изтриете профила.</p>'+
@@ -325,6 +330,7 @@ function renderProfile(){
     '<div class="proto"><span class="t">'+ic("flag",18)+'Само за прототипа</span><p>'+(u.demo?'Примерен клиент: поръчките са измислени, ястията и цените са от истинското меню.':'Профилът е създаден от входа в прототипа.')+'</p><div class="btns">'+
       '<button class="pill pill-soft" type="button" data-p="empty">'+ic("user",18)+'Нов клиент без поръчки</button>'+
       '<button class="pill pill-soft" type="button" data-p="error">'+ic("warning",18)+'Грешка при зареждане</button>'+
+      '<button class="pill pill-soft" type="button" data-p="off" aria-pressed="'+OFF+'">'+ic("warning-circle",18)+'Без интернет: '+(OFF?'включено':'изключено')+'</button>'+
       '<a class="pill pill-soft" href="#demo" data-demo>'+ic("receipt",18)+'Примерен профил</a></div></div>';
   loadOrders(600);
   SC.reveal(); spy();
@@ -359,21 +365,22 @@ function adrsHTML(){ var list = U.addrs.length ? '<div class="card alist">'+U.ad
 
 function loyalHTML(){ var n = Math.min(U.stamps,10), li = "";
   for (var i=1; i<=10; i++){ li += i<=n ? '<li class="f">'+ic("fire",24)+'<span class="vh">Печат '+i+'</span></li>' : i===10 ? '<li class="g">'+ic("gift",24)+'<span class="vh">Печат 10, награда</span></li>' : '<li class="e"><span>'+i+'</span></li>'; }
-  return '<div class="loyal rv" role="group" aria-label="Карта с печати, '+n+' от 10"><div class="lh"><span><b>Карта с печати</b><span class="s">Печат за всяка поръчка <span class="missing">[ЛИПСВА: точно правило]</span></span></span><span class="cnt2"><b>'+n+'</b> от 10</span></div>'+
+  return '<div class="loyal rv" role="group" aria-label="Карта с печати, '+n+' от 10"><div class="lh"><span><b>Карта с печати</b><span class="s"><span class="missing">[ЛИПСВА: правило за печат]</span></span></span><span class="cnt2"><b>'+n+'</b> от 10</span></div>'+
     '<ol class="stamps">'+li+'</ol><p>Първите 2 са подарък от нас. Още '+(10-n)+' до <span class="missing">[ЛИПСВА: награда при 10 печата]</span>.</p></div>'; }
 
 function couponsHTML(){ var c = U.consent;
   return (U.coupons.signup ? '<div class="ticket ember-card"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката. Валиден до <span class="missing">[ЛИПСВА: срок]</span>.</span></span></div>' : '')+
     '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">След поръчка ни кажете как е било, с „Да“ или с „Не“. Кодът идва веднага.</span></span></div>'+
-    (c.birthday
-      ? '<div class="ticket ember-card"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% или малка торта. Пишем ви седмица преди празника.</span><span class="state">'+ic("check-circle",18)+'Включено</span></span></div>'
-      : '<div class="ticket off"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% или малка торта за рожденика.</span><a class="link" href="#saglasia">Включете в „Съгласия“'+ic("caret-right",16)+'</a></span></div>'); }
+    (c.birthday && U.email
+      ? '<div class="ticket ember-card"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта. Имейл седмица преди празника.</span><span class="state">'+ic("check-circle",18)+'Включено</span></span></div>'
+      : '<div class="ticket off"><span class="big">'+ic("cake",34)+'</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта за рожденика.</span>'+(c.birthday ? '<button class="link" type="button" data-edit="email">'+ic("plus",16)+'Добавете имейл, за да го получите</button>' : '<a class="link" href="#saglasia">Включете в „Съгласия“'+ic("caret-right",16)+'</a>')+'</span></div>'); }
 
 function consHTML(){ var c = U.consent, D = [];
   for (var d=1; d<=31; d++) D.push(d);
   var bd = (c.bday||"").split("-"), bm = +bd[0]||0, bdd = +bd[1]||0;
   return sw("consent.marketing","Искам да получавам оферти и маркетингови предложения","Първи научавате за събитията и новите оферти.",c.marketing)+
-    sw("consent.birthday","Искам подарък за рождения си ден","-10% или малка торта. Пишем ви седмица преди празника.",c.birthday)+
+    sw("consent.birthday","Искам подарък за рождения си ден","Седмица преди рождения ви ден ви пращаме имейл с подаръка: -10% от сметката или малка торта, когато празнувате при нас.",c.birthday)+
+    (c.birthday && !U.email ? '<div class="bday"><div class="needmail" role="status">'+ic("warning-circle",22)+'<b>Добавете имейл, за да ви пишем</b><span class="muted small">Подаръкът идва по имейл. Без него няма къде да го изпратим.</span><button class="pill pill-line sm" type="button" data-edit="email">'+ic("plus",18)+'Добави имейл</button></div></div>' : '')+
     (c.birthday ? '<div class="bday"><span class="label" id="bd-l">Рожден ден (по желание)</span><div class="two">'+
       '<div class="selw"><label class="vh" for="bd-d">Ден</label><select class="input" id="bd-d" data-bday aria-describedby="bd-l"><option value="">Ден</option>'+D.map(function(x){ return '<option'+(x===bdd?' selected':'')+'>'+x+'</option>'; }).join("")+'</select>'+ic("caret-down",20)+'</div>'+
       '<div class="selw"><label class="vh" for="bd-m">Месец</label><select class="input" id="bd-m" data-bday aria-describedby="bd-l"><option value="">Месец</option>'+SC.MONTHS.map(function(m,i){ return '<option value="'+(i+1)+'"'+(i+1===bm?' selected':'')+'>'+m+'</option>'; }).join("")+'</select>'+ic("caret-down",20)+'</div>'+
@@ -382,7 +389,7 @@ function consHTML(){ var c = U.consent, D = [];
 function setsHTML(){ var th = SC.prefs.theme || "system";
   return '<div class="kvr"><span><span class="k">Име</span><span class="v">'+esc(U.name||"")+'</span></span><button class="pill pill-soft sm" type="button" data-edit>Промени</button></div>'+
     '<div class="kvr"><span><span class="k">Телефон</span><span class="v" style="font-variant-numeric:tabular-nums">'+pretty(U.phone)+'</span><span class="h">С него влизате. Смяна с нов SMS код.</span></span></div>'+
-    '<div class="kvr"><span><span class="k">Имейл</span><span class="v'+(U.email?'':' none')+'">'+(U.email?esc(U.email):'Не е добавен')+'</span><span class="h">По желание, за касовата бележка.</span></span><button class="pill pill-soft sm" type="button" data-edit>'+(U.email?'Промени':'Добави')+'</button></div>'+
+    '<div class="kvr"><span><span class="k">Имейл</span><span class="v'+(U.email?'':' none')+'">'+(U.email?esc(U.email):'Не е добавен')+'</span><span class="h">По желание. За касовата бележка и за подаръка за рождения ден.</span></span><button class="pill pill-soft sm" type="button" data-edit>'+(U.email?'Промени':'Добави')+'</button></div>'+
     '<div class="setg" role="group" aria-labelledby="lang-l"><span class="label" id="lang-l">Език</span><div class="seg"><button type="button" aria-pressed="true">Български</button><button type="button" data-en aria-pressed="false">English</button></div></div>'+
     '<div class="setg" role="group" aria-labelledby="th-l"><span class="label" id="th-l">Тъмен режим</span><div class="seg" data-theme-seg>'+[["system","Авто"],["light","Светъл"],["dark","Тъмен"]].map(function(t){ return '<button type="button" data-th="'+t[0]+'" aria-pressed="'+(th===t[0])+'">'+t[1]+'</button>'; }).join("")+'</div><span class="muted small">„Авто“ следва настройката на телефона.</span></div>'; }
 
@@ -395,10 +402,10 @@ function spy(){ if (io) io.disconnect(); if (!("IntersectionObserver" in window)
 /* ---------- actions ---------- */
 function refresh(sel, html){ var el = main.querySelector(sel); if (el) el.innerHTML = html; }
 function refreshTiles(){ var y = SC.scroller.scrollTop; renderProfileKeep(); SC.scroller.scrollTop = y; }
-function renderProfileKeep(){ var t = main.querySelector(".tiles"); if (!t) return; var cps = (U.coupons.signup?1:0)+(U.consent.birthday?1:0), a = t.querySelectorAll("a")[2];
+function renderProfileKeep(){ var t = main.querySelector(".tiles"); if (!t) return; var cps = (U.coupons.signup?1:0)+(U.consent.birthday && U.email?1:0), a = t.querySelectorAll("a")[2];
   a.className = cps ? "em" : ""; a.querySelector("b").textContent = cps; a.querySelector(".w").textContent = cps===1 ? "купон" : "купона"; }
 
-function reorder(i, btn){ var o = U.orders[i], P = orderParts(o); if (!P.ok.length) return;
+function reorder(i, btn){ var o = U.orders[i], P = orderParts(o); if (!P.ok.length || offline()) return;
   var snap = JSON.parse(JSON.stringify(SC.cart.lines()));
   P.ok.forEach(function(l){ SC.cart.add(l[0], l[1]); });
   SC.fly(btn, P.ok[0][0]); SC.haptic(); SC.flash(btn, ic("check",20)+"Добавено в количката", 1800);
@@ -413,7 +420,7 @@ function toggle(btn){ var k = btn.dataset.sw.split("."), on = btn.getAttribute("
     "notif.push":["Известията на този телефон са включени.","Известията на този телефон са спрени."],
     "notif.remind":["Ще ви напомняме за резервацията.","Спряхме напомнянията за резервации."],
     "consent.marketing":["Благодарим! Ще научавате първи за офертите.","Спряхме офертите. Няма да ви пишем за тях."],
-    "consent.birthday":["Включено. Изберете деня, ако искате.","Спряхме подаръка за рождения ден."]}[btn.dataset.sw];
+    "consent.birthday":[U.email ? "Включено. Изберете деня, ако искате." : "Включено. Добавете имейл, за да ви изпратим подаръка.","Спряхме подаръка за рождения ден."]}[btn.dataset.sw];
   if (k[0]==="consent" && k[1]==="birthday"){ if (!on) U.consent.bday = ""; saveUser(); refresh("[data-cons]", consHTML()); refresh("[data-cps]", couponsHTML()); renderProfileKeep();
     var nb = main.querySelector('[data-sw="consent.birthday"]'); nb && nb.focus({preventScroll:true}); }
   if (msg) SC.toast(on ? msg[0] : msg[1]); }
@@ -440,20 +447,21 @@ function doDelete(){ var phone = U.phone; U = null; saveUser();
   try{ var k = JSON.parse(localStorage.getItem("sc-known")||"{}"); delete k[phone]; localStorage.setItem("sc-known", JSON.stringify(k)); }catch(e){}
   main.innerHTML = '<section class="gone"><div class="card empty" style="padding:40px 20px"><span class="ill">'+ic("check",44)+'</span><h1 class="h2">Профилът е изтрит</h1><p class="muted" style="margin:0;max-width:30em">Изтрихме данните ви. Благодарим, че бяхте с нас. Можете да поръчвате и без профил.</p><a class="pill pill-red pill-lg" href="menu.html">'+ic("fork-knife",20)+'Към менюто</a><a class="link" href="login.html">Нов профил'+ic("caret-right",18)+'</a></div></section>';
   SC.scroller.scrollTop = 0; }
-function logout(){ U = null; saveUser(); render(); SC.scroller.scrollTop = 0; SC.toast("Излязохте. До скоро!"); }
+function logout(){ var was = U; U = null; saveUser(); render(); SC.scroller.scrollTop = 0; SC.toast("Излязохте. До скоро!", function(){ U = was; saveUser(); render(); }); }
 
 /* edit name + email */
-function editSheet(){ var s = SC.sheet({title:"Лични данни", html:
+function editSheet(focusEmail){ var s = SC.sheet({title:"Лични данни", html:
   '<form class="sform" novalidate><div class="field"><label for="e-n">Име</label><input class="input" id="e-n" autocomplete="given-name" value="'+esc(U.name)+'" aria-describedby="e-n-err"><p class="err" id="e-n-err" hidden></p></div>'+
-  '<div class="field"><label for="e-m">Имейл (по желание)</label><input class="input" id="e-m" type="email" inputmode="email" autocomplete="email" placeholder="например ime@poshta.bg" value="'+esc(U.email)+'" aria-describedby="e-m-h e-m-err"><p class="help" id="e-m-h">За касовата бележка. Без реклами, освен ако не ги включите.</p><p class="err" id="e-m-err" hidden></p></div>'+
+  '<div class="field"><label for="e-m">Имейл (по желание)</label><input class="input" id="e-m" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" value="'+esc(U.email)+'" aria-describedby="e-m-h e-m-err"><p class="help" id="e-m-h">За касовата бележка и за подаръка за рождения ден. Без реклами, освен ако не ги включите.</p><p class="err" id="e-m-err" hidden></p></div>'+
   '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("check",20)+'Запази промените</button></form>'});
   var f = s.el.querySelector("form");
-  f.addEventListener("submit", function(e){ e.preventDefault(); var n = f.querySelector("#e-n"), m = f.querySelector("#e-m"), ok = true;
-    [[n, !n.value.trim(), "Напишете името си."],[m, m.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m.value.trim()), "Проверете имейла, например ime@poshta.bg."]].forEach(function(c){ var er = f.querySelector("#"+c[0].id+"-err");
+  if (focusEmail) setTimeout(function(){ var m0 = f.querySelector("#e-m"); m0 && m0.focus({preventScroll:true}); }, 380);
+  f.addEventListener("submit", function(e){ e.preventDefault(); if (offline()) return; var n = f.querySelector("#e-n"), m = f.querySelector("#e-m"), ok = true;
+    [[n, !n.value.trim(), "Напишете името си."],[m, m.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m.value.trim()), "Проверете имейла, ime@primer.bg."]].forEach(function(c){ var er = f.querySelector("#"+c[0].id+"-err");
       if (c[1]){ ok = false; c[0].setAttribute("aria-invalid","true"); er.textContent = c[2]; er.hidden = false; } else { c[0].removeAttribute("aria-invalid"); er.hidden = true; } });
     if (!ok){ f.querySelector('[aria-invalid="true"]').focus(); return; }
     U.name = n.value.trim(); U.email = m.value.trim(); saveUser(); s.close();
-    refresh("[data-sets]", setsHTML()); var h = main.querySelector(".who .h1"); if (h) h.textContent = "Здравейте, "+U.name; var av = main.querySelector(".av"); if (av) av.textContent = U.name.charAt(0).toUpperCase();
+    refresh("[data-sets]", setsHTML()); refresh("[data-cons]", consHTML()); refresh("[data-cps]", couponsHTML()); renderProfileKeep(); var h = main.querySelector(".who .h1"); if (h) h.textContent = "Здравейте, "+U.name; var av = main.querySelector(".av"); if (av) av.textContent = U.name.charAt(0).toUpperCase();
     SC.toast("Записахме промените"); }); }
 
 /* add / edit address */
@@ -473,7 +481,7 @@ function adrSheet(id){ var a = U.addrs.filter(function(x){ return x.id===id; })[
   function zupd(){ var z = zoneLine(zs.value); zr.className = "zres "+z.cls; zr.innerHTML = ic(z.icon,20)+'<span>'+z.html+'</span>'; }
   zs.addEventListener("change", zupd); zupd();
   f.querySelector("[data-kind]").addEventListener("click", function(e){ var b = e.target.closest("[data-k]"); if (!b) return; kind = b.dataset.k; f.querySelectorAll("[data-k]").forEach(function(x){ x.setAttribute("aria-pressed", x===b); }); });
-  f.addEventListener("submit", function(e){ e.preventDefault(); var l = f.querySelector("#a-l"), er = f.querySelector("#a-l-err");
+  f.addEventListener("submit", function(e){ e.preventDefault(); if (offline()) return; var l = f.querySelector("#a-l"), er = f.querySelector("#a-l-err");
     if (!l.value.trim()){ l.setAttribute("aria-invalid","true"); er.textContent = "Напишете улица или блок, за да ви намери куриерът."; er.hidden = false; l.focus(); return; }
     a.kind = kind; a.zone = zs.value; a.line = l.value.trim(); a.note = f.querySelector("#a-n").value.trim(); a.main = f.querySelector("#a-m").checked;
     if (a.main) U.addrs.forEach(function(x){ x.main = false; }); a.main = a.main || !U.addrs.filter(function(x){ return x.id!==a.id; }).length;
@@ -491,7 +499,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.dataset.sw){ toggle(t); return; }
   if (t.dataset.th){ setTheme(t.dataset.th); return; }
   if (t.hasAttribute("data-en")){ SC.toast("Английската версия идва след българската."); return; }
-  if (t.hasAttribute("data-edit")){ editSheet(); return; }
+  if (t.hasAttribute("data-edit")){ editSheet(t.dataset.edit==="email"); return; }
   if (t.dataset.adr){ adrSheet(t.dataset.adr==="new" ? null : t.dataset.adr); return; }
   if (t.hasAttribute("data-favedit")){ var fv = main.querySelector(".favs"); if (!fv) return; var on = fv.classList.toggle("editing"); t.innerHTML = on ? ic("check",18)+"Готово" : ic("pencil-simple",18)+"Промени"; return; }
   if (t.dataset.unfav){ var id = t.dataset.unfav, before = U.favs.slice(), wasEditing = true; U.favs = U.favs.filter(function(x){ return x!==id; }); saveUser();
@@ -503,6 +511,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.hasAttribute("data-delyes")){ doDelete(); return; }
   if (t.hasAttribute("data-logout")){ logout(); return; }
   if (t.dataset.p==="empty"){ U.orders = []; U.favs = []; U.addrs = []; U.demo = false; saveUser(); render(); SC.toast("Показваме нов клиент"); return; }
+  if (t.dataset.p==="off"){ OFF = !OFF; t.setAttribute("aria-pressed", OFF); t.innerHTML = ic("warning-circle",18)+"Без интернет: "+(OFF?"включено":"изключено"); SC.toast(OFF ? "Симулираме липса на връзка" : "Връзката е обратно"); return; }
   if (t.dataset.p==="error"){ var ob = main.querySelector("[data-orders]"); ob.style.display = ""; ob.setAttribute("aria-busy","true"); ob.innerHTML = skel(); loadOrders(500, true); main.querySelector("#porachki").scrollIntoView({block:"start"}); return; }
   if (t.hasAttribute("data-demo")){ e.preventDefault(); U = demoUser(); saveUser(); render(); SC.scroller.scrollTop = 0; return; }
 });

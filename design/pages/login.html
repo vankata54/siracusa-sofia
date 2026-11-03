@@ -38,8 +38,9 @@
 .pill .spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:spin 700ms linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .pill.busy{pointer-events:none}
-.backl{justify-self:start; min-height:48px; margin:-10px 0 -12px -4px; padding:0 4px}
-.backl .ic{color:var(--red)}
+.acts2{display:grid; grid-template-columns:auto 1fr; gap:8px}
+.acts2 .pill{padding:0 18px}
+.lg.done .lg-a .bonus,.lg.done .lg-p{display:none}
 
 /* 6-box code */
 .otp{border:0; margin:0; padding:0; min-width:0}
@@ -79,7 +80,7 @@
 .ticket .big{font-size:40px; line-height:1; font-weight:800; letter-spacing:-.05em}
 .ticket .cut{width:0; align-self:stretch; border-left:2px dashed currentColor; opacity:.35}
 .ticket b{display:block; font-size:17px; line-height:1.25}
-.ticket span{display:block; font-size:15px; opacity:.85; line-height:1.35}
+.ticket .s{display:block; font-size:15px; opacity:.85; line-height:1.35}
 .ticket.in{animation:tin 640ms var(--ease) 180ms both}
 @keyframes tin{0%{transform:translateY(16px) rotate(-3deg) scale(.94); opacity:0}100%{transform:none; opacity:1}}
 
@@ -111,7 +112,7 @@
   .bonus .big{font-size:64px}
   .bonus b{font-size:20px}
   .bonus .art{display:block; position:absolute; right:-36px; top:50%; width:200px; height:200px; margin-top:-100px; transform:rotate(-12deg)}
-  .bonus .art svg{width:100%; height:100%; display:block; filter:drop-shadow(0 14px 18px rgba(0,0,0,.25))}
+  .bonus .art svg{width:100%; height:100%; display:block; filter:drop-shadow(0 14px 18px var(--line-strong))}
   .perks{grid-template-columns:1fr 1fr; column-gap:28px}
   .perks li:nth-child(2){border-top:0}
   .core.box{padding:28px 28px 30px}
@@ -142,8 +143,8 @@ var S = {ready:false, step:"phone", phone:"", tries:0, offline:false, name:"", m
 function digits(v){ var d = String(v||"").replace(/\D/g,"");
   if (d.indexOf("00359")===0) d = "0"+d.slice(5); else if (d.indexOf("359")===0) d = "0"+d.slice(3); else if (/^[89]/.test(d) && d.length===9) d = "0"+d;
   return d; }
-function valid(d){ return /^0(8[789]|9[89])\d{7}$/.test(d); }
-function pretty(d){ return d.length===10 ? d.slice(0,4)+" "+d.slice(4,7)+" "+d.slice(7) : d; }
+function valid(d){ return /^0\d{9}$/.test(d); }
+function pretty(d){ return d.length===10 ? d.slice(0,4)+" "+d.slice(4,6)+" "+d.slice(6,8)+" "+d.slice(8) : d; }
 
 /* ---------- page frame ---------- */
 var PERKS = [["receipt","Поръчай отново","Любимата поръчка с едно докосване."],["map-pin","Адресите са запомнени","Не ги пишете всеки път."],["fire","Карта с печати","Започвате с 2 от 10 печата подарък."],["ticket","Купоните на едно място","Отстъпките се прилагат сами в количката."]];
@@ -153,7 +154,7 @@ main.innerHTML =
       '<p class="eyebrow">Вход и регистрация</p>'+
       '<h1 class="h1">Влезте с телефона си</h1>'+
       '<p class="lead">Без парола. Пращаме ви код по SMS и сте вътре.</p>'+
-      '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от първата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span><span class="art" aria-hidden="true">'+SC.art("pitsa-s-burata-i-proshuto-krudo")+'</span></div>'+
+      '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span><span class="art" aria-hidden="true">'+SC.art("pitsa-s-burata-i-proshuto-krudo")+'</span></div>'+
     '</div>'+
     '<div class="lg-f"><div class="shell"><div class="core box" data-box aria-live="polite"></div></div></div>'+
     '<div class="lg-p">'+
@@ -169,8 +170,13 @@ main.innerHTML =
   '</div>';
 var box = main.querySelector("[data-box]");
 
-function stepper(n, label){ return '<div class="stepper" style="--n:3"><div class="bar">'+[1,2,3].map(function(i){ return '<span'+(i<=n?' class="on"':'')+'></span>'; }).join("")+'</div><div class="t"><b>Стъпка '+n+' от 3</b><span>'+label+'</span></div></div>'; }
-function show(html, focusSel){ clearInterval(S.timer); box.innerHTML = '<div class="view'+(SC.reduce?'':' in')+'">'+html+'</div>';
+function stepper(n, label, of){ of = of || 3; var ix = []; for (var k=1; k<=of; k++) ix.push(k); return '<div class="stepper" style="--n:'+of+'"><div class="bar">'+ix.map(function(i){ return '<span'+(i<=n?' class="on"':'')+'></span>'; }).join("")+'</div><div class="t"><b>Стъпка '+n+' от '+of+'</b><span>'+label+'</span></div></div>'; }
+/* hero follows the flow: after a successful sign-in it greets instead of inviting */
+function hero(done, name, isNew){ var lg = main.querySelector(".lg"); lg.classList.toggle("done", !!done);
+  main.querySelector(".lg-a .eyebrow").textContent = done ? "Профил" : "Вход и регистрация";
+  main.querySelector(".lg-a .h1").textContent = done ? (isNew ? "Добре дошли" : "Добре дошли отново")+(name?", "+name:"") : "Влезте с телефона си";
+  main.querySelector(".lg-a .lead").textContent = done ? "Влязохте. Поръчките, адресите и купоните ви са в профила." : "Без парола. Пращаме ви код по SMS и сте вътре."; }
+function show(html, focusSel){ clearInterval(S.timer); if (!S.finishing) hero(false); box.innerHTML = '<div class="view'+(SC.reduce?'':' in')+'">'+html+'</div>';
   if (focusSel){ var f = box.querySelector(focusSel); if (f) setTimeout(function(){ f.focus({preventScroll:true}); }, 30); }
   /* after the first view, bring the card's top under the floating header so the new step is in sight */
   if (S.ready){ var sc = SC.scroller, top = box.getBoundingClientRect().top - sc.getBoundingClientRect().top;
@@ -190,18 +196,18 @@ function viewPhone(err, focusPh){
   show(stepper(1,"Телефон")+
     '<form class="view" style="gap:18px;animation:none" data-f="phone" novalidate>'+
       '<div class="field"><label for="ph">Мобилен телефон</label>'+
-        '<input class="input" id="ph" name="ph" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="0888 123 456" value="'+esc(S.phone?pretty(S.phone):"")+'" aria-describedby="ph-help ph-err"'+(err?' aria-invalid="true"':'')+'>'+
+        '<input class="input" id="ph" name="ph" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="0888 12 34 56" value="'+esc(S.phone?pretty(S.phone):"")+'" aria-describedby="ph-help ph-err"'+(err?' aria-invalid="true"':'')+'>'+
         '<p class="help" id="ph-help">Пращаме SMS с 6 цифри. Без парола.</p>'+
         '<p class="err" id="ph-err"'+(err?'':' hidden')+'>'+(err||"")+'</p></div>'+
       '<div data-alert></div>'+
       '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("paper-plane-right",20)+'Изпрати код по SMS</button>'+
-      '<p class="fine">С входа приемате <a href="#" data-noop>Общите условия</a> и <a href="#" data-noop>Политиката за поверителност</a>.</p>'+
+      '<p class="fine">С входа приемате <a href="#" data-noop>Общите условия</a> и <a href="#" data-noop>Политиката за поверителност</a> <span class="missing">[ЛИПСВА: правни страници]</span>.</p>'+
     '</form>', focusPh ? "#ph" : null);
   var f = box.querySelector("form"), inp = f.querySelector("#ph"), er = f.querySelector("#ph-err");
   inp.addEventListener("input", function(){ if (inp.getAttribute("aria-invalid")){ var d = digits(inp.value); if (valid(d) || !d){ inp.removeAttribute("aria-invalid"); er.hidden = true; } } });
   inp.addEventListener("blur", function(){ var d = digits(inp.value); if (valid(d)) inp.value = pretty(d); });
   f.addEventListener("submit", function(e){ e.preventDefault(); var d = digits(inp.value); S.phone = d;
-    var msg = !d ? "Напишете номера си, например 0888 123 456." : !valid(d) ? "Номерът изглежда непълен. Трябват 10 цифри, например 0888 123 456." : "";
+    var msg = !d ? "Напишете номера си, например 0888 12 34 56." : !valid(d) ? "Номерът изглежда непълен. Трябват 10 цифри, започващи с 0, например 0888 12 34 56." : "";
     if (msg){ inp.setAttribute("aria-invalid","true"); er.textContent = msg; er.hidden = false; inp.focus(); return; }
     inp.value = pretty(d);
     var btn = f.querySelector("[type=submit]"); busy(btn, "Изпращаме кода...");
@@ -229,15 +235,14 @@ function viewBlocked(){
 /* ---------- step 2: SMS code ---------- */
 function viewCode(fresh){
   var known = get("sc-known") || {}; S.isNew = !known[S.phone];
-  show(stepper(2,"Код от SMS")+
-    '<button class="link backl" type="button" data-back>'+ic("arrow-left",20)+'Смени номера</button>'+
-    '<div style="display:grid;gap:6px"><h2 class="h3">Въведете кода</h2><p class="sub">Изпратихме 6 цифри на <b>'+pretty(S.phone)+'</b>.</p></div>'+
+  show(stepper(2,"Код от SMS", S.isNew ? 3 : 2)+
+    '<div style="display:grid;gap:6px"><h2 class="h3">Въведете кода</h2><p class="sub">Изпратихме 6 цифри на <b>'+pretty(S.phone)+'</b>. Грешен номер? Натиснете „Назад“.</p></div>'+
     '<form class="view" style="gap:16px;animation:none" data-f="code" novalidate>'+
       '<fieldset class="otp" aria-describedby="otp-err"><legend class="vh">Код от SMS, 6 цифри</legend><div class="boxes">'+
         [0,1,2,3,4,5].map(function(i){ return '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" '+(i===0?'autocomplete="one-time-code" ':'autocomplete="off" ')+'aria-label="Цифра '+(i+1)+' от 6" data-i="'+i+'">'; }).join("")+
       '</div></fieldset>'+
       '<p class="err" id="otp-err" role="alert" hidden></p>'+
-      '<button class="pill pill-red pill-lg pill-block" type="submit" disabled>'+ic("check",20)+'Потвърди кода</button>'+
+      '<div class="acts2"><button class="pill pill-line pill-lg" type="button" data-back>'+ic("arrow-left",20)+'Назад</button><button class="pill pill-red pill-lg" type="submit" disabled>'+ic("check",20)+'Потвърди кода</button></div>'+
     '</form>'+
     '<div class="resend" data-resend></div>'+
     '<p class="hint">'+ic("info",20)+'<span>Кодът идва до минута. Ако не дойде, проверете дали номерът е верен.</span></p>', '.otp input');
@@ -298,6 +303,7 @@ function viewName(){
 
 /* ---------- done ---------- */
 function finish(){
+  S.finishing = true;
   var known = get("sc-known") || {}, prev = known[S.phone];
   var name = S.isNew ? S.name : (prev && prev.name) || "";
   var u = {phone:S.phone, name:name, isNew:S.isNew, since:new Date().toISOString().slice(0,10), consent:{marketing:S.isNew ? S.mkt : !!(prev && prev.marketing), birthday:false, bday:""}};
@@ -305,17 +311,18 @@ function finish(){
   if (S.isNew){
     show('<div class="view center" style="display:grid;gap:16px">'+
       '<span class="ok-ring'+(SC.reduce?'':' in')+'">'+ic("check",44)+'</span>'+
-      '<div style="display:grid;gap:6px"><h2 class="h3" style="font-size:26px">Профилът е готов, '+esc(name)+'</h2><p class="sub">Добре дошли в Siracusa. Ето подаръка ви:</p></div>'+
-      '<div class="ticket ember-card'+(SC.reduce?'':' in')+'"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>от следващата поръчка</b><span>Прилага се сам в количката.</span></span></div>'+
+      '<div style="display:grid;gap:6px"><h2 class="h3" style="font-size:26px">Профилът е готов</h2><p class="sub">Ето подаръка ви за добре дошли:</p></div>'+
+      '<div class="ticket ember-card'+(SC.reduce?'':' in')+'"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам в количката.</span></span></div>'+
       '<p class="sub" style="display:flex;gap:8px;align-items:center;justify-content:center">'+ic("fire",20)+'И 2 от 10 печата на картата ви.</p>'+
       '<a class="pill pill-red pill-lg pill-block" href="profile.html">'+ic("user",20)+'Към профила</a>'+
       '<a class="link" href="menu.html">Към менюто'+ic("caret-right",18)+'</a></div>');
   } else {
     show('<div class="view center" style="display:grid;gap:16px">'+
       '<span class="ok-ring'+(SC.reduce?'':' in')+'">'+ic("check",44)+'</span>'+
-      '<h2 class="h3" style="font-size:26px">Добре дошли отново'+(name?', '+esc(name):'')+'</h2><p class="sub">Влязохте с <b>'+pretty(S.phone)+'</b>.</p>'+
+      '<h2 class="h3" style="font-size:26px">Влязохте успешно</h2><p class="sub">С номер <b>'+pretty(S.phone)+'</b>.</p>'+
       '<a class="pill pill-red pill-lg pill-block" href="profile.html">'+ic("user",20)+'Към профила</a></div>');
   }
+  hero(true, name, S.isNew); S.finishing = false;
   var a = box.querySelector("a.pill"); if (a) setTimeout(function(){ a.focus({preventScroll:true}); }, 60);
 }
 

@@ -27,11 +27,9 @@
 .ticket .core{position:relative}
 .tk-band{position:relative; display:block; height:34px; background:var(--ember); color:var(--on-ember)}
 .tk-band > svg{display:block; width:100%; height:100%}
-.tk-band .lbl{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 12px 0 9px; border-radius:var(--r-pill); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 0 0 3px var(--ember); font-size:14px; font-weight:800; white-space:nowrap; letter-spacing:-.01em}
-.tk-band .lbl .ic{color:var(--ember)}
 .tk-main{display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center; padding:18px 18px 12px}
 .cal{width:104px; border-radius:20px; overflow:hidden; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line); transform-origin:50% 0; animation:calIn 900ms var(--ease) 150ms both}
-.cal .m{display:block; padding:7px 0 6px; background:var(--ink); color:var(--bg); font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; line-height:1.2}
+.cal .m{display:block; padding:6px 0 5px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; line-height:1.2}
 .cal .d{display:block; padding:10px 0 0; font-size:54px; font-weight:800; letter-spacing:-.06em; line-height:1; font-variant-numeric:tabular-nums}
 .cal .w{display:block; padding:4px 0 12px; font-size:14px; font-weight:700; color:var(--muted)}
 @keyframes calIn{from{transform:perspective(500px) rotateX(-75deg); opacity:0} to{transform:none; opacity:1}}
@@ -97,7 +95,6 @@
 .rule + .rule{border-top:1px solid var(--line)}
 .rule .ri{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
 .rule .ri.ok{color:var(--ok)}
-.rule .ri.em{background:var(--ember); color:var(--on-ember)}
 .rule h3{margin:0; font-size:17px; line-height:1.3; letter-spacing:-.01em}
 .rule p{margin:4px 0 0; color:var(--muted); line-height:1.45}
 .ev-call{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding:6px 6px 6px 20px; border-radius:var(--r-pill); background:var(--surface-2)}
@@ -106,9 +103,9 @@
 /* ---------- next evening ---------- */
 .nx{display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; padding:18px}
 .nx .cal{width:80px; animation:none; border-radius:18px}
-.nx .cal .m{font-size:12px; padding:5px 0 4px}
+.nx .cal .m{font-size:14px; padding:4px 0 3px}
 .nx .cal .d{font-size:36px; padding-top:6px}
-.nx .cal .w{font-size:13px; padding-bottom:8px}
+.nx .cal .w{font-size:14px; padding-bottom:8px}
 .nx b{display:block; font-size:18px; line-height:1.3; letter-spacing:-.01em}
 .nx .missing{display:block; margin-top:4px}
 .nx-go{grid-column:1 / -1}
@@ -124,7 +121,7 @@
 .ev-up h2{margin-bottom:12px}
 .ev-upcard{display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; padding:16px; text-decoration:none; color:inherit}
 .ev-upcard .cal{width:76px; animation:none; border-radius:18px}
-.ev-upcard .cal .m{font-size:12px; padding:5px 0 4px} .ev-upcard .cal .d{font-size:36px; padding-top:6px} .ev-upcard .cal .w{font-size:13px; padding-bottom:8px}
+.ev-upcard .cal .m{font-size:14px; padding:4px 0 3px} .ev-upcard .cal .d{font-size:36px; padding-top:6px} .ev-upcard .cal .w{font-size:14px; padding-bottom:8px}
 .ev-upcard b{display:block; font-size:18px; line-height:1.3}
 .ev-upcard .go2{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red)}
 .sk-line{height:18px; border-radius:9px}
@@ -139,13 +136,11 @@
 .sh-list .pill{justify-content:flex-start; padding:0 20px}
 .sh-fine{margin:16px 0 4px; font-size:14px; color:var(--muted)}
 
-/* ---------- prototype-only state switcher (outside the device frame) ---------- */
-.ev-pv{position:fixed; left:16px; bottom:16px; z-index:1000; display:none; flex-direction:column; gap:2px; width:236px; padding:10px; border-radius:24px; background:var(--glass); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:14px}
-.ev-pv b{padding:4px 10px 6px; font-size:13px; color:var(--muted); letter-spacing:.02em}
-.ev-pv a{min-height:36px; padding:0 12px; border-radius:999px; display:flex; align-items:center; font-weight:700; text-decoration:none}
-.ev-pv a[aria-current="true"]{background:var(--ink); color:var(--bg)}
-html.pv-phone .ev-pv{display:flex}
-@media (max-width:1000px){ html.pv-phone .ev-pv{display:none} }
+/* ---------- prototype-only state switcher (bottom of the page, BRIEF 8) ---------- */
+.proto{display:grid; gap:12px; padding:16px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.proto .pchips{display:flex; flex-wrap:wrap; gap:8px}
+.proto .chip{text-decoration:none}
 
 /* ---------- desktop ---------- */
 @container app (min-width:700px){
@@ -166,7 +161,7 @@ html.pv-phone .ev-pv{display:flex}
   .tk-perf::before{left:28px; right:28px}
   .facts{padding:6px 24px}
   .ev-cols{grid-template-columns:1fr 1fr; gap:64px}
-  .rules{display:grid; grid-template-columns:repeat(4,1fr); padding:8px}
+  .rules{display:grid; grid-template-columns:repeat(3,1fr); padding:8px}
   .rule{grid-template-columns:1fr; gap:14px; padding:20px 18px}
   .rule + .rule{border-top:0; box-shadow:-1px 0 0 var(--line)}
   .ev-call{width:fit-content; gap:28px; padding-left:24px}
@@ -201,7 +196,7 @@ function ymd(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(
 function toMin(t){ var a = String(t||"19:00").split(":"); return (+a[0])*60 + (+a[1]||0); }
 function lastSat(y, m){ var d = new Date(y, m+1, 0); while (d.getDay() !== 6) d.setDate(d.getDate()-1); return d; }
 function nextLastSat(d){ var m = d.getMonth() + 1, y = d.getFullYear(); if (m > 11){ m = 0; y++; } return lastSat(y, m); }
-function longDate(d){ return SC.DAYS[d.getDay()] + ", " + d.getDate() + " " + SC.MONTHS[d.getMonth()]; }
+function longDate(d){ return WD[d.getDay()] + ", " + d.getDate() + " " + SC.MONTHS[d.getMonth()]; } /* site-wide format (BRIEF 8): "сб, 28 ноември" */
 function shortDate(d){ return WD[d.getDay()] + ", " + d.getDate() + " " + SC.MON[d.getMonth()]; }
 /* Sofia offset for JSON-LD: EEST from the last Sunday of March to the last Sunday of October */
 function sofiaOffset(d){ var y = d.getFullYear();
@@ -236,7 +231,7 @@ function cta(e){
   if (e.offline || e.phase === "live") return {t:"Обади се за място", bar:"Обади се · " + R.phone, href:TEL, ic:"phone"};
   if (e.full) return {t:"Запиши ме в чакащите", bar:"Запиши ме в списъка на чакащите", href:res, ic:"list-checks"};
   if (e.phase === "today") return {t:"Запази място за днес", bar:"Запази място за днес · " + e.time, href:res, ic:"arrow-right"};
-  return {t:"Запази място", bar:"Запази място · " + shortDate(e.date), href:res, ic:"arrow-right"}; }
+  return {t:"Запази място", bar:"Запази място · " + longDate(e.date), href:res, ic:"arrow-right"}; }
 
 /* ---- pieces ---- */
 function meander(id, h){ /* Greek key band, drawn in currentColor; numeric h = one row centred in the band */
@@ -259,13 +254,12 @@ function priceHTML(e){ if (e.free) return "Вход свободен"; if (e.pri
 function slot(icon, label, cls){ return '<div class="slot '+(cls||"")+'" role="img" aria-label="Място за снимка: '+esc(label)+'"><span class="bg">'+ic(icon,160)+'</span><span class="si">'+ic(icon,24)+'</span><span class="sl"><span class="missing">['+esc(label)+']</span></span></div>'; }
 
 function ticketHTML(e){ var c = cta(e);
-  var offer = (e.phase === "soon" && !e.full) ? '<span class="lbl">'+ic("seal-percent",18)+'-5% при ранна резервация</span>' : "";
   var note = e.offline ? '<div class="ev-note" role="status">'+ic("warning-circle",20)+'<span>Няма връзка с интернет. Обадете ни се на <b>'+R.phone+'</b> и ще ви запазим място.</span></div>'
     : e.phase === "live" ? '<div class="ev-note">'+ic("info",20)+'<span>Вечерта тече. Обадете се и ще ви кажем дали има свободна маса.</span></div>'
     : e.full ? '<div class="ev-note">'+ic("info",20)+'<span>Всички места са заети. Запишете се и ще ви се обадим, ако се освободи маса.</span></div>' : "";
   var cal2 = (e.phase === "over" || e.phase === "live" || e.offline) ? "" : '<button class="pill pill-line pill-block" type="button" data-cal>'+ic("calendar-check",20)+'Добави в календара</button>';
   return '<div class="shell ticket"><div class="core">'+
-    '<span class="tk-band">'+meander("mk-band", 34)+offer+'</span>'+
+    '<span class="tk-band">'+meander("mk-band", 34)+'</span>'+
     '<div class="tk-main">'+cal(e.date)+whenHTML(e)+'</div>'+
     '<div class="tk-perf" aria-hidden="true"><i></i><i></i></div>'+
     '<div class="tk-stub">'+
@@ -302,21 +296,20 @@ function photosHTML(){
 function rulesHTML(e){ var R2 = [
     ["check-circle","ok","Без депозит","Запазването на място е безплатно. Потвърждаваме по SMS или Viber."],
     ["bell","","Напомняме ви","Ден преди вечерта и 3 часа преди часа на резервацията."],
-    ["pencil-simple","","Промяна или отказ","До "+e.lockH+" часа преди часа на резервацията, от връзката в SMS-а. След това се обадете."],
-    ["seal-percent","em","-5% при ранна резервация",'<span class="missing">[ЛИПСВА: колко дни преди вечерта важи]</span>'] ];
+    ["pencil-simple","","Промяна или отказ","До "+e.lockH+" часа преди часа на резервацията, от връзката в SMS-а. След това се обадете."]];
   return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Добре е да знаете</h2></div><div class="shell"><div class="core rules">'+
     R2.map(function(r){ return '<div class="rule"><span class="ri '+r[1]+'">'+ic(r[0],22)+'</span><div><h3>'+r[2]+'</h3><p>'+r[3]+'</p></div></div>'; }).join("")+
     '</div></div><div class="ev-call"><span>Или по телефона</span><a class="pill pill-ink" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div></section>'; }
 
 function nextHTML(e){ var n = e.next;
   return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Следващата тематична вечер</h2></div><div class="shell"><div class="core nx">'+cal(n, true)+
-    '<div><b>'+longDate(n)[0].toUpperCase()+longDate(n).slice(1)+'</b><span class="missing">[ЛИПСВА: коя кухня]</span></div>'+
+    '<div><b>'+longDate(n)+'</b><span class="missing">[ЛИПСВА: коя кухня]</span></div>'+
     '<a class="pill pill-line nx-go" href="events.html">'+ic("calendar-dots",20)+'Всички събития</a></div></div></section>'; }
 
 /* ---- page states ---- */
 function upcomingCard(){ var ev = EVENTS[0]; if (!ev) return "";
   return '<div class="ev-up"><h2 class="h3">Предстои</h2><a class="card ev-upcard" href="event.html#'+ev.id+'">'+cal(ev.date, true)+
-    '<span><b>'+esc(ev.n)+'</b><span class="muted">'+longDate(ev.date)+', '+ev.time+'</span></span><span class="go2" aria-hidden="true">'+ic("arrow-right",22)+'</span></a></div>'; }
+    '<span><b>'+esc(ev.n)+'</b><span class="muted">'+longDate(ev.date)+' · '+ev.time+'</span></span><span class="go2" aria-hidden="true">'+ic("arrow-right",22)+'</span></a></div>'; }
 function invalidHTML(){
   return '<section class="sec ev-state"><div class="empty"><span class="ill">'+ic("calendar-blank",44)+'</span>'+
     '<h1 class="h2">Това събитие го няма в програмата</h1><p class="lead">Може вече да е минало или връзката да е непълна. Вижте какво предстои при нас.</p>'+
@@ -357,7 +350,7 @@ function openCalendar(e){
   var s = SC.sheet({title:"В календара", html:'<p class="sh-p">Изберете своя календар. Той ще ви напомни за вечерта.</p><div class="sh-list">'+
     '<a class="pill pill-line pill-lg pill-block" href="'+g+'" target="_blank" rel="noopener" data-calg>'+ic("calendar-check",22)+'Google Календар</a>'+
     '<button class="pill pill-line pill-lg pill-block" type="button" data-ics>'+ic("calendar-dots",22)+'Apple, Outlook и други</button></div>'+
-    '<p class="sh-fine">Записваме: '+longDate(e.date)+', '+e.time+' - '+R.close+', '+esc(R.name)+', Дружба 2.</p>'});
+    '<p class="sh-fine">Записваме: '+longDate(e.date)+' · '+e.time+' - '+R.close+', '+esc(R.name)+', Дружба 2.</p>'});
   s.el.querySelector("[data-calg]").addEventListener("click", function(){ setTimeout(s.close, 150); });
   s.el.querySelector("[data-ics]").addEventListener("click", function(){
     var ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Siracusa Bar & Grill//BG","CALSCALE:GREGORIAN","BEGIN:VEVENT",
@@ -373,7 +366,7 @@ function copyLink(url){ var ok = function(){ SC.toast("Връзката е ко�
   try{ navigator.clipboard.writeText(url).then(ok, ok); }catch(x){ ok(); } }
 function openShare(e){
   var url = location.href.split("#")[0] + "#" + e.id;
-  var text = e.n + " в Siracusa, " + longDate(e.date) + ", " + e.time;
+  var text = e.n + " в Siracusa, " + longDate(e.date) + " · " + e.time;
   var coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
   if (navigator.share && coarse){ navigator.share({title:e.n, text:text, url:url}).catch(function(){}); return; }
   var s = SC.sheet({title:"Сподели", html:'<p class="sh-p">Поканете приятели за '+esc(text)+'.</p><div class="sh-list">'+
@@ -392,13 +385,13 @@ function setBar(on){ abar.classList.toggle("off", !on); var fab = SC.device.quer
 function render(){
   var q = parse(), ev = find(q.id), ttl = document.querySelector(".top .ttl"), meta = document.querySelector('meta[name="description"]');
   if (io){ io.disconnect(); io = null; } setBar(false); cur = null;
-  if (!ev){ main.innerHTML = invalidHTML(); if (ttl) ttl.textContent = "Събитие"; document.title = "Събитието не е намерено | Siracusa Bar & Grill"; jsonLD(null); pvSync(q); SC.reveal(); return; }
+  if (!ev){ main.innerHTML = invalidHTML() + protoHTML(q); if (ttl) ttl.textContent = "Събитие"; document.title = "Събитието не е намерено | Siracusa Bar & Grill"; jsonLD(null); SC.reveal(); return; }
   if (ttl) ttl.textContent = ev.n;
-  if (q.st === "zarezhdane"){ main.innerHTML = loadingHTML(); pvSync(q); return; }
-  if (q.st === "greshka"){ main.innerHTML = errorHTML(ev.id); pvSync(q); return; }
+  if (q.st === "zarezhdane"){ main.innerHTML = loadingHTML() + protoHTML(q); return; }
+  if (q.st === "greshka"){ main.innerHTML = errorHTML(ev.id) + protoHTML(q); return; }
   var e = cur = model(ev, q.st), c = cta(e);
   document.title = e.n + " · " + longDate(e.date) + " | Siracusa Bar & Grill";
-  if (meta) meta.setAttribute("content", e.n + " в Siracusa Bar & Grill, Дружба 2: " + longDate(e.date) + " от " + e.time + ". " + e.text + " Запазете място онлайн или на " + R.phone + ".");
+  if (meta) meta.setAttribute("content", e.n + " в Siracusa Bar & Grill, Дружба 2: " + longDate(e.date) + " · " + e.time + ". " + e.text + " Запазете място онлайн или на " + R.phone + ".");
   jsonLD(e);
   main.innerHTML =
     '<section class="sec ev-hero">'+
@@ -409,25 +402,24 @@ function render(){
       '<div class="ev-facts">'+factsHTML(e)+'</div>'+
     '</section>'+
     '<section class="sec rv"><div class="ev-cols">'+programHTML(e)+menuHTML()+'</div></section>'+
-    photosHTML()+rulesHTML(e)+nextHTML(e);
+    photosHTML()+rulesHTML(e)+nextHTML(e)+protoHTML(q);
   abar.innerHTML = '<a class="pill pill-red" href="'+c.href+'">'+ic(c.ic === "arrow-right" ? (c.href.indexOf("reservation") === 0 ? "calendar-check" : "calendar-dots") : c.ic, 20)+esc(c.bar)+'</a>';
   var hc = main.querySelector("[data-hero-cta]");
   if ("IntersectionObserver" in window && hc){
     io = new IntersectionObserver(function(es){ var x = es[0]; setBar(!x.isIntersecting && x.boundingClientRect.top < (x.rootBounds ? x.rootBounds.top + 150 : 150)); }, {root:SC.scroller, rootMargin:"-150px 0px 0px 0px"});
     io.observe(hc); }
-  pvSync(q); SC.reveal(); }
+  SC.reveal(); }
 
 main.addEventListener("click", function(ev){ var t = ev.target.closest("button"); if (!t || !cur && !t.dataset.retry) return;
   if (t.hasAttribute("data-cal")) openCalendar(cur);
   else if (t.hasAttribute("data-evshare")) openShare(cur);
   else if (t.dataset.retry){ location.hash = t.dataset.retry; } });
 
-/* ---- prototype-only: list of page states beside the phone frame ---- */
-var pv = null;
-if (window.innerWidth > 700){ pv = document.createElement("nav"); pv.className = "ev-pv"; pv.setAttribute("aria-label", "Състояния на страницата (само за прототипа)"); document.body.appendChild(pv); }
-function pvSync(q){ if (!pv) return; var id = (EVENTS[0] && EVENTS[0].id) || "";
-  var list = DEMO.map(function(d){ return ['#' + id + (d[0] ? "/" + d[0] : ""), d[1], find(q.id) && q.st === d[0]]; }).concat([["#nyama-takova", "Невалидно събитие", !find(q.id)]]);
-  pv.innerHTML = '<b>Състояния на страницата</b>' + list.map(function(l){ return '<a href="'+l[0]+'"'+(l[2] ? ' aria-current="true"' : '')+'>'+l[1]+'</a>'; }).join(""); }
+/* ---- prototype-only: page states, last block of the page (BRIEF 8); simulated states are never on by default ---- */
+function protoHTML(q){ var id = (EVENTS[0] && EVENTS[0].id) || "", ok = !!find(q.id);
+  var list = DEMO.map(function(d){ return ['#' + id + (d[0] ? "/" + d[0] : ""), d[1], ok && q.st === d[0]]; }).concat([["#nyama-takova", "Невалидно събитие", !ok]]);
+  return '<section class="sec" aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>'+ic("eye",18)+'Само в прототипа: покажи състояние</p><div class="pchips">'+
+    list.map(function(l){ return '<a class="chip" href="'+l[0]+'"'+(l[2] ? ' aria-current="true"' : '')+'>'+l[1]+'</a>'; }).join("")+'</div></div></section>'; }
 
 window.addEventListener("hashchange", function(){ render(); SC.scroller.scrollTop = 0; });
 window.addEventListener("online", render); window.addEventListener("offline", render);
