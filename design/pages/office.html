@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Обедна поръчка за офиса | Siracusa Bar & Grill</title>
-<meta name="description" content="Групова обедна поръчка за офиса от Siracusa в Дружба 2: един отваря поръчката, праща връзката в чата и всеки си избира от обедното меню до крайния час. Плаща един или всеки сам.">
+<title>Обща поръчка за офиса | Siracusa Bar & Grill</title>
+<meta name="description" content="Обща поръчка за офиса от Siracusa в Дружба 2: един отваря поръчката, праща връзката в чата и всеки си избира от обедното меню до крайния час. Плаща един или всеки сам.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
 <link rel="stylesheet" href="../ds/sc.css">
@@ -162,7 +162,7 @@
 .o-preview .o-bubble{margin-bottom:14px}
 
 /* ---------- share ---------- */
-.o-done-ic{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:#fff; margin-bottom:18px}
+.o-done-ic{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); margin-bottom:18px}
 .o-linkwrap{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:20px}
 .o-link{display:flex; align-items:center; gap:10px; min-height:56px; padding:12px 18px; border-radius:20px; background:var(--surface-2); font-weight:700; font-size:16px}
 .o-link .ic{color:var(--muted)}
@@ -192,7 +192,7 @@
 .o-person{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:14px; align-items:start; padding:16px 0}
 .o-person + .o-person{border-top:1px solid var(--line)}
 .o-person .nm{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800; font-size:17px; line-height:1.3; min-height:24px}
-.o-tag{font-size:13px; font-weight:700; line-height:1; padding:5px 9px; border-radius:999px; background:var(--surface-2); color:var(--muted)}
+.o-tag{font-size:14px; font-weight:700; line-height:1; padding:5px 9px; border-radius:999px; background:var(--surface-2); color:var(--muted)}
 .o-person ul{list-style:none; margin:6px 0 0; padding:0; display:grid; gap:4px}
 .o-person li{display:flex; gap:8px; font-size:15px; line-height:1.35; color:var(--muted); font-weight:600}
 .o-person li .q{color:var(--ink); font-weight:800; font-variant-numeric:tabular-nums; flex:none}
@@ -241,7 +241,7 @@
 /* ---------- states ---------- */
 .o-state{display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; text-align:center; gap:10px; padding:36px 20px 30px}
 .o-state .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); margin-bottom:6px}
-.o-state .ill.ok{background:var(--ok); color:#fff}
+.o-state .ill.ok{background:var(--ok); color:var(--on-ok)}
 .o-state .ill.warn{color:var(--warn)}
 .o-state p{margin:0; max-width:36ch}
 .o-state .o-actions{width:100%; max-width:360px; margin-top:10px}
@@ -287,7 +287,7 @@
 <script>
 (function(){
 "use strict";
-var main = SC.mount({page:"office", nav:null, title:"Обедна поръчка за офиса"});
+var main = SC.mount({page:"office", nav:null, title:"Обща поръчка за офиса"});
 var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
 var R = SC.RESTAURANT;
 var SITE = "siracusa-sofia.com/office#join-";
@@ -310,6 +310,7 @@ var TEAM = [
 ].map(function(t){ var p = {}; Object.keys(t.picks).forEach(function(k){ if (SC.byId[k]) p[k] = t.picks[k]; }); t.picks = p; return t; });
 var DEMO_ORG = "Мария";  /* organiser name in the colleague view when nobody created an order in this browser */
 var DEMO_CODE = "7K3M";
+var ORDER_NO = 1043;  /* mock order number for the prototype (format "№ 1043", same as cart № 1042) */
 
 /* ---------- state (per-viewer convenience; the real order lives on the server) ---------- */
 var KEY = "sc-office";
@@ -349,7 +350,9 @@ function zoneOf(a){ var s = (a||"").toLowerCase().replace(/\s+/g," ").trim();
   if (/младост|люлин|център|лозенец|надежда|овча|студентски|мусагеница|дървеница|слатина|изток|красно|гео милев|изгрев|банишора|витоша|бояна|обеля|сухата|кремиковци|подуяне|сердика|хаджи|редута|яворов|борово|стрелбище|гоце|овча купел|красна|манастирски|павлово|кръстова|лагера|хиподрума|княжево|симеоново|драгалевци|бенковски|орландовци|илиянци|враждебна/.test(s)) return {out:true};
   if (s.length >= 8) return {unknown:true};
   return null; }
-function etaMin(z){ if (G.mode === "pickup") return 0; var e = z && z.eta ? parseInt(z.eta.replace(/\D/g,""),10) : 0; return e || 35; }
+function etaMin(z, day){ if (G.mode === "pickup") return 0; var e = z && z.eta ? parseInt(z.eta.replace(/\D/g,""),10) : 0; e = e || 35;
+  if (day === "today" && SC.eta().busy) e += 20;  /* same rule as cart.html: busy kitchen adds 20 min */
+  return e; }
 
 /* Deadline slots: every 30 min from 10:30 to 14:00 (lunch is delivered until 15:00). Default 11:30. */
 function plan(){ var m = SC.minutes(), first = Math.ceil(Math.max(m+30, 630)/30)*30, tom = first > 840, slots = [];
@@ -365,7 +368,7 @@ function ctx(){ var p = plan();
   var remain = day === "today" ? dl*60 - secNow : (1440*60 - secNow) + dl*60;
   var zr = zoneOf(G.addr), z = zr && zr.z;
   var late = day === "today" && nowM >= 900;
-  return {day:day, dl:dl, remain:remain, closed:sim.closed || remain <= 0, late:late, z:z, eta:dl + etaMin(z),
+  return {day:day, dl:dl, remain:remain, closed:sim.closed || remain <= 0, late:late, z:z, eta:dl + etaMin(z, day),
     dayWord: day === "today" ? "днес" : "утре", dayFull: day === "today" ? dateLabel(new Date()) : dateLabel(tomorrowDate())}; }
 function left(sec){ sec = Math.max(0, sec); var h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
   if (h >= 1) return h + '<small> ч </small>' + pad(m) + '<small> мин</small>';
@@ -389,7 +392,7 @@ function scrollToEl(el){ if (!el) return; var s = SC.scroller; var y = el.getBou
 
 /* ---------- small templates ---------- */
 function stepper(n){ var names = ["Създайте", "Споделете", "Изпратете"];
-  return '<div class="o-step"><div class="o-step-top"><span>Стъпка '+n+' от 3</span></div><div class="stepper" style="--n:3"><div class="bar">'+
+  return '<div class="o-step"><div class="stepper" style="--n:3"><div class="t"><b>Стъпка '+n+' от 3</b><span>'+(n < 3 ? "Следва: "+names[n] : "Последна стъпка")+'</span></div><div class="bar">'+
     names.map(function(_, i){ return '<span'+(i < n ? ' class="on"' : '')+'></span>'; }).join("")+'</div></div>'+
     '<ol class="o-step-l">'+names.map(function(t, i){ var st = i+1 < n ? "done" : i+1 === n ? "cur" : "";
       return '<li class="'+st+'"'+(st==="cur"?' aria-current="step"':'')+'>'+(st==="done" ? ic("check",16)+'<span class="vh">Готово: </span>' : '')+t+'</li>'; }).join("")+'</ol></div>'; }
@@ -412,16 +415,16 @@ function viewStart(){ var p = syncPlan(), c = ctx(); save();
   var demoTotal = TEAM.reduce(function(s,t){ return s + sum(t.picks); }, 0), demoCount = TEAM.reduce(function(s,t){ return s + cnt(t.picks); }, 0);
 
   var hero = '<section class="sec o-hero"><div class="o-hero-grid"><div>'+
-    '<span class="o-eyebrow">'+ic("briefcase",18)+'За офиса · обедно меню</span>'+
-    '<h1 class="h1">Обяд за целия офис с една поръчка</h1>'+
+    '<span class="o-eyebrow">'+ic("briefcase",18)+'Обяд за целия офис с една поръчка</span>'+
+    '<h1 class="h1">Обща поръчка за офиса</h1>'+
     '<p class="lead">Отворете поръчка, пратете връзката в чата на офиса и всеки си избира от обедното меню до крайния час. Носим всичко заедно.</p>'+
     '<ul class="o-facts">'+
       '<li><span class="o-fi">'+ic("timer",22)+'</span><span>Колегите избират до 11:30 или до часа, който определите</span></li>'+
       '<li><span class="o-fi">'+ic("truck",22)+'</span><span>Безплатна доставка до Дружба 1 и 2, НПЗ Искър и Бусманци</span></li>'+
       '<li><span class="o-fi">'+ic("wallet",22)+'</span><span>Плаща един за всички или всеки своето</span></li>'+
     '</ul>'+
-    '<div class="o-cta"><button class="pill pill-red go" type="button" data-act="toform">Започни групова поръчка<span class="knob">'+ic("arrow-right",22)+'</span></button>'+
-    '<a class="link" href="lunch.html">Виж днешното обедно меню'+ic("caret-right",18)+'</a></div></div>'+
+    '<div class="o-cta"><button class="pill pill-red go" type="button" data-act="toform">Започни обща поръчка<span class="knob">'+ic("arrow-right",22)+'</span></button>'+
+    '<a class="link" href="lunch.html">'+(SC.lunchIsToday() ? "Виж днешното обедно меню" : "Виж обедното меню")+ic("caret-right",18)+'</a></div></div>'+
     '<figure class="o-demo shell" style="margin:0" role="img" aria-label="Пример: връзката е в чата на офиса и колегите добавят ястия в общата поръчка"><div class="core" aria-hidden="true">'+
       '<div class="o-demo-h"><span><b>Обяд в офиса</b><span class="small">Чатът на офиса</span></span><span class="o-avas"><span class="o-ava me">М</span><span class="o-ava a1">И</span><span class="o-ava a2">П</span><span class="o-ava a3">Г</span></span></div>'+
       '<div class="o-bubble"><span class="who">Мария</span>Поръчваме обяд от Siracusa. Изберете си до 11:30.<br><span class="o-linkchip">'+ic("arrow-up-right",16)+'<span>'+SITE+DEMO_CODE+'</span></span></div>'+
@@ -469,8 +472,8 @@ function viewStart(){ var p = syncPlan(), c = ctx(); save();
       faq("До колко часа може да е крайният час?", "До 14:00. Обедното меню се доставя до 15:00, а след крайния час ние приготвяме и тръгваме към вас.")+
       faq("Как плащаме?", "В брой или с карта при получаване, без онлайн плащане. Може да плати един за всички или всеки своето.")+
       faq("Какво става, ако някой закъснее?", "След крайния час списъкът се затваря. Организаторът може да изпрати поръчката и по-рано.")+
-      faq("Има ли минимална поръчка?", '<span class="missing">[ЛИПСВА: минимална поръчка за групова доставка]</span>')+
-      faq("Може ли фактура на фирмата?", '<span class="missing">[ЛИПСВА: фактура при групова поръчка]</span>')+
+      faq("Има ли минимална поръчка?", '<span class="missing">[ЛИПСВА: минимална поръчка за обща доставка]</span>')+
+      faq("Може ли фактура на фирмата?", '<span class="missing">[ЛИПСВА: фактура при обща поръчка]</span>')+
     '</div></div></div></section>';
 
   return hero + how + form + sub; }
@@ -557,8 +560,8 @@ function viewList(){ var c = ctx();
 
   var canSend = T > 0 && !c.late;
   var sendLbl = canSend ? (c.day === "tomorrow" ? "Изпрати за утре · " : "Изпрати на ресторанта · ")+fmt(T) : "Добавете поне едно ястие";
-  var payFields = '<div class="shell"><div class="core o-card" style="display:grid;gap:18px"><h2 class="o-h3">За куриера</h2>'+
-    '<div class="field"><label for="o-phone">Вашият телефон</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="08X XXX XXXX" value="'+esc(G.phone)+'" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h">Обаждаме се само ако има въпрос по поръчката.</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>'+
+  var payFields = '<div class="shell"><div class="core o-card" style="display:grid;gap:18px"><h2 class="o-h3">За шофьора</h2>'+
+    '<div class="field"><label for="o-phone">Вашият телефон</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="'+esc(G.phone)+'" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h">Обаждаме се само ако има въпрос по поръчката.</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>'+
     (G.pays === "one" ? '<div class="field"><span class="label" id="o-pay-l">Как плащате</span><div class="seg" role="group" aria-labelledby="o-pay-l"><button type="button" data-pay="cash" aria-pressed="'+(G.pay==="cash")+'">'+ic("money",20)+'В брой</button><button type="button" data-pay="card" aria-pressed="'+(G.pay==="card")+'">'+ic("credit-card",20)+'С карта</button></div><span class="help">При получаване. Без онлайн плащане.</span></div>' : '')+
     '<div data-senderr></div>'+
     '<button class="pill pill-red pill-lg pill-block o-onlydesk o-sendinline" type="button" data-act="send"'+(canSend ? '' : ' disabled')+'>'+sendLbl+'</button>'+
@@ -582,8 +585,8 @@ function viewList(){ var c = ctx();
   return html; }
 
 function pickerHTML(picks, guestView){
-  return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2><p class="muted" style="margin:-6px 0 0;font-weight:600">'+esc(SC.menu.lunch.dayName)+', '+dateLabel(new Date(SC.menu.lunch.date+"T12:00:00")).split(", ")[1]+'</p>'+
-    (ctx().day === "tomorrow" ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] В прототипа показваме днешното.</p>' : '')+
+  return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2>'<p class="muted" style="margin:-6px 0 0;font-weight:600">'+(SC.lunchIsToday() ? esc(SC.menu.lunch.dayName)+', '+dateLabel(new Date(SC.menu.lunch.date+"T12:00:00")).split(", ")[1] : "Обедното меню се качва всяка сутрин.")+'</p>'+
+    (ctx().day === "tomorrow" ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] В прототипа показваме последното качено.</p>' : '')+
     '<div class="chips" role="list">'+GROUPS.map(function(g){ return '<button class="chip" type="button" role="listitem" data-jump="'+g.id+'">'+esc(g.n)+'<span class="n">'+g.items.length+'</span></button>'; }).join("")+'</div></div>'+
     GROUPS.map(function(g){ return '<div class="o-grp" id="'+g.id+'"><h3 class="h3">'+esc(g.n)+'</h3><div class="o-items">'+g.items.map(function(x){ return itemHTML(x, picks[x.id]||0); }).join("")+'</div></div>'; }).join("")+'</section>'; }
 function itemHTML(x, q){ var out = SC.isOut(x);
@@ -607,7 +610,7 @@ function saveDis(p){ return sum(p) ? '' : ' aria-disabled="true"'; }
 function viewJoin(rt){ var c = ctx(); var valid = !rt.code || rt.code === DEMO_CODE || rt.code === G.code;
   var org = G.name.trim() || DEMO_ORG;
   if (!valid) return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">'+ic("warning-circle",40)+'</div><h1 class="h2">Тази връзка не работи</h1><p class="muted">Може поръчката вече да е изпратена или връзката да е непълна. Помолете колегата за нова връзка или поръчайте сами.</p>'+
-    '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="lunch.html">Към обедното меню</a><a class="pill pill-line pill-block" href="#">Отворете своя групова поръчка</a></div></div></div></section>';
+    '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="lunch.html">Към обедното меню</a><a class="pill pill-line pill-block" href="#">Започни обща поръчка</a></div></div></div></section>';
   if (sim.loading) return '<section class="sec o-top" aria-busy="true"><div class="o-lay"><div class="o-col"><div class="skel" style="height:190px;border-radius:28px"></div><div class="skel" style="height:52px;width:60%"></div>'+[0,1,2,3].map(function(){ return '<div class="row" style="gap:14px"><div class="skel" style="width:64px;height:64px;border-radius:18px;flex:none"></div><div style="flex:1;display:grid;gap:8px"><div class="skel" style="height:18px"></div><div class="skel" style="height:18px;width:40%"></div></div></div>'; }).join("")+'</div><div class="o-col o-onlydesk"><div class="skel" style="height:260px;border-radius:28px"></div></div></div><span class="vh" role="status">Зареждаме поръчката</span></section>';
   if (c.closed || c.late) return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill">'+ic("clock",40)+'</div><h1 class="h2">Изборът приключи в '+clock(c.dl)+'</h1><p class="muted">'+esc(org)+' вече изпраща поръчката на ресторанта. Ако не сте успели, обадете се на '+esc(org)+' или поръчайте сами.</p>'+
     '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="lunch.html">Поръчай си сам</a><a class="pill pill-line pill-block" href="tel:+359894365577">'+ic("phone",20)+'Обади се на ресторанта</a></div></div></div></section>';
@@ -646,12 +649,12 @@ function viewSent(){ var c = ctx(); var T = total(), list = eaters();
   return '<section class="sec o-top"><div class="shell" style="max-width:620px;margin:0 auto"><div class="core o-state">'+
     '<div class="ill ok">'+ic("check",44)+'</div><h1 class="h2">Поръчката е изпратена</h1>'+
     '<p class="muted">Ресторантът я получи. Ще ви известим, когато тръгне към вас.</p>'+
-    '<div class="o-sentmeta"><div><span>Поръчка</span><b>№128</b></div><div><span>'+(G.mode==="pickup"?"Готова":"Пристига около")+'</span><b>'+(c.day==="tomorrow"?"утре ":"")+clock(c.eta)+'</b></div><div><span>Ястия</span><b>'+totalCount()+' за '+souls(list.length)+'</b></div><div><span>Общо</span><b class="price">'+fmt(T)+'</b></div></div>'+
+    '<div class="o-sentmeta"><div><span>Поръчка</span><b>№ '+ORDER_NO+'</b></div><div><span>'+(G.mode==="pickup"?"Готова":"Пристига около")+'</span><b>'+(c.day==="tomorrow"?"утре ":"")+clock(c.eta)+'</b></div><div><span>Ястия</span><b>'+totalCount()+' за '+souls(list.length)+'</b></div><div><span>Общо</span><b class="price">'+fmt(T)+'</b></div></div>'+
     (G.pays === "one" && others.length ? '<div style="width:100%;max-width:420px;text-align:left"><h2 class="o-h3" style="font-size:17px;margin:12px 0 2px">Колегите ви дължат</h2><div class="o-owe">'+others.map(function(p){ return '<div class="kv"><span>'+esc(p.n)+'</span><span class="price">'+fmt(sum(p.picks))+'</span></div>'; }).join("")+'</div></div>' : '')+
-    '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="tracking.html">Следи поръчката'+ic("arrow-right",20)+'</a>'+
+    '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="tracking.html#'+ORDER_NO+'">Следи поръчката'+ic("arrow-right",20)+'</a>'+
     '<button class="pill pill-line pill-block" type="button" data-act="copydone">'+ic("copy",20)+'Копирай съобщение за чата</button></div>'+
-    '<label class="check" style="text-align:left;max-width:420px;margin-top:6px"><input type="checkbox" id="o-news"><span><b>Искам да науча първа/първи за абонамента за офиси</b><br><span class="muted small">Обяд всеки ден в избран час. Пишем ви само за това.</span></span></label>'+
-    '<a class="link" href="#" data-act="restart">Нова групова поръчка</a>'+
+    '<label class="check" style="text-align:left;max-width:420px;margin-top:6px"><input type="checkbox" id="o-news"><span><b>Пишете ми, когато има абонамент за офиси</b><br><span class="muted small">Обяд всеки ден в избран час. Пишем ви само за това.</span></span></label>'+
+    '<a class="link" href="#" data-act="restart">Започни нова обща поръчка</a>'+
   '</div></div></section>'; }
 
 function protoPanel(rt){ var v = rt.v;
@@ -757,16 +760,25 @@ function onClick(e){ var t = e.target.closest("button, a"); if (!t) return;
 main.addEventListener("click", onClick);
 SC.ov.addEventListener("click", function(e){ if (e.target.closest(".o-bar")) onClick(e); });
 
-function send(btn){ var ok = /^(\+359|0)8[789]\d{7}$/.test(G.phone.replace(/[\s-]/g,""));
+function send(btn){ var ok = /^(\+359\d{9}|0\d{9})$/.test(G.phone.replace(/[\s-]/g,""));
   var errBox = main.querySelector("[data-senderr]"); if (errBox) errBox.innerHTML = "";
-  if (!ok){ setErr("phone", G.phone.trim() ? "Проверете номера: например 0888 123 456." : "Напишете телефон, за да ви се обадим, ако има въпрос."); var p = document.getElementById("o-phone"); scrollToEl(p); setTimeout(function(){ p.focus({preventScroll:true}); }, SC.reduce ? 0 : 350); return; }
+  if (!ok){ setErr("phone", G.phone.trim() ? "Проверете номера: 10 цифри, например 0888 12 34 56." : "Напишете телефон, за да ви се обадим, ако има въпрос."); var p = document.getElementById("o-phone"); scrollToEl(p); setTimeout(function(){ p.focus({preventScroll:true}); }, SC.reduce ? 0 : 350); return; }
   var btns = document.querySelectorAll('[data-act="send"]'), label = btn.innerHTML;
   btns.forEach(function(b){ b.setAttribute("data-busy",""); b.innerHTML = label + '<span class="o-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh" role="status">Изпращаме</span>'; });
   setTimeout(function(){
     if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("data-busy"); b.innerHTML = label; });
       var box = main.querySelector("[data-senderr]"); if (box) box.innerHTML = '<div class="o-note bad" role="alert">'+ic("warning-circle",22)+'<div><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button></div></div>';
       SC.toast("Няма връзка. Опитайте пак."); scrollToEl(box); return; }
-    G.sentAt = Date.now(); save(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }
+    G.sentAt = Date.now(); save(); handoff(); location.hash = "sent"; }
+/* hand-off to tracking.html: same sc-order shape as cart.html */
+function handoff(){ var c = ctx(), m = SC.minutes(), lines = {}, payName = G.pays === "each" ? "Всеки плаща своето" : (G.pay === "card" ? "Карта при получаване" : "В брой");
+  eaters().forEach(function(p){ Object.keys(p.picks).forEach(function(k){ lines[k] = (lines[k]||0) + p.picks[k]; }); });
+  var etaMins = c.day === "today" ? Math.max(0, c.eta - m) : (1440 - m) + c.eta;
+  SC.store("sc-order", {no:String(ORDER_NO), mode:G.mode === "pickup" ? "pickup" : "delivery",
+    lines:Object.keys(lines).map(function(k){ return {id:k, q:lines[k], mods:[], extra:0}; }),
+    lunchOnly:true, zone:G.mode === "pickup" ? "" : (c.z ? c.z.n : ""), pay:G.pays === "each" ? "split" : G.pay, payLabel:payName, total:total(),
+    eta:etaMins, at:clock(c.eta), sched:c.day === "tomorrow" ? "утре "+clock(c.eta) : "", placedAt:clock(m),
+    ts:(function(){ var d = new Date(); d.setHours(Math.floor(m/60), m%60, 0, 0); return d.getTime(); })(), group:true}); }, SC.reduce ? 200 : 1100); }
 
 window.addEventListener("hashchange", function(){ render(); });
 render();
