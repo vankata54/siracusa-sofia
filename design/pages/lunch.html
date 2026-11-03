@@ -292,7 +292,7 @@ function offlineNote(){ return '<div class="lnote warn" role="status" style="mar
 function weekHTML(){ var dow = (dd.getDay() + 6) % 7, mon = new Date(dd); mon.setDate(dd.getDate() - dow);
   var ABBR = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"], FULL = ["понеделник","вторник","сряда","четвъртък","петък","събота","неделя"];
   return '<div class="week" role="list">'+ABBR.map(function(a, i){ var d = new Date(mon); d.setDate(mon.getDate() + i); var me = i === dow, past = i < dow;
-    var body = me ? '<span class="tag">'+(isToday ? "Днес" : "Последно качено")+'</span><span class="cnt2">'+SC.plural(SC.lunch.length, "ястие", "ястия")+'</span><span class="from">от '+SC.fmt(minP)+'</span>'
+    var body = me ? '<span class="tag">'+(isToday ? "Днес" : "Качено")+'</span><span class="cnt2">'+SC.plural(SC.lunch.length, "ястие", "ястия")+'</span><span class="from">от '+SC.fmt(minP)+'</span>'
       : '<span class="missing">[ЛИПСВА: меню за '+FULL[i]+']</span>'+SC.ic("calendar-dots",22);
     return '<div class="day'+(me ? (isToday ? " is-today" : " has-menu") : " empty-day")+(past && isToday ? " past" : "")+'" role="listitem" aria-label="'+FULL[i]+', '+d.getDate()+' '+SC.MONTHS[d.getMonth()]+'"><span class="dn"><b>'+a+'</b><span>'+d.getDate()+'.'+pad(d.getMonth() + 1)+'</span></span>'+body+'</div>'; }).join("")+'</div>'; }
 

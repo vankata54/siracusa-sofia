@@ -256,8 +256,10 @@ if (tok.delivered || tok.done) S.k = isD() ? stages().length-1 : stages().length
 if (tok.way && isD()) S.k = stages().length-2;
 /* a real order from cart.html: start (ts, real clock) and promised minutes (eta) drive every time on the page,
    so it matches the cart's success screen. The sample № 1042 is used only without sc-order. */
-function isReal(){ return !!(saved && saved.ts && typeof saved.eta==="number" && !S.sampleSwap && (!hashNo || hashNo===String(saved.no))); }
-function elapsed(){ return Math.max(0, (Date.now() - saved.ts)/60000); }
+function isReal(){ return !!(saved && (saved.ts || saved.placedAt) && typeof saved.eta==="number" && !S.sampleSwap && (!hashNo || hashNo===String(saved.no))); }
+/* placedAt ("21:30") is on the same clock as the rest of the prototype (the preview bar can fix the hour); ts is the fallback */
+function elapsed(){ if (saved.placedAt && /^\d{1,2}:\d{2}$/.test(saved.placedAt)){ var t = saved.placedAt.split(":"), d = SC.minutes() - (+t[0]*60 + +t[1]); if (d < -720) d += 1440; return Math.max(0, d); }
+  return Math.max(0, (Date.now() - saved.ts)/60000); }
 function realOff(){ var T = Math.max(0, saved.eta), L = S.lunch;
   return isD() ? {acc:0, cook:1, ready:Math.round(T*(L?.3:.55)), way:Math.round(T*(L?.4:.65)), done:T}
                : {acc:0, cook:Math.max(1, T-18), ready:T}; }
