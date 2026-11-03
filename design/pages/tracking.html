@@ -19,7 +19,9 @@
 .live{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
 .live i{position:relative; width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
 .live i::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
-.live.off i{background:var(--off)} .live.off i::after{display:none}
+.live.off i{background:var(--off)} .live.off i::after,.live i.still::after{display:none}
+.trk-live[hidden]{display:none}
+.trk-live .live{flex:none}
 
 /* hero */
 .hero{display:grid; gap:0}
@@ -40,7 +42,7 @@
 .is-cook .viz .plate > svg{animation:spin 48s linear infinite}
 .vb{position:absolute; left:50%; bottom:0; width:56px; height:56px; margin-left:-28px; margin-bottom:-16px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ok); box-shadow:var(--shadow), inset 0 0 0 1.5px var(--line)}
 .vb::before{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 3px var(--ok); opacity:0; animation:halo2 2s var(--ease-std) infinite}
-.is-done .vb{background:var(--ok); color:var(--surface)} .is-done .vb::before{display:none}
+.is-done .vb{background:var(--ok); color:var(--on-ok)} .is-done .vb::before{display:none}
 .is-late .vb{color:var(--warn)} .is-late .vb::before{box-shadow:0 0 0 3px var(--warn)}
 .is-off .vb::before,.is-off .ring .now,.is-off .live i::after{animation:none}
 .enter .viz{animation:pop 700ms var(--ease) both}
@@ -65,7 +67,7 @@
 .tl{position:relative; list-style:none; margin:0; padding:18px 10px 12px; display:flex; justify-content:space-between; gap:6px}
 .tl li{position:relative; z-index:2; display:grid; justify-items:center; align-content:start; gap:6px; text-align:center; min-width:0}
 .tl .dot{width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); position:relative}
-.tl .done .dot{background:var(--ok); color:var(--surface); box-shadow:none}
+.tl .done .dot{background:var(--ok); color:var(--on-ok); box-shadow:none}
 .tl .now .dot{box-shadow:inset 0 0 0 3px var(--ok)}
 .tl .now .dot::before{content:""; width:10px; height:10px; border-radius:50%; background:var(--ok)}
 .tl .now .dot::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
@@ -124,6 +126,8 @@
 .oline + .oline{border-top:1px solid var(--line)}
 .oline .pic{width:56px; height:56px; border-radius:16px}
 .oline .nm{font-weight:700; line-height:1.25}
+.oline .mods{display:flex; flex-wrap:wrap; gap:4px; margin-top:4px}
+.oline .mod{display:inline-flex; align-items:center; gap:3px; min-height:24px; padding:0 8px; border-radius:var(--r-pill); background:var(--surface-2); font-size:14px; font-weight:700}
 .oline .q{display:block; font-size:14px; color:var(--muted); font-weight:600}
 .okv .kv{align-items:baseline}
 .okv .kv span:first-child{color:var(--muted)}
@@ -240,7 +244,7 @@ var S = {
 };
 /* lunch menu is not delivered after 15:00 (decision 4) */
 function lunchPickupOnly(){ return S.lunch && !ST.lunch; }
-if (lunchPickupOnly()) S.mode = "pickup";
+if (lunchPickupOnly() && !isReal()) S.mode = "pickup";
 
 function isD(){ return S.mode==="delivery"; }
 function stages(){ var a = [{id:"acc", nm:"Приета", ic:"receipt"}];
@@ -250,6 +254,16 @@ function stages(){ var a = [{id:"acc", nm:"Приета", ic:"receipt"}];
   return a; }
 if (tok.delivered || tok.done) S.k = isD() ? stages().length-1 : stages().length;
 if (tok.way && isD()) S.k = stages().length-2;
+/* a real order from cart.html: start (ts, real clock) and promised minutes (eta) drive every time on the page,
+   so it matches the cart's success screen. The sample № 1042 is used only without sc-order. */
+function isReal(){ return !!(saved && saved.ts && typeof saved.eta==="number" && !S.sampleSwap && (!hashNo || hashNo===String(saved.no))); }
+function elapsed(){ return Math.max(0, (Date.now() - saved.ts)/60000); }
+function realOff(){ var T = Math.max(0, saved.eta), L = S.lunch;
+  return isD() ? {acc:0, cook:1, ready:Math.round(T*(L?.3:.55)), way:Math.round(T*(L?.4:.65)), done:T}
+               : {acc:0, cook:Math.max(1, T-18), ready:T}; }
+if (isReal() && !tok.delivered && !tok.done && !tok.way){ (function(){ var o = realOff(), a = stages(), e = elapsed(), k = 0;
+  a.forEach(function(st, i){ if (o[st.id] <= e) k = i; });
+  S.k = Math.min(k, isD() ? a.length-2 : a.length-1); })(); }
 function finished(){ var n = stages().length; return isD() ? S.k>=n-1 : S.k>=n; }
 function cur(){ var a = stages(); return a[Math.min(S.k, a.length-1)]; }
 
@@ -261,16 +275,22 @@ function etaMin(id){ var L = S.lunch, add = S.late ? 10 : 0, t;
 function offsets(){ var L = S.lunch;
   return isD() ? {acc:0, cook:2, ready:L?6:(BUSY?32:16), way:L?9:(BUSY?35:19), done:L?24:(BUSY?50:31)}
                : {acc:0, cook:2, ready:L?5:(BUSY?24:18)}; }
-function times(){ var o = offsets(), a = stages(), now = SC.minutes(), c = cur();
+function times(){ var now = SC.minutes(), c = cur();
+  if (isReal()){ var ro = realOff(), pl = now - elapsed(), T = Math.max(0, saved.eta), add = S.late ? 10 : 0;
+    var vnow = Math.max(now, pl + ro[c.id] + (ro[c.id] ? 1 : 0));
+    return {placed:pl, at:function(id){ return pl + ro[id]; }, now:vnow, pickedAt:Math.max(now, pl+T+5),
+      rem:function(){ return Math.max(1, Math.round(pl + T - vnow)) + add; }}; }
+  var o = offsets();
   var placed = finished() ? now - (o[isD()?"done":"ready"] + (isD()?1:6)) : now - o[c.id] - 3;
-  return {placed:placed, at:function(id){ return placed + o[id]; }, now:now, pickedAt:now-1}; }
+  return {placed:placed, at:function(id){ return placed + o[id]; }, now:now, pickedAt:now-1, rem:function(id){ return etaMin(id); }}; }
 
 function mainDish(){ var ls = lines().map(function(l){ return SC.byId[l.id]; }).filter(Boolean);
   return ls.filter(function(x){ return x.cat==="pitsi"; })[0] || ls.filter(function(x){ return x.course==="main"; })[0] || ls[0]; }
 function cookSay(){ var m = mainDish(); if (m && m.cat==="pitsi") return "Пицата е в пещта"; if (m && m.cat==="skara-bertha") return "Месото е във фурната Bertha"; return "Готвим поръчката ви"; }
 function totals(){ var sub = 0, lunchSub = 0; lines().forEach(function(l){ var x = SC.byId[l.id]; var p = x.p*l.q + (l.extra||0)*l.q; sub += p; if (x.lunch) lunchSub += p; });
   var disc = (!isD() && ST.lunchDiscount && lunchSub) ? Math.round(lunchSub*0.30*100)/100 : 0;
-  return {sub:sub, disc:disc, total:sub-disc}; }
+  var total = (isReal() && typeof saved.total==="number") ? saved.total : sub-disc;
+  return {sub:sub, disc:disc, total:total}; }
 
 /* ---------- ring around the plate: one arc per step, starting and ending at the badge (bottom) ---------- */
 function ringSVG(){ var a = stages(), n = a.length, gap = n>3 ? 15 : 13, step = 360/n, out = "", done = finished(), r = 92;
@@ -287,7 +307,7 @@ function heroHTML(){ var a = stages(), c = cur(), T = times(), D = isD(), done =
     say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас."; }
   else if (!D && c.id==="ready"){ label = "Готова от"; big = '<span class="enum clock"><b>'+clock(T.at("ready"))+'</b></span>';
     say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта. Вземане до "+R.kitchen+"."; }
-  else { var m = etaMin(c.id), arrive = clock(T.now + m);
+  else { var m = T.rem(c.id), arrive = clock(T.now + m);
     label = D ? "Пристига след" : "Готова след";
     big = '<span class="enum"><span class="ab">около</span><b>'+m+'</b><span class="u">мин</span></span>';
     say = c.id==="acc" ? "Получихме поръчката ви" : c.id==="cook" ? cookSay() : c.id==="ready" ? "Поръчката е готова" : "Шофьорът е на път към вас";
@@ -351,13 +371,19 @@ function rateHTML(){ if (!finished()) return "";
   return '<div class="shell rate" data-rate><div class="core cpad"><span class="offer">'+ic("seal-percent",18)+'-10% за оценката</span><h2 id="rate-h">Останахте ли доволни?</h2><p class="lead">От храната и '+(isD()?"доставката":"обслужването")+'. За отговора ви даваме -10% от следващата поръчка, каквото и да изберете.</p>'+
     '<div class="yn" role="group" aria-labelledby="rate-h"><button type="button" data-rate="yes" aria-pressed="'+(r==="yes")+'">'+ic("thumbs-up",26)+'Да</button><button type="button" data-rate="no" aria-pressed="'+(r==="no")+'">'+ic("thumbs-down",26)+'Не</button></div>'+ans+'</div></div>'; }
 
+var PAY = {cash:"В брой", card:"Карта при получаване", voucher:"Ваучер"};
+function payText(){ if (saved && !S.sampleSwap){ if (saved.payLabel) return saved.payLabel; if (PAY[saved.pay]) return PAY[saved.pay]; } return PAY.cash; }
+function modsHTML(l){ if (!l.mods || !l.mods.length) return "";
+  return '<span class="mods">'+l.mods.map(function(md){ var add = /^\+/.test(md), t = md.replace(/^\+\s*/,""); t = t.charAt(0).toUpperCase()+t.slice(1);
+    return '<span class="mod'+(add?" add":"")+'">'+(add?ic("plus",14):"")+esc(t)+'</span>'; }).join("")+'</span>'; }
 function orderHTML(){ var ls = lines(), t = totals(), D = isD();
-  var rows = ls.map(function(l){ var x = SC.byId[l.id]; return '<div class="oline">'+SC.pic(x)+'<span><span class="nm">'+esc(x.n)+'</span><span class="q">'+l.q+' бр.'+(x.g?' · '+esc(x.g):'')+'</span></span><span class="price">'+SC.fmt(x.p*l.q+(l.extra||0)*l.q)+'</span></div>'; }).join("");
-  var zone = (saved && saved.zone) || SC.ZONES[1].n;
-  var kv = (D ? '<div class="kv"><span>Доставка до</span><span>'+esc(zone)+' · безплатна</span></div>'
+  var rows = ls.map(function(l){ var x = SC.byId[l.id]; return '<div class="oline">'+SC.pic(x)+'<span><span class="nm">'+esc(x.n)+'</span><span class="q">'+l.q+' бр.'+(x.g?' · '+esc(x.g):'')+'</span>'+modsHTML(l)+'</span><span class="price">'+SC.fmt(x.p*l.q+(l.extra||0)*l.q)+'</span></div>'; }).join("");
+  var zone = (saved && !S.sampleSwap && saved.zone) || SC.ZONES[1].n, zd = SC.ZONES.filter(function(z){ return z.n===zone; })[0];
+  var fee = !zd || zd.free ? 'безплатна' : 'по тарифа <span class="missing">[ЛИПСВА: такса]</span>';
+  var kv = (D ? '<div class="kv"><span>Доставка до</span><span>'+esc(zone)+' · '+fee+'</span></div>'
               : '<div class="kv"><span>Вземане от</span><span>Siracusa, Дружба 2</span></div>')+
     (t.disc ? '<div class="kv disc"><span>Отстъпка след 15:00</span><span class="price">-'+SC.fmt(t.disc)+'</span></div>' : '')+
-    '<div class="kv"><span>Плащане</span><span>'+esc((saved && saved.pay) || (D ? "В брой при получаване" : "В брой в ресторанта"))+'</span></div>'+
+    '<div class="kv"><span>Плащане</span><span>'+esc(payText())+'</span></div>'+
     '<div class="kv tot"><span>Общо</span><span class="price">'+SC.fmt(t.total)+'</span></div>';
   var again = finished() ? '<button class="pill pill-line pill-lg pill-block" type="button" data-again style="margin-top:12px">'+ic("plus",20)+'Поръчай същото · '+SC.fmt(t.sub)+'</button>' : '';
   return '<div class="shell"><div class="core cpad"><div class="sec-h" style="margin-bottom:4px"><h2 class="h3">Вашата поръчка</h2><span class="muted small">'+SC.plural(ls.reduce(function(a,l){ return a+l.q; },0),"ястие","ястия")+'</span></div>'+rows+
@@ -378,8 +404,14 @@ function protoHTML(){ var lpo = lunchPickupOnly(), D = isD(), done = finished();
       '<button class="pill pill-soft" type="button" data-sim="reset">'+ic("arrow-left",18)+'Отначало</button>'+
     '</div><p class="help">В истинския сайт въпросът „Останахте ли доволни?“ идва 40 мин след доставката, като известие и тук. Часът се сменя от лентата горе.</p></section>'; }
 
-function titleHTML(){ return '<div class="trk-title"><h1>Поръчка <span class="no">№ '+esc(S.no)+'</span></h1>'+
-  (S.offline ? '<span class="live off"><i></i>Без връзка · от '+clock(S.updated)+'</span>' : finished() ? '<span class="live off"><i></i>'+(isD()?"Доставена":"Взета")+'</span>' : '<span class="live"><i></i>На живо · '+clock(S.updated)+'</span>')+'</div>'; }
+function titleHTML(){ return '<div class="trk-title"><h1>Поръчка <span class="no">№ '+esc(S.no)+'</span></h1></div>'; }
+/* the live state sits in the shared status row (next to the cart), where the store status would be */
+var row2 = SC.scroller.querySelector(".row2"), liveBox = document.createElement("div");
+liveBox.className = "status trk-live"; liveBox.setAttribute("role","status"); if (row2) row2.insertBefore(liveBox, row2.firstChild);
+function liveUpdate(){ liveBox.hidden = S.view!=="order";
+  liveBox.innerHTML = S.offline ? '<span class="live off"><i></i></span><span><b>Без връзка</b> · последно в '+clock(S.updated)+'</span>'
+    : finished() ? '<span class="live"><i class="still"></i></span><span><b>'+(isD()?"Доставена":"Взета")+'</b> · поръчка № '+esc(S.no)+'</span>'
+    : '<span class="live"><i></i></span><span><b>На живо</b> · обновено в '+clock(S.updated)+'</span>'; }
 
 /* ---------- other views ---------- */
 function skeletonHTML(){ return '<div class="trk-title"><span class="skel" style="width:220px;height:32px"></span></div><div class="trk" aria-busy="true" aria-label="Зареждаме поръчката"><div class="trk-l"><div class="shell"><div class="core sk">'+
@@ -402,6 +434,7 @@ function render(){
   else html = titleHTML()+'<div class="trk"><div class="trk-l">'+offlineHTML()+heroHTML()+actsHTML()+'</div><div class="trk-r">'+rateHTML()+notifyHTML()+orderHTML()+protoHTML()+'</div></div>';
   main.innerHTML = '<section class="sec trk-s">'+html+'</section>';
   S.first = false;
+  liveUpdate();
   placeTrack();
 }
 /* the track runs from the first dot to the last; the fill grows to the current dot (transform only) */
