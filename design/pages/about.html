@@ -61,7 +61,7 @@
 .ab-year{display:flex; align-items:flex-end; gap:14px}
 .ab-year b{font-size:104px; line-height:.82; font-weight:800; letter-spacing:-.07em; font-variant-numeric:tabular-nums}
 .ab-year > span{padding-bottom:4px; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35}
-.ab-year .missing{display:block; margin-top:4px}
+.ab-conf{margin:14px 0 0; font-size:15px}
 .ab-year > span em{display:block; font-style:normal; font-weight:800; color:var(--ink)}
 .ab-note{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:18px}
 .ab-note .ico{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
@@ -239,7 +239,7 @@ var nums = [
 var storyHTML =
   '<section class="sec" aria-labelledby="ab-story-h"><div class="sec-h"><h2 class="h2" id="ab-story-h">Нашата история</h2></div>'+
   '<div class="ab-story">'+
-    '<div class="ab-year rv"><b>'+(R.est||2013)+'</b><span><em>Siracusa est. '+(R.est||2013)+'</em>както пише на логото на менюто <span class="missing">[ЛИПСВА: потвърждение от собственика]</span></span></div>'+
+    '<div class="rv"><div class="ab-year"><b>'+(R.est||2013)+'</b><span><em>Siracusa est. '+(R.est||2013)+'</em>както пише на логото на менюто</span></div><p class="missing ab-conf">[ЛИПСВА: потвърждение на годината от собственика]</p></div>'+
     '<div class="card ab-note rv"><span class="ico">'+ic("pencil-simple",22)+'</span><div><p class="missing">[ЛИПСВА: историята от собственика. Как започна Siracusa, кой стои зад ресторанта и защо в Дружба 2.]</p></div></div>'+
   '</div>'+
   '<h3 class="h3" style="margin-top:44px">Siracusa в числа</h3>'+

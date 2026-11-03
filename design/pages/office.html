@@ -769,7 +769,7 @@ function send(btn){ var ok = /^(\+359\d{9}|0\d{9})$/.test(G.phone.replace(/[\s-]
     if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("data-busy"); b.innerHTML = label; });
       var box = main.querySelector("[data-senderr]"); if (box) box.innerHTML = '<div class="o-note bad" role="alert">'+ic("warning-circle",22)+'<div><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button></div></div>';
       SC.toast("Няма връзка. Опитайте пак."); scrollToEl(box); return; }
-    G.sentAt = Date.now(); save(); handoff(); location.hash = "sent"; }
+    G.sentAt = Date.now(); save(); handoff(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }
 /* hand-off to tracking.html: same sc-order shape as cart.html */
 function handoff(){ var c = ctx(), m = SC.minutes(), lines = {}, payName = G.pays === "each" ? "Всеки плаща своето" : (G.pay === "card" ? "Карта при получаване" : "В брой");
   eaters().forEach(function(p){ Object.keys(p.picks).forEach(function(k){ lines[k] = (lines[k]||0) + p.picks[k]; }); });
@@ -778,7 +778,7 @@ function handoff(){ var c = ctx(), m = SC.minutes(), lines = {}, payName = G.pay
     lines:Object.keys(lines).map(function(k){ return {id:k, q:lines[k], mods:[], extra:0}; }),
     lunchOnly:true, zone:G.mode === "pickup" ? "" : (c.z ? c.z.n : ""), pay:G.pays === "each" ? "split" : G.pay, payLabel:payName, total:total(),
     eta:etaMins, at:clock(c.eta), sched:c.day === "tomorrow" ? "утре "+clock(c.eta) : "", placedAt:clock(m),
-    ts:(function(){ var d = new Date(); d.setHours(Math.floor(m/60), m%60, 0, 0); return d.getTime(); })(), group:true}); }, SC.reduce ? 200 : 1100); }
+    ts:(function(){ var d = new Date(); d.setHours(Math.floor(m/60), m%60, 0, 0); return d.getTime(); })(), group:true}); }
 
 window.addEventListener("hashchange", function(){ render(); });
 render();
