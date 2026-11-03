@@ -192,9 +192,12 @@ window.SC_MENU={
 "site_eur": 6.2,
 "t": [],
 "al": [
+"eggs",
+"fish",
 "gluten",
 "milk",
-"molluscs"
+"molluscs",
+"mustard"
 ],
 "noOnion": true,
 "share": false
@@ -231,8 +234,11 @@ window.SC_MENU={
 "site_eur": 7.15,
 "t": [],
 "al": [
+"eggs",
+"fish",
 "gluten",
-"milk"
+"milk",
+"mustard"
 ],
 "noOnion": true,
 "share": false
@@ -1790,7 +1796,12 @@ window.SC_MENU={
 "lv": 2.49,
 "site_eur": 1.27,
 "t": [],
-"al": [],
+"al": [
+"eggs",
+"fish",
+"milk",
+"mustard"
+],
 "noOnion": false,
 "share": false
 },

@@ -298,7 +298,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .foot{margin-top:72px; padding:40px 16px 160px; background:var(--surface-2); display:grid; gap:24px}
 .foot .cols{display:grid; gap:24px}
 .foot h3{margin:0 0 8px; font-size:16px}
-.foot a{text-decoration:none; display:block; min-height:40px; display:flex; align-items:center; color:var(--muted); font-weight:600}
+.foot a{text-decoration:none; display:block; min-height:48px; display:flex; align-items:center; color:var(--muted); font-weight:600}
 .foot .legal{font-size:14px; color:var(--muted)}
 @container app (min-width:900px){ .foot{padding:56px max(40px, calc((100% - 1200px)/2)) 48px} .foot .cols{grid-template-columns:2fr 1fr 1fr 1fr} }
 
@@ -342,4 +342,4 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .aiform input{flex:1; min-width:0; border:0; background:transparent; padding:0 12px; min-height:48px; font-size:16px; color:var(--ink); outline:none}
 .aiform input::placeholder{color:var(--muted)}
 .aiform .pill{width:48px; padding:0}
-.aifine{margin:0; font-size:13px; color:var(--muted); text-align:center; flex:none}
+.aifine{margin:0; font-size:14px; color:var(--muted); text-align:center; flex:none}
