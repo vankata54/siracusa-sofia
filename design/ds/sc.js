@@ -39,9 +39,9 @@ SC.RESTAURANT = {est:2013 /* from the menu logo, to confirm */, payment:["В б�
   open:"10:00", close:"23:00", kitchen:"22:30", delivery:"21:00", lunchUntil:"15:00",
   maps:"https://www.google.com/maps/dir/?api=1&destination=Siracusa+Bar+%26+Grill+%D0%94%D1%80%D1%83%D0%B6%D0%B1%D0%B0+2+%D0%A1%D0%BE%D1%84%D0%B8%D1%8F"};
 SC.ZONES = [
-  {n:"Дружба 1", free:true, eta:"около 30 мин"}, {n:"Дружба 2", free:true, eta:"около 25 мин"},
-  {n:"НПЗ Искър", free:true, eta:"около 35 мин"}, {n:"Бусманци", free:true, eta:"около 40 мин"},
-  {n:"Горубляне", free:false, fee:null, eta:"около 40 мин"}, {n:"Гара Искър", free:false, fee:null, eta:"около 45 мин"}];
+  {n:"Дружба 1", etaMin:30, free:true, eta:"около 30 мин"}, {n:"Дружба 2", etaMin:25, free:true, eta:"около 25 мин"},
+  {n:"НПЗ Искър", etaMin:35, free:true, eta:"около 35 мин"}, {n:"Бусманци", etaMin:40, free:true, eta:"около 40 мин"},
+  {n:"Горубляне", etaMin:40, free:false, fee:null, eta:"около 40 мин"}, {n:"Гара Искър", etaMin:45, free:false, fee:null, eta:"около 45 мин"}];
 SC.TAGS = {hit:["Хит","fire"], new:["Ново","sparkle"], veg:["Вегетарианско","leaf"], hot:["Люто","pepper"], out:["Изчерпано днес","clock"]};
 /* 14 EU allergens (Reg. 1169/2011). Values in data are derived from the composition text and must be confirmed by the kitchen. */
 SC.ALLERGENS = [
@@ -263,7 +263,7 @@ function header(o){ var st = SC.status();
     ? '<header class="top back"><a class="hb" href="'+o.back.href+'">'+SC.ic("arrow-left",20)+SC.esc(o.back.label||"Назад")+'</a><span class="ttl">'+SC.esc(o.title||"")+'</span><div class="hact">'+(o.share?'<button class="hb" type="button" data-share>'+SC.ic("export",20)+'Сподели</button>':'')+'</div></header>'
     : '<header class="top"><a class="word" href="home.html" title="Заместител до новото лого">Siracusa</a><nav class="dnav" aria-label="Раздели">'+DNAV.map(function(d){ return '<a href="'+d[2]+'"'+(o.nav===d[0]?' aria-current="page"':'')+'>'+d[1]+'</a>'; }).join("")+'</nav><div class="hact">'+
       '<a class="hb call" href="tel:+359894365577" aria-label="Обади се на 0894 36 55 77">'+SC.ic("phone",20)+'Обади се</a><button class="hb" type="button" data-lang aria-label="Смени езика на английски">BG</button><button class="hb more" type="button" data-more>'+SC.ic("list",20)+'Още</button></div></header>';
-  var row2 = '<div class="row2">'+(o.status===false?'':'<div class="status"><span class="dot '+st.cls+'"></span><span>'+st.html+'</span></div>')+cartBtn+'</div>';
+  var row2 = (o.status===false && o.cart===false) ? '' : '<div class="row2">'+(o.status===false?'':'<div class="status"><span class="dot '+st.cls+'"></span><span>'+st.html+'</span></div>')+(o.cart===false?'':cartBtn)+'</div>';
   return '<div class="sentinel" data-sent></div>'+row1+row2; }
 function bottomNav(active){ return '<nav class="nav" aria-label="Основна навигация">'+NAV.map(function(n){ return '<a href="'+n[3]+'"'+(active===n[0]?' aria-current="page"':'')+'>'+SC.ic(n[2],24)+n[1]+'</a>'; }).join("")+'</nav>'; }
 SC.footer = function(){ var R=SC.RESTAURANT;
