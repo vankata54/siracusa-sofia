@@ -281,8 +281,8 @@ input[type="date"].input{padding-right:12px; min-width:0}
   .feast .pl + .pl{margin-left:-28px}
   .perks{flex-wrap:wrap; overflow:visible; margin:22px 0 0; padding:0}
   .cf{transform:scale(1.4)}
-  .proto{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr); align-items:end; gap:16px 20px}
-  .proto-h{align-self:center}
+  .proto{grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; gap:16px 20px}
+  .proto-h{grid-column:1/-1}
   .calc-grid{grid-template-columns:minmax(0,1fr) 380px; gap:48px}
   .aside{display:block; position:sticky; top:156px}
   .cbar{display:none}
@@ -326,7 +326,7 @@ var R = SC.RESTAURANT;
 var ZONES = [
   {id:"salon", n:"Салон", ic:"chair", sub:"В ресторанта"},
   {id:"garden", n:"Отоплявана градина", ic:"tree", sub:"Отоплява се през зимата"},
-  {id:"all", n:"Цялото място", ic:"house", sub:"Салонът и градината само за вас"}];
+  {id:"all", n:"Цялото място", ic:"house", sub:"Салон и градина само за вас"}];
 /* Early booking -5% (hand-off 10.5). How many days count as "early" is [ЛИПСВА]; in the prototype it is switched on by hand in "Само в прототипа", never computed from the date. */
 var CAKES = [["none","Без торта"],["ours","От нас"],["bring","Носим наша"]];
 var WISHES = ["Балони","Цветя","Надпис с име","В цветовете на повода"];
