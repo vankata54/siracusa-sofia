@@ -46,9 +46,9 @@ SC.TAGS = {hit:["Хит","fire"], new:["Ново","sparkle"], veg:["Вегета
 /* 14 EU allergens (Reg. 1169/2011). Values in data are derived from the composition text and must be confirmed by the kitchen. */
 SC.ALLERGENS = [
   ["gluten","Глутен","grains"],["crustaceans","Ракообразни","shrimp"],["eggs","Яйца","egg"],["fish","Риба","fish"],
-  ["peanuts","Фъстъци","plant"],["soy","Соя","plant"],["milk","Мляко","drop"],["nuts","Ядки","tree"],
-  ["celery","Целина","carrot"],["mustard","Синап","jar"],["sesame","Сусам","dots-three"],["sulphites","Сулфити","wine"],
-  ["lupin","Лупина","flower"],["molluscs","Мекотели","fish"]];
+  ["peanuts","Фъстъци","circles-three"],["soy","Соя","plant"],["milk","Мляко","drop"],["nuts","Ядки","acorn"],
+  ["celery","Целина","carrot"],["mustard","Синап","jar"],["sesame","Сусам","dots-nine"],["sulphites","Сулфити","wine"],
+  ["lupin","Лупина","flower"],["molluscs","Мекотели","fish-simple"]];
 SC.allergenName = function(k){ var a = SC.ALLERGENS.filter(function(x){ return x[0]===k; })[0]; return a ? a[1] : k; };
 
 /* Filters for the menu ("менюта като филтри"). Data-driven: a filter is shown only if at least one item matches. */

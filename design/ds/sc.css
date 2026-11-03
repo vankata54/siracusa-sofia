@@ -203,10 +203,11 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .cnt[hidden]{display:none}
 .bump{animation:bump var(--t-spring) var(--ease)}
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* full section links only where they fit; between 900 and 1180 the header keeps the compact phone layout */
+@container app (min-width:1180px){ .dnav{display:flex; gap:2px; margin:0 auto} }
 @container app (max-width:370px){ .word{font-size:20px} .hb{padding:0 7px} .hb.call{padding:0 11px} .top{padding-left:14px} }
 @container app (min-width:900px){
   .top{top:14px; margin:14px max(24px, calc((100% - 1240px)/2)) 0; height:68px; padding:0 8px 0 26px}
-  .dnav{display:flex; gap:2px; margin:0 auto}
   .dnav a{min-height:44px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; font-weight:700; text-decoration:none; font-size:15px}
   .dnav a[aria-current="page"]{background:var(--surface-2)}
   .row2{top:90px; margin:10px max(24px, calc((100% - 1240px)/2)) 0}
