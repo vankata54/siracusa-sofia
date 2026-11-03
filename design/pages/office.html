@@ -170,7 +170,9 @@
 .nw{white-space:nowrap}
 
 /* ---------- shared list ---------- */
-.o-timer{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap}
+.o-timer{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:nowrap}
+.o-timer > div:first-child{flex:1; min-width:0}
+.o-until{flex:none}
 .o-timer .lbl{display:block; font-weight:700; color:var(--muted); font-size:15px}
 .o-time{display:block; font-size:48px; font-weight:800; letter-spacing:-.045em; line-height:1; margin-top:6px; font-variant-numeric:tabular-nums}
 .o-time small{font-size:20px; letter-spacing:-.02em; margin-left:2px}
@@ -546,7 +548,7 @@ function viewList(){ var c = ctx();
   var timer;
   if (c.late && !sim.closed) timer = '<div class="o-note warn">'+ic("clock",22)+'<div><p>Обедното меню вече не се доставя днес (до 15:00). Отворете нова поръчка за утре.</p><button class="pill pill-line" type="button" data-act="restart">Нова поръчка за утре</button></div></div>';
   else if (c.closed) timer = '<div class="o-closed"><span class="o-fi">'+ic("lock",22)+'</span><div><b>Изборът приключи в '+clock(c.dl)+'</b><span>Списъкът е затворен. Изпратете поръчката сега.</span></div></div>';
-  else timer = '<div class="o-timer"><div><span class="lbl">Колегите избират още</span><span class="o-time" data-left>'+left(c.remain)+'</span></div><div class="o-until"><span class="o-live"><i></i>На живо</span><br>до '+clock(c.dl)+' '+c.dayWord+'</div></div>'+
+  else timer = '<div class="o-timer"><div><span class="lbl">Остават за избор</span><span class="o-time" data-left>'+left(c.remain)+'</span></div><div class="o-until"><span class="o-live"><i></i>На живо</span><br>до '+clock(c.dl)+' '+c.dayWord+'</div></div>'+
     '<div class="o-track" aria-hidden="true"><span data-track style="transform:scaleX('+Math.min(1, Math.max(0, c.remain/(c.day==="today"?3600*2:3600*24))).toFixed(3)+')"></span></div>';
 
   var plist = sim.empty
@@ -567,7 +569,7 @@ function viewList(){ var c = ctx();
     '<div class="o-lay"><div class="o-col">'+
       '<div><h1 class="h1" style="font-size:clamp(30px,8cqi,44px)">'+esc(G.office.trim() || "Общата поръчка")+'</h1><p class="lead o-sub">'+(G.mode==="pickup" ? "Вземане от ресторанта" : "Доставка до "+esc(whereText(c)))+' · '+(G.mode==="pickup" ? "готово в " : "около ")+clock(c.eta)+'</p></div>'+
       '<div class="shell"><div class="core o-card">'+timer+'</div></div>'+
-      '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between"><h2 class="o-h3">Кой какво поръча</h2>'+(N ? '<span class="muted small" style="font-weight:700">'+souls(list.length)+' · '+dishes(N)+'</span>' : '')+'</div><div class="o-people">'+plist+'</div></div></div>'+
+      '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;row-gap:2px"><h2 class="o-h3">Кой какво поръча</h2>'+(N ? '<span class="muted small" style="font-weight:700">'+souls(list.length)+' · '+dishes(N)+'</span>' : '')+'</div><div class="o-people">'+plist+'</div></div></div>'+
     '</div><aside class="o-aside o-col">'+
       '<div class="shell"><div class="core o-card"><h2 class="o-h3" style="margin-bottom:4px">Сметка</h2><div class="o-kv">'+
         '<div class="kv"><span>'+dishes(N)+'</span><span class="price">'+fmt(T)+'</span></div>'+

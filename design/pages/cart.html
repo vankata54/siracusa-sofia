@@ -319,6 +319,8 @@ var hdrBack = dev.querySelector(".top.back > a.hb"), hdrTitle = dev.querySelecto
 var DKEY = "sc-checkout", OKEY = "sc-last-order";
 var D = Object.assign({addr:"", zone:"", zk:"", addrMore:"", slot:"", name:"", phone:"", email:"", note:"", pay:"cash", sched:""}, SC.load(DKEY, {}));
 D.consent = false; /* marketing consent is never pre-ticked and never restored */
+var U = SC.user ? SC.user() : null; /* signed-in client from login.html */
+if (U){ if (!D.name && U.name) D.name = U.name; if (!D.phone && U.phone) D.phone = String(U.phone); }
 (function(){ /* time chosen on pickup.html: SC.store("sc-pickup", {kind, day, t}); t = "16:45" (or minutes), null = as soon as possible */
   var pk = SC.load("sc-pickup", null); if (!pk || typeof pk!=="object") return;
   if (pk.day && pk.day!=="today") return;
@@ -561,7 +563,7 @@ function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
   var where = deliv ? '<span><small>Доставка до</small><b>'+esc(D.addr)+(D.addrMore?', '+esc(D.addrMore):'')+'</b><span class="muted small">'+esc(e.big)+'</span></span>'
     : '<span><small>Вземане от ресторанта</small><b>'+(D.slot==="asap"?esc(e.big):(I.sched?esc(e.big):"В "+esc(D.slot)))+'</b><span class="muted small">Siracusa, Дружба 2, срещу бл. 311</span></span>';
   var pays = [["cash","money","В брой",deliv?"На шофьора":"В ресторанта"],["card","credit-card",deliv?"Карта при доставка":"Карта в ресторанта","Visa или Mastercard"],["voucher","ticket","Ваучер","Sodexo или подаръчна карта"]];
-  var h = stepper(3,true)+'<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">Без регистрация. Обаждаме се само ако нещо не е ясно.</p>'+
+  var h = stepper(3,true)+'<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">'+(U ? "Попълнихме ги от профила ви. Проверете ги." : "Без регистрация. Обаждаме се само ако нещо не е ясно.")+'</p>'+
     '<div style="margin-top:22px" id="topnotes">'+topNotes(I,3)+
     (P.err==="offline" ? note("bad","warning-circle","Няма връзка. Поръчката ви е запазена - опитайте пак.","Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: "+R.phone+".",'<a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Обади се</a>') : '')+
     (P.err==="form" ? note("bad","warning-circle","Остава малко","Попълнете отбелязаните полета.") : '')+'</div>'+
@@ -576,7 +578,8 @@ function viewStep3(I){ var deliv = I.mode==="delivery", e = etaText(I);
     '<section class="blk" aria-labelledby="ph"><div class="blk-h"><h2 class="h3" id="ph">Как ще платите?</h2><p class="muted small">При получаване</p></div><div class="opts" role="radiogroup" aria-labelledby="ph">'+
       pays.map(function(p){ return '<label class="opt"><input type="radio" name="pay" value="'+p[0]+'" data-f="pay" data-fk="pay-'+p[0]+'"'+(D.pay===p[0]?" checked":"")+'>'+ic(p[1],24)+'<span><b>'+p[2]+'</b><small>'+p[3]+'</small></span></label>'; }).join("")+
     '</div><p class="legal">Не въвеждате карта онлайн. Плащате, когато получите поръчката.</p></section>'+
-    '<section class="blk"><div class="card consent"><label class="check"><input type="checkbox" data-f="consent" data-fk="consent"'+(D.consent?" checked":"")+'><span><b>Искам да получавам оферти и маркетингови предложения</b><span>Първи научавате за събитията и празничните менюта. Отписвате се с едно натискане.</span></span></label></div>'+
+    '<section class="blk">'+(U && U.consent && U.consent.marketing ? '<div class="card consent"><p class="row" style="min-height:56px;margin:0">'+ic("check-circle",22)+'<span>Вече получавате нашите оферти. Променя се от <a href="profile.html">профила</a>.</span></p></div>'
+      : '<div class="card consent"><label class="check"><input type="checkbox" data-f="consent" data-fk="consent"'+(D.consent?" checked":"")+'><span><b>Искам да получавам оферти и маркетингови предложения</b><span>Първи научавате за събитията и празничните менюта. Отписвате се с едно натискане.</span></span></label></div>')+
     '<p class="legal">С натискане на „Поръчай“ приемате <a href="#" data-noop>Общите условия</a>. Храната не подлежи на връщане след доставка.</p></section>';
   return '<div class="ck"><div class="ck-grid"><div class="ck-main">'+h+'</div><div class="ck-side">'+summaryHTML(I,3)+'</div></div>'+protoHTML("cart")+'</div>'; }
 
@@ -592,7 +595,8 @@ function viewDone(o){
       '<div class="kv"><span>'+dishWord(o.n)+'</span><span class="price">'+fmt(o.total)+(o.feeUnknown?' + доставка':'')+'</span></div>'+
       '<div class="kv"><span>Плащане</span><span>'+esc(o.pay)+'</span></div></div></div></div>'+
     '<a class="pill pill-red go" href="tracking.html#'+o.no+'">Следи поръчката<span class="knob">'+ic("arrow-right",22)+'</span></a>'+
-    '<div class="offer ember-card"><b>Направи профил и вземи -10% от следващата поръчка</b><p class="muted">Само с телефона, без парола. Поръчвате отново с едно натискане.</p><a class="pill pill-ink" href="login.html">'+ic("user",20)+'Направи профил</a></div>'+
+    (U ? '<div class="card offer"><b>Поръчката е запазена в профила ви</b><p class="muted">Следващия път я поръчвате отново с едно натискане.</p><a class="pill pill-line" href="profile.html">'+ic("user",20)+'Към профила</a></div>'
+      : '<div class="offer ember-card"><b>Направи профил и вземи -10% от следващата поръчка</b><p class="muted">Само с телефона, без парола. Поръчвате отново с едно натискане.</p><a class="pill pill-ink" href="login.html">'+ic("user",20)+'Направи профил</a></div>')+
     '<div class="card"><button class="swrow" type="button" role="switch" aria-checked="'+P.bday+'" data-act="bday"><span><b>Искате ли подарък за рождения си ден и първи да научавате за събитията?</b><span>По желание. Можете да се откажете по всяко време.</span></span><span class="sw-state" aria-hidden="true">'+(P.bday?"Да":"Не")+'</span><span class="sw" aria-hidden="true"></span></button>'+
       (P.bday ? '<div class="bday"><span class="label" id="bdl">Рожден ден</span><div class="row" role="group" aria-labelledby="bdl"><label class="vh" for="bd-d">Ден</label><select class="input" id="bd-d">'+(function(){ var s='<option value="">Ден</option>'; for (var i=1;i<=31;i++) s+='<option>'+i+'</option>'; return s; })()+'</select><label class="vh" for="bd-m">Месец</label><select class="input" id="bd-m"><option value="">Месец</option>'+SC.MONTHS.map(function(m){ return '<option>'+m+'</option>'; }).join("")+'</select></div><p class="help muted small" style="margin:0">Ще ви пишем седмица по-рано с подарък: -10% или малка торта.</p></div>' : '')+
     '</div>'+

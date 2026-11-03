@@ -453,9 +453,9 @@ main.innerHTML =
     noticeHTML()+'</section>'+
   controlsHTML()+
   '<section class="sec res" id="res" aria-labelledby="res-h"><h2 class="vh" id="res-h">Ястия и алергени</h2>'+
-    '<div class="sum"><p class="st" data-sum aria-live="polite"></p><button class="pill pill-soft" type="button" data-goto="filters">'+ic("sliders-horizontal",20)+'Филтри</button>'+
+    '<div class="tblwrap"><div class="sum"><p class="st" data-sum aria-live="polite"></p><button class="pill pill-soft" type="button" data-goto="filters">'+ic("sliders-horizontal",20)+'Филтри</button>'+
       '<span class="legend" aria-hidden="true"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></div>'+
-    '<div data-list></div>'+lunchHTML()+'</section>'+
+    '<div data-list></div></div>'+lunchHTML()+'</section>'+
   refHTML()+faqHTML();
 
 var list = main.querySelector("[data-list]"), sum = main.querySelector("[data-sum]"), qIn = main.querySelector("#q"), ring = main.querySelector(".ring");
@@ -475,10 +475,10 @@ function render(){
   main.querySelector("[data-clear]").hidden = !active();
   main.querySelector("[data-clrq]").hidden = !st.q;
   main.querySelectorAll("[data-view]").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.view === st.view || (b.dataset.view==="empty" && st.view==="ok" && st.q==="ястие-което-го-няма")); });
-  if (st.view === "loading"){ sum.innerHTML = '<b>Зареждаме алергените</b>'; list.innerHTML = loadingHTML(); return; }
-  if (st.view === "error"){ sum.innerHTML = '<b>Не успяхме да заредим</b>'; list.innerHTML = stateBox("warning-circle", "warn", "Не успяхме да заредим алергените", "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона.",
+  if (st.view === "loading"){ sum.innerHTML = '<b>Зареждаме</b> · момент'; list.innerHTML = loadingHTML(); return; }
+  if (st.view === "error"){ sum.innerHTML = '<b>Грешка</b> · опитайте пак'; list.innerHTML = stateBox("warning-circle", "warn", "Не успяхме да заредим алергените", "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона.",
     '<button class="pill pill-red" type="button" data-retry>'+ic("arrow-up-right",20)+'Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
-  if (st.view === "offline"){ sum.innerHTML = '<b>Няма връзка</b>'; list.innerHTML = stateBox("globe", "warn", "Няма връзка с интернет", "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите: "+R.phone+".",
+  if (st.view === "offline"){ sum.innerHTML = '<b>Няма връзка</b> · опитайте пак'; list.innerHTML = stateBox("globe", "warn", "Няма връзка с интернет", "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите: "+R.phone+".",
     '<button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
   var r = results();
   sum.innerHTML = summaryText(r.list.length);

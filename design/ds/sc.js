@@ -34,7 +34,8 @@ SC.cats = M.cats;
 SC.catById = {}; M.cats.forEach(function(c){ SC.catById[c.id] = c; });
 SC.inCat = function(cat){ return M.items.filter(function(x){ return x.cat === cat; }); };
 SC.isOut = function(x){ return x.t.indexOf("out") > -1; };
-SC.RESTAURANT = {name:"Siracusa Bar & Grill", address:"ж.к. Дружба 2, срещу бл. 311, 1582 София", phone:"0894 36 55 77", phone2:"0700 199 55", email:"menu@siracusa-sofia.com",
+SC.RESTAURANT = {est:2013 /* from the menu logo, to confirm */, payment:["В брой","Карта при получаване (Visa, Mastercard)","Ваучери (Sodexo, да се провери името)","Подаръчна карта"], social:{facebook:"https://www.facebook.com/BarGrillSiracusa", instagram:null, google:null}, googleReview:null,
+  name:"Siracusa Bar & Grill", address:"ж.к. Дружба 2, срещу бл. 311, 1582 София", phone:"0894 36 55 77", phone2:"0700 199 55", email:"menu@siracusa-sofia.com",
   open:"10:00", close:"23:00", kitchen:"22:30", delivery:"21:00", lunchUntil:"15:00",
   maps:"https://www.google.com/maps/dir/?api=1&destination=Siracusa+Bar+%26+Grill+%D0%94%D1%80%D1%83%D0%B6%D0%B1%D0%B0+2+%D0%A1%D0%BE%D1%84%D0%B8%D1%8F"};
 SC.ZONES = [
@@ -199,8 +200,8 @@ SC.plusBtn = function(x){ if (typeof x === "string") x = SC.byId[x]; if (SC.isOu
   return '<button class="plus" type="button" data-add="'+x.id+'" aria-label="Добави '+SC.esc(x.n)+' в количката">'+SC.ic("plus",22)+'</button>'; };
 /* variant: "card" (rail/grid) or "row" */
 SC.dishCard = function(x, variant){ if (typeof x === "string") x = SC.byId[x];
-  if (variant==="row") return '<div class="drow"><a class="open" href="'+SC.href("dish",x.id)+'">'+SC.pic(x)+'<span><span class="nm">'+SC.esc(x.n)+'</span><span class="meta"><span class="price">'+SC.fmt(x.p)+'</span><span class="muted small">'+x.g+'</span></span>'+(x.t.length?'<span style="display:block;margin-top:6px">'+SC.badges(x)+'</span>':'')+'</span></a>'+SC.plusBtn(x)+'</div>';
-  return '<div class="dcard"><a class="open" href="'+SC.href("dish",x.id)+'"><span class="pw">'+SC.pic(x)+SC.badges(x,true)+'</span><span class="nm">'+SC.esc(x.n)+'</span></a><div class="rowp"><span><span class="price">'+SC.fmt(x.p)+'</span><small>'+x.g+'</small></span>'+SC.plusBtn(x)+'</div></div>'; };
+  if (variant==="row") return '<div class="drow"><a class="open" href="'+SC.href("dish",x.id)+'">'+SC.pic(x)+'<span><span class="nm">'+SC.esc(x.n)+'</span><span class="meta"><span class="price">'+SC.fmt(x.p)+'</span><span class="muted small">'+(x.per100?'за 100 гр.':x.g)+'</span></span>'+(x.t.length?'<span style="display:block;margin-top:6px">'+SC.badges(x)+'</span>':'')+'</span></a>'+SC.plusBtn(x)+'</div>';
+  return '<div class="dcard"><a class="open" href="'+SC.href("dish",x.id)+'"><span class="pw">'+SC.pic(x)+SC.badges(x,true)+'</span><span class="nm">'+SC.esc(x.n)+'</span></a><div class="rowp"><span><span class="price">'+SC.fmt(x.p)+'</span><small>'+(x.per100?'за 100 гр.':x.g)+'</small></span>'+SC.plusBtn(x)+'</div></div>'; };
 
 /* ---------- cart store ---------- */
 var cart = load("sc-cart", {lines:[], mode:"delivery"});
