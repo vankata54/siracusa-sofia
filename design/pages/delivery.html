@@ -44,7 +44,7 @@
 @keyframes rin{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
 .rcard .rh{display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:start}
 .rcard .ri{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink)}
-.rcard.free .ri{background:var(--ok); color:var(--surface)}
+.rcard.free .ri{background:var(--ok); color:var(--on-ok)}
 .rcard.paid .ri{background:var(--ember); color:var(--on-ember)}
 .rcard.out .ri,.rcard.err .ri{background:var(--surface); color:var(--warn)}
 .rcard h3{margin:0; font-size:19px; line-height:1.25; letter-spacing:-.02em; font-weight:800}
@@ -85,7 +85,7 @@
 .map .z.paid:hover path.f{fill:color-mix(in srgb, var(--ember) 40%, var(--surface))}
 .map .zl{font:800 17px var(--font); letter-spacing:-.02em; fill:var(--ink); stroke:var(--surface); stroke-width:4px; stroke-linejoin:round; paint-order:stroke; pointer-events:none; text-anchor:middle; transition:fill var(--t-base) var(--ease)}
 .map .z.free .zl{stroke:var(--z-free)}
-.map .z.on .zl{fill:var(--surface); stroke:none}
+.map .z.on .zl{fill:var(--on-ok); stroke:none}
 .map .z.paid.on .zl{fill:var(--on-ember)}
 .map .air path{fill:var(--surface-2); stroke:var(--surface); stroke-width:6; stroke-linejoin:round}
 .map .air text{font:700 14px var(--font); fill:var(--muted); text-anchor:middle}
@@ -107,7 +107,7 @@
 .zcard .zt{display:flex; align-items:center; justify-content:space-between; gap:12px}
 .zcard h3{font-size:26px; letter-spacing:-.035em; line-height:1.1}
 .ztag{display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:4px 12px 4px 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
-.ztag.free{background:var(--ok); color:var(--surface)}
+.ztag.free{background:var(--ok); color:var(--on-ok)}
 .ztag.paid{background:var(--ember); color:var(--on-ember)}
 .ztag.out{background:var(--surface-2); color:var(--ink)}
 .zcard .here{margin:6px 0 0; display:flex; gap:6px; align-items:center; color:var(--muted); font-weight:600; font-size:15px}
@@ -196,11 +196,9 @@
 .end h2{max-width:16ch}
 .end .lead{margin-top:-6px}
 .end .btns{display:grid; gap:10px}
-.end .go .knob{background:rgba(255,255,255,.2)}
 
 @container app (min-width:700px){
-  .pay{grid-template-columns:repeat(3,1fr)}
-  .pay .card{grid-template-columns:1fr; gap:14px}
+  .pay{grid-template-columns:1fr 1fr}
 }
 @container app (min-width:900px){
   .dl-hero{padding-top:56px}
@@ -249,11 +247,15 @@ var SHAPES = {
   "Горубляне":  {slug:"gorublyane", d:"M150 236 L304 226 L330 266 L290 294 L176 294 L140 266 Z", lx:236, ly:268}
 };
 var PIN = {x:272, y:168}; // Siracusa: Дружба 2, срещу бл. 311 (position on the schematic is approximate)
-var Z = SC.ZONES.map(function(z){ var s = SHAPES[z.n]; return {n:z.n, free:z.free, fee:z.fee, eta:z.eta, slug:s.slug, d:s.d, lx:s.lx, ly:s.ly, two:s.two}; });
+var Z = SC.ZONES.map(function(z){ var s = SHAPES[z.n]; return {n:z.n, free:z.free, fee:z.fee, eta:z.eta, etaMin:z.etaMin, slug:s.slug, d:s.d, lx:s.lx, ly:s.ly, two:s.two}; });
 var bySlug = {}; Z.forEach(function(z){ bySlug[z.slug] = z; });
 var ORDER = Z.filter(function(z){ return z.free; }).concat(Z.filter(function(z){ return !z.free; }));
 
-function etaMin(z){ var base = parseInt(String(z.eta).replace(/\D+/g,""), 10) || 35; return ETA.busy ? base + (ETA.min - 35) : base; }
+/* one rule with cart.html: the quarter's etaMin, +20 min when the kitchen is busy (SC.eta().busy) */
+var BUSY_ADD = 20;
+function etaMin(z){ return (z.etaMin || 35) + (ETA.busy ? BUSY_ADD : 0); }
+function etaRange(){ var a = Z.map(etaMin); return Math.min.apply(null,a) + " - " + Math.max.apply(null,a) + " мин"; }
+function etaRangeBase(){ var a = Z.map(function(z){ return z.etaMin || 35; }); return Math.min.apply(null,a) + " до " + Math.max.apply(null,a) + " минути"; }
 function etaText(z){ return "около " + etaMin(z) + " мин"; }
 function feeHTML(z){ return z.free ? "Безплатно" : (z.fee != null ? SC.fmt(z.fee) : '<span class="missing">'+MISS_FEE+'</span>'); }
 
@@ -271,8 +273,8 @@ function ctaHTML(a, cls){ return '<a class="pill pill-red pill-lg pill-block '+(
 /* ---------- live line ---------- */
 function liveHTML(){
   if (S.delivery) return ETA.busy
-    ? '<span class="dot warn"></span><span><b>Натоварено:</b> доставка около '+ETA.min+' мин</span>'
-    : '<span class="dot ok"></span><span><b>Доставка сега:</b> около '+ETA.min+' мин</span>';
+    ? '<span class="dot warn"></span><span><b>Натоварено:</b> '+etaRange()+' според квартала</span>'
+    : '<span class="dot ok"></span><span><b>Доставка сега:</b> '+etaRange()+' според квартала</span>';
   if (S.kitchen) return '<span class="dot warn"></span><span><b>Утре доставяме от 10:00</b> · днес вземане до 22:30</span>';
   return '<span class="dot"></span><span><b>Сега не доставяме</b> · '+(S.m < 600 ? "днес" : "утре")+' от 10:00</span>';
 }
@@ -285,7 +287,7 @@ function mapSVG(){
                       : '<text class="zl" x="'+z.lx+'" y="'+(z.ly+6)+'">'+z.n+'</text>';
     return '<g class="z '+(z.free?"free":"paid")+'" data-zone="'+z.slug+'"><path class="f" d="'+z.d+'"/>'+(z.free?"":'<path class="h" d="'+z.d+'"/>')+'<path class="sel" d="'+z.d+'"/>'+label+'</g>'; }).join("");
   return '<svg class="map" viewBox="0 0 420 304" role="img" aria-labelledby="mapT mapD">'+
-    '<title id="mapT">Схема на зоните за доставка</title><desc id="mapD">Безплатна доставка: Дружба 1, Дружба 2, НПЗ Искър и Бусманци. По тарифа: Горубляне и Гара Искър. Ресторантът е в Дружба 2. Същото е описано в таблицата под картата.</desc>'+
+    '<title id="mapT">Схема на зоните за доставка</title><desc id="mapD">Безплатна доставка: Дружба 1, Дружба 2, НПЗ Искър и Бусманци. По тарифа: Горубляне и Гара Искър. Ресторантът е в Дружба 2, мястото на схемата е приблизително. Същото е описано в таблицата под картата.</desc>'+
     '<defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="7" style="fill:var(--z-hatch)"/></pattern></defs>'+
     dots+
     '<g class="air" aria-hidden="true"><path d="M246 6 L414 6 L414 112 L344 110 L314 60 L248 52 Z"/><text x="352" y="44">Летище</text><text x="352" y="62">София</text></g>'+
@@ -305,9 +307,9 @@ var faqs = [
   ["Има ли минимална поръчка?", "<span class=\"missing\">"+MISS_MIN+"</span>"],
   ["До колко часа доставяте?", "Всеки ден от 10:00 до 21:00. След 21:00 можете да вземете поръчката от ресторанта до 22:30."],
   ["Доставяте ли обедното меню?", "Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class=\"link\" href=\"pickup.html\">Вземи от място</a>."],
-  ["Колко бързо пристига поръчката?", "Обикновено за 25 до 45 минути, според квартала. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате."],
+  ["Колко бързо пристига поръчката?", "Обикновено за "+etaRangeBase()+", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате."],
   ["Как ще разбера кога идва шофьорът?", "Следите поръчката на живо: приета, готви се, готова, на път. 10 минути преди пристигане ви пращаме известие по SMS, Viber или в браузъра, както изберете."],
-  ["Как да платя?", "В брой или с карта при доставка, или с ваучери за храна. Онлайн плащане засега няма: плащате, когато получите поръчката."],
+  ["Как да платя?", "В брой, с карта при получаване или с ваучер. Онлайн плащане засега няма: плащате, когато получите поръчката."],
   ["Адресът ми не е в зоните. Какво да направя?", "Можете да вземете поръчката от ресторанта: "+esc(R.address)+". Ако сте наблизо, обадете се на <a class=\"link\" href=\"tel:+359894365577\">"+R.phone+"</a> и ще проверим."]
 ];
 
@@ -318,7 +320,7 @@ main.innerHTML =
   '<div class="live" data-live>'+liveHTML()+'</div></div>'+
   '<div class="chk shell" id="proverka"><div class="core">'+
     '<h2 id="chkT">Доставяте ли до мен?</h2><p class="sub">Напишете квартала си. Отговаряме веднага: време, такса и минимална поръчка.</p>'+
-    '<form data-chk novalidate><div class="field"><label for="adr">Вашият адрес или квартал</label>'+
+    '<form data-chk novalidate><div class="field"><label for="adr">Вашият квартал</label>'+
       '<div class="inwrap">'+ic("map-pin",22)+'<input class="input" id="adr" name="adr" type="text" autocomplete="street-address" placeholder="Например: Дружба 2" aria-describedby="adrHelp adrErr"><button class="clr" type="button" data-clear aria-label="Изчисти адреса" hidden>'+ic("x",20)+'</button></div>'+
       '<span class="help" id="adrHelp">Достатъчно е да напишете квартала. Може и на латиница.</span><span class="err" id="adrErr" role="alert"></span></div>'+
       '<button class="pill pill-ink pill-lg" type="submit">'+ic("magnifying-glass",20)+'Провери адреса</button></form>'+
@@ -329,7 +331,7 @@ main.innerHTML =
 '<section class="sec" id="karta" aria-labelledby="mapH"><div class="sec-h"><h2 class="h2" id="mapH">Къде доставяме</h2></div>'+
   '<ul class="legend"><li><span class="sw free"></span>Безплатна доставка</li><li><span class="sw paid"></span>По тарифа</li></ul>'+
   '<div class="map-grid">'+
-    '<div class="shell rv"><div class="core mapbox">'+mapSVG()+'<div class="mapnote"><span>Докоснете квартал</span><span>Схема без мащаб</span></div></div></div>'+
+    '<div class="shell rv"><div class="core mapbox">'+mapSVG()+'<div class="mapnote"><span>Докоснете квартал</span><span>Схема без мащаб, мястото е приблизително</span></div></div></div>'+
     '<div class="map-side">'+
       '<div class="card zcard" data-zcard aria-live="polite"></div>'+
       '<table class="fees"><caption>Такси и време по квартали</caption><thead><tr><th scope="col">Квартал</th><th scope="col">Доставка</th></tr></thead><tbody>'+
@@ -347,14 +349,15 @@ main.innerHTML =
   '<div class="card tl rv">'+timelineHTML()+'</div></div>'+
   '<div><div class="sec-h"><h2 class="h2" id="payH">Плащане при доставка</h2></div>'+
   '<div class="pay rv">'+
-    '<div class="card"><span class="pi">'+ic("money",26)+'</span><div><h3>В брой</h3><p>Плащате, когато получите поръчката.</p></div></div>'+
-    '<div class="card"><span class="pi">'+ic("credit-card",26)+'</span><div><h3>С карта при доставка</h3><p>Visa или Mastercard, на вратата.</p></div></div>'+
-    '<div class="card"><span class="pi">'+ic("ticket",26)+'</span><div><h3>Ваучери за храна</h3><p>Sodexo. <span class="missing">[ЛИПСВА: актуалното име на марката]</span></p></div></div>'+
+    '<div class="card"><span class="pi">'+ic("money",26)+'</span><div><h3>В брой</h3><p>Плащате на шофьора, когато получите поръчката.</p></div></div>'+
+    '<div class="card"><span class="pi">'+ic("credit-card",26)+'</span><div><h3>Карта при получаване</h3><p>Visa или Mastercard. <span class="missing">[ЛИПСВА: потвърждение, че шофьорът приема карти]</span></p></div></div>'+
+    '<div class="card"><span class="pi">'+ic("ticket",26)+'</span><div><h3>Ваучер</h3><p>Ваучери за храна Sodexo. <span class="missing">[ЛИПСВА: актуалното име на марката]</span></p></div></div>'+
+    '<div class="card"><span class="pi">'+ic("gift",26)+'</span><div><h3>Подаръчна карта</h3><p><span class="missing">[ЛИПСВА: приема ли се при доставка]</span></p></div></div>'+
   '</div>'+
   '<p class="paynote">'+ic("info",20)+'<span>Онлайн плащане засега няма. Никой няма да ви поиска данни за карта предварително.</span></p></div>'+
 '</div></section>'+
 
-'<section class="sec" aria-labelledby="faqH"><div class="faq-grid"><div class="faq-side"><h2 class="h2" id="faqH">Често питате</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div><div class="faq">'+
+'<section class="sec" aria-labelledby="faqH"><div class="faq-grid"><div class="faq-side"><h2 class="h2" id="faqH">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div><div class="faq">'+
   faqs.map(function(f,i){ return '<details class="rv"'+(i===0?' open':'')+'><summary>'+f[0]+'<span class="cv">'+ic("caret-down",20)+'</span></summary><div class="ans"><p>'+f[1]+'</p></div></details>'; }).join("")+
 '</div></div></section>'+
 
@@ -386,13 +389,13 @@ var zcard = main.querySelector("[data-zcard]"), svg = main.querySelector(".map")
 var current = null;
 function zoneCardHTML(z){
   if (!z) return '<div class="zt"><h3 class="h3">Извън зоните</h3><span class="ztag out">'+ic("x",16)+'Не доставяме</span></div>'+
-    '<p class="note" style="margin-top:8px">Не доставяме до този адрес. Можете да вземете поръчката си от ресторанта.</p>'+
+    '<p class="note" style="margin-top:8px">Не доставяме до този адрес. Можете да я вземете от ресторанта.</p>'+
     '<div style="display:grid;gap:10px;margin-top:16px"><a class="pill pill-red pill-lg pill-block" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a><a class="pill pill-line pill-block" href="tel:+359894365577">'+ic("phone",20)+'Наблизо сте? Обадете се</a></div>';
   var a = action(z), mins = etaMin(z);
   return '<div class="zswap"><div class="zt"><h3 class="h3">'+z.n+'</h3>'+(z.free?'<span class="ztag free">'+ic("check",16)+'Безплатна доставка</span>':'<span class="ztag paid">'+ic("tag",16)+'По тарифа</span>')+'</div>'+
     (z.slug==="druzhba-2"?'<p class="here">'+ic("map-pin",18)+'Тук сме: срещу бл. 311</p>':'')+
     '<dl>'+
-      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"":"утре, ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин<small>натоварено сега</small></span>':'около '+mins+' мин')+'</dd></div>'+
+      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"Днес от 10:00 · ":"Утре от 10:00 · ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин<small>натоварено сега</small></span>':'около '+mins+' мин')+'</dd></div>'+
       '<div class="kv"><dt>Такса</dt><dd'+(z.free||z.fee!=null?'':' class="missing"')+'>'+(z.free?"Безплатно":(z.fee!=null?SC.fmt(z.fee):MISS_FEE))+'</dd></div>'+
       '<div class="kv"><dt>Минимална поръчка</dt><dd class="missing">[ЛИПСВА: сума в €]</dd></div>'+
       '<div class="kv"><dt>Днес</dt><dd>'+(S.delivery?"до 21:00":S.m<600?"от 10:00 до 21:00":"не доставяме")+'</dd></div>'+
@@ -428,6 +431,8 @@ function norm(s){ s = String(s).toLowerCase(); LAT.forEach(function(p){ s = s.sp
 function lev(a,b){ var m=a.length, n=b.length, d=[], i, j; for (i=0;i<=m;i++){ d[i]=[i]; } for (j=0;j<=n;j++) d[0][j]=j;
   for (i=1;i<=m;i++) for (j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[m][n]; }
 function like(tok, word){ if (tok===word) return true; if (word.length>4 && Math.abs(tok.length-word.length)<=1 && lev(tok,word)<=1) return true; return word.length>5 && tok.indexOf(word.slice(0,6))===0; }
+/* known Sofia quarters outside our zones: a clear refusal (cart.html, 10.1). Nearby villages are left out on purpose: they may be "по тарифа". */
+var OUTSIDE = ["младост","люлин","слатина","изгрев","лозенец","надежда","овча","красно","студентски","център","центъра","гео","редута","подуяне","сухата","витоша","борово","бъкстон","илинден","връбница","банишора","обеля","хиподрума","яворов","дианабад","мусагеница","дървеница","симеоново","бояна","драгалевци","манастирски","разсадника","захарна","толстой","левски","суходол","гоце","хаджи","стрелбище","белите","павлово","княжево","горна","модерно","овча купел"];
 function parse(text){ var t = norm(text), w = t.split(" "), i, has = function(word){ for (var k=0;k<w.length;k++) if (like(w[k],word)) return k; return -1; };
   if (t.length < 3) return {type:"short"};
   if (has("нпз")>-1) return {type:"zone", slug:"npz-iskar"};
@@ -438,6 +443,8 @@ function parse(text){ var t = norm(text), w = t.split(" "), i, has = function(wo
   if (has("бусманци")>-1) return {type:"zone", slug:"busmantsi"};
   if (has("горубляне")>-1 || has("горублянe")>-1) return {type:"zone", slug:"gorublyane"};
   if (isk>-1) return {type:"ask", opts:["npz-iskar","gara-iskar"], q:"НПЗ Искър или Гара Искър?"};
+  for (i=0;i<OUTSIDE.length;i++) if (has(OUTSIDE[i])>-1) return {type:"out"};
+  if (/(^|\s)(ул|улица|бул|булевард|бл|блок|вх|ет|ап)(\s|$)/.test(t) || /\d/.test(t)) return {type:"street"};
   return {type:"unknown"};
 }
 function resultHTML(r, text){
@@ -445,14 +452,14 @@ function resultHTML(r, text){
     return '<div class="rcard '+(z.free?"free":"paid")+'"><div class="rh"><span class="ri">'+ic(z.free?"check":"tag",24)+'</span><div><h3>'+(z.free?"Доставяме безплатно до "+z.n:"Доставяме до "+z.n+" по тарифа")+'</h3>'+
       (S.delivery?'':'<p class="muted">'+esc(a.note||"")+'</p>')+'</div></div>'+
       '<div class="rfacts">'+(S.delivery?'<span class="fact">'+ic("clock",18)+'около '+mins+' мин'+(ETA.busy?' · натоварено':'')+'</span>':'')+
-        (z.free?'<span class="fact">'+ic("truck",18)+'Без такса</span>':'<span class="fact missing">'+ic("truck",18)+MISS_FEE+'</span>')+
+        (z.free?'<span class="fact">'+ic("moped",18)+'Без такса</span>':'<span class="fact missing">'+ic("moped",18)+MISS_FEE+'</span>')+
         '<span class="fact missing">'+ic("receipt",18)+MISS_MIN+'</span></div>'+
       ctaHTML(a)+'<a class="link" href="#karta" data-tomap>'+ic("map-trifold",20)+'Виж '+z.n+' на картата</a></div>'; }
   if (r.type==="ask") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("question",24)+'</span><div><h3>'+r.q+'</h3><p class="muted">Изберете, за да ви кажем точното време.</p></div></div>'+
       '<div class="ropts">'+r.opts.map(function(s){ return '<button class="pill pill-line" type="button" data-ans="'+s+'">'+bySlug[s].n+'</button>'; }).join("")+'</div></div>';
-  if (r.type==="unknown") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("map-pin-line",24)+'</span><div><h3>Не открихме квартала в „'+esc(text)+'“</h3><p class="muted">Изберете го от списъка:</p></div></div>'+
+  if (r.type==="unknown" || r.type==="street") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("map-pin-line",24)+'</span><div><h3>Напишете квартала, например Дружба 2</h3><p class="muted">'+(r.type==="street"?"По улица и блок още не можем да проверим. ":"")+'Или изберете квартала си:</p></div></div>'+
       '<div class="ropts">'+ORDER.map(function(z){ return '<button class="pill pill-line" type="button" data-ans="'+z.slug+'">'+z.n+'</button>'; }).join("")+'<button class="pill pill-soft" type="button" data-ans="none">Моят квартал го няма</button></div></div>';
-  if (r.type==="out") return '<div class="rcard out"><div class="rh"><span class="ri">'+ic("storefront",24)+'</span><div><h3>Не доставяме до този адрес.</h3><p>Можете да вземете поръчката си от ресторанта: '+esc(R.address)+'.</p></div></div>'+
+  if (r.type==="out") return '<div class="rcard out"><div class="rh"><span class="ri">'+ic("storefront",24)+'</span><div><h3>Не доставяме до този адрес.</h3><p>Можете да я вземете от ресторанта: '+esc(R.address)+'.</p></div></div>'+
       '<a class="pill pill-red pill-lg pill-block" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>'+
       '<p class="rnote">'+ic("phone",18)+'<span>Наблизо сте? Обадете се на <a class="link" style="min-height:0" href="tel:+359894365577">'+R.phone+'</a> и ще проверим.</span></p></div>';
   if (r.type==="offline") return '<div class="rcard err"><div class="rh"><span class="ri">'+ic("warning-circle",24)+'</span><div><h3>Няма връзка.</h3><p>Адресът ви е запазен - опитайте пак.</p></div></div><button class="pill pill-ink pill-block" type="button" data-retry>'+ic("arrow-right",20)+'Опитай пак</button></div>';
