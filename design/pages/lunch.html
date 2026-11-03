@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Обедно меню днес | Siracusa Bar & Grill</title>
+<title>Обедно меню | Siracusa Bar & Grill</title>
 <meta name="description" content="Обедното меню на Siracusa в Дружба 2: ново всеки ден, с доставка до 15:00 и -30% при вземане от място след 15:00.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
@@ -90,7 +90,8 @@
 @container app (min-width:900px){ .jump.chips{margin:0 0 8px; padding:2px 0; flex-wrap:wrap; overflow:visible} }
 .jump .chip .ic{color:var(--muted)}
 
-.lnote{display:flex; gap:12px; align-items:flex-start; margin:8px 0 0; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2); font-size:15px; line-height:1.4}
+.lnote{display:flex; gap:12px; align-items:flex-start; margin:8px 0 0; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2); font-size:16px; line-height:1.45}
+.lnote.upl{margin-top:16px}
 .lnote .ic{margin-top:1px; flex:none}
 .lnote b{display:block; font-size:16px}
 .lnote.warn .ic{color:var(--warn)}
@@ -123,7 +124,7 @@
   .lrow .pic{width:72px; height:72px; border-radius:20px}
   .lrow .nm{font-size:17px}
   .lrow .lt{display:flex; align-items:center; justify-content:space-between; gap:24px}
-  .lrow .meta{margin-top:0; flex:none; flex-direction:row-reverse; flex-wrap:nowrap; align-items:center}
+  .lrow .meta{margin-top:0; flex:none; flex-wrap:nowrap; align-items:center}
   .lrow .meta .price{font-size:18px}
 }
 
@@ -146,11 +147,12 @@
 .day.empty-day{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
 .day.empty-day .ic{margin-top:auto; color:var(--muted)}
 .day .missing{font-size:14px; line-height:1.35}
-.day .tag{align-self:flex-start; font-size:13px; font-weight:800; padding:4px 9px; border-radius:999px; background:var(--surface-2)}
+.day .tag{align-self:flex-start; font-size:14px; font-weight:800; padding:4px 9px; border-radius:999px; background:var(--surface-2)}
 .day.is-today{background:var(--chip-dark); color:var(--on-chip-dark)}
 .day.is-today .dn span{color:var(--on-chip-dark); opacity:.7}
 .day.is-today .tag{background:var(--ember); color:var(--on-ember)}
 .day.past{opacity:.6}
+.day.has-menu .tag{background:var(--surface-2)}
 @container app (min-width:900px){
   .week{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); overflow:visible; margin:0; padding:2px 0}
   .day{min-height:210px}
@@ -184,7 +186,7 @@
 .abar .asum{flex:none; padding:0 4px 0 12px; display:grid; line-height:1.2}
 .abar [data-cta] .pill{padding:0 14px; min-width:0}
 .abar .asum b{font-size:16px; font-variant-numeric:tabular-nums}
-.abar .asum small{font-size:13px; font-weight:600; color:var(--muted)}
+.abar .asum small{font-size:14px; font-weight:600; color:var(--muted)}
 .abar .asum[hidden],.abar[hidden]{display:none}
 </style>
 </head>
@@ -213,7 +215,7 @@ SC.lunch.forEach(function(x){ var g = groups.filter(function(z){ return z.n === 
 groups.forEach(function(g){ g.items.sort(function(a,b){ return SC.isOut(a) - SC.isOut(b); }); });
 
 var dd = new Date(L.date + "T12:00:00"), today = new Date();
-var isToday = dd.toDateString() === today.toDateString();
+var isToday = SC.lunchIsToday(); /* BRIEF 8: the menu is for the date in the data; never call it "today" otherwise */
 var dayName = L.dayName || (SC.DAYS[dd.getDay()].charAt(0).toUpperCase() + SC.DAYS[dd.getDay()].slice(1));
 var dateText = dayName + ", " + dd.getDate() + " " + SC.MONTHS[dd.getMonth()];
 var minP = Math.min.apply(null, SC.lunch.map(function(x){ return x.p; }));
@@ -223,7 +225,7 @@ function pad(n){ return (n < 10 ? "0" : "") + n; }
 function left(min){ var h = Math.floor(min / 60), mm = min % 60; return (h ? h + "\u00a0ч" : "") + (h && mm ? "\u00a0" : "") + (mm ? mm + "\u00a0мин" : ""); }
 var now = SC.now(), clock = pad(now.h) + ":" + pad(now.m);
 
-var main = SC.mount({page:"lunch", nav:"lunch", title:"Обедно меню", docTitle:"Обедно меню днес", actionBar:canOrder});
+var main = SC.mount({page:"lunch", nav:"lunch", title:"Обедно меню", docTitle:"Обедно меню", actionBar:canOrder});
 /* lunch lives under "Меню" in the phone tab bar; SC.mount marks only one key, so mark the tab here (see report) */
 var tab = SC.ov.querySelector('.nav a[href="menu.html"]'); if (tab) tab.setAttribute("aria-current", "page");
 
@@ -256,13 +258,14 @@ function dealBanner(){ if (phase !== "discount") return "";
     '<p>След 15:00 обедното меню е само за вземане от място. Отстъпката се смята сама в количката.</p></div>'; }
 
 var hero = '<section class="sec lhero" aria-labelledby="lh1">'+
-  '<h1 class="h1" id="lh1"><span class="eb">'+SC.ic("fork-knife",18)+'Обедно меню'+(isToday ? ' · днес' : '')+'</span><span class="dt">'+dateText+'</span></h1>'+
+  '<h1 class="h1" id="lh1"><span class="eb">'+SC.ic("fork-knife",18)+'Обедно меню'+(isToday ? ' · днес' : '')+'</span><span class="dt">'+(isToday ? dateText : 'Меню за '+dateText.charAt(0).toLowerCase()+dateText.slice(1))+'</span></h1>'+
   '<p class="lead" data-lead>'+SC.plural(SC.lunch.length, "ястие", "ястия")+', от '+SC.fmt(minP)+'. Ново меню всеки ден.'+(canOrder ? ' При вземане от място е готово веднага.' : '')+'</p>'+
+  (isToday ? '' : '<div class="lnote upl">'+SC.ic("calendar-dots",22)+'<span><b>Обедното меню се качва всяка сутрин</b>Отгоре е последното качено меню. В прототипа ястията остават за поръчка като пример.</span></div>')+
   dealBanner() + todayCard() + '</section>';
 
 /* ---------- list ---------- */
 function priceHTML(x){
-  if (phase === "discount" && !SC.isOut(x)) return '<span class="price">'+SC.fmt(cut(x.p))+'</span><span class="old"><span class="vh">вместо </span>'+SC.fmt(x.p)+'</span>';
+  if (phase === "discount" && !SC.isOut(x)) return '<span class="old"><span class="vh">вместо </span>'+SC.fmt(x.p)+'</span><span class="price">'+SC.fmt(cut(x.p))+'</span>';
   return '<span class="price">'+SC.fmt(x.p)+'</span>'; }
 function row(x){ var out = SC.isOut(x);
   var right = out || !canOrder ? '<span class="slot" aria-hidden="true"></span>' : SC.plusBtn(x);
@@ -275,11 +278,11 @@ function jumpChips(){ return '<div class="chips jump" role="navigation" aria-lab
   return '<button class="chip" type="button" data-jump="g-'+GROUP_ID[g.n]+'">'+SC.ic(GROUP_ICON[g.n] || "fork-knife",18)+SC.esc(g.n === "Скара на дървени въглища" ? "Скара" : g.n)+' <span class="n">'+g.items.length+'</span></button>'; }).join("")+'</div>'; }
 function allergenNote(){ return '<div class="lnote">'+SC.ic("info",22)+'<span><b>Алергени и грамаж</b>Съставът на обедните ястия още не е въведен. Ако имате алергия, попитайте ни на <a href="tel:+359894365577" style="color:var(--ink);font-weight:700">'+R.phone+'</a> преди да поръчате. <span class="missing">[ЛИПСВА: грамаж, състав и алергени от кухнята]</span></span></div>'; }
 function lockedNote(){ if (canOrder) return "";
-  return '<div class="lnote" style="margin:0 0 20px">'+SC.ic("clock",22)+'<span><b>'+(phase === "before" ? "Днешното меню, поръчки от 10:00" : "Днешното меню приключи")+'</b>'+(phase === "before" ? "Разгледайте го сега. Бутоните за поръчка се появяват в 10:00." : "Оставяме го за справка. Поръчки отново утре от 10:00.")+'</span></div>'; }
+  return '<div class="lnote" style="margin:0 0 20px">'+SC.ic("clock",22)+'<span><b>'+(phase === "before" ? (isToday ? "Днешното меню, поръчки от 10:00" : "Поръчки от 10:00") : (isToday ? "Днешното меню приключи" : "Поръчките за днес приключиха"))+'</b>'+(phase === "before" ? "Разгледайте го сега. Бутоните за поръчка се появяват в 10:00." : "Оставяме го за справка. Поръчки отново утре от 10:00.")+'</span></div>'; }
 
 function skeleton(){ var g = '<div class="shell"><div class="core"><div class="lrows">'+[0,1,2,3].map(function(){ return '<div class="sk-row"><span class="skel p"></span><span><span class="skel l1" style="display:block"></span><span class="skel l2" style="display:block"></span></span></div>'; }).join("")+'</div></div></div>';
   return '<div aria-busy="true" aria-live="polite"><span class="vh">Зареждаме обедното меню</span><div class="grp-h"><span class="skel" style="width:44px;height:44px;border-radius:50%"></span><span class="skel" style="height:22px;width:120px"></span></div>'+g+'<div class="grp-h" style="margin-top:32px"><span class="skel" style="width:44px;height:44px;border-radius:50%"></span><span class="skel" style="height:22px;width:160px"></span></div>'+g+'</div>'; }
-function emptyState(){ return '<div class="shell"><div class="core empty"><span class="ill">'+SC.ic("bowl-food",44)+'</span><h2 class="h3">Обедното меню за днес още не е качено</h2><p class="muted" style="margin:0;max-width:34ch">Проверете пак след малко или поръчайте от основното меню.</p>'+
+function emptyState(){ return '<div class="shell"><div class="core empty"><span class="ill">'+SC.ic("bowl-food",44)+'</span><h2 class="h3">Обедното меню още не е качено</h2><p class="muted" style="margin:0;max-width:34ch">Проверете пак след малко или поръчайте от основното меню.</p>'+
   '<a class="pill pill-red pill-lg" href="menu.html">Към основното меню'+SC.ic("arrow-right",20)+'</a><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се</a></div></div>'; }
 function errorState(){ return '<div class="shell"><div class="core empty" role="alert"><span class="ill">'+SC.ic("warning-circle",44)+'</span><h2 class="h3">Не успяхме да заредим обедното меню</h2><p class="muted" style="margin:0;max-width:34ch">Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има днес.</p>'+
   '<button class="pill pill-red pill-lg" type="button" data-demo="">Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'Обади се · '+R.phone+'</a></div></div>'; }
@@ -289,9 +292,9 @@ function offlineNote(){ return '<div class="lnote warn" role="status" style="mar
 function weekHTML(){ var dow = (dd.getDay() + 6) % 7, mon = new Date(dd); mon.setDate(dd.getDate() - dow);
   var ABBR = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"], FULL = ["понеделник","вторник","сряда","четвъртък","петък","събота","неделя"];
   return '<div class="week" role="list">'+ABBR.map(function(a, i){ var d = new Date(mon); d.setDate(mon.getDate() + i); var me = i === dow, past = i < dow;
-    var body = me ? '<span class="tag">'+(isToday ? "Днес" : "В менюто")+'</span><span class="cnt2">'+SC.plural(SC.lunch.length, "ястие", "ястия")+'</span><span class="from">от '+SC.fmt(minP)+'</span>'
+    var body = me ? '<span class="tag">'+(isToday ? "Днес" : "Последно качено")+'</span><span class="cnt2">'+SC.plural(SC.lunch.length, "ястие", "ястия")+'</span><span class="from">от '+SC.fmt(minP)+'</span>'
       : '<span class="missing">[ЛИПСВА: меню за '+FULL[i]+']</span>'+SC.ic("calendar-dots",22);
-    return '<div class="day'+(me ? " is-today" : " empty-day")+(past ? " past" : "")+'" role="listitem" aria-label="'+FULL[i]+', '+d.getDate()+' '+SC.MONTHS[d.getMonth()]+'"><span class="dn"><b>'+a+'</b><span>'+d.getDate()+'.'+pad(d.getMonth() + 1)+'</span></span>'+body+'</div>'; }).join("")+'</div>'; }
+    return '<div class="day'+(me ? (isToday ? " is-today" : " has-menu") : " empty-day")+(past && isToday ? " past" : "")+'" role="listitem" aria-label="'+FULL[i]+', '+d.getDate()+' '+SC.MONTHS[d.getMonth()]+'"><span class="dn"><b>'+a+'</b><span>'+d.getDate()+'.'+pad(d.getMonth() + 1)+'</span></span>'+body+'</div>'; }).join("")+'</div>'; }
 
 /* ---------- office + faq ---------- */
 var FAQ = [
@@ -303,15 +306,15 @@ var FAQ = [
 function bottomHTML(){
   return '<section class="sec" aria-labelledby="wk"><div class="sec-h"><h2 class="h2" id="wk">Цялата седмица</h2></div><p class="muted" style="margin:-4px 0 16px">Само за преглед. Всеки ден поръчвате от менюто за деня.</p>'+weekHTML()+'</section>'+
   '<section class="sec"><div class="duo">'+
-    '<div class="shell office"><div class="core"><span class="ill">'+SC.ic("briefcase",28)+'</span><h2 class="h3">Обедна поръчка за офиса</h2><p class="muted">Без събиране на поръчки по телефона.</p>'+
+    '<div class="shell office"><div class="core"><span class="ill">'+SC.ic("briefcase",28)+'</span><h2 class="h3">Обща поръчка за офиса</h2><p class="muted">Без събиране на поръчки по телефона.</p>'+
       '<ol><li><span>Един колега отваря поръчка и праща връзка в чата.</span></li><li><span>Всеки добавя своето от обедното меню до 11:30.</span></li><li><span>Всичко пристига заедно, с обща сметка или поотделно.</span></li></ol>'+
-      '<a class="pill pill-line" href="office.html">'+SC.ic("users-three",20)+'Организирай за офиса</a></div></div>'+
+      '<a class="pill pill-line" href="office.html">'+SC.ic("users-three",20)+'Започни обща поръчка</a></div></div>'+
     '<div class="faq"><h2 class="h3" style="margin:0 4px 12px">Често питани</h2><div class="shell"><div class="core">'+FAQ.map(function(q){ return '<details><summary>'+q[0]+SC.ic("caret-down",20)+'</summary><p>'+q[1]+'</p></details>'; }).join("")+'</div></div></div>'+
   '</div></section>'+
-  '<section class="sec" style="padding-top:40px"><div class="proto"><div class="label small">'+SC.ic("eye",18)+'<span><b>Само в прототипа:</b> покажи състояние</span></div><div class="chips" data-demos></div></div></section>'; }
+  '<section class="sec" style="padding-top:40px"><div class="proto"><div class="label small">'+SC.ic("eye",18)+'<b>Само в прототипа</b></div><div class="chips" data-demos></div></div></section>'; }
 
 /* ---------- render ---------- */
-var DEMOS = [["","Нормално"],["loading","Зарежда"],["empty","Не е качено"],["error","Грешка"],["offline","Без интернет"]];
+var DEMOS = [["","Нормално"],["loading","Зареждане"],["empty","Не е качено"],["error","Грешка"],["offline","Без интернет"]];
 function demo(){ var h = (location.hash || "").replace("#",""); return DEMOS.some(function(d){ return d[0] === h; }) ? h : ""; }
 function listHTML(){ var d = demo();
   if (d === "loading") return skeleton();
@@ -320,7 +323,7 @@ function listHTML(){ var d = demo();
   return (d === "offline" || (navigator.onLine === false) ? offlineNote() : "") + lockedNote() + jumpChips() +
     '<div style="margin-top:12px">'+groups.map(groupHTML).join("")+'</div>' + allergenNote(); }
 
-main.innerHTML = '<div class="lgrid">' + hero + '<div class="sec lmain" data-list aria-label="Ястията днес"></div></div>' + bottomHTML();
+main.innerHTML = '<div class="lgrid">' + hero + '<div class="sec lmain" data-list aria-label="Ястията в обедното меню"></div></div>' + bottomHTML();
 var listEl = main.querySelector("[data-list]");
 var leadEl = null;
 function renderList(){ listEl.innerHTML = listHTML(); var d = demo();
