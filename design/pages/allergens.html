@@ -16,7 +16,7 @@
 .hero{padding-top:24px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; align-items:center}
 .hero .hh{grid-column:1; grid-row:1}
 .eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
-.eyebrow .ic{color:var(--ok)}
+.eyebrow .ic{color:var(--ink)}
 .hero .lead{grid-column:1 / -1; margin-top:14px; max-width:46ch}
 .hero .notice{grid-column:1 / -1; margin-top:22px}
 
@@ -47,7 +47,7 @@
 .meter .mt b{font-variant-numeric:tabular-nums}
 .meter .mt .muted{font-size:14px}
 .meter .bar{margin-top:10px; height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden}
-.meter .bar span{display:block; height:100%; border-radius:4px; background:var(--ok); transform-origin:left}
+.meter .bar span{display:block; height:100%; border-radius:4px; background:var(--ink); transform-origin:left}
 .meter .chk{margin:10px 0 0; font-size:14px; color:var(--muted)}
 .notice .acts{display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; margin-top:16px}
 .notice .acts .pill{flex:1 1 auto}
@@ -122,7 +122,7 @@
 .nm a .ic{color:var(--muted); transition:transform var(--t-fast) var(--ease)}
 .nm a:hover b{text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:3px}
 .nm a:hover .ic{transform:translateX(3px)}
-.nm .comp{margin:4px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
+.nm .comp{margin:-4px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
 .nm .badge{margin-top:8px}
 .nm .ndn{display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:14px; font-weight:600; color:var(--muted)}
 .atbl .a.n{display:none}
@@ -251,7 +251,7 @@
   .nm a{justify-content:flex-start}
   .nm a b{font-size:16px}
   .nm a .ic{display:none}
-  .nm .comp{font-size:15px; margin-top:2px}
+  .nm .comp{font-size:15px; margin-top:-10px}
   .nm .badge{margin:6px 0 0}
   .atbl .a{text-align:center; padding:10px 2px}
   .atbl .a.n{display:table-cell}

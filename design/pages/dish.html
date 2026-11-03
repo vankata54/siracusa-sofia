@@ -17,7 +17,6 @@
 
 .dish{padding:12px 16px 0}
 .dgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:20px}
-.toast > span{white-space:nowrap}
 
 /* hero visual */
 .hero{position:relative}
@@ -54,7 +53,15 @@
 .prow2 .price{font-size:30px; letter-spacing:-.03em}
 .prow2 .g{font-size:17px; color:var(--muted); font-weight:600; white-space:nowrap}
 .sharebtn{min-height:48px; padding:0 4px 0 12px; color:var(--ink)}
-.prow2 .badges{justify-content:flex-end}
+.facts{margin-top:10px}
+.fav{flex:none; min-height:48px; padding:0 18px 0 14px; font-size:16px}
+.fav .ic{color:var(--muted); transition:transform var(--t-base) var(--ease)}
+.fav[aria-pressed="true"]{background:var(--surface-2); box-shadow:none}
+.fav[aria-pressed="true"] .ic{color:var(--red)}
+.fav.pop .ic{animation:pop var(--t-spring) var(--ease)}
+@keyframes pop{40%{transform:scale(1.3)}}
+.u100{font-size:15px; font-weight:700; opacity:.85}
+.per100note{margin:10px 0 0; font-size:15px; color:var(--muted)}
 .dietlbl{margin:0 0 8px; font-size:14px; font-weight:700; color:var(--muted)}
 .desc{margin:14px 0 0; font-size:16px}
 .closednote{margin-top:14px; padding:12px 16px; border-radius:var(--r-field); background:var(--surface-2); color:var(--ink); font-size:15px; font-weight:600; display:flex; gap:10px; align-items:flex-start}
@@ -142,7 +149,6 @@ details.nutr .kv span:first-child{font-weight:600}
 /* sticky action bar */
 .dish-abar .counter{background:var(--surface-2)}
 .dish-abar .pill .q, .buy .pill .q{opacity:.85; font-weight:700}
-.pill.done{background:var(--ok); color:#fff}
 .abar.out .soldlbl{flex:none; display:inline-flex; align-items:center; gap:8px; padding:0 6px 0 12px; font-weight:800; font-size:16px; color:var(--warn); white-space:nowrap}
 
 /* not found */
@@ -166,6 +172,7 @@ details.nutr .kv span:first-child{font-weight:600}
   .buy{display:flex}
   .dish-abar{display:none}
   .aifab.up{bottom:24px}
+  .top.back .ttl{opacity:1; transform:none; text-align:center}
   .nf{padding-top:72px}
   .sheet .mfoot{margin:0 -18px}
 }
@@ -206,7 +213,7 @@ function unit(){ return x.p + extra(); }
 
 /* ---------- small components ---------- */
 function pairCard(d, label){
-  return '<div class="pcard"><a class="open" href="dish.html#'+d.id+'">'+SC.pic(d)+'<span><span class="eb">'+esc(label)+'</span><span class="nm">'+esc(d.n)+'</span><span class="meta"><span class="price">'+fmt(d.p)+'</span><span class="muted small">'+esc(d.g)+'</span></span></span></a>'+SC.plusBtn(d)+'</div>'; }
+  return '<div class="pcard"><a class="open" href="dish.html#'+d.id+'">'+SC.pic(d)+'<span><span class="eb">'+esc(label)+'</span><span class="nm">'+esc(d.n)+'</span><span class="meta"><span class="price">'+fmt(d.p)+'</span><span class="muted small">'+(d.per100?'за 100 гр.':esc(d.g))+'</span></span></span></a>'+SC.plusBtn(d)+'</div>'; }
 function similar(d){ var pool = SC.inCat(d.cat).filter(function(z){ return z.id!==d.id && !SC.isOut(z); });
   if (pool.length < 3) pool = pool.concat(SC.items.filter(function(z){ return z.id!==d.id && !SC.isOut(z) && z.course===d.course && z.cat!==d.cat && pool.indexOf(z)<0; }));
   return pool.sort(function(a,b){ return Math.abs(a.p-d.p)-Math.abs(b.p-d.p); }).slice(0,3); }
@@ -238,12 +245,22 @@ function factsCard(d){ var c = compList(d);
     allergenBlock(d)+
     '<div class="fblk"><details class="nutr"><summary>Хранителна информация'+ic("caret-down",22)+'</summary><div class="nbody">'+
       [["Енергия","ккал"],["Белтъчини","г"],["Въглехидрати","г"],["от тях захари","г"],["Мазнини","г"],["Сол","г"]].map(function(r){ return '<div class="kv"><span>'+r[0]+'</span><span class="missing">[ЛИПСВА]</span></div>'; }).join("")+
-      '<p class="note-auto" style="margin-top:8px">'+ic("info",18)+'<span>На порция '+esc(d.g||"")+'. Стойностите идват, когато кухнята ги въведе.</span></p></div></details></div>'+
+      '<p class="note-auto" style="margin-top:8px">'+ic("info",18)+'<span>'+(d.per100?'На 100 гр.':'На порция '+esc(d.g||""))+'. Стойностите идват, когато кухнята ги въведе.</span></p></div></details></div>'+
   '</div></div>'; }
 
 function buyHTML(){ var t = unit()*qty;
   return '<div class="counter" role="group" aria-label="Брой"><button type="button" data-q="-1" aria-label="Едно по-малко"'+(qty<=1?' disabled style="opacity:.4;cursor:not-allowed"':'')+'>'+ic("minus",20)+'</button><output aria-live="polite">'+qty+'</output><button type="button" data-q="1" aria-label="Едно повече">'+ic("plus",20)+'</button></div>'+
-    '<button class="pill pill-red pill-lg" type="button" data-buy><span>Добави'+(qty>1?' <span class="q">'+qty+' бр.</span>':'')+' · <span class="price">'+fmt(t)+'</span></span></button>'; }
+    '<button class="pill pill-red pill-lg" type="button" data-buy>'+buyLabel()+'</button>'; }
+function buyLabel(){ return x.per100
+  ? '<span>Добави · <span class="price">'+fmt(unit())+'</span><span class="u100">/100 гр.</span></span>'
+  : '<span>Добави'+(qty>1?' <span class="q">'+qty+' бр.</span>':'')+' · <span class="price">'+fmt(unit()*qty)+'</span></span>'; }
+function favs(){ var f = SC.load("sc-fav", []); return Array.isArray(f) ? f : []; }
+function favHTML(){ var on = favs().indexOf(x.id)>-1;
+  return '<button class="pill pill-line fav" type="button" data-fav aria-pressed="'+on+'">'+ic("heart",20)+'Любимо</button>'; }
+function toggleFav(btn){ var f = favs(), i = f.indexOf(x.id), on = i<0;
+  if (on) f.push(x.id); else f.splice(i,1); SC.store("sc-fav", f);
+  btn.setAttribute("aria-pressed", String(on)); btn.classList.remove("pop"); void btn.offsetWidth; if (on) btn.classList.add("pop");
+  SC.toast(on ? "Добавено в любими ♥" : "Махнато от любими"); }
 
 /* ---------- render ---------- */
 function render(){
@@ -255,8 +272,10 @@ function render(){
   if (!x) return notFound(id);
   cat = catOf(x);
   var out = SC.isOut(x), sug = out ? [] : SC.suggest(x.id, SC.cart.lines().map(function(l){ return l.id; }));
-  ttl.textContent = x.n; backA.href = cat.back;
-  backA.innerHTML = ic("arrow-left",20)+"Меню";
+  ttl.textContent = x.n;
+  var fromCat = /category\.html/.test(document.referrer||"") && cat.id!=="obedno";
+  backA.href = fromCat ? cat.href : cat.back;
+  backA.innerHTML = ic("arrow-left",20)+esc(fromCat ? cat.n : cat.id==="obedno" ? "Обедно меню" : "Меню");
   document.title = x.n + " | " + cat.n + " | Siracusa Bar & Grill";
   setMeta(x);
 
@@ -268,7 +287,9 @@ function render(){
   var info =
     '<nav aria-label="Хлебни трохи"><ol class="crumbs"><li><a href="menu.html">Меню</a></li><li>'+ic("caret-right",16)+'<a href="'+cat.href+'">'+esc(cat.n)+'</a></li></ol></nav>'+
     '<h1 class="h1" data-h1>'+esc(x.n)+'</h1>'+
-    '<div class="prow2"><span class="pg"><span class="price">'+fmt(x.p)+'</span>'+(x.g?'<span class="g">'+esc(x.g)+'</span>':'')+'</span>'+(facts.length ? '<span class="badges">'+facts.join("")+'</span>' : '')+'</div>'+
+    '<div class="prow2"><span class="pg"><span class="price">'+fmt(x.p)+'</span>'+(x.per100?'<span class="g">за 100 гр.</span>':x.g?'<span class="g">'+esc(x.g)+'</span>':'')+'</span>'+favHTML()+'</div>'+
+    (x.per100 ? '<p class="per100note">Продава се на тегло: сумата се смята по теглото на парчето. <span class="missing">[ЛИПСВА: среден грамаж на порция]</span></p>' : '')+
+    (facts.length ? '<div class="badges facts">'+facts.join("")+'</div>' : '')+
     (closed && !out ? '<div class="closednote">'+ic("clock",20)+'<span>'+(st.m<600?'Кухнята отваря в 10:00. Добавете сега и поръчайте, когато отворим.':'Кухнята приема поръчки до 22:30. Добавете сега и поръчайте за утре.')+'</span></div>' : '')+
     (out
       ? '<div class="soldout" role="status"><span class="ico">'+ic("clock",24)+'</span><span><b>Изчерпано днес</b><span>Вижте подобни ястия, които имаме сега.</span></span></div>'+
@@ -315,13 +336,12 @@ function paint(){
 /* ---------- add to cart ---------- */
 function buy(btn){
   var m = modsList(), opts = m.length ? {mods:m, extra:Math.round(extra()*100)/100} : {};
-  var key = x.id + (m.length ? "|"+m.join(",") : "");
-  var prev = SC.cart.lines().filter(function(l){ return l.key===key; })[0], prevQ = prev ? prev.q : 0, n = qty, t = unit()*qty;
+  var n = qty, t = unit()*qty;
   SC.cart.add(x.id, qty, opts);
   SC.fly(btn, x.id); SC.haptic();
-  document.querySelectorAll("[data-buy]").forEach(function(b){ b.classList.add("done"); b.innerHTML = ic("check",22)+"Добавено"+(n>1?" "+n+" бр.":"")+" · "+fmt(t); });
+  document.querySelectorAll("[data-buy]").forEach(function(b){ b.classList.add("done"); b.innerHTML = ic("check",22)+"Добавено"+(n>1?" "+n+" бр.":"")+(x.per100?"":" · "+fmt(t)); });
   setTimeout(paint, 1400);
-  SC.toast("Добавено ✓"+(n>1?" · "+n+" бр.":""), function(){ SC.cart.setQty(key, prevQ); });
+  SC.toast("Добавено ✓");
 }
 
 /* ---------- modifiers sheet ---------- */
@@ -340,7 +360,7 @@ function openMods(){
   function upd(){ var t = unit()*qty, has = modsList().length;
     sheet.querySelector("[data-tot]").textContent = fmt(t);
     sheet.querySelector("[data-totl]").textContent = (has ? "С промените, " : "Общо, ") + qty + " бр.";
-    sheet.querySelector("[data-sbuy]").innerHTML = '<span>Добави в количката · <span class="price">'+fmt(t)+'</span></span>';
+    sheet.querySelector("[data-sbuy]").innerHTML = buyLabel();
     sheet.querySelector("[data-sreset]").hidden = !has; }
   upd();
   sheet.addEventListener("change", function(e){ var el = e.target;
@@ -382,6 +402,7 @@ function onClick(e){ var t = e.target.closest("button, a"); if (!t || !x) return
   if (t.dataset.q){ qty = Math.max(1, Math.min(20, qty + (+t.dataset.q))); paint(); return; }
   if (t.hasAttribute("data-buy")){ buy(t); return; }
   if (t.hasAttribute("data-mods")){ openMods(); return; }
+  if (t.hasAttribute("data-fav")){ toggleFav(t); return; }
   if (t.hasAttribute("data-3d")){ if (!t.hasAttribute("aria-busy")) toggle3d(t); return; }
 }
 main.addEventListener("click", onClick);
@@ -395,7 +416,7 @@ function watchTitle(){ var h = main.querySelector("[data-h1]"); ttl.classList.re
 
 /* ---------- SEO helpers ---------- */
 function setMeta(d){ var m = document.querySelector('meta[name="description"]');
-  m.setAttribute("content", d.n+" от Siracusa Bar & Grill, Дружба 2: "+(d.comp?d.comp+". ":"")+(d.g?d.g+", ":"")+fmt(d.p)+". Поръчайте с доставка или вземете от място."); }
+  m.setAttribute("content", d.n+" от Siracusa Bar & Grill, Дружба 2: "+(d.comp?d.comp+". ":"")+(d.per100?"":d.g?d.g+", ":"")+fmt(d.p)+(d.per100?" за 100 гр.":"")+". Поръчайте с доставка или вземете от място."); }
 function jsonLd(d){ var old = document.getElementById("ld"); if (old) old.remove();
   var data = {"@context":"https://schema.org","@type":"MenuItem","name":d.n,"description":d.comp||undefined,
     "offers":{"@type":"Offer","price":d.p.toFixed(2),"priceCurrency":"EUR","availability":SC.isOut(d)?"https://schema.org/OutOfStock":"https://schema.org/InStock"},
