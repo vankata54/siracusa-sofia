@@ -30,6 +30,8 @@ SC.byId = {}; M.items.forEach(function(x){ SC.byId[x.id] = x; });
 SC.lunch = M.lunch.items.filter(function(x){ return x.p; }).map(function(x){ var g=x.group;
   var it = {id:x.id, n:x.n, cat:"obedno", group:g, course:/Супи|Салати/.test(g)?"starter":/Десерти/.test(g)?"dessert":"main", comp:"", g:"", p:x.p, t:[], al:[], noOnion:false, share:false, lunch:true};
   SC.byId[it.id] = it; return it; });
+/* the lunch menu in the data is for one date; pages must not present it as "today" on another day */
+SC.lunchIsToday = function(){ try{ var t=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Sofia"}).format(new Date()); return t===M.lunch.date; }catch(e){ return false; } };
 SC.cats = M.cats;
 SC.catById = {}; M.cats.forEach(function(c){ SC.catById[c.id] = c; });
 SC.inCat = function(cat){ return M.items.filter(function(x){ return x.cat === cat; }); };
@@ -100,7 +102,7 @@ SC.offers = function(){ var s = SC.state(), ev = SC.lastSaturday(), o = [];
   if (s.lunch) o.push({id:"lunch", t:"Обедно меню днес", p:"Поръчайте до 15:00 с доставка или вземане от място.", go:"Виж обедното меню", href:"lunch.html"});
   else if (s.lunchDiscount) o.push({id:"lunch30", t:"-30% на обедното меню", p:"След 15:00 при вземане от място. Отстъпката се смята сама.", go:"Вземи от място", href:"lunch.html"});
   else o.push({id:"tomorrow", t:"Поръчай за утре", p:"Кухнята приема поръчки всеки ден от 10:00 до 22:30.", go:"Към менюто", href:"menu.html"});
-  o.push({id:"greek", t:"Гръцка вечер", p:(ev.days===0?"Днес":"След "+SC.plural(ev.days,"ден","дни"))+". -5% при ранна резервация.", go:"Запази място", href:"event.html#gratska-vecher"});
+  o.push({id:"greek", t:"Гръцка вечер", p:(ev.days===0?"Днес":"След "+SC.plural(ev.days,"ден","дни"))+". Последната събота от месеца.", go:"Запази място", href:"event.html#gratska-vecher"});
   o.push({id:"birthday", t:"Рожден ден при нас", p:"-10% от сметката или малка торта за рожденика.", go:"Виж офертата", href:"offers.html#birthday"});
   o.push({id:"signup", t:"-10% с профил", p:"Направете профил и вземете -10% от следващата поръчка.", go:"Направи профил", href:"login.html"});
   return o; };
