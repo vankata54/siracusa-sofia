@@ -585,7 +585,7 @@ function viewList(){ var c = ctx();
   return html; }
 
 function pickerHTML(picks, guestView){
-  return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2>'<p class="muted" style="margin:-6px 0 0;font-weight:600">'+(SC.lunchIsToday() ? esc(SC.menu.lunch.dayName)+', '+dateLabel(new Date(SC.menu.lunch.date+"T12:00:00")).split(", ")[1] : "Обедното меню се качва всяка сутрин.")+'</p>'+
+  return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2><p class="muted" style="margin:-6px 0 0;font-weight:600">'+(SC.lunchIsToday() ? esc(SC.menu.lunch.dayName)+', '+dateLabel(new Date(SC.menu.lunch.date+"T12:00:00")).split(", ")[1] : "Обедното меню се качва всяка сутрин.")+'</p>'+
     (ctx().day === "tomorrow" ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] В прототипа показваме последното качено.</p>' : '')+
     '<div class="chips" role="list">'+GROUPS.map(function(g){ return '<button class="chip" type="button" role="listitem" data-jump="'+g.id+'">'+esc(g.n)+'<span class="n">'+g.items.length+'</span></button>'; }).join("")+'</div></div>'+
     GROUPS.map(function(g){ return '<div class="o-grp" id="'+g.id+'"><h3 class="h3">'+esc(g.n)+'</h3><div class="o-items">'+g.items.map(function(x){ return itemHTML(x, picks[x.id]||0); }).join("")+'</div></div>'; }).join("")+'</section>'; }

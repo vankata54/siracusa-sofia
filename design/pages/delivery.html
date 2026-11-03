@@ -273,8 +273,8 @@ function ctaHTML(a, cls){ return '<a class="pill pill-red pill-lg pill-block '+(
 /* ---------- live line ---------- */
 function liveHTML(){
   if (S.delivery) return ETA.busy
-    ? '<span class="dot warn"></span><span><b>Натоварено:</b> '+etaRange()+' според квартала</span>'
-    : '<span class="dot ok"></span><span><b>Доставка сега:</b> '+etaRange()+' според квартала</span>';
+    ? '<span class="dot warn"></span><span><b>Натоварено</b> · '+etaRange()+'</span>'
+    : '<span class="dot ok"></span><span><b>Доставка сега</b> · '+etaRange()+'</span>';
   if (S.kitchen) return '<span class="dot warn"></span><span><b>Утре доставяме от 10:00</b> · днес вземане до 22:30</span>';
   return '<span class="dot"></span><span><b>Сега не доставяме</b> · '+(S.m < 600 ? "днес" : "утре")+' от 10:00</span>';
 }
@@ -328,10 +328,10 @@ main.innerHTML =
   '</div></div>'+
 '</div></section>'+
 
-'<section class="sec" id="karta" aria-labelledby="mapH"><div class="sec-h"><h2 class="h2" id="mapH">Къде доставяме</h2></div>'+
+'<section class="sec" id="karta" aria-labelledby="mapH"><div class="sec-h"><h2 class="h2" id="mapH">Къде доставяме</h2></div><p class="lead" style="margin:-4px 0 14px">Докоснете квартал, за да видите времето и таксата.</p>'+
   '<ul class="legend"><li><span class="sw free"></span>Безплатна доставка</li><li><span class="sw paid"></span>По тарифа</li></ul>'+
   '<div class="map-grid">'+
-    '<div class="shell rv"><div class="core mapbox">'+mapSVG()+'<div class="mapnote"><span>Докоснете квартал</span><span>Схема без мащаб, мястото е приблизително</span></div></div></div>'+
+    '<div class="shell rv"><div class="core mapbox">'+mapSVG()+'<div class="mapnote"><span>Схема без мащаб, мястото е приблизително</span></div></div></div>'+
     '<div class="map-side">'+
       '<div class="card zcard" data-zcard aria-live="polite"></div>'+
       '<table class="fees"><caption>Такси и време по квартали</caption><thead><tr><th scope="col">Квартал</th><th scope="col">Доставка</th></tr></thead><tbody>'+
@@ -395,7 +395,7 @@ function zoneCardHTML(z){
   return '<div class="zswap"><div class="zt"><h3 class="h3">'+z.n+'</h3>'+(z.free?'<span class="ztag free">'+ic("check",16)+'Безплатна доставка</span>':'<span class="ztag paid">'+ic("tag",16)+'По тарифа</span>')+'</div>'+
     (z.slug==="druzhba-2"?'<p class="here">'+ic("map-pin",18)+'Тук сме: срещу бл. 311</p>':'')+
     '<dl>'+
-      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="muted">'+(S.m<600?"Днес от 10:00 · ":"Утре от 10:00 · ")+'около '+mins+' мин</span>':ETA.busy?'<span class="busy">около '+mins+' мин<small>натоварено сега</small></span>':'около '+mins+' мин')+'</dd></div>'+
+      '<div class="kv"><dt>Време до вас</dt><dd>'+(!S.delivery?'<span class="busy" style="color:var(--ink)">около '+mins+' мин<small class="muted">'+(S.m<600?"днес от 10:00":"утре от 10:00")+'</small></span>':ETA.busy?'<span class="busy">около '+mins+' мин<small>натоварено сега</small></span>':'около '+mins+' мин')+'</dd></div>'+
       '<div class="kv"><dt>Такса</dt><dd'+(z.free||z.fee!=null?'':' class="missing"')+'>'+(z.free?"Безплатно":(z.fee!=null?SC.fmt(z.fee):MISS_FEE))+'</dd></div>'+
       '<div class="kv"><dt>Минимална поръчка</dt><dd class="missing">[ЛИПСВА: сума в €]</dd></div>'+
       '<div class="kv"><dt>Днес</dt><dd>'+(S.delivery?"до 21:00":S.m<600?"от 10:00 до 21:00":"не доставяме")+'</dd></div>'+
@@ -458,7 +458,7 @@ function resultHTML(r, text){
   if (r.type==="ask") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("question",24)+'</span><div><h3>'+r.q+'</h3><p class="muted">Изберете, за да ви кажем точното време.</p></div></div>'+
       '<div class="ropts">'+r.opts.map(function(s){ return '<button class="pill pill-line" type="button" data-ans="'+s+'">'+bySlug[s].n+'</button>'; }).join("")+'</div></div>';
   if (r.type==="unknown" || r.type==="street") return '<div class="rcard"><div class="rh"><span class="ri">'+ic("map-pin-line",24)+'</span><div><h3>Напишете квартала, например Дружба 2</h3><p class="muted">'+(r.type==="street"?"По улица и блок още не можем да проверим. ":"")+'Или изберете квартала си:</p></div></div>'+
-      '<div class="ropts">'+ORDER.map(function(z){ return '<button class="pill pill-line" type="button" data-ans="'+z.slug+'">'+z.n+'</button>'; }).join("")+'<button class="pill pill-soft" type="button" data-ans="none">Моят квартал го няма</button></div></div>';
+      '<div class="ropts">'+ORDER.map(function(z){ return '<button class="pill pill-line" type="button" data-ans="'+z.slug+'">'+z.n+'</button>'; }).join("")+'<button class="pill pill-line" type="button" data-ans="none">Моят квартал го няма</button></div></div>';
   if (r.type==="out") return '<div class="rcard out"><div class="rh"><span class="ri">'+ic("storefront",24)+'</span><div><h3>Не доставяме до този адрес.</h3><p>Можете да я вземете от ресторанта: '+esc(R.address)+'.</p></div></div>'+
       '<a class="pill pill-red pill-lg pill-block" href="pickup.html" data-mode="pickup">'+ic("storefront",20)+'Вземи от място</a>'+
       '<p class="rnote">'+ic("phone",18)+'<span>Наблизо сте? Обадете се на <a class="link" style="min-height:0" href="tel:+359894365577">'+R.phone+'</a> и ще проверим.</span></p></div>';
