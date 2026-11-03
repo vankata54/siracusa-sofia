@@ -314,7 +314,7 @@ var ORDER_NO = 1043;  /* mock order number for the prototype (format "№ 1043",
 
 /* ---------- state (per-viewer convenience; the real order lives on the server) ---------- */
 var KEY = "sc-office";
-var DEF = {office:"", name:"", addr:"", mode:"delivery", deadline:null, day:null, pays:"one", phone:"", pay:"cash", code:"", mine:{}, removed:[], guest:{name:"", picks:{}, done:false}, sentAt:null};
+var DEF = {office:"", name:"", addr:"", mode:"delivery", deadline:null, day:null, pays:"one", phone:"", pay:"cash", sentM:null, code:"", mine:{}, removed:[], guest:{name:"", picks:{}, done:false}, sentAt:null};
 var G = Object.assign({}, DEF, SC.load(KEY, {}));
 G.guest = Object.assign({}, DEF.guest, G.guest || {}); G.mine = G.mine || {}; G.removed = G.removed || [];
 function save(){ SC.store(KEY, G); }
@@ -368,7 +368,7 @@ function ctx(){ var p = plan();
   var remain = day === "today" ? dl*60 - secNow : (1440*60 - secNow) + dl*60;
   var zr = zoneOf(G.addr), z = zr && zr.z;
   var late = day === "today" && nowM >= 900;
-  return {day:day, dl:dl, remain:remain, closed:sim.closed || remain <= 0, late:late, z:z, eta:dl + etaMin(z, day),
+  return {day:day, dl:dl, remain:remain, closed:sim.closed || remain <= 0, late:late, z:z, eta:((G.sentM != null && day === "today") ? Math.min(G.sentM, dl) : dl) + etaMin(z, day),
     dayWord: day === "today" ? "днес" : "утре", dayFull: day === "today" ? dateLabel(new Date()) : dateLabel(tomorrowDate())}; }
 function left(sec){ sec = Math.max(0, sec); var h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
   if (h >= 1) return h + '<small> ч </small>' + pad(m) + '<small> мин</small>';
@@ -769,7 +769,7 @@ function send(btn){ var ok = /^(\+359\d{9}|0\d{9})$/.test(G.phone.replace(/[\s-]
     if (sim.offline){ btns.forEach(function(b){ b.removeAttribute("data-busy"); b.innerHTML = label; });
       var box = main.querySelector("[data-senderr]"); if (box) box.innerHTML = '<div class="o-note bad" role="alert">'+ic("warning-circle",22)+'<div><p>Няма връзка. Поръчката ви е запазена - опитайте пак.</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button></div></div>';
       SC.toast("Няма връзка. Опитайте пак."); scrollToEl(box); return; }
-    G.sentAt = Date.now(); save(); handoff(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }
+    G.sentAt = Date.now(); G.sentM = SC.minutes(); save(); handoff(); location.hash = "sent"; }, SC.reduce ? 200 : 1100); }
 /* hand-off to tracking.html: same sc-order shape as cart.html */
 function handoff(){ var c = ctx(), m = SC.minutes(), lines = {}, payName = G.pays === "each" ? "Всеки плаща своето" : (G.pay === "card" ? "Карта при получаване" : "В брой");
   eaters().forEach(function(p){ Object.keys(p.picks).forEach(function(k){ lines[k] = (lines[k]||0) + p.picks[k]; }); });
