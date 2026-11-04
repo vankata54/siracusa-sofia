@@ -37,7 +37,7 @@ const path = Astro.url.pathname;
 const canonical = new URL(p.canonical || path, Astro.site).href;
 /* relative path to the site root, used by the demo (static files) for links built in the browser */
 const depth = path.replace(/^\/|\/?index\.html$/g, "").split("/").filter(Boolean).length;
-const root = depth ? "../".repeat(depth) : "./";
+const root = depth && p.page !== "404" ? "../".repeat(depth) : "./";
 const hopts: HeaderOpts = { nav: p.nav ?? null, back: p.back || null, title: p.title, share: p.share, status: p.status, cart: p.cart };
 const showNav = p.bottomNav !== false;
 const ld = p.jsonld ? (Array.isArray(p.jsonld) ? p.jsonld : [p.jsonld]) : [];
