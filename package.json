@@ -1,0 +1,23 @@
+{
+  "name": "siracusa-sofia",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "gen": "node scripts/gen-menu.mjs && node scripts/gen-icons.mjs",
+    "predev": "npm run gen",
+    "dev": "astro dev",
+    "prebuild": "npm run gen",
+    "build": "astro build",
+    "build:demo": "npm run gen && DEMO=1 astro build && node scripts/relativize.mjs dist",
+    "serve": "node --experimental-strip-types --no-warnings server/index.ts",
+    "db:migrate": "drizzle-kit generate",
+    "db:seed": "node scripts/make-env.mjs && node --experimental-strip-types --no-warnings server/seed.ts",
+    "make-env": "node scripts/make-env.mjs",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "shoot": "node scripts/shoot.mjs"
+  }
+}
