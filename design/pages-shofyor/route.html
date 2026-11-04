@@ -51,8 +51,8 @@ function render(){
   var r = DR.current(), etas = DR.etas(), same = P.A.order.every(function(d,i){ return d === P.B.order[i]; });
   var h = '<section class="st-sec">'+scheme(r)+'</section>';
   h += '<section class="st-sec"><div class="st-h"><h2>Предложение</h2><span class="muted">вие решавате</span></div><div class="rchoice">'+
-    card("A", P.A, "Път А · по-бързо до клиентите", "Най-малко чакане общо за клиентите")+
-    (same ? '<p class="small muted" style="margin:0">Път Б (най-кратък) съвпада с Път А за този курс.</p>' : card("B", P.B, "Път Б · по-кратък", "Най-малко километри"))+
+    card("A", P.A, "Път А · по срока", "Първо поръчките, които трябва да стигнат по-рано")+
+    (same ? '<p class="small muted" style="margin:0">Най-краткият път съвпада с Път А за този курс.</p>' : card("B", P.B, "Път Б · по-кратък", "Най-малко километри за целия курс"))+
     (P.own ? card("own", P.own, "Моят ред", "Подредихте адресите сами") : '')+'</div>'+
     '<p class="small muted" style="margin:10px 4px 0">Редът се смята с VROOM върху OSRM (без такса на заявка, без трафик). Числата тук са примерни. Литрите и еврото се смятат от реалния разход на автомобила, щом има зареждания <span class="missing">[ЛИПСВА: разход л/100 км, цена на горивото]</span>.</p></section>';
   h += '<section class="st-sec"><div class="st-h"><h2>Адресите по ред</h2><span class="muted">пристигане</span></div><div class="stops">'+

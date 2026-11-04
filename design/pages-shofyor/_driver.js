@@ -82,15 +82,16 @@ DR.money = function(d){ return fmt(DR.total(d)) + (DR.feeKnown(d) ? "" : " + т�
 function pt(d){ if (d === "home") return DR.POS.home; var p = DR.POS[d.zone || "out"]; return [p[0] + (d.dx||0), p[1] + (d.dy||0)]; }
 function km(a, b){ var p = pt(a), q = pt(b); return Math.hypot(p[0]-q[0], p[1]-q[1]) * 0.05; }
 function inTown(d){ return d === "home" || d.zone === "Дружба 1" || d.zone === "Дружба 2"; }
-function mins(a, b){ var k = km(a, b); return 1 + k * (inTown(a) && inTown(b) ? 3.0 : inTown(a) || inTown(b) ? 2.1 : 1.4); }
+function mins(a, b){ var k = km(a, b); return 1 + k * (inTown(a) && inTown(b) ? 2.6 : 1.9); }
 function perms(a){ if (a.length < 2) return [a]; var r = []; a.forEach(function(x, i){ perms(a.slice(0,i).concat(a.slice(i+1))).forEach(function(p){ r.push([x].concat(p)); }); }); return r; }
 function measure(order){ var t = 0, k = 0, prev = "home", legs = [], wait = 0, late = 0;
   order.forEach(function(d, i){ var lm = mins(prev, d), lk = km(prev, d); t += lm; k += lk; wait += t + 2*i; late += Math.max(0, Date.now() + (t + 2*i)*60000 - DR.due(d)); legs.push({m:lm, k:lk}); prev = d; });
   var rk = km(prev, "home"), rm = mins(prev, "home");
   return {order:order, min:Math.round(t + rm), km:k + rk, legs:legs, back:{m:rm, k:rk}, wait:wait, late:late}; }
 DR.plan = function(){ var stops = DR.active(); if (!stops.length) return null;
-  var all = perms(stops).map(measure);
-  var A = all.slice().sort(function(a,b){ return Math.round((a.late - b.late)/60000) || a.wait - b.wait || a.km - b.km; })[0]; /* A: least lateness against the promised times, then least waiting for the clients */
+  var all = perms(stops).filter(function(o){ return !stops.some(function(d){ return d.st==="road"; }) || o[0].st === "road"; }).map(measure);
+  /* A: by the promised time (VROOM with time windows: the one on the road first, then the earliest deadline) */
+  var A = measure(stops.slice().sort(function(a,b){ return (b.st==="road") - (a.st==="road") || DR.due(a) - DR.due(b); }));
   var B = all.slice().sort(function(a,b){ return a.km - b.km || a.min - b.min; })[0];
   var own = null; if (DR.db.route.own){ var o = DR.db.route.own.map(DR.byId).filter(function(d){ return d && stops.indexOf(d) > -1; }); stops.forEach(function(d){ if (o.indexOf(d) < 0) o.push(d); }); own = measure(o); }
   return {A:A, B:B, own:own}; };
