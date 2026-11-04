@@ -179,7 +179,7 @@ M.plus = function(x){ if (!M.orderable(x)) return "";
 M.why = function(x){ if (SC.isOut(x)) return ""; if (x.cat === "zakuski" && !SC.state().breakfast && M.kitchen()) return '<span class="later">'+L("до 11:30","until 11:30")+'</span>'; return ""; };
 /* who already has it in the shared cart: "2 · Телефон 2" */
 M.inCartTag = function(x){ var ls = M.inDraft(x.id); if (!ls.length) return "";
-  return '<span class="incart">'+ls.map(function(l){ return '<span class="who">'+M.av(l.who, true)+(l.q > 1 ? l.q+" × " : "")+esc(M.name(l.who))+'</span>'; }).join("")+'</span>'; };
+  return '<span class="incart"><span class="who">'+L("В количката:","In the cart:")+'</span>'+ls.map(function(l){ return '<span class="who">'+M.av(l.who, true)+(l.q > 1 ? l.q+" × " : "")+esc(M.name(l.who))+'</span>'; }).join("")+'</span>'; };
 M.card = function(x){ return '<div class="dcard"><button class="open" type="button" data-mdish="'+x.id+'"><span class="pw">'+SC.pic(x)+SC.badges(x,true)+'</span><span class="nm">'+esc(x.n)+'</span></button><div class="rowp"><span><span class="price">'+SC.fmt(x.p)+'</span><small>'+(x.per100?L("за 100 гр.","per 100 g"):esc(x.g))+'</small></span>'+M.plus(x)+M.why(x)+'</div></div>'; };
 M.row = function(x){ return '<div class="mrow'+(SC.isOut(x)?" out":"")+'" data-row="'+x.id+'"><button class="open" type="button" data-mdish="'+x.id+'">'+SC.pic(x)+'<span class="tx"><span class="nm">'+esc(x.n)+'</span>'+
   '<span class="meta"><span class="price">'+SC.fmt(x.p)+'</span><span>'+(x.per100?L("за 100 гр.","per 100 g"):esc(x.g))+'</span></span>'+(x.t.length?SC.badges(x):"")+M.inCartTag(x)+'</span></button>'+(M.plus(x)||M.why(x)||'<span></span>')+'</div>'; };

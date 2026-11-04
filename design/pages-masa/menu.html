@@ -107,7 +107,7 @@ function tableCard(){ var by = {}; S.draft.forEach(function(l){ by[l.who] = (by[
 
 main.innerHTML =
   '<section class="mpage mm" aria-labelledby="mm-h">'+
-    '<div class="mm-top"><div class="mm-h"><h1 class="h1" id="mm-h">'+L("Меню","Menu")+'</h1><p class="lead">'+L("Натиснете „+“ и ястието отива в общата количка на масата.","Tap “+” and the dish goes to the table’s shared cart.")+'</p></div><div data-tblbox>'+tableCard()+'</div></div>'+
+    '<div class="mm-top"><div class="mm-h"><h1 class="h1" id="mm-h">'+L("Меню","Menu")+'</h1><p class="lead">'+(M.kitchen() ? L("Натиснете „+“ и ястието отива в общата количка на масата.","Tap “+” and the dish goes to the table’s shared cart.") : L("Кухнята затвори за днес. Менюто е за разглеждане.","The kitchen has closed for today. The menu is for browsing."))+'</p></div><div data-tblbox>'+tableCard()+'</div></div>'+
     '<div class="mnotes" data-notes></div>'+
     '<div class="sbox" role="search"><label class="vh" for="mq">'+L("Търсете ястие или съставка","Search a dish or ingredient")+'</label>'+ic("magnifying-glass",22)+'<input id="mq" type="search" placeholder="'+L("Търсете: пица, бурата, кебапчета","Search: pizza, burrata")+'" autocomplete="off" enterkeyhint="search"><button class="clr" type="button" data-qclr aria-label="'+L("Изчисти търсенето","Clear search")+'" hidden>'+ic("x",20)+'</button></div>'+
     '<div class="chips fchips" data-fchips role="group" aria-label="'+L("Филтри","Filters")+'"></div>'+

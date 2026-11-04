@@ -15,7 +15,7 @@ const de = document.documentElement;
 const DEMO = de.dataset.demo === "1";
 configureRoutes({ demo: DEMO, root: de.dataset.root || "/" });
 
-const reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- storage (per-viewer convenience) ---------- */
 function load<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
@@ -175,8 +175,8 @@ function cookieChoice(v: string) {
 /* ---------- share ---------- */
 async function share() {
   const data = { title: document.title, url: location.href };
-  try { if (navigator.share) { await navigator.share(data); return; } } catch { return; }
-  try { await navigator.clipboard.writeText(location.href); } catch { /* ignore */ }
+  try { if ("share" in navigator) { await navigator.share(data); return; } } catch { return; }
+  try { await (navigator as Navigator).clipboard.writeText(location.href); } catch { /* ignore */ }
   toast("Връзката е копирана");
 }
 
