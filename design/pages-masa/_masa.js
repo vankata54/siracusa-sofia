@@ -24,18 +24,19 @@ function fresh(){ return {v:2, mode:"open", draft:seedDraft(), rounds:[], calls:
 /* ---------- this phone: every browser tab is its own phone (window.name survives reloads, not new tabs) ---------- */
 var HB = "sc-masa-tab-"; /* one key per tab: no read-modify-write races between tabs */
 if (!/^masa-/.test(window.name || "")) window.name = "masa-" + uid();
-var TAB = window.name;
+var TAB = window.name, SINCE;
 function tabs(){ var out = {}; try{ for (var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if (k && k.indexOf(HB) === 0){ var v = SC.load(k, null); if (v) out[k.slice(HB.length)] = v; } } }catch(e){} return out; }
 M.me = (function(){ var t = tabs(), now = Date.now();
-  if (t[TAB] && t[TAB].id) return t[TAB].id;
+  if (t[TAB] && t[TAB].id){ SINCE = t[TAB].since || now; return t[TAB].id; }
+  SINCE = now;
   var taken = Object.keys(t).filter(function(k){ return k !== TAB && now - t[k].ts < 5000; }).map(function(k){ return t[k].id; });
   return M.WHO.filter(function(w){ return taken.indexOf(w) < 0; })[0] || "me"; })();
 function beat(){ var t = tabs(), now = Date.now(); Object.keys(t).forEach(function(k){ if (now - t[k].ts > 60000) try{ localStorage.removeItem(HB+k); }catch(e){} });
   /* two live tabs on the same phone: the later tab id moves to a free phone */
-  var clash = Object.keys(t).filter(function(k){ return k !== TAB && t[k].id === M.me && now - t[k].ts < 5000 && k < TAB; })[0];
+  var clash = Object.keys(t).filter(function(k){ return k !== TAB && t[k].id === M.me && now - t[k].ts < 5000 && ((t[k].since||0) < SINCE || ((t[k].since||0) === SINCE && k < TAB)); })[0];
   if (clash){ var taken = Object.keys(t).filter(function(k){ return k !== TAB && now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }), free = M.WHO.filter(function(w){ return taken.indexOf(w) < 0; })[0];
-    if (free){ SC.store(HB+TAB, {id:free, ts:now}); location.reload(); return; } }
-  SC.store(HB+TAB, {id:M.me, ts:now}); }
+    if (free){ SC.store(HB+TAB, {id:free, ts:now, since:now}); location.reload(); return; } }
+  SC.store(HB+TAB, {id:M.me, ts:now, since:SINCE}); }
 beat(); setInterval(beat, 1500);
 M.livePhones = function(){ var t = tabs(), now = Date.now(); return Object.keys(t).filter(function(k){ return now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }); };
 /* language and connection belong to the phone, never to the table */

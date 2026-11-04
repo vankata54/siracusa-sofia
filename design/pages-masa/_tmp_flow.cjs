@@ -10,7 +10,7 @@ log('A proto:', (await A.textContent('.ptxt')).match(/страница: Теле
 log('B groups:', await B.$$eval('.grp-h b', e=>e.map(x=>x.textContent)));
 // language per phone
 await A.click('.wl-lang [data-mlang="en"]');await A.waitForTimeout(1500);await B.reload();await B.waitForTimeout(800);
-log('A lang', await A.getAttribute('html','lang'), 'B lang', await B.getAttribute('html','lang'));
+log('A me', await A.evaluate(()=>MASA.me), 'A lang', await A.getAttribute('html','lang'), 'B lang', await B.getAttribute('html','lang'));
 // A adds from menu, B sees
 await A.goto(base+'menu.html');await A.waitForTimeout(600);await A.click('[data-madd="pitsa-s-burata-i-proshuto-krudo"]');await B.waitForTimeout(600);
 log('B groups after A add:', await B.$$eval('.grp-h b', e=>e.map(x=>x.textContent)));
