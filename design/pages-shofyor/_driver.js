@@ -77,7 +77,7 @@ DR.active = function(){ return DR.db.dels.filter(function(d){ return d.st !== "d
 DR.doneList = function(){ return DR.db.dels.filter(function(d){ return d.st === "done" || d.st === "prob"; }).sort(function(a,b){ return (b.doneAt||b.at) - (a.doneAt||a.at); }); };
 DR.clock = function(ms){ var d = new Date(ms); return (d.getHours()<10?"0":"")+d.getHours()+":"+(d.getMinutes()<10?"0":"")+d.getMinutes(); };
 DR.mins = function(ms){ return Math.round(ms/60000); };
-DR.money = function(d){ return fmt(DR.total(d)) + (DR.feeKnown(d) ? "" : " + такса"); };
+DR.money = function(d){ if (!d.zone) return "уточнете с ресторанта"; return fmt(DR.total(d)) + (DR.feeKnown(d) ? "" : " + такса"); };
 
 /* ---------- route (VROOM on OSRM, own server; numbers here are only for the mock) ---------- */
 function pt(d){ if (d === "home") return DR.POS.home; var p = DR.POS[d.zone || "out"]; return [p[0] + (d.dx||0), p[1] + (d.dy||0)]; }
@@ -120,7 +120,7 @@ DR.restore = function(id, prev){ var d = DR.byId(id); if (!d) return; d.st = pre
 DR.goAll = function(){ var ids = []; DR.ordered().forEach(function(d){ if (d.st === "picked"){ d.st = "road"; ids.push(d.id); queue(d, "На път"); } }); relock(); DR.save(); return ids; };
 DR.arrived = function(id){ var d = DR.byId(id), prev = snap(d); d.arrivedAt = Date.now(); queue(d, "Пристигнах (SMS: шофьорът е пред входа)"); DR.save(); return prev; };
 DR.returned = function(id){ var d = DR.byId(id); d.prob.returned = Date.now(); queue(d, "Върнах в ресторанта"); DR.save(); };
-DR.pickAll = function(){ var n = 0; DR.db.dels.forEach(function(d){ if (d.st === "wait"){ d.st = "picked"; n++; queue(d, "Взех от ресторанта"); } }); DR.save(); return n; };
+DR.pickAll = function(){ var n = 0; DR.db.dels.forEach(function(d){ if (d.st === "wait" && d.zone){ d.st = "picked"; n++; queue(d, "Взех от ресторанта"); } }); DR.save(); return n; };
 DR.problem = function(id, k, note){ var d = DR.byId(id), prev = snap(d); d.st = "prob"; d.prob = {k:k, note:note||"", at:Date.now()}; d.doneAt = Date.now(); if (DR.db.driving === d.id) DR.db.driving = null; relock(); queue(d, "Проблем: "+DR.PROB[k][0]); DR.save(); return prev; };
 DR.cash = function(){ return DR.db.dels.filter(function(d){ return d.st === "done" && d.pay === "cash"; }).reduce(function(s,d){ return s + DR.total(d); }, 0); };
 DR.fuelCash = function(){ return DR.db.fuel.filter(function(x){ return x.cash; }).reduce(function(s,x){ return s + x.s; }, 0); };
