@@ -27,6 +27,7 @@ body{background:var(--bg)}
 .net i{width:12px; height:12px; border-radius:50%; background:var(--ok); flex:none}
 .net.off{color:var(--danger)}
 .net.off i{background:var(--danger)}
+@container app (max-width:1300px){ .net span{display:none} .ktabs a{padding:0 15px} }
 @container app (max-width:1180px){ .ktabs a{padding:0 14px; font-size:16px} .ktabs a .ic{display:none} }
 @container app (max-width:899px){ .kcount .sep.s2,.kcount .soonc{display:none} }
 @container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .net span{display:none} }
