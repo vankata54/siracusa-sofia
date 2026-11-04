@@ -87,7 +87,7 @@ el.querySelector("[data-go]").addEventListener("click", function(){
   if (pin.length < 4){ el.querySelector("[data-err]").textContent = "Въведете 4 цифри."; el.querySelector("[data-dots]").classList.add("err"); return; }
   if (pin === "0000"){ pin = ""; upd(); el.querySelector("[data-err]").textContent = "ПИН не е верен. Опитайте пак."; el.querySelector("[data-dots]").classList.add("err"); return; } /* прототип: 0000 показва грешка */
   if (chosen !== "all") K.store("sec", chosen);
-  location.href = (chosen === "all" ? "summary.html#s=" + K.secId : "queue.html#s=" + chosen) + (K.hash.t ? "&t=" + K.hash.t : "");
+  location.href = (chosen === "all" ? "summary.html#s=all" : "queue.html#s=" + chosen) + (K.hash.t ? "&t=" + K.hash.t : "");
 });
 upd();
 })();

@@ -98,3 +98,204 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .proto .row{flex-wrap:wrap; gap:6px}
 .proto .chip{min-height:44px; font-size:14px; padding:0 14px}
 .proto p{margin:0; font-size:14px; color:var(--muted)}
+
+/* segments (from _staff.css) */
+.st-seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2)}
+.st-seg button{min-height:48px; border:0; border-radius:999px; background:transparent; font-weight:800; font-size:16px; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; padding:0 6px}
+.st-seg button[aria-pressed="true"]{background:var(--surface); box-shadow:var(--shadow)}
+
+/* ================= driver ================= */
+/* status vocabulary for a delivery (icon + word + colour) */
+.stt.wait{background:var(--surface-2); color:var(--ink)}
+.stt.picked{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.stt.road{background:var(--ember); color:var(--on-ember)}
+.stt.done{background:transparent; color:var(--ok); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.stt.prob{background:var(--surface); color:var(--danger); box-shadow:inset 0 0 0 2px var(--danger)}
+.stt.late{background:var(--red); color:var(--on-red)}
+.stt.soon{background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 2px var(--warn)}
+.stt.queued{background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.stt.out{background:var(--surface); color:var(--danger); box-shadow:inset 0 0 0 1.5px var(--danger)}
+
+/* sum strip at the top of the list */
+.dsum{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.dsum > *{display:grid; gap:2px; align-content:start; padding:12px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); min-height:76px; color:var(--ink); text-decoration:none}
+.dsum b{font-size:26px; font-weight:800; letter-spacing:-.04em; line-height:1.05; font-variant-numeric:tabular-nums; white-space:nowrap}
+.dsum b.sm{font-size:21px; letter-spacing:-.03em}
+.dsum span{font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+
+/* the "next" card: biggest thing on the list screen */
+.next{position:relative; border-radius:30px; padding:6px; background:var(--ink); color:var(--bg)}
+.next .hd{display:flex; align-items:center; gap:10px; padding:8px 12px 10px; font-weight:800; font-size:16px}
+.next .hd .n1{width:32px; height:32px; border-radius:50%; background:var(--bg); color:var(--ink); display:grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
+.next .hd .stt{margin-left:auto}
+.next.late{background:var(--red); color:var(--on-red)}
+.next.late .hd .n1{background:var(--on-red); color:var(--red)}
+.next.late .hd .stt.late{background:var(--on-red); color:var(--red)}
+.next .in{border-radius:24px; background:var(--surface); color:var(--ink); padding:16px 16px 16px}
+.addr{display:grid; gap:2px}
+.addr b{font-size:26px; font-weight:800; letter-spacing:-.035em; line-height:1.12}
+.addr span{font-size:16px; font-weight:600; color:var(--muted); line-height:1.35}
+.addr .ex{display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:700; color:var(--muted)}
+.meta{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:12px}
+.money{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding:12px 14px; border-radius:20px; background:var(--surface-2)}
+.money .w{display:flex; align-items:center; gap:8px; font-weight:800; font-size:16px; min-width:0}
+.money .w span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.money .price{font-size:24px; letter-spacing:-.03em}
+.money.cash{background:var(--surface); box-shadow:inset 0 0 0 2px var(--ink)}
+.acts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.acts .pill{min-height:56px; font-size:17px; min-width:0; padding:0 14px}
+.acts .wide{grid-column:1/-1}
+
+/* list rows */
+.dl{display:grid; gap:10px}
+.drow2{display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:start; padding:14px 14px 14px 12px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); text-decoration:none; transition:transform var(--t-fast) var(--ease)}
+.drow2:active{transform:scale(.98)}
+.drow2 .no{width:40px; height:40px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.drow2 .a,.drow2 .s{display:block}
+.drow2 .a{font-size:19px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
+.drow2 .s{font-size:15px; font-weight:600; color:var(--muted); margin-top:2px; line-height:1.3}
+.drow2 .ln{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin-top:8px; font-size:15px; font-weight:700}
+.drow2 .ln .price{font-size:17px}
+.drow2.done{background:var(--surface-2); box-shadow:none}
+.drow2.done .no{background:var(--surface)}
+.drow2.late{box-shadow:inset 0 0 0 2.5px var(--red), var(--shadow)}
+.drow2.prob{box-shadow:inset 0 0 0 2px var(--danger), var(--shadow)}
+.payw{display:inline-flex; align-items:center; gap:5px; color:var(--muted)}
+
+/* delivery screen */
+.client{display:flex; align-items:center; gap:12px; padding:14px 14px 14px 16px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.client .nm{flex:1; min-width:0}
+.client .nm b{display:block; font-size:19px; font-weight:800; letter-spacing:-.02em}
+.client .nm span{font-size:16px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.client .pill{flex:none; min-height:56px}
+.notebox{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn); font-size:17px; font-weight:700; line-height:1.4}
+.notebox .ic{color:var(--warn); margin-top:2px; flex:none}
+.flow{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0; padding:0; list-style:none}
+.flow li{display:grid; gap:6px; justify-items:start; font-size:14px; font-weight:800; color:var(--muted); line-height:1.2}
+.flow li::before{content:""; width:100%; height:6px; border-radius:3px; background:var(--surface-3)}
+.flow li.on{color:var(--ink)}
+.flow li.on::before{background:var(--ink)}
+.flow li.now::before{background:var(--ember)}
+.flow li .t{font-weight:700; font-variant-numeric:tabular-nums}
+.paygrid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+.paygrid > div{display:grid; justify-items:center; gap:4px; padding:10px 6px; border-radius:18px; background:var(--surface-2); color:var(--muted); font-size:14px; font-weight:800; text-align:center; line-height:1.2}
+.paygrid > div.on{background:var(--ink); color:var(--bg)}
+.change{display:flex; flex-wrap:wrap; gap:8px}
+.change .chip{min-width:72px; justify-content:center; font-variant-numeric:tabular-nums}
+.chg{font-size:18px; font-weight:800; margin-top:10px}
+
+/* item lines */
+.icard{border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:4px 16px 14px}
+.il{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 0}
+.il + .il{border-top:1px solid var(--line)}
+.il .q{min-width:44px; height:44px; padding:0 8px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.il .nm{font-weight:700; font-size:17px; line-height:1.3}
+.il .price{font-size:16px; color:var(--muted)}
+.icard .kv{font-size:16px}
+.icard .kv.tot{font-size:21px; font-weight:800; padding-top:12px}
+.icard .kv.tot .price{font-size:21px; color:var(--ink)}
+
+/* problem tiles */
+.ptiles{display:grid; gap:8px}
+.ptile{display:flex; align-items:center; gap:14px; min-height:72px; padding:10px 16px 10px 12px; border:0; border-radius:22px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:17px; text-align:left; cursor:pointer; width:100%}
+.ptile .ii{width:48px; height:48px; border-radius:50%; background:var(--surface); display:grid; place-items:center; color:var(--danger); flex:none}
+.ptile small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-top:2px; line-height:1.3}
+.ptile[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.ptile[aria-pressed="true"] small{color:var(--bg); opacity:.8}
+
+/* route schematic (not a map) */
+.scheme{border-radius:28px; padding:6px; background:var(--surface-2)}
+.scheme .in{position:relative; border-radius:22px; background:var(--surface); box-shadow:var(--hi); overflow:hidden}
+.scheme svg{display:block; width:100%; height:auto}
+.scheme .cap{display:flex; align-items:center; gap:6px; padding:8px 10px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.sv-zone{fill:var(--surface-2)}
+.sv-zl{fill:var(--muted); font:700 14px var(--font)}
+.sv-road{fill:none; stroke:var(--line-strong); stroke-width:2; stroke-dasharray:2 7; stroke-linecap:round}
+.sv-path{fill:none; stroke:var(--ink); stroke-width:4; stroke-linecap:round; stroke-linejoin:round}
+.sv-ret{fill:none; stroke:var(--muted); stroke-width:2.5; stroke-dasharray:6 7; stroke-linecap:round}
+.sv-stop{fill:var(--ink)} .sv-stop-t{fill:var(--bg); font:800 16px var(--font); text-anchor:middle; dominant-baseline:central}
+.sv-stop.done{fill:var(--surface-3)} .sv-stop-t.done{fill:var(--muted)}
+.sv-stop.next{fill:var(--red)} .sv-stop-t.next{fill:var(--on-red)}
+.sv-home{fill:var(--red)} .sv-home-t{fill:var(--on-red)}
+.sv-hl{fill:var(--ink); font:800 14px var(--font)}
+.rchoice{display:grid; gap:10px}
+.rc{display:grid; gap:8px; padding:14px 16px; border:0; border-radius:24px; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); text-align:left; cursor:pointer; width:100%; font:inherit}
+.rc .t{display:flex; align-items:center; gap:8px; font-size:18px; font-weight:800}
+.rc .t .stt{margin-left:auto}
+.rc .nums{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums}
+.rc .nums b{font-size:22px; letter-spacing:-.03em}
+.rc .ord{font-size:15px; color:var(--muted); font-weight:700}
+.rc[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--ink), var(--shadow)}
+.stop{display:grid; grid-template-columns:40px 1fr auto; gap:12px; align-items:center; padding:12px 0}
+.stop + .stop{border-top:1px solid var(--line)}
+.stop .no{width:40px; height:40px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.stop.done .no{background:var(--surface-2); color:var(--muted)}
+.stop .a{font-weight:800; font-size:17px; line-height:1.25}
+.stop .s{font-size:15px; color:var(--muted); font-weight:600}
+.stop .eta{display:grid; justify-items:end; font-size:14px; font-weight:700; color:var(--muted)}
+.stop .eta b{font-size:19px; color:var(--ink); font-variant-numeric:tabular-nums}
+.mv{display:flex; gap:6px; grid-column:2/-1}
+.mv .pill{min-height:48px; padding:0 14px; font-size:15px}
+
+/* fuel */
+.bigf .input{min-height:64px; font-size:26px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; padding-right:72px}
+.bigf .u{position:absolute; right:18px; top:50%; transform:translateY(-50%); font-size:18px; font-weight:800; color:var(--muted); pointer-events:none}
+.bigf .wrapi{position:relative}
+.fgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.fgrid .full{grid-column:1/-1}
+.slot{display:grid; justify-items:center; align-content:center; gap:8px; min-height:168px; padding:16px; border:0; border-radius:24px; background:var(--surface-2); box-shadow:inset 0 0 0 2px var(--line-strong); color:var(--ink); text-align:center; cursor:pointer; width:100%; font:inherit}
+.slot .ii{width:64px; height:64px; border-radius:50%; background:var(--surface); display:grid; place-items:center}
+.slot b{font-size:18px}
+.slot span{font-size:15px; color:var(--muted); font-weight:600}
+.slot.has{background:var(--surface); box-shadow:inset 0 0 0 2px var(--ok)}
+.slot.has .ii{background:var(--ok); color:var(--on-ok)}
+.calc{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; border-radius:20px; background:var(--surface-2); font-weight:700}
+.calc b{font-size:20px; font-variant-numeric:tabular-nums}
+.hist{display:grid}
+.hist .h{display:grid; grid-template-columns:1fr auto; gap:2px 10px; padding:12px 0}
+.hist .h + .h{border-top:1px solid var(--line)}
+.hist .h b{font-size:17px}
+.hist .h span{font-size:15px; color:var(--muted); font-weight:600}
+
+/* shift end */
+.cashbox{border-radius:30px; padding:6px; background:var(--ink); color:var(--bg)}
+.cashbox .hd{display:flex; align-items:center; gap:8px; padding:8px 12px 8px; font-weight:800}
+.cashbox .in{border-radius:24px; background:var(--surface); color:var(--ink); padding:14px 16px}
+.cashbox .big{font-size:44px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+
+/* parked-only notice + moving overlay */
+.park{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface-2); font-size:15px; font-weight:700; line-height:1.35}
+.park .ic{flex:none}
+.park span{flex:1}
+.park .iconbtn{background:transparent}
+.moving{position:fixed; inset:0; z-index:90; display:grid; align-content:center; justify-items:center; gap:16px; padding:24px; background:var(--bg); text-align:center}
+.moving .ill{width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.moving h1{margin:0; font-size:30px; font-weight:800; letter-spacing:-.04em; line-height:1.1; max-width:16ch}
+.moving p{margin:0; color:var(--muted); font-size:17px; max-width:32ch}
+.moving .pill{width:min(100%, 340px)}
+
+/* login */
+.lg{padding:24px 16px 0; display:grid; gap:18px}
+.cars{display:grid; gap:8px}
+.car{display:flex; align-items:center; gap:14px; min-height:72px; padding:10px 16px 10px 12px; border:0; border-radius:22px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); text-align:left; cursor:pointer; width:100%; font:inherit}
+.car .ii{width:48px; height:48px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; flex:none}
+.car b{display:block; font-size:18px}
+.car span{font-size:15px; color:var(--muted); font-weight:600}
+.car[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.car[aria-pressed="true"] span{color:var(--bg); opacity:.8}
+.car[aria-pressed="true"] .ii{background:var(--bg); color:var(--ink)}
+
+@container app (max-width:370px){
+  .st-top .tt b{font-size:18px}
+  .st-me{padding:0 12px 0 10px}
+  .addr b{font-size:23px}
+  .dsum b{font-size:22px} .dsum b.sm{font-size:18px}
+  .dsum > *{padding:10px 10px}
+  .acts .pill{font-size:16px; padding:0 10px}
+  .money .price{font-size:21px}
+}
+.st-bar .pill{min-width:0}
+@media (max-width:370px){
+  .st-bar .pill{padding:0 12px; font-size:16px; gap:6px}
+  .st-bar .pill .price{font-size:16px}
+}

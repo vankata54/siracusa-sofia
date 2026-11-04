@@ -50,22 +50,25 @@ var ic = SC.ic, esc = SC.esc;
 var main = K.mount({page:"item-out", title:"Изчерпано днес · " + K.sec.n});
 
 function strip(){
-  var o = K.outs(), mine = o.filter(function(x){ return x.sec === K.secId; }).length;
-  K.strip.innerHTML = K.st === "offline" ? K.offlineHTML() : '<div class="kcount"><span>Изчерпани в ' + esc(K.sec.n) + ' <b>' + mine + '</b></span><span class="sep"></span><span>Във всички секции <b>' + o.length + '</b></span></div>';
+  var o = K.outs(), mine = K.outMine().length;
+  K.strip.innerHTML = (K.st === "offline" ? K.offlineHTML("item-out") : '') + '<div class="kcount">' + (K.all ? '' : '<span>Изчерпани за ' + esc(K.sec.n) + ' <b>' + mine + '</b></span><span class="sep"></span>') + '<span>Във всички секции <b>' + o.length + '</b></span></div>';
 }
 function render(){
-  var outs = K.outs(), cats = K.sec.cats.filter(function(c){ return SC.inCat(c).length; });
-  var mineOut = outs.filter(function(x){ return x.sec === K.secId; }), otherOut = outs.filter(function(x){ return x.sec !== K.secId; });
+  /* групите: категориите на секцията (+ обедното меню в „Топла“) и общите „Добавки“ накрая */
+  var outs = K.outs(), groups = K.sec.cats.map(function(c){ return c === "obedno" ? {n:"Обедно меню", note:"условно в „Топла кухня“", items:SC.lunch} : {n:SC.catById[c].n, items:SC.inCat(c)}; })
+    .concat(K.SHARED_CATS.map(function(c){ return {n:SC.catById[c].n, note:"за всички секции: готвят се с основното ястие", items:SC.inCat(c)}; }))
+    .filter(function(g){ return g.items.length; });
+  var mineOut = K.outMine(), otherOut = outs.filter(function(x){ return mineOut.indexOf(x) < 0; });
   function orow(o){ var x = SC.byId[o.id];
-    return '<div class="orow"><div><b>' + esc(x.n) + '</b><small>' + esc(K.secById[o.sec] ? K.secById[o.sec].n : "") + ' · от ' + o.at + '</small></div>' +
+    return '<div class="orow"><div><b>' + esc(x.n) + '</b><small>' + esc(K.secById[o.sec] ? K.secById[o.sec].n : o.sec === "shared" ? "Добавка, всички секции" : "") + ' · от ' + o.at + '</small></div>' +
       '<button class="kb line" type="button" data-back="' + o.id + '">' + ic("arrow-counter-clockwise",22) + 'Върни в менюто</button></div>'; }
   main.innerHTML = '<div class="kpage"><div class="io"><section aria-labelledby="h1">' +
     '<div class="io-h"><div><h1 class="kh1" id="h1">Изчерпано днес</h1><p class="klead">Докоснете ястие, което свърши. Действа веднага.</p></div></div>' +
     '<ul class="eff"><li>' + ic("check",18) + 'Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“</li><li>' + ic("check",18) + 'Wolt и Foodpanda: скрито</li></ul>' +
-    cats.map(function(c){ return '<h2 class="cath">' + esc(SC.catById[c].n) + '</h2><div class="tiles">' + SC.inCat(c).map(function(x){ var out = K.isOut(x.id);
+    groups.map(function(g){ return '<h2 class="cath">' + esc(g.n) + (g.note ? ' <span style="font-weight:600">· ' + esc(g.note) + '</span>' : '') + '</h2><div class="tiles">' + g.items.map(function(x){ var out = K.isOut(x.id);
       return '<button class="tile' + (out ? " out" : "") + '" type="button" data-id="' + x.id + '" aria-pressed="' + out + '"><span><b>' + esc(x.n) + '</b>' + (x.g ? '<small>' + esc(x.g) + '</small>' : '') + '</span>' +
         (out ? '<span class="st">' + ic("clock",18) + 'Изчерпано днес</span>' : '') +
-        '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни в менюто' : ic("x",18) + 'Изчерпано днес') + '</span></button>'; }).join("") + '</div>'; }).join("") +
+        '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни в менюто' : ic("x",18) + 'Отбележи изчерпано') + '</span></button>'; }).join("") + '</div>'; }).join("") +
     '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Списък изчерпани <span class="n num">' + outs.length + '</span></h2>' +
     (outs.length ? mineOut.concat(otherOut).map(orow).join("") : '<p class="none">Всичко от менюто е налично.</p>') +
     '<p class="foot2">' + ic("info",20) + '<span>Утре в 10:00 всичко се връща в менюто само. <span class="miss">[за потвърждение]</span></span></p></aside></div></div>';
@@ -76,7 +79,10 @@ function render(){
 function toggle(id){
   var was = K.isOut(id), prev = K.outs(), x = SC.byId[id];
   K.setOut(id, !was); render();
-  K.toast(was ? '<b>' + esc(x.n) + ' е отново в менюто</b><small>Бутонът „+“ се върна навсякъде.</small>' : '<b>' + esc(x.n) + ' · изчерпано днес</b><small>Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.</small>',
+  /* вече приетите поръчки с това ястие: редът им се отбелязва „Изчерпано днес“ и сервитьорът се известява */
+  var inQ = K.orders().filter(function(o){ return o.lines.some(function(l){ return l.id === id && l.o.st !== "done"; }); }).length;
+  K.toast(was ? '<b>' + esc(x.n) + ' е отново в менюто</b><small>Бутонът „+“ се върна навсякъде.</small>' : '<b>' + esc(x.n) + ' · изчерпано днес</b><small>' +
+    (inQ ? 'Има го в ' + inQ + (inQ === 1 ? ' приета поръчка' : ' приети поръчки') + ': отбелязано на реда, сервитьорът е известен.' : 'Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.') + '</small>',
     function(){ K.store("outs", prev); render(); });
 }
 render();

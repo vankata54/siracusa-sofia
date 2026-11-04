@@ -12,7 +12,7 @@ body{background:var(--bg)}
 .ksec{display:flex; align-items:center; gap:12px; min-height:56px; padding:0 16px 0 8px; border-radius:999px; text-decoration:none; color:inherit; flex:none; max-width:34%}
 .ksec:active{transform:scale(.98)}
 .ksec .si{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
-.ksec b{display:block; font-size:24px; line-height:1.1; letter-spacing:-.03em; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ksec b{display:flex; align-items:center; gap:4px; font-size:24px; line-height:1.1; letter-spacing:-.03em; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .ksec small{display:flex; align-items:center; gap:2px; font-size:14px; font-weight:700; color:var(--muted)}
 .ksec > span{min-width:0}
 .ktabs{display:flex; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2); margin:0 auto; min-width:0}
@@ -27,16 +27,14 @@ body{background:var(--bg)}
 .net i{width:12px; height:12px; border-radius:50%; background:var(--ok); flex:none}
 .net.off{color:var(--danger)}
 .net.off i{background:var(--danger)}
-@container app (max-width:1300px){ .net span{display:none} .ktabs a{padding:0 15px} }
+@container app (max-width:1300px){ .ktabs a{padding:0 15px} }
 @container app (max-width:1180px){ .ktabs a{padding:0 14px; font-size:16px} .ktabs a .ic{display:none} }
-@container app (max-width:899px){ .kcount .sep.s2,.kcount .soonc{display:none} }
-@container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .net span{display:none} }
+@container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .kclock b{font-size:30px} .ktabs a{padding:0 12px} }
 @container app (max-width:899px){
   .kbar{flex-wrap:wrap; row-gap:8px}
   .ksec{max-width:none; flex:1}
   .ktabs{order:3; width:100%; margin:0}
   .ktabs a{flex:1; justify-content:center; padding:0 6px}
-  .net span{display:inline}
 }
 
 /* ---------- strip under the bar: counts, alerts, busy, sound ---------- */
@@ -60,7 +58,8 @@ body{background:var(--bg)}
 .koff p{margin:2px 0 0; font-size:16px; color:var(--muted)}
 .koff ol{margin:6px 0 0; padding-left:20px; font-size:16px; display:flex; flex-wrap:wrap; gap:0 28px}
 .koff li{padding-left:2px}
-.offline .tk .tmr b{opacity:.55}
+.koff{flex-basis:100%}
+.koff + .kcount{min-height:52px}
 
 /* ---------- main area ---------- */
 .kmain{min-height:0; overflow:auto; position:relative}
@@ -71,8 +70,10 @@ body{background:var(--bg)}
 /* ---------- queue: FIFO columns, oldest on the left ---------- */
 .kq{height:100%; display:flex; gap:12px; overflow-x:auto; overflow-y:hidden; padding:12px 16px 16px; scroll-snap-type:x proximity; scroll-padding:0 16px; scrollbar-width:thin; overscroll-behavior-x:contain}
 .kq::after{content:""; flex:0 0 4px}
-.tk{position:relative; flex:0 0 clamp(340px, calc((100cqw - 32px - 36px) / 3.4), 400px); height:100%; display:flex; flex-direction:column; scroll-snap-align:start; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); overflow:hidden; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
-@container app (max-width:899px){ .tk{flex-basis:calc((100cqw - 32px - 12px) / 2.12)} }
+.tk{position:relative; flex:0 0 calc((100cqw - 32px - 76px - 36px) / 3); height:100%; display:flex; flex-direction:column; scroll-snap-align:start; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); overflow:hidden; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+@container app (min-width:1400px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 48px) / 4)} }
+@container app (max-width:1099px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 24px) / 2)} }
+@container app (max-width:899px){ .tk{flex-basis:calc((100cqw - 32px - 40px - 24px) / 2)} .tk-h{padding-left:16px; padding-right:16px} }
 .tk.soon{box-shadow:inset 0 0 0 4px var(--warn)}
 .tk.late{box-shadow:inset 0 0 0 4px var(--danger)}
 .tk.late::after{content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 0 0 9px var(--danger); pointer-events:none; animation:kpulse 2.4s ease-in-out infinite alternate}
@@ -112,6 +113,7 @@ body{background:var(--bg)}
 .md{display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:0 12px 0 8px; border-radius:999px; font-size:19px; font-weight:800; line-height:1.1}
 .md.no{color:var(--red); box-shadow:inset 0 0 0 2.5px var(--red)}
 .md.add{background:var(--ember-soft); color:var(--ink); box-shadow:inset 0 0 0 2px var(--ember)}
+.md.out{background:var(--red); color:var(--on-red); padding-left:10px}
 .md.nt{background:var(--surface-2); color:var(--ink); font-weight:700; padding-left:10px}
 .tk-note{margin:12px 14px 4px; padding:10px 14px; border-radius:16px; display:flex; gap:10px; align-items:flex-start; font-size:19px; font-weight:800; line-height:1.25; box-shadow:inset 0 0 0 2.5px var(--warn)}
 .tk-note .ic{color:var(--warn); margin-top:1px}
@@ -119,8 +121,10 @@ body{background:var(--bg)}
 .tk-o h4{margin:0 0 4px; font-size:14px; font-weight:800; letter-spacing:.02em}
 .tk-o div{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:8px; align-items:baseline; font-size:17px; font-weight:600; line-height:1.3; padding:3px 0}
 .tk-o .num{white-space:nowrap}
-.tk-o .os{ font-size:14px; font-weight:800; white-space:nowrap}
-.tk-o .os.ok{color:var(--ok)}
+.tk-o .os{display:inline-flex; align-items:center; gap:4px; color:var(--ink); font-size:15px !important;  font-size:14px; font-weight:800; white-space:nowrap}
+.tk-o .os.done .ic{color:var(--ok)}
+.tk-o .os.cook .ic{color:var(--red)}
+.tk-o .os.wait{color:var(--muted)}
 
 .tk-f{display:grid; grid-template-columns:1fr 1.35fr; gap:8px; padding:10px; border-top:2px solid var(--line)}
 .tk-f.one{grid-template-columns:1fr}
@@ -139,7 +143,7 @@ body{background:var(--bg)}
 .kb.hold .lbl > span{display:inline-flex; align-items:center; gap:8px}
 
 /* "още поръчки" hint at the right edge */
-.kmore{position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:72px; padding:16px 0; border:0; border-radius:24px 0 0 24px; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer}
+.kmore{position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:60px; padding:16px 0; border:0; border-radius:24px 0 0 24px; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer}
 .kmore b{font-size:26px; line-height:1; font-variant-numeric:tabular-nums}
 .kmore small{font-size:14px; font-weight:700}
 .kmore[hidden]{display:none}
@@ -151,12 +155,15 @@ body{background:var(--bg)}
 .kempty p{font-size:20px; color:var(--muted); margin:8px 0 0}
 
 /* ---------- toast with 10 s "Върни" ---------- */
-.ktoasts{position:fixed; left:50%; top:84px; transform:translateX(-50%); z-index:90; display:grid; gap:8px; width:min(720px, calc(100% - 32px)); pointer-events:none}
-.kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:14px; min-height:72px; padding:8px 8px 8px 22px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}
+.kstripw{position:relative}
+.ktoasts{position:absolute; left:16px; right:16px; top:8px; z-index:90; display:grid; pointer-events:none}
+.kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; min-height:56px; max-width:900px; margin-left:auto; width:100%; padding:4px 4px 4px 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}
 .kt .ic{color:var(--ok); flex:none}
 .kt span{flex:1; min-width:0; line-height:1.25}
-.kt span small{display:block; font-size:15px; font-weight:600; opacity:.8}
-.kt button{flex:none; min-height:56px; padding:0 22px; border:0; border-radius:999px; background:var(--bg); color:var(--ink); font-weight:800; font-size:18px; cursor:pointer; font-variant-numeric:tabular-nums}
+.kt span{line-height:1.2; font-size:17px}
+.kt span b{margin-right:8px}
+.kt span small{display:inline; font-size:15px; font-weight:600; opacity:.8}
+.kt button{flex:none; min-height:48px; padding:0 22px; border:0; border-radius:999px; background:var(--bg); color:var(--ink); font-weight:800; font-size:18px; cursor:pointer; font-variant-numeric:tabular-nums}
 .kt i{position:absolute; left:0; right:0; bottom:0; height:4px; background:var(--ember); transform-origin:left; animation:ktbar linear both}
 @keyframes ktin{from{transform:translateY(16px); opacity:0}to{transform:none; opacity:1}}
 @keyframes ktbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}

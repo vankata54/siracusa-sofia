@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Моите доставки | Siracusa · Шофьор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_driver.css">
+<style>
+.rline{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.rline .muted{font-size:15px; font-weight:700}
+.donel .drow2{padding-top:12px; padding-bottom:12px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_driver.js"></script>
+<script>
+var main = DR.mount({page:"list", title:"Моите доставки", nav:"list", bar:true});
+var ic = SC.ic, esc = SC.esc;
+var bar = document.createElement("div"); bar.className = "st-bar"; document.body.appendChild(bar);
+
+function nextCard(d, eta){ var late = DR.lvl(d) === "late", app = DR.prefs.nav || "google";
+  return '<div class="next'+(late?' late':'')+'"><div class="hd"><span class="n1">1</span><span>Следваща · № '+d.id+'</span>'+DR.dStt(d)+'</div><div class="in">'+
+    '<a href="delivery.html#'+d.id+'" style="color:inherit;text-decoration:none;display:block"><div class="addr"><b>'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</b><span>'+esc(d.sub)+'</span>'+DR.exTag+'</div></a>'+
+    '<div class="meta">'+(d.zone?'':DR.zoneLine(d))+DR.dueStt(d, eta)+(eta?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+'</div>'+
+    '<div class="money'+(d.pay==="cash"?' cash':'')+'"><span class="w">'+ic(DR.PAY[d.pay][1],22)+'<span>'+(d.pay==="cash"?"Вземете в брой":DR.PAY[d.pay][0])+'</span></span><span class="price">'+DR.money(d)+'</span></div>'+
+    '<div class="acts"><a class="pill pill-red" href="'+DR.navUrl(d, app)+'" target="_blank" rel="noopener">'+ic("path",22)+'Навигация</a><a class="pill pill-line" href="delivery.html#'+d.id+'&call">'+ic("phone",22)+'Обади се</a>'+
+    '<a class="pill pill-soft wide" href="delivery.html#'+d.id+'">Отвори доставката'+ic("caret-right",20)+'</a></div></div></div>'; }
+
+function row(d, n, eta){ var l = DR.lvl(d), cls = d.st==="done" ? "done" : d.st==="prob" ? "prob" : l==="late" ? "late" : "";
+  return '<a class="drow2 '+cls+'" href="delivery.html#'+d.id+'" aria-label="'+(n?"Номер "+n+" в маршрута, ":"")+'поръчка '+d.id+', '+esc((d.zone||"извън зоните")+", "+d.addr)+'">'+
+    '<span class="no">'+(d.st==="done"?ic("check",22):d.st==="prob"?ic("warning",22):n)+'</span><span><span class="a">'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</span><span class="s">№ '+d.id+' · '+esc(d.sub)+(eta?' · пристигане ~'+DR.clock(eta):'')+'</span>'+
+    '<span class="ln"><span class="price">'+DR.money(d)+'</span>'+DR.payWord(d)+'</span>'+
+    '<span class="ln">'+(d.zone?'':DR.zoneLine(d))+(d.st==="wait"||d.st==="road"?DR.dStt(d):'')+DR.dueStt(d)+'</span></span></a>'; }
+
+function render(){
+  var act = DR.active(), ord = DR.ordered(), etas = DR.etas(), done = DR.doneList(), waiting = act.filter(function(d){ return d.st==="wait"; });
+  var cashLeft = act.filter(function(d){ return d.pay==="cash"; }).reduce(function(s,d){ return s+DR.total(d); },0);
+  var h = '';
+  if (!DR.db.parkSeen) h += '<section class="st-sec"><div class="park">'+ic("car",22)+'<span>Ползвайте приложението само когато колата е паркирана. Благодарим!</span><button class="iconbtn" type="button" data-park aria-label="Скрий напомнянето">'+ic("x",20)+'</button></div></section>';
+  h += '<section class="st-sec"><div class="dsum"><a href="#sled"><b>'+act.length+'</b><span>за доставяне</span></a><div><b class="sm">'+SC.fmt(cashLeft)+'</b><span>в брой за събиране</span></div><a href="#dneshni"><b>'+done.length+'</b><span>доставени днес</span></a></div></section>';
+  if (!act.length){
+    h += '<section class="st-sec"><div class="st-empty"><div class="ill">'+ic("check-circle",48)+'</div><h2>Няма доставки за вас</h2><p>Когато кухнята приготви поръчка за вас, телефонът ще вибрира и тя ще се появи тук.</p>'+
+      '<a class="pill pill-line pill-lg" href="shift.html" style="margin-top:8px">'+ic("wallet",22)+'Виж смяната и парите</a></div></section>';
+  } else {
+    var nx = DR.next(), rest = ord.filter(function(d){ return d !== nx; }), pick = DR.db.route.pick;
+    if (waiting.length) h += '<section class="st-sec"><div class="notice warn">'+ic("storefront",22)+'<span><b>'+SC.plural(waiting.length,"поръчка чака","поръчки чакат")+' в ресторанта.</b> Проверете бройките в торбите и натиснете „Взех“ долу.</span></div></section>';
+    h += '<section class="st-sec"><div class="st-h"><h2>Следваща</h2><a class="link" href="route.html" style="font-size:15px">'+ic("path",18)+(pick==="own"?"Моят ред":"Път "+pick)+' · смени</a></div>'+nextCard(nx, etas[nx.id])+'</section>';
+    if (rest.length) h += '<section class="st-sec" id="sled"><div class="st-h"><h2>След това</h2><span class="muted">по реда на маршрута</span></div><div class="dl">'+rest.map(function(d){ return row(d, ord.indexOf(d)+1, etas[d.id]); }).join("")+'</div></section>';
+  }
+  if (done.length) h += '<section class="st-sec donel" id="dneshni"><div class="st-h"><h2>Доставени днес</h2><span class="muted">'+SC.plural(done.length,"адрес","адреса")+'</span></div><div class="dl">'+done.map(function(d){ return row(d, 0); }).join("")+'</div></section>';
+  main.innerHTML = h;
+  renderBar(act, waiting);
+}
+function renderBar(act, waiting){ var nx = DR.next();
+  if (!act.length){ bar.hidden = true; DR.app.classList.remove("withbar"); return; }
+  bar.hidden = false; DR.app.classList.add("withbar");
+  if (waiting.length) bar.innerHTML = '<button class="pill pill-red" type="button" data-pickall>'+ic("shopping-bag",22)+'Взех '+SC.plural(waiting.length,"поръчка","поръчки")+' от ресторанта</button>';
+  else if (nx.st === "picked") bar.innerHTML = '<button class="pill pill-red" type="button" data-road="'+nx.id+'">'+ic("car",22)+'Тръгвам към № '+nx.id+'</button>';
+  else bar.innerHTML = '<a class="pill pill-red" href="delivery.html#'+nx.id+'">Пристигнах при № '+nx.id+ic("caret-right",22)+'</a>';
+}
+render(); DR.on(render);
+document.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("data-park")){ DR.db.parkSeen = true; DR.save(); return; }
+  if (b.hasAttribute("data-pickall")){ var before = DR.db.dels.map(function(d){ return d.st; }); var n = DR.pickAll(); DR.haptic();
+    DR.toast((DR.offline?"Записано на телефона: ":"")+SC.plural(n,"поръчка е взета","поръчки са взети")+". Ресторантът вижда, че сте тръгнали.", function(){ DR.db.dels.forEach(function(d,i){ d.st = before[i]; }); if (DR.offline) DR.db.outbox.splice(-n, n); DR.save(); }); return; }
+  if (b.dataset.road){ var id = b.dataset.road, prev = DR.setSt(id, "road"); DR.haptic(); window.scrollTo({top:0});
+    DR.toast((DR.offline?"Записано на телефона: ":"")+"№ "+id+" е на път. Клиентът вижда приблизително време.", function(){ DR.restore(id, prev); }); return; }
+});
+</script>
+</body>
+</html>

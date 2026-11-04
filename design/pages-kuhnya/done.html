@@ -26,6 +26,7 @@
 .dr .du small{display:flex; justify-content:flex-end; align-items:center; gap:4px; font-size:15px; font-weight:800; color:var(--ok)}
 .dr .du small.late{color:var(--danger)}
 .dr .kb{min-height:56px; font-size:17px}
+.dr .kb .x{margin-left:-4px}
 .sum{display:flex; flex-wrap:wrap; gap:6px 22px; font-size:18px; color:var(--muted); font-weight:700; margin-top:8px}
 .sum b{color:var(--ink); font-variant-numeric:tabular-nums}
 @container app (max-width:1100px){ .dr{grid-template-columns:80px 150px minmax(0,1fr) 170px auto; gap:14px; padding:14px 16px} .dr .kb .x{display:none} }
@@ -46,7 +47,7 @@ if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
 
 function render(){
   var onTime = list.filter(function(o){ return K.s(o.doneAt) <= o.due; }).length;
-  if (K.st !== "offline") K.strip.innerHTML = '<div class="kcount"><span>Днес изпълнени <b>' + list.length + '</b></span><span class="sep"></span><span>Навреме <b>' + onTime + '</b></span></div>' +
+  K.strip.innerHTML = (K.st === "offline" ? K.offlineHTML("done") : '') + '<div class="kcount"><span>Днес изпълнени <b>' + list.length + '</b></span><span class="sep"></span><span>Навреме <b>' + onTime + '</b></span></div>' +
     '<a class="kpill" href="' + K.link("queue") + '">' + ic("arrow-left",22) + 'Към опашката</a>';
   main.innerHTML = '<div class="kpage"><h1 class="kh1">Изпълнени днес</h1><p class="klead">Последните поръчки на ' + esc(K.sec.n) + ', най-новата горе. Ако нещо е отбелязано по грешка, върнете го в опашката.</p>' +
     (list.length ? '<div class="dl kcard">' + list.map(function(o, i){ var src = K.src(o), took = Math.round((K.s(o.doneAt) - o.at)/60), late = Math.round((K.s(o.doneAt) - o.due)/60);
@@ -55,7 +56,7 @@ function render(){
         '<div class="s">' + ic(src.ic,26) + '<span><b>' + esc(o.kind === "table" ? "Маса " + o.num : "№ " + o.num) + '</b><small>' + (o.kind === "table" ? esc(o.zone) : o.kind === "delivery" ? "Доставка" : "Вземане") + '</small></span></div>' +
         '<div class="it">' + mine.map(function(l){ return '<span>' + l.q + ' × ' + esc(SC.byId[l.id].n) + (l.o.w ? ' (' + esc(l.o.w) + ')' : '') + '</span>' + (l.o.no||[]).map(function(t){ return '<span class="md no">без ' + esc(t) + '</span>'; }).join(""); }).join(", ") + '</div>' +
         '<div class="du">за ' + took + ' мин' + (late > 0 ? '<small class="late">' + ic("warning",16) + 'с ' + late + ' мин закъснение</small>' : '<small>' + ic("check",16) + 'навреме</small>') + '</div>' +
-        '<button class="kb line" type="button" data-back="' + i + '" aria-label="Върни ' + esc(K.srcText(o)) + ' в опашката">' + ic("arrow-counter-clockwise",22) + 'Върни<span class="x">&nbsp;в опашката</span></button></div>'; }).join("") + '</div>'
+        '<button class="kb line" type="button" data-back="' + i + '" aria-label="Върни ' + esc(K.srcText(o)) + ' в опашката">' + ic("arrow-counter-clockwise",22) + 'Върни<span class="x">в опашката</span></button></div>'; }).join("") + '</div>'
     : '<div class="kempty" style="height:auto; padding:80px 16px"><div><div class="ill">' + ic("clock",56) + '</div><h2>Още няма изпълнени поръчки днес</h2><p>Тук ще виждате последните поръчки, отбелязани с „Готово“.</p></div></div>') + '</div>';
   main.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ var i = +b.getAttribute("data-back"), o = list[i];
     list.splice(i, 1); render();

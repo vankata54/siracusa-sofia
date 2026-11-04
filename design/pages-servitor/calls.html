@@ -24,11 +24,12 @@
 <script src="_staff.js"></script>
 <script>
 var main = ST.mount({page:"calls", title:"Повиквания", nav:"calls"});
-var ic = SC.ic, esc = SC.esc, filter = "mine";
+var ic = SC.ic, esc = SC.esc, filter = "mine", OFF = ST.offline ? ' aria-disabled="true" data-off' : '';
+if (ST.offline) ST.frozen = true;
 
 function card(c){ var r = ST.REASONS[c.r], t = ST.tableByN[c.t], mine = ST.isMine(c.t), s = ST.secs(c.since), lvl = ST.level(s);
   var cls = c.taken==="me" ? " mine-taken" : c.taken==="other" ? " other-taken" : "";
-  var who = c.taken==="me" ? '<span>'+ic("check-circle",18)+'</span><span>Поехте я преди '+ST.timer(c.takenAt)+'</span>' : c.taken==="other" ? '<span>'+ic("user",18)+'</span><span>Поема '+ST.OTHER+'</span>' : (mine ? '<span>Ваша маса</span>' : '<span>Маса на '+ST.OTHER+' · свободно повикване</span>');
+  var who = c.taken==="me" ? '<span>'+ic("check-circle",18)+'</span><span>Отивам · от '+ST.timer(c.takenAt)+'</span>' : c.taken==="other" ? '<span>'+ic("user",18)+'</span><span>Поема '+ST.OTHER+'</span>' : (mine ? '<span>Моя маса</span>' : '<span>Маса на '+ST.OTHER+' · никой не го е поел, затова е и при мен</span>');
   var esc5 = '<span class="esc"'+(lvl==="late"?'':' hidden')+' data-esc>'+ic("warning",18)+'Изпратено и на управителя</span>';
   return '<article class="callc'+cls+'"'+(c.taken?'':' data-lvl')+' aria-label="Маса '+c.t+', '+r[0]+'">'+
     '<div class="t1"><b>Маса '+c.t+'</b><span class="zone">'+ST.ZONE[t.zone]+'</span></div>'+
@@ -36,8 +37,8 @@ function card(c){ var r = ST.REASONS[c.r], t = ST.tableByN[c.t], mine = ST.isMin
     '<div class="why">'+ic(r[1],24)+r[0]+'</div>'+
     '<div class="meta">'+who+esc5+'</div>'+
     (c.taken==="other" ? '' : '<div class="acts">'+(c.taken==="me"
-      ? '<button class="pill pill-red" type="button" data-done="'+c.id+'" style="background:var(--ok);color:var(--on-ok)">'+ic("check",22)+'Обслужено</button>'
-      : '<button class="pill pill-red" type="button" data-take="'+c.id+'">Отивам</button>')+
+      ? '<button class="pill pill-red" type="button" data-done="'+c.id+'"'+OFF+' style="background:var(--ok);color:var(--on-ok)">'+ic("check",22)+'Обслужено</button>'
+      : '<button class="pill pill-red" type="button" data-take="'+c.id+'"'+OFF+'>Отивам</button>')+
       '<a class="pill pill-line" href="table.html#'+c.t+'">Масата</a></div>')+'</article>'; }
 
 function qrCard(o){ var t = ST.tableByN[o.t], n = o.lines.reduce(function(s,l){ return s+l.q; },0);
@@ -45,23 +46,22 @@ function qrCard(o){ var t = ST.tableByN[o.t], n = o.lines.reduce(function(s,l){ 
     '<div class="t1"><b>Маса '+o.t+'</b><span class="zone">'+ST.ZONE[t.zone]+'</span></div>'+
     '<div class="timer" style="grid-row:span 2"><span>чака</span><b>'+ST.timer(o.at)+'</b></div>'+
     '<div class="why">'+ic("qr-code",24)+'QR поръчка · '+SC.plural(n,"артикул","артикула")+'</div>'+
-    '<div class="meta"><span>Първата поръчка от QR чака вашето потвърждение · '+SC.fmt(ST.linesTotal(o.lines))+'</span></div>'+
-    '<div class="acts"><a class="pill pill-red" href="table.html#'+o.t+'">Виж и потвърди</a></div></article>'; }
+    '<div class="meta"><span>Първата поръчка от QR чака моето потвърждение · '+SC.fmt(ST.linesTotal(o.lines))+'</span></div>'+
+    '<div class="acts"><a class="pill pill-red" href="table.html#'+o.t+'">Отвори масата</a></div></article>'; }
 
 function render(){
-  var calls = ST.openCalls(), qr = ST.pendingQR();
-  if (filter==="mine"){ calls = calls.filter(function(c){ return ST.isMine(c.t) || !c.taken || c.taken==="me"; }); qr = qr.filter(function(o){ return ST.isMine(o.t); }); }
-  var all = ST.db.calls.length + ST.pendingQR().length;
+  var calls = filter==="mine" ? ST.myCalls() : ST.openCalls(), qr = filter==="mine" ? ST.myQR() : ST.pendingQR();
+  var all = ST.db.calls.length + ST.pendingQR().length, mineN = ST.myQueueCount();
   var html = '<section class="st-sec"><div class="st-seg" role="group" aria-label="Кои повиквания">'+
-    '<button type="button" data-f="mine" aria-pressed="'+(filter==="mine")+'">За мен</button><button type="button" data-f="all" aria-pressed="'+(filter==="all")+'">Всички <span class="n">'+all+'</span></button></div></section>';
+    '<button type="button" data-f="mine" aria-pressed="'+(filter==="mine")+'">За мен <span class="n">'+mineN+'</span></button><button type="button" data-f="all" aria-pressed="'+(filter==="all")+'">Всички <span class="n">'+all+'</span></button></div></section>';
   if (!calls.length && !qr.length){
     html += '<div class="st-empty"><div class="ill">'+ic("check-circle",52)+'</div><h2>Няма повиквания</h2><p>Всички маси са обслужени. Щом някой повика, телефонът и часовникът ще вибрират.</p><a class="pill pill-line pill-lg" href="tables.html">'+ic("squares-four",22)+'Към залата</a></div>';
   } else {
     var oldest = calls.filter(function(c){ return !c.taken; })[0];
-    if (calls.length + qr.length >= 5) html += '<section class="st-sec"><div class="lead2">'+ic("warning",24)+'<span><b>'+(calls.length+qr.length)+'</b> чакат наведнъж'+(oldest?' · най-старото: Маса '+oldest.t+', '+ST.mmss(ST.secs(oldest.since)):'')+'. Поемете най-старото, колегите виждат кое сте взели.</span></div></section>';
+    if (ST.offline) html += '<section class="st-sec"><div class="notice warn">'+ic("clock",22)+'<span><b>Без връзка: последни данни.</b> Таймерите са спрени, „Отивам“ ще може, щом има връзка.</span></div></section>';
+    if (calls.length + qr.length >= 5) html += '<section class="st-sec"><div class="lead2">'+ic("warning",24)+'<span><b>'+(calls.length+qr.length)+'</b> чакат наведнъж'+(oldest?' · най-старото: Маса '+oldest.t+', '+ST.mmss(ST.secs(oldest.since)):'')+'. Първо най-старото; колегите виждат кое съм поел.</span></div></section>';
     html += '<section class="st-sec"><div class="list">'+qr.map(function(o){ return {s:o.at, h:qrCard(o), t:0}; }).concat(calls.map(function(c){ return {s:c.since, h:card(c), t:c.taken?1:0}; })).sort(function(a,b){ return (a.t-b.t) || (a.s-b.s); }).map(function(r){ return r.h; }).join("")+'</div></section>';
   }
-  html += '<section class="st-sec"><div class="notice">'+ic("info",22)+'<span>Цветът се сменя след 2 мин (жълто) и след 5 мин (червено). Ако никой не поеме повикването, след 5 мин то отива и при управителя. Тези минути са условни: <span class="missing">[ЛИПСВА: настройва се в админ панела]</span>.</span></div></section>';
   main.innerHTML = html; ST.tick(); escTick();
 }
 function escTick(){ main.querySelectorAll("[data-esc]").forEach(function(el){ var card = el.closest(".callc"); el.hidden = !card.classList.contains("late"); }); }
@@ -69,7 +69,8 @@ setInterval(escTick, 1000);
 render(); ST.on(render);
 main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
   if (b.dataset.f){ filter = b.dataset.f; render(); return; }
-  if (b.dataset.take){ var c = ST.db.calls.filter(function(x){ return x.id===b.dataset.take; })[0]; ST.takeCall(c.id); ST.haptic(); ST.toast("Маса "+c.t+": отивате. Колегите виждат, че сте я поели."); return; }
+  if (b.hasAttribute("data-off")){ ST.toast("Без връзка колегите няма да видят. Опитай, щом връзката се върне."); return; }
+  if (b.dataset.take){ var c = ST.db.calls.filter(function(x){ return x.id===b.dataset.take; })[0]; ST.takeCall(c.id); ST.haptic(); ST.toast("Маса "+c.t+": отивам. Колегите виждат, че съм я поел."); return; }
   if (b.dataset.done){ var c2 = ST.db.calls.filter(function(x){ return x.id===b.dataset.done; })[0]; ST.doneCall(c2.id); ST.toast("Маса "+c2.t+" е обслужена", function(){ ST.restoreCall(c2); }); return; }
 });
 </script>

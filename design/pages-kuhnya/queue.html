@@ -27,25 +27,32 @@ function counts(){
   return {n:orders.length, late:late, soon:soon}; }
 
 function strip(){
-  if (offline){ var q0 = document.querySelector("[data-qn]"); if (q0) q0.textContent = orders.length; return; }
   var c = counts(), b = K.busy();
   var qn = document.querySelector("[data-qn]"); if (qn) qn.textContent = c.n;
-  K.strip.innerHTML =
+  var snd = !K.sound() ? '<button class="kpill" type="button" data-sound aria-pressed="false">' + ic("bell",22) + 'Звук изкл.</button>'
+    : K.audioReady ? '<button class="kpill" type="button" data-sound aria-pressed="true">' + ic("bell-ringing",22) + 'Звук вкл.</button>'
+    : '<button class="kpill on" type="button" data-sound data-unlock>' + ic("bell-ringing",22) + 'Докоснете, за да включите звука</button>';
+  K.strip.innerHTML = (offline ? K.offlineHTML("queue") : '') +
     '<div class="kcount"><span>Чакат <b>' + c.n + '</b></span>' + (c.late ? '<span class="sep"></span><span class="late">' + ic("warning",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px;color:var(--danger)"') + ' Закъсняват <b>' + c.late + '</b></span>' : '') +
-      (c.soon ? '<span class="sep s2"></span><span class="soonc">Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
-    (newO && orders.indexOf(newO) > -1 ? '<button class="knew" type="button" data-newgo>' + ic("bell-ringing",22) + 'Нова поръчка · ' + esc(K.srcText(newO)) + '<span class="go2">Виж' + ic("arrow-right",16) + '</span></button>' : '') +
-    '<button class="kpill" type="button" data-sound aria-pressed="' + K.sound() + '">' + ic(K.sound() ? "bell-ringing" : "bell", 22) + 'Звук ' + (K.sound() ? "вкл." : "изкл.") + '</button>' +
-    '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>';
+      (c.soon ? '<span class="sep"></span><span>Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
+    (offline ? '' : (newO && orders.indexOf(newO) > -1 ? '<button class="knew" type="button" data-newgo>' + ic("bell-ringing",22) + 'Нова поръчка · ' + esc(K.srcText(newO)) + '<span class="go2">Виж' + ic("arrow-right",16) + '</span></button>' : '') +
+    snd +
+    '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>');
   var ng = K.strip.querySelector("[data-newgo]");
   if (ng) ng.addEventListener("click", function(){ var q = main.querySelector("[data-q]"); q.scrollTo({left:q.scrollWidth, behavior:SC.reduce ? "auto" : "smooth"}); newO = null; strip(); });
-  K.strip.querySelector("[data-sound]").addEventListener("click", function(){ K.store("sound", !K.sound()); strip(); if (K.sound()) K.beep(); });
+  var sb = K.strip.querySelector("[data-sound]");
+  if (sb) sb.addEventListener("click", function(){
+    if (sb.hasAttribute("data-unlock")){ K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
+    strip(); if (!orders.length) render(); });
 }
 
 function render(){
   if (!orders.length){
     main.innerHTML = '<div class="kempty"><div><div class="ill">' + ic("check-circle",64) + '</div><h2>Няма поръчки в момента</h2>' +
-      '<p>Новите поръчки за ' + esc(K.sec.n) + ' ще се появят тук сами' + (K.sound() ? ', със звуков сигнал' : '') + '.</p>' +
+      '<p>Новите поръчки за ' + esc(K.sec.n) + ' ще се появят тук сами' + (K.sound() && K.audioReady ? ', със звуков сигнал' : '') + '.</p>' +
+      (K.sound() && !K.audioReady ? '<p><button class="kb red" type="button" data-unlock2 style="margin-top:8px">' + ic("bell-ringing",24) + 'Докоснете, за да включите звука</button></p>' : '') +
       '<p style="font-size:17px">Последна изпълнена: Маса 11 в 19:40</p></div></div>';
+    var u = main.querySelector("[data-unlock2]"); if (u) u.addEventListener("click", function(){ K.unlock(); K.beep(); render(); });
     strip(); return; }
   main.innerHTML = '<div class="kq" data-q>' + orders.map(function(o, i){ return K.ticket(o, i); }).join("") + '</div><button class="kmore" type="button" data-more hidden></button>';
   bind(); strip(); more();
@@ -55,9 +62,12 @@ function bind(){
   main.querySelectorAll(".tk").forEach(function(card){
     var o = orders[+card.getAttribute("data-o")];
     card.querySelectorAll("[data-ln]").forEach(function(btn){ btn.addEventListener("click", function(){
-      var l = o.lines[+btn.getAttribute("data-ln")], was = l.o.st === "done";
-      l.o.st = was ? "" : "done"; render();
-      if (!was) K.toast('<b>' + l.q + ' × ' + esc(SC.byId[l.id].n) + '</b> е готово<small>' + esc(K.srcText(o)) + '</small>', function(){ l.o.st = ""; render(); });
+      var l = o.lines[+btn.getAttribute("data-ln")], was = l.o.st === "done", t = Date.now();
+      if (l.tapAt && t - l.tapAt < 800) return; /* мокра ръка: второто докосване до 0,8 сек. не отменя */
+      l.tapAt = t; l.o.st = was ? "" : "done"; render();
+      var name = l.q + ' × ' + esc(SC.byId[l.id].n);
+      if (!was) K.toast('<b>' + name + ' · готово</b><small>' + esc(K.srcText(o)) + '</small>', function(){ l.o.st = ""; l.tapAt = 0; render(); });
+      else K.toast('<b>Върнато: ' + name + '</b><small>' + esc(K.srcText(o)) + ' · пак е за готвене</small>', function(){ l.o.st = "done"; l.tapAt = 0; render(); });
     }); });
     var st = card.querySelector("[data-start]");
     if (st) st.addEventListener("click", function(){ o.startedBy = o.startedBy || {}; o.startedBy[K.secId] = K.hm(K.now()); o.isNew = false; render(); });
@@ -84,7 +94,7 @@ function finish(o, card){
 function more(){
   var q = main.querySelector("[data-q]"), b = main.querySelector("[data-more]"); if (!q) return;
   function upd(){ var hidden = 0, r = q.getBoundingClientRect().right;
-    q.querySelectorAll(".tk").forEach(function(c){ if (c.getBoundingClientRect().left > r - 60) hidden++; });
+    q.querySelectorAll(".tk").forEach(function(c){ if (c.getBoundingClientRect().right > r + 4) hidden++; });
     b.hidden = !hidden; b.innerHTML = ic("arrow-right",26) + '<b>+' + hidden + '</b><small>още</small>'; b.setAttribute("aria-label", "Още " + hidden + (hidden === 1 ? " поръчка" : " поръчки") + " вдясно"); }
   q.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd); upd();
   b.onclick = function(){ q.scrollBy({left:q.clientWidth * .8, behavior:SC.reduce ? "auto" : "smooth"}); };
