@@ -14,7 +14,6 @@
 .callbig{display:grid; justify-items:center; gap:6px; padding:8px 0 4px; text-align:center}
 .callbig b{font-size:34px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
 .callbig span{color:var(--muted); font-weight:700}
-.st-bar .pill-line{flex:0 0 auto; background:var(--surface)}
 .notice.bad{background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
 .notice.bad > .ic{color:var(--danger)}
 .notice .pill{margin-top:10px}
@@ -27,76 +26,103 @@
 <script src="_driver.js"></script>
 <script>
 var d = DR.byId(DR.hash.id) || DR.next() || DR.db.dels[DR.db.dels.length-1];
-var main = DR.mount({page:"delivery", title:"№ "+d.id, sub:(d.zone||"Извън зоните")+" · "+DR.PAY[d.pay][0], back:{href:"list.html", label:"Доставки"}, nav:"list", bar:true});
-var ic = SC.ic, esc = SC.esc, given = 0;
+var main = DR.mount({page:"delivery", title:"№ "+d.id, sub:(d.zone||"Извън зоните"), back:{href:"list.html", label:"Доставки"}, nav:"list", bar:true});
+var ic = SC.ic, esc = SC.esc, given = 0, other = "";
 var bar = document.createElement("div"); bar.className = "st-bar"; document.body.appendChild(bar);
-var tel = d.phone.replace(/\s/g,""), RT = SC.RESTAURANT.phone, RTtel = RT.replace(/\s/g,"");
+var RT = SC.RESTAURANT.phone, RTtel = RT.replace(/\s/g,"");
+function live(){ return d.st !== "done" && d.st !== "prob"; }
 
 function flow(){ var order = ["picked","road","done"], i = d.st==="wait" ? -1 : d.st==="prob" ? 1 : order.indexOf(d.st);
   return '<ol class="flow" aria-label="Етапи">'+[["Взета","picked"],["На път","road"],["Доставена","done"]].map(function(s, k){ return '<li class="'+(k<=i?"on":"")+(k===i&&d.st==="road"?" now":"")+'">'+s[0]+'</li>'; }).join("")+'</ol>'; }
 
+function changeBox(total){
+  if (!DR.feeKnown(d)) return '<div class="notice warn" style="margin-top:12px">'+ic("warning",22)+'<span><b>Таксата не е въведена</b> '+(d.zone?'<span class="missing">[ЛИПСВА: такса за '+esc(d.zone)+']</span>':'(адрес извън зоните)')+'. Питайте ресторанта колко да вземете, преди да върнете ресто.</span></div>';
+  var opts = [], c = Math.round(total*100)/100;
+  [5,10,20,50,100].forEach(function(step){ var v = Math.ceil(c/step)*step; if (v > c && opts.indexOf(v) < 0) opts.push(v); });
+  opts = opts.slice(0,4); var g = given === -1 ? parseFloat(String(other).replace(",",".")) : given;
+  var out = g ? (g < c ? '<div class="chg" style="color:var(--danger)">Сумата е по-малка от '+SC.fmt(c)+'</div>' : g === c ? '<div class="chg big">Без ресто</div>' : '<div class="chg big">Върнете '+SC.fmt(g-c)+'</div>') : '';
+  return '<div class="notice" style="margin-top:12px;display:block"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Ресто</b><span class="prop">'+ic("sparkle",14)+'Предложение</span></div><p class="muted" style="margin:4px 0 10px">Клиентът дава:</p><div class="change">'+
+    '<button class="chip" type="button" data-give="'+c+'" aria-pressed="'+(given===c)+'">Точна сума</button>'+
+    opts.map(function(n){ return '<button class="chip" type="button" data-give="'+n+'" aria-pressed="'+(given===n)+'">'+n+' €</button>'; }).join("")+
+    '<button class="chip" type="button" data-give="-1" aria-pressed="'+(given===-1)+'">Друга сума</button></div>'+
+    (given === -1 ? '<div class="field bigf" style="margin-top:10px"><label for="oth">Колко дава клиентът</label><div class="wrapi"><input class="input" id="oth" inputmode="decimal" placeholder="0,00" value="'+esc(other)+'"><span class="u">€</span></div></div>' : '')+
+    '<div id="chg">'+out+'</div></div>'; }
+
 function render(){
-  var etas = DR.etas(), eta = etas[d.id], l = DR.lvl(d), total = DR.total(d), fee = DR.fee(d), app = DR.prefs.nav || "google";
+  var etas = DR.etas(), eta = etas[d.id], l = DR.lvl(d), total = DR.total(d), fee = DR.fee(d), app = DR.prefs.nav || "google", locked = DR.lock();
   var h = '<section class="st-sec">'+flow()+'</section>';
-  if (d.st === "prob") h += '<section class="st-sec"><div class="notice bad">'+ic("warning",22)+'<span><b>Проблем: '+DR.PROB[d.prob.k][0]+'.</b> Ресторантът е уведомен в '+DR.clock(d.prob.at)+'. Върнете поръчката в ресторанта'+(d.pay==="cash"?"; сумата не се събира":"")+'.</span></div></section>';
-  if (!d.zone) h += '<section class="st-sec"><div class="notice bad">'+ic("map-pin-line",22)+'<span><b>Адресът е извън зоните за доставка.</b> Преди да тръгнете, уточнете с ресторанта дали да я карате.<br><a class="pill pill-line" href="tel:'+RTtel+'">'+ic("phone",20)+'Обади се в ресторанта</a></span></div></section>';
+  if (d.st === "prob") h += '<section class="st-sec"><div class="notice bad">'+ic("warning",22)+'<span><b>Проблем: '+DR.PROB[d.prob.k][0]+'.</b> Ресторантът е уведомен в '+DR.clock(d.prob.at)+'. '+(d.prob.returned ? 'Върната в ресторанта в '+DR.clock(d.prob.returned)+'.' : 'Ако клиентът се обади, доставете я. Иначе я върнете в ресторанта'+(d.pay==="cash"?"; сумата не се събира":"")+'.')+'</span></div></section>';
+  if (!d.zone && live()) h += '<section class="st-sec"><div class="notice bad">'+ic("map-pin-line",22)+'<span><b>Адресът е извън зоните за доставка.</b> Преди да тръгнете, уточнете с ресторанта дали да я карате и каква е сумата.<br><a class="pill pill-line" href="tel:'+RTtel+'">'+ic("phone",20)+'Обади се в ресторанта</a></span></div></section>';
   if (l === "late") h += '<section class="st-sec"><div class="notice bad">'+ic("timer",22)+'<span><b>Закъснява '+(-DR.mins(DR.due(d)-Date.now()))+' мин.</b> Обадете се на клиента и кажете кога пристигате. Ресторантът също вижда закъснението.<br><button class="pill pill-line" type="button" data-call>'+ic("phone",20)+'Обади се на клиента</button></span></div></section>';
+  if (d.st === "road" && locked && locked !== d) h += '<section class="st-sec"><div class="notice">'+ic("info",22)+'<span>Сега карате към <a class="link" href="delivery.html#'+locked.id+'" style="min-height:0;display:inline">№ '+locked.id+'</a>. Тази е следваща по реда на маршрута.</span></div></section>';
   h += '<section class="st-sec"><div class="acard"><div class="addr"><b>'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</b><span>'+esc(d.sub)+'</span>'+DR.exTag+'</div>'+
-    '<div class="meta">'+DR.dueStt(d, eta)+(eta&&d.st!=="done"&&d.st!=="prob"?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+(d.zone && !DR.zone(d.zone).free ? DR.stt("picked","Платена зона","tag") : "")+'</div>'+
-    '<div class="acts"><a class="pill pill-red pill-lg" href="'+DR.navUrl(d, app)+'" target="_blank" rel="noopener">'+ic("path",22)+'Навигация · '+DR.NAVAPP[app]+'</a></div></div></section>';
-  h += '<section class="st-sec"><p class="st-cap">Клиент</p><div class="client"><span class="nm"><b>'+esc(d.client)+'</b><span>'+esc(d.phone)+'</span><small class="small muted" style="display:block;font-weight:600">примерен номер</small></span><button class="pill pill-line" type="button" data-call>'+ic("phone",22)+'Обади се</button></div>'+
-    '<p class="small muted" style="margin:8px 4px 0">Виждате само името и телефона от поръчката, докато трае доставката.</p></section>';
+    '<div class="meta">'+DR.dueStt(d, eta)+(eta&&live()?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+(d.zone && !DR.zone(d.zone).free ? DR.stt("picked","Платена зона","tag") : "")+'</div>'+
+    (d.arrivedAt?'<div class="arr">'+ic("check-circle",20)+'Клиентът получи SMS „Шофьорът е пред входа“ в '+DR.clock(d.arrivedAt)+'</div>':'')+
+    (live()?'<div class="acts"><a class="pill pill-ink pill-lg" href="'+DR.navUrl(d, app)+'" target="_blank" rel="noopener">'+ic("path",22)+'Навигация · '+DR.NAVAPP[app]+'</a></div>':'')+'</div></section>';
+  h += '<section class="st-sec"><p class="st-cap">Клиент</p><div class="client"><span class="nm"><b>'+esc(d.client)+'</b><span style="font-size:15px">Номерът е скрит</span></span><button class="pill pill-line" type="button" data-call>'+ic("phone",22)+'Обади се</button></div>'+
+    '<p class="small muted" style="margin:8px 4px 0">Обаждането и SMS минават през номера на ресторанта. Клиентът не вижда вашия номер, вие не виждате неговия.</p></section>';
   if (d.note) h += '<section class="st-sec"><p class="st-cap">Бележка от клиента</p><div class="notebox">'+ic("note",22)+'<span>'+esc(d.note)+'</span></div></section>';
   h += '<section class="st-sec"><div class="st-h"><h2>В торбата</h2><span class="muted">'+SC.plural(d.items.reduce(function(s,x){ return s+x[1]; },0),"артикул","артикула")+'</span></div><div class="icard">'+
     d.items.map(function(x){ var it = SC.byId[x[0]]; return '<div class="il"><span class="q">'+x[1]+'×</span><span class="nm">'+esc(it.n)+'</span><span class="price">'+SC.fmt(it.p*x[1])+'</span></div>'; }).join("")+
-    '<div class="kv" style="border-top:1px solid var(--line)"><span class="muted">Доставка</span><b>'+(!d.zone?'<span class="missing">[ЛИПСВА: извън зоните]</span>':fee===0?'Безплатна':fee===null?'<span class="missing">[ЛИПСВА: такса за '+esc(d.zone)+']</span>':SC.fmt(fee))+'</b></div>'+
-    '<div class="kv tot"><span>Общо</span><span class="price">'+DR.money(d)+'</span></div></div></section>';
+    '<div class="kv" style="border-top:1px solid var(--line)"><span class="muted">Доставка</span><b>'+(!d.zone?'уточнете с ресторанта':fee===0?'Безплатна':fee===null?'<span class="missing">[ЛИПСВА: такса за '+esc(d.zone)+']</span>':SC.fmt(fee))+'</b></div>'+
+    '<div class="kv tot"><span>Общо</span><span class="price">'+(d.zone?DR.money(d):SC.fmt(DR.itemsSum(d))+' + ?')+'</span></div></div></section>';
   h += '<section class="st-sec"><div class="st-h"><h2>Плащане</h2></div><div class="paygrid">'+["cash","card","voucher"].map(function(k){ return '<div class="'+(d.pay===k?"on":"")+'"'+(d.pay===k?' aria-current="true"':'')+'>'+ic(DR.PAY[k][1],24)+DR.PAY[k][0]+'</div>'; }).join("")+'</div>';
-  if (d.pay === "cash" && d.st !== "done" && d.st !== "prob"){
-    var notes = [20,50,100].filter(function(n){ return n >= total; });
-    h += '<div class="notice" style="margin-top:12px;display:block"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Ресто</b><span class="prop">'+ic("sparkle",14)+'Предложение</span></div><p class="small muted" style="margin:4px 0 10px">Клиентът дава:</p><div class="change">'+notes.map(function(n){ return '<button class="chip" type="button" data-give="'+n+'" aria-pressed="'+(given===n)+'">'+n+' €</button>'; }).join("")+'</div>'+
-      (given ? '<div class="chg">Върнете '+SC.fmt(given-total)+'</div>' : '')+(DR.feeKnown(d)?'':'<p class="small muted" style="margin:8px 0 0">Таксата за зоната не е въведена в системата <span class="missing">[ЛИПСВА]</span>; сумата е без нея.</p>')+'</div>';
-  }
-  if (d.pay === "card" && d.st !== "done") h += '<div class="notice" style="margin-top:12px">'+ic("credit-card",22)+'<span>Вземете терминала за карти. <span class="missing">[ЛИПСВА: мобилен POS терминал, модел]</span></span></div>';
-  if (d.pay === "voucher" && d.st !== "done") h += '<div class="notice" style="margin-top:12px">'+ic("ticket",22)+'<span>Вземете ваучерите за '+DR.money(d)+'. Предават се в края на смяната.</span></div>';
+  if (d.pay === "cash" && live()) h += changeBox(total);
+  if (d.pay === "card" && live()) h += '<div class="notice" style="margin-top:12px">'+ic("credit-card",22)+'<span>Вземете терминала за карти. <span class="missing">[ЛИПСВА: мобилен POS терминал, модел]</span></span></div>';
+  if (d.pay === "voucher" && live()) h += '<div class="notice" style="margin-top:12px">'+ic("ticket",22)+'<span>Вземете ваучерите за '+DR.money(d)+'. Предават се в края на смяната.</span></div>';
   h += '</section>';
-  if (d.st !== "done" && d.st !== "prob") h += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-problem>'+ic("warning",22)+'Проблем с доставката</button></section>';
+  if (d.st === "picked" || d.st === "road") h += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-problem>'+ic("warning",22)+'Проблем с доставката</button></section>';
   main.innerHTML = h; renderBar();
   if (DR.hash.call !== undefined && !render.called){ render.called = true; callSheet(); }
 }
 function renderBar(){ var money = d.pay==="cash" ? "взех "+DR.money(d) : d.pay==="card" ? "платено с карта" : "взех ваучера";
   var nx = DR.ordered().filter(function(x){ return x !== d; })[0];
-  if (d.st === "wait") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="picked">'+ic("shopping-bag",22)+'Взех от ресторанта</button>';
+  var nextLink = nx ? '<a class="pill pill-red" href="delivery.html#'+nx.id+'">Следваща · № '+nx.id+ic("caret-right",22)+'</a>' : '<a class="pill pill-red" href="list.html">'+ic("check-circle",22)+'Към доставките</a>';
+  if (d.st === "wait" && !d.zone) bar.innerHTML = '<button class="pill pill-red" type="button" data-confirm>'+ic("shopping-bag",22)+'Взех · след потвърждение</button>';
+  else if (d.st === "wait") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="picked">'+ic("shopping-bag",22)+'Взех от ресторанта</button>';
   else if (d.st === "picked") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="road">'+ic("car",22)+'Тръгвам · На път</button>';
-  else if (d.st === "road") bar.innerHTML = '<button class="pill pill-ok pill-red" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">'+ic("check-circle",22)+'Доставена · '+money+'</button>';
-  else bar.innerHTML = nx ? '<a class="pill pill-red" href="delivery.html#'+nx.id+'" data-go>Следваща · № '+nx.id+ic("caret-right",22)+'</a>' : '<a class="pill pill-red" href="list.html">'+ic("check-circle",22)+'Всичко е доставено</a>';
+  else if (d.st === "road") bar.innerHTML = (d.arrivedAt ? '' : '<button class="pill pill-line" type="button" data-arr>'+ic("map-pin",22)+'Пристигнах</button>')+'<button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">'+ic("check-circle",22)+'Доставена'+(d.arrivedAt?' · '+money:'')+'</button>';
+  else if (d.st === "prob" && !d.prob.returned) bar.innerHTML = '<button class="pill pill-line" type="button" data-ret>Върнах в ресторанта</button><button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">Доставих все пак</button>';
+  else bar.innerHTML = nextLink;
 }
-function callSheet(){ DR.sheet({title:"Обаждане до клиента", html:
-  '<div class="callbig"><span>'+esc(d.client)+'</span><b>'+esc(d.phone)+'</b><span>примерен номер от поръчката</span></div>'+
-  '<p class="st-cap" style="margin-top:14px">Какво да кажете</p><div class="notechips">'+["Пристигам след 5 минути","Пред входа съм","Не намирам входа"].map(function(t){ return '<a class="chip" href="sms:'+tel+'?body='+encodeURIComponent(t+". Siracusa")+'">'+ic("chat-circle-dots",18)+t+'</a>'; }).join("")+'</div>'+
-  '<p class="small muted" style="margin:10px 0 0">Бутоните изпращат кратко SMS от вашия телефон. Номерът се вижда само по време на доставката.</p>',
-  foot:'<a class="pill pill-red pill-lg pill-block" href="tel:'+tel+'">'+ic("phone",22)+'Обади се · '+esc(d.phone)+'</a>'}); }
+function callSheet(){ var s = DR.sheet({title:"Обаждане до клиента", html:
+  '<div class="callbig"><span>'+esc(d.client)+'</span><b>Скрит номер</b><span>Обаждането минава през номера на ресторанта '+RT+'</span></div>'+
+  '<p class="small muted" style="margin:6px 0 0;text-align:center">'+DR.MASK+'</p>'+
+  '<p class="st-cap" style="margin-top:14px">Бързо SMS до клиента</p><div class="notechips">'+["Пристигам след 5 минути","Пред входа съм","Не намирам входа"].map(function(t){ return '<button class="chip" type="button" data-sms="'+esc(t)+'">'+ic("chat-circle-dots",18)+t+'</button>'; }).join("")+'</div>'+
+  '<p class="small muted" style="margin:10px 0 0">SMS тръгва от номера на ресторанта, не от вашия телефон.</p>',
+  foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-dial>'+ic("phone",22)+'Обади се през ресторанта</button>'});
+  s.el.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.sms){ s.close(); DR.toast("SMS „"+b.dataset.sms+"“ е изпратен през номера на ресторанта"); }
+    if (b.hasAttribute("data-dial")){ s.close(); DR.toast("В прототипа: обаждането тръгва през доставчика на скрити номера"); } }); }
+function confirmSheet(){ var s = DR.sheet({title:"Ресторантът потвърди ли?", html:'<p style="margin:0">Адресът е извън зоните. Вземете поръчката само ако ресторантът е казал да я карате и колко да вземете.</p>',
+  foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-yes>Да, потвърдиха · Взех</button><a class="pill pill-line pill-lg pill-block" href="tel:'+RTtel+'">'+ic("phone",22)+'Обади се в ресторанта</a>'});
+  s.el.querySelector("[data-yes]").onclick = function(){ s.close(); var prev = DR.setSt(d.id, "picked"); DR.toast("№ "+d.id+" е взета.", function(){ DR.restore(d.id, prev); }); }; }
 function problemSheet(){ var pick = null;
   var s = DR.sheet({title:"Какво се случи?", html:'<div class="ptiles">'+Object.keys(DR.PROB).map(function(k){ return '<button class="ptile" type="button" data-p="'+k+'" aria-pressed="false"><span class="ii">'+ic(DR.PROB[k][1],24)+'</span><span>'+DR.PROB[k][0]+'<small>'+DR.PROB[k][2]+'</small></span></button>'; }).join("")+'</div><div id="pmore"></div>',
     foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-psend disabled>Изпрати на ресторанта</button>'});
   var more = s.el.querySelector("#pmore"), send = s.el.querySelector("[data-psend]");
   var TIP = {nobody:'<div class="notice" style="margin-top:12px">'+ic("phone",22)+'<span>Първо се обадете на клиента. Ако не вдига, изчакайте <span class="missing">[ЛИПСВА: колко минути]</span> и изпратете.</span></div><button class="pill pill-line pill-block" type="button" data-callnow style="margin-top:10px">'+ic("phone",20)+'Обади се на клиента</button>',
     addr:'<div class="field" style="margin-top:12px"><label for="na">Верният адрес, ако клиентът го каже</label><input class="input" id="na" placeholder="например бл. 3xx, вх. В"></div>',
-    refuse:'<div class="field" style="margin-top:12px"><label for="nr">Причина (по желание)</label><input class="input" id="nr" placeholder="например студена храна"></div><p class="small muted" style="margin:8px 0 0">Не спорете с клиента. Върнете поръчката в ресторанта.</p>'};
+    refuse:'<div class="field" style="margin-top:12px"><label for="nr">Причина (по желание)</label><input class="input" id="nr" placeholder="например студена храна"></div><p class="muted" style="margin:8px 0 0">Не спорете с клиента. Върнете поръчката в ресторанта.</p>'};
   s.el.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
     if (b.dataset.p){ pick = b.dataset.p; s.el.querySelectorAll("[data-p]").forEach(function(x){ x.setAttribute("aria-pressed", x===b); }); more.innerHTML = TIP[pick]; send.disabled = false; send.textContent = "Изпрати: "+DR.PROB[pick][0]; return; }
-    if (b.hasAttribute("data-callnow")){ location.href = "tel:"+tel; return; }
+    if (b.hasAttribute("data-callnow")){ s.close(); callSheet(); return; }
     if (b.hasAttribute("data-psend") && pick){ var inp = more.querySelector("input"), prev = DR.problem(d.id, pick, inp ? inp.value : ""); s.close(); DR.haptic([30,60,30]);
       DR.toast((DR.offline?"Записано на телефона. ":"")+"Ресторантът е уведомен: "+DR.PROB[pick][0], function(){ DR.restore(d.id, prev); }); }
   }); }
 
 render(); DR.on(render);
+main.addEventListener("input", function(e){ if (e.target.id === "oth"){ other = e.target.value; var c = Math.round(DR.total(d)*100)/100, g = parseFloat(other.replace(",",".")), out = main.querySelector("#chg");
+  out.innerHTML = !g ? '' : g < c ? '<div class="chg" style="color:var(--danger)">Сумата е по-малка от '+SC.fmt(c)+'</div>' : '<div class="chg big">Върнете '+SC.fmt(g-c)+'</div>'; } });
 document.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b || b.closest(".st-sheetwrap")) return;
   if (b.hasAttribute("data-call")){ callSheet(); return; }
   if (b.hasAttribute("data-problem")){ problemSheet(); return; }
-  if (b.dataset.give){ given = +b.dataset.give === given ? 0 : +b.dataset.give; render(); return; }
-  if (b.dataset.st){ var st = b.dataset.st, prev = DR.setSt(d.id, st); DR.haptic(st==="done"?[20,40,20]:12);
-    var w = st==="picked" ? "взета от ресторанта" : st==="road" ? "е на път. Клиентът вижда приблизително време" : "е доставена";
+  if (b.hasAttribute("data-confirm")){ confirmSheet(); return; }
+  if (b.dataset.give){ var v = +b.dataset.give; given = v === given ? 0 : v; render(); if (given === -1){ var f = main.querySelector("#oth"); f && f.focus(); } return; }
+  if (b.hasAttribute("data-arr")){ var pa = DR.arrived(d.id); DR.haptic(); DR.toast((DR.offline?"Записано на телефона: ":"")+"Клиентът получава SMS: „Шофьорът е пред входа“.", function(){ DR.restore(d.id, pa); }); return; }
+  if (b.hasAttribute("data-ret")){ DR.returned(d.id); DR.toast("Записано: № "+d.id+" е върната в ресторанта."); return; }
+  if (b.dataset.st){ var st = b.dataset.st, prev = DR.setSt(d.id, st); if (st === "done") d.prob = null; DR.save(); DR.haptic(st==="done"?[20,40,20]:12);
+    var w = st==="picked" ? "е взета от ресторанта" : st==="road" ? "е на път. Клиентът вижда приблизително време" : "е доставена";
     DR.toast((DR.offline?"Записано на телефона: ":"")+"№ "+d.id+" "+w+".", function(){ DR.restore(d.id, prev); }); window.scrollTo({top:0}); return; }
 });
 window.addEventListener("hashchange", function(){ location.reload(); });

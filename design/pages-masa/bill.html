@@ -14,7 +14,7 @@
 .bg{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
 .reqbtn{white-space:normal; text-align:center; line-height:1.2; padding:10px 20px}
 .payer{grid-column:2; font-size:14px; font-weight:700; color:var(--muted)}
-.payer.mine{color:var(--ok)}
+.payer.me{color:var(--ok)}
 .unas{display:flex; justify-content:space-between; gap:12px; margin-top:12px; padding:12px 14px; border-radius:var(--r-field); background:var(--ember-soft); font-weight:700}
 .unas.ok{background:var(--surface-2)}
 .gsep{border:0; border-top:1px solid var(--line); margin:4px 0 0}
@@ -129,7 +129,7 @@ function linesHTML(pick){ var ls = sent();
   if (!ls.length) return '<div class="shell"><div class="core empty bempty"><span class="ill">'+ic("receipt",40)+'</span><h2 class="h3">'+L("Още нищо не е поръчано","Nothing ordered yet")+'</h2><p>'+L("Сметката се пълни с изпратените поръчки.","The bill fills up with the orders you send.")+'</p><a class="pill pill-red" href="menu.html">'+ic("fork-knife",20)+L("Към менюто","Go to the menu")+'</a></div></div>';
   return '<div class="shell"><div class="core lines">'+ls.map(function(z){ var l = z.l, x = SC.byId[l.id], owner = pick && picks()[l.key], on = owner === M.me;
     var body = '<span class="nm">'+(l.q>1?l.q+' × ':'')+esc(x.n)+'</span>'+M.whoTag(l.who)+'<span class="price">'+fmt(lineSum(l))+'</span>';
-    if (pick){ var pay = owner ? '<span class="payer'+(on?" mine":"")+'">'+(on ? L("Плащате вие","You pay") : esc(M.name(owner))+L(" плаща"," pays"))+'</span>' : '<span class="payer">'+L("Още никой не го плаща","Nobody pays for it yet")+'</span>';
+    if (pick){ var pay = owner ? '<span class="payer'+(on?" me":"")+'">'+(on ? L("Плащате вие","You pay") : esc(M.name(owner))+L(" плаща"," pays"))+'</span>' : '<span class="payer">'+L("Още никой не го плаща","Nobody pays for it yet")+'</span>';
       if (owner && !on) return '<div class="bl pick taken"><input type="checkbox" checked disabled aria-label="'+esc(x.n)+': '+esc(M.name(owner))+L(" плаща"," pays")+'">'+body+pay+'</div>';
       return '<label class="bl pick"><input type="checkbox" data-pick="'+l.key+'"'+(on?" checked":"")+'>'+body+pay+'</label>'; }
     return '<div class="bl">'+body+'</div>'; }).join("")+

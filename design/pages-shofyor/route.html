@@ -25,7 +25,7 @@ var ic = SC.ic, esc = SC.esc;
 function km1(k){ return k.toFixed(1).replace(".", ","); }
 var P0 = DR.POS.home;
 
-var L = {"Дружба 1":[0,-38], "Дружба 2":[44,42], "НПЗ Искър":[0,-38], "Бусманци":[0,46], "Горубляне":[0,46], "Гара Искър":[0,-38]};
+var L = {"Дружба 1":[0,-38], "Дружба 2":[0,-34], "НПЗ Искър":[0,-38], "Бусманци":[0,46], "Горубляне":[0,46], "Гара Искър":[0,-38]};
 function scheme(r){ var zones = ["Дружба 1","Дружба 2","НПЗ Искър","Бусманци","Горубляне","Гара Искър"];
   function pt(d){ var p = DR.POS[d.zone || "out"]; return [p[0]+(d.dx||0), p[1]+(d.dy||0)]; }
   var nx = DR.next(), pts = r.order.map(pt), path = "M"+P0.join(","), prev = P0;
@@ -42,24 +42,25 @@ function scheme(r){ var zones = ["Дружба 1","Дружба 2","НПЗ Ис�
 
 function card(k, r, title, sub){ var pick = DR.db.route.pick;
   return '<button class="rc" type="button" data-pick="'+k+'" aria-pressed="'+(pick===k)+'"><span class="t">'+title+(pick===k?DR.stt("done","Избран","check"):'')+'</span><span class="ord">'+esc(sub)+'</span>'+
-    '<span class="nums"><span><b>'+r.min+'</b> мин</span><span><b>'+km1(r.km)+'</b> км</span><span class="muted">гориво <span class="missing">[ЛИПСВА]</span></span></span>'+
+    '<span class="nums"><span><b>'+r.min+'</b> мин</span><span><b>'+km1(r.km)+'</b> км</span><span class="muted">гориво <span class="missing">[ЛИПСВА: разход]</span></span></span>'+
     '<span class="ord">'+r.order.map(function(d, i){ return (i+1)+'. '+(d.zone||"извън зоните"); }).join(" → ")+' → S</span></button>'; }
 
 function render(){
   var P = DR.plan();
   if (!P){ main.innerHTML = '<section class="st-sec"><div class="st-empty"><div class="ill">'+ic("path",48)+'</div><h2>Няма маршрут</h2><p>Маршрутът се предлага сам, щом имате поръчки за доставяне.</p><a class="pill pill-line pill-lg" href="list.html" style="margin-top:8px">Към доставките</a></div></section>'; return; }
+  var lastF = DR.db.fuel[0], price = lastF ? (lastF.s/lastF.l).toFixed(2).replace(".",",") : null, L = DR.lock();
   var r = DR.current(), etas = DR.etas(), same = P.A.order.every(function(d,i){ return d === P.B.order[i]; });
   var h = '<section class="st-sec">'+scheme(r)+'</section>';
   h += '<section class="st-sec"><div class="st-h"><h2>Предложение</h2><span class="muted">вие решавате</span></div><div class="rchoice">'+
     card("A", P.A, "Път А · по срока", "Първо поръчките, които трябва да стигнат по-рано")+
     (same ? '<p class="small muted" style="margin:0">Най-краткият път съвпада с Път А за този курс.</p>' : card("B", P.B, "Път Б · по-кратък", "Най-малко километри за целия курс"))+
     (P.own ? card("own", P.own, "Моят ред", "Подредихте адресите сами") : '')+'</div>'+
-    '<p class="small muted" style="margin:10px 4px 0">Редът се смята с VROOM върху OSRM (без такса на заявка, без трафик). Числата тук са примерни. Литрите и еврото се смятат от реалния разход на автомобила, щом има зареждания <span class="missing">[ЛИПСВА: разход л/100 км, цена на горивото]</span>.</p></section>';
+    '<p class="small muted" style="margin:10px 4px 0">Редът се смята с VROOM върху OSRM (без такса на заявка, без трафик). Числата тук са примерни. Литрите и еврото се смятат от реалния разход на автомобила <span class="missing">[ЛИПСВА: разход л/100 км]</span>'+(price?' и цената от последното зареждане ('+price+' €/л)':'; цената на горивото се взима от последното зареждане')+'.</p></section>';
   h += '<section class="st-sec"><div class="st-h"><h2>Адресите по ред</h2><span class="muted">пристигане</span></div><div class="stops">'+
     r.order.map(function(d, i){ return '<div class="stop"><span class="no">'+(i+1)+'</span><a href="delivery.html#'+d.id+'" style="color:inherit;text-decoration:none"><span class="a" style="display:block">'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</span><span class="s" style="display:block">№ '+d.id+' · '+DR.ST[d.st][0]+'</span></a><span class="eta"><b>~'+DR.clock(etas[d.id])+'</b>срок '+DR.clock(DR.due(d))+'</span>'+
-      '<span class="mv"><button class="pill pill-soft" type="button" data-up="'+i+'"'+(i===0?' disabled':'')+' aria-label="По-рано: '+esc(d.zone||"извън зоните")+'">'+ic("caret-up",20)+'По-рано</button><button class="pill pill-soft" type="button" data-down="'+i+'"'+(i===r.order.length-1?' disabled':'')+' aria-label="По-късно: '+esc(d.zone||"извън зоните")+'">'+ic("caret-down",20)+'По-късно</button></span></div>'; }).join("")+
+      (d===L ? '<span class="lockh">'+ic("lock",16)+'Карате към нея сега: остава първа</span>' : '<span class="mv"><button class="pill pill-soft" type="button" data-up="'+i+'"'+(i===0||(i===1&&L)?' disabled':'')+' aria-label="По-рано: '+esc(d.zone||"извън зоните")+'">'+ic("caret-up",20)+'По-рано</button><button class="pill pill-soft" type="button" data-down="'+i+'"'+(i===r.order.length-1?' disabled':'')+' aria-label="По-късно: '+esc(d.zone||"извън зоните")+'">'+ic("caret-down",20)+'По-късно</button></span>')+'</div>'; }).join("")+
     '<div class="stop home"><span class="no">S</span><span><span class="a" style="display:block">Обратно в ресторанта</span><span class="s" style="display:block">'+km1(r.back.k)+' км</span></span><span class="eta"><b>~'+DR.clock(Date.now() + r.min*60000 + 2*(r.order.length-1)*60000)+'</b></span></div></div>'+
-    '<p class="small muted" style="margin:10px 4px 0">Пристигане = времето по пътя + 2 мин за всеки предишен адрес. Клиентът вижда приблизително време, известие 10 мин преди пристигане.</p></section>';
+    '<p class="small muted" style="margin:10px 4px 0">Пристигане = времето по пътя от мястото на колата (GPS) + 2 мин за всеки предишен адрес. Клиентът вижда приблизително време, известие 10 мин преди пристигане.</p></section>';
   main.innerHTML = h;
 }
 render(); DR.on(render);
