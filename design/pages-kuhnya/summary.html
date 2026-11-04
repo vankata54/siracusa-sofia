@@ -69,7 +69,7 @@ function render(){
   var tot = {wait:0, late:0}; active = orders.filter(function(o){ return K.SECTIONS.some(function(s){ var x = secState(o, s.id); return x && x !== "done"; }); });
   active.forEach(function(o){ tot.wait++; if (K.stateOf(o) === "late") tot.late++; });
   var b = K.busy(), outs = K.outs();
-  K.strip.innerHTML = (off ? K.offlineHTML("summary") : '') + '<div class="kcount"><span>Поръчки в кухнята <b>' + tot.wait + '</b></span><span class="sep"></span><span class="late">Закъсняват <b>' + tot.late + '</b></span><span class="sep"></span><span>Изчерпани <b>' + outs.length + '</b></span></div>' +
+  K.strip.innerHTML = (off ? K.offlineHTML("summary") : '') + '<div class="kcount"><span>Поръчки в кухнята <b>' + tot.wait + '</b></span><span class="sep"></span><span class="late">Закъсняват <b>' + tot.late + '</b></span><span class="sep"></span><span>Изчерпани <b>' + outs.length + '</b></span><span class="sep"></span><span>По-късно <b>' + K.later().length + '</b></span></div>' +
     '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>';
   main.innerHTML = '<div class="kpage"><h1 class="vh">Общ изглед на кухнята</h1><div class="secg">' + K.SECTIONS.map(function(s){ var r = stats(s.id), o = outs.filter(function(x){ return x.sec === s.id; }).length;
       return '<a class="sc kcard' + (r.late ? " late" : "") + '" href="queue.html#s=' + s.id + (K.hash.t ? "&t=" + K.hash.t : "") + '"><span class="hd"><span class="si">' + ic(s.ic,24) + '</span>' + esc(s.n) + '</span>' +

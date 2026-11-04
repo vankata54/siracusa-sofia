@@ -83,12 +83,15 @@ function initOrder(){
   /* Black Angus steaks are priced per 100 g: ask the weight once per steak */
   function gramsSheet(x){ var gr = 400;
     var sh = ST.sheet({title:"Грамаж", html:'<p style="margin:0 0 12px;font-weight:700">'+esc(x.n)+' · '+fmt(x.p)+' за 100 гр.</p><div class="grams" role="group" aria-label="Грамаж">'+[300,400,500,600].map(function(v){ return '<button class="chip" type="button" data-gr="'+v+'" aria-pressed="'+(v===gr)+'">'+v+' гр.</button>'; }).join("")+'</div>'+
-      '<div class="field" style="margin-top:14px"><label for="gg">Друг грамаж (гр.)</label><input class="input" id="gg" type="number" inputmode="numeric" min="100" step="50" value="'+gr+'"><span class="help">Цената се смята по грамажа. Кой въвежда точното тегло след рязане: <span class="missing">[ЛИПСВА: кухнята или сервитьорът]</span>.</span></div>',
+      '<div class="field" style="margin-top:14px"><label for="gg">Друг грамаж (гр.)</label><input class="input" id="gg" type="number" inputmode="numeric" min="100" max="2000" step="50" value="'+gr+'" aria-describedby="ggerr"><span class="err" id="ggerr" hidden></span><span class="help">Цената се смята по грамажа. Кой въвежда точното тегло след рязане: <span class="missing">[ЛИПСВА: кухнята или сервитьорът]</span>.</span></div>',
       foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-gok>Добави · <span class="price" id="gp">'+fmt(x.p*gr/100)+'</span></button>'});
     var gi = sh.el.querySelector("#gg"), gp = sh.el.querySelector("#gp");
-    function upd(){ gr = Math.max(100, Math.round(+gi.value||0)); gp.textContent = fmt(x.p*gr/100); sh.el.querySelectorAll("[data-gr]").forEach(function(b){ b.setAttribute("aria-pressed", +b.dataset.gr===gr); }); }
+    var ge = sh.el.querySelector("#ggerr"), gb = sh.el.querySelector("[data-gok]");
+    function upd(){ var v = Math.round(+gi.value||0), bad = v < 100 || v > 2000; gr = bad ? gr : v;
+      ge.hidden = !bad; ge.textContent = v > 2000 ? "До 2000 гр. За повече: две отделни парчета." : "Поне 100 гр."; gi.setAttribute("aria-invalid", bad); gb.disabled = bad;
+      gp.textContent = fmt(x.p*gr/100); sh.el.querySelectorAll("[data-gr]").forEach(function(b){ b.setAttribute("aria-pressed", +b.dataset.gr===v); }); }
     gi.addEventListener("input", upd);
-    sh.el.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; if (b.dataset.gr){ gi.value = b.dataset.gr; upd(); } if (b.hasAttribute("data-gok")){ sh.close(); add(x.id, 1, gr); } }); }
+    sh.el.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; if (b.dataset.gr){ gi.value = b.dataset.gr; upd(); } if (b.hasAttribute("data-gok") && !b.disabled){ sh.close(); add(x.id, 1, gr); } }); }
 
   function row(x){ var n = qty(x.id), out = SC.isOut(x);
     return '<div class="qrow'+(out?" out":"")+'">'+SC.pic(x)+'<div><div class="nm">'+esc(x.n)+'</div><div class="mt"><span class="price">'+fmt(x.p)+'</span><span class="g">'+(x.per100?"за 100 гр.":esc(x.g))+'</span>'+(out?'<span class="out-b">'+ic("clock",16)+'Изчерпано днес</span>':'')+'</div></div>'+
@@ -115,7 +118,7 @@ function initOrder(){
   }
   function drawBar(){ var n = count();
     bar.innerHTML = '<button class="sumbtn" type="button" data-review'+(n?'':' disabled')+'>'+ic("list-checks",22)+(n?SC.plural(n,"артикул","артикула")+' · Преглед':'Няма добавени ястия')+'</button>'+
-      '<button class="pill pill-red" type="button" data-send'+(n&&kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(n?'Изпрати в кухнята · <span class="price">'+fmt(sum())+'</span>':'Изпрати в кухнята')+'</button>'; }
+      '<button class="pill pill-red" type="button" data-send'+(n&&kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Изпрати в кухнята')+(n?' · <span class="price">'+fmt(sum())+'</span>':'')+'</button>'; }
 
   function noteSheet(k, after){ var l = st.cart[k];
     var sh = ST.sheet({title:"Бележка към кухнята", html:'<p style="margin:0 0 12px;font-weight:700">'+l.q+'× '+esc(ST.lineName(l))+'</p><div class="notechips">'+["Без лук","Без сирене","Сосът отделно","Добре изпечено","Първо за детето"].map(function(t){ return '<button class="chip" type="button" data-nt="'+t+'">'+t+'</button>'; }).join("")+'</div>'+
@@ -136,7 +139,7 @@ function initOrder(){
       rv.innerHTML = Object.keys(by).map(function(b){ return (st.split?'<p class="st-cap" style="margin:12px 0 0">'+esc(b)+'</p>':'')+by[b].map(function(l){ var nm = esc(ST.lineName(l));
         return '<div class="sum-line"><div class="counter"><button type="button" data-rdec="'+esc(l.k)+'" aria-label="Едно по-малко '+nm+'">'+ic("minus",20)+'</button><output>'+l.q+'</output><button type="button" data-rinc="'+esc(l.k)+'" aria-label="Още едно '+nm+'">'+ic("plus",20)+'</button></div><div><div class="nm">'+nm+'</div>'+(l.note?'<div class="nb">'+ic("note",16)+esc(l.note)+'</div>':'')+'<button class="notebtn" type="button" data-note="'+esc(l.k)+'" aria-label="Бележка към '+nm+'">'+ic("pencil-simple",18)+(l.note?'Промени бележката':'Бележка')+'</button></div><span class="price">'+fmt(ST.linePrice(l))+'</span></div>'; }).join(""); }).join("")+
         '<div class="field" style="margin-top:14px"><label for="gn">Бележка за цялата поръчка</label><input class="input" id="gn" value="'+esc(st.note)+'" placeholder="Например: двете пици заедно"></div>';
-      rf.innerHTML = '<button class="pill pill-red pill-lg pill-block" type="button" data-send'+(kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+'Изпрати в кухнята · <span class="price">'+fmt(sum())+'</span></button>'+(kitchenOpen?'':'<p class="small muted" style="margin:0;text-align:center">Кухнята приема поръчки до 22:30.</p>');
+      rf.innerHTML = '<button class="pill pill-red pill-lg pill-block" type="button" data-send'+(kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Изпрати в кухнята')+' · <span class="price">'+fmt(sum())+'</span></button>'+(ST.offline?'<p class="small muted" style="margin:0;text-align:center">Няма връзка: поръчката тръгва към кухнята сама, щом се върне.</p>':'')+(kitchenOpen?'':'<p class="small muted" style="margin:0;text-align:center">Кухнята приема поръчки до 22:30.</p>');
       rv.querySelector("#gn").addEventListener("input", function(e){ st.note = e.target.value; persist(); });
       if (focusSel){ var f = rv.querySelector(focusSel); f && f.focus(); }
     }

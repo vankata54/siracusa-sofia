@@ -5,9 +5,9 @@
    (SEO), plus JSON-LD Menu > MenuSection > MenuItem. The browser adds the hour (segment sub-lines, delivery line, notices),
    the filters, allergens, search and scrollspy, kept in the address: #pitsi&f=veg.hot&a=gluten.milk&q=пица. */
 import Base from "../../layouts/Base.astro";
-import { ic, art, byId, inCat, state, eta, url, RESTAURANT } from "../../lib/index.ts";
+import { ic, art, byId, inCat, catById, state, eta, url } from "../../lib/index.ts";
 import {
-  MAIN_ITEMS, BF_ITEMS, HERO_ID, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, catById,
+  MAIN_ITEMS, BF_ITEMS, HERO_ID, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, LAZY_AFTER,
   type MenuState,
 } from "./_menu.ts";
 
@@ -16,10 +16,10 @@ const st0: MenuState = { menu: "main", f: [], a: [], q: "", cat: null };
 const R = results(st0);
 const bfGroup = { c: catById.zakuski, items: BF_ITEMS, top: 0 };
 const heroArt = byId[HERO_ID] || inCat("pitsi")[0];
-const resultsHTML = R.groups.map((g) => sectionHTML(g, { menu: "main" })).join("") + sectionHTML(bfGroup, { menu: "bf", hidden: true });
+const resultsHTML = R.groups.map((g, i) => sectionHTML(g, { menu: "main", lazy: i >= LAZY_AFTER })).join("") + sectionHTML(bfGroup, { menu: "bf", hidden: true, lazy: true });
 const jsonld = menuLd(Astro.site);
 ---
-<Base page="menu" nav="menu" title="Меню" actionBar
+<Base page="menu" nav="menu" title="Меню"
   description={"Менюто на Siracusa Bar & Grill в Дружба 2: " + MAIN_ITEMS.length + " ястия и закуски. Пица на пещ, скара на дървени въглища Bertha, салати, паста, бургери и десерти. Цени в евро, доставка до 21:00."}
   jsonld={jsonld}>
   <div class="menupg" data-menupg>
@@ -258,8 +258,8 @@ const jsonld = menuLd(Astro.site);
 <script>
   import { SC } from "../../client/sc-menu.ts";
   import {
-    parseHash, hashOf, results, scopeItems, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML,
-    card as cardHTML, filterById, fic, FICON, plural, BF_ITEMS, type MenuState, type Group,
+    parseHash, hashOf, results, scopeItems, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML, LAZY_AFTER,
+    filterById, fic, FICON, plural, type MenuState, type Group,
   } from "./_menu.ts";
   import type { Dish } from "../../lib/data.ts";
   /* icons this script draws itself (the server ones are already in the HTML; the rest come from _menu.ts) */
@@ -344,12 +344,18 @@ const jsonld = menuLd(Astro.site);
     if (view === "loading") { navs(); elRes.innerHTML = skeletonHTML(); return; }
     if (view === "error") { navs(); elRes.innerHTML = errorHTML(); return; }
     navs();
-    if (!full) { requestAnimationFrame(spy); return; }
+    if (!full) { arts(); requestAnimationFrame(spy); return; }
     if (!R.list.length) { elRes.innerHTML = emptyHTML(); return; }
     const q = st.q.trim(), nd = st.a.length > 0, later = laterText(S, st);
-    elRes.innerHTML = R.groups.map((g) => sectionHTML(g, { q, menu: st.menu, nd, later })).join("");
+    elRes.innerHTML = R.groups.map((g, i) => sectionHTML(g, { q, menu: st.menu, nd, later, lazy: i >= LAZY_AFTER })).join("");
+    arts();
     requestAnimationFrame(spy);
   }
+
+  /* ---------- lazy illustrations: drawn ~1.5 screens before they scroll into view ---------- */
+  const artIO = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { drawArt(e.target as HTMLElement); artIO!.unobserve(e.target); } }), { rootMargin: "1200px 0px" }) : null;
+  function drawArt(el: HTMLElement) { const id = el.dataset.art; if (id && SC.byId[id] && !el.querySelector("svg")) el.insertAdjacentHTML("afterbegin", SC.art(id)); el.removeAttribute("data-art"); }
+  function arts() { elRes.querySelectorAll<HTMLElement>("[data-art]").forEach((el) => (artIO ? artIO.observe(el) : drawArt(el))); }
 
   /* ---------- scrollspy: sticky chips (phone) and the sidebar (desktop); the document scrolls ---------- */
   let active: string | null = null, lockUntil = 0;
@@ -535,5 +541,4 @@ const jsonld = menuLd(Astro.site);
   else if (!plain) requestAnimationFrame(() => jumpToResults());
   const later = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1200));
   later(syncMenu);
-  void BF_ITEMS; void cardHTML;
 </script>

@@ -59,7 +59,7 @@ function render(){
   } else {
     var oldest = calls.filter(function(c){ return !c.taken; })[0];
     if (ST.offline) html += '<section class="st-sec"><div class="notice warn">'+ic("clock",22)+'<span><b>Без връзка: последни данни.</b> Таймерите са спрени, „Отивам“ ще може, щом има връзка.</span></div></section>';
-    if (calls.length + qr.length >= 5) html += '<section class="st-sec"><div class="lead2">'+ic("warning",24)+'<span><b>'+(calls.length+qr.length)+'</b> чакат наведнъж'+(oldest?' · най-старото: Маса '+oldest.t+', '+ST.mmss(ST.secs(oldest.since)):'')+'. Първо най-старото; колегите виждат кое съм поел.</span></div></section>';
+    if (calls.length + qr.length >= 5) html += '<section class="st-sec"><div class="lead2">'+ic("warning",24)+'<span><b>'+(calls.length+qr.length)+'</b> чакат наведнъж'+(oldest?' · най-старото: Маса '+oldest.t+', '+ST.mmss(ST.secs(oldest.since)):'')+'. Първо най-старото; колегите виждат кои са поети.</span></div></section>';
     html += '<section class="st-sec"><div class="list">'+qr.map(function(o){ return {s:o.at, h:qrCard(o), t:0}; }).concat(calls.map(function(c){ return {s:c.since, h:card(c), t:c.taken?1:0}; })).sort(function(a,b){ return (a.t-b.t) || (a.s-b.s); }).map(function(r){ return r.h; }).join("")+'</div></section>';
   }
   main.innerHTML = html; ST.tick(); escTick();
@@ -70,7 +70,7 @@ render(); ST.on(render);
 main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
   if (b.dataset.f){ filter = b.dataset.f; render(); return; }
   if (b.hasAttribute("data-off")){ ST.toast("Без връзка колегите няма да видят. Опитай, щом връзката се върне."); return; }
-  if (b.dataset.take){ var c = ST.db.calls.filter(function(x){ return x.id===b.dataset.take; })[0]; ST.takeCall(c.id); ST.haptic(); ST.toast("Маса "+c.t+": отивам. Колегите виждат, че съм я поел."); return; }
+  if (b.dataset.take){ var c = ST.db.calls.filter(function(x){ return x.id===b.dataset.take; })[0]; ST.takeCall(c.id); ST.haptic(); ST.toast("Маса "+c.t+": отивам. Колегите виждат, че масата е поета."); return; }
   if (b.dataset.done){ var c2 = ST.db.calls.filter(function(x){ return x.id===b.dataset.done; })[0]; ST.doneCall(c2.id); ST.toast("Маса "+c2.t+" е обслужена", function(){ ST.restoreCall(c2); }); return; }
 });
 </script>

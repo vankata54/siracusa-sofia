@@ -19,43 +19,56 @@
 (function(){
 var ic = SC.ic, esc = SC.esc;
 var main = K.mount({page:"queue", title:"Опашка · " + K.sec.n});
-var orders = K.orders().filter(function(o){ return K.mine(o).length; });
-var offline = K.st === "offline", newO = null;
+/* активната опашка: само поръчки, в които секцията има неготов ред (готовите излизат) */
+var orders = K.orders().filter(function(o){ return K.active(o); });
+var offline = K.st === "offline", newO = null, laterOpen = false, lastTouch = Date.now();
+var seen = {}; orders.forEach(function(o){ if (o.sched) seen[o.num] = 1; });
+document.addEventListener("pointerdown", function(){ lastTouch = Date.now(); }, {capture:true});
+K.onAudio = function(){ strip(); if (!orders.length) render(); };
 
 function counts(){
   var late = 0, soon = 0; orders.forEach(function(o){ var s = K.stateOf(o); if (s === "late") late++; else if (s === "soon") soon++; });
   return {n:orders.length, late:late, soon:soon}; }
+function laterMine(){ return K.later().filter(function(o){ return K.mine(o).length; }); }
 
 function strip(){
-  var c = counts(), b = K.busy();
+  var c = counts(), b = K.busy(), lt = laterMine();
   var qn = document.querySelector("[data-qn]"); if (qn) qn.textContent = c.n;
   var snd = !K.sound() ? '<button class="kpill" type="button" data-sound aria-pressed="false">' + ic("bell",22) + 'Звук изкл.</button>'
     : K.audioReady ? '<button class="kpill" type="button" data-sound aria-pressed="true">' + ic("bell-ringing",22) + 'Звук вкл.</button>'
-    : '<button class="kpill on" type="button" data-sound data-unlock>' + ic("bell-ringing",22) + 'Докоснете, за да включите звука</button>';
+    : '<button class="kpill" type="button" data-sound data-unlock>' + ic("bell",22) + 'Включи звука</button>';
   K.strip.innerHTML = (offline ? K.offlineHTML("queue") : '') +
     '<div class="kcount"><span>Чакат <b>' + c.n + '</b></span>' + (c.late ? '<span class="sep"></span><span class="late">' + ic("warning",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px;color:var(--danger)"') + ' Закъсняват <b>' + c.late + '</b></span>' : '') +
       (c.soon ? '<span class="sep"></span><span>Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
-    (offline ? '' : (newO && orders.indexOf(newO) > -1 ? '<button class="knew" type="button" data-newgo>' + ic("bell-ringing",22) + 'Нова поръчка · ' + esc(K.srcText(newO)) + '<span class="go2">Виж' + ic("arrow-right",16) + '</span></button>' : '') +
+    (offline ? '' : (newO && orders.indexOf(newO) > -1 ? '<button class="knew" type="button" data-newgo>' + ic("bell-ringing",22) + (newO.sched ? 'Влезе' : 'Нова') + ' · ' + esc(K.srcText(newO)) + '<span class="go2">Виж' + ic("arrow-right",16) + '</span></button>' : '') +
+    (lt.length ? '<div class="klater"><button class="kpill" type="button" data-later aria-expanded="' + laterOpen + '">' + ic("calendar-check",22) + 'По-късно <span class="num" style="min-width:26px; height:26px; padding:0 7px; border-radius:13px; background:var(--ink); color:var(--bg); display:inline-grid; place-items:center; font-size:15px">' + lt.length + '</span></button>' +
+      (laterOpen ? '<div class="kpanel" role="dialog" aria-label="Поръчки за по-късно"><h3>По-късно</h3><p>Влизат в опашката ' + K.NORM + ' мин преди часа си.</p>' + lt.map(function(o){ var src = K.src(o);
+        return '<div class="lrow2">' + ic(src.ic,22) + '<span><b>' + esc(K.srcText(o)) + '</b><small>' + K.mine(o).map(function(l){ return l.q + ' × ' + esc(SC.byId[l.id].n); }).join(", ") + '</small></span>' +
+          '<span class="when">' + (o.tomorrow ? 'утре ' : 'за ') + K.hm(o.forAt) + '<small>влиза ' + (o.tomorrow ? 'утре ' : 'в ') + K.hm(o.enter) + '</small></span></div>'; }).join("") + '</div>' : '') + '</div>' : '') +
     snd +
     '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>');
   var ng = K.strip.querySelector("[data-newgo]");
-  if (ng) ng.addEventListener("click", function(){ var q = main.querySelector("[data-q]"); q.scrollTo({left:q.scrollWidth, behavior:SC.reduce ? "auto" : "smooth"}); newO = null; strip(); });
+  if (ng) ng.addEventListener("click", function(){ var q = main.querySelector("[data-q]"), card = q && q.querySelector('[data-o="' + orders.indexOf(newO) + '"]');
+    if (card) q.scrollTo({left:card.offsetLeft - 16, behavior:SC.reduce ? "auto" : "smooth"}); newO = null; strip(); });
+  var lb = K.strip.querySelector("[data-later]"); if (lb) lb.addEventListener("click", function(){ laterOpen = !laterOpen; strip(); });
   var sb = K.strip.querySelector("[data-sound]");
   if (sb) sb.addEventListener("click", function(){
     if (sb.hasAttribute("data-unlock")){ K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
-    strip(); if (!orders.length) render(); });
+    strip(); });
+  K.placeToast();
 }
 
 function render(){
   if (!orders.length){
     main.innerHTML = '<div class="kempty"><div><div class="ill">' + ic("check-circle",64) + '</div><h2>Няма поръчки в момента</h2>' +
       '<p>Новите поръчки за ' + esc(K.sec.n) + ' ще се появят тук сами' + (K.sound() && K.audioReady ? ', със звуков сигнал' : '') + '.</p>' +
-      (K.sound() && !K.audioReady ? '<p><button class="kb red" type="button" data-unlock2 style="margin-top:8px">' + ic("bell-ringing",24) + 'Докоснете, за да включите звука</button></p>' : '') +
+      (K.sound() && !K.audioReady ? '<p style="font-size:17px">Звукът се включва с първото докосване на екрана.</p>' : '') +
       '<p style="font-size:17px">Последна изпълнена: Маса 11 в 19:40</p></div></div>';
-    var u = main.querySelector("[data-unlock2]"); if (u) u.addEventListener("click", function(){ K.unlock(); K.beep(); render(); });
     strip(); return; }
-  main.innerHTML = '<div class="kq" data-q>' + orders.map(function(o, i){ return K.ticket(o, i); }).join("") + '</div><button class="kmore" type="button" data-more hidden></button>';
-  bind(); strip(); more();
+  var keep = main.querySelector("[data-q]"), sl = keep ? keep.scrollLeft : 0;
+  main.innerHTML = '<button class="kless" type="button" data-less hidden></button><div class="kq" data-q>' + orders.map(function(o, i){ return K.ticket(o, i); }).join("") + '</div><button class="kmore" type="button" data-more hidden></button>';
+  main.querySelector("[data-q]").scrollLeft = sl;
+  bind(); strip(); edges();
 }
 
 function bind(){
@@ -64,7 +77,10 @@ function bind(){
     card.querySelectorAll("[data-ln]").forEach(function(btn){ btn.addEventListener("click", function(){
       var l = o.lines[+btn.getAttribute("data-ln")], was = l.o.st === "done", t = Date.now();
       if (l.tapAt && t - l.tapAt < 800) return; /* мокра ръка: второто докосване до 0,8 сек. не отменя */
-      l.tapAt = t; l.o.st = was ? "" : "done"; render();
+      var prev = K.mine(o).map(function(x){ return x.o.st; });
+      l.tapAt = t; l.o.st = was ? "" : "done";
+      if (!was && !K.active(o)){ finish(o, card, prev); return; } /* последният ред: картата излиза от опашката, с „Върни“ */
+      render();
       var name = l.q + ' × ' + esc(SC.byId[l.id].n);
       if (!was) K.toast('<b>' + name + ' · готово</b><small>' + esc(K.srcText(o)) + '</small>', function(){ l.o.st = ""; l.tapAt = 0; render(); });
       else K.toast('<b>Върнато: ' + name + '</b><small>' + esc(K.srcText(o)) + ' · пак е за готвене</small>', function(){ l.o.st = "done"; l.tapAt = 0; render(); });
@@ -75,8 +91,8 @@ function bind(){
   });
 }
 
-function finish(o, card){
-  var src = K.src(o), idx = orders.indexOf(o), prev = K.mine(o).map(function(l){ return l.o.st; });
+function finish(o, card, prevIn){
+  var src = K.src(o), idx = orders.indexOf(o), prev = prevIn || K.mine(o).map(function(l){ return l.o.st; });
   K.mine(o).forEach(function(l){ l.o.st = "done"; });
   var waiting = K.others(o).filter(function(l){ return l.o.st !== "done"; }).map(function(l){ return K.shortSec[K.secOf(l.id)]; })
     .filter(function(v, i, a){ return a.indexOf(v) === i; });
@@ -86,31 +102,40 @@ function finish(o, card){
     waiting.length ? 'Чака още ' + waiting.join(", ") + '. ' + (o.kind === "delivery" ? "Шофьорът" : "Клиентът") + ' ще бъде известен, когато всичко е готово.' :
     'Известихме ' + src.who + '.') + '</small>';
   setTimeout(function(){ orders.splice(idx, 1); render();
-    K.toast(msg, function(){ K.mine(o).forEach(function(l, i){ l.o.st = prev[i]; }); orders.splice(idx, 0, o); render(); });
+    K.toast(msg, function(){ K.mine(o).forEach(function(l, i){ l.o.st = prev[i]; l.tapAt = 0; }); orders.splice(idx, 0, o); render(); });
   }, 300);
 }
 
-/* "Още N →" when cards are off to the right */
-function more(){
-  var q = main.querySelector("[data-q]"), b = main.querySelector("[data-more]"); if (!q) return;
-  function upd(){ var hidden = 0, r = q.getBoundingClientRect().right;
-    q.querySelectorAll(".tk").forEach(function(c){ if (c.getBoundingClientRect().right > r + 4) hidden++; });
-    b.hidden = !hidden; b.innerHTML = ic("arrow-right",26) + '<b>+' + hidden + '</b><small>още</small>'; b.setAttribute("aria-label", "Още " + hidden + (hidden === 1 ? " поръчка" : " поръчки") + " вдясно"); }
+/* both edges: "+N още" on the right, "← N по-стари · закъсняват" on the left (so the oldest never get lost) */
+function edges(){
+  var q = main.querySelector("[data-q]"), b = main.querySelector("[data-more]"), a = main.querySelector("[data-less]"); if (!q) return;
+  function upd(){ var hidden = 0, older = 0, late = 0, qr = q.getBoundingClientRect();
+    q.querySelectorAll(".tk").forEach(function(c){ var r = c.getBoundingClientRect();
+      if (r.right > qr.right + 4) hidden++;
+      if (r.left < qr.left + 8){ older++; if (c.classList.contains("late")) late++; } });
+    b.hidden = !hidden; b.innerHTML = ic("arrow-right",26) + '<b>+' + hidden + '</b><small>още</small>'; b.setAttribute("aria-label", "Още " + hidden + (hidden === 1 ? " поръчка" : " поръчки") + " вдясно");
+    a.hidden = !older; a.innerHTML = ic("arrow-left",26) + '<b>' + older + '</b><small>по-стари</small>' + (late ? '<small class="late">' + late + ' закъсн.</small>' : '');
+    a.setAttribute("aria-label", older + " по-стари поръчки вляво" + (late ? ", " + late + " закъсняват" : "") + ". Към началото"); }
   q.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd); upd();
   b.onclick = function(){ q.scrollBy({left:q.clientWidth * .8, behavior:SC.reduce ? "auto" : "smooth"}); };
+  a.onclick = function(){ q.scrollTo({left:0, behavior:SC.reduce ? "auto" : "smooth"}); };
 }
 
-/* live timers: only text and state class change, no re-render */
 setInterval(function(){
+  /* live timers: only text and state class change, no re-render */
   main.querySelectorAll(".tk").forEach(function(card){ var o = orders[+card.getAttribute("data-o")]; if (!o) return;
     var s = K.stateOf(o); if (!card.classList.contains(s)){ card.classList.remove("ok","soon","late"); card.classList.add(s); strip(); }
     card.querySelector("[data-tmr]").innerHTML = K.timerHTML(o); });
+  /* 20 сек. без докосване: опашката се връща в началото, при най-старите */
+  var q = main.querySelector("[data-q]");
+  if (q && q.scrollLeft > 40 && Date.now() - lastTouch > 20000){ q.scrollTo({left:0, behavior:SC.reduce ? "auto" : "smooth"}); lastTouch = Date.now(); }
+  /* поръчки за по-късен час влизат в опашката в (часа − нормата) */
+  K.entered().forEach(function(o){ if (seen[o.num] || !K.active(o)) return; seen[o.num] = 1; o.isNew = true; arriveO(o); });
 }, 1000);
 
-/* new order: lands at the end of the FIFO line, with a banner that scrolls to it */
-function arrive(){
-  var o = K.newOrder(); newO = o; orders.push(o); render(); K.beep();
-}
+/* new order: takes its FIFO place (the end for a fresh one), with a banner that scrolls to it */
+function arriveO(o){ newO = o; orders.push(o); orders.sort(function(a, b){ return K.key(a) - K.key(b); }); render(); K.beep(); }
+function arrive(){ arriveO(K.newOrder()); }
 render();
 if (K.st === "new") setTimeout(arrive, 250);
 })();

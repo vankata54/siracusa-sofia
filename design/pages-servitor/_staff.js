@@ -168,9 +168,9 @@ function updateBadges(){ var c = counts(); [["calls",c.calls],["ready",c.ready]]
   var a = el.closest("a"); if (a){ var base = a.dataset.label; a.setAttribute("aria-label", base + (p[1] ? ", " + p[1] : "")); } }); }
 ST.updateBadges = updateBadges;
 function nav(cur){ var c = counts();
-  var tabs = [["tables","tables.html","squares-four","Маси"],["calls","calls.html","bell-ringing","Повиквания","calls"],["ready","ready.html","chef-hat","Готови","ready"],["order","order.html","plus","Нова поръчка"]];
+  var tabs = [["tables","tables.html","squares-four","Маси"],["calls","calls.html","bell-ringing","Повиквания","calls"],["ready","ready.html","chef-hat","Готови","ready"],["order","order.html","plus","Поръчка"]];
   return '<nav class="st-nav'+(ST.offline?' stale':'')+'" aria-label="Приложение на сервитьора">'+tabs.map(function(t){ var n = t[4] ? c[t[4]] : 0;
-    return '<a href="'+t[1]+'" data-label="'+t[3]+'"'+(cur===t[0]?' aria-current="page"':'')+'>'+ic(t[2],26)+'<span class="lb">'+t[3]+'</span>'+(t[4]?'<span class="cnt'+(t[4]==="ready"?" ember":"")+'" data-cnt="'+t[4]+'"'+(n?'':' hidden')+'>'+n+'</span>':'')+'</a>'; }).join("")+'</nav>'; }
+    return '<a href="'+t[1]+'" data-label="'+(t[0]==="order"?"Нова поръчка":t[3])+'"'+(t[0]==="order"?' aria-label="Нова поръчка"':'')+''+(cur===t[0]?' aria-current="page"':'')+'>'+ic(t[2],26)+'<span class="lb">'+t[3]+'</span>'+(t[4]?'<span class="cnt'+(t[4]==="ready"?" ember":"")+'" data-cnt="'+t[4]+'"'+(n?'':' hidden')+'>'+n+'</span>':'')+'</a>'; }).join("")+'</nav>'; }
 function topbar(o){ var since = ST.clock(ST.db.shiftStart);
   if (o.bare) return '<header class="st-top"><div class="tt"><b class="st-word">Siracusa</b><span>Персонал</span></div>'+(o.right||'')+'</header>';
   var left = o.back ? '<a class="st-back" href="'+o.back.href+'">'+ic("caret-left",22)+esc(o.back.label)+'</a>' : '';

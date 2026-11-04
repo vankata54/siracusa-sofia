@@ -80,6 +80,7 @@ function render(){
       '</tbody></table>' +
       '<div class="cust"><span class="lbl">Клиентът вижда при доставка, преди да поръча</span>' +
       '<div class="status"><span class="dot' + (on ? " warn" : "") + '"></span><span>' + (on ? '<b>' + K.custText(true) + '</b>' : '<b>' + K.custText(false) + '</b>') + '</span></div>' +
+      '<span class="lbl" style="font-weight:600">В поръчката времето е по квартал, също +' + K.BUSY_MIN + ' мин при „Натоварено“ (Дружба 2: около ' + SC.ZONES[1].etaMin + ' → ' + (SC.ZONES[1].etaMin + K.BUSY_MIN) + ' мин).</span>' +
       (on ? '<span class="lbl" style="font-weight:600">Беше: „' + K.custText(false) + '“</span>' : '<span class="lbl" style="font-weight:600">При „Натоварено“: „' + K.custText(true) + '“</span>') +
       '<span class="lbl" style="font-weight:600">Срокът в кухнята е условен: <span class="miss">[ЛИПСВА: норми за време]</span></span></div></section>' +
     '<section class="lg2 kcard" aria-labelledby="h-lg"><h2 id="h-lg">Днес</h2>' +

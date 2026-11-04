@@ -29,7 +29,8 @@ body{background:var(--bg)}
 .net.off i{background:var(--danger)}
 @container app (max-width:1300px){ .ktabs a{padding:0 15px} }
 @container app (max-width:1180px){ .ktabs a{padding:0 14px; font-size:16px} .ktabs a .ic{display:none} }
-@container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .kclock b{font-size:30px} .ktabs a{padding:0 12px} }
+@container app (max-width:1100px){ .kclock{flex-direction:column-reverse; align-items:flex-end; gap:2px} .kclock b{font-size:28px} }
+@container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .ktabs a{padding:0 10px} }
 @container app (max-width:899px){
   .kbar{flex-wrap:wrap; row-gap:8px}
   .ksec{max-width:none; flex:1}
@@ -39,7 +40,7 @@ body{background:var(--bg)}
 
 /* ---------- strip under the bar: counts, alerts, busy, sound ---------- */
 .kstrip{display:flex; align-items:center; gap:10px; padding:10px 16px 0; min-height:66px; flex-wrap:wrap}
-.kcount{display:flex; align-items:center; gap:6px; font-size:18px; font-weight:700; color:var(--muted); margin-right:auto; flex-wrap:wrap}
+.kcount{flex:1 1 auto; min-width:0; min-height:52px; display:flex; align-items:center; gap:6px; font-size:18px; font-weight:700; color:var(--muted); flex-wrap:wrap; overflow:hidden}
 .kcount b{color:var(--ink); font-size:22px; font-variant-numeric:tabular-nums}
 .kcount .sep{width:1px; height:22px; background:var(--line-strong); margin:0 8px}
 .kcount .late b{color:var(--danger)}
@@ -97,6 +98,7 @@ body{background:var(--bg)}
 .tag{display:inline-flex; align-items:center; gap:5px; min-height:28px; padding:0 10px; border-radius:999px; font-size:15px; font-weight:800; background:var(--surface-2); color:var(--ink)}
 .tag.new{background:var(--ember); color:var(--on-ember)}
 .tag.cook{background:var(--ink); color:var(--bg)}
+.tag.sched{background:var(--ink); color:var(--bg)}
 .tag.busy{box-shadow:inset 0 0 0 1.5px var(--ember)}
 
 .tk-b{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
@@ -121,6 +123,7 @@ body{background:var(--bg)}
 .tk-o h4{margin:0 0 4px; font-size:14px; font-weight:800; letter-spacing:.02em}
 .tk-o div{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:8px; align-items:baseline; font-size:17px; font-weight:600; line-height:1.3; padding:3px 0}
 .tk-o .num{white-space:nowrap}
+.tk-o .oout{color:var(--red); font-size:14px; font-weight:800; white-space:nowrap}
 .tk-o .os{display:inline-flex; align-items:center; gap:4px; color:var(--ink); font-size:15px !important;  font-size:14px; font-weight:800; white-space:nowrap}
 .tk-o .os.done .ic{color:var(--ok)}
 .tk-o .os.cook .ic{color:var(--red)}
@@ -141,6 +144,9 @@ body{background:var(--bg)}
 .kb.hold.holding::before{transform:scaleX(1); transition:transform 1000ms linear}
 .kb.hold .lbl{flex-direction:column; gap:0}
 .kb.hold .lbl > span{display:inline-flex; align-items:center; gap:8px}
+.kb.hold{touch-action:none; -webkit-user-select:none; user-select:none}
+.kb.hold .lbl small{font-size:15px}
+.kb.hold.hint{background:var(--ember); color:var(--on-ember)}
 
 /* "още поръчки" hint at the right edge */
 .kmore{position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:60px; padding:16px 0; border:0; border-radius:24px 0 0 24px; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer}
@@ -156,13 +162,14 @@ body{background:var(--bg)}
 
 /* ---------- toast with 10 s "Върни" ---------- */
 .kstripw{position:relative}
-.ktoasts{position:absolute; left:16px; right:16px; top:8px; z-index:90; display:grid; pointer-events:none}
-.kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; min-height:56px; max-width:900px; margin-left:auto; width:100%; padding:4px 4px 4px 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}
+.ktoasts{position:absolute; left:16px; top:36px; width:600px; transform:translateY(-50%); z-index:30; display:grid; pointer-events:none}
+.kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:10px; min-height:56px; width:100%; padding:4px 4px 4px 16px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}
 .kt .ic{color:var(--ok); flex:none}
 .kt span{flex:1; min-width:0; line-height:1.25}
-.kt span{line-height:1.2; font-size:17px}
+.kt span{line-height:1.2; font-size:16px}
+.kt > .ic{width:24px; height:24px}
 .kt span b{margin-right:8px}
-.kt span small{display:inline; font-size:15px; font-weight:600; opacity:.8}
+.kt span small{display:block; font-size:15px; font-weight:600; opacity:.8}
 .kt button{flex:none; min-height:48px; padding:0 22px; border:0; border-radius:999px; background:var(--bg); color:var(--ink); font-weight:800; font-size:18px; cursor:pointer; font-variant-numeric:tabular-nums}
 .kt i{position:absolute; left:0; right:0; bottom:0; height:4px; background:var(--ember); transform-origin:left; animation:ktbar linear both}
 @keyframes ktin{from{transform:translateY(16px); opacity:0}to{transform:none; opacity:1}}
@@ -187,3 +194,21 @@ body{background:var(--bg)}
 .kseg button{min-height:52px; padding:0 18px; border:0; border-radius:999px; background:transparent; font-weight:800; font-size:16px; cursor:pointer; color:var(--muted)}
 .kseg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
 .miss{color:var(--muted); font-style:italic; text-decoration:underline dashed 1px; text-underline-offset:4px}
+
+/* ---------- left edge: older cards scrolled out of view ---------- */
+.kless{position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:64px; padding:14px 0; border:0; border-radius:0 24px 24px 0; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer; text-align:center}
+.kless b{font-size:24px; line-height:1; font-variant-numeric:tabular-nums}
+.kless small{font-size:14px; font-weight:700; line-height:1.15}
+.kless .late{color:var(--danger); background:var(--bg); border-radius:999px; padding:2px 6px; margin-top:4px}
+.kless[hidden]{display:none}
+
+/* ---------- "По-късно": orders for a later time ---------- */
+.klater{position:relative}
+.kpanel{position:absolute; right:0; top:60px; z-index:40; width:min(460px, calc(100vw - 32px)); padding:14px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); display:grid; gap:4px}
+.kpanel h3{margin:0 0 4px; font-size:20px; letter-spacing:-.02em}
+.kpanel p{margin:0 0 6px; font-size:15px; color:var(--muted)}
+.lrow2{display:grid; grid-template-columns:auto 1fr auto; gap:4px 12px; align-items:center; padding:10px 0; border-top:1px solid var(--line)}
+.lrow2 b{font-size:19px}
+.lrow2 small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.lrow2 .when{text-align:right; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.lrow2 .when small{font-weight:700}

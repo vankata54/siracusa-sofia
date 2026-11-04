@@ -3,7 +3,7 @@
    Pure string renderers: no DOM. The icons drawn here are imported below, so SC.ic() knows them in the browser too. */
 import { items, cats, catById, inCat, isOut, FILTERS, ALLERGENS, RESTAURANT, type Dish, type Category, type Filter } from "../../lib/data.ts";
 import type { State, Eta } from "../../lib/status.ts";
-import { dishCard } from "../../lib/render.ts";
+import { dishCard, art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
@@ -32,6 +32,7 @@ export const MAIN_ITEMS: Dish[] = items.filter((x) => x.cat !== "zakuski");
 export const BF_ITEMS: Dish[] = inCat("zakuski");
 export const HERO_ID = "pitsa-s-burata-i-proshuto-krudo";
 
+export { filterById };
 export type MenuKind = "main" | "bf";
 export interface MenuState { menu: MenuKind; f: string[]; a: string[]; q: string; cat: string | null }
 export interface Group { c: Category; items: Dish[]; top: number }
@@ -101,22 +102,26 @@ export function catDesc(c: Category, shown: number): string {
 }
 
 /** One dish card: the shared dishCard + the composition line; "no allergen data" and "later" variants. */
-export function card(x: Dish, o: { nd?: boolean; later?: string | null } = {}): string {
+export function card(x: Dish, o: { nd?: boolean; later?: string | null; lazy?: boolean } = {}): string {
   let h = dishCard(x);
+  /* lazy: the illustration (placeholder until the photo shoot, heavy SVG) is drawn by the browser near the viewport */
+  if (o.lazy) h = h.replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ');
   if (x.comp) h = h.replace('</a><div class="rowp">', '<span class="cp">' + esc(cap(x.comp)) + '</span></a><div class="rowp">');
   if (o.nd && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">' + ic("info", 18) + 'Няма данни за алергени, попитайте ни</span></a><div class="rowp">');
   if (o.later) h = h.replace('class="pic ', 'class="pic out ').replace(/<button class="plus"[\s\S]*?<\/button>/, '<span class="later">' + o.later + "</span>");
   return h;
 }
 
-export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: boolean; later?: string | null; hidden?: boolean }): string {
+/** Sections after the first LAZY_AFTER ones get lazy illustrations (keeps the HTML light; names, prices and links stay). */
+export const LAZY_AFTER = 2;
+export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: boolean; later?: string | null; hidden?: boolean; lazy?: boolean }): string {
   const c = g.c, nn = NOUN[c.id];
   return '<section class="mcat" id="c-' + c.id + '" data-cat="' + c.id + '" aria-labelledby="h-' + c.id + '"' + (o.hidden ? " hidden" : "") + ">" +
     '<div class="sec-h"><h2 class="h2" id="h-' + c.id + '">' + esc(c.n) + "</h2>" +
     (o.menu === "main" ? '<a class="link" href="' + url.cat(c.id) + '"' + (nn ? "" : ' aria-label="Към категорията ' + esc(c.n) + '"') + ">" + (nn ? "Всички " + nn[1] : "Към категорията") + ic("caret-right", 18) + "</a>" : "") + "</div>" +
     '<p class="cdesc">' + catDesc(c, g.items.length) + "</p>" +
     (o.q ? "" : '<p class="cseo missing">[ЛИПСВА: SEO текст за „' + esc(c.n) + "“, 2 - 3 изречения]</p>") +
-    '<div class="grid-dishes">' + g.items.map((x) => card(x, { nd: o.nd, later: o.later })).join("") + "</div></section>";
+    '<div class="grid-dishes">' + g.items.map((x) => card(x, { nd: o.nd, later: o.later, lazy: o.lazy })).join("") + "</div></section>";
 }
 
 /** Sub-line under each menu in the segment (depends on the hour). */

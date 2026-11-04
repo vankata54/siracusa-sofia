@@ -36,9 +36,9 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .st-net button{margin-left:auto; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-weight:800; cursor:pointer; white-space:nowrap}
 
 /* ---------- bottom nav (4 tabs) ---------- */
-.st-nav{position:fixed; z-index:40; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); height:78px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:40px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.st-nav{position:fixed; z-index:40; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .st-nav a{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; text-decoration:none; font-size:14px; font-weight:700; color:var(--muted); min-height:56px; border-radius:999px; text-align:center; line-height:1.1}
-.st-nav a .lb{max-width:11ch; line-height:1.05}
+.st-nav a .lb{white-space:nowrap; line-height:1.1}
 .st-nav a .ic{width:24px; height:24px}
 .st-nav.stale .cnt,.st-nav.stale .cnt.ember{background:var(--off); color:var(--bg)}
 .st-nav a[aria-current="page"]{color:var(--ink)}
@@ -47,7 +47,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .st-nav .cnt.ember{background:var(--ember); color:var(--on-ember)}
 
 /* action bar above the nav */
-.st-bar{position:fixed; z-index:39; bottom:calc(98px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); display:flex; gap:8px; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.st-bar{position:fixed; z-index:39; bottom:calc(92px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); display:flex; gap:8px; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .st-bar.nonav{bottom:calc(10px + env(safe-area-inset-bottom))}
 .st-bar .pill{min-height:56px; font-size:17px; flex:1; padding:0 16px}
 .st-bar .pill.grow{flex:1.6}

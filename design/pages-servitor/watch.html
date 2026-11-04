@@ -67,7 +67,7 @@ function callRect(cls, n, why, icon, since, btn, top){ return '<div class="face 
 var take = '<button class="btn" type="button" data-take>Отивам</button>';
 var served = '<button class="btn" type="button" data-served>'+ic("check",20)+'Сервирах</button>';
 var html = '';
-html += '<section class="wsec"><h2>1. Повикване от маса</h2><p>Един ред и вибрация. „Отивам“ (същата дума като на телефона) казва на колегите, че съм я поел. Масата и причината са най-едрите.</p>'+
+html += '<section class="wsec"><h2>1. Повикване от маса</h2><p>Един ред и вибрация. „Отивам“ (същата дума като на телефона) казва на колегите, че масата е поета. Масата и причината са най-едрите.</p>'+
   pair("call", callFace("call", 12, "Сметка", "receipt", c12, take), callRect("call", 12, "Сметка", "receipt", c12, take))+'</section>';
 html += '<section class="wsec"><h2>2. Отивам</h2><p>Таймерът продължава до „Обслужено“.</p>'+
   pair("ok", '<div class="face ok" style="padding-bottom:34px"><div class="why">'+ic("check-circle",20)+'Отивам</div><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div><button class="btn" type="button" data-done>'+ic("check",20)+'Обслужено</button></div>',
@@ -80,7 +80,7 @@ html += '<section class="wsec"><h2>4. Закъснява · няколко на�
     callRect("call late", 9, "Друго", "chat-circle-dots", late9, take, '<span class="pager" role="img" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></span>'))+'</section>';
 html += '<section class="wsec"><h2>5. Празно и без връзка</h2><p>Часовникът е тих, докато няма нищо. Без връзка с телефона казва какво да се направи.</p>'+
   pair("idle", '<div class="face"><span class="big">'+ic("check-circle",40)+'</span><div class="why">Няма повиквания</div><div class="muted">Маси: 3, 4, 7, 12, 14, 16</div></div>',
-    '<div class="face" style="align-content:center;gap:10px"><span class="warn">'+ic("warning",40)+'</span><div class="why">Няма връзка</div><div class="muted">Дръжте телефона с вас и проверете Bluetooth</div></div>')+'</section>';
+    '<div class="face" style="align-content:center;gap:10px"><span class="warn">'+ic("warning",40)+'</span><div class="why">Няма връзка</div><div class="muted">Дръж телефона с теб и провери Bluetooth</div></div>')+'</section>';
 html += '<section class="wsec"><h2>Вибрации</h2><div class="vib"><div class="r">'+ic("bell-ringing",24)+'<b>Повикване</b><span class="bars" aria-label="2 дълги"><i style="width:44px"></i><i style="width:44px"></i></span></div><div class="r">'+ic("chef-hat",24)+'<b>Готово от кухнята</b><span class="bars" aria-label="3 кратки"><i style="width:14px"></i><i style="width:14px"></i><i style="width:14px"></i></span></div><div class="r">'+ic("warning",24)+'<b>Закъснява (5 мин)</b><span class="bars" aria-label="повтаря се"><i style="width:44px"></i><i style="width:14px"></i><i style="width:44px"></i></span></div></div></section>';
 html += '<section class="wsec"><h2>Правила за часовника</h2><ul class="rules"><li>Нито един текст под 14 px; номерът на масата е 28-30 px.</li><li>Една цел на екран, поне 52 px висока, на цялата ширина.</li><li>Винаги тъмен екран (пести батерия, не свети в салона вечер).</li><li>Само известия: без меню и без поръчки от часовника.</li><li>Кои часовници поддържаме (Wear OS, Apple Watch, или известия от телефона): <span class="missing">[ЛИПСВА: решение]</span>.</li></ul></section>';
 main.innerHTML = html; ST.tick();

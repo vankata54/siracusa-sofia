@@ -67,7 +67,7 @@ function render(){
     '<ul class="eff"><li>' + ic("check",18) + 'Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“</li><li>' + ic("check",18) + 'Wolt и Foodpanda: скрито</li></ul>' +
     groups.map(function(g){ return '<h2 class="cath">' + esc(g.n) + (g.note ? ' <span style="font-weight:600">· ' + esc(g.note) + '</span>' : '') + '</h2><div class="tiles">' + g.items.map(function(x){ var out = K.isOut(x.id);
       return '<button class="tile' + (out ? " out" : "") + '" type="button" data-id="' + x.id + '" aria-pressed="' + out + '"><span><b>' + esc(x.n) + '</b>' + (x.g ? '<small>' + esc(x.g) + '</small>' : '') + '</span>' +
-        (out ? '<span class="st">' + ic("clock",18) + 'Изчерпано днес</span>' : '') +
+        (out ? '<span class="st">' + ic("x",18) + 'Изчерпано днес</span>' : '') +
         '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни в менюто' : ic("x",18) + 'Отбележи изчерпано') + '</span></button>'; }).join("") + '</div>'; }).join("") +
     '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Списък изчерпани <span class="n num">' + outs.length + '</span></h2>' +
     (outs.length ? mineOut.concat(otherOut).map(orow).join("") : '<p class="none">Всичко от менюто е налично.</p>') +
@@ -80,9 +80,10 @@ function toggle(id){
   var was = K.isOut(id), prev = K.outs(), x = SC.byId[id];
   K.setOut(id, !was); render();
   /* вече приетите поръчки с това ястие: редът им се отбелязва „Изчерпано днес“ и сервитьорът се известява */
-  var inQ = K.orders().filter(function(o){ return o.lines.some(function(l){ return l.id === id && l.o.st !== "done"; }); }).length;
+  var hit = K.orders().filter(function(o){ return o.lines.some(function(l){ return l.id === id && l.o.st !== "done"; }); }), inQ = hit.length;
+  var who = [hit.some(function(o){ return o.kind === "table"; }) ? "сервитьора" : "", hit.some(function(o){ return o.kind !== "table"; }) ? "управителя (доставка и вземане)" : ""].filter(Boolean).join(" и ");
   K.toast(was ? '<b>' + esc(x.n) + ' е отново в менюто</b><small>Бутонът „+“ се върна навсякъде.</small>' : '<b>' + esc(x.n) + ' · изчерпано днес</b><small>' +
-    (inQ ? 'Има го в ' + inQ + (inQ === 1 ? ' приета поръчка' : ' приети поръчки') + ': отбелязано на реда, сервитьорът е известен.' : 'Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.') + '</small>',
+    (inQ ? 'Има го в ' + inQ + (inQ === 1 ? ' приета поръчка' : ' приети поръчки') + ': отбелязано на реда, известихме ' + who + '.' : 'Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.') + '</small>',
     function(){ K.store("outs", prev); render(); });
 }
 render();
