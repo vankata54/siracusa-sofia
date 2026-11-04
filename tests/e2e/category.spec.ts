@@ -55,9 +55,10 @@ test("category: filters, sort and allergens are kept in the address", async ({ p
   expect([...nums].sort((a, b) => a - b)).toEqual(nums);
   /* allergens */
   await page.locator("[data-allergens]").click();
-  await page.locator('.sheetwrap.on [data-al="milk"]').click();
+  await page.locator('.sheetwrap.on [data-al="nuts"]').click();
   await page.locator(".sheetwrap.on [data-alok]").click();
-  await expect(page).toHaveURL(/a=milk/);
+  await expect(page).toHaveURL(/a=nuts/);
+  await expect(cards(page)).toHaveCount(3);
   await expect(page.locator("[data-allergens]")).toHaveText(/Без 1 алерген/);
   /* clear */
   await page.locator(".res-note [data-clear]").click();

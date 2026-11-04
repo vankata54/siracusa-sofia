@@ -272,6 +272,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
     const alt = v === "loading" || v === "error";
     elBody.hidden = alt; elAlt.hidden = !alt;
     elAlt.innerHTML = v === "loading" ? loadingHTML() : v === "error" ? errorHTML() : "";
+    if (alt) window.scrollTo(0, 0);
     root.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
     if (!alt) { timeParts(); plate = root.querySelector<SVGElement>(".ch-spin svg"); spin(); }
     if (v === "loading") setTimeout(() => { if (view === "loading") setView(navigator.onLine === false ? "offline" : "ok"); }, 2600);
