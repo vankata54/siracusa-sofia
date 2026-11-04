@@ -28,8 +28,8 @@
 .dr .kb{min-height:56px; font-size:17px}
 .sum{display:flex; flex-wrap:wrap; gap:6px 22px; font-size:18px; color:var(--muted); font-weight:700; margin-top:8px}
 .sum b{color:var(--ink); font-variant-numeric:tabular-nums}
-@container app (max-width:1100px){ .dr{grid-template-columns:84px 170px minmax(0,1fr) 180px; } .dr .kb{grid-column:3 / -1; justify-self:end} }
-@container app (max-width:899px){ .dr{grid-template-columns:80px minmax(0,1fr) auto} .dr .it{grid-column:2 / -1} .dr .du{grid-row:1; grid-column:3} .dr .kb{grid-column:1 / -1; justify-self:stretch} }
+@container app (max-width:1100px){ .dr{grid-template-columns:80px 150px minmax(0,1fr) 170px auto; gap:14px; padding:14px 16px} .dr .kb .x{display:none} }
+@container app (max-width:899px){ .dr{grid-template-columns:80px minmax(0,1fr) auto} .dr .it{grid-column:2 / -1} .dr .du{grid-row:1; grid-column:3} .dr .kb{grid-column:1 / -1; justify-self:stretch} .dr .kb .x{display:inline} }
 </style>
 </head>
 <body>
@@ -55,7 +55,7 @@ function render(){
         '<div class="s">' + ic(src.ic,26) + '<span><b>' + esc(o.kind === "table" ? "Маса " + o.num : "№ " + o.num) + '</b><small>' + (o.kind === "table" ? esc(o.zone) : o.kind === "delivery" ? "Доставка" : "Вземане") + '</small></span></div>' +
         '<div class="it">' + mine.map(function(l){ return '<span>' + l.q + ' × ' + esc(SC.byId[l.id].n) + (l.o.w ? ' (' + esc(l.o.w) + ')' : '') + '</span>' + (l.o.no||[]).map(function(t){ return '<span class="md no">без ' + esc(t) + '</span>'; }).join(""); }).join(", ") + '</div>' +
         '<div class="du">за ' + took + ' мин' + (late > 0 ? '<small class="late">' + ic("warning",16) + 'с ' + late + ' мин закъснение</small>' : '<small>' + ic("check",16) + 'навреме</small>') + '</div>' +
-        '<button class="kb line" type="button" data-back="' + i + '">' + ic("arrow-counter-clockwise",22) + 'Върни в опашката</button></div>'; }).join("") + '</div>'
+        '<button class="kb line" type="button" data-back="' + i + '" aria-label="Върни ' + esc(K.srcText(o)) + ' в опашката">' + ic("arrow-counter-clockwise",22) + 'Върни<span class="x">&nbsp;в опашката</span></button></div>'; }).join("") + '</div>'
     : '<div class="kempty" style="height:auto; padding:80px 16px"><div><div class="ill">' + ic("clock",56) + '</div><h2>Още няма изпълнени поръчки днес</h2><p>Тук ще виждате последните поръчки, отбелязани с „Готово“.</p></div></div>') + '</div>';
   main.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ var i = +b.getAttribute("data-back"), o = list[i];
     list.splice(i, 1); render();

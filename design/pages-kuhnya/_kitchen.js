@@ -138,8 +138,8 @@ K.ticket = function(o, idx){
     mine.map(function(l){ return K.lineHTML(l, o.lines.indexOf(l)); }).join("");
   if (oth.length) h += '<div class="tk-o"><h4>Други секции</h4>' + oth.map(function(l){ var d = l.o.st === "done";
       return '<div><span class="num">' + l.q + '&thinsp;×</span><span>' + esc(SC.byId[l.id].n) + '</span><span class="os' + (d ? " ok" : "") + '">' + K.shortSec[K.secOf(l.id)] + ' · ' + (d ? "готово" : "чака") + '</span></div>'; }).join("") + '</div>';
-  h += '</div><footer class="tk-f' + (started ? " one" : "") + '">' +
-    (started ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame",22) + 'Започни</button>') +
+  h += '</div><footer class="tk-f' + (started || allDone ? " one" : "") + '">' +
+    (started || allDone ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame",22) + 'Започни</button>') +
     '<button class="kb ok hold" type="button" data-done aria-label="Готово, ' + esc(K.srcText(o)) + '. Задръжте 1 секунда"><span class="lbl"><span>' + ic("check-circle",24) + ' Готово</span><small>задръжте 1 сек.</small></span></button></footer></article>';
   return h; };
 

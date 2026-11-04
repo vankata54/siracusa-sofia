@@ -81,7 +81,7 @@ function render(){
     '<h2 class="h2k">Поръчки в работа <span class="muted" style="font-size:18px; font-weight:700">· по реда на пристигане</span></h2>' +
     (active.length ? '<div class="kcard" style="overflow:hidden"><table class="ot"><thead><tr><th scope="col">Поръчка</th><th scope="col">Пристигна</th><th scope="col">Секции</th><th scope="col" style="text-align:right">Срок</th></tr></thead><tbody>' +
       active.map(function(o){ var src = K.src(o), st = K.stateOf(o), l = K.left(o);
-        return '<tr class="' + st + '"><td class="src"><b>' + esc(K.srcText(o).replace("Доставка ", "").replace("Вземане ", "")) + '</b><small>' + esc(src.k) + '</small></td><td class="num">' + K.hm(o.at) + '</td>' +
+        return '<tr class="' + st + '"><td class="src"><b>' + esc(K.srcText(o).replace("Доставка ", "").replace("Вземане ", "")) + '</b><small>' + esc(o.kind === "table" ? o.zone : src.k) + '</small></td><td class="num">' + K.hm(o.at) + '</td>' +
           '<td><div class="sts">' + K.SECTIONS.map(function(s){ var x = secState(o, s.id); if (!x) return "";
             return '<span class="sst ' + x + '">' + ic(x === "done" ? "check" : x === "cook" ? "flame" : "hourglass", 16) + K.shortSec[s.id] + ' · ' + (x === "done" ? "готово" : x === "cook" ? "готви се" : "чака") + '</span>'; }).join("") + '</div></td>' +
           '<td class="tm"><small>' + (st === "late" ? "закъснява" : st === "soon" ? "наближава" : "остават") + '</small>' + (st === "late" ? "+" : "") + K.mmss(l) + '</td></tr>'; }).join("") + '</tbody></table></div>'

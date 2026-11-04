@@ -64,7 +64,7 @@ function render(){
   if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
   else K.strip.innerHTML = '<div class="kcount">' + (on ? '<span>Натоварено <b>+' + K.BUSY_MIN + ' мин</b> от <b>' + b.at + '</b></span>' : '<span>Обичаен режим</span>') + '</div>' +
     '<a class="kpill" href="' + K.link("queue") + '">' + ic("arrow-left",22) + 'Към опашката</a>';
-  function row(t, sub, base, unit){ return '<tr class="' + (on ? "on" : "") + '"><td>' + t + '<small>' + sub + '</small></td><td class="was">' + (on ? base : "") + '</td><td class="now">' + unit(base + add) + (on ? '<span class="plus15">+' + K.BUSY_MIN + '</span>' : '') + '</td></tr>'; }
+  function row(t, sub, base, unit){ return '<tr class="' + (on ? "on" : "") + '"><td>' + t + '<small>' + sub + '</small></td><td class="was">' + (on ? base + " мин" : "") + '</td><td class="now">' + unit(base + add) + (on ? '<span class="plus15">+' + K.BUSY_MIN + '</span>' : '') + '</td></tr>'; }
   var min = function(v){ return v + ' мин'; };
   main.innerHTML = '<div class="kpage"><div class="bz">' +
     '<section class="sw kcard' + (on ? " on" : "") + '" aria-labelledby="h1"><h1 class="kh1" id="h1">' + ic("hourglass",30) + 'Натоварено: +' + K.BUSY_MIN + ' мин</h1>' +

@@ -1,0 +1,14 @@
+/* Preview-only styles from the prototype (phone frame and the toolbar). Used only by admin preview frames, never by public pages. */
+:root{--pv-bg:#E2E2DC}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--pv-bg:#0A0A09} }
+:root[data-theme="dark"]{--pv-bg:#0A0A09}
+html.pv-phone body{display:grid; place-items:center; padding:64px 16px 24px; min-height:100%; height:auto}
+html.pv-phone .device{width:min(410px,100%); height:min(864px, calc(100dvh - 96px)); border:10px solid #0C0C0B; border-radius:54px; box-shadow:0 40px 80px -30px rgba(0,0,0,.5)}
+.pv-bar{position:fixed; top:10px; left:50%; transform:translateX(-50%); flex-wrap:nowrap!important; z-index:1000; display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:14px; max-width:calc(100% - 20px)}
+.pv-bar a,.pv-bar button{min-height:36px; padding:0 12px; border:0; border-radius:999px; background:transparent; cursor:pointer; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
+.pv-bar [aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.pv-bar .sep{width:1px; height:20px; background:var(--line-strong)}
+.pv-bar select{min-height:36px; border:0; border-radius:999px; background:var(--surface-2); padding:0 10px; font-weight:700; color:var(--ink)}
+.pv-bar.low{top:auto; bottom:12px; left:12px; transform:none}
+@media (max-width:700px){ .pv-bar{display:none} }
+

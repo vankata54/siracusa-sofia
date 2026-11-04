@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>QR маса: екрани</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<style>
+body{background:var(--bg); padding:40px 16px 80px}
+.wrapx{max-width:1100px; margin:0 auto; display:grid; gap:40px}
+.hero h1{font-size:clamp(36px,6vw,64px); line-height:1; letter-spacing:-.05em; margin:0 0 12px; font-weight:800}
+.hero p{max-width:66ch; color:var(--muted); margin:0 0 8px}
+.hero a{color:var(--ink); font-weight:700}
+.flow h2{font-size:22px; letter-spacing:-.03em; margin:0 0 12px}
+.grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px}
+.tile{display:grid; gap:6px; padding:18px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; min-height:118px; align-content:start; transition:transform var(--t-fast) var(--ease)}
+.tile:active{transform:scale(.98)}
+.tile b{font-size:17px; letter-spacing:-.01em}
+.tile span{font-size:14px; color:var(--muted)}
+.tile .ic{color:var(--red)}
+.meta{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrapx">
+  <header class="hero">
+    <div class="meta"><span class="badge new">Етап D</span><span class="badge">QR маса</span><span class="badge">Решение 34</span></div>
+    <h1>QR маса: всички екрани</h1>
+    <p>Жив прототип на това, което гостът вижда след като сканира кода на масата. Долна лента: Меню · Повикай сервитьор · Количка · Профил; сметката е плочка в „Повикай сервитьор“. Всеки екран има панел „Само в прототипа“ най-долу за състоянията и настройките.</p>
+    <p>Отворете два раздела в браузъра: те са два телефона на една маса и виждат общата количка на живо. <a href="../index.html">Клиентският модул</a></p>
+  </header>
+  <div id="flows"></div>
+</div>
+<script src="../ds/icons.js"></script>
+<script>
+var I=window.SC_ICONS; function ic(n){ return '<svg class="ic" viewBox="0 0 256 256" width="24" height="24" fill="currentColor" aria-hidden="true">'+(I[n]||"")+'</svg>'; }
+var F=[
+ ["Екрани",[["welcome.html","Добре дошли","hand-waving","Маса, език, какво може гостът, менюто веднага"],["menu.html","Меню на масата","fork-knife","Категории, филтри, алергени, кой какво е добавил"],["cart.html","Обща количка","shopping-bag","Изпрати към кухнята, потвърждение, статуси"],["call.html","Повикай сервитьор","bell-ringing","4 плочки, „чакате 0:42“, защита от повторение"],["bill.html","Сметката","receipt","В брой или с карта, по хора или по ястия, оценка"]]],
+ ["Състояния",[["cart.html#demo=waiting","Чака потвърждение","hourglass","Първата поръчка чака сервитьора"],["cart.html#demo=cooking","Статус на ястията","fire","Прието, готви се, сервирано"],["call.html#demo=called","Сервитьорът идва","timer","Брояч и заключена плочка"],["call.html#demo=manager","Известие до управителя","warning","Минаха минутите без отговор"],["bill.html#demo=rated","Оценка „Не“","thumbs-down","Поле до управителя, код -10%, Google"],["bill.html#demo=closed","Сметката е платена","check-circle","Затворена маса на страницата за сметка"],["welcome.html#demo=closed","Сесията е затворена","lock","Опит за поръчка след сметката"],["welcome.html#demo=invalid","Невалиден QR код","qr-code","„Този код вече не работи“"],["menu.html#demo=kitchen","Кухнята затвори","clock","След 22:30: само за разглеждане"],["cart.html#demo=offline","Няма интернет","warning-circle","Поръчката е запазена, „Опитай пак“"]]]];
+document.getElementById("flows").innerHTML=F.map(function(f){ return '<section class="flow"><h2>'+f[0]+'</h2><div class="grid">'+f[1].map(function(p){ return '<a class="tile" href="'+p[0]+'">'+ic(p[2])+'<div><b>'+p[1]+'</b><br><span>'+p[3]+'</span></div></a>'; }).join("")+'</div></section>'; }).join("");
+</script>
+</body>
+</html>

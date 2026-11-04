@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Сметката | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_masa.css">
+<style>
+/* bill.html (QR table): page-only styles, tokens only */
+.bg{display:grid; gap:24px}
+.blk-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 12px}
+.lines{padding:6px 18px 14px}
+.bl{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:12px 0; align-items:center}
+.bl + .bl{border-top:1px solid var(--line)}
+.bl .nm{font-weight:700; line-height:1.3}
+.bl .who{grid-column:1}
+.bl .price{grid-row:1 / span 2; grid-column:2}
+.bl.pick{grid-template-columns:auto minmax(0,1fr) auto; cursor:pointer; min-height:64px}
+.bl.pick input{width:24px; height:24px; margin:0; accent-color:var(--red); grid-row:1 / span 2}
+.bl.pick .who{grid-column:2}
+.bl.pick .price{grid-column:3}
+.bl.taken{opacity:.6}
+.tot{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:14px 0 0; margin-top:4px; border-top:1.5px solid var(--line-strong)}
+.tot b{font-size:18px}
+.tot .price{font-size:28px; letter-spacing:-.03em}
+.fine{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.qh{margin:0 0 10px; font-size:17px; font-weight:800}
+.seg.pay button{min-height:64px; font-size:17px}
+.seg.pay button .ic{color:var(--muted)}
+.seg.pay button[aria-pressed="true"] .ic{color:var(--red)}
+.seg.split button{min-height:56px; font-size:15px; line-height:1.15; padding:0 6px; text-align:center}
+.splitbox{margin-top:14px}
+.ppl{padding:4px 18px}
+.pp{display:flex; align-items:center; gap:12px; min-height:60px}
+.pp + .pp{border-top:1px solid var(--line)}
+.pp b{flex:1}
+.mine{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-top:12px; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.mine b{font-size:17px}
+.mine .price{font-size:22px}
+.reqbtn{margin-top:18px}
+.coming{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 16px; align-items:center; padding:20px}
+.bell{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red); grid-row:span 2}
+.bell::after{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 2px var(--red); animation:bring 2400ms var(--ease) infinite; opacity:0}
+@keyframes bring{0%{transform:scale(1); opacity:.8}100%{transform:scale(1.5); opacity:0}}
+.coming h2{margin:0; font-size:24px; line-height:1.15; letter-spacing:-.03em}
+.coming .t{font-variant-numeric:tabular-nums; white-space:nowrap}
+.coming .what{margin:0; color:var(--muted); font-weight:600}
+.coming .kvs{grid-column:1 / -1; margin-top:8px; border-top:1px solid var(--line)}
+.coming .kv > span:last-child{font-weight:700; text-align:right}
+.coming.done .bell{background:var(--ok); color:var(--on-ok)}
+.coming.done .bell::after{display:none}
+/* rating (hand-off 10.6, same as tracking.html) */
+.rate{scroll-margin-top:110px}
+.offer{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; border-radius:var(--r-pill); background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.rate h2{font-size:28px; line-height:1.08; letter-spacing:-.035em; font-weight:800; margin:10px 0 0}
+.rate .lead{margin-top:6px}
+.yn{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+.yn button{min-height:64px; border:0; border-radius:var(--r-pill); display:inline-flex; align-items:center; justify-content:center; gap:10px; font-size:19px; font-weight:800; cursor:pointer; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:transform var(--t-fast) var(--ease)}
+.yn button:active{transform:scale(.97)}
+.yn button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.ans{display:grid; gap:16px; margin-top:20px; padding-top:20px; border-top:1px solid var(--line); animation:rise 420ms var(--ease) both}
+@keyframes rise{from{transform:translateY(10px); opacity:0}to{transform:none; opacity:1}}
+.ans h3{font-size:20px; letter-spacing:-.02em; margin:0}
+.ans h3:focus{outline:none}
+.ans p{margin:0}
+.code{border-radius:var(--r-core); padding:18px; display:grid; gap:12px}
+.code .k{font-size:14px; font-weight:800}
+.code .v{font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; line-height:1}
+.code .row{justify-content:space-between; flex-wrap:wrap}
+.code p{font-size:15px}
+.code .pill{background:var(--on-ember); color:var(--ember)}
+.gq{display:grid; gap:10px}
+.gq .missing{font-size:14px}
+.fbsent{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.fbsent .ic{color:var(--ok); margin-top:2px}
+.change{justify-self:start; color:var(--muted)}
+.side{display:grid; gap:16px}
+.bempty{padding:28px 16px}
+.bempty p{margin:0; color:var(--muted)}
+@container app (min-width:900px){
+  .bg{grid-template-columns:minmax(0,1fr) 420px; gap:24px 48px; align-items:start}
+  .bg > .side{grid-column:2; grid-row:1 / span 6; position:sticky; top:110px; display:grid; gap:20px}
+  .bg > :not(.side){grid-column:1}
+  .lines,.ppl{padding-left:24px; padding-right:24px}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_masa.js"></script>
+<script>
+(function(){
+"use strict";
+var M = MASA, L = M.L, ic = SC.ic, esc = SC.esc, S = M.st, fmt = SC.fmt;
+var main = M.mount({page:"bill", title:"Сметката", docTitle:"Сметката · QR маса", allowClosed:true});
+if (!main) return;
+/* choices before asking for the bill (per phone; not shared state) */
+var C = {pay:"cash", split:"one", mine:null};
+function sent(){ return M.sent(); }
+function all(){ return sent().map(function(z){ return z.l; }); }
+function myDefault(){ return all().filter(function(l){ return l.who === "me"; }).map(function(l){ return l.key; }); }
+if (!C.mine) C.mine = myDefault();
+function lineSum(l){ var x = SC.byId[l.id]; return x ? x.p*l.q : 0; }
+function mineSum(keys){ return all().filter(function(l){ return keys.indexOf(l.key) > -1; }).reduce(function(a,l){ return a+lineSum(l); }, 0); }
+function share(){ var B = S.bill || C; if (B.split === "people") return M.sum(all().filter(function(l){ return l.who === "me"; })); if (B.split === "dishes") return mineSum(B.mine || []); return M.sum(all()); }
+function plural(n){ return SC.plural(n, L("ястие","dish"), L("ястия","dishes")); }
+var PAY = {cash:["В брой","Cash","money"], card:["С карта","By card","credit-card"]};
+var SPLIT = {one:["Една сметка","One bill"], people:["По хора","By person"], dishes:["По ястия","By dish"]};
+
+function linesHTML(pick){ var ls = sent();
+  if (!ls.length) return '<div class="shell"><div class="core empty bempty"><span class="ill">'+ic("receipt",40)+'</span><h2 class="h3">'+L("Още нищо не е поръчано","Nothing ordered yet")+'</h2><p>'+L("Сметката се пълни с изпратените поръчки.","The bill fills up with the orders you send.")+'</p><a class="pill pill-red" href="menu.html">'+ic("fork-knife",20)+L("Към менюто","Go to the menu")+'</a></div></div>';
+  return '<div class="shell"><div class="core lines">'+ls.map(function(z){ var l = z.l, x = SC.byId[l.id], on = pick && C.mine.indexOf(l.key) > -1;
+    var body = '<span class="nm">'+(l.q>1?l.q+' × ':'')+esc(x.n)+'</span>'+M.whoTag(l.who)+'<span class="price">'+fmt(lineSum(l))+'</span>';
+    return pick ? '<label class="bl pick"><input type="checkbox" data-pick="'+l.key+'"'+(on?" checked":"")+'>'+body+'</label>' : '<div class="bl">'+body+'</div>'; }).join("")+
+    '<div class="tot"><b>'+L("Общо за масата","Table total")+'</b><span class="price">'+fmt(M.sum(all()))+'</span></div>'+
+    '<p class="fine">'+L("Цените са с ДДС. Касовата бележка ви носи сервитьорът.","Prices include VAT. The waiter brings your receipt.")+'</p></div></div>'; }
+
+function splitBox(){
+  if (C.split === "people"){ return '<div class="splitbox"><div class="shell"><div class="core ppl">'+M.WHO.map(function(w){ var s = M.sum(all().filter(function(l){ return l.who===w; })); return s ? '<div class="pp">'+M.av(w)+'<b>'+esc(M.name(w))+'</b><span class="price">'+fmt(s)+'</span></div>' : ''; }).join("")+'</div></div>'+
+    '<p class="fine">'+L("Всеки плаща ястията, които е добавил от своя телефон.","Everyone pays for the dishes they added from their phone.")+'</p></div>'; }
+  if (C.split === "dishes") return '<p class="fine" style="margin-top:12px">'+L("Отметнете в списъка „Поръчано“ какво плащате вие. Другите отбелязват своето от техните телефони.","Tick in the “Ordered” list what you pay for. The others tick theirs on their phones.")+'</p>';
+  return ''; }
+
+function reqHTML(){ var B = S.bill, done = S.mode === "closed", w = (Date.now() - B.at)/1000;
+  return '<div class="shell" role="status"><div class="core coming'+(done?" done":"")+'"><span class="bell">'+ic(done?"check":"receipt",30)+'</span>'+
+    (done ? '<h2>'+L("Сметката е платена","The bill is paid")+'</h2><p class="what">'+L("Масата е затворена. Благодарим, че бяхте при нас!","The table is closed. Thank you for coming!")+'</p>'
+      : '<h2>'+L("Сервитьорът идва със сметката","The waiter is bringing the bill")+' · <span class="t">'+L("чакате ","waiting ")+'<span data-wt>'+M.mmss(w)+'</span></span></h2><p class="what">'+L("Поискана в ","Asked at ")+M.clock(B.at)+'</p>')+
+    '<div class="kvs"><div class="kv"><span>'+L("Плащане","Payment")+'</span><span>'+L(PAY[B.pay][0],PAY[B.pay][1])+'</span></div><div class="kv"><span>'+L("Разделяне","Split")+'</span><span>'+L(SPLIT[B.split][0],SPLIT[B.split][1])+'</span></div>'+
+    (B.split !== "one" ? '<div class="kv"><span>'+L("Вашата част","Your share")+'</span><span class="price">'+fmt(share())+'</span></div>' : '<div class="kv"><span>'+L("Общо","Total")+'</span><span class="price">'+fmt(M.sum(all()))+'</span></div>')+'</div>'+
+    (done ? '' : '<p class="fine" style="grid-column:1 / -1">'+L("Ако искате промяна, кажете на сервитьора, когато дойде.","If you want a change, tell the waiter when they come.")+'</p>')+'</div></div>'; }
+
+function code(){ return "SIR10-M"+M.table().n; }
+function codeHTML(){ return '<div class="code ember-card"><span class="k">'+L("Вашият код за -10% от следващата поръчка","Your code for 10% off your next order")+'</span><div class="row"><span class="v">'+code()+'</span><button class="pill pill-ink" type="button" data-copy>'+ic("copy",18)+L("Копирай кода","Copy code")+'</button></div><p>'+L("За следваща поръчка от сайта или на масата. Един код на телефонен номер.","For your next order on the website or at the table. One code per phone number.")+'</p></div>'; }
+var GOOGLE_MISSING = '<span class="missing">[ЛИПСВА: линк към профила в Google]</span>';
+function rateHTML(){ if (!S.bill) return ""; var r = S.rating || {}, a = r.ans, ans = "";
+  if (a === "yes") ans = '<div class="ans"><h3 tabindex="-1" data-focus>'+L("Благодарим! Радваме се, че ви хареса.","Thank you! We are glad you liked it.")+'</h3>'+codeHTML()+
+    '<div class="gq"><p><b>'+L("Ще ни помогнете ли с отзив в Google?","Would you help us with a Google review?")+'</b></p><a class="pill pill-line pill-lg pill-block" href="#" data-google>'+ic("google-logo",20)+L("Напиши отзив в Google","Write a Google review")+ic("arrow-up-right",18)+'</a>'+GOOGLE_MISSING+'</div>'+
+    '<button class="link change" type="button" data-rate-reset>'+L("Промени отговора","Change your answer")+'</button></div>';
+  if (a === "no") ans = '<div class="ans"><h3 tabindex="-1" data-focus>'+L("Съжаляваме. Благодарим, че ни казвате.","We are sorry. Thank you for telling us.")+'</h3>'+
+    (r.sent ? '<div class="fbsent">'+ic("check-circle",22)+'<span><b>'+L("Изпратихме го на управителя.","We sent it to the manager.")+'</b><br><span class="muted">'+L("Ще го прочете лично.","They will read it personally.")+'</span></span></div>'
+      : '<div class="field"><label for="fb">'+L("Как да подобрим обслужването?","How can we improve our service?")+'</label><textarea class="input" id="fb" rows="4" aria-describedby="fbh'+(r.err?' fbe':'')+'"'+(r.err?' aria-invalid="true"':'')+'>'+esc(r.fb||"")+'</textarea><span class="help" id="fbh">'+L("Стига само до управителя.","Only the manager reads it.")+'</span>'+(r.err?'<span class="err" id="fbe">'+r.err+'</span>':'')+'</div>'+
+        '<button class="pill pill-red pill-lg pill-block" type="button" data-fb>'+ic("paper-plane-right",20)+L("Изпрати на управителя","Send to the manager")+'</button>')+
+    codeHTML()+
+    '<p class="muted">'+L("Ако желаете, можете да оставите и отзив в Google.","If you like, you can also leave a Google review.")+'</p><div><a class="link" href="#" data-google>'+ic("google-logo",20)+L("Отзив в Google","Google review")+ic("arrow-up-right",16)+'</a><br>'+GOOGLE_MISSING+'</div>'+
+    '<button class="link change" type="button" data-rate-reset>'+L("Промени отговора","Change your answer")+'</button></div>';
+  return '<section class="shell rate" id="rate"><div class="core cpad"><span class="offer">'+ic("seal-percent",18)+L("-10% за оценката","10% off for your rating")+'</span><h2 id="rate-h">'+L("Останахте ли доволни?","Did you enjoy your visit?")+'</h2><p class="lead">'+L("От храната и обслужването. За отговора ви даваме -10% от следващата поръчка, каквото и да изберете.","With the food and the service. For your answer you get 10% off your next order, whatever you choose.")+'</p>'+
+    '<div class="yn" role="group" aria-labelledby="rate-h"><button type="button" data-rate="yes" aria-pressed="'+(a==="yes")+'">'+ic("thumbs-up",26)+L("Да","Yes")+'</button><button type="button" data-rate="no" aria-pressed="'+(a==="no")+'">'+ic("thumbs-down",26)+L("Не","No")+'</button></div>'+ans+'</div></section>'; }
+
+function askHTML(){ var n = sent().length; if (!n) return "";
+  var s = C.split === "one" ? M.sum(all()) : share(), canPay = !S.offline, btnTxt = C.split === "one" ? L("Поискай сметката · ","Ask for the bill · ")+fmt(s) : L("Поискай моята част · ","Ask for my share · ")+fmt(s);
+  return '<div class="shell"><div class="core cpad"><p class="qh">'+L("Как ще платите?","How will you pay?")+'</p>'+
+    '<div class="seg pay" role="group" aria-label="'+L("Плащане","Payment")+'">'+["cash","card"].map(function(k){ return '<button type="button" data-pay="'+k+'" aria-pressed="'+(C.pay===k)+'">'+ic(PAY[k][2],22)+L(PAY[k][0],PAY[k][1])+'</button>'; }).join("")+'</div>'+
+    '<p class="qh" style="margin-top:20px">'+L("Как да я разделим?","How should we split it?")+'</p>'+
+    '<div class="seg split" role="group" aria-label="'+L("Разделяне","Split")+'">'+["one","people","dishes"].map(function(k){ return '<button type="button" data-split="'+k+'" aria-pressed="'+(C.split===k)+'">'+L(SPLIT[k][0],SPLIT[k][1])+'</button>'; }).join("")+'</div>'+
+    splitBox()+
+    (C.split !== "one" ? '<div class="mine"><b>'+L("Вие плащате","You pay")+'</b><span class="price">'+fmt(s)+'</span></div>' : '')+
+    (canPay ? '<button class="pill pill-red pill-lg pill-block reqbtn" type="button" data-req'+(C.split==="dishes"&&!C.mine.length?' aria-disabled="true"':'')+'>'+ic("receipt",20)+btnTxt+'</button>'
+      : '<button class="pill pill-ink pill-lg pill-block reqbtn" type="button" data-mretry>'+ic("arrow-clockwise",20)+L("Няма връзка · Опитай пак","No connection · Try again")+'</button>')+
+    '</div></div>'; }
+
+function render(){ var y = SC.scroller.scrollTop, draftN = M.qty(S.draft), closed = S.mode === "closed";
+  main.innerHTML = '<section class="mpage" aria-labelledby="bl-h"><div class="mh"><h1 class="h1" id="bl-h">'+L("Сметката","The bill")+'</h1><p class="lead">'+esc(M.tableLabel())+' · '+L("всичко поръчано досега","everything ordered so far")+'</p></div>'+
+    '<div class="bg">'+(S.offline ? '<div class="mnotes">'+M.banners({kitchen:false})+'</div>' : '')+
+    (draftN && !closed ? '<div class="mnote warn">'+ic("shopping-bag",24)+'<div><b>'+plural(draftN)+L(" в количката още не са изпратени"," in the cart are not sent yet")+'</b><p>'+L("Не са в сметката. Изпратете ги или ги махнете.","They are not on the bill. Send or remove them.")+'</p><div class="acts"><a class="pill pill-line" href="cart.html">'+L("Към количката","To the cart")+'</a></div></div></div>' : '')+
+    '<div class="side">'+(S.bill ? reqHTML() : askHTML())+(S.bill ? rateHTML() : '')+'</div>'+
+    '<section><div class="blk-h"><h2 class="h3">'+L("Поръчано","Ordered")+'</h2><span class="muted small">'+plural(sent().reduce(function(a,z){ return a+z.l.q; },0))+'</span></div>'+linesHTML(!S.bill && C.split === "dishes")+'</section>'+
+    '</div>'+
+    M.protoHTML('<button class="pill" type="button" data-pclose>'+ic("check",18)+'Сервитьорът затваря сметката</button><a class="pill" href="bill.html#demo=bill">Преди поискване</a><a class="pill" href="bill.html#demo=billreq">Поискана</a><a class="pill" href="bill.html#demo=rated">Отговор „Не“</a><a class="pill" href="bill.html#demo=closed">Сесията е затворена</a>')+
+    '</section><div class="mend"></div>';
+  SC.scroller.scrollTop = y; }
+
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
+  if (t.dataset.pay){ C.pay = t.dataset.pay; render(); return; }
+  if (t.dataset.split){ C.split = t.dataset.split; render(); return; }
+  if (t.hasAttribute("data-req")){ if (t.getAttribute("aria-disabled")){ SC.toast(L("Отметнете поне едно ястие","Tick at least one dish")); return; }
+    if (M.requestBill({pay:C.pay, split:C.split, mine:C.mine.slice()})){ SC.toast(L("Сервитьорът идва със сметката","The waiter is bringing the bill")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }
+  if (t.dataset.rate){ S.rating = {ans:t.dataset.rate, fb:"", sent:false}; M.save("rate"); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-rate-reset")){ S.rating = null; M.save("rate"); return; }
+  if (t.hasAttribute("data-fb")){ var v = (main.querySelector("#fb")||{}).value || ""; if (v.trim().length < 3){ S.rating.fb = v; S.rating.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.save("rate"); main.querySelector("#fb").focus(); return; }
+    S.rating.fb = v; S.rating.err = ""; S.rating.sent = true; M.save("rate"); SC.toast(L("Изпратено на управителя","Sent to the manager")); return; }
+  if (t.hasAttribute("data-copy")){ try{ navigator.clipboard.writeText(code()).catch(function(){}); }catch(x){} SC.flash(t, ic("check",18)+L("Копирано","Copied")); return; }
+  if (t.hasAttribute("data-google")){ e.preventDefault(); SC.toast(L("Тук ще се отвори профилът в Google","Our Google profile opens here")); return; }
+  if (t.hasAttribute("data-pclose")){ if (!S.bill) M.requestBill({pay:C.pay, split:C.split, mine:C.mine.slice()}); M.close(); return; }
+});
+main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; C.mine = C.mine.filter(function(z){ return z!==k; }); if (e.target.checked) C.mine.push(k); render(); });
+render();
+M.on(function(){ render(); });
+M.tick(function(){ var s = main.querySelector("[data-wt]"); if (s && S.bill) s.textContent = M.mmss((Date.now()-S.bill.at)/1000); });
+if (/rate/.test(location.hash)) requestAnimationFrame(function(){ var r = document.getElementById("rate"); r && r.scrollIntoView(); });
+})();
+</script>
+</body>
+</html>

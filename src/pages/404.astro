@@ -1,0 +1,18 @@
+---
+/* Simple 404 (the designed one from design/pages/404.html is made by its own agent). */
+import Base from "../layouts/Base.astro";
+import { url, ic } from "../lib/index.ts";
+---
+<Base page="404" nav={null} title="Страницата я няма" noindex>
+  <section class="sec" style="padding-top:28px">
+    <div class="empty">
+      <span class="ill"><Fragment set:html={ic("question", 44)} /></span>
+      <h1 class="h2">Тази страница я няма в менюто</h1>
+      <p class="lead">Може адресът да е сгрешен или страницата да е преместена.</p>
+      <div class="row" style="flex-wrap:wrap;justify-content:center">
+        <a class="pill pill-red" href={url.menu()}>Към менюто</a>
+        <a class="pill pill-line" href={url.home()}>Начало</a>
+      </div>
+    </div>
+  </section>
+</Base>

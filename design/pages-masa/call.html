@@ -13,6 +13,7 @@
 /* call.html (QR table): page-only styles, tokens only */
 .cl-grid{display:grid; gap:20px}
 .live{display:grid; gap:12px}
+.live:empty{display:none}
 .coming{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 16px; align-items:center; padding:20px}
 .bell{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red); grid-row:span 2}
 .bell::after{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 2px var(--red); animation:bring 2400ms var(--ease) infinite; opacity:0}
@@ -33,7 +34,7 @@
 .tile .ti{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
 .tile b{font-size:19px; line-height:1.2; letter-spacing:-.02em}
 .tile .d{font-size:14px; color:var(--muted); font-weight:600; line-height:1.35}
-.tile .go{position:absolute; top:18px; right:16px; color:var(--muted)}
+.tile .tgo{position:absolute; top:18px; right:16px; color:var(--muted)}
 .tile[aria-disabled="true"]{background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--line); cursor:not-allowed}
 .tile[aria-disabled="true"] .ti{background:var(--surface); color:var(--muted)}
 .tile .lock{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:800; color:var(--ink)}
@@ -85,7 +86,7 @@ function liveHTML(){ var act = M.active();
 function tileHTML(t){ var c = M.CALLS[t], left = M.callLeft(t), active = S.calls[t] && !S.calls[t].done;
   var inner = '<span class="ti">'+ic(c.icon,30)+'</span><b>'+L(c.bg,c.en)+'</b>';
   if (t === "bill"){ var req = S.bill;
-    return '<a class="tile'+(active?" on":"")+'" href="bill.html">'+ic("caret-right",20).replace('class="ic"','class="ic go"')+inner+'<span class="d">'+(req ? L("Поискана в ","Asked at ")+M.clock(req.at) : L(c.sub[0],c.sub[1]))+'</span></a>'; }
+    return '<a class="tile'+(active?" on":"")+'" href="bill.html">'+ic("caret-right",20).replace('class="ic"','class="ic tgo"')+inner+'<span class="d">'+(req ? L("Поискана в ","Asked at ")+M.clock(req.at) : L(c.sub[0],c.sub[1]))+'</span></a>'; }
   if (left) return '<button class="tile'+(active?" on":"")+'" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="d">'+(active ? L("Вече повикахме. Изчакайте малко.","Already called. Please wait a little.") : L("Сервитьорът току-що дойде.","The waiter has just been here."))+'</span><span class="lock">'+ic("timer",18)+L("Пак след ","Again in ")+'<span data-lt="'+t+'">'+M.mmss(left)+'</span></span></button>';
   return '<button class="tile" type="button" data-call="'+t+'"'+(S.offline?' aria-disabled="true"':'')+'>'+inner+'<span class="d">'+L(c.sub[0],c.sub[1])+'</span></button>'; }
 

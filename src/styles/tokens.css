@@ -1,0 +1,47 @@
+/* Design tokens: ported 1:1 from design/ds/sc.css (only the preview-frame colour --pv-bg moved to preview.css). */
+/* Siracusa design system v1 (direction "В" + ember). Font: Manrope. Shape rule: everything pressable is a pill;
+   containers are 28px shells holding 22px cores; images inside cores are 22px. Animate only transform and opacity. */
+:root{
+  --font:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg:#F2F2EF; --surface:#FBFBFA; --surface-2:#E8E8E3; --surface-3:#DEDED8;
+  --plate-1:#EEEDE8; --plate-2:#D9D7CF;
+  --ink:#121211; --muted:#5C5C57; --line:rgba(18,18,17,.10); --line-strong:rgba(18,18,17,.30);
+  --red:#CC2A1E; --red-press:#B3241A; --on-red:#FFFFFF;
+  --ember:#F2B23A; --on-ember:#1F1D1B; --ember-soft:rgba(242,178,58,.16);
+  --ok:#2E7D4F; --on-ok:#FFFFFF; --warn:#B45309; --off:#75756F; --danger:#B3241A;
+  --glass:rgba(251,251,250,.82); --glass-line:rgba(18,18,17,.08); --scrim:rgba(12,12,11,.45);
+  --shadow:0 1px 1px rgba(18,18,17,.04), 0 14px 34px -14px rgba(18,18,17,.22);
+  --shadow-lg:0 30px 60px -24px rgba(18,18,17,.35);
+  --hi:inset 0 1px 0 rgba(255,255,255,.7);
+  --chip-dark:#1C1C1A; --on-chip-dark:#F2F2EF;
+  --ease:cubic-bezier(.32,.72,0,1); --ease-std:cubic-bezier(.2,0,0,1);
+  --t-fast:120ms; --t-base:200ms; --t-slow:320ms; --t-spring:400ms;
+  --r-pill:999px; --r-shell:28px; --r-core:22px; --r-img:22px; --r-field:16px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --surface-3:#31312E;
+    --plate-1:#2B2B28; --plate-2:#161615;
+    --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.10); --line-strong:rgba(242,242,239,.30);
+    --red:#FF6B5E; --red-press:#E85A4F; --on-red:#121211;
+    --ok:#4CAF7A; --on-ok:#121211; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
+    --glass:rgba(28,28,26,.76); --glass-line:rgba(242,242,239,.10); --scrim:rgba(0,0,0,.6);
+    --shadow:0 0 0 1px rgba(242,242,239,.05), 0 18px 40px -18px rgba(0,0,0,.7);
+    --shadow-lg:0 0 0 1px rgba(242,242,239,.06), 0 30px 60px -24px rgba(0,0,0,.8);
+    --hi:inset 0 1px 0 rgba(255,255,255,.06);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --surface-3:#31312E;
+  --plate-1:#2B2B28; --plate-2:#161615;
+  --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.10); --line-strong:rgba(242,242,239,.30);
+  --red:#FF6B5E; --red-press:#E85A4F; --on-red:#121211;
+  --ok:#4CAF7A; --on-ok:#121211; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
+  --glass:rgba(28,28,26,.76); --glass-line:rgba(242,242,239,.10); --scrim:rgba(0,0,0,.6);
+  --shadow:0 0 0 1px rgba(242,242,239,.05), 0 18px 40px -18px rgba(0,0,0,.7);
+  --shadow-lg:0 0 0 1px rgba(242,242,239,.06), 0 30px 60px -24px rgba(0,0,0,.8);
+  --hi:inset 0 1px 0 rgba(255,255,255,.06);
+  color-scheme:dark;
+}

@@ -1,0 +1,92 @@
+---
+/* The shell of every client page: SEO head, theme without flash, then the same structure as SC.mount():
+   .device > .scroller > header + <main id="main"> + footer, and the fixed .ov layer (bottom nav, assistant, cookie banner).
+   Page content goes into the default slot (inside <main>); floating page UI (.abar) goes into slot="ov". */
+import "../styles/tokens.css";
+import "../styles/components.css";
+import latinFont from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import cyrFont from "@fontsource-variable/manrope/files/manrope-cyrillic-wght-normal.woff2?url";
+import { header, footer, bottomNav, aiFab, cookieBanner, type HeaderOpts } from "../lib/render.ts";
+
+export interface Props {
+  page: string;                      // id of the page (data-page), e.g. "menu"
+  title?: string;                    // short title: <title>"X | Siracusa Bar & Grill"</title>, and in the back bar
+  docTitle?: string;                 // <title> override when the bar title differs
+  description?: string;
+  nav?: string | null;               // active section: menu | reserve | offers | profile | lunch | events | delivery | about
+  back?: { href: string; label?: string } | null;
+  share?: boolean;
+  status?: boolean;                  // status row (default true)
+  cart?: boolean;                    // cart button (default true)
+  footer?: boolean;                  // default true; false -> .end-space
+  ai?: boolean;                      // assistant button (default true)
+  actionBar?: boolean;               // the page renders its own .abar into slot="ov"
+  bottomNav?: boolean;               // default true
+  jsonld?: object | object[] | null; // structured data
+  noindex?: boolean;
+  canonical?: string;                // path, default = current path
+  ogImage?: string;
+}
+const p = Astro.props;
+const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
+const SITE = "Siracusa Bar & Grill";
+const t = p.docTitle || p.title;
+const fullTitle = t ? `${t} | ${SITE}` : `${SITE} | Пица на пещ и скара в Дружба 2`;
+const description = p.description || "Пица на пещ и скара на дървени въглища в Дружба 2, София. Доставка до 21:00, кухня до 22:30, обедно меню всеки ден.";
+const path = Astro.url.pathname;
+const canonical = new URL(p.canonical || path, Astro.site).href;
+/* relative path to the site root, used by the demo (static files) for links built in the browser */
+const depth = path.replace(/^\/|\/?index\.html$/g, "").split("/").filter(Boolean).length;
+const root = depth ? "../".repeat(depth) : "./";
+const hopts: HeaderOpts = { nav: p.nav ?? null, back: p.back || null, title: p.title, share: p.share, status: p.status, cart: p.cart };
+const showNav = p.bottomNav !== false;
+const ld = p.jsonld ? (Array.isArray(p.jsonld) ? p.jsonld : [p.jsonld]) : [];
+const fontCss = `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${cyrFont}) format("woff2-variations"),url(${cyrFont}) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}` +
+  `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${latinFont}) format("woff2-variations"),url(${latinFont}) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}`;
+/* theme + cookie flags before first paint (no flash). Same keys as the prototype. */
+const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(localStorage.getItem("sc-prefs")||"{}");if(p.theme==="light"||p.theme==="dark")d.dataset.theme=p.theme;if(localStorage.getItem("sc-cookie"))d.dataset.ck="1";}catch(e){}})();`;
+---
+<!doctype html>
+<html lang="bg" data-root={root} data-demo={demo ? "1" : undefined} data-page={p.page}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{fullTitle}</title>
+<meta name="description" content={description}>
+{(p.noindex || demo) && <meta name="robots" content="noindex,nofollow">}
+<link rel="canonical" href={canonical}>
+<meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="bg_BG">
+<meta property="og:site_name" content={SITE}>
+<meta property="og:title" content={fullTitle}>
+<meta property="og:description" content={description}>
+<meta property="og:url" content={canonical}>
+{p.ogImage && <meta property="og:image" content={new URL(p.ogImage, Astro.site).href}>}
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href={cyrFont} as="font" type="font/woff2" crossorigin>
+<link rel="preload" href={latinFont} as="font" type="font/woff2" crossorigin>
+<style is:inline set:html={fontCss}></style>
+<script is:inline set:html={boot}></script>
+{ld.map((j) => <script type="application/ld+json" set:html={JSON.stringify(j)} />)}
+<slot name="head" />
+</head>
+<body>
+<a class="vh skip" href="#main">Към съдържанието</a>
+<div class="device" data-page={p.page}>
+  <div class="scroller" data-scroller>
+    <Fragment set:html={header(hopts)} />
+    <main id="main" data-main><slot /></main>
+    {p.footer === false ? <div class="end-space"></div> : <Fragment set:html={footer()} />}
+  </div>
+</div>
+<div class="ov" data-ov data-nav={showNav ? "1" : "0"} data-actionbar={p.actionBar ? "1" : "0"}>
+  {showNav && <Fragment set:html={bottomNav((p.nav as string) ?? null)} />}
+  {p.ai !== false && <Fragment set:html={aiFab({ actionBar: p.actionBar, bottomNav: showNav })} />}
+  <Fragment set:html={cookieBanner()} />
+  <slot name="ov" />
+</div>
+<script>import "../client/sc.ts";</script>
+</body>
+</html>

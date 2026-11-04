@@ -214,7 +214,7 @@ M.mount = function(o){ readDemo();
   var top = SC.scroller.querySelector(".top"); if (top) top.outerHTML = headerHTML(o.page);
   var gated = S.mode === "invalid" || (S.mode === "closed" && !o.allowClosed);
   if (!gated) SC.ov.insertAdjacentHTML("afterbegin", navHTML(o.page));
-  else SC.scroller.querySelectorAll(".mdnav").forEach(function(n){ n.remove(); });
+  else SC.scroller.querySelectorAll(".mdnav"+(S.mode==="invalid"?", .mtab":"")).forEach(function(n){ n.remove(); });
   M.updateCount(); M.on(M.updateCount);
   setInterval(function(){
     if (M.waiting() && Date.now() - S.rounds.filter(function(r){ return !r.conf; })[0].at > 14000){ M.confirm(); SC.toast(L("Сервитьорът потвърди поръчката","The waiter confirmed your order")); }

@@ -36,11 +36,12 @@
 .dots i{width:22px; height:22px; border-radius:50%; box-shadow:inset 0 0 0 2.5px var(--line-strong)}
 .dots i.on{background:var(--ink); box-shadow:none}
 .dots.err i{box-shadow:inset 0 0 0 2.5px var(--danger)}
-.pad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
-.pad button{min-height:72px; border:0; border-radius:22px; background:var(--surface-2); color:var(--ink); font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-items:center}
-.pad button:active{transform:scale(.96); background:var(--surface-3)}
-.pad .fn{font-size:17px}
+.pinpad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.pinpad button{min-height:72px; border:0; border-radius:22px; background:var(--surface-2); color:var(--ink); font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-items:center}
+.pinpad button:active{transform:scale(.96); background:var(--surface-3)}
+.pinpad .fn{font-size:17px}
 .perr{min-height:24px; margin:0; text-align:center; font-size:16px; font-weight:700; color:var(--danger)}
+@container app (max-width:1100px){ .lg-in{grid-template-columns:minmax(0,1fr) 340px; gap:20px; padding:22px} .sct{padding:16px} .sct b{font-size:22px} .sct .si{width:52px; height:52px} .sct span.d{font-size:15px} .pinpad button{min-height:64px} }
 @container app (max-width:899px){
   .lg-in{grid-template-columns:1fr; align-content:start; padding:20px 16px}
   .pin{max-width:520px; width:100%; justify-self:center}
@@ -66,7 +67,7 @@ el.innerHTML = '<div class="lg-in">' +
   '<p class="note">' + ic("info",20) + '<span>Секциите и кое ястие къде се готви са условни: <span class="miss">[ЛИПСВА: секциите на кухнята и брой таблети]</span></span></p></section>' +
   '<section class="pin kcard" aria-labelledby="h-pin"><h2 id="h-pin">Личен ПИН<small data-for></small></h2>' +
   '<div class="dots" data-dots aria-hidden="true"><i></i><i></i><i></i><i></i></div><p class="perr" data-err role="alert"></p>' +
-  '<div class="pad">' + [1,2,3,4,5,6,7,8,9].map(function(n){ return '<button type="button" data-k="' + n + '">' + n + '</button>'; }).join("") +
+  '<div class="pinpad">' + [1,2,3,4,5,6,7,8,9].map(function(n){ return '<button type="button" data-k="' + n + '">' + n + '</button>'; }).join("") +
   '<button type="button" class="fn" data-k="c">Изчисти</button><button type="button" data-k="0">0</button><button type="button" class="fn" data-k="b" aria-label="Изтрий една цифра">' + ic("arrow-left",28) + '</button></div>' +
   '<button class="kb red" type="button" data-go style="width:100%">' + ic("sign-in",24) + '<span data-golbl></span></button></section></div>';
 document.body.appendChild(el); K.protoBind(el);
@@ -84,6 +85,7 @@ el.querySelectorAll("[data-k]").forEach(function(b){ b.addEventListener("click",
   if (k === "c") pin = ""; else if (k === "b") pin = pin.slice(0,-1); else if (pin.length < 4) pin += k; upd(); }); });
 el.querySelector("[data-go]").addEventListener("click", function(){
   if (pin.length < 4){ el.querySelector("[data-err]").textContent = "Въведете 4 цифри."; el.querySelector("[data-dots]").classList.add("err"); return; }
+  if (pin === "0000"){ pin = ""; upd(); el.querySelector("[data-err]").textContent = "ПИН не е верен. Опитайте пак."; el.querySelector("[data-dots]").classList.add("err"); return; } /* прототип: 0000 показва грешка */
   if (chosen !== "all") K.store("sec", chosen);
   location.href = (chosen === "all" ? "summary.html#s=" + K.secId : "queue.html#s=" + chosen) + (K.hash.t ? "&t=" + K.hash.t : "");
 });

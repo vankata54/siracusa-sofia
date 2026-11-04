@@ -16,16 +16,16 @@
 .eff li{display:flex; gap:6px; align-items:center}
 .eff .ic{color:var(--ok)}
 .cath{font-size:15px; font-weight:800; color:var(--muted); margin:22px 0 10px; letter-spacing:.01em}
-.tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:10px}
-.tile{position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:center; min-height:88px; padding:14px 14px 14px 18px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), inset 0 0 0 2px var(--line); color:var(--ink); text-align:left; cursor:pointer}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px}
+.tile{position:relative; display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:12px; min-height:132px; padding:16px 14px 14px 18px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), inset 0 0 0 2px var(--line); color:var(--ink); text-align:left; cursor:pointer}
 .tile:active{transform:scale(.98)}
 .tile b{font-size:21px; line-height:1.2; letter-spacing:-.015em}
 .tile small{display:block; font-size:15px; color:var(--muted); font-weight:600; margin-top:2px}
-.tile .act{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-weight:800; font-size:15px; white-space:nowrap}
+.tile .act{align-self:stretch; justify-content:center; display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-weight:800; font-size:15px; white-space:nowrap}
 .tile.out{background:var(--surface-2); box-shadow:inset 0 0 0 2.5px var(--warn)}
 .tile.out b{color:var(--muted); text-decoration:line-through; text-decoration-thickness:2px}
 .tile.out .act{background:var(--ink); color:var(--bg)}
-.tile .st{grid-column:1 / -1; display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--warn)}
+.tile .st{display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--warn)}
 .side{position:sticky; top:0; padding:18px; display:grid; gap:4px}
 .side h2{margin:0; font-size:24px; letter-spacing:-.03em; font-weight:800; display:flex; align-items:center; gap:10px}
 .side h2 .n{min-width:32px; height:32px; padding:0 9px; border-radius:16px; background:var(--warn); color:var(--bg); display:inline-grid; place-items:center; font-size:17px}
@@ -64,9 +64,9 @@ function render(){
     '<ul class="eff"><li>' + ic("check",18) + 'Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“</li><li>' + ic("check",18) + 'Wolt и Foodpanda: скрито</li></ul>' +
     cats.map(function(c){ return '<h2 class="cath">' + esc(SC.catById[c].n) + '</h2><div class="tiles">' + SC.inCat(c).map(function(x){ var out = K.isOut(x.id);
       return '<button class="tile' + (out ? " out" : "") + '" type="button" data-id="' + x.id + '" aria-pressed="' + out + '"><span><b>' + esc(x.n) + '</b>' + (x.g ? '<small>' + esc(x.g) + '</small>' : '') + '</span>' +
-        '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни' : ic("x",18) + 'Изчерпано') + '</span>' +
-        (out ? '<span class="st">' + ic("clock",18) + 'Изчерпано днес</span>' : '') + '</button>'; }).join("") + '</div>'; }).join("") +
-    '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Изчерпани днес <span class="n num">' + outs.length + '</span></h2>' +
+        (out ? '<span class="st">' + ic("clock",18) + 'Изчерпано днес</span>' : '') +
+        '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни в менюто' : ic("x",18) + 'Изчерпано днес') + '</span></button>'; }).join("") + '</div>'; }).join("") +
+    '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Списък изчерпани <span class="n num">' + outs.length + '</span></h2>' +
     (outs.length ? mineOut.concat(otherOut).map(orow).join("") : '<p class="none">Всичко от менюто е налично.</p>') +
     '<p class="foot2">' + ic("info",20) + '<span>Утре в 10:00 всичко се връща в менюто само. <span class="miss">[за потвърждение]</span></span></p></aside></div></div>';
   main.querySelectorAll("[data-id]").forEach(function(b){ b.addEventListener("click", function(){ toggle(b.getAttribute("data-id")); }); });

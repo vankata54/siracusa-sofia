@@ -1,0 +1,21 @@
+---
+/* TEMPORARY home page that proves the foundation (same content as design/pages/_template.html).
+   The real home page (design/pages/home.html) is made by its own agent and replaces this file. */
+import Base from "../layouts/Base.astro";
+import { inCat, dishCard, ic, url, RESTAURANT } from "../lib/index.ts";
+
+const jsonld = {
+  "@context": "https://schema.org", "@type": "Restaurant", name: RESTAURANT.name, telephone: "+359894365577",
+  address: { "@type": "PostalAddress", streetAddress: "ж.к. Дружба 2, срещу бл. 311", postalCode: "1582", addressLocality: "София", addressCountry: "BG" },
+  servesCuisine: ["Пица", "Скара"], priceRange: "€€", openingHours: "Mo-Su 10:00-23:00",
+};
+---
+<Base page="template" nav="menu" title="Шаблон" description="Временна начална страница на основата на кода." jsonld={jsonld} noindex>
+  <section class="sec" style="padding-top:28px"><h1 class="h1">Шаблон на страница</h1><p class="lead" style="margin-top:8px">Пример как се ползват общите компоненти.</p></section>
+  <section class="sec"><div class="sec-h"><h2 class="h2">Пици на пещ</h2><a class="link" href={url.cat("pitsi")}>Всички<Fragment set:html={ic("caret-right", 18)} /></a></div><div class="rail" set:html={inCat("pitsi").slice(0, 6).map((x) => dishCard(x)).join("")}></div></section>
+  <section class="sec"><h2 class="h2" style="margin-bottom:8px">Скара Bertha</h2><Fragment set:html={inCat("skara-bertha").slice(0, 4).map((x) => dishCard(x, "row")).join("")} /></section>
+</Base>
+<script>
+  import { SC } from "../client/sc.ts";
+  SC.reveal();
+</script>
