@@ -1,0 +1,539 @@
+---
+/* Menu (/menu/): port of design/pages/menu.html (design/PAGES.md "menu.html" + the common logic of menus and filters).
+   The server draws everything that does not depend on the hour or the visitor: the hero, the controls, the filter chips,
+   the 14 categories with all their dishes and the breakfast section (hidden in the main menu): all 127 dishes are in the HTML
+   (SEO), plus JSON-LD Menu > MenuSection > MenuItem. The browser adds the hour (segment sub-lines, delivery line, notices),
+   the filters, allergens, search and scrollspy, kept in the address: #pitsi&f=veg.hot&a=gluten.milk&q=пица. */
+import Base from "../../layouts/Base.astro";
+import { ic, art, byId, inCat, state, eta, url, RESTAURANT } from "../../lib/index.ts";
+import {
+  MAIN_ITEMS, BF_ITEMS, HERO_ID, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, catById,
+  type MenuState,
+} from "./_menu.ts";
+
+const S = state(), E = eta();
+const st0: MenuState = { menu: "main", f: [], a: [], q: "", cat: null };
+const R = results(st0);
+const bfGroup = { c: catById.zakuski, items: BF_ITEMS, top: 0 };
+const heroArt = byId[HERO_ID] || inCat("pitsi")[0];
+const resultsHTML = R.groups.map((g) => sectionHTML(g, { menu: "main" })).join("") + sectionHTML(bfGroup, { menu: "bf", hidden: true });
+const jsonld = menuLd(Astro.site);
+---
+<Base page="menu" nav="menu" title="Меню" actionBar
+  description={"Менюто на Siracusa Bar & Grill в Дружба 2: " + MAIN_ITEMS.length + " ястия и закуски. Пица на пещ, скара на дървени въглища Bertha, салати, паста, бургери и десерти. Цени в евро, доставка до 21:00."}
+  jsonld={jsonld}>
+  <div class="menupg" data-menupg>
+  <section class="sec mhero" aria-labelledby="mh1">
+    <div class="mtop"><div class="hero-art" aria-hidden="true"><div class="pic" set:html={art(heroArt)}></div></div>
+      <h1 class="h1" id="mh1">Меню</h1>
+      <p class="lead">Пица на пещ и скара на дървени въглища.</p>
+      <Fragment set:html={etaLine(S, E)} />
+    </div>
+    <div class="mctl">
+      <div class="seg mseg" role="group" aria-label="Кое меню">
+        <button type="button" data-menu="main" aria-pressed="true"><b>Основно</b><small data-sub="main" set:html={segSub("main", S)}></small></button>
+        <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" set:html={segSub("lunch", S)}></small></a>
+        <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" set:html={segSub("bf", S)}></small></button>
+      </div>
+      <div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
+        <input id="mq" type="search" placeholder="пица, kebapcheta, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div></div>
+      <div class="chips fchips" data-fchips role="group" aria-label="Филтри" set:html={filterChipsHTML(st0)}></div>
+    </div>
+    <div class="mstat"><p class="cnt-t" data-count aria-live="polite" style="margin:0" set:html={countHTML(st0, R.list.length)}></p><button class="link" type="button" data-clearall hidden><Fragment set:html={ic("x", 18)} />Изчисти</button></div>
+    <p class="note-auto alnote"><Fragment set:html={ic("info", 18)} /><span>Алергените са предварителни, от състава. Кухнята ги потвърждава.</span></p>
+    <div class="notices" data-notices set:html={noticesHTML(S, st0)}></div>
+  </section>
+  <div class="wrap mbody">
+    <aside class="mside"><nav class="snav" aria-label="Категории в менюто"><span class="label">Категории</span><div class="slist" data-slist set:html={sideHTML(R.groups)}></div></nav></aside>
+    <div class="mmain"><nav class="catbar" data-catbar aria-label="Категории"><div class="catscroll atstart" data-catscroll set:html={catChipsHTML(R.groups)}></div></nav><div data-results set:html={resultsHTML}></div></div>
+  </div>
+  </div>
+  <div class="abar cbar" slot="ov" aria-hidden="true" inert><span class="cn" data-cn></span><a class="pill pill-red" href={url.cart()} data-cgo>Поръчай<span class="knob" set:html={ic("arrow-right", 20)}></span></a></div>
+</Base>
+
+<style is:global>
+/* ---------- hero ---------- */
+.mhero{position:relative; padding-top:20px; overflow:clip; overflow-clip-margin:0}
+/* the plate peeks past the right edge but is clipped inside the hero, so the page never gets wider than the screen */
+.mtop{position:relative; min-height:150px; padding-right:128px}
+.mtop .h1{font-size:44px; letter-spacing:-.05em}
+.mtop .lead{margin-top:8px; font-size:16px; max-width:28ch}
+.eta{display:flex; align-items:flex-start; gap:8px; margin-top:12px; font-size:16px; font-weight:700; line-height:1.35}
+.eta .ic{margin-top:1px; color:var(--ok)}
+.eta.warn .ic{color:var(--warn)}
+.eta span{color:var(--muted); font-weight:600}
+.hero-art{position:absolute; top:-8px; right:-60px; width:184px; height:184px; pointer-events:none; animation:artIn 900ms var(--ease) both}
+.hero-art .pic{width:100%; height:100%; background:none; overflow:visible}
+.hero-art .pic > svg{inset:0; width:100%; height:100%}
+@keyframes artIn{from{transform:rotate(-40deg) scale(.86); opacity:0}to{transform:none; opacity:1}}
+
+.mctl{display:grid; gap:16px; margin-top:22px}
+.mseg{grid-auto-columns:1fr}
+.mseg > button,.mseg > a{min-height:64px; border:0; border-radius:16px; background:transparent; color:var(--ink); text-decoration:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 4px; line-height:1.15; transition:transform var(--t-fast) var(--ease)}
+.mseg > *:active{transform:scale(.97)}
+.mseg b{font-size:16px; font-weight:800; letter-spacing:-.01em}
+.mseg small{font-size:14px; font-weight:600; color:var(--muted); white-space:nowrap}
+.mseg [aria-pressed="true"]{background:var(--surface); box-shadow:var(--shadow), inset 0 0 0 1.5px var(--line)}
+.mseg .tg{display:inline-flex; align-items:center; gap:3px; color:var(--ink)}
+.mseg .tg i{font-style:normal; font-size:14px; font-weight:800; padding:1px 6px; border-radius:999px; background:var(--ember); color:var(--on-ember)}
+
+.search{display:grid; gap:6px}
+.search label{font-weight:700; font-size:15px}
+.sbox{position:relative}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:56px; padding:0 56px 0 50px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong), var(--hi); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input::placeholder{color:var(--muted)}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sbox .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.sbox .clr[hidden]{display:none}
+
+.fchips{padding-top:2px; padding-bottom:4px}
+.fchips .chip,.catbar .chip{min-height:48px}
+.chip .ic{flex:none}
+.chip.leaf .ic{color:var(--ok)} .chip.pep .ic{color:var(--red)}
+.chip[aria-pressed="true"] .ic{color:inherit}
+.chip.more{box-shadow:none; background:var(--surface-2)}
+.chip .dot{min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums}
+
+.mstat{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 12px; margin-top:18px}
+.mstat .cnt-t{font-weight:800; font-size:17px; letter-spacing:-.01em; font-variant-numeric:tabular-nums}
+.mstat .cnt-t span{color:var(--muted); font-weight:600}
+.mstat .link{min-height:44px}
+.mstat .link[hidden]{display:none}
+.alnote{margin-top:2px}
+.alnote .ic{margin-top:2px}
+
+/* ---------- notices ---------- */
+.notices{display:grid; gap:10px; margin-top:16px}
+.notices:empty{display:none}
+.notice{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:start; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.notice .nic{grid-row:span 3; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.notice.warn .nic{color:var(--warn)}
+.notice.off .nic{color:var(--danger)}
+.notice b{font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.notice p{margin:0; color:var(--muted); font-size:15px}
+.notice .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.notice .acts .pill{min-height:48px}
+
+/* ---------- body layout ---------- */
+.mbody{position:relative; margin-top:20px}
+.mside{display:none}
+.mmain{min-width:0}
+
+/* sticky category island, sits left of the floating cart button */
+.catbar{position:sticky; top:74px; z-index:18; margin:0 52px 0 -8px; padding:4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.catbar[hidden]{display:none}
+/* once stuck, a band of page colour behind the island hides content passing between it and the cart */
+.catbar::before{content:""; position:absolute; left:-8px; right:-68px; top:-80px; bottom:-14px; z-index:-1; background:linear-gradient(var(--bg) 82%, transparent); opacity:0; pointer-events:none; transition:opacity var(--t-base) var(--ease)}
+.catbar.stuck::before{opacity:1}
+.catscroll{position:relative; display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; border-radius:999px; scroll-behavior:smooth}
+.catscroll::-webkit-scrollbar{display:none}
+.catscroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 28px),transparent)}
+.catscroll.atstart{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.catbar .chip{position:relative; z-index:1; text-decoration:none; background:transparent; box-shadow:none; padding:0 14px; transition:color var(--t-base) var(--ease), transform var(--t-fast) var(--ease)}
+.catbar .chip[aria-current="true"]{background:transparent; color:var(--bg)}
+.catbar .chip .n{font-size:14px}
+/* sliding indicator: two caps + a stretched middle, moved with transform only */
+.ind{position:absolute; left:0; top:0; height:48px; width:0; pointer-events:none; opacity:0; transition:opacity var(--t-base) var(--ease)}
+.ind.on{opacity:1}
+.ind i{position:absolute; top:0; left:0; height:48px; background:var(--ink); transition:transform var(--t-slow) var(--ease)}
+.ind .l{width:24px; border-radius:24px 0 0 24px}
+.ind .r{width:24px; border-radius:0 24px 24px 0}
+.ind .m{width:2px; margin-left:-1px; transform-origin:0 0}
+.ind.jump i{transition:none}
+
+/* ---------- category sections ---------- */
+.mcat{padding-top:48px}
+.mcat:first-child{padding-top:28px}
+.mcat .sec-h{margin-bottom:6px; align-items:center}
+.mcat .sec-h .link{flex:none}
+.cdesc{margin:0; font-size:15px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums}
+.cseo{margin:4px 0 18px; font-size:14px}
+.qhead{padding-top:28px}
+.qhead .h3{font-size:22px}
+.qhead p{margin:4px 0 0; color:var(--muted)}
+.dcard .nodata{display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; line-height:1.3; color:var(--muted)}
+.dcard .nodata .ic{margin-top:1px; color:var(--warn)}
+.dcard .later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
+.mcat .grid-dishes{animation:gridIn var(--t-slow) var(--ease) both}
+@keyframes gridIn{from{opacity:0}to{opacity:1}}
+
+/* ---------- empty, error, loading ---------- */
+.mempty{margin-top:24px; padding:36px 20px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mempty .ill{background:var(--surface); color:var(--ink)}
+.mempty.err .ill{color:var(--danger)}
+.mempty p{margin:0; color:var(--muted); max-width:34ch}
+.mempty .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:6px}
+.mempty .rm{display:flex; flex-wrap:wrap; justify-content:center; gap:8px}
+.mempty .rm .chip{box-shadow:none; background:var(--surface)}
+.mempty .tryq{display:flex; flex-wrap:wrap; justify-content:center; gap:8px}
+.mempty .tryq .chip{box-shadow:none; background:var(--surface)}
+.sk-row{display:flex; gap:8px; overflow:hidden; margin-top:4px}
+.sk-row .skel{flex:none; height:48px; border-radius:999px}
+.sk-sec{padding-top:36px}
+.sk-sec .t{height:30px; width:56%; border-radius:12px}
+.sk-sec .d{height:16px; width:70%; margin:12px 0 18px; border-radius:8px}
+.sk-card{display:grid; gap:10px}
+.sk-card .p{aspect-ratio:1; border-radius:24px}
+.sk-card .a{height:18px; width:85%; border-radius:8px}
+.sk-card .b{height:18px; width:45%; border-radius:8px}
+
+/* ---------- prototype-only state switch ---------- */
+.proto{padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent}
+.proto .lbl{display:flex; align-items:center; gap:8px; margin:0 0 4px; font-weight:800; font-size:15px}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+.proto .chips{margin:0; padding:2px 0; flex-wrap:wrap}
+
+/* ---------- sheets ---------- */
+.flist{display:grid; margin:4px 0 0}
+.flist .check{align-items:center; padding:6px 0; min-height:56px; border-top:1px solid var(--line)}
+.flist .check:first-child{border-top:0}
+.flist .fi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.flist .fi.leaf{color:var(--ok)} .flist .fi.pep{color:var(--red)}
+.flist .ft{flex:1; min-width:0; display:grid; line-height:1.25}
+.flist .ft b{font-size:16px}
+.flist .ft small{font-size:14px; color:var(--muted); font-weight:600}
+.flist .check.dis{cursor:not-allowed}
+.flist .check.dis .ft b,.flist .check.dis .fi{opacity:.55}
+.sh-intro{margin:0 0 6px; color:var(--muted); font-size:15px}
+.sh-sub{margin:18px 0 0; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
+.sh-note{display:flex; gap:8px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:14px; color:var(--muted)}
+.sh-note .ic{margin-top:1px; color:var(--ink)}
+.sh-foot{position:sticky; bottom:0; display:grid; grid-template-columns:auto 1fr; gap:8px; padding:14px 0 2px; margin-top:8px; background:var(--surface)}
+.sh-foot .pill-red{min-height:56px; font-size:17px}
+
+/* ---------- card additions, same look as category.html: composition on one line under the name ---------- */
+.dcard .cp{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-top:-4px; font-size:15px; line-height:1.4; color:var(--muted); font-weight:500}
+.dcard .rowp .price{font-size:19px}
+.grid-dishes .dcard{grid-template-rows:1fr auto}
+.grid-dishes .dcard .open{align-content:start}
+
+/* ---------- order bar (same as category.html) ---------- */
+.cbar{transform:translateY(140%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); padding:6px 6px 6px 18px}
+.cbar.on{transform:none; opacity:1; pointer-events:auto}
+.cbar .cn{flex:none; font-size:15px; font-weight:700; line-height:1.2; color:var(--muted); font-variant-numeric:tabular-nums}
+.cbar .cn b{display:block; color:var(--ink); font-size:16px}
+.cbar .pill{justify-content:space-between; padding:0 8px 0 20px}
+.cbar .knob{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--red-press)}
+
+/* ---------- tablet & desktop ---------- */
+@container app (min-width:700px){
+  .mtop{padding-right:240px; min-height:196px}
+  .mtop .lead{max-width:none}
+  .hero-art{width:200px; height:200px; top:-6px; right:0}
+}
+@container app (min-width:900px){
+  .mhero{padding-top:40px}
+  .mtop{position:static; min-height:0; padding-right:0}
+  .mtop .h1{font-size:64px}
+  .mtop .lead{font-size:18px; max-width:none; margin-top:12px}
+  .hero-art{width:300px; height:300px; top:16px; right:max(40px, calc((100% - 1200px)/2))}
+  .mctl{grid-template-columns:minmax(360px,420px) 1fr; align-items:end; gap:16px 16px; margin-top:28px; margin-right:340px}
+  .search{grid-column:2}
+  .mseg{grid-column:1; grid-row:1}
+  .fchips{grid-column:1 / -1; flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .mstat{margin-top:22px; margin-right:340px}
+  .mbody{display:grid; grid-template-columns:232px 1fr; gap:48px; margin-top:12px}
+  .mside{display:block}
+  .catbar{display:none}
+  .mcat{padding-top:64px}
+  .mcat:first-child,.qhead{padding-top:24px}
+}
+/* desktop sidebar with a sliding marker */
+.snav{position:sticky; top:104px; max-height:calc(100dvh - 112px); overflow-y:auto; scrollbar-width:none; padding:28px 0 24px}
+.snav .label{display:block; margin:0 0 10px 16px; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
+.slist{position:relative; display:grid; gap:2px}
+.slist a{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px; padding:0 16px; border-radius:999px; text-decoration:none; font-weight:700; font-size:16px; color:var(--muted); transition:color var(--t-base) var(--ease)}
+.slist a:hover{color:var(--ink)}
+.slist a[aria-current="true"]{color:var(--ink)}
+.slist a .n{font-size:14px; font-weight:600; font-variant-numeric:tabular-nums}
+.smark{position:absolute; left:0; right:0; top:0; height:44px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); opacity:0; transition:transform var(--t-slow) var(--ease), opacity var(--t-base) var(--ease); pointer-events:none}
+.smark.on{opacity:1}
+.smark::before{content:""; position:absolute; left:6px; top:12px; bottom:12px; width:4px; border-radius:2px; background:var(--red)}
+.snav .note-auto{margin:20px 0 0 16px}
+</style>
+
+<script>
+  import { SC } from "../../client/sc-menu.ts";
+  import {
+    parseHash, hashOf, results, scopeItems, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML,
+    card as cardHTML, filterById, fic, FICON, plural, BF_ITEMS, type MenuState, type Group,
+  } from "./_menu.ts";
+  import type { Dish } from "../../lib/data.ts";
+  /* icons this script draws itself (the server ones are already in the HTML; the rest come from _menu.ts) */
+  import "../../lib/icons/arrow-right.ts";
+  import "../../lib/icons/eye.ts";
+  import "../../lib/icons/shrimp.ts";
+  import "../../lib/icons/egg.ts";
+  import "../../lib/icons/fish.ts";
+  import "../../lib/icons/circles-three.ts";
+  import "../../lib/icons/acorn.ts";
+  import "../../lib/icons/carrot.ts";
+  import "../../lib/icons/jar.ts";
+  import "../../lib/icons/dots-nine.ts";
+  import "../../lib/icons/wine.ts";
+  import "../../lib/icons/flower.ts";
+  import "../../lib/icons/fish-simple.ts";
+
+  type View = "ok" | "loading" | "error" | "offline";
+  const main = SC.mount();
+  const root = main.querySelector<HTMLElement>("[data-menupg]")!;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const elRes = $("[data-results]"), elCat = $("[data-catscroll]"), elBar = $("[data-catbar]"), elSide = $("[data-slist]"), elF = $("[data-fchips]"),
+    elCount = $("[data-count]"), elNot = $("[data-notices]"), elQ = $<HTMLInputElement>("#mq"), elClr = $("[data-qclear]"), elClearAll = $("[data-clearall]");
+
+  let S = SC.state();
+  let st: MenuState = parseHash(location.hash);
+  let view: View = navigator.onLine === false ? "offline" : "ok";
+  elQ.value = st.q;
+  elClr.hidden = !st.q;
+  elCat.addEventListener("scroll", () => elCat.classList.toggle("atstart", elCat.scrollLeft < 4), { passive: true });
+
+  function writeHash() {
+    try { history.replaceState(history.state, "", (hashOf(st) || location.pathname + location.search)); } catch { /* ignore */ }
+  }
+
+  /* ---------- render ---------- */
+  let R: { list: Dish[]; groups: Group[] } = { list: [], groups: [] };
+  function navs() {
+    const groups = view === "loading" || view === "error" ? [] : R.groups;
+    elBar.hidden = groups.length < 2;
+    elCat.innerHTML = catChipsHTML(groups);
+    elSide.innerHTML = sideHTML(groups);
+    active = null;
+  }
+  function count() {
+    elCount.innerHTML = view === "loading" ? "Зареждаме менюто…" : view === "error" ? "" : countHTML(st, R.list.length);
+    elClearAll.hidden = !(st.f.length || st.a.length);
+  }
+  function emptyHTML(): string {
+    const q = st.q.trim(), ic = SC.ic, esc = SC.esc;
+    if (q && !(st.f.length || st.a.length)) return '<div class="empty mempty"><span class="ill">' + ic("magnifying-glass", 40) + '</span><h2 class="h3">Не намерихме „' + esc(q) + '“</h2><p>Проверете думата или опитайте някое от тези. Можете да попитате и асистента.</p>' +
+      '<div class="tryq">' + ["пица", "кебапчета", "салата", "бургер"].map((w) => '<button class="chip" type="button" data-try="' + w + '">' + w + "</button>").join("") + "</div>" +
+      '<div class="acts"><button class="pill pill-line" type="button" data-qclear>' + ic("x", 20) + 'Изчисти търсенето</button><button class="pill pill-ember" type="button" data-ai>' + ic("sparkle", 20) + "Попитай асистента</button></div></div>";
+    const rm = st.f.map((id) => '<button class="chip" type="button" data-f="' + id + '">' + ic("x", 18) + filterById(id)!.n + "</button>")
+      .concat(st.a.map((id) => '<button class="chip" type="button" data-arm="' + id + '">' + ic("x", 18) + "Без " + SC.allergenName(id).toLowerCase() + "</button>")).join("");
+    return '<div class="empty mempty"><span class="ill">' + ic("funnel", 40) + '</span><h2 class="h3">Няма ястия с тези филтри</h2><p>' + (q ? "Търсим „" + esc(q) + "“ само сред ястията, които минават филтрите. " : "") + "Махнете някой филтър или изчистете всички.</p>" +
+      (rm ? '<div class="rm">' + rm + "</div>" : "") + '<div class="acts"><button class="pill pill-red" type="button" data-clearall>Изчисти филтрите</button>' + (q ? '<button class="pill pill-line" type="button" data-qclear>Изчисти търсенето</button>' : "") + "</div></div>";
+  }
+  function skeletonHTML(): string {
+    let cards = "";
+    for (let i = 0; i < 4; i++) cards += '<div class="sk-card"><div class="skel p"></div><div class="skel a"></div><div class="skel b"></div></div>';
+    const sec = '<div class="sk-sec"><div class="skel t"></div><div class="skel d"></div><div class="grid-dishes">' + cards + "</div></div>";
+    return '<div aria-busy="true" aria-label="Менюто се зарежда"><div class="sk-row">' + [90, 120, 150, 110].map((w) => '<span class="skel" style="width:' + w + 'px"></span>').join("") + "</div>" + sec + sec + "</div>";
+  }
+  function errorHTML(): string {
+    return '<div class="empty mempty err" role="alert"><span class="ill">' + SC.ic("warning", 40) + '</span><h2 class="h3">Менюто не се зареди</h2><p>Връзката прекъсна, докато зареждахме. Опитайте пак след малко или поръчайте по телефона.</p>' +
+      '<div class="acts"><button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="tel:' + SC.RESTAURANT.phoneIntl + '">' + SC.ic("phone", 20) + SC.RESTAURANT.phone + "</a></div></div>";
+  }
+  /* the hour-dependent frame: segment sub-lines, delivery line, notices */
+  function timeParts() {
+    (["main", "lunch", "bf"] as const).forEach((k) => { const el = $("[data-sub=" + k + "]"); const h = segSub(k, S); if (el.innerHTML !== h) el.innerHTML = h; });
+    const eta = $("[data-eta]"), h = etaLine(S, SC.eta());
+    if (eta.outerHTML !== h) eta.outerHTML = h;
+    elNot.innerHTML = noticesHTML(S, st, view === "offline");
+  }
+  /** full: redraw the dish sections (false keeps the server HTML on a plain first load) */
+  function render(full = true) {
+    R = results(st);
+    root.querySelectorAll<HTMLElement>(".mseg [data-menu]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.menu === st.menu)));
+    elF.innerHTML = filterChipsHTML(st);
+    timeParts(); count();
+    if (view === "loading") { navs(); elRes.innerHTML = skeletonHTML(); return; }
+    if (view === "error") { navs(); elRes.innerHTML = errorHTML(); return; }
+    navs();
+    if (!full) { requestAnimationFrame(spy); return; }
+    if (!R.list.length) { elRes.innerHTML = emptyHTML(); return; }
+    const q = st.q.trim(), nd = st.a.length > 0, later = laterText(S, st);
+    elRes.innerHTML = R.groups.map((g) => sectionHTML(g, { q, menu: st.menu, nd, later })).join("");
+    requestAnimationFrame(spy);
+  }
+
+  /* ---------- scrollspy: sticky chips (phone) and the sidebar (desktop); the document scrolls ---------- */
+  let active: string | null = null, lockUntil = 0;
+  const isDesk = () => SC.device.clientWidth >= 900;
+  const offset = () => (isDesk() ? 128 : 146);
+  const topOf = (el: Element) => el.getBoundingClientRect().top;
+  function setActive(id: string | null, jump?: boolean) {
+    if (id === active) return;
+    active = id;
+    elCat.querySelectorAll<HTMLElement>("[data-go]").forEach((a) => a.setAttribute("aria-current", String(a.dataset.go === id)));
+    elSide.querySelectorAll<HTMLElement>("[data-go]").forEach((a) => a.setAttribute("aria-current", String(a.dataset.go === id)));
+    placeMarks(jump, true);
+    if (!id) elCat.scrollLeft = 0;
+    if (Date.now() > lockUntil) { st.cat = st.menu === "main" ? id : null; writeHash(); }
+  }
+  function placeMarks(jump?: boolean, follow?: boolean) {
+    const id = active;
+    const ind = elCat.querySelector<HTMLElement>(".ind"), chip = id ? elCat.querySelector<HTMLElement>('[data-go="' + id + '"]') : null;
+    if (ind) {
+      ind.classList.toggle("jump", !!jump || !ind.classList.contains("on"));
+      ind.classList.toggle("on", !!chip);
+      if (chip) {
+        const x = chip.offsetLeft, w = chip.offsetWidth;
+        ind.querySelector<HTMLElement>(".l")!.style.transform = "translateX(" + x + "px)";
+        ind.querySelector<HTMLElement>(".m")!.style.transform = "translateX(" + (x + 24) + "px) scaleX(" + Math.max(0, (w - 48) / 2 + 1) + ")";
+        ind.querySelector<HTMLElement>(".r")!.style.transform = "translateX(" + (x + w - 24) + "px)";
+        if (follow && elBar.offsetParent) elCat.scrollTo({ left: Math.max(0, x - (elCat.clientWidth - w) / 2), behavior: jump ? "auto" : "smooth" });
+      }
+      void ind.offsetWidth; ind.classList.remove("jump");
+    }
+    const mk = elSide.querySelector<HTMLElement>(".smark"), sl = id ? elSide.querySelector<HTMLElement>('[data-go="' + id + '"]') : null;
+    if (mk) {
+      if (jump) mk.style.transition = "none";
+      mk.classList.toggle("on", !!sl);
+      if (sl) mk.style.transform = "translateY(" + sl.offsetTop + "px)";
+      if (jump) { void mk.offsetWidth; mk.style.transition = ""; }
+    }
+  }
+  /* web font or width changes move the chips: re-measure without animating */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeMarks(true, true));
+  if ("ResizeObserver" in window) new ResizeObserver(() => placeMarks(true, false)).observe(SC.device);
+  function stuck() { if (elBar.hidden || !elBar.offsetParent) return; elBar.classList.toggle("stuck", topOf(elBar) <= 75); }
+  function spy() {
+    stuck();
+    if (Date.now() < lockUntil) return;
+    const secs = elRes.querySelectorAll<HTMLElement>(".mcat:not([hidden])"), o = offset() + 8;
+    let id: string | null = null;
+    for (const s of secs) { if (topOf(s) <= o) id = s.dataset.cat || null; else break; }
+    setActive(id);
+  }
+  let raf = 0, idle: ReturnType<typeof setTimeout> | undefined;
+  window.addEventListener("scroll", () => {
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; spy(); });
+    /* release the lock once a programmatic scroll settles (scrollend where supported, else a quiet 140 ms) */
+    clearTimeout(idle); idle = setTimeout(() => { if (lockUntil) { lockUntil = 0; spy(); } }, 140);
+  }, { passive: true });
+  window.addEventListener("scrollend", () => { if (lockUntil) { lockUntil = 0; spy(); } });
+  function goCat(id: string, instant?: boolean) {
+    const sec = elRes.querySelector<HTMLElement>('[data-cat="' + id + '"]');
+    if (!sec) return;
+    const y = window.scrollY + topOf(sec) - offset();
+    lockUntil = Date.now() + (instant ? 60 : 1600); st.cat = id; writeHash();
+    setActive(id, instant); active = id;
+    window.scrollTo({ top: Math.max(0, y), behavior: instant || SC.reduce ? "auto" : "smooth" });
+  }
+  function jumpToResults() {
+    const top = window.scrollY + topOf($(".mstat")) - offset() + 40;
+    if (window.scrollY > top) window.scrollTo({ top, behavior: SC.reduce ? "auto" : "smooth" });
+  }
+
+  /* ---------- sheets: allergens and more filters ---------- */
+  function liveBtn() { const n = results(st).list.length; return n ? "Покажи " + plural(n) : "Няма ястия с тези филтри"; }
+  const foot = '<div class="sh-foot"><button class="pill pill-soft" type="button" data-shclear>Изчисти</button><button class="pill pill-red" type="button" data-shgo></button></div>';
+  function allergenSheet() {
+    const list = scopeItems(st);
+    const rows = SC.ALLERGENS.map((a) => {
+      const n = list.filter((x) => x.al.indexOf(a[0]) > -1).length, on = st.a.indexOf(a[0]) > -1;
+      return '<label class="check"><input type="checkbox" data-al="' + a[0] + '"' + (on ? " checked" : "") + '><span class="fi">' + SC.ic(a[2], 22) + '</span><span class="ft"><b>' + a[1] + "</b><small>" + (n ? "в " + plural(n) + " по състава" : "не е открит в състава") + "</small></span></label>";
+    }).join("");
+    const nd = list.filter((x) => !x.comp).length;
+    const s = SC.sheet({ title: "Алергени", html:
+      '<p class="sh-intro">Отметнете какво не ядете. Ще скрием ястията, които го съдържат.</p>' +
+      '<p class="sh-note">' + SC.ic("info", 18) + "<span>Алергените са предварителни, от състава. Кухнята ги потвърждава." + (nd ? " За " + plural(nd) + " още нямаме състав: показваме ги с бележка „попитайте ни“." : "") + "</span></p>" +
+      '<div class="flist">' + rows + "</div>" + foot });
+    wireSheet(s, (inp) => { const id = inp.dataset.al!; st.a = st.a.filter((k) => k !== id); if (inp.checked) st.a.push(id); }, () => { st.a = []; });
+  }
+  function moreSheet() {
+    const list = scopeItems(st);
+    const rows = SC.FILTERS.map((f) => {
+      const n = f.needs ? 0 : list.filter(f.test).length, on = st.f.indexOf(f.id) > -1, dis = !!f.needs || !n;
+      return '<label class="check' + (dis ? " dis" : "") + '"><input type="checkbox" data-fx="' + f.id + '"' + (on ? " checked" : "") + (dis ? " disabled" : "") + '><span class="fi ' + (FICON[f.id] || "") + '">' + SC.ic(fic(f), 22) + '</span><span class="ft"><b>' + f.n + "</b><small>" + (f.needs ? "Скоро. Чакаме " + f.needs + " от кухнята." : n ? plural(n) : "Няма такива в това меню") + "</small></span></label>";
+    }).join("");
+    const s = SC.sheet({ title: "Още филтри", html: '<p class="sh-intro">Изберете няколко. Показваме ястията, за които важат всички.</p><div class="flist">' + rows + "</div>" + foot });
+    wireSheet(s, (inp) => { const id = inp.dataset.fx!; st.f = st.f.filter((k) => k !== id); if (inp.checked) st.f.push(id); }, () => { st.f = []; });
+  }
+  function wireSheet(s: { el: HTMLElement; close: () => void }, onToggle: (i: HTMLInputElement) => void, onClear: () => void) {
+    const go = s.el.querySelector<HTMLElement>("[data-shgo]")!;
+    const upd = () => { go.textContent = liveBtn(); writeHash(); render(); };
+    go.textContent = liveBtn();
+    s.el.addEventListener("change", (e) => { const t = e.target as HTMLInputElement; if (t.matches("input[type=checkbox]")) { onToggle(t); upd(); } });
+    s.el.querySelector<HTMLElement>("[data-shclear]")!.onclick = () => { onClear(); s.el.querySelectorAll<HTMLInputElement>("input[type=checkbox]:not([disabled])").forEach((i) => { i.checked = false; }); upd(); };
+    go.onclick = () => { s.close(); jumpToResults(); };
+  }
+
+  /* ---------- events ---------- */
+  let qt: ReturnType<typeof setTimeout> | undefined;
+  elQ.addEventListener("input", () => { elClr.hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(() => { st.q = elQ.value; st.cat = null; writeHash(); render(); }, 120); });
+  elQ.addEventListener("keydown", (e) => { if (e.key === "Escape" && elQ.value) { e.stopPropagation(); setQ(""); } if (e.key === "Enter") elQ.blur(); });
+  function setQ(v: string) { elQ.value = v; st.q = v; elClr.hidden = !v; writeHash(); render(); }
+  root.addEventListener("click", (e) => {
+    const t = (e.target as Element).closest<HTMLElement>("button, a");
+    if (!t || !root.contains(t)) return;
+    if (t.dataset.go) { e.preventDefault(); goCat(t.dataset.go); return; }
+    if (t.dataset.menu) { if (st.menu !== t.dataset.menu) { st.menu = t.dataset.menu as MenuState["menu"]; st.cat = null; writeHash(); render(); jumpToResults(); } return; }
+    if (t.dataset.f) { const id = t.dataset.f; st.f = st.f.indexOf(id) > -1 ? st.f.filter((k) => k !== id) : st.f.concat(id); writeHash(); render(); return; }
+    if (t.dataset.arm) { const a = t.dataset.arm; st.a = st.a.filter((k) => k !== a); writeHash(); render(); return; }
+    if (t.dataset.sheet === "al") { allergenSheet(); return; }
+    if (t.dataset.sheet === "more") { moreSheet(); return; }
+    if (t.hasAttribute("data-clearall")) { st.f = []; st.a = []; writeHash(); render(); return; }
+    if (t.hasAttribute("data-qclear")) { setQ(""); elQ.focus({ preventScroll: true }); return; }
+    if (t.dataset.try) { setQ(t.dataset.try); return; }
+    if (t.hasAttribute("data-retry")) { setView("loading"); setTimeout(() => setView(navigator.onLine === false ? "offline" : "ok"), 900); return; }
+    if (t.dataset.view) { setView(t.dataset.view as View); return; }
+  });
+  function setView(v: View) {
+    view = v;
+    root.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+    render(); cartBar();
+  }
+  window.addEventListener("offline", () => setView("offline"));
+  window.addEventListener("online", () => { if (view === "offline") { setView("ok"); SC.toast("Връзката се върна"); } });
+  window.addEventListener("hashchange", () => {
+    const c = st.cat; st = parseHash(location.hash); elQ.value = st.q; elClr.hidden = !st.q; render();
+    if (st.cat && st.cat !== c) goCat(st.cat, true);
+  });
+  /* the hour moves on (every minute): the segment, the delivery line, the notices and the breakfast cards */
+  document.addEventListener("sc:tick", () => {
+    const n = SC.state(), changed = JSON.stringify(n) !== JSON.stringify(S);
+    if (!changed) return;
+    const bfFlip = n.breakfast !== S.breakfast; S = n;
+    if (st.menu === "bf" && bfFlip) render(); else timeParts();
+  });
+
+  /* ---------- floating "Поръчай · сума" bar after the first "+" (same as the category and lunch pages) ---------- */
+  const cbar = SC.ov.querySelector<HTMLElement>(".cbar")!;
+  function cartBar() {
+    const n = SC.cart.count(), on = n > 0 && view !== "loading" && view !== "error";
+    cbar.classList.toggle("on", on); cbar.setAttribute("aria-hidden", on ? "false" : "true");
+    if (on) cbar.removeAttribute("inert"); else cbar.setAttribute("inert", "");
+    cbar.querySelector("[data-cn]")!.innerHTML = "<b>" + plural(n) + "</b>в количката";
+    cbar.querySelector("[data-cgo]")!.firstChild!.textContent = "Поръчай · " + SC.fmt(SC.cart.subtotal());
+    const fab = SC.ov.querySelector(".aifab"); if (fab) fab.classList.toggle("up", on);
+  }
+  SC.cart.on(cartBar);
+
+  /* ---------- live menu: "Изчерпано днес" and prices from the kitchen / admin (api), after the first paint ---------- */
+  function syncMenu() {
+    import("../../client/api.ts").then(({ api }) => api.menu()).then((m) => {
+      let changed = false;
+      for (const x of m.items) {
+        const d = SC.byId[x.id];
+        if (!d) continue;
+        const out = x.t.indexOf("out") > -1, was = d.t.indexOf("out") > -1;
+        if (out !== was) { d.t = out ? [...d.t, "out"] : d.t.filter((k) => k !== "out"); changed = true; }
+        if (typeof x.p === "number" && x.p !== d.p) { d.p = x.p; changed = true; }
+      }
+      if (changed && view !== "loading" && view !== "error") render();
+    }).catch(() => { /* the menu in the HTML stays; nothing to tell */ });
+  }
+
+  /* ---------- preview only: the simulated states ("Само в прототипа"), never on the real site ---------- */
+  if (SC.preview) {
+    root.insertAdjacentHTML("beforeend", '<section class="sec" style="padding-top:64px"><div class="proto"><p class="lbl">' + SC.ic("eye", 18) + "Само в прототипа</p><p>Покажете как изглежда менюто в другите състояния.</p>" +
+      '<div class="chips" role="group" aria-label="Състояние за прототипа">' + ([["ok", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]] as const)
+        .map(([k, n]) => '<button class="chip" type="button" data-view="' + k + '" aria-pressed="' + (k === view) + '">' + n + "</button>").join("") + "</div></div></section>");
+  }
+
+  /* ---------- first paint: keep the server HTML unless the address asks for something else ---------- */
+  const plain = st.menu === "main" && !st.f.length && !st.a.length && !st.q.trim() && view === "ok";
+  render(!plain);
+  cartBar();
+  if (st.cat) requestAnimationFrame(() => goCat(st.cat!, true));
+  else if (!plain) requestAnimationFrame(() => jumpToResults());
+  const later = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1200));
+  later(syncMenu);
+  void BF_ITEMS; void cardHTML;
+</script>

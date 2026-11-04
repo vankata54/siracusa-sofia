@@ -30,7 +30,12 @@ M.me = (function(){ var t = tabs(), now = Date.now();
   if (t[TAB] && t[TAB].id) return t[TAB].id;
   var taken = Object.keys(t).filter(function(k){ return k !== TAB && now - t[k].ts < 5000; }).map(function(k){ return t[k].id; });
   return M.WHO.filter(function(w){ return taken.indexOf(w) < 0; })[0] || "me"; })();
-function beat(){ var t = tabs(), now = Date.now(); Object.keys(t).forEach(function(k){ if (now - t[k].ts > 60000) try{ localStorage.removeItem(HB+k); }catch(e){} }); SC.store(HB+TAB, {id:M.me, ts:now}); }
+function beat(){ var t = tabs(), now = Date.now(); Object.keys(t).forEach(function(k){ if (now - t[k].ts > 60000) try{ localStorage.removeItem(HB+k); }catch(e){} });
+  /* two live tabs on the same phone: the later tab id moves to a free phone */
+  var clash = Object.keys(t).filter(function(k){ return k !== TAB && t[k].id === M.me && now - t[k].ts < 5000 && k < TAB; })[0];
+  if (clash){ var taken = Object.keys(t).filter(function(k){ return k !== TAB && now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }), free = M.WHO.filter(function(w){ return taken.indexOf(w) < 0; })[0];
+    if (free){ SC.store(HB+TAB, {id:free, ts:now}); location.reload(); return; } }
+  SC.store(HB+TAB, {id:M.me, ts:now}); }
 beat(); setInterval(beat, 1500);
 M.livePhones = function(){ var t = tabs(), now = Date.now(); return Object.keys(t).filter(function(k){ return now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }); };
 /* language and connection belong to the phone, never to the table */

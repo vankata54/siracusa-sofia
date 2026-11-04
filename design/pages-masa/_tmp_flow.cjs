@@ -4,8 +4,8 @@ const base='file:///home/user/siracusa-sofia/design/pages-masa/';
 await ctx.addInitScript(()=>{ if(!localStorage.getItem('sc-cookie')){localStorage.setItem('sc-cookie','"min"');localStorage.setItem('sc-prefs',JSON.stringify({theme:'light',view:'phone',time:'19:30'}));} });
 const errs=[];const A=await ctx.newPage(), B=await ctx.newPage();[A,B].forEach((p,i)=>{p.on('pageerror',e=>errs.push(i+': '+e.message));p.on('console',m=>{if(m.type()==='error')errs.push(i+': '+m.text())});});
 const log=(...a)=>console.log(...a);
-await A.goto(base+'welcome.html');await A.waitForTimeout(600);
-await B.goto(base+'cart.html');await B.waitForTimeout(800);
+await A.goto(base+'welcome.html');await A.waitForTimeout(600);log('dbgA', await A.evaluate(()=>[window.name, MASA.me, Object.keys(localStorage)]));
+await B.goto(base+'cart.html');await B.waitForTimeout(800);log('dbg', await B.evaluate(()=>[window.name, MASA.me, Object.keys(localStorage).filter(k=>k.startsWith('sc-masa-tab-')).map(k=>k+localStorage.getItem(k))]));
 log('A proto:', (await A.textContent('.ptxt')).match(/страница: Телефон \d/)[0], ' B proto:', (await B.textContent('.ptxt')).match(/страница: Телефон \d/)[0]);
 log('B groups:', await B.$$eval('.grp-h b', e=>e.map(x=>x.textContent)));
 // language per phone

@@ -52,7 +52,7 @@ K.mins = function(sec){ return Math.max(0, Math.round(sec/60)); };
 K.NORM = 20; K.DELIVERY = 35;
 K.BUSY_MIN = 20;
 K.custText = function(on){ return on ? "Възможни са закъснения · около " + (K.DELIVERY + K.BUSY_MIN) + " мин" : "около " + K.DELIVERY + " мин"; };
-K.busy = function(){ return load("busy", {on:false, at:null, by:null, log:[{on:"13:05", off:"13:50", by:"Общ изглед"}]}); };
+K.busy = function(){ return load("busy", {on:false, at:null, by:null, log:[{on:"13:05", off:"13:50", by:"Главен готвач (Общ изглед)"}]}); };
 K.setBusy = function(on){ var b = K.busy(), t = K.hm(K.now());
   if (on){ b.on = true; b.at = t; b.by = K.all ? "Главен готвач (Общ изглед)" : K.sec.n; }
   else { if (b.on && b.at) b.log.unshift({on:b.at, off:t, by:b.by}); b.on = false; b.at = null; b.by = null; }
@@ -69,8 +69,15 @@ K.outBadge = function(){ var a = document.querySelector('.ktabs a[href^="item-ou
   if (!n){ if (b) b.remove(); return; } if (!b){ b = document.createElement("span"); b.className = "n warn"; a.appendChild(b); } b.textContent = n; };
 K.sound = function(){ return load("sound", true); };
 /* браузърът пуска звук само след докосване: докато не е отключен, „Звук“ не се показва като включен */
-K.audioReady = false;
-K.unlock = function(){ try{ var A = window.AudioContext || window.webkitAudioContext; K._ac = K._ac || new A(); if (K._ac.resume) K._ac.resume(); K.audioReady = true; }catch(e){} };
+/* Отключва се от ПЪРВОТО докосване където и да е (и при вход с ПИН) и се пази за сесията (sessionStorage), за да не се губи при смяна на таб.
+   В продукта опашката е едно приложение и отключването просто остава. */
+function sget(k){ try{ return sessionStorage.getItem("sk-"+k); }catch(e){ return null; } }
+function sset(k, v){ try{ sessionStorage.setItem("sk-"+k, v); }catch(e){} }
+K.audioReady = sget("audio") === "1";
+K.unlock = function(){ try{ var A = window.AudioContext || window.webkitAudioContext; K._ac = K._ac || new A(); if (K._ac.resume) K._ac.resume(); }catch(e){}
+  var was = K.audioReady; K.audioReady = true; sset("audio", "1"); if (!was && K.onAudio) K.onAudio(); };
+document.addEventListener("pointerdown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
+document.addEventListener("keydown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
 
 /* ---------- mock orders (УСЛОВНИ). Line: [qty, itemId, {no:[], add:[], nt:"", w:"", st:"done"}] ---------- */
 function O(kind, num, at, due, lines, extra){ var o = {kind:kind, num:num, at:K.s(at), due:K.s(at) + K.NORM*60, lines:lines.map(function(l){ return {q:l[0], id:l[1], o:l[2]||{}}; })};
@@ -101,16 +108,32 @@ function many(sec){ var pool = SC.items.filter(function(x){ return sec.cats.inde
       {zone: i%2 ? "Градина" : "Салон"}));
   }
   return out; }
+/* поръчки за по-късен час (за утре / вземане в избран час): влизат в опашката в (часа − K.NORM), срокът е самият час */
+function L(kind, num, ordered, forHM, tomorrow, lines){ var o = O(kind, num, ordered, "", lines, {});
+  o.sched = true; o.tomorrow = !!tomorrow; o.forAt = K.s(forHM) + (tomorrow ? 86400 : 0); o.due = o.forAt; o.enter = o.forAt - K.NORM*60;
+  o.pickupAt = forHM; if (kind === "delivery") o.driver = forHM; return o; }
+var LATER = function(){ return [
+  L("pickup", 1047, "17:10", "20:03", false, [[1,"kebapcheta"],[1,"pitsa-margarita"],[1,"shopska-salata"],[1,"spageti-boloneze"]]),
+  L("delivery", 1051, "18:20", "20:40", false, [[2,"pleskavitsa"],[1,"pitsa-kaprichoza"],[1,"gratska-salata"],[1,"pileshka-supa"]]),
+  L("pickup", 1052, "19:05", "12:30", true, [[1,"pileshko-file"],[1,"pitsa-vegetariana"],[1,"vitaminozna-salata"],[1,"kartofeno-pyure"]])
+]; };
+K.allLater = function(){ return K.st === "empty" ? [] : LATER(); };
+K.later = function(){ var n = K.now(); return K.allLater().filter(function(o){ return o.enter > n; }); };
+K.entered = function(){ var n = K.now(); return K.allLater().filter(function(o){ return o.enter <= n; }); };
+K.key = function(o){ return o.sched ? o.enter : o.at; }; /* редът във FIFO */
+K.active = function(o, sid){ return K.mine(o, sid).some(function(l){ return l.o.st !== "done"; }); };
 K.orders = function(){
-  var list = K.st === "empty" ? [] : BASE();
+  var list = K.st === "empty" ? [] : BASE().concat(K.entered());
   if (K.st === "many") list = list.concat(many(K.sec));
   var b = K.busy();
-  list.forEach(function(o){ if (b.on && b.at && o.at >= K.s(b.at)) { o.due += K.BUSY_MIN*60; o.busy = true; } });
-  list.sort(function(a,b){ return a.at - b.at; });
+  list.forEach(function(o){ if (!o.sched && b.on && b.at && o.at >= K.s(b.at)) { o.due += K.BUSY_MIN*60; o.busy = true; } });
+  list.sort(function(a,b){ return K.key(a) - K.key(b); });
   return list; };
 /* a just-arrived order for the "new" state and for "Пусни нова поръчка" */
 K.newOrder = function(){ var n = K.now();
   var pick = {topla:["spageti-boloneze","rizoto-s-gorski-gabi-i-tryufel-pasta"], skara:["svinski-vrat","kebapcheta"], pesht:["pitsa-kuatro-formadzhi","pitsa-vegetariana"], studeni:["kapreze-s-burata-i-avokado","salata-sirakuza"]}[K.secId];
+  var pool = SC.items.filter(function(x){ return K.sec.cats.indexOf(x.cat) > -1 && !K.isOut(x.id); });
+  pick = pick.map(function(id, i){ return K.isOut(id) ? pool[i].id : id; }); /* изчерпаното не може да се поръча */
   var o = O("table", 20, K.hm(n), "", [[2, pick[0]], [1, pick[1], {no:["лук"]}], [1, K.secId === "skara" ? "parzheni-kartofi" : "kebapcheta"]], {zone:"Градина", isNew:true});
   var b = K.busy(); if (b.on){ o.due += K.BUSY_MIN*60; o.busy = true; }
   return o; };
@@ -127,7 +150,7 @@ K.stateOf = function(o){ var l = K.left(o); return l < 0 ? "late" : l <= K.SOON 
 K.src = function(o){
   if (o.kind === "table") return {ic:"fork-knife", k:(o.zone || "Салон"), t:"Маса " + o.num, who:"сервитьора"};
   if (o.kind === "delivery") return {ic:"moped", k:"Доставка", t:"№ " + o.num, who:"шофьора"};
-  return {ic:"storefront", k:"Вземане в " + (o.pickupAt || ""), t:"№ " + o.num, who:"клиента", pick:true};
+  return {ic:"storefront", k:"Вземане" + (o.sched ? "" : " в " + (o.pickupAt || "")), t:"№ " + o.num, who:"клиента", pick:true};
 };
 K.srcText = function(o){ return o.kind === "table" ? "Маса " + o.num : (o.kind === "delivery" ? "Доставка № " : "Вземане № ") + o.num; };
 
@@ -148,7 +171,8 @@ K.timerHTML = function(o){ var l = K.left(o), s = K.stateOf(o);
 K.ticket = function(o, idx){
   var src = K.src(o), mine = K.mine(o), oth = K.others(o), started = o.startedBy && o.startedBy[K.secId];
   var allDone = mine.every(function(l){ return l.o.st === "done"; });
-  var meta = '<span>пристигна <b>' + K.hm(o.at) + '</b></span><span>срок <b>' + K.hm(o.due) + '</b></span>';
+  var meta = o.sched ? '<span class="tag sched">' + ic("calendar-check",16) + 'за ' + K.hm(o.forAt) + '</span><span>приета <b>' + K.hm(o.at) + '</b></span>'
+    : '<span>пристигна <b>' + K.hm(o.at) + '</b></span><span>срок <b>' + K.hm(o.due) + '</b></span>';
   if (o.driver) meta += '<span>шофьор <b>' + o.driver + '</b></span>';
   if (o.isNew) meta = '<span class="tag new">' + ic("bell-ringing",16) + 'Нова</span>' + meta;
   if (started) meta += '<span class="tag cook">' + ic("flame",16) + 'готви се от ' + started + '</span>';
@@ -159,17 +183,21 @@ K.ticket = function(o, idx){
     '<div class="tk-b">' + (o.note ? '<div class="tk-note">' + ic("warning-circle",22) + '<span>' + esc(o.note) + '</span></div>' : '') +
     mine.map(function(l){ return K.lineHTML(l, o.lines.indexOf(l)); }).join("");
   if (oth.length) h += '<div class="tk-o"><h4>Други секции</h4>' + oth.map(function(l){ var sid = K.secOf(l.id), st = l.o.st === "done" ? "done" : K.secState(o, sid) === "cook" ? "cook" : "wait";
-      return '<div><span class="num">' + l.q + '&thinsp;×</span><span>' + esc(SC.byId[l.id].n) + '</span><span class="os ' + st + '">' + ic(K.ST_IC[st],15) + K.shortSec[sid] + ' · ' + K.ST_TXT[st] + '</span></div>'; }).join("") + '</div>';
+      return '<div><span class="num">' + l.q + '&thinsp;×</span><span>' + esc(SC.byId[l.id].n) + (K.isOut(l.id) ? ' <b class="oout">' + ic("x",14).replace('class="ic"','class="ic" style="display:inline;vertical-align:-1px"') + 'изчерпано</b>' : '') + '</span><span class="os ' + st + '">' + ic(K.ST_IC[st],15) + K.shortSec[sid] + ' · ' + K.ST_TXT[st] + '</span></div>'; }).join("") + '</div>';
   h += '</div><footer class="tk-f' + (started || allDone ? " one" : "") + '">' +
     (started || allDone ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame",22) + 'Започни</button>') +
     '<button class="kb ok hold" type="button" data-done aria-label="Готово, ' + esc(K.srcText(o)) + '. Задръжте 1 секунда"><span class="lbl"><span>' + ic("check-circle",24) + ' Готово</span><small>задръжте 1 сек.</small></span></button></footer></article>';
   return h; };
 
 /* ---------- press-and-hold 1 s (keyboard Enter/Space confirms at once; "Върни" covers mistakes) ---------- */
-K.hold = function(btn, fn){ var t = null;
+K.hold = function(btn, fn){ var t = null, x0 = 0, y0 = 0, hint = btn.querySelector(".lbl small"), orig = hint ? hint.textContent : "";
   function stop(){ clearTimeout(t); t = null; btn.classList.remove("holding"); }
-  btn.addEventListener("pointerdown", function(e){ if (e.button) return; btn.classList.add("holding"); t = setTimeout(function(){ stop(); fn(); }, 1000); });
-  ["pointerup","pointerleave","pointercancel"].forEach(function(ev){ btn.addEventListener(ev, stop); });
+  function moved(){ if (!t) return; stop(); if (!hint) return; hint.textContent = "Задръжте, без да местите пръста"; btn.classList.add("hint");
+    clearTimeout(btn._h); btn._h = setTimeout(function(){ hint.textContent = orig; btn.classList.remove("hint"); }, 2200); }
+  btn.addEventListener("pointerdown", function(e){ if (e.button) return; x0 = e.clientX; y0 = e.clientY; btn.classList.add("holding"); t = setTimeout(function(){ t = null; stop(); fn(); }, 1000); });
+  btn.addEventListener("pointermove", function(e){ if (t && Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 12) moved(); });
+  btn.addEventListener("pointerup", stop);
+  ["pointerleave","pointercancel"].forEach(function(ev){ btn.addEventListener(ev, moved); });
   btn.addEventListener("click", function(e){ if (e.detail === 0) fn(); });
   btn.addEventListener("contextmenu", function(e){ e.preventDefault(); }); };
 
@@ -178,11 +206,16 @@ K.toast = function(html, undo, secs){ secs = secs || 10; var layer = document.qu
   var el = document.createElement("div"); el.className = "kt"; el.setAttribute("role", "status");
   el.innerHTML = ic("check-circle",28) + '<span>' + html + '</span>' + (undo ? '<button type="button">' + ic("arrow-counter-clockwise",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-4px;margin-right:6px;color:inherit"') + 'Върни · <b class="num">' + secs + '</b></button>' : '') + '<i style="animation-duration:' + secs + 's"></i>';
   if (K._toast) K._toast.close(); /* най-много едно известие: новото заменя старото */
-  layer.appendChild(el); var left = secs, b = el.querySelector("button b");
-  var iv = setInterval(function(){ left--; if (b) b.textContent = left; if (left <= 0) close(); }, 1000);
+  layer.appendChild(el); K.placeToast(); var left = secs, b = el.querySelector("button b");
+  var iv = setInterval(function(){ left--; if (b) b.textContent = left; K.placeToast(); if (left <= 0) close(); }, 1000);
   function close(){ clearInterval(iv); if (el.parentNode) el.parentNode.removeChild(el); }
   if (undo) el.querySelector("button").addEventListener("click", function(){ close(); undo(); });
   K._toast = {close:close}; return K._toast; };
+
+/* известието заема мястото на броячите (те не са бутони); бутоните, „Нова поръчка“ и лентата „Няма връзка“ остават открити */
+K.placeToast = function(){ var layer = document.querySelector(".ktoasts"), w = document.querySelector(".kstripw"), kc = K.strip && K.strip.querySelector(".kcount");
+  if (!layer || !w || !kc) return; var r = kc.getBoundingClientRect(), wr = w.getBoundingClientRect();
+  layer.style.left = (r.left - wr.left) + "px"; layer.style.top = (r.top - wr.top + r.height/2) + "px"; layer.style.width = Math.max(r.width, 280) + "px"; };
 
 /* ---------- soft beep for new orders (only after a tap, browsers block sound before that) ---------- */
 K.beep = function(){ if (!K.sound() || !K.audioReady) return; try{ var A = window.AudioContext || window.webkitAudioContext; var c = K._ac || (K._ac = new A());
@@ -197,7 +230,7 @@ K.mount = function(opt){
   opt = opt || {}; document.title = (opt.title || "Кухня") + " | Кухня · Siracusa";
   if (K.all && (opt.page === "queue" || opt.page === "done")){ location.replace("summary.html#s=all" + (K.hash.t ? "&t=" + K.hash.t : "")); }
   var off = K.st === "offline", outN = K.outMine().length;
-  var qn = K.orders().filter(function(o){ return K.mine(o).length; }).length + (K.st === "new" ? 1 : 0);
+  var qn = K.orders().filter(function(o){ return K.active(o); }).length + (K.st === "new" ? 1 : 0);
   var d = document.createElement("div"); d.className = "kd" + (off ? " offline" : "");
   d.innerHTML =
     '<header class="kbar">' +
@@ -235,14 +268,14 @@ K.offlineHTML = function(page){
   '<button class="kb line" type="button" onclick="location.reload()">' + ic("arrow-clockwise",22) + 'Опитай пак</button></div>'; };
 
 /* ---------- done today (УСЛОВНО) ---------- */
-K.doneToday = function(){ var pool = SC.items.filter(function(x){ return K.sec.cats.indexOf(x.cat) > -1; }).concat(K.secId === "topla" ? SC.lunch : []); return [
+K.doneToday = function(){ /* условно: 6 от 8 навреме */ var pool = SC.items.filter(function(x){ return K.sec.cats.indexOf(x.cat) > -1; }).concat(K.secId === "topla" ? SC.lunch : []); return [
   ["19:40","table",11,"19:21","19:41",[[2,"kebapcheta"],[1,"svinski-vrat"]]],
   ["19:37","delivery",1040,"19:12","19:34",[[1,"pleskavitsa"],[1,"pileshko-file"]]],
-  ["19:31","table",6,"19:10","19:30",[[2,"svinski-kyufteta",{no:["лук"]}],[1,"ushtiptsi"]]],
-  ["19:22","pickup",1039,"19:00","19:25",[[1,"svinski-rebra"]]],
+  ["19:31","table",6,"19:12","19:30",[[2,"svinski-kyufteta",{no:["лук"]}],[1,"ushtiptsi"]]],
+  ["19:22","pickup",1039,"19:04","19:25",[[1,"svinski-rebra"]]],
   ["19:15","table",2,"18:58","19:18",[[1,"ribay-stek-ot-blek-angas",{w:"300 гр."}],[2,"pileshko-file"]]],
   ["19:04","table",14,"18:41","19:01",[[4,"kebapcheta"],[2,"teleshki-sudzhuk"]]],
-  ["18:52","delivery",1037,"18:30","18:52",[[1,"svinski-vrat"]]],
+  ["18:52","delivery",1037,"18:34","18:52",[[1,"svinski-vrat"]]],
   ["18:40","table",8,"18:20","18:40",[[1,"t-bon-stek-ot-blek-angas",{w:"500 гр."}]]]
 ].map(function(r, i){ return {doneAt:r[0], kind:r[1], num:r[2], at:K.s(r[3]), due:K.s(r[3]) + K.NORM*60, zone:i%2 ? "Градина" : "Салон",
   lines:r[5].map(function(l, j){ var id = l[1], o = l[2]||{};
