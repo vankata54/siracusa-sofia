@@ -44,7 +44,7 @@ function render(){
   h += '<section class="st-sec"><div class="acard"><div class="addr"><b>'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</b><span>'+esc(d.sub)+'</span>'+DR.exTag+'</div>'+
     '<div class="meta">'+DR.dueStt(d, eta)+(eta&&d.st!=="done"&&d.st!=="prob"?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+(d.zone && !DR.zone(d.zone).free ? DR.stt("picked","Платена зона","tag") : "")+'</div>'+
     '<div class="acts"><a class="pill pill-red pill-lg" href="'+DR.navUrl(d, app)+'" target="_blank" rel="noopener">'+ic("path",22)+'Навигация · '+DR.NAVAPP[app]+'</a></div></div></section>';
-  h += '<section class="st-sec"><p class="st-cap">Клиент</p><div class="client"><span class="nm"><b>'+esc(d.client)+'</b><span>'+esc(d.phone)+' · примерен</span></span><button class="pill pill-line" type="button" data-call>'+ic("phone",22)+'Обади се</button></div>'+
+  h += '<section class="st-sec"><p class="st-cap">Клиент</p><div class="client"><span class="nm"><b>'+esc(d.client)+'</b><span>'+esc(d.phone)+'</span><small class="small muted" style="display:block;font-weight:600">примерен номер</small></span><button class="pill pill-line" type="button" data-call>'+ic("phone",22)+'Обади се</button></div>'+
     '<p class="small muted" style="margin:8px 4px 0">Виждате само името и телефона от поръчката, докато трае доставката.</p></section>';
   if (d.note) h += '<section class="st-sec"><p class="st-cap">Бележка от клиента</p><div class="notebox">'+ic("note",22)+'<span>'+esc(d.note)+'</span></div></section>';
   h += '<section class="st-sec"><div class="st-h"><h2>В торбата</h2><span class="muted">'+SC.plural(d.items.reduce(function(s,x){ return s+x[1]; },0),"артикул","артикула")+'</span></div><div class="icard">'+

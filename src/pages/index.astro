@@ -171,16 +171,16 @@ const jsonld = restaurantLd(Astro.site);
 /* ---------- hero ---------- */
 .hero{display:grid; grid-template-columns:minmax(0,1fr); grid-template-areas:"stage" "acts"}
 .stage{grid-area:stage; position:relative; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
-  margin-top:calc(var(--pull,122px) * -1); min-height:calc(var(--pull,122px) + 300px); padding:calc(var(--pull,122px) + 24px) 20px 24px;
+  margin-top:calc(var(--pull,120px) * -1); min-height:calc(var(--pull,120px) + 300px); padding:calc(var(--pull,120px) + 24px) 20px 24px;
   border-radius:0 0 36px 36px; color:var(--on-chip-dark)}
 .film{position:absolute; inset:0; z-index:-1; overflow:hidden; background:var(--chip-dark); border-radius:inherit}
 .film .cam{position:absolute; inset:0; animation:hm-cam 16s var(--ease-std) infinite alternate; transform-origin:70% 35%}
-.film .glow{position:absolute; width:520px; height:520px; right:-170px; top:calc(var(--pull,122px) - 150px); border-radius:50%;
+.film .glow{position:absolute; width:520px; height:520px; right:-170px; top:calc(var(--pull,120px) - 150px); border-radius:50%;
   background:radial-gradient(closest-side, color-mix(in srgb, var(--ember) 62%, transparent), color-mix(in srgb, var(--ember) 18%, transparent) 55%, transparent);
   animation:hm-flicker 3.4s ease-in-out infinite alternate}
-.film .spin{position:absolute; width:370px; height:370px; right:-96px; top:calc(var(--pull,122px) - 74px); animation:hm-spin 60s linear infinite}
+.film .spin{position:absolute; width:370px; height:370px; right:-96px; top:calc(var(--pull,120px) - 74px); animation:hm-spin 60s linear infinite}
 .film .spin svg{width:100%; height:100%; display:block}
-.film .shade{position:absolute; width:340px; height:340px; right:-78px; top:calc(var(--pull,122px) - 40px); border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--chip-dark) 70%, transparent), transparent)}
+.film .shade{position:absolute; width:340px; height:340px; right:-78px; top:calc(var(--pull,120px) - 40px); border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--chip-dark) 70%, transparent), transparent)}
 .film .spark{position:absolute; left:var(--x); bottom:var(--b,40%); width:var(--s,5px); height:var(--s,5px); border-radius:50%; background:var(--ember); opacity:0;
   animation:hm-rise var(--d,4.6s) linear var(--w,0s) infinite}
 .film .veil{position:absolute; inset:0; background:linear-gradient(to top, var(--chip-dark) 18%, color-mix(in srgb, var(--chip-dark) 72%, transparent) 46%, transparent 74%)}
@@ -390,7 +390,7 @@ const jsonld = restaurantLd(Astro.site);
   .htxt .eyebrow{display:block}
   .htxt .h1{color:var(--ink); font-size:60px; letter-spacing:-.055em; max-width:13ch}
   .htxt p{color:var(--muted); font-size:20px; margin-top:18px}
-  .vctl{grid-area:film; align-self:end; justify-self:stretch; margin:0; padding:24px; justify-content:space-between}
+  .vctl{grid-area:film; align-self:end; justify-self:stretch; margin:0; padding:24px; justify-content:space-between; border-radius:0 0 40px 40px; overflow:hidden /* keeps the button blur inside the rounded clip */}
   .acts{padding:0; gap:12px; align-self:start}
   .promo-sec{padding-top:72px}
   .promo{display:grid; grid-template-columns:1fr auto; align-items:end; min-height:250px}

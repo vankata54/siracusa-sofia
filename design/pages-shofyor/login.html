@@ -44,7 +44,7 @@ function render(){ var h = '<div class="lg">';
   } else if (view==="km"){
     var c = DR.CARS.filter(function(x){ return x.id===car; })[0];
     h += stepper(2)+'<div><h1 class="h2">Начален километраж</h1><p class="lead" style="margin-top:6px">Препишете числото от таблото на '+c.n+'. По него се смятат изминатите километри и разходът.</p></div>'+
-      '<div class="field bigf"><label for="km">Километраж сега</label><div class="wrapi"><input class="input" id="km" inputmode="numeric" autocomplete="off" placeholder="0" value="'+esc(kmv)+'"'+(kmErr?' aria-invalid="true" aria-describedby="kerr"':' aria-describedby="khelp"')+'><span class="u">км</span></div>'+
+      '<div class="field bigf"><label for="kmnow">Километраж сега</label><div class="wrapi"><input class="input" id="kmnow" inputmode="numeric" autocomplete="off" placeholder="0" value="'+esc(kmv)+'"'+(kmErr?' aria-invalid="true" aria-describedby="kerr"':' aria-describedby="khelp"')+'><span class="u">км</span></div>'+
       (kmErr?'<span class="err" id="kerr">'+kmErr+'</span>':'<span class="help" id="khelp">Последно записан за тази кола: '+DR.db.kmStart.toLocaleString("bg-BG")+' км (условно за макета).</span>')+'</div>'+
       '<div class="park">'+ic("car",22)+'<span>Ползвайте приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>'+
       '<button class="pill pill-red pill-lg pill-block" type="button" data-start>'+ic("moped",22)+'Започни смяната</button>'+
@@ -55,14 +55,14 @@ function render(){ var h = '<div class="lg">';
 render();
 main.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p");
   if (!u.value.trim() || !p.value){ view = "err"; render(); return; } view = "car"; render(); window.scrollTo(0,0); });
-main.addEventListener("input", function(e){ if (e.target.id==="km") kmv = e.target.value; });
+main.addEventListener("input", function(e){ if (e.target.id==="kmnow") kmv = e.target.value; });
 main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
   if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"), sh = p.type==="password"; p.type = sh ? "text" : "password"; b.innerHTML = ic("eye",20)+(sh?"Скрий":"Покажи"); return; }
   if (b.dataset.car){ car = b.dataset.car; render(); return; }
   if (b.dataset.go){ view = b.dataset.go; render(); window.scrollTo(0,0); return; }
   if (b.hasAttribute("data-start")){ var v = parseInt(kmv.replace(/\s/g,""),10);
     kmErr = !v ? "Въведете километража от таблото." : v < DR.db.kmStart ? "По-малко е от последно записания ("+DR.db.kmStart.toLocaleString("bg-BG")+" км). Проверете пак." : "";
-    if (kmErr){ render(); main.querySelector("#km").focus(); return; }
+    if (kmErr){ render(); main.querySelector("#kmnow").focus(); return; }
     DR.db.car = car; DR.db.kmStart = v; DR.db.shiftStart = Date.now(); DR.db.parkSeen = false; DR.save(); location.href = "list.html"; }
 });
 </script>

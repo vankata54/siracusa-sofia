@@ -58,7 +58,7 @@
 .sum .kv{padding:10px 0; align-items:baseline}
 .sum .kv.tot{border-top:1.5px solid var(--line-strong); margin-top:4px; padding-top:14px}
 .sum .kv.tot .price{font-size:26px; letter-spacing:-.03em}
-.sum .how{display:flex; gap:10px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:15px}
+.sum .how{display:flex; gap:10px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:16px}
 .sum .how .ic{margin-top:2px; color:var(--muted)}
 .sum .send{display:none; margin-top:16px}
 .billcard{display:flex; align-items:center; gap:14px; padding:16px 18px; min-height:72px; text-decoration:none; color:inherit}
@@ -106,15 +106,15 @@ function draftHTML(){ var n = M.qty(S.draft);
   return '<section>'+head+'<div class="shell"><div class="core">'+groups.map(function(g){
     return '<div class="grp"><div class="grp-h">'+M.av(g[0])+'<b>'+esc(M.name(g[0]))+'</b><span class="price">'+fmt(M.sum(g[1]))+'</span></div>'+
       g[1].map(function(l){ var x = SC.byId[l.id];
-        return '<div class="cl" data-key="'+l.key+'">'+SC.pic(x)+'<span><span class="nm">'+esc(x.n)+'</span><span class="sub">'+fmt(x.p)+(x.g?' · '+esc(x.g):'')+'</span></span>'+
+        return '<div class="cl" data-key="'+l.key+'">'+SC.pic(x)+'<span><span class="nm">'+esc(x.n)+'</span><span class="sub">'+fmt(x.p)+(x.g?' · '+esc(x.g).replace(/ (?=гр|мл|бр)/g,"\u00a0"):'')+'</span></span>'+
           '<span class="counter" role="group" aria-label="'+L("Брой: ","Quantity: ")+esc(x.n)+'"><button type="button" data-q="-1" data-k="'+l.key+'" aria-label="'+(l.q>1?L("Намали","Decrease"):L("Махни","Remove"))+'">'+ic(l.q>1?"minus":"trash",20)+'</button><output>'+l.q+'</output><button type="button" data-q="1" data-k="'+l.key+'" aria-label="'+L("Увеличи","Increase")+'"'+(M.orderable(x)?'':' disabled')+'>'+ic("plus",20)+'</button></span></div>'; }).join("")+'</div>'; }).join("")+
     '</div></div><p class="note-auto" style="margin-top:10px">'+ic("users-three",18)+'<span>'+L("Всеки на масата може да промени количката. Промените се виждат веднага на всички телефони.","Anyone at the table can change the cart. Changes show at once on every phone.")+'</span></p></section>'; }
 
 function sentHTML(){ if (!S.rounds.length) return "";
   return '<section><div class="blk-h"><h2 class="h3">'+L("Поръчано","Ordered")+'</h2><span class="muted small">'+plural(M.sent().reduce(function(a,z){ return a+z.l.q; },0))+'</span></div>'+
-    '<div class="legend" aria-hidden="true">'+["ok","cook","served"].map(M.stp).join("")+'</div>'+
+    '<p class="legend">'+L("Етапи:","Stages:")+' '+["ok","cook","served"].map(M.stp).join('<span aria-hidden="true">→</span>')+'</p>'+
     '<div class="shell"><div class="core">'+S.rounds.slice().reverse().map(function(r){
-      return '<div class="rnd"><div class="rnd-h"><b>'+L("Поръчка ","Order ")+r.no+'</b><span>'+M.clock(r.at)+' · '+(r.conf ? (r.no===1 ? L("потвърдена от сервитьора","confirmed by the waiter") : L("направо в кухнята","straight to the kitchen")) : L("чака сервитьора","waiting for the waiter"))+'</span></div>'+
+      return '<div class="rnd"><div class="rnd-h"><b>'+L("Поръчка ","Order ")+r.no+'</b><span>'+M.clock(r.at)+' · '+(r.conf ? ((r.via || (r.via===undefined && r.no===1)) ? L("потвърдена от сервитьора","confirmed by the waiter") : L("направо в кухнята","straight to the kitchen")) : L("чака сервитьора","waiting for the waiter"))+'</span></div>'+
         r.lines.map(function(l, i){ var x = SC.byId[l.id];
           return '<div class="sl">'+SC.pic(x)+'<span><span class="nm">'+(l.q>1?l.q+' × ':'')+esc(x.n)+'</span>'+M.whoTag(l.who)+'</span>'+M.stp(M.status(r, i))+'</div>'; }).join("")+'</div>'; }).join("")+'</div></div></section>'; }
 
@@ -129,15 +129,15 @@ function sendBtn(cls){ var s = sendState();
 function sideHTML(){ var n = M.qty(S.draft), first = !S.rounds.length || M.waiting();
   return '<div class="side"><div class="shell"><div class="core sum"><h2 class="h3" style="margin:0 0 4px">'+L("За изпращане","To send")+'</h2>'+
     '<div class="kv"><span>'+plural(n)+'</span><span class="price">'+fmt(M.sum(S.draft))+'</span></div>'+
-    (S.rounds.length ? '<div class="kv"><span>'+L("Вече поръчано","Already ordered")+'</span><span class="price">'+fmt(M.sum([].concat.apply([], S.rounds.map(function(r){ return r.lines; }))))+'</span></div>' : '')+
-    '<div class="kv tot"><span><b>'+L("Сметка на масата","Table bill")+'</b></span><span class="price">'+fmt(M.sum(S.draft.concat([].concat.apply([], S.rounds.map(function(r){ return r.lines; })))))+'</span></div>'+
+    (S.rounds.length ? '<div class="kv"><span>'+L("Сметка на масата досега","Table bill so far")+'</span><span class="price">'+fmt(M.sum([].concat.apply([], S.rounds.map(function(r){ return r.lines; }))))+'</span></div>'+
+      '<div class="kv tot"><span><b>'+L("Общо с новите","Total with the new ones")+'</b></span><span class="price">'+fmt(M.sum(S.draft.concat([].concat.apply([], S.rounds.map(function(r){ return r.lines; })))))+'</span></div>' : '')+
     '<p class="how">'+ic(first?"hourglass":"cooking-pot",20)+'<span>'+(first ? L("Първата поръчка я потвърждава сервитьорът, после отива в кухнята.","The waiter confirms the first order, then it goes to the kitchen.") : L("Сервитьорът вече потвърди масата: тази поръчка отива направо в кухнята.","The waiter has already confirmed your table: this order goes straight to the kitchen."))+'</span></p>'+
     sendBtn("pill-lg pill-block send")+'</div></div>'+
     '<div class="shell"><a class="core billcard" href="bill.html"><span class="ci">'+ic("receipt",24)+'</span><span><b>'+L("Поискай сметката","Ask for the bill")+'</b><span class="d">'+L("В брой или с карта, заедно или поотделно","Cash or card, together or split")+'</span></span>'+ic("caret-right",20)+'</a></div></div>'; }
 
 function render(){ var y = SC.scroller.scrollTop;
   main.innerHTML = '<section class="mpage" aria-labelledby="ct-h"><div class="mh"><h1 class="h1" id="ct-h">'+L("Количка на масата","Table cart")+'</h1><p class="lead">'+L("Пълни се от всички телефони на масата.","Filled from every phone at the table.")+'</p></div>'+
-    '<div class="cg"><div class="mnotes">'+M.banners()+'</div>'+waitHTML()+draftHTML()+sideHTML()+sentHTML()+'</div>'+
+    '<div class="cg"><div class="mnotes">'+M.banners()+'</div>'+waitHTML()+sentHTML()+draftHTML()+sideHTML()+'</div>'+
     M.protoHTML('<button class="pill" type="button" data-pconf>'+ic("check",18)+'Сервитьорът потвърждава</button><button class="pill" type="button" data-pnext>'+ic("arrow-right",18)+'Следващ етап на ястията</button><button class="pill" type="button" data-psim>'+ic("users-three",18)+'Телефон 2 добавя</button>'+
       '<a class="pill" href="cart.html#demo=waiting">Чака потвърждение</a><a class="pill" href="cart.html#demo=cooking">Статуси</a><a class="pill" href="cart.html#demo=empty">Празна</a><a class="pill" href="cart.html#demo=offline">Без интернет</a>')+
     '</section><div class="mend"></div>';

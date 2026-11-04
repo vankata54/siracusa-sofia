@@ -3,7 +3,7 @@
 /* ---------- header: wordmark, table, (desktop) sections, language ---------- */
 .mtop{padding:0 6px 0 18px}
 .mtop .word{flex:none}
-.mtab{display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px 0 10px; margin-left:10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:800; font-size:15px; letter-spacing:-.01em; white-space:nowrap; text-decoration:none; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis}
+.mtab{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px 0 10px; margin-left:10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:800; font-size:15px; letter-spacing:-.01em; white-space:nowrap; text-decoration:none; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis}
 .mtab .ic{color:var(--red)}
 .mtop .sp{flex:1}
 .mdnav{display:none}
@@ -89,7 +89,7 @@
 .proto .ptag{display:flex; align-items:center; gap:8px; margin:0; font-size:15px; font-weight:800}
 .proto .ptxt{margin:-8px 0 0; font-size:14px; color:var(--muted)}
 .proto .pbtns{display:flex; flex-wrap:wrap; gap:8px}
-.proto .pbtns .pill{min-height:48px; padding:0 16px; font-size:15px; background:var(--surface)}
+.proto .pbtns .pill{min-height:48px; padding:8px 16px; font-size:15px; background:var(--surface); white-space:normal; text-align:left; line-height:1.25}
 .proto .pbtns .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 .proto .pset{display:grid; gap:10px; padding:14px; border-radius:var(--r-core); background:var(--surface)}
 .proto .pset .label{font-size:15px}
@@ -135,3 +135,13 @@
 .dsh-no{display:flex; gap:10px; align-items:center; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
 .dsh-no .ic{color:var(--warn)}
 @container app (min-width:900px){ .dsh-pic{aspect-ratio:4/3} }
+
+/* ---------- after review 1 ---------- */
+/* whole sentences a guest must read are 16px; 14px stays for meta only */
+.mpage .note-auto{font-size:16px}
+.mpage .note-auto .ic{margin-top:3px}
+.counter button[disabled]{opacity:.35; cursor:not-allowed}
+.legend{display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin:0 0 12px; font-size:14px; font-weight:700; color:var(--muted)}
+.legend .stp{background:transparent; box-shadow:none; padding:0; min-height:24px; color:var(--muted)}
+.legend .stp .ic{color:inherit}
+.nw{white-space:nowrap}

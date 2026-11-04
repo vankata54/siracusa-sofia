@@ -25,14 +25,14 @@ var ic = SC.ic, esc = SC.esc;
 function km1(k){ return k.toFixed(1).replace(".", ","); }
 var P0 = DR.POS.home;
 
-var L = {"Дружба 1":[0,-38], "Дружба 2":[34,44], "НПЗ Искър":[0,-38], "Бусманци":[0,46], "Горубляне":[-62,44], "Гара Искър":[0,-38]};
+var L = {"Дружба 1":[0,-38], "Дружба 2":[44,42], "НПЗ Искър":[0,-38], "Бусманци":[0,46], "Горубляне":[0,46], "Гара Искър":[0,-38]};
 function scheme(r){ var zones = ["Дружба 1","Дружба 2","НПЗ Искър","Бусманци","Горубляне","Гара Искър"];
   function pt(d){ var p = DR.POS[d.zone || "out"]; return [p[0]+(d.dx||0), p[1]+(d.dy||0)]; }
   var nx = DR.next(), pts = r.order.map(pt), path = "M"+P0.join(","), prev = P0;
   pts.forEach(function(p){ var mx = (prev[0]+p[0])/2 + (p[1]-prev[1])*0.12, my = (prev[1]+p[1])/2 - (p[0]-prev[0])*0.12; path += " Q"+mx.toFixed(1)+","+my.toFixed(1)+" "+p.join(","); prev = p; });
   var last = pts[pts.length-1];
   var svg = '<svg viewBox="0 0 360 272" role="img" aria-label="Схема на маршрута: ресторантът и '+SC.plural(r.order.length,"адрес","адреса")+' по ред. Не е карта; списъкът отдолу е същият.">'+
-    zones.map(function(z){ var p = DR.POS[z]; return '<ellipse class="sv-zone" cx="'+p[0]+'" cy="'+p[1]+'" rx="52" ry="30"/><text class="sv-zl" x="'+p[0]+'" y="'+(p[1]+(p[1]>150?46:-38))+'" text-anchor="middle">'+z+'</text>'; }).join("")+
+    zones.map(function(z){ var p = DR.POS[z]; return '<ellipse class="sv-zone" cx="'+p[0]+'" cy="'+p[1]+'" rx="52" ry="30"/><text class="sv-zl" x="'+(p[0]+L[z][0])+'" y="'+(p[1]+L[z][1])+'" text-anchor="middle">'+z+'</text>'; }).join("")+
     (r.order.some(function(d){ return !d.zone; }) ? '<text class="sv-zl" x="'+DR.POS.out[0]+'" y="'+(DR.POS.out[1]-26)+'">извън</text>' : '')+
     '<path class="sv-ret" d="M'+last.join(",")+' L'+P0.join(",")+'"/>'+
     '<path class="sv-path" d="'+path+'"/>'+

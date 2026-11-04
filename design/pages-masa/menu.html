@@ -102,8 +102,8 @@ function passes(x){ for (var i=0;i<st.f.length;i++){ var f = FILT.filter(functio
 function groups(){ return CATS.map(function(c){ var it = SC.inCat(c.id).filter(passes).sort(function(a,b){ return SC.isOut(a)-SC.isOut(b); }); return {c:c, it:it}; }).filter(function(g){ return g.it.length; }); }
 
 function tableCard(){ var by = {}; S.draft.forEach(function(l){ by[l.who] = (by[l.who]||0) + l.q; });
-  var parts = M.WHO.filter(function(w){ return by[w]; }).map(function(w){ return esc(M.name(w))+": "+by[w]; });
-  return '<a class="tbl" href="cart.html" data-tbl><span class="avs">'+M.av("me")+M.av("g2")+M.av("g3")+'</span><span><b>'+L("Обща количка на масата","Shared table cart")+'</b><span class="d">'+(parts.length ? parts.join(" · ") : L("Още е празна","Still empty"))+'</span></span>'+ic("caret-right",20)+'</a>'; }
+  var parts = M.order().filter(function(w){ return by[w]; }).map(function(w){ return '<span class="nw">'+esc(M.name(w))+": "+by[w]+'</span>'; });
+  return '<a class="tbl" href="cart.html" data-tbl><span class="avs">'+M.phones().map(function(w){ return M.av(w); }).join("")+'</span><span><b>'+L("Обща количка на масата","Shared table cart")+'</b><span class="d">'+(parts.length ? parts.join(" · ") : L("Още е празна","Still empty"))+'</span></span>'+ic("caret-right",20)+'</a>'; }
 
 main.innerHTML =
   '<section class="mpage mm" aria-labelledby="mm-h">'+
@@ -125,7 +125,7 @@ function chips(){ var aOn = st.a.length;
   $("[data-fchips]").innerHTML = '<button class="chip" type="button" data-al aria-pressed="'+(aOn>0)+'" aria-haspopup="dialog">'+ic("funnel",20)+L("Алергени","Allergens")+(aOn?' <span class="dot">'+aOn+'</span>':'')+'</button>'+
     FILT.map(function(f){ return '<button class="chip '+(FCLS[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+(st.f.indexOf(f.id)>-1)+'">'+ic(f.icon,20)+L(f.n, {veg:"Vegetarian",hot:"Spicy",noonion:"No onion",nogluten:"Gluten free",nomilk:"Dairy free"}[f.id])+'</button>'; }).join(""); }
 function render(keep){ var G = groups(), n = G.reduce(function(a,g){ return a+g.it.length; },0), any = st.f.length || st.a.length || st.q.trim();
-  $("[data-notes]").innerHTML = M.banners();
+  $("[data-notes]").innerHTML = M.banners() + (SC.state().lunch && M.kitchen() ? '<div class="mnote">'+ic("bowl-food",24)+'<div><b>'+L("Обедното меню","The lunch menu")+'</b><p>'+L("Дали се поръчва от масата до 15:00, още не е решено.","Whether it can be ordered from the table until 15:00 is not decided yet.")+' <span class="missing">[ЛИПСВА: обедно меню от масата, въпрос към собственика]</span></p></div></div>' : '');
   chips();
   $("[data-count]").innerHTML = any ? L("Показваме ","Showing ")+n+' <span>'+L("от ","of ")+plural(SC.items.length - SC.inCat("dobavki").length)+'</span>' : plural(SC.items.length - SC.inCat("dobavki").length)+' <span>· '+CATS.length+L(" категории"," categories")+'</span>';
   $("[data-clr]").hidden = !any;
@@ -144,7 +144,7 @@ function spy(){ var secs = elRes.querySelectorAll(".mcat"), id = null, top = sc.
 sc.addEventListener("scroll", function(){ requestAnimationFrame(spy); }, {passive:true});
 
 /* allergen sheet */
-function alSheet(){ var s = SC.sheet({title:L("Алергени","Allergens"), html:'<p class="muted" style="margin:0 0 6px">'+L("Отметнете какво не ядете. Скриваме ястията, които го съдържат по състава.","Tick what you don’t eat. We hide dishes that contain it.")+'</p><div class="flist">'+
+function alSheet(){ var s = M.sheet({title:L("Алергени","Allergens"), html:'<p class="muted" style="margin:0 0 6px">'+L("Отметнете какво не ядете. Скриваме ястията, които го съдържат по състава.","Tick what you don’t eat. We hide dishes that contain it.")+'</p><div class="flist">'+
     SC.ALLERGENS.map(function(a){ return '<label class="check"><input type="checkbox" data-alk="'+a[0]+'"'+(st.a.indexOf(a[0])>-1?" checked":"")+'><span class="fi">'+ic(a[2],22)+'</span><span class="ft"><b>'+a[1]+'</b><small>'+SC.items.filter(function(x){ return x.al.indexOf(a[0])>-1; }).length+L(" ястия по състава"," dishes by ingredients")+'</small></span></label>'; }).join("")+
     '</div><div class="sh-foot"><button class="pill pill-soft" type="button" data-shclr>'+L("Изчисти","Clear")+'</button><button class="pill pill-red" type="button" data-close>'+L("Покажи ","Show ")+'<span data-n></span></button></div>'});
   function upd(){ render(); s.el.querySelector("[data-n]").textContent = plural(groups().reduce(function(a,g){ return a+g.it.length; },0)); }
