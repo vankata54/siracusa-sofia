@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="_kitchen.css">
 <style>
 .dl{margin-top:14px; padding:4px 0}
-.dr{display:grid; grid-template-columns:96px minmax(180px,.8fr) minmax(0,1.6fr) auto auto; gap:18px; align-items:center; padding:16px 20px; border-top:1px solid var(--line)}
+.dr{display:grid; grid-template-columns:96px 200px minmax(0,1fr) 190px auto; gap:18px; align-items:center; padding:16px 20px; border-top:1px solid var(--line)}
 .dr:first-child{border-top:0}
 .dr .t{font-size:28px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
 .dr .t small{display:block; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0}
@@ -28,7 +28,7 @@
 .dr .kb{min-height:56px; font-size:17px}
 .sum{display:flex; flex-wrap:wrap; gap:6px 22px; font-size:18px; color:var(--muted); font-weight:700; margin-top:8px}
 .sum b{color:var(--ink); font-variant-numeric:tabular-nums}
-@container app (max-width:1100px){ .dr{grid-template-columns:84px minmax(150px,.7fr) minmax(0,1.4fr) auto; } .dr .kb{grid-column:3 / -1; justify-self:end} }
+@container app (max-width:1100px){ .dr{grid-template-columns:84px 170px minmax(0,1fr) 180px; } .dr .kb{grid-column:3 / -1; justify-self:end} }
 @container app (max-width:899px){ .dr{grid-template-columns:80px minmax(0,1fr) auto} .dr .it{grid-column:2 / -1} .dr .du{grid-row:1; grid-column:3} .dr .kb{grid-column:1 / -1; justify-self:stretch} }
 </style>
 </head>
