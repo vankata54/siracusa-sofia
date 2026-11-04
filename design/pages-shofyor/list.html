@@ -44,7 +44,7 @@ function render(){
   var cashLeft = act.filter(function(d){ return d.pay==="cash"; }).reduce(function(s,d){ return s+DR.total(d); },0);
   var h = '';
   var noFee = act.some(function(d){ return d.pay==="cash" && !DR.feeKnown(d); });
-  h += '<section class="st-sec" style="padding-top:12px"><div class="dsum one"><a href="#sled"><b>'+act.length+'</b><span>за доставяне</span></a><div><b>'+SC.fmt(cashLeft)+'</b><span>в брой'+(noFee?' без такси':'')+'</span></div><a href="#dneshni"><b>'+done.length+'</b><span>доставени</span></a></div></section>';
+  h += '<section class="st-sec" style="padding-top:12px"><div class="dsum one"><a href="#sled"><b>'+act.length+'</b><span>'+(act.length===1?'адрес':'адреса')+'</span></a><div><b>'+SC.fmt(cashLeft)+'</b><span>в брой</span></div><a href="#dneshni"><b>'+done.length+'</b><span>доставени</span></a></div>'+(noFee?'<p class="small muted" style="margin:6px 18px 0">Сумата в брой е без таксите за платените зони.</p>':'')+'</section>';
   if (!act.length){
     h += '<section class="st-sec"><div class="st-empty"><div class="ill">'+ic("check-circle",48)+'</div><h2>Няма доставки за вас</h2><p>Когато кухнята приготви поръчка за вас, телефонът ще вибрира и тя ще се появи тук.</p>'+
       '<a class="pill pill-line pill-lg" href="shift.html" style="margin-top:8px">'+ic("wallet",22)+'Виж смяната и парите</a></div></section>';

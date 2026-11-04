@@ -306,7 +306,8 @@ a.chip{text-decoration:none; color:var(--ink)}
 .big16 .stt, .next .stt, .acard .stt{font-size:16px; min-height:36px}
 .dsum.one{display:flex; justify-content:space-between; align-items:center; gap:8px; min-height:56px; padding:6px 18px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .dsum.one > *{display:flex; align-items:baseline; gap:6px; min-height:0; padding:0; background:none; box-shadow:none; border-radius:0}
-.dsum.one b{font-size:22px} .dsum.one span{font-size:14px}
+.dsum.one b{font-size:20px; white-space:nowrap} .dsum.one span{font-size:14px; white-space:nowrap}
+.dsum.one{padding:6px 16px}
 .st-bar .pill-line{flex:0 0 auto; background:var(--surface)}
 .st-bar .pill-ink{flex:0 0 auto}
 .arr{display:flex; align-items:center; gap:8px; margin-top:10px; font-weight:700; color:var(--ok)}
