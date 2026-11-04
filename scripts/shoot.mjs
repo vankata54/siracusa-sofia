@@ -3,6 +3,7 @@
 //   node scripts/shoot.mjs /menu/ shots/menu [--time=21:30] [--click="sel|sel"] [--scroll=800] [--base=http://localhost:8787] [--dist] [--only=390,1440]
 //   Server mode (default): npm run build && npm run serve, then shoot http://localhost:8787<route>.
 //   --dist: serve dist/ with a tiny built-in static server (no API); good for the demo build (npm run build:demo).
+// Order: --scroll first, then --click (several with "|").
 // Makes: 360 light, 390 light, 390 dark, 1440 light, full-page 390; prints console errors and horizontal overflow.
 // The clock (--time, default 12:30) works through ?preview=1&t=HH:MM (preview mode, see src/client/sc.ts).
 import { createRequire } from "node:module";
@@ -47,10 +48,11 @@ for (const [tag, w, h, theme] of runs) {
   p.on("pageerror", (e) => errors.push(tag + ": " + e.message));
   p.on("console", (m) => { if (m.type() === "error") errors.push(tag + ": " + m.text()); });
   await p.addInitScript(([theme]) => { localStorage.setItem("sc-prefs", JSON.stringify({ theme })); localStorage.setItem("sc-cookie", '"min"'); }, [theme]);
-  await p.goto(url, { waitUntil: "networkidle" });
+  await p.goto(url, { waitUntil: "load" });
   await p.waitForTimeout(900);
-  if (opt.click) for (const sel of opt.click.split("|")) { await p.click(sel).catch(() => errors.push("click failed: " + sel)); await p.waitForTimeout(500); }
+  /* scroll first (the assistant only shows after scrolling), then the clicks */
   if (opt.scroll) { await p.evaluate((y) => window.scrollTo(0, +y), opt.scroll); await p.waitForTimeout(800); }
+  if (opt.click) for (const sel of opt.click.split("|")) { await p.click(sel, { timeout: 5000 }).catch(() => errors.push(tag + ": click failed: " + sel)); await p.waitForTimeout(900); }
   const over = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (over > 0) errors.push(`${tag}: horizontal overflow ${over}px`);
   await p.screenshot({ path: `${out}/${name}-${tag}.png` });
