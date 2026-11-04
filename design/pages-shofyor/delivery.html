@@ -82,7 +82,7 @@ function renderBar(){ var money = d.pay==="cash" ? "взех "+DR.money(d) : d.p
   else if (d.st === "wait") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="picked">'+ic("shopping-bag",22)+'Взех от ресторанта</button>';
   else if (d.st === "picked") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="road">'+ic("car",22)+'Тръгвам · На път</button>';
   else if (d.st === "road") bar.innerHTML = (d.arrivedAt ? '' : '<button class="pill pill-line" type="button" data-arr>'+ic("map-pin",22)+'Пристигнах</button>')+'<button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">'+ic("check-circle",22)+'Доставена'+(d.arrivedAt?' · '+money:'')+'</button>';
-  else if (d.st === "prob" && !d.prob.returned) bar.innerHTML = '<button class="pill pill-line" type="button" data-ret>Върнах в ресторанта</button><button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">Доставих все пак</button>';
+  else if (d.st === "prob" && !d.prob.returned) bar.innerHTML = '<button class="pill pill-line" type="button" data-ret aria-label="Върнах поръчката в ресторанта">'+ic("storefront",22)+'Върнах я</button><button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">'+ic("check-circle",22)+'Доставих все пак</button>';
   else bar.innerHTML = nextLink;
 }
 function callSheet(){ var s = DR.sheet({title:"Обаждане до клиента", html:

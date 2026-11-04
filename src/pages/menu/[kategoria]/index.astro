@@ -1,0 +1,413 @@
+---
+/* Category (/menu/<кат>/): port of design/pages/category.html (design/PAGES.md "category.html" + the common filter logic).
+   One static page per category (SEO). The server draws everything that does not depend on the hour or the visitor:
+   crumbs, H1, facts, the intro with [ЛИПСВА: SEO текст], filter chips, every dish of the category, "Други категории",
+   the FAQ and JSON-LD (Menu > MenuSection > MenuItem, BreadcrumbList, FAQPage). The browser adds the hour (delivery line,
+   notices, breakfast cards), filters / allergens / sort / search kept in the address (#f=veg.hot&a=gluten&q=...&sort=asc),
+   the turning plate, the order bar and the live menu ("Изчерпано днес", prices). */
+import type { GetStaticPaths } from "astro";
+import Base from "../../../layouts/Base.astro";
+import { ic, url } from "../../../lib/index.ts";
+import { CATS, catById, heroHTML, chipsHTML, resultsHTML, othersHTML, faqHTML, metaDescription, catLd, type CatState } from "./_cat.ts";
+
+export const getStaticPaths = (() => CATS.map((c) => ({ params: { kategoria: c.id }, props: { id: c.id } }))) satisfies GetStaticPaths;
+
+const c = catById[Astro.props.id];
+const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
+---
+<Base page="category" nav="menu" title={c.n} docTitle={c.n + " в Дружба 2 с доставка"} description={metaDescription(c)} jsonld={catLd(c, Astro.site)}>
+  <div class="catpg" data-catpg data-cat={c.id}>
+    <div data-body>
+      <Fragment set:html={heroHTML(c)} />
+      <div class="notices" role="status" data-notices></div>
+      <section class="flt" aria-label="Ястия">
+        <div class="chips" role="group" aria-label="Филтри" data-chips set:html={chipsHTML(c, st0)}></div>
+        <div data-results set:html={resultsHTML(c, st0, null)}></div>
+      </section>
+      <Fragment set:html={othersHTML(c)} />
+      <Fragment set:html={faqHTML(c)} />
+    </div>
+    <div data-alt hidden></div>
+  </div>
+  <div class="abar cbar" slot="ov" aria-hidden="true" inert><span class="cn" data-cn></span><a class="pill pill-red" href={url.cart()} data-cgo>Поръчай<span class="knob" set:html={ic("arrow-right", 20)}></span></a></div>
+</Base>
+
+<style is:global>
+/* category page only; tokens from tokens.css */
+
+/* ---------- hero: text on the left, a big plate of the category's signature dish peeking in from the right ---------- */
+.ch{position:relative; padding:20px 16px 0; overflow:hidden; overflow:clip; display:grid; grid-template-areas:"text" "intro"; row-gap:18px}
+.ch-text{grid-area:text; position:relative; z-index:1; display:grid; gap:10px; align-content:start; min-height:236px}
+.ch-text > :not(.crumbs){margin-right:124px}
+.ch-intro{grid-area:intro; position:relative; z-index:1}
+.ch-plate{position:absolute; top:58px; right:-92px; width:248px; height:248px; pointer-events:none}
+.ch-plate .sh{position:absolute; inset:4%; border-radius:50%; background:radial-gradient(closest-side, var(--plate-1) 70%, var(--plate-2)); box-shadow:var(--shadow-lg)}
+.ch-plate.square .sh{display:none}
+.ch-spin{position:absolute; inset:0; animation:plateIn 1100ms var(--ease) both}
+.ch-spin svg{width:100%; height:100%; display:block; will-change:transform}
+@keyframes plateIn{from{transform:rotate(-70deg) scale(.82); opacity:0} to{transform:none; opacity:1}}
+
+.crumbs ol{list-style:none; margin:0 0 -6px; padding:0; display:flex; flex-wrap:wrap; align-items:center; font-size:15px; font-weight:700; color:var(--muted)}
+.crumbs li{display:flex; align-items:center}
+.crumbs li + li::before{content:"›"; margin:0 8px; color:var(--muted); font-weight:600}
+.crumbs a{min-height:48px; display:inline-flex; align-items:center; gap:6px; color:var(--red); text-decoration:none}
+.crumbs [aria-current]{color:var(--ink)}
+
+.facts{list-style:none; margin:4px 0 0; padding:0; display:grid; gap:8px}
+.facts li{display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; line-height:1.3}
+.facts li[hidden]{display:none}
+.facts .fi{width:32px; height:32px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.facts .warn .fi{color:var(--warn)}
+.facts .ok .fi{color:var(--ok)}
+.facts .g-fact{display:none}
+.facts .sub{display:block; font-size:14px; font-weight:600; color:var(--warn)}
+
+.intro-p{margin:0; font-size:17px; line-height:1.55; color:var(--muted); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden}
+.intro-p b{color:var(--ink); font-weight:700}
+.ch-intro.open .intro-p{display:block; -webkit-line-clamp:unset; overflow:visible}
+.intro-more{margin-top:2px}
+.intro-more .ic{transition:transform var(--t-base) var(--ease)}
+.ch-intro.open .intro-more .ic{transform:rotate(180deg)}
+.seo-gap{display:block; margin-top:12px; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); font-size:16px; line-height:1.5}
+.seo-gap .missing{display:block}
+.seo-gap small{display:block; margin-top:6px; font-size:14px; color:var(--muted); font-style:normal}
+
+/* ---------- notices (closed, offline, breakfast over) ---------- */
+.notices{display:grid; gap:10px; padding:20px 16px 0}
+.notices:empty{display:none}
+.notice{display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.notice .ni{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--warn)}
+.notice b{display:block; font-size:17px; line-height:1.3}
+.notice p{margin:2px 0 0; color:var(--muted)}
+.notice .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.notice .pill{min-height:48px}
+
+/* ---------- filters + results ---------- */
+.flt{padding:26px 16px 0}
+.flt .chips{padding-top:4px; padding-bottom:4px}
+.flt .chip{min-height:48px}
+.chip .ic{color:inherit; flex:none}
+.chip.leaf:not([aria-pressed="true"]) .ic{color:var(--ok)}
+.chip.pep:not([aria-pressed="true"]) .ic{color:var(--red)}
+.chip.ghost{background:transparent}
+.resbar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin:22px 0 4px}
+.resbar h2{font-size:22px; letter-spacing:-.025em; line-height:1.15; margin:0; font-variant-numeric:tabular-nums}
+.resbar h2 small{display:block; font-size:15px; letter-spacing:0; font-weight:600; color:var(--muted)}
+.sortbtn{min-height:48px; padding:0 14px 0 16px; font-size:15px; gap:6px}
+.res-note{margin:0 0 18px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px}
+.res-note .note-auto{align-items:center}
+.res-note .link{min-height:48px; font-size:15px}
+
+/* dish card additions (same card as /menu/): composition, "no allergen data", breakfast later, sold out */
+.dcard .cp{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin-top:-4px; font-size:15px; line-height:1.4; color:var(--muted); font-weight:500}
+.dcard .rowp .price{font-size:19px}
+.grid-dishes .dcard{grid-template-rows:1fr auto}
+.grid-dishes .dcard .open{align-content:start}
+.dcard .nodata{display:flex; gap:6px; align-items:flex-start; font-size:14px; font-weight:600; line-height:1.3; color:var(--muted)}
+.dcard .nodata .ic{margin-top:1px; color:var(--warn)}
+.dcard.is-out .nm,.dcard.is-out .price{color:var(--muted)}
+.dcard .later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
+.flt .grid-dishes .dcard{animation:cardIn 360ms var(--ease) both}
+@keyframes cardIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+
+/* ---------- other categories: pill links with a small plate ---------- */
+.cats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0; padding:0; list-style:none}
+.cat{display:flex; align-items:center; gap:10px; min-height:60px; padding:6px 14px 6px 6px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line), var(--shadow); text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.cat:active{transform:scale(.97)}
+.cat .pic{width:48px; height:48px; border-radius:50%; flex:none}
+.cat .pic > svg{inset:4%; width:92%; height:92%; filter:none}
+.cat b{display:block; font-size:15px; line-height:1.2; letter-spacing:-.01em}
+.cat small{display:block; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.allmenu{margin-top:14px}
+
+/* ---------- FAQ ---------- */
+.faq{display:grid; gap:0}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:12px 18px; cursor:pointer; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .tg{width:36px; height:36px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-base) var(--ease)}
+.faq details[open] summary .tg{transform:rotate(45deg)}
+.faq .a{padding:0 18px 18px; color:var(--muted); line-height:1.55}
+.faq .a p{margin:0 0 8px} .faq .a p:last-child{margin:0}
+.faq .a .link{min-height:48px}
+.faq .vlink{color:var(--ink); font-weight:700}
+.faq-note{margin:14px 4px 0; font-size:14px}
+.faqbox{margin-top:18px}
+
+/* ---------- preview-only states panel ---------- */
+.proto{margin-top:56px; padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:10px}
+.proto h2{margin:0; font-size:16px; letter-spacing:0}
+.proto p{margin:0; font-size:14px}
+.proto .chips{flex-wrap:wrap; margin:0; padding:0; overflow:visible}
+.proto .chip{text-decoration:none; font-size:15px; min-height:48px}
+
+/* ---------- states ---------- */
+.state{margin:24px 16px 0}
+.state .core{padding:28px 20px}
+.state .empty{padding:8px 0}
+.state .empty .ill{color:var(--ink)}
+.state .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:4px}
+.skel-hero{padding:24px 16px 0; display:grid; gap:12px}
+.empty-f{grid-column:1/-1}
+.empty-f .ill{color:var(--muted)}
+.empty-f p{margin:0; max-width:34ch}
+
+/* ---------- order bar (same as /menu/) ---------- */
+.cbar{transform:translateY(140%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); padding:6px 6px 6px 18px}
+.cbar.on{transform:none; opacity:1; pointer-events:auto}
+.cbar .cn{flex:none; font-size:15px; font-weight:700; line-height:1.2; color:var(--muted); font-variant-numeric:tabular-nums}
+.cbar .cn b{display:block; color:var(--ink); font-size:16px}
+.cbar .pill{justify-content:space-between; padding:0 8px 0 20px}
+.cbar .knob{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb, var(--on-red) 20%, transparent)}
+
+.hit-tag{display:none; position:absolute; left:-12px; bottom:38px; z-index:2; align-items:center; gap:10px; min-height:56px; padding:6px 18px 6px 6px; border-radius:var(--r-pill); background:var(--glass); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); text-decoration:none; color:var(--ink); pointer-events:auto; max-width:340px}
+.hit-tag .bd{width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--chip-dark); color:var(--ember)}
+.hit-tag b{display:block; font-size:15px; line-height:1.25}
+.hit-tag small{display:block; font-size:14px; color:var(--muted); font-weight:700}
+
+/* ---------- tablet & desktop ---------- */
+@container app (min-width:700px){
+  .cats{grid-template-columns:repeat(3,1fr)}
+}
+@container app (min-width:900px){
+  .ch{--gut:max(40px, calc((100% - 1200px)/2)); padding:40px calc(var(--gut) + 496px) 0 var(--gut); min-height:500px; grid-template-areas:"text" "intro"; row-gap:22px; align-content:start; overflow:visible}
+  .ch-text{min-height:0; gap:14px}
+  .ch-text > :not(.crumbs){margin-right:0}
+  .ch-plate{top:32px; right:var(--gut); width:440px; height:440px}
+  .crumbs ol{font-size:16px}
+  .facts{grid-template-columns:repeat(2, max-content); column-gap:28px; row-gap:12px; margin-top:8px}
+  .facts .g-fact{display:flex}
+  .intro-p{font-size:18px; -webkit-line-clamp:3; max-width:62ch}
+  .seo-gap{max-width:62ch}
+  .notices,.flt{padding-left:max(40px, calc((100% - 1200px)/2)); padding-right:max(40px, calc((100% - 1200px)/2))}
+  .notices{padding-top:28px; grid-template-columns:repeat(auto-fit, minmax(360px,1fr))}
+  .flt{padding-top:36px}
+  .flt .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .resbar{margin-top:28px}
+  .resbar h2{font-size:26px}
+  .state{margin:40px max(40px, calc((100% - 1200px)/2)) 0}
+  .skel-hero{padding:48px max(40px, calc((100% - 1200px)/2)) 0}
+  .faqwrap{display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:56px; align-items:start}
+  .faqbox{margin-top:0}
+  .allmenu{width:auto; margin-top:20px}
+  .hit-tag{display:flex}
+}
+@container app (min-width:1100px){
+  .cats{grid-template-columns:repeat(4,1fr)}
+}
+@media (prefers-reduced-motion: reduce){ .ch-spin{animation:none} .flt .grid-dishes .dcard{animation:none} }
+</style>
+
+<script>
+  import { SC } from "../../../client/sc-menu.ts";
+  import type { Dish } from "../../../lib/data.ts";
+  import { plural } from "../_menu.ts";
+  import {
+    parseHash, hashOf, anyFilter, apply, chipsHTML, resultsHTML, noticesHTML, timeFact, timeFactCls, crumbsHTML, count, laterText,
+    type CatState, type Sort,
+  } from "./_cat.ts";
+  /* icons this script draws itself (the server ones are already in the HTML; the rest come from _cat.ts / _menu.ts) */
+  import "../../../lib/icons/arrow-right.ts";
+  import "../../../lib/icons/eye.ts";
+  import "../../../lib/icons/shrimp.ts";
+  import "../../../lib/icons/egg.ts";
+  import "../../../lib/icons/fish.ts";
+  import "../../../lib/icons/circles-three.ts";
+  import "../../../lib/icons/acorn.ts";
+  import "../../../lib/icons/carrot.ts";
+  import "../../../lib/icons/jar.ts";
+  import "../../../lib/icons/dots-nine.ts";
+  import "../../../lib/icons/wine.ts";
+  import "../../../lib/icons/flower.ts";
+  import "../../../lib/icons/fish-simple.ts";
+  import "../../../lib/icons/grains.ts";
+  import "../../../lib/icons/drop.ts";
+  import "../../../lib/icons/plant.ts";
+
+  type View = "ok" | "loading" | "error" | "offline";
+  const main = SC.mount();
+  const root = main.querySelector<HTMLElement>("[data-catpg]")!;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const cat = SC.catById[root.dataset.cat!];
+  const items = (): Dish[] => SC.inCat(cat.id);
+  const elBody = $("[data-body]"), elAlt = $("[data-alt]"), elChips = $("[data-chips]"), elRes = $("[data-results]"), elNot = $("[data-notices]"), elTf = $("[data-tfact]");
+  const ic = SC.ic;
+
+  let S = SC.state();
+  let st: CatState = parseHash(location.hash);
+  let view: View = navigator.onLine === false ? "offline" : "ok";
+
+  function writeHash() {
+    try { history.replaceState(history.state, "", hashOf(st) || location.pathname + location.search); } catch { /* ignore */ }
+  }
+
+  /* ---------- the hour: facts line, notices, breakfast cards ---------- */
+  function timeParts() {
+    const e = SC.eta();
+    elTf.className = timeFactCls(cat, S, e);
+    elTf.innerHTML = timeFact(cat, S, e);
+    elTf.hidden = false;
+    elNot.innerHTML = noticesHTML(cat, S, view === "offline");
+  }
+  function refresh() {
+    writeHash();
+    elChips.innerHTML = chipsHTML(cat, st);
+    elRes.innerHTML = resultsHTML(cat, st, S);
+  }
+
+  /* ---------- loading / error (reached only from the preview panel; the real page is static) ---------- */
+  function loadingHTML(): string {
+    let cards = "";
+    for (let i = 0; i < 6; i++) cards += '<div class="dcard" aria-hidden="true"><div class="skel" style="aspect-ratio:1;border-radius:24px"></div><div class="skel" style="height:18px;width:80%"></div><div class="skel" style="height:14px;width:60%"></div><div class="skel" style="height:22px;width:40%"></div></div>';
+    return '<div class="skel-hero" aria-busy="true" aria-label="Зареждаме менюто"><div class="skel" style="height:16px;width:140px"></div><div class="skel" style="height:40px;width:62%"></div><div class="skel" style="height:16px;width:100%"></div><div class="skel" style="height:16px;width:88%"></div><div class="skel" style="height:16px;width:70%"></div></div>' +
+      '<div class="flt"><div class="row" style="gap:8px;margin-bottom:24px"><div class="skel" style="height:44px;width:120px;border-radius:999px"></div><div class="skel" style="height:44px;width:150px;border-radius:999px"></div><div class="skel" style="height:44px;width:90px;border-radius:999px"></div></div><div class="grid-dishes">' + cards + "</div></div>";
+  }
+  function errorHTML(): string {
+    return '<div style="padding:20px 16px 0">' + crumbsHTML(cat) + "</div>" +
+      '<div class="state" role="alert"><div class="shell"><div class="core"><div class="empty"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2">Ястията не се заредиха</h2><p class="muted" style="margin:0;max-width:36ch">Нещо прекъсна връзката с менюто. Проверете интернета и опитайте пак или ни се обадете, ще приемем поръчката по телефона.</p>' +
+      '<div class="acts"><button class="pill pill-red pill-lg" type="button" data-retry>Опитай пак</button><a class="pill pill-line pill-lg" href="tel:' + SC.RESTAURANT.phoneIntl + '">' + ic("phone", 20) + SC.RESTAURANT.phone + "</a></div></div></div></div></div>";
+  }
+  function setView(v: View) {
+    view = v;
+    const alt = v === "loading" || v === "error";
+    elBody.hidden = alt; elAlt.hidden = !alt;
+    elAlt.innerHTML = v === "loading" ? loadingHTML() : v === "error" ? errorHTML() : "";
+    root.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+    if (!alt) { timeParts(); plate = root.querySelector<SVGElement>(".ch-spin svg"); spin(); }
+    if (v === "loading") setTimeout(() => { if (view === "loading") setView(navigator.onLine === false ? "offline" : "ok"); }, 2600);
+    cartBar();
+  }
+
+  /* ---------- sheets ---------- */
+  function scrollToResults() {
+    const r = $(".flt"), top = window.scrollY + r.getBoundingClientRect().top - 150;
+    if (window.scrollY > top) window.scrollTo({ top, behavior: SC.reduce ? "auto" : "smooth" });
+  }
+  const many = (n?: number) => (n == null ? count(cat.id, 2).replace(/^2 /, "") : count(cat.id, n));
+  function allergenSheet() {
+    let pick = st.a.slice();
+    const html = '<p style="margin:0 0 6px">Отметнете какво не ядете. Ще скрием ' + many() + ", които го съдържат. Числото до алергена казва в колко ги има.</p>" +
+      '<p class="note-auto" style="margin:0 0 14px">' + ic("info", 18) + "<span>Предварително, от състава. Кухнята ги потвърждава. При силна алергия ни се обадете.</span></p>" +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + SC.ALLERGENS.map((a) => {
+        const n = items().filter((x) => x.al.indexOf(a[0]) > -1).length;
+        return '<button class="chip" type="button" data-al="' + a[0] + '" aria-pressed="' + (pick.indexOf(a[0]) > -1) + '" style="justify-content:flex-start;min-height:52px;padding:0 14px">' + ic(a[2], 18) + '<span style="flex:1;text-align:left">' + a[1] + "</span>" + (n ? '<span class="n">' + n + "</span>" : "") + "</button>";
+      }).join("") + "</div>" +
+      '<div style="height:14px"></div>' +
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;position:sticky;bottom:0;padding-top:6px;background:var(--surface)"><button class="pill pill-line" type="button" data-alclear>Изчисти</button><button class="pill pill-red" type="button" data-alok></button></div>';
+    const sh = SC.sheet({ title: "Без алергени", html }), el = sh.el;
+    const ok = el.querySelector<HTMLButtonElement>("[data-alok]")!;
+    const upd = () => { const n = apply(items(), st.f, pick, st.q).length; ok.textContent = n ? "Покажи " + many(n) : "Няма такива, махнете някой"; ok.disabled = !n; };
+    el.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLElement>("button");
+      if (!b) return;
+      if (b.dataset.al) { const k = b.dataset.al, on = pick.indexOf(k) > -1; pick = on ? pick.filter((z) => z !== k) : pick.concat(k); b.setAttribute("aria-pressed", String(!on)); upd(); }
+      else if (b.hasAttribute("data-alclear")) { pick = []; el.querySelectorAll("[data-al]").forEach((z) => z.setAttribute("aria-pressed", "false")); upd(); }
+      else if (b.hasAttribute("data-alok")) { st.a = pick.slice(); refresh(); sh.close(); scrollToResults(); }
+    });
+    upd();
+  }
+  function moreFilters() {
+    const total = items().length;
+    const rows = SC.FILTERS.map((F) => {
+      const n = items().filter(F.test).length;
+      if (F.needs) return [F, "Скоро. Ще се появи, когато кухнята въведе " + F.needs + "."] as const;
+      if (!n) return [F, "Няма " + many() + " с това в категорията."] as const;
+      if (n === total) return [F, "Всички " + many() + " тук са такива."] as const;
+      return null;
+    }).filter(Boolean) as (readonly [typeof SC.FILTERS[number], string])[];
+    SC.sheet({ title: "Още филтри", html: '<p class="muted" style="margin:0 0 8px">Тези филтри не стесняват избора в „' + SC.esc(cat.n) + "“ в момента.</p>" +
+      rows.map((r) => '<div class="kv" style="justify-content:flex-start;align-items:center;gap:14px;min-height:64px"><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--muted);flex:none">' + ic(r[0].icon, 20) + '</span><span><b style="display:block">' + r[0].n + '</b><span class="muted small">' + r[1] + "</span></span></div>").join("") +
+      '<a class="pill pill-line pill-block" href="' + SC.url.page("allergens") + '" style="margin-top:14px">' + ic("list-checks", 20) + "Таблица с алергените</a>" });
+  }
+  function sortSheet() {
+    const o: [Sort, string, string][] = [["rec", "Препоръчани", "Първо хитът и новото, после останалите"], ["asc", "Цена: от ниска към висока", ""], ["desc", "Цена: от висока към ниска", ""]];
+    const sh = SC.sheet({ title: "Подреждане", html: '<div class="stack" style="gap:6px" role="radiogroup" aria-label="Подреждане">' + o.map((z) => '<label class="check" style="align-items:center;padding:10px 4px;min-height:56px"><input type="radio" name="sort" value="' + z[0] + '"' + (st.sort === z[0] ? " checked" : "") + "><span><b>" + z[1] + "</b>" + (z[2] ? '<br><span class="muted small">' + z[2] + "</span>" : "") + "</span></label>").join("") + "</div>" });
+    sh.el.addEventListener("change", (e) => { const t = e.target as HTMLInputElement; if (t.name === "sort") { st.sort = t.value as Sort; refresh(); setTimeout(sh.close, 160); } });
+  }
+
+  /* ---------- one strong motion: the plate turns as you scroll (transform only) ---------- */
+  let plate = root.querySelector<SVGElement>(".ch-spin svg"), ticking = false;
+  function spin() { if (!plate || SC.reduce) return; const y = window.scrollY; if (y < 1200) plate.style.transform = "rotate(" + (y * 0.16).toFixed(1) + "deg)"; }
+  window.addEventListener("scroll", () => { if (ticking) return; ticking = true; requestAnimationFrame(() => { ticking = false; spin(); }); }, { passive: true });
+
+  /* ---------- floating "Поръчай · сума" bar after the first "+" (same as /menu/) ---------- */
+  const cbar = SC.ov.querySelector<HTMLElement>(".cbar")!;
+  function cartBar() {
+    const n = SC.cart.count(), on = n > 0 && view !== "loading" && view !== "error";
+    cbar.classList.toggle("on", on); cbar.setAttribute("aria-hidden", on ? "false" : "true");
+    if (on) cbar.removeAttribute("inert"); else cbar.setAttribute("inert", "");
+    cbar.querySelector("[data-cn]")!.innerHTML = "<b>" + plural(n) + "</b>в количката";
+    cbar.querySelector("[data-cgo]")!.firstChild!.textContent = "Поръчай · " + SC.fmt(SC.cart.subtotal());
+    const fab = SC.ov.querySelector(".aifab"); if (fab) fab.classList.toggle("up", on);
+  }
+  SC.cart.on(cartBar);
+
+  /* ---------- events ---------- */
+  const KEY = "sc-cat-pos";
+  function remember() { try { sessionStorage.setItem(KEY, JSON.stringify({ h: location.pathname + location.hash, y: window.scrollY })); } catch { /* private mode */ } }
+  window.addEventListener("pagehide", remember);
+  root.addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLElement>("button, a");
+    if (!b || !root.contains(b)) return;
+    if (b.dataset.f) { const k = b.dataset.f; st.f = st.f.indexOf(k) > -1 ? st.f.filter((z) => z !== k) : st.f.concat(k); refresh(); elChips.querySelector<HTMLElement>('[data-f="' + k + '"]')?.focus({ preventScroll: true }); return; }
+    if (b.hasAttribute("data-allergens")) { allergenSheet(); return; }
+    if (b.hasAttribute("data-morefilters")) { moreFilters(); return; }
+    if (b.hasAttribute("data-sort")) { sortSheet(); return; }
+    if (b.hasAttribute("data-clear")) { st.f = []; st.a = []; st.q = ""; refresh(); elChips.querySelector<HTMLElement>("[data-allergens]")?.focus({ preventScroll: true }); return; }
+    if (b.hasAttribute("data-more-intro")) { const w = b.closest(".ch-intro")!, open = !w.classList.contains("open"); w.classList.toggle("open", open); b.setAttribute("aria-expanded", String(open)); b.firstChild!.textContent = open ? "По-малко" : "Още"; return; }
+    if (b.hasAttribute("data-retry")) { setView("loading"); return; }
+    if (b.dataset.view) { setView(b.dataset.view as View); return; }
+    if (b.matches(".dcard a, .hit-tag")) remember();
+  });
+  window.addEventListener("hashchange", () => { st = parseHash(location.hash); refresh(); });
+  window.addEventListener("offline", () => setView("offline"));
+  window.addEventListener("online", () => { if (view === "offline") { setView("ok"); SC.toast("Връзката се върна"); } });
+  /* the hour moves on (every minute) */
+  document.addEventListener("sc:tick", () => {
+    const n = SC.state();
+    if (JSON.stringify(n) === JSON.stringify(S)) return;
+    const bfFlip = n.breakfast !== S.breakfast; S = n;
+    timeParts();
+    if (bfFlip && cat.id === "zakuski") refresh();
+  });
+
+  /* ---------- live menu: "Изчерпано днес" and prices from the kitchen / admin (api), after the first paint ---------- */
+  function syncMenu() {
+    import("../../../client/api.ts").then(({ api }) => api.menu()).then((m) => {
+      let changed = false;
+      for (const x of m.items) {
+        const d = SC.byId[x.id];
+        if (!d || d.cat !== cat.id) continue;
+        const out = x.t.indexOf("out") > -1, was = d.t.indexOf("out") > -1;
+        if (out !== was) { d.t = out ? [...d.t, "out"] : d.t.filter((k) => k !== "out"); changed = true; }
+        if (typeof x.p === "number" && x.p !== d.p) { d.p = x.p; changed = true; }
+      }
+      if (changed) refresh();
+    }).catch(() => { /* the menu in the HTML stays; nothing to tell */ });
+  }
+
+  /* ---------- preview only: the simulated states ("Само в прототипа"), never on the real site ---------- */
+  if (SC.preview) {
+    const q = location.search;
+    const links: [string, string][] = [["Изчерпано ястие", SC.url.cat("skara-bertha")], ["Без данни за алергени", SC.url.cat("supi", "a=gluten")], ["Закуски", SC.url.cat("zakuski")],
+      ["Търсене „моцарела“", SC.url.cat("pitsi", "q=" + encodeURIComponent("моцарела"))], ["Няма такава категория", SC.url.menu().replace(/(index\.html)?$/, "") + "napitki/"]];
+    elBody.querySelector('[aria-labelledby="faq-h"]')!.insertAdjacentHTML("beforeend",
+      '<aside class="proto" aria-label="Само в прототипа"><h2>Само в прототипа: състояния</h2><p class="muted">Не влиза в сайта. Показва как изглежда страницата в различни случаи.</p><div class="chips">' +
+      ([["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]] as const).map(([k, n]) => '<button class="chip" type="button" data-view="' + k + '" aria-pressed="false">' + n + "</button>").join("") +
+      links.map(([n, h]) => { const [p, hs] = h.split("#"); return '<a class="chip" href="' + p + q + (hs ? "#" + hs : "") + '">' + n + "</a>"; }).join("") + "</div></aside>");
+  }
+
+  /* ---------- first paint: keep the server HTML unless the address or the hour asks for something else ---------- */
+  timeParts();
+  if (anyFilter(st) || st.sort !== "rec" || laterText(cat, S)) refresh();
+  if (view !== "ok") setView(view);
+  cartBar();
+  spin();
+  try {
+    const mem = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    if (mem && mem.h === location.pathname + location.hash) window.scrollTo(0, mem.y);
+  } catch { /* ignore */ }
+  const later = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1200));
+  later(syncMenu);
+  SC.reveal();
+</script>
