@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Кухня: екрани | Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+<style>
+html,body{overflow:auto}
+.ix{max-width:1100px; margin:0 auto; padding:40px 16px 64px}
+.ix header{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.ix .word{font-size:26px}
+.ix h1{font-size:40px; letter-spacing:-.045em; line-height:1.05; margin:8px 0 6px; font-weight:800}
+.ix .lead{font-size:18px; max-width:640px}
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; margin-top:24px}
+.sc2{display:grid; gap:10px; padding:20px}
+.sc2 a.main{display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; min-height:48px}
+.sc2 a.main .si{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.sc2 a.main b{font-size:21px; letter-spacing:-.02em}
+.sc2 a.main small{display:block; font-size:14px; color:var(--muted); font-weight:700}
+.sc2 p{margin:0; color:var(--muted); font-size:16px}
+.st2{display:flex; flex-wrap:wrap; gap:6px}
+.st2 a{display:inline-flex; align-items:center; min-height:44px; padding:0 14px; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:700; font-size:15px; text-decoration:none}
+.notes{margin-top:28px; padding:20px 22px}
+.notes h2{margin:0 0 6px; font-size:22px; letter-spacing:-.02em}
+.notes ul{margin:0; padding-left:20px; display:grid; gap:6px; font-size:16px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, t = K.hash.t ? "&t=" + K.hash.t : "";
+var S = [
+  ["login","Вход","Избор на секция и личен ПИН","sign-in",[]],
+  ["queue","Опашка","Поръчките на секцията по реда на пристигане. „Започни“, „Готово“ за ред и за поръчка, „Върни“ 10 сек.","list-checks",[["","Обичайно"],["new","Нова поръчка"],["many","Много поръчки"],["empty","Празна"],["offline","Няма връзка"]]],
+  ["item-out","Изчерпано днес","Едно докосване: веднага без „+“ навсякъде, скрито във Wolt и Foodpanda. „Върни в менюто“.","clock",[["","Обичайно"],["offline","Няма връзка"]]],
+  ["busy","Натоварено +15 мин","Ръчен превключвател за цялата кухня, новите срокове, кой и кога.","hourglass",[["","Изключено"],["on","Включено"]]],
+  ["done","Изпълнени","Последните изпълнени днес, „Върни в опашката“.","check-circle",[["","Обичайно"],["empty","Празно"]]],
+  ["summary","Общ изглед","За главния готвач: всички секции, колко чакат, закъснения, поръчките по секции.","squares-four",[["","Обичайно"],["new","Нова поръчка"],["many","Много поръчки"],["offline","Няма връзка"]]]
+];
+var el = document.createElement("div"); el.className = "ix";
+el.innerHTML = '<header><div><span class="word">Siracusa</span><h1>Кухня: таблет на всяка секция</h1><p class="lead">Жив прототип, хоризонтален таблет 1024-1280 px (работи и вертикално на 768 px). Тъмна тема по подразбиране.</p></div>' + K.proto("login") + '</header>' +
+  '<div class="grid">' + S.map(function(s){ return '<section class="sc2 kcard"><a class="main" href="' + s[0] + '.html#s=' + K.secId + t + '"><span class="si">' + ic(s[3],24) + '</span><span><b>' + s[1] + '</b><small>' + s[0] + '.html</small></span></a><p>' + s[2] + '</p>' +
+    (s[4].length ? '<div class="st2">' + s[4].map(function(x){ return '<a href="' + s[0] + '.html#s=' + K.secId + t + (x[0] ? "&st=" + x[0] : "") + '">' + x[1] + '</a>'; }).join("") + '</div>' : '') + '</section>'; }).join("") + '</div>' +
+  '<section class="notes kcard"><h2>За прототипа</h2><ul><li>Поръчките и часът (19:42) са условни; ястията са истинските от менюто.</li><li>Секциите и кое ястие къде се готви: <span class="miss">[ЛИПСВА: секциите на кухнята]</span>. Смяна: „Смени секцията“ горе вляво.</li>' +
+  '<li>„Натоварено“ и „Изчерпано“ се помнят в този браузър, за да се виждат между екраните.</li><li>Звук при нова поръчка: превключвател „Звук“ в опашката (вкл. по подразбиране).</li></ul></section>';
+document.body.appendChild(el); K.protoBind(el);
+})();
+</script>
+</body>
+</html>

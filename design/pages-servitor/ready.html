@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Готови за сервиране | Siracusa · Персонал</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_staff.css">
+<style>
+.rcard .oline .cat{font-size:14px; font-weight:700; color:var(--muted)}
+.rcard .go2{display:grid; grid-template-columns:auto 1fr; gap:8px; margin-top:8px}
+.rcard .go2 .pill{min-height:56px; font-size:17px}
+.rcard .who{font-size:15px; font-weight:700; color:var(--muted); margin:8px 0 0}
+.pushrow{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.pushrow .tx{flex:1; line-height:1.35}
+.pushrow .tx b{display:block}
+.pushrow .tx span{font-size:14px; color:var(--muted); font-weight:600}
+.pushrow .on{display:inline-flex; align-items:center; gap:6px; color:var(--ok); font-weight:800; white-space:nowrap}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_staff.js"></script>
+<script>
+var main = ST.mount({page:"ready", title:"Готови за сервиране", nav:"ready"});
+var ic = SC.ic, esc = SC.esc;
+function card(g){ var mine = ST.isMine(g.t), t = ST.tableByN[g.t];
+  return '<article class="rcard'+(mine?'':' other')+'" aria-label="Маса '+g.t+', готово за сервиране"><div class="hd">'+ic("bell-ringing",26)+'<b>Маса '+g.t+'</b><span>'+ST.ZONE[t.zone]+'</span><span class="tm">готово от '+ST.timer(g.since)+'</span></div><div class="in">'+
+    g.lines.map(function(r){ var x = SC.byId[r.l.id]; return '<div class="oline"><span class="q">'+r.l.q+'×</span><div><div class="nm">'+esc(x.n)+'</div><div class="cat">'+esc(SC.catById[x.cat].n)+(r.o.bill?' · '+esc(r.o.bill):'')+'</div>'+(r.l.note?'<div class="note">'+ic("note",18)+esc(r.l.note)+'</div>':'')+'</div></div>'; }).join("")+
+    (mine?'':'<p class="who">Маса на '+ST.OTHER+'. Ако сте наблизо, може да я занесете вие.</p>')+
+    '<div class="go2"><a class="pill pill-line" href="table.html#'+g.t+'">Масата</a><button class="pill pill-red" type="button" data-serve="'+g.t+'">'+ic("check",22)+'Сервирах'+(g.lines.length>1?' всичко':'')+'</button></div></div></article>'; }
+function render(){ var gs = ST.readyGroups();
+  var html = '<section class="st-sec"><div class="pushrow">'+ic("bell",26)+'<div class="tx"><b>Известия от кухнята</b><span>Звук и 3 кратки вибрации, и на часовника</span></div><span class="on">'+ic("check-circle",20)+'Включени</span></div></section>';
+  if (!gs.length) html += '<div class="st-empty"><div class="ill">'+ic("check-circle",52)+'</div><h2>Нищо не чака</h2><p>Щом кухнята отбележи „Готово“, ястието ще се появи тук, а телефонът ще вибрира.</p><a class="pill pill-line pill-lg" href="tables.html">'+ic("squares-four",22)+'Към залата</a></div>';
+  else html += '<section class="st-sec"><div class="st-h"><h2>Вземете от кухнята</h2><span class="muted">най-старото отгоре</span></div>'+gs.map(card).join("")+'</section>';
+  main.innerHTML = html; ST.tick(); }
+render(); ST.on(render);
+main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b || !b.dataset.serve) return; var n = +b.dataset.serve;
+  var snap = JSON.parse(JSON.stringify(ST.ordersOf(n))); ST.serveTable(n);
+  ST.toast("Маса "+n+": сервирано", function(){ ST.db.orders = ST.db.orders.filter(function(o){ return o.t!==n; }).concat(snap); ST.save(); }); });
+</script>
+</body>
+</html>

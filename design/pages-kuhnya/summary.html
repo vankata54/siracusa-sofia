@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Общ изглед | Кухня · Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+<style>
+.secg{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.sc{display:grid; gap:10px; padding:18px; text-decoration:none; color:inherit}
+.sc.late{box-shadow:var(--hi), var(--shadow), inset 0 0 0 4px var(--danger)}
+.sc .hd{display:flex; align-items:center; gap:10px; font-size:20px; font-weight:800; letter-spacing:-.02em}
+.sc .hd .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.sc .big{display:flex; align-items:baseline; gap:8px}
+.sc .big b{font-size:56px; line-height:1; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+.sc .big span{font-size:19px; font-weight:700; color:var(--muted)}
+.sc ul{list-style:none; margin:0; padding:0; display:grid; gap:4px; font-size:17px; font-weight:600; color:var(--muted)}
+.sc li{display:flex; justify-content:space-between; gap:8px}
+.sc li b{color:var(--ink); font-variant-numeric:tabular-nums}
+.sc li.bad b{color:var(--danger)}
+.sc li.warnl b{color:var(--warn)}
+.sc .tab{display:flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--muted); padding-top:8px; border-top:1px solid var(--line)}
+.sc .tab i{width:10px; height:10px; border-radius:50%; background:var(--ok)}
+.h2k{font-size:24px; letter-spacing:-.03em; font-weight:800; margin:26px 0 10px}
+.ot{width:100%; border-collapse:collapse}
+.ot th{font-size:15px; font-weight:800; color:var(--muted); text-align:left; padding:12px 16px}
+.ot td{padding:12px 16px; border-top:1px solid var(--line); font-size:18px; vertical-align:middle}
+.ot td.src b{font-size:22px; letter-spacing:-.02em; white-space:nowrap}
+.ot td.src small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.ot td.tm{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
+.ot td.tm small{display:block; font-size:14px; font-weight:800; color:var(--muted)}
+.ot tr.late td.tm,.ot tr.late td.tm small{color:var(--danger)}
+.ot tr.soon td.tm,.ot tr.soon td.tm small{color:var(--warn)}
+.sts{display:flex; flex-wrap:wrap; gap:6px}
+.sst{display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 12px 0 10px; border-radius:999px; font-size:16px; font-weight:800; background:var(--surface-2); color:var(--ink); white-space:nowrap}
+.sst.done{color:var(--ok); box-shadow:inset 0 0 0 2px var(--ok); background:transparent}
+.sst.cook{background:var(--ink); color:var(--bg)}
+.sst.wait{box-shadow:inset 0 0 0 2px var(--line-strong); background:transparent}
+.legend{display:flex; flex-wrap:wrap; gap:8px 16px; margin:10px 0 0; font-size:15px; color:var(--muted); font-weight:600; align-items:center}
+@container app (max-width:1100px){ .sc .big b{font-size:46px} .ot th:nth-child(2),.ot td:nth-child(2){display:none} }
+@container app (max-width:899px){ .secg{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, esc = SC.esc;
+var main = K.mount({page:"summary", title:"Общ изглед"});
+var orders = K.orders();
+if (K.st === "new") orders.push(K.newOrder());
+
+function secState(o, sid){ var ls = K.mine(o, sid); if (!ls.length) return null;
+  var left = ls.filter(function(l){ return l.o.st !== "done"; }).reduce(function(a, l){ return a + l.q; }, 0);
+  if (!left) return "done"; return o.startedBy && o.startedBy[sid] ? "cook" : "wait"; }
+function stats(sid){ var r = {wait:0, late:0, soon:0, oldest:0};
+  orders.forEach(function(o){ var s = secState(o, sid); if (!s || s === "done") return; r.wait++;
+    var st = K.stateOf(o); if (st === "late") r.late++; else if (st === "soon") r.soon++;
+    r.oldest = Math.max(r.oldest, K.now() - o.at); }); return r; }
+
+function render(){
+  var tot = {wait:0, late:0}, active = orders.filter(function(o){ return K.SECTIONS.some(function(s){ var x = secState(o, s.id); return x && x !== "done"; }); });
+  active.forEach(function(o){ tot.wait++; if (K.stateOf(o) === "late") tot.late++; });
+  var b = K.busy(), outs = K.outs();
+  if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
+  else K.strip.innerHTML = '<div class="kcount"><span>Поръчки в кухнята <b>' + tot.wait + '</b></span><span class="sep"></span><span class="late">Закъсняват <b>' + tot.late + '</b></span><span class="sep"></span><span>Изчерпани <b>' + outs.length + '</b></span></div>' +
+    '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>';
+  main.innerHTML = '<div class="kpage"><h1 class="vh">Общ изглед на кухнята</h1><div class="secg">' + K.SECTIONS.map(function(s){ var r = stats(s.id), o = outs.filter(function(x){ return x.sec === s.id; }).length;
+      return '<a class="sc kcard' + (r.late ? " late" : "") + '" href="queue.html#s=' + s.id + (K.hash.t ? "&t=" + K.hash.t : "") + '"><span class="hd"><span class="si">' + ic(s.ic,24) + '</span>' + esc(s.n) + '</span>' +
+        '<span class="big"><b>' + r.wait + '</b><span>' + (r.wait === 1 ? "поръчка чака" : "поръчки чакат") + '</span></span>' +
+        '<ul><li class="' + (r.late ? "bad" : "") + '"><span>' + (r.late ? ic("warning",16).replace('class="ic"','class="ic" style="display:inline;vertical-align:-2px"') + ' ' : '') + 'Закъсняват</span><b>' + r.late + '</b></li><li class="' + (r.soon ? "warnl" : "") + '"><span>Наближават</span><b>' + r.soon + '</b></li>' +
+        '<li><span>Най-старата</span><b>' + (r.wait ? K.mins(r.oldest) + ' мин' : '-') + '</b></li><li><span>Изчерпани днес</span><b>' + o + '</b></li></ul>' +
+        '<span class="tab"><i></i>Таблетът е свързан</span></a>'; }).join("") + '</div>' +
+    '<h2 class="h2k">Поръчки в работа <span class="muted" style="font-size:18px; font-weight:700">· по реда на пристигане</span></h2>' +
+    (active.length ? '<div class="kcard" style="overflow:hidden"><table class="ot"><thead><tr><th scope="col">Поръчка</th><th scope="col">Пристигна</th><th scope="col">Секции</th><th scope="col" style="text-align:right">Срок</th></tr></thead><tbody>' +
+      active.map(function(o){ var src = K.src(o), st = K.stateOf(o), l = K.left(o);
+        return '<tr class="' + st + '"><td class="src"><b>' + esc(K.srcText(o).replace("Доставка ", "").replace("Вземане ", "")) + '</b><small>' + esc(src.k) + '</small></td><td class="num">' + K.hm(o.at) + '</td>' +
+          '<td><div class="sts">' + K.SECTIONS.map(function(s){ var x = secState(o, s.id); if (!x) return "";
+            return '<span class="sst ' + x + '">' + ic(x === "done" ? "check" : x === "cook" ? "flame" : "hourglass", 16) + K.shortSec[s.id] + ' · ' + (x === "done" ? "готово" : x === "cook" ? "готви се" : "чака") + '</span>'; }).join("") + '</div></td>' +
+          '<td class="tm"><small>' + (st === "late" ? "закъснява" : st === "soon" ? "наближава" : "остават") + '</small>' + (st === "late" ? "+" : "") + K.mmss(l) + '</td></tr>'; }).join("") + '</tbody></table></div>'
+      : '<div class="kempty" style="height:auto; padding:56px 16px"><div><div class="ill">' + ic("check-circle",56) + '</div><h2>Няма поръчки в работа</h2><p>Всички секции са свободни.</p></div></div>') +
+    '<p class="legend"><span class="sst done">' + ic("check",16) + 'готово</span><span class="sst cook">' + ic("flame",16) + 'готви се</span><span class="sst wait">' + ic("hourglass",16) + 'чака</span><span>Докоснете секция, за да видите опашката ѝ.</span></p></div>';
+}
+render();
+setInterval(render, 5000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Повикай сервитьор | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_masa.css">
+<style>
+/* call.html (QR table): page-only styles, tokens only */
+.cl-grid{display:grid; gap:20px}
+.live{display:grid; gap:12px}
+.coming{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 16px; align-items:center; padding:20px}
+.bell{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red); grid-row:span 2}
+.bell::after{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 2px var(--red); animation:bring 2400ms var(--ease) infinite; opacity:0}
+@keyframes bring{0%{transform:scale(1); opacity:.8}100%{transform:scale(1.5); opacity:0}}
+.coming h2{margin:0; font-size:24px; line-height:1.15; letter-spacing:-.03em}
+.coming h2 .t{font-variant-numeric:tabular-nums; white-space:nowrap}
+.coming .what{margin:0; color:var(--muted); font-weight:600}
+.coming .more{grid-column:1 / -1; display:grid; gap:8px; margin-top:6px; padding-top:12px; border-top:1px solid var(--line)}
+.coming .more p{margin:0; font-size:15px; color:var(--muted)}
+.coming .mgr{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:16px; background:var(--ember-soft); color:var(--ink); font-size:15px}
+.coming .mgr .ic{margin-top:2px; color:var(--warn)}
+.coming .link{justify-self:start; color:var(--muted)}
+.served{display:flex; gap:10px; align-items:center; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.served .ic{color:var(--ok)}
+.tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.tile{position:relative; display:grid; align-content:start; gap:8px; min-height:168px; padding:18px 16px; border:0; border-radius:var(--r-shell); background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); text-align:left; text-decoration:none; cursor:pointer; font:inherit; transition:transform var(--t-fast) var(--ease)}
+.tile:active{transform:scale(.97)}
+.tile .ti{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.tile b{font-size:19px; line-height:1.2; letter-spacing:-.02em}
+.tile .d{font-size:14px; color:var(--muted); font-weight:600; line-height:1.35}
+.tile .go{position:absolute; top:18px; right:16px; color:var(--muted)}
+.tile[aria-disabled="true"]{background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--line); cursor:not-allowed}
+.tile[aria-disabled="true"] .ti{background:var(--surface); color:var(--muted)}
+.tile .lock{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:800; color:var(--ink)}
+.tile .lock span{font-variant-numeric:tabular-nums}
+.tile.on{box-shadow:inset 0 0 0 2px var(--red), var(--shadow)}
+.why{display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 12px; padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.why > .ic{color:var(--muted); margin-top:2px}
+.why b{display:block}
+.why p{margin:2px 0 0; color:var(--muted); font-size:15px}
+.why .missing{display:block; margin-top:6px; font-size:14px}
+.why.hl{box-shadow:inset 0 0 0 2px var(--ink)}
+.oth .field{margin-top:4px}
+.oth .pill{margin-top:14px}
+@container app (min-width:700px){ .tiles{grid-template-columns:repeat(4,1fr)} }
+@container app (min-width:900px){
+  .cl-grid{grid-template-columns:minmax(0,1fr) 400px; gap:24px 40px; align-items:start}
+  .cl-grid .live{grid-column:2; grid-row:1 / span 3; position:sticky; top:110px}
+  .cl-grid > :not(.live){grid-column:1}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile{min-height:190px; padding:22px}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_masa.js"></script>
+<script>
+(function(){
+"use strict";
+var M = MASA, L = M.L, ic = SC.ic, esc = SC.esc, S = M.st;
+var main = M.mount({page:"call", title:"Повикай сервитьор", docTitle:"Повикай сервитьор · QR маса"});
+if (!main) return;
+var ORDER = ["order","bill","water","other"], hl = null;
+function el(t){ return (Date.now() - S.calls[t].at)/1000; }
+
+function liveHTML(){ var act = M.active();
+  var last = Object.keys(S.calls).filter(function(k){ return S.calls[k].done === "served" && M.callLeft(k); })[0];
+  return act.map(function(t){ var c = S.calls[t], late = el(t) > M.cfg.manager*60;
+    return '<div class="shell" role="status"><div class="core coming"><span class="bell">'+ic("bell-ringing",30)+'</span>'+
+      '<h2>'+L("Сервитьорът идва","A waiter is on the way")+' · <span class="t">'+L("чакате ","waiting ")+'<span data-wt="'+t+'">'+M.mmss(el(t))+'</span></span></h2>'+
+      '<p class="what">'+esc(M.callName(t))+(c.text ? ': „'+esc(c.text)+'“' : '')+' · '+L("повикан в ","called at ")+M.clock(c.at)+'</p>'+
+      '<div class="more">'+(late ? '<p class="mgr">'+ic("warning",20)+'<span>'+L("Чакате над "+M.cfg.manager+" мин. Известихме и управителя.","You have waited over "+M.cfg.manager+" min. We have told the manager too.")+'</span></p>'
+        : '<p>'+L("Сервитьорът вижда номера на масата и колко чакате. Ако не отговори до "+M.cfg.manager+" мин, известието отива и при управителя.","The waiter sees your table number and how long you have waited. If nobody answers within "+M.cfg.manager+" min, the manager is told too.")+'</p>')+
+      (t === "bill" ? '<a class="link" href="bill.html">'+ic("receipt",20)+L("Виж сметката","See the bill")+'</a>' : '<button class="link" type="button" data-cancel="'+t+'">'+ic("x",18)+L("Не ни трябва вече","We no longer need it")+'</button>')+'</div></div></div>'; }).join("")+
+    (last && !act.length ? '<div class="served" role="status">'+ic("check-circle",24)+'<span><b>'+L("Обслужено","Done")+'</b> · '+esc(M.callName(last))+'. '+L("Сервитьорът го отбеляза.","The waiter marked it.")+'</span></div>' : ''); }
+
+function tileHTML(t){ var c = M.CALLS[t], left = M.callLeft(t), active = S.calls[t] && !S.calls[t].done;
+  var inner = '<span class="ti">'+ic(c.icon,30)+'</span><b>'+L(c.bg,c.en)+'</b>';
+  if (t === "bill"){ var req = S.bill;
+    return '<a class="tile'+(active?" on":"")+'" href="bill.html">'+ic("caret-right",20).replace('class="ic"','class="ic go"')+inner+'<span class="d">'+(req ? L("Поискана в ","Asked at ")+M.clock(req.at) : L(c.sub[0],c.sub[1]))+'</span></a>'; }
+  if (left) return '<button class="tile'+(active?" on":"")+'" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="d">'+(active ? L("Вече повикахме. Изчакайте малко.","Already called. Please wait a little.") : L("Сервитьорът току-що дойде.","The waiter has just been here."))+'</span><span class="lock">'+ic("timer",18)+L("Пак след ","Again in ")+'<span data-lt="'+t+'">'+M.mmss(left)+'</span></span></button>';
+  return '<button class="tile" type="button" data-call="'+t+'"'+(S.offline?' aria-disabled="true"':'')+'>'+inner+'<span class="d">'+L(c.sub[0],c.sub[1])+'</span></button>'; }
+
+function render(){
+  main.innerHTML = '<section class="mpage" aria-labelledby="cw-h"><div class="mh"><h1 class="h1" id="cw-h">'+L("Повикай сервитьор","Call a waiter")+'</h1><p class="lead">'+L("Изберете за какво. Сервитьорът вижда номера на масата.","Choose what for. The waiter sees your table number.")+'</p></div>'+
+    '<div class="cl-grid"><div class="live" aria-live="polite">'+liveHTML()+'</div>'+
+    (S.offline ? '<div class="mnotes">'+M.banners({kitchen:false})+'</div>' : '')+
+    '<div class="tiles" role="group" aria-label="'+L("За какво","What for")+'">'+ORDER.map(tileHTML).join("")+'</div>'+
+    '<div class="why'+(hl?" hl":"")+'" id="why">'+ic("info",22)+'<div><b>'+L("Едно и също повикване веднъж на "+M.cfg.cooldown+" мин","The same call once every "+M.cfg.cooldown+" min")+'</b><p>'+L("Така известията стигат до сервитьора ясно, без повторения. Другите плочки работят веднага. Ако е спешно, махнете на сервитьора.","This keeps the waiter’s alerts clear, without repeats. The other tiles work right away. If it is urgent, wave to the waiter.")+'</p>'+
+      '<span class="missing">[ЛИПСВА: интервалът и времето до управителя се настройват от админа; тук '+M.cfg.cooldown+' и '+M.cfg.manager+' мин]</span></div></div></div>'+
+    M.protoHTML('<button class="pill" type="button" data-pserve>'+ic("check",18)+'Сервитьорът отбелязва „обслужено“</button><a class="pill" href="call.html#demo=called">Повикан преди 0:42</a><a class="pill" href="call.html#demo=manager">Минаха минутите за управителя</a><a class="pill" href="call.html#demo=served">Обслужено, още заключено</a>')+
+    '</section><div class="mend"></div>';
+  render.key = key(); }
+function key(){ return ORDER.map(function(t){ return (M.callLeft(t)?1:0)+":"+(S.calls[t]&&S.calls[t].done||"")+":"+(S.calls[t] && el(t) > M.cfg.manager*60 ? 1 : 0); }).join("|"); }
+
+function otherSheet(){ var s = SC.sheet({title:L("Друго","Something else"), html:'<div class="oth"><div class="field"><label for="oth">'+L("Какво ви трябва? (по желание)","What do you need? (optional)")+'</label><textarea class="input" id="oth" rows="3" maxlength="140"></textarea><span class="help">'+L("Сервитьорът ще го прочете на телефона си.","The waiter will read it on their phone.")+'</span></div>'+
+  '<button class="pill pill-red pill-lg pill-block" type="button" data-osend>'+ic("bell-ringing",20)+L("Повикай сервитьор","Call a waiter")+'</button></div>'});
+  s.el.querySelector("[data-osend]").onclick = function(){ var v = s.el.querySelector("#oth").value.trim(); s.close(); doCall("other", v); };
+  setTimeout(function(){ var i = s.el.querySelector("#oth"); i && i.focus({preventScroll:true}); }, 80); }
+function doCall(t, text){ if (S.offline){ SC.toast(L("Няма връзка. Опитайте пак или махнете на сервитьора.","No connection. Try again or wave to the waiter.")); return; }
+  if (M.call(t, text)){ SC.haptic(); SC.toast(L("Сервитьорът идва","A waiter is on the way")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } }
+
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
+  if (t.dataset.call){ if (t.dataset.call === "other") otherSheet(); else doCall(t.dataset.call); return; }
+  if (t.dataset.locked){ hl = 1; render(); SC.toast(L("Вече повикахме. Изчакайте малко.","Already called. Please wait a little.")); var w = main.querySelector("#why"); w && w.scrollIntoView({block:"nearest", behavior:SC.reduce?"auto":"smooth"}); return; }
+  if (t.dataset.cancel){ M.cancelCall(t.dataset.cancel); SC.toast(L("Отменихме повикването","Call cancelled")); return; }
+  if (t.hasAttribute("data-pserve")){ var a = M.active(); if (a.length) M.serveCall(a[0]); else SC.toast("Няма активно повикване"); return; }
+});
+render();
+M.on(function(){ render(); });
+M.tick(function(){ if (key() !== render.key){ render(); return; }
+  main.querySelectorAll("[data-wt]").forEach(function(s){ s.textContent = M.mmss(el(s.dataset.wt)); });
+  main.querySelectorAll("[data-lt]").forEach(function(s){ s.textContent = M.mmss(M.callLeft(s.dataset.lt)); }); });
+})();
+</script>
+</body>
+</html>

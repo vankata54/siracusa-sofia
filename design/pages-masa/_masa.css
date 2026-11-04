@@ -1,0 +1,137 @@
+/* QR маса: shared styles for design/pages-masa. Tokens from ../ds/sc.css only; no new colours. */
+
+/* ---------- header: wordmark, table, (desktop) sections, language ---------- */
+.mtop{padding:0 6px 0 18px}
+.mtop .word{flex:none}
+.mtab{display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px 0 10px; margin-left:10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:800; font-size:15px; letter-spacing:-.01em; white-space:nowrap; text-decoration:none; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis}
+.mtab .ic{color:var(--red)}
+.mtop .sp{flex:1}
+.mdnav{display:none}
+.mlang{gap:6px}
+@container app (max-width:370px){ .mtab{margin-left:6px; padding:0 10px 0 8px; font-size:14px} .mtop{padding-left:14px} }
+@container app (min-width:900px){
+  .mdnav{display:flex; gap:2px; margin:0 auto}
+  .mdnav a,.mdnav button{position:relative; display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:0 14px; border:0; border-radius:var(--r-pill); background:transparent; font-weight:700; font-size:15px; text-decoration:none; color:var(--ink); cursor:pointer}
+  .mdnav [aria-current="page"]{background:var(--surface-2)}
+  .mdnav .call .ic{color:var(--red)}
+  .mdnav .cnt{position:static; margin-left:2px}
+  .mtop .sp{display:none}
+}
+
+/* ---------- bottom nav (decision 34): Меню · Повикай сервитьор · Количка · Профил ---------- */
+.mnav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; height:72px; display:grid; grid-template-columns:1fr 1.3fr 1fr 1fr; padding:0 4px; border-radius:var(--r-pill); background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.mnav a,.mnav button{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:48px; padding:0 2px; border:0; background:transparent; border-radius:var(--r-pill); text-decoration:none; font-size:14px; font-weight:700; line-height:1.1; text-align:center; color:var(--muted); cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.mnav a:active,.mnav button:active{transform:scale(.95)}
+.mnav [aria-current="page"]{color:var(--ink)}
+.mnav [aria-current="page"] .ic{color:var(--red)}
+.mnav .call .ic{color:var(--red)}
+.mnav .ib{position:relative; display:block}
+.mnav .cnt{top:-6px; right:-14px}
+@container app (min-width:900px){ .mnav{display:none} }
+
+/* ---------- avatars: who added what (colour + initial + name, never colour alone) ---------- */
+.av{flex:none; width:28px; height:28px; border-radius:50%; display:inline-grid; place-items:center; font-size:14px; font-weight:800; line-height:1; background:var(--ink); color:var(--bg)}
+.av.g2{background:var(--ember); color:var(--on-ember)}
+.av.g3{background:var(--ok); color:var(--on-ok)}
+.av.sm{width:24px; height:24px}
+.who{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.avs{display:inline-flex}
+.avs .av{box-shadow:0 0 0 2px var(--surface)}
+.avs .av + .av{margin-left:-6px}
+
+/* ---------- notes and banners ---------- */
+.mnote{display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 12px; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.mnote > .ic{margin-top:1px; color:var(--muted)}
+.mnote.warn > .ic{color:var(--warn)}
+.mnote.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+.mnote.bad > .ic{color:var(--danger)}
+.mnote.ok > .ic{color:var(--ok)}
+.mnote b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em; text-wrap:balance}
+.mnote p{margin:2px 0 0; color:var(--muted)}
+.mnote .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.mnotes{display:grid; gap:10px}
+.mnotes:empty{display:none}
+
+/* ---------- line status (icon + word; colour is never the only signal) ---------- */
+.stp{display:inline-flex; align-items:center; gap:5px; min-height:30px; padding:0 11px 0 8px; border-radius:var(--r-pill); font-size:14px; font-weight:800; line-height:1; white-space:nowrap; background:var(--surface-2); color:var(--ink)}
+.stp.wait{background:transparent; color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.stp.cook{background:var(--ember-soft); color:var(--ink)}
+.stp.cook .ic{color:var(--warn)}
+.stp.served{background:var(--ok); color:var(--on-ok)}
+
+/* ---------- page frame ---------- */
+.mpage{padding:20px 16px 0}
+.mpage .h1{font-size:38px}
+.mh{display:grid; gap:6px; margin-bottom:20px}
+.mh .lead{font-size:16px}
+.eyebrow{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin:0}
+.mend{height:180px}
+.cpad{padding:20px}
+.flash{animation:mflash 1400ms var(--ease) both}
+@keyframes mflash{0%{opacity:.35; transform:scale(.98)}30%{opacity:1; transform:scale(1.01)}100%{opacity:1; transform:none}}
+@container app (min-width:900px){
+  .mpage{padding:40px max(40px, calc((100% - 1200px)/2)) 0}
+  .mpage .h1{font-size:52px}
+  .mend{height:96px}
+}
+
+/* ---------- blocking states (invalid code, closed session) ---------- */
+.gate{display:grid; justify-items:center; text-align:center; gap:14px; padding:40px 8px 8px; max-width:520px; margin:0 auto}
+.gate .ill{width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.gate.bad .ill{color:var(--danger)}
+.gate.ok .ill{background:var(--ok); color:var(--on-ok)}
+.gate .h2{margin-top:4px}
+.gate p{margin:0; color:var(--muted)}
+.gate .btns{display:grid; gap:10px; width:100%; max-width:380px; margin-top:8px}
+
+/* ---------- prototype-only panel ---------- */
+.proto{margin-top:56px; padding:18px 16px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 2px var(--line-strong); background:repeating-linear-gradient(135deg, transparent 0 14px, var(--line) 14px 15px); display:grid; gap:14px}
+.proto .ptag{display:flex; align-items:center; gap:8px; margin:0; font-size:15px; font-weight:800}
+.proto .ptxt{margin:-8px 0 0; font-size:14px; color:var(--muted)}
+.proto .pbtns{display:flex; flex-wrap:wrap; gap:8px}
+.proto .pbtns .pill{min-height:48px; padding:0 16px; font-size:15px; background:var(--surface)}
+.proto .pbtns .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.proto .pset{display:grid; gap:10px; padding:14px; border-radius:var(--r-core); background:var(--surface)}
+.proto .pset .label{font-size:15px}
+.proto .prow{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.proto .prow .input{width:96px; min-height:48px}
+.proto select.input{width:auto; min-width:200px}
+.proto .missing{font-size:14px}
+.proto .sub{margin:0; font-size:14px; font-weight:800; color:var(--muted)}
+
+/* ---------- sheets (profile, dish) ---------- */
+.psec + .psec{margin-top:20px; padding-top:18px; border-top:1px solid var(--line)}
+.psec h3{margin:0 0 10px; font-size:17px}
+.psec p{margin:0 0 10px; color:var(--muted)}
+.pline{display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:12px; align-items:center; padding:8px 0}
+.pline + .pline{border-top:1px solid var(--line)}
+.pline .pic{width:48px; height:48px; border-radius:14px}
+.pline b{display:block; font-size:16px; line-height:1.25}
+.pline small{display:block; font-size:14px; color:var(--muted)}
+
+/* ---------- compact dish row (menu at the table) ---------- */
+.mrow{display:grid; grid-template-columns:minmax(0,1fr) 48px; gap:10px; align-items:center; padding:12px 0}
+.mrow + .mrow{border-top:1px solid var(--line)}
+.mrow .open{display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; align-items:center; min-height:72px; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; font:inherit}
+.mrow .pic{width:72px; height:72px; border-radius:20px}
+.mrow .tx{display:grid; gap:4px; min-width:0}
+.mrow .nm{font-weight:700; font-size:16px; line-height:1.3; letter-spacing:-.01em}
+.mrow .meta{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; font-size:14px; color:var(--muted); font-weight:600}
+.mrow .meta .price{font-size:16px; color:var(--ink)}
+.mrow .badges{margin-top:2px}
+.mrow.out .nm{color:var(--muted)}
+.mrow > span:last-child:empty{display:block}
+.incart{display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:2px}
+.incart .who{color:var(--ink)}
+.later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
+
+/* ---------- dish sheet ---------- */
+.dsh{display:grid; gap:14px; padding-bottom:4px}
+.dsh-pic{width:100%; aspect-ratio:16/10; border-radius:var(--r-img)}
+.dsh-m{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.dsh-m .price{font-size:24px}
+.dsh p{margin:0}
+.dsh h3{margin:4px 0 0; font-size:17px}
+.dsh-no{display:flex; gap:10px; align-items:center; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.dsh-no .ic{color:var(--warn)}
+@container app (min-width:900px){ .dsh-pic{aspect-ratio:4/3} }

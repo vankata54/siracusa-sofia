@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Маса | Siracusa · Персонал</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_staff.css">
+<style>
+.thead{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.thead .meta{display:grid; gap:4px}
+.thead .meta span{font-weight:700; color:var(--muted)}
+.callbar{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-top:14px; padding:8px 8px 8px 16px; border-radius:28px; background:var(--red); color:var(--on-red)}
+.callbar .tx{display:flex; align-items:center; gap:8px; font-weight:800; font-size:17px; line-height:1.25}
+.callbar .pill{min-height:52px; background:var(--on-red); color:var(--red)}
+.callbar.taken{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 2.5px var(--ok)}
+.callbar.taken .pill{background:var(--ok); color:var(--on-ok)}
+.oline .serve{margin-left:auto}
+.oline .serve .pill{min-height:48px}
+.paidrow{display:flex; align-items:center; gap:8px; color:var(--ok); font-weight:800}
+.tot{display:flex; justify-content:space-between; align-items:baseline; padding:16px 4px 0; font-size:20px; font-weight:800}
+.splitcard{border-radius:22px; background:var(--surface-2); padding:12px 14px}
+.splitcard + .splitcard{margin-top:10px}
+.splitcard .hd{display:flex; justify-content:space-between; align-items:baseline; font-weight:800; font-size:18px}
+.splitcard .ln{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:3px 0}
+.splitcard .acts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+.free-hero{display:grid; gap:10px; margin-top:16px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_staff.js"></script>
+<script>
+var N = ST.hash.table || 12; if (!ST.tableByN[N]) N = 12;
+var T = ST.tableByN[N];
+var main = ST.mount({page:"table", title:"Маса "+N, sub:ST.ZONE[T.zone]+" · "+T.seats+" места (условно)", back:{href:"tables.html", label:"Маси"}, nav:"tables", bar:true});
+var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
+document.body.insertAdjacentHTML("beforeend", '<div class="st-bar" id="bar"></div>');
+var bar = document.getElementById("bar");
+
+function lineHTML(o, l, i){ var x = SC.byId[l.id];
+  return '<div class="oline'+(l.st==="served"?" served":"")+'"><span class="q">'+l.q+'×</span><div><div class="nm">'+esc(x.n)+'</div>'+
+    (l.note?'<div class="note">'+ic("note",18)+esc(l.note)+'</div>':'')+
+    '<div class="sub">'+ST.lineStt(l.st)+'<span class="price">'+fmt(x.p*l.q)+'</span>'+
+    (l.st==="ready"?'<span class="serve"><button class="pill pill-red" type="button" data-serve="'+o.id+'" data-i="'+i+'">Сервирах</button></span>':'')+'</div></div></div>'; }
+
+function groups(){ var g = {}; ST.ordersOf(N).filter(function(o){ return !o.pending; }).forEach(function(o){ var k = o.bill || "Обща сметка"; (g[k] = g[k] || []).push(o); }); return g; }
+function total(){ return ST.ordersOf(N).filter(function(o){ return !o.pending; }).reduce(function(s,o){ return s + ST.linesTotal(o.lines); }, 0); }
+
+function render(){
+  var s = ST.tStatus(N), t = ST.db.tables[N], os = ST.ordersOf(N), calls = ST.callsOf(N), qr = os.filter(function(o){ return o.pending; });
+  var mine = ST.isMine(N), tot = total(), paid = ST.paidSum(N), left = Math.max(0, tot - paid);
+  var html = '<section class="hero"><div class="thead"><div class="meta"><span class="bigno">'+N+'</span><span>'+(mine?'Ваша маса':'Маса на '+ST.OTHER)+(t.st!=="free"?' · заета от '+ST.clock(t.since):'')+'</span></div>'+ST.stt(s.k, s.k==="call"?"Вика":s.w, s.i)+'</div>';
+  calls.forEach(function(c){ var r = ST.REASONS[c.r];
+    html += '<div class="callbar'+(c.taken==="me"?" taken":"")+'"><div class="tx">'+ic(r[1],24)+'<span>'+(c.taken==="me"?'Поехте: ':'Вика: ')+r[0]+' · чака '+ST.timer(c.since)+'</span></div>'+
+      (c.taken==="me"?'<button class="pill" type="button" data-done="'+c.id+'">'+ic("check",20)+'Обслужено</button>':'<button class="pill" type="button" data-take="'+c.id+'">Отивам</button>')+'</div>'; });
+  html += '</section>';
+
+  qr.forEach(function(o){ html += '<section class="st-sec"><div class="qrcard" data-lvl><div class="hd">'+ic("qr-code",24)+'<span>Поръчка от QR · чака потвърждение</span><span class="tm">'+ST.timer(o.at)+'</span></div><div class="in">'+
+    o.lines.map(function(l){ var x = SC.byId[l.id]; return '<div class="oline"><span class="q">'+l.q+'×</span><div><div class="nm">'+esc(x.n)+'</div>'+(l.note?'<div class="note">'+ic("note",18)+esc(l.note)+'</div>':'')+'<div class="sub"><span class="price">'+fmt(x.p*l.q)+'</span></div></div></div>'; }).join("")+
+    '<div class="ocard" style="box-shadow:none;padding:0;margin-top:4px"><div class="ft"><span>Общо</span><span class="price">'+fmt(ST.linesTotal(o.lines))+'</span></div></div>'+
+    '<p class="small muted" style="margin:10px 0 0">Първата поръчка от QR се потвърждава, за да няма фалшиви поръчки. Следващите от тази маса отиват направо в кухнята.</p>'+
+    '<div class="acts"><button class="pill pill-line" type="button" data-reject="'+o.id+'">Откажи</button><button class="pill pill-red" type="button" data-confirm="'+o.id+'">'+ic("check",22)+'Потвърди и прати</button></div></div></div></section>'; });
+
+  var g = groups(), keys = Object.keys(g);
+  if (t.st === "free" && !keys.length && !qr.length){
+    html += '<section class="st-sec"><div class="st-empty" style="padding-top:24px"><div class="ill">'+ic("chair",48)+'</div><h2>Масата е свободна</h2><p>Като седнат гости, добавете първата поръчка или ги изчакайте да поръчат от QR.</p></div></section>';
+  } else if (!keys.length && !qr.length){
+    html += '<section class="st-sec"><div class="notice warn">'+ic("hourglass",22)+'<span>Гостите са седнали преди '+Math.max(1,Math.round(ST.secs(t.since)/60))+' мин и още нямат поръчка.</span></div></section>';
+  }
+  if (keys.length){
+    html += '<section class="st-sec"><div class="st-h"><h2>Поръчки</h2><span class="muted">'+(keys.length>1?'поотделно · '+keys.length+' сметки':'една сметка')+'</span></div>'+
+      keys.map(function(k){ var sum = 0, lines = "";
+        g[k].forEach(function(o){ sum += ST.linesTotal(o.lines); lines += '<p class="st-cap" style="margin:12px 0 0">№ '+o.id+' · '+ST.clock(o.at)+' · '+(o.src==="qr"?'от QR':'въведена от сервитьор')+(o.queued?' · чака връзка':'')+'</p>'+o.lines.map(function(l,i){ return lineHTML(o,l,i); }).join(""); });
+        return '<div class="ocard"><div class="oh"><b>'+esc(k)+'</b><span class="price" style="color:var(--ink);font-size:17px">'+fmt(sum)+'</span></div>'+lines+'</div>'; }).join("")+
+      '<div class="tot"><span>Общо за масата</span><span class="price">'+fmt(tot)+'</span></div>'+
+      (paid?'<div class="paidrow" style="padding:6px 4px 0">'+ic("check-circle",22)+'Платено '+fmt(paid)+(left>0.004?' · остават '+fmt(left):' · всичко е платено')+'</div>':'')+
+      '</section>';
+  }
+  var canClose = t.st!=="free" && (!keys.length ? !qr.length : left < 0.005);
+  if (t.st !== "free" || keys.length) html += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-close-table'+(canClose?'':' aria-disabled="true"')+'>'+ic("door-open",22)+'Затвори масата</button>'+
+    (canClose?'':'<p class="small muted" style="margin:8px 4px 0;text-align:center">Първо маркирайте сметката като платена.</p>')+'</section>';
+  main.innerHTML = html; ST.tick();
+
+  bar.innerHTML = (keys.length && left > 0.004 ? '<button class="pill pill-line" type="button" data-bill>'+ic("receipt",22)+'Сметка</button>' : '')+
+    '<a class="pill pill-red grow" href="order.html#'+N+'">'+ic("plus",22)+(keys.length?'Добави поръчка':'Нова поръчка')+'</a>';
+}
+
+/* ---------- bill sheet ---------- */
+var billMode = "one", pay = "cash";
+function billSheet(){ var g = groups(), keys = Object.keys(g), tot = total() - ST.paidSum(N);
+  if (keys.length > 1) billMode = billMode==="one" ? "guests" : billMode;
+  var sh = ST.sheet({title:"Сметка · Маса "+N, html:'<div id="bb"></div>', foot:'<div id="bf"></div>'});
+  var bb = sh.el.querySelector("#bb"), bf = sh.el.querySelector("#bf"), picked = {};
+  function seg(){ return '<div class="st-seg" role="group" aria-label="Как се плаща">'+[["one","Една сметка"],["guests","По гости"],["items","По ястия"]].map(function(m){ return '<button type="button" data-m="'+m[0]+'" aria-pressed="'+(billMode===m[0])+'"'+(m[0]==="guests"&&keys.length<2?' disabled':'')+'>'+m[1]+'</button>'; }).join("")+'</div>'; }
+  function paySeg(){ return '<p class="st-cap" style="margin:16px 0 8px">Плащане</p><div class="st-seg" role="group" aria-label="Плащане"><button type="button" data-p="cash" aria-pressed="'+(pay==="cash")+'">'+ic("money",22)+'В брой</button><button type="button" data-p="card" aria-pressed="'+(pay==="card")+'">'+ic("credit-card",22)+'Карта</button></div>'; }
+  function allLines(){ var r = []; keys.forEach(function(k){ g[k].forEach(function(o){ o.lines.forEach(function(l,i){ r.push({k:o.id+":"+i, x:SC.byId[l.id], q:l.q, who:k}); }); }); }); return r; }
+  function draw(){ var body = seg(), foot = "";
+    if (billMode==="one"){
+      body += '<div class="kvs" style="margin-top:12px">'+allLines().map(function(r){ return '<div class="kv"><span>'+r.q+'× '+esc(r.x.n)+'</span><span class="price">'+fmt(r.x.p*r.q)+'</span></div>'; }).join("")+'<div class="kv tot"><span>За плащане</span><span class="price">'+fmt(tot)+'</span></div></div>'+paySeg();
+      foot = '<button class="pill pill-red pill-lg pill-block" type="button" data-pay="all" data-sum="'+tot+'">'+ic("check",22)+'Платено · <span class="price">'+fmt(tot)+'</span></button>';
+    } else if (billMode==="guests"){
+      body += '<div style="margin-top:12px">'+keys.map(function(k){ var sum = g[k].reduce(function(s,o){ return s+ST.linesTotal(o.lines); },0), done = (ST.db.paid[N]||[]).some(function(p){ return p.key===k; });
+        return '<div class="splitcard"><div class="hd"><span>'+esc(k)+'</span><span class="price">'+fmt(sum)+'</span></div>'+g[k].map(function(o){ return o.lines.map(function(l){ var x=SC.byId[l.id]; return '<div class="ln"><span>'+l.q+'× '+esc(x.n)+'</span><span class="price" style="font-weight:700">'+fmt(x.p*l.q)+'</span></div>'; }).join(""); }).join("")+
+          (done?'<div class="paidrow" style="margin-top:8px">'+ic("check-circle",22)+'Платено</div>':'<div class="acts"><button class="pill pill-soft" type="button" data-pay="'+esc(k)+'" data-how="cash" data-sum="'+sum+'">'+ic("money",20)+'В брой</button><button class="pill pill-soft" type="button" data-pay="'+esc(k)+'" data-how="card" data-sum="'+sum+'">'+ic("credit-card",20)+'Карта</button></div>')+'</div>'; }).join("")+'</div>';
+    } else {
+      var sel = allLines().filter(function(r){ return picked[r.k]; }).reduce(function(s,r){ return s+r.x.p*r.q; },0);
+      body += '<p class="small muted" style="margin:12px 0 4px">Отбележете какво плаща този гост.</p>'+allLines().map(function(r){ return '<label class="chk"><input type="checkbox" data-k="'+r.k+'"'+(picked[r.k]?' checked':'')+'><span>'+r.q+'× '+esc(r.x.n)+'</span><span class="price">'+fmt(r.x.p*r.q)+'</span></label>'; }).join("")+paySeg();
+      foot = '<button class="pill pill-red pill-lg pill-block" type="button" data-pay="items" data-sum="'+sel+'"'+(sel?'':' disabled')+'>'+ic("check",22)+(sel?'Платено · <span class="price">'+fmt(sel)+'</span>':'Изберете ястия')+'</button>';
+    }
+    body += '<p class="small muted" style="margin:14px 0 0">Касовият бон се издава от касата за всяко плащане <span class="missing">[ЛИПСВА: връзка с касовия апарат]</span>.</p>';
+    bb.innerHTML = body; bf.innerHTML = foot; }
+  draw();
+  sh.el.addEventListener("change", function(e){ if (e.target.dataset.k){ picked[e.target.dataset.k] = e.target.checked; draw(); } });
+  sh.el.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.m){ billMode = b.dataset.m; draw(); return; }
+    if (b.dataset.p){ pay = b.dataset.p; draw(); return; }
+    if (b.dataset.pay){ var sum = +b.dataset.sum; ST.markPaid(N, b.dataset.pay, b.dataset.how || pay, sum); ST.toast("Платено "+fmt(sum)+((b.dataset.how||pay)==="card"?" с карта":" в брой"));
+      if (b.dataset.pay==="all" || total()-ST.paidSum(N) < 0.005) sh.close(); else draw(); } });
+}
+
+render(); ST.on(render);
+document.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("data-bill")){ billSheet(); return; }
+  if (b.dataset.serve){ ST.serve(b.dataset.serve, +b.dataset.i); ST.toast("Сервирано"); return; }
+  if (b.dataset.take){ ST.takeCall(b.dataset.take); ST.haptic(); return; }
+  if (b.dataset.done){ var c = ST.db.calls.filter(function(x){ return x.id===b.dataset.done; })[0]; ST.doneCall(c.id); ST.toast("Обслужено", function(){ ST.restoreCall(c); }); return; }
+  if (b.dataset.confirm){ ST.confirmQR(b.dataset.confirm); ST.toast(ST.offline?"Потвърдено. Ще тръгне към кухнята, щом има връзка.":"Потвърдено и изпратено в кухнята"); return; }
+  if (b.dataset.reject){ var id = b.dataset.reject, sh = ST.sheet({title:"Да откажем ли поръчката?", html:'<p style="margin:0 0 12px">Гостите ще видят на телефона, че поръчката е отказана. Кажете им защо.</p><div class="notechips">'+["Тестова или по грешка","Гостите се отказаха","Ще я въведа аз"].map(function(r){ return '<button class="chip" type="button" data-r>'+r+'</button>'; }).join("")+'</div>',
+      foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-rj>Откажи поръчката</button><button class="pill pill-line pill-lg pill-block" type="button" data-keep>Не, върни се</button>'});
+    sh.el.addEventListener("click", function(ev){ var x = ev.target.closest("button"); if (!x) return; if (x.hasAttribute("data-r")){ sh.el.querySelectorAll("[data-r]").forEach(function(c){ c.setAttribute("aria-pressed", c===x); }); }
+      if (x.hasAttribute("data-rj")){ var o = ST.db.orders.filter(function(q){ return q.id===id; })[0]; ST.rejectQR(id); sh.close(); ST.toast("Поръчката е отказана", function(){ ST.db.orders.push(o); ST.save(); }); }
+      if (x.hasAttribute("data-keep")) sh.close(); }); return; }
+  if (b.hasAttribute("data-close-table")){ if (b.getAttribute("aria-disabled")==="true"){ ST.toast("Първо маркирайте сметката като платена."); return; }
+    var sh2 = ST.sheet({title:"Затваряне на Маса "+N, html:'<p style="margin:0">Масата става свободна, а QR сесията се затваря. Следващите гости ще сканират нов код.</p>', foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-yes>'+ic("door-open",22)+'Затвори масата</button><button class="pill pill-line pill-lg pill-block" type="button" data-no>Остави отворена</button>'});
+    sh2.el.addEventListener("click", function(ev){ var x = ev.target.closest("button"); if (!x) return; if (x.hasAttribute("data-yes")){ ST.closeTable(N); sh2.close(); ST.toast("Маса "+N+" е свободна"); } if (x.hasAttribute("data-no")) sh2.close(); }); return; }
+});
+window.addEventListener("hashchange", function(){ location.reload(); });
+</script>
+</body>
+</html>

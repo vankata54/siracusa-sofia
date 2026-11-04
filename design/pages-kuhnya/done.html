@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Изпълнени | Кухня · Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+<style>
+.dl{margin-top:14px; padding:4px 0}
+.dr{display:grid; grid-template-columns:96px minmax(180px,.8fr) minmax(0,1.6fr) auto auto; gap:18px; align-items:center; padding:16px 20px; border-top:1px solid var(--line)}
+.dr:first-child{border-top:0}
+.dr .t{font-size:28px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.dr .t small{display:block; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0}
+.dr .s{display:flex; align-items:center; gap:10px; min-width:0}
+.dr .s .ic{color:var(--muted)}
+.dr .s b{font-size:24px; letter-spacing:-.03em; white-space:nowrap}
+.dr .s small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.dr .it{font-size:19px; font-weight:700; line-height:1.35}
+.dr .it span{white-space:nowrap}
+.dr .it .md{min-height:28px; font-size:15px; vertical-align:2px; margin-left:4px}
+.dr .du{text-align:right; font-size:17px; font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums}
+.dr .du small{display:flex; justify-content:flex-end; align-items:center; gap:4px; font-size:15px; font-weight:800; color:var(--ok)}
+.dr .du small.late{color:var(--danger)}
+.dr .kb{min-height:56px; font-size:17px}
+.sum{display:flex; flex-wrap:wrap; gap:6px 22px; font-size:18px; color:var(--muted); font-weight:700; margin-top:8px}
+.sum b{color:var(--ink); font-variant-numeric:tabular-nums}
+@container app (max-width:1100px){ .dr{grid-template-columns:84px minmax(150px,.7fr) minmax(0,1.4fr) auto; } .dr .kb{grid-column:3 / -1; justify-self:end} }
+@container app (max-width:899px){ .dr{grid-template-columns:80px minmax(0,1fr) auto} .dr .it{grid-column:2 / -1} .dr .du{grid-row:1; grid-column:3} .dr .kb{grid-column:1 / -1; justify-self:stretch} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, esc = SC.esc;
+var main = K.mount({page:"done", title:"Изпълнени · " + K.sec.n});
+var list = K.st === "empty" ? [] : K.doneToday();
+if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
+
+function render(){
+  var onTime = list.filter(function(o){ return K.s(o.doneAt) <= o.due; }).length;
+  if (K.st !== "offline") K.strip.innerHTML = '<div class="kcount"><span>Днес изпълнени <b>' + list.length + '</b></span><span class="sep"></span><span>Навреме <b>' + onTime + '</b></span></div>' +
+    '<a class="kpill" href="' + K.link("queue") + '">' + ic("arrow-left",22) + 'Към опашката</a>';
+  main.innerHTML = '<div class="kpage"><h1 class="kh1">Изпълнени днес</h1><p class="klead">Последните поръчки на ' + esc(K.sec.n) + ', най-новата горе. Ако нещо е отбелязано по грешка, върнете го в опашката.</p>' +
+    (list.length ? '<div class="dl kcard">' + list.map(function(o, i){ var src = K.src(o), took = Math.round((K.s(o.doneAt) - o.at)/60), late = Math.round((K.s(o.doneAt) - o.due)/60);
+      var mine = o.lines.filter(function(l){ return K.secOf(l.id) === K.secId; });
+      return '<div class="dr"><div class="t">' + o.doneAt + '<small>готово</small></div>' +
+        '<div class="s">' + ic(src.ic,26) + '<span><b>' + esc(o.kind === "table" ? "Маса " + o.num : "№ " + o.num) + '</b><small>' + (o.kind === "table" ? esc(o.zone) : o.kind === "delivery" ? "Доставка" : "Вземане") + '</small></span></div>' +
+        '<div class="it">' + mine.map(function(l){ return '<span>' + l.q + ' × ' + esc(SC.byId[l.id].n) + (l.o.w ? ' (' + esc(l.o.w) + ')' : '') + '</span>' + (l.o.no||[]).map(function(t){ return '<span class="md no">без ' + esc(t) + '</span>'; }).join(""); }).join(", ") + '</div>' +
+        '<div class="du">за ' + took + ' мин' + (late > 0 ? '<small class="late">' + ic("warning",16) + 'с ' + late + ' мин закъснение</small>' : '<small>' + ic("check",16) + 'навреме</small>') + '</div>' +
+        '<button class="kb line" type="button" data-back="' + i + '">' + ic("arrow-counter-clockwise",22) + 'Върни в опашката</button></div>'; }).join("") + '</div>'
+    : '<div class="kempty" style="height:auto; padding:80px 16px"><div><div class="ill">' + ic("clock",56) + '</div><h2>Още няма изпълнени поръчки днес</h2><p>Тук ще виждате последните поръчки, отбелязани с „Готово“.</p></div></div>') + '</div>';
+  main.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ var i = +b.getAttribute("data-back"), o = list[i];
+    list.splice(i, 1); render();
+    K.toast('<b>' + esc(K.srcText(o)) + ' е отново в опашката</b><small>Известихме ' + K.src(o).who + ', че поръчката още не е готова.</small>', function(){ list.splice(i, 0, o); render(); }); }); });
+}
+render();
+})();
+</script>
+</body>
+</html>

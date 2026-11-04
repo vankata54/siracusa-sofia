@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Натоварено | Кухня · Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+<style>
+.bz{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:16px; align-items:start}
+.sw{padding:24px; display:grid; gap:16px}
+.sw.on{box-shadow:var(--hi), var(--shadow), inset 0 0 0 4px var(--ember)}
+.sw h1{display:flex; align-items:center; gap:12px}
+.state{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:18px; background:var(--surface-2); font-size:18px; font-weight:700}
+.state i{width:16px; height:16px; border-radius:50%; background:var(--off); flex:none}
+.sw.on .state{background:var(--ember); color:var(--on-ember)}
+.sw.on .state i{background:var(--on-ember)}
+.state small{display:block; font-size:15px; font-weight:600; opacity:.85}
+.big{min-height:88px; font-size:22px; width:100%}
+.kb.ember{background:var(--ember); color:var(--on-ember)}
+.why{margin:0; padding:0; list-style:none; display:grid; gap:8px; font-size:17px; color:var(--muted)}
+.why li{display:flex; gap:10px; align-items:flex-start}
+.why .ic{color:var(--ink); margin-top:2px}
+.fx{padding:22px}
+.fx h2,.lg2 h2{margin:0 0 4px; font-size:24px; letter-spacing:-.03em; font-weight:800}
+.fx table{width:100%; border-collapse:collapse; margin-top:8px}
+.fx th{font-size:15px; font-weight:800; color:var(--muted); text-align:left; padding:8px 0}
+.fx th:not(:first-child),.fx td:not(:first-child){text-align:right}
+.fx td{padding:14px 0; border-top:1px solid var(--line); font-size:19px; font-weight:700; vertical-align:top}
+.fx td small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.fx td.now{font-size:24px; font-weight:800; font-variant-numeric:tabular-nums}
+.fx td.was{color:var(--muted); font-variant-numeric:tabular-nums}
+.fx .on td.now{color:var(--ink)}
+.fx .plus15{display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800; vertical-align:3px}
+.cust{margin-top:14px; display:grid; gap:8px}
+.cust .lbl{font-size:15px; font-weight:800; color:var(--muted)}
+.cust .status{position:static; pointer-events:auto; display:flex; align-items:center; gap:10px; min-height:52px; padding:8px 16px; border-radius:26px; background:var(--surface-2); font-size:16px}
+.cust .dot{width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+.cust .dot.warn{background:var(--warn)}
+.lg2{grid-column:1 / -1; padding:20px 22px}
+.lrow{display:grid; grid-template-columns:150px 1fr; gap:12px; padding:12px 0; border-top:1px solid var(--line); font-size:18px}
+.lrow b{font-variant-numeric:tabular-nums}
+@container app (max-width:899px){ .bz{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, esc = SC.esc;
+var main = K.mount({page:"busy", title:"Натоварено"});
+/* условни норми за макета: [ЛИПСВА: срок в кухнята по канал]; доставката е 35 мин както в SC.eta() */
+var BASE = {table:20, pickup:20, delivery:35};
+if (K.hash.st === "on" && !K.busy().on){ K.setBusy(true); }
+
+function render(){
+  var b = K.busy(), on = b.on, add = on ? K.BUSY_MIN : 0, now = K.now();
+  if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
+  else K.strip.innerHTML = '<div class="kcount">' + (on ? '<span>Натоварено <b>+' + K.BUSY_MIN + ' мин</b> от <b>' + b.at + '</b></span>' : '<span>Обичаен режим</span>') + '</div>' +
+    '<a class="kpill" href="' + K.link("queue") + '">' + ic("arrow-left",22) + 'Към опашката</a>';
+  function row(t, sub, base, unit){ return '<tr class="' + (on ? "on" : "") + '"><td>' + t + '<small>' + sub + '</small></td><td class="was">' + (on ? base : "") + '</td><td class="now">' + unit(base + add) + (on ? '<span class="plus15">+' + K.BUSY_MIN + '</span>' : '') + '</td></tr>'; }
+  var min = function(v){ return v + ' мин'; };
+  main.innerHTML = '<div class="kpage"><div class="bz">' +
+    '<section class="sw kcard' + (on ? " on" : "") + '" aria-labelledby="h1"><h1 class="kh1" id="h1">' + ic("hourglass",30) + 'Натоварено: +' + K.BUSY_MIN + ' мин</h1>' +
+      '<div class="state" role="status"><i></i><span>' + (on ? 'Включено от ' + b.at + '<small>Включи: ' + esc(b.by) + '</small>' : 'Изключено<small>Сроковете са обичайните</small>') + '</span></div>' +
+      '<button class="kb big ' + (on ? "ink" : "ember") + '" type="button" data-tg>' + (on ? ic("check-circle",28) + 'Изключи: кухнята се справя' : ic("hourglass",28) + 'Включи +' + K.BUSY_MIN + ' мин') + '</button>' +
+      '<ul class="why"><li>' + ic("info",20) + '<span>Важи за цялата кухня: всички секции и всички канали.</span></li>' +
+      '<li>' + ic("info",20) + '<span>Поръчките не спират. Новите получават ' + K.BUSY_MIN + ' мин повече; приетите пазят своя срок.</span></li>' +
+      '<li>' + ic("info",20) + '<span>Изключва се само ръчно. <span class="miss">[за решение: напомняне след 60 мин?]</span></span></li></ul></section>' +
+    '<section class="fx kcard" aria-labelledby="h-fx"><h2 id="h-fx">' + (on ? 'Новите срокове' : 'Какво ще се промени') + '</h2>' +
+      '<table><thead><tr><th scope="col">Канал</th><th scope="col">' + (on ? 'Беше' : '') + '</th><th scope="col">' + (on ? 'Сега' : 'Сега') + '</th></tr></thead><tbody>' +
+      row('Маса в салона', 'срок в кухнята', BASE.table, min) +
+      row('Вземане', 'най-ранен час: ' + K.hm(now + (BASE.pickup + add)*60), BASE.pickup, min) +
+      row('Доставка', 'до вратата на клиента', BASE.delivery, function(v){ return 'около ' + v + ' мин'; }) +
+      '</tbody></table>' +
+      '<div class="cust"><span class="lbl">Клиентът вижда в сайта преди поръчка</span><div class="status"><span class="dot' + (on ? " warn" : "") + '"></span>' +
+      (on ? '<span><b>Възможни са закъснения</b> · около ' + (BASE.delivery + add) + ' мин</span>' : '<span><b>Отворено до 23:00</b> · Доставка около ' + BASE.delivery + ' мин</span>') + '</div>' +
+      '<span class="lbl" style="font-weight:600">Сроковете в кухнята са условни: <span class="miss">[ЛИПСВА: норми за време по канал]</span></span></div></section>' +
+    '<section class="lg2 kcard" aria-labelledby="h-lg"><h2 id="h-lg">Днес</h2>' +
+      (on ? '<div class="lrow"><b>' + b.at + ' - сега</b><span>' + esc(b.by) + '</span></div>' : '') +
+      b.log.map(function(l){ return '<div class="lrow"><b>' + l.on + ' - ' + l.off + '</b><span>' + esc(l.by) + '</span></div>'; }).join("") + '</section>' +
+  '</div></div>';
+  main.querySelector("[data-tg]").addEventListener("click", function(){ var was = K.busy();
+    K.setBusy(!was.on); render();
+    K.toast(was.on ? '<b>Натоварено е изключено</b><small>Новите поръчки са с обичайните срокове.</small>' : '<b>Натоварено: +' + K.BUSY_MIN + ' мин</b><small>Новите поръчки и сайтът вече показват по-дълги срокове.</small>',
+      function(){ K.store("busy", was); render(); }); });
+}
+render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Меню на масата | Siracusa Bar & Grill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_masa.css">
+<style>
+/* menu.html (QR table): page-only styles, tokens only */
+.mm-h{display:grid; gap:6px}
+.mm-h .lead{max-width:46ch}
+.tbl{display:flex; align-items:center; gap:12px; margin-top:16px; padding:12px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; min-height:64px}
+.tbl b{display:block; font-size:16px; line-height:1.3}
+.tbl .d{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.tbl > .ic{margin-left:auto; color:var(--muted)}
+.tbl.flash{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
+.sbox{position:relative; margin-top:16px}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:52px; padding:0 52px 0 50px; border:0; border-radius:var(--r-pill); background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:16px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sbox .clr{position:absolute; right:2px; top:2px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.fchips{margin-top:12px; padding-bottom:2px}
+.fchips .chip.leaf .ic{color:var(--ok)} .fchips .chip.pep .ic{color:var(--red)}
+.fchips .chip[aria-pressed="true"] .ic{color:inherit}
+.fchips .dot{min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center}
+.mstat{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; min-height:48px}
+.mstat p{margin:0; font-weight:800; font-variant-numeric:tabular-nums}
+.mstat p span{color:var(--muted); font-weight:600}
+.alnote{margin-top:4px}
+.mm .mnotes{margin-top:16px}
+/* sticky categories */
+.catbar{position:sticky; top:74px; z-index:18; margin:18px -8px 0; padding:4px; border-radius:var(--r-pill); background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.catbar .cs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; border-radius:var(--r-pill)}
+.catbar .cs::-webkit-scrollbar{display:none}
+.catbar .chip{background:transparent; box-shadow:none; padding:0 14px; text-decoration:none}
+.catbar .chip[aria-current="true"]{background:var(--ink); color:var(--bg)}
+.mcat{padding-top:32px; scroll-margin-top:136px}
+.mcat .h3{font-size:22px}
+.mcat .cdesc{margin:2px 0 4px; font-size:14px; font-weight:600; color:var(--muted)}
+.rows{display:grid}
+.mempty{margin-top:24px; padding:32px 20px; border-radius:var(--r-shell); background:var(--surface-2)}
+.mempty .ill{background:var(--surface); color:var(--ink)}
+.mempty p{margin:0; color:var(--muted)}
+/* allergen sheet */
+.flist .check{align-items:center; min-height:56px; padding:6px 0; border-top:1px solid var(--line)}
+.flist .check:first-child{border-top:0}
+.flist .fi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.flist .ft{flex:1; display:grid; line-height:1.25}
+.flist .ft small{font-size:14px; color:var(--muted); font-weight:600}
+.sh-foot{position:sticky; bottom:0; display:grid; grid-template-columns:auto 1fr; gap:8px; padding:14px 0 2px; background:var(--surface)}
+/* cart bar */
+.cbar{padding:6px 6px 6px 16px}
+.cbar .avs{flex:none}
+.cbar .cn{flex:none; font-size:14px; font-weight:700; line-height:1.2; color:var(--muted)}
+.cbar .cn b{display:block; color:var(--ink); font-size:16px}
+.cbar .pill{justify-content:space-between; padding:0 8px 0 18px}
+.cbar .knob{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--red-press)}
+.cbar.off .pill{background:var(--ink); color:var(--bg)}
+.cbar.off .knob{background:transparent}
+@container app (max-width:699px){ .cbar .avs{display:none} }
+@container app (max-width:370px){ .cbar .cn{display:none} }
+@container app (min-width:700px){
+  .rows{grid-template-columns:1fr 1fr; column-gap:32px}
+  .rows .mrow + .mrow{border-top:0}
+  .rows .mrow{border-bottom:1px solid var(--line)}
+}
+@container app (min-width:900px){
+  .mm-top{display:grid; grid-template-columns:minmax(0,1fr) 420px; gap:12px 40px; align-items:end}
+  .tbl{margin-top:0}
+  .catbar{top:96px; margin:28px 0 0}
+  .mcat{scroll-margin-top:170px; padding-top:44px}
+  .fchips{flex-wrap:wrap; overflow:visible; margin:12px 0 0; padding:0}
+}
+@container app (min-width:1100px){ .rows{grid-template-columns:1fr 1fr 1fr} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_masa.js"></script>
+<script>
+(function(){
+"use strict";
+var M = MASA, L = M.L, ic = SC.ic, esc = SC.esc, S = M.st;
+var main = M.mount({page:"menu", title:"Меню на масата", docTitle:"Меню на масата · QR маса", actionBar:true});
+if (!main) return;
+var CATS = SC.cats.filter(function(c){ return c.id !== "dobavki"; });
+var FILT = ["veg","hot","noonion","nogluten","nomilk"].map(function(id){ return SC.FILTERS.filter(function(f){ return f.id===id; })[0]; });
+var FCLS = {veg:"leaf", hot:"pep"};
+var st = {q:"", f:[], a:[]};
+function plural(n){ return SC.plural(n, L("ястие","dish"), L("ястия","dishes")); }
+
+function passes(x){ for (var i=0;i<st.f.length;i++){ var f = FILT.filter(function(z){ return z.id===st.f[i]; })[0]; if (!f.test(x)) return false; }
+  for (var j=0;j<st.a.length;j++) if (x.al.indexOf(st.a[j]) > -1) return false;
+  var q = st.q.trim().toLowerCase(); if (q && (x.n+" "+x.comp).toLowerCase().indexOf(q) < 0) return false; return true; }
+function groups(){ return CATS.map(function(c){ var it = SC.inCat(c.id).filter(passes).sort(function(a,b){ return SC.isOut(a)-SC.isOut(b); }); return {c:c, it:it}; }).filter(function(g){ return g.it.length; }); }
+
+function tableCard(){ var by = {}; S.draft.forEach(function(l){ by[l.who] = (by[l.who]||0) + l.q; });
+  var parts = M.WHO.filter(function(w){ return by[w]; }).map(function(w){ return esc(M.name(w))+": "+by[w]; });
+  return '<a class="tbl" href="cart.html" data-tbl><span class="avs">'+M.av("me")+M.av("g2")+M.av("g3")+'</span><span><b>'+L("Обща количка на масата","Shared table cart")+'</b><span class="d">'+(parts.length ? parts.join(" · ") : L("Още е празна","Still empty"))+'</span></span>'+ic("caret-right",20)+'</a>'; }
+
+main.innerHTML =
+  '<section class="mpage mm" aria-labelledby="mm-h">'+
+    '<div class="mm-top"><div class="mm-h"><h1 class="h1" id="mm-h">'+L("Меню","Menu")+'</h1><p class="lead">'+L("Натиснете „+“ и ястието отива в общата количка на масата.","Tap “+” and the dish goes to the table’s shared cart.")+'</p></div><div data-tblbox>'+tableCard()+'</div></div>'+
+    '<div class="mnotes" data-notes></div>'+
+    '<div class="sbox" role="search"><label class="vh" for="mq">'+L("Търсете ястие или съставка","Search a dish or ingredient")+'</label>'+ic("magnifying-glass",22)+'<input id="mq" type="search" placeholder="'+L("Търсете: пица, бурата, кебапчета","Search: pizza, burrata")+'" autocomplete="off" enterkeyhint="search"><button class="clr" type="button" data-qclr aria-label="'+L("Изчисти търсенето","Clear search")+'" hidden>'+ic("x",20)+'</button></div>'+
+    '<div class="chips fchips" data-fchips role="group" aria-label="'+L("Филтри","Filters")+'"></div>'+
+    '<div class="mstat"><p data-count aria-live="polite"></p><button class="link" type="button" data-clr hidden>'+ic("x",18)+L("Изчисти","Clear")+'</button></div>'+
+    '<p class="note-auto alnote">'+ic("info",18)+'<span>'+L("Алергените са предварителни, от състава. Кухнята ги потвърждава.","Allergens are preliminary, from the ingredients. The kitchen confirms them.")+'</span></p>'+
+    (S.lang==="en" ? '<p class="note-auto">'+ic("info",18)+'<span>Dish names are in Bulgarian for now. <span class="missing">[ЛИПСВА: английски имена и състав на ястията]</span></span></p>' : '')+
+    '<nav class="catbar" aria-label="'+L("Категории","Categories")+'"><div class="cs" data-cats></div></nav>'+
+    '<div data-res></div>'+
+    M.protoHTML('<button class="pill" type="button" data-simadd>'+ic("users-three",18)+'Телефон 2 добавя ястие</button><a class="pill" href="menu.html#demo=empty">Празна количка</a>')+
+  '</section><div class="mend"></div>';
+
+var $ = function(s){ return main.querySelector(s); };
+var elRes = $("[data-res]"), elQ = $("#mq");
+function chips(){ var aOn = st.a.length;
+  $("[data-fchips]").innerHTML = '<button class="chip" type="button" data-al aria-pressed="'+(aOn>0)+'" aria-haspopup="dialog">'+ic("funnel",20)+L("Алергени","Allergens")+(aOn?' <span class="dot">'+aOn+'</span>':'')+'</button>'+
+    FILT.map(function(f){ return '<button class="chip '+(FCLS[f.id]||"")+'" type="button" data-f="'+f.id+'" aria-pressed="'+(st.f.indexOf(f.id)>-1)+'">'+ic(f.icon,20)+L(f.n, {veg:"Vegetarian",hot:"Spicy",noonion:"No onion",nogluten:"Gluten free",nomilk:"Dairy free"}[f.id])+'</button>'; }).join(""); }
+function render(keep){ var G = groups(), n = G.reduce(function(a,g){ return a+g.it.length; },0), any = st.f.length || st.a.length || st.q.trim();
+  $("[data-notes]").innerHTML = M.banners();
+  chips();
+  $("[data-count]").innerHTML = any ? L("Показваме ","Showing ")+n+' <span>'+L("от ","of ")+plural(SC.items.length - SC.inCat("dobavki").length)+'</span>' : plural(SC.items.length - SC.inCat("dobavki").length)+' <span>· '+CATS.length+L(" категории"," categories")+'</span>';
+  $("[data-clr]").hidden = !any;
+  $("[data-cats]").innerHTML = G.map(function(g){ return '<a class="chip" href="#c-'+g.c.id+'" data-go="'+g.c.id+'">'+esc(g.c.n)+'</a>'; }).join("");
+  main.querySelector(".catbar").hidden = G.length < 2;
+  elRes.innerHTML = G.length ? G.map(function(g){
+    return '<section class="mcat" id="c-'+g.c.id+'" data-cat="'+g.c.id+'"><h2 class="h3">'+esc(g.c.n)+'</h2>'+(g.c.id==="zakuski"?'<p class="cdesc">'+L("Всеки ден до 11:30","Every day until 11:30")+'</p>':'')+'<div class="rows">'+g.it.map(M.row).join("")+'</div></section>'; }).join("")
+    : '<div class="empty mempty"><span class="ill">'+ic("funnel",40)+'</span><h2 class="h3">'+L("Няма ястия с тези филтри","No dishes match these filters")+'</h2><p>'+L("Махнете някой филтър или изчистете всички.","Remove a filter or clear them all.")+'</p><button class="pill pill-red" type="button" data-clr>'+L("Изчисти филтрите","Clear filters")+'</button></div>';
+  spy(); }
+
+/* scrollspy for the sticky categories */
+var sc = SC.scroller;
+function spy(){ var secs = elRes.querySelectorAll(".mcat"), id = null, top = sc.getBoundingClientRect().top;
+  for (var i=0;i<secs.length;i++){ if (secs[i].getBoundingClientRect().top - top < 150) id = secs[i].dataset.cat; }
+  main.querySelectorAll("[data-go]").forEach(function(a){ var on = a.dataset.go === id; a.setAttribute("aria-current", String(on)); if (on && a.dataset.on !== "1"){ a.parentNode.scrollTo({left:a.offsetLeft - 40, behavior:"smooth"}); } a.dataset.on = on ? "1" : ""; }); }
+sc.addEventListener("scroll", function(){ requestAnimationFrame(spy); }, {passive:true});
+
+/* allergen sheet */
+function alSheet(){ var s = SC.sheet({title:L("Алергени","Allergens"), html:'<p class="muted" style="margin:0 0 6px">'+L("Отметнете какво не ядете. Скриваме ястията, които го съдържат по състава.","Tick what you don’t eat. We hide dishes that contain it.")+'</p><div class="flist">'+
+    SC.ALLERGENS.map(function(a){ return '<label class="check"><input type="checkbox" data-alk="'+a[0]+'"'+(st.a.indexOf(a[0])>-1?" checked":"")+'><span class="fi">'+ic(a[2],22)+'</span><span class="ft"><b>'+a[1]+'</b><small>'+SC.items.filter(function(x){ return x.al.indexOf(a[0])>-1; }).length+L(" ястия по състава"," dishes by ingredients")+'</small></span></label>'; }).join("")+
+    '</div><div class="sh-foot"><button class="pill pill-soft" type="button" data-shclr>'+L("Изчисти","Clear")+'</button><button class="pill pill-red" type="button" data-close>'+L("Покажи ","Show ")+'<span data-n></span></button></div>'});
+  function upd(){ render(); s.el.querySelector("[data-n]").textContent = plural(groups().reduce(function(a,g){ return a+g.it.length; },0)); }
+  s.el.addEventListener("change", function(e){ var k = e.target.dataset.alk; if (!k) return; st.a = st.a.filter(function(z){ return z!==k; }); if (e.target.checked) st.a.push(k); upd(); });
+  s.el.querySelector("[data-shclr]").onclick = function(){ st.a = []; s.el.querySelectorAll("input").forEach(function(i){ i.checked = false; }); upd(); };
+  s.el.querySelector(".sh-foot [data-close]").addEventListener("click", s.close); upd(); }
+
+main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
+  if (t.dataset.go){ e.preventDefault(); var sec = document.getElementById("c-"+t.dataset.go); sec && sec.scrollIntoView({behavior:SC.reduce?"auto":"smooth"}); return; }
+  if (t.dataset.f){ var id = t.dataset.f; st.f = st.f.indexOf(id)>-1 ? st.f.filter(function(z){ return z!==id; }) : st.f.concat(id); render(); return; }
+  if (t.hasAttribute("data-al")){ alSheet(); return; }
+  if (t.hasAttribute("data-clr")){ st = {q:"", f:[], a:[]}; elQ.value = ""; $("[data-qclr]").hidden = true; render(); return; }
+  if (t.hasAttribute("data-qclr")){ elQ.value = ""; st.q = ""; t.hidden = true; render(); elQ.focus(); return; }
+  if (t.hasAttribute("data-simadd")){ S.sim.btn = 0; M.simOther("btn", "salata-sirakuza", "g2", 50); return; }
+});
+var qt; elQ.addEventListener("input", function(){ $("[data-qclr]").hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(function(){ st.q = elQ.value; render(); }, 120); });
+
+/* floating cart bar */
+SC.ov.insertAdjacentHTML("beforeend", '<div class="abar cbar" data-cbar hidden><span class="avs" data-cav></span><span class="cn" data-cn></span><a class="pill pill-red" href="cart.html" data-cgo><span></span><span class="knob">'+ic("arrow-right",20)+'</span></a></div>');
+var cbar = SC.ov.querySelector("[data-cbar]");
+function bar(){ var n = M.qty(S.draft); cbar.hidden = !n; if (!n) return;
+  var who = M.WHO.filter(function(w){ return S.draft.some(function(l){ return l.who===w; }); });
+  cbar.querySelector("[data-cav]").innerHTML = who.map(function(w){ return M.av(w, true); }).join("");
+  cbar.querySelector("[data-cn]").innerHTML = '<b>'+plural(n)+'</b>'+L("на масата","at the table");
+  cbar.classList.toggle("off", !M.kitchen());
+  cbar.querySelector("[data-cgo] span").textContent = (M.kitchen() ? L("Към количката · ","To the cart · ") : L("Виж количката · ","View cart · "))+SC.fmt(M.sum(S.draft)); }
+
+render(); bar();
+M.on(function(why){ var y = sc.scrollTop; $("[data-tblbox]").innerHTML = tableCard(); render(); sc.scrollTop = y; bar();
+  if (/^other:/.test(why)){ var key = why.slice(6), l = S.draft.filter(function(z){ return z.key===key; })[0];
+    var tb = $("[data-tbl]"); tb && tb.classList.add("flash");
+    if (l){ var r = elRes.querySelector('[data-row="'+l.id+'"]'); r && r.classList.add("flash"); } } });
+M.simOther("menu", "tiramisu", "g3", 6000);
+var h = location.hash.slice(1); if (h && SC.catById[h]) requestAnimationFrame(function(){ var sec = document.getElementById("c-"+h); sec && sec.scrollIntoView(); });
+})();
+</script>
+</body>
+</html>

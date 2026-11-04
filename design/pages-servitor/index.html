@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Сервитьор и часовник | Siracusa · Персонал</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_staff.css">
+<style>
+.scr{display:grid; gap:10px}
+.scr a.it{display:grid; grid-template-columns:52px 1fr auto; gap:14px; align-items:center; padding:14px 14px 14px 12px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink)}
+.scr .ico{width:52px; height:52px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.scr b{display:block; font-size:18px; letter-spacing:-.01em}
+.scr span.d{display:block; font-size:15px; color:var(--muted); line-height:1.35; margin-top:2px}
+.states{display:flex; flex-wrap:wrap; gap:8px}
+.states a{text-decoration:none}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_staff.js"></script>
+<script>
+var main = ST.mount({page:"index", title:"Сервитьор и часовник", sub:"Етап D · жив прототип · 8 екрана", bare:false, nav:null});
+var ic = SC.ic;
+var S = [
+  ["login.html","sign-in","Вход и смяна","Потребител и парола; бърз ПИН за споделен телефон (предложение); моите маси днес; приключване на смяната."],
+  ["tables.html","squares-four","Залата","Повикванията отгоре, моите маси, Салон и Градина със статус и таймер на всяка маса."],
+  ["calls.html","bell-ringing","Повиквания","Опашка по време на чакане: „Отивам“, „Обслужено“, цвят при закъснение, към управителя след X мин."],
+  ["table.html#12","receipt","Една маса","Поръчки по сметки със статус на всяко ястие, „Сервирах“, сметка (в брой, карта, разделяне), „Затвори масата“."],
+  ["table.html#3","qr-code","Маса с QR поръчка","Първата поръчка от QR чака потвърждение: „Потвърди и прати“ или „Откажи“."],
+  ["order.html#12","plus","Бърза поръчка","Търсене на латиница или кирилица, последно поръчвани, категории, бройки, бележка, отделни сметки."],
+  ["ready.html","bell","Готови за сервиране","Известия от кухнята по маси, най-старото отгоре, „Сервирах“."],
+  ["watch.html","clock","Смарт часовник","Кръгъл и правоъгълен екран: повикване, поето, готово, закъснява, празно, без връзка."]
+];
+main.innerHTML = '<section class="st-sec"><p class="lead" style="color:var(--ink)">Приложението на сервитьора е на телефона (PWA), с известия и на часовника. Данните са условни за макета: масите са от общия план, ястията са истинските от менюто.</p></section>'+
+  '<section class="st-sec"><div class="scr">'+S.map(function(s){ return '<a class="it" href="'+s[0]+'"><span class="ico">'+ic(s[1],26)+'</span><span><b>'+s[2]+'</b><span class="d">'+s[3]+'</span></span>'+ic("caret-right",22)+'</a>'; }).join("")+'</div></section>'+
+  '<section class="st-sec"><div class="st-h"><h2>Състояния</h2></div><div class="states">'+
+  '<a class="chip" href="calls.html#s=rush">'+ic("warning",18)+'Много повиквания</a><a class="chip" href="calls.html#s=empty">'+ic("check-circle",18)+'Празна опашка</a><a class="chip" href="tables.html#s=offline">'+ic("warning-circle",18)+'Няма връзка</a><a class="chip" href="order.html#12&q=pitsa">'+ic("magnifying-glass",18)+'Търсене „pitsa“</a><a class="chip" href="login.html#err">'+ic("lock",18)+'Грешна парола</a><a class="chip" href="login.html#end">'+ic("sign-out",18)+'Край на смяната</a>'+
+  '</div><p class="small muted" style="margin:12px 0 0">Тъмната тема: панелът „Само в прототипа“ най-долу на всеки екран или „Смяна“ горе вдясно. „По часа“ включва тъмна от 18:00.</p></section>';
+</script>
+</body>
+</html>

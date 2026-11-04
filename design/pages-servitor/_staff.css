@@ -1,0 +1,266 @@
+/* Siracusa staff app (waiter PWA + watch). Only tokens from ../ds/sc.css; no literal colours.
+   The staff app has its own chrome: no footer, no assistant, no cookie banner, no marketing. Page scrolls (DECISIONS, code v1). */
+
+/* A dark scope for elements that are always dark (the watch face). Same values as the dark theme in sc.css. */
+.st-dark{
+  --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --surface-3:#31312E;
+  --ink:#F2F2EF; --muted:#A09F99; --line:rgba(242,242,239,.10); --line-strong:rgba(242,242,239,.30);
+  --red:#FF6B5E; --red-press:#E85A4F; --on-red:#121211;
+  --ok:#4CAF7A; --on-ok:#121211; --warn:#F59E0B; --off:#8E8D88; --danger:#FF6B5E;
+  --glass:rgba(28,28,26,.76); --glass-line:rgba(242,242,239,.10);
+  --hi:inset 0 1px 0 rgba(255,255,255,.06);
+  color:var(--ink); color-scheme:dark;
+}
+
+body.st{background:var(--pv-bg); min-height:100%; height:auto}
+.st-app{position:relative; overflow-x:clip; max-width:430px; min-height:100dvh; margin:0 auto; background:var(--bg); container-type:inline-size; container-name:app; padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+.st-app.nonav{padding-bottom:40px}
+.st-app.withbar{padding-bottom:calc(196px + env(safe-area-inset-bottom))}
+.st-app.withbar.nonav{padding-bottom:120px}
+@media (min-width:700px){ .st-app{box-shadow:0 0 0 1px var(--line), var(--shadow-lg)} }
+
+/* ---------- top bar ---------- */
+.st-top{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:8px; min-height:68px; padding:8px 8px 8px 16px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:0 1px 0 var(--glass-line)}
+.st-top.back{padding-left:6px}
+.st-top .tt{flex:1; min-width:0; display:grid; line-height:1.15}
+.st-top .tt b{font-size:20px; font-weight:800; letter-spacing:-.025em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.st-top .tt span{font-size:14px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.st-back{display:inline-flex; align-items:center; gap:4px; min-height:48px; padding:0 14px 0 8px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; text-decoration:none; cursor:pointer; flex:none}
+.st-me{display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:0 14px 0 12px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:15px; cursor:pointer; flex:none; white-space:nowrap}
+.st-me .dot{width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+.st-me.off .dot{background:var(--warn)}
+.st-word{font-weight:800; font-size:22px; letter-spacing:-.05em}
+
+/* offline strip under the top bar */
+.st-net{position:sticky; top:68px; z-index:29; display:flex; align-items:center; gap:10px; min-height:52px; padding:8px 16px; background:var(--warn); color:var(--on-ember); font-weight:700; font-size:15px; line-height:1.3}
+.st-net button{margin-left:auto; min-height:44px; padding:0 14px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-weight:800; cursor:pointer; white-space:nowrap}
+
+/* ---------- bottom nav (4 tabs) ---------- */
+.st-nav{position:fixed; z-index:40; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.st-nav a{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; text-decoration:none; font-size:14px; font-weight:700; color:var(--muted); min-height:56px; border-radius:999px; white-space:nowrap}
+.st-nav a[aria-current="page"]{color:var(--ink)}
+.st-nav a[aria-current="page"] .ic{color:var(--red)}
+.st-nav .cnt{position:absolute; top:4px; left:calc(50% + 6px); min-width:24px; height:24px; padding:0 6px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.st-nav .cnt.ember{background:var(--ember); color:var(--on-ember)}
+
+/* action bar above the nav */
+.st-bar{position:fixed; z-index:39; bottom:calc(92px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); display:flex; gap:8px; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.st-bar.nonav{bottom:calc(10px + env(safe-area-inset-bottom))}
+.st-bar .pill{min-height:56px; font-size:17px; flex:1; padding:0 16px}
+.st-bar .pill.grow{flex:1.6}
+.st-bar .pill .price{font-size:17px}
+
+/* ---------- layout ---------- */
+.st-sec{padding:20px 16px 0}
+.st-h{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 0 12px}
+.st-h h2{margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em}
+.st-h .muted{font-size:14px; font-weight:700}
+.st-cap{font-size:14px; font-weight:800; color:var(--muted); letter-spacing:.02em; margin:0 0 8px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- status vocabulary (icon + word + colour, never colour alone) ---------- */
+.stt{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 9px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap; background:var(--surface-2); color:var(--ink)}
+.stt.call,.stt.bill{background:var(--red); color:var(--on-red)}
+.stt.qr{background:var(--surface); color:var(--red); box-shadow:inset 0 0 0 2px var(--red)}
+.stt.ready{background:var(--ember); color:var(--on-ember)}
+.stt.wait{background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 2px var(--warn)}
+.stt.free{background:var(--surface); color:var(--ok); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.stt.busy{background:var(--surface-2); color:var(--ink)}
+.stt.acc{background:var(--surface-2); color:var(--ink)}
+.stt.cook{background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 2px var(--warn)}
+.stt.served{background:transparent; color:var(--ok); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.stt.late{background:var(--red); color:var(--on-red)}
+
+/* ---------- table tiles ---------- */
+.tgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.tile{position:relative; display:grid; align-content:space-between; gap:6px; min-height:112px; padding:12px 12px 12px 14px; border:0; border-radius:24px; background:var(--surface); color:var(--ink); text-align:left; text-decoration:none; cursor:pointer; box-shadow:var(--hi), var(--shadow); transition:transform var(--t-fast) var(--ease)}
+.tile:active{transform:scale(.97)}
+.tile .no{font-size:34px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+.tile .no small{font-size:14px; font-weight:700; letter-spacing:0; color:inherit; opacity:.75; margin-left:2px}
+.tile .w{display:flex; align-items:center; gap:5px; font-size:14px; font-weight:800; line-height:1.15}
+.tile .tm{font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
+.tile .own{position:absolute; top:12px; right:12px; font-size:14px; font-weight:700; opacity:.75}
+.tile.free{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.tile.free .w{color:var(--ok)}
+.tile.busy{background:var(--surface-2); box-shadow:none}
+.tile.wait{box-shadow:inset 0 0 0 2.5px var(--warn)}
+.tile.wait .w,.tile.wait .tm{color:var(--warn)}
+.tile.qr{box-shadow:inset 0 0 0 2.5px var(--red)}
+.tile.qr .w,.tile.qr .tm{color:var(--red)}
+.tile.ready{background:var(--ember); color:var(--on-ember)}
+.tile.call,.tile.bill{background:var(--red); color:var(--on-red); box-shadow:none}
+.tile.late::after,.callc.late::after{content:""; position:absolute; inset:-4px; border-radius:inherit; box-shadow:0 0 0 3px var(--red); opacity:0; animation:stpulse 1.6s var(--ease-std) infinite; pointer-events:none}
+@keyframes stpulse{0%{opacity:.9; transform:scale(.98)}100%{opacity:0; transform:scale(1.04)}}
+.tile.other{opacity:.92}
+.legend{display:flex; flex-wrap:wrap; gap:6px}
+
+/* zone + filter segments */
+.st-seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2)}
+.st-seg button{min-height:48px; border:0; border-radius:999px; background:transparent; font-weight:800; font-size:16px; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap}
+.st-seg button[aria-pressed="true"]{background:var(--surface); box-shadow:var(--shadow)}
+.st-seg .n{font-variant-numeric:tabular-nums; color:var(--muted); font-weight:700}
+
+/* ---------- call strips / cards ---------- */
+.callc{position:relative; display:grid; grid-template-columns:1fr auto; gap:6px 12px; align-items:center; padding:14px 14px 14px 18px; border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.callc .t1{display:flex; align-items:baseline; gap:10px; min-width:0; flex-wrap:wrap}
+.callc .t1 b{font-size:24px; font-weight:800; letter-spacing:-.035em; white-space:nowrap}
+.callc .why{display:flex; align-items:center; gap:6px; font-weight:800; font-size:17px}
+.callc .meta{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.callc .timer{display:grid; justify-items:end; line-height:1}
+.callc .timer b{font-size:30px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.callc .timer span{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:4px}
+.callc .acts{grid-column:1/-1; display:flex; gap:8px; margin-top:6px}
+.callc .acts .pill{flex:1; min-height:56px; font-size:17px}
+.callc .acts .pill-line{flex:0 0 auto}
+.callc.warn{box-shadow:inset 0 0 0 2.5px var(--warn), var(--shadow)}
+.callc.warn .timer b{color:var(--warn)}
+.callc.late{background:var(--red); color:var(--on-red); box-shadow:var(--shadow)}
+.callc.late .meta,.callc.late .timer span{color:var(--on-red); opacity:.85}
+.callc.late .pill-red{background:var(--on-red); color:var(--red)}
+.callc.late .pill-line{color:var(--on-red); box-shadow:inset 0 0 0 1.5px var(--on-red)}
+.callc.mine-taken{box-shadow:inset 0 0 0 2.5px var(--ok), var(--shadow)}
+.callc.other-taken{opacity:.7; box-shadow:none; background:var(--surface-2)}
+.esc{display:inline-flex; align-items:center; gap:6px; font-weight:800}
+.callc:not(.late) .esc{color:var(--red)}
+
+/* compact red strip for the tables screen */
+.cstrip{display:flex; align-items:center; gap:10px; min-height:64px; padding:6px 6px 6px 16px; border-radius:999px; background:var(--red); color:var(--on-red); text-decoration:none}
+.cstrip .tx{flex:1; min-width:0; display:flex; align-items:center; gap:8px; font-weight:800; font-size:17px; line-height:1.2}
+.cstrip .tx span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cstrip .tm{font-variant-numeric:tabular-nums; font-weight:800; font-size:17px; white-space:nowrap}
+.cstrip .pill{min-height:52px; background:var(--on-red); color:var(--red); padding:0 18px; flex:none}
+.cstrip.other{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--red)}
+.cstrip.other .pill{background:var(--red); color:var(--on-red)}
+
+/* ---------- order lines ---------- */
+.oline{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; padding:14px 0; align-items:start}
+.oline + .oline{border-top:1px solid var(--line)}
+.oline .q{min-width:44px; height:44px; padding:0 8px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.oline .nm{font-weight:700; font-size:17px; line-height:1.3}
+.oline .note{display:flex; gap:6px; align-items:center; font-size:15px; font-weight:700; color:var(--warn)}
+.oline .sub{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px}
+.oline .sub .price{font-size:15px; color:var(--muted); font-weight:700}
+.oline.served .nm{color:var(--muted)}
+.ocard{border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:4px 16px 12px}
+.ocard + .ocard{margin-top:12px}
+.ocard .oh{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 0 6px; border-bottom:1px solid var(--line)}
+.ocard .oh b{font-size:18px; font-weight:800; letter-spacing:-.02em}
+.ocard .oh span{font-size:14px; font-weight:700; color:var(--muted)}
+.ocard .ft{display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--line); font-weight:800}
+
+.qrcard{position:relative; border-radius:28px; padding:6px; background:var(--red)}
+.qrcard .in{border-radius:22px; background:var(--surface); padding:6px 16px 16px}
+.qrcard .hd{display:flex; align-items:center; gap:10px; padding:8px 10px 10px; color:var(--on-red); font-weight:800; font-size:17px}
+.qrcard .hd .tm{margin-left:auto; font-variant-numeric:tabular-nums}
+.qrcard .acts{display:grid; grid-template-columns:auto 1fr; gap:8px; margin-top:10px}
+.qrcard .acts .pill{min-height:56px; font-size:17px}
+
+/* ---------- quick order ---------- */
+.osticky{position:sticky; top:68px; z-index:25; padding:10px 16px 12px; background:var(--bg); box-shadow:0 1px 0 var(--line)}
+.search{position:relative}
+.search .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.search .input{min-height:56px; padding-left:50px; padding-right:56px; border-radius:999px; font-size:17px}
+.search .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.guests{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:10px -16px 0; padding:2px 16px}
+.guests::-webkit-scrollbar{display:none}
+.guests .chip{min-height:48px}
+.cattiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.cattile{display:flex; align-items:center; gap:12px; min-height:72px; padding:10px 14px 10px 10px; border:0; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); text-align:left; cursor:pointer; font-weight:800; font-size:16px; line-height:1.2; transition:transform var(--t-fast) var(--ease)}
+.cattile:active{transform:scale(.97)}
+.cattile .pic{width:52px; height:52px; border-radius:16px; flex:none}
+.cattile .n{display:block; font-size:14px; color:var(--muted); font-weight:700; margin-top:2px}
+.qrow{display:grid; grid-template-columns:52px 1fr auto; gap:12px; align-items:center; min-height:76px; padding:10px 0}
+.qrow + .qrow{border-top:1px solid var(--line)}
+.qrow .pic{width:52px; height:52px; border-radius:16px}
+.qrow .nm{font-weight:700; font-size:17px; line-height:1.25}
+.qrow .mt{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; font-size:15px; margin-top:2px}
+.qrow .mt .price{font-size:16px}
+.qrow .mt .g{color:var(--muted); font-size:14px; font-weight:600}
+.qrow.out .nm{color:var(--muted)}
+.bigplus{width:56px; height:56px; border-radius:50%; border:0; background:var(--red); color:var(--on-red); display:grid; place-items:center; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.bigplus:active{transform:scale(.9)}
+.qcount{display:inline-flex; align-items:center; border-radius:999px; background:var(--ink); color:var(--bg)}
+.qcount button{width:52px; height:56px; border:0; background:transparent; color:inherit; display:grid; place-items:center; cursor:pointer; border-radius:999px}
+.qcount output{min-width:24px; text-align:center; font-weight:800; font-size:19px; font-variant-numeric:tabular-nums}
+.recent{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.rbtn{position:relative; display:grid; gap:4px; align-content:space-between; min-height:96px; padding:12px 14px; border:0; border-radius:22px; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.rbtn:active{transform:scale(.97)}
+.rbtn .nm{font-weight:800; font-size:16px; line-height:1.25; padding-right:30px}
+.rbtn .price{font-size:15px; color:var(--muted)}
+.rbtn .pl{position:absolute; right:10px; bottom:10px; width:36px; height:36px; border-radius:50%; background:var(--red); color:var(--on-red); display:grid; place-items:center}
+.rbtn .qn{position:absolute; right:10px; top:10px; min-width:28px; height:28px; padding:0 8px; border-radius:14px; background:var(--ink); color:var(--bg); font-weight:800; font-size:15px; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.rbtn[aria-disabled="true"]{opacity:.55; cursor:not-allowed}
+.backchip{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 16px 0 10px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; cursor:pointer}
+
+/* ---------- ready list ---------- */
+.rcard{border-radius:28px; padding:6px; background:var(--ember)}
+.rcard .hd{display:flex; align-items:center; gap:10px; padding:8px 12px 10px; color:var(--on-ember); font-weight:800; font-size:17px}
+.rcard .hd b{font-size:24px; letter-spacing:-.03em}
+.rcard .hd .tm{margin-left:auto; font-variant-numeric:tabular-nums; white-space:nowrap}
+.rcard .in{border-radius:22px; background:var(--surface); padding:4px 16px 16px}
+.rcard.other{background:var(--surface-2)}
+.rcard.other .hd{color:var(--ink)}
+.rcard + .rcard{margin-top:12px}
+
+/* ---------- sheets & toast (own, since SC.mount is not used) ---------- */
+.st-sheetwrap{position:fixed; inset:0; z-index:80; pointer-events:none}
+.st-sheetwrap .scrim{position:absolute; inset:0; border:0; width:100%; background:var(--scrim); opacity:0; transition:opacity var(--t-slow) var(--ease); cursor:pointer}
+.st-sheet{position:absolute; left:50%; bottom:6px; width:min(calc(100% - 12px), 424px); max-height:90dvh; display:flex; flex-direction:column; background:var(--surface); color:var(--ink); border-radius:34px; padding:10px 18px 18px; transform:translate(-50%,110%); transition:transform var(--t-slow) var(--ease); box-shadow:var(--shadow-lg)}
+.st-sheet .body{overflow-y:auto; overscroll-behavior:contain; flex:1; min-height:0; padding-bottom:4px}
+.st-sheetwrap.on{pointer-events:auto}
+.st-sheetwrap.on .scrim{opacity:1}
+.st-sheetwrap.on .st-sheet{transform:translate(-50%,0)}
+.st-sheet .sh{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; flex:none}
+.st-sheet .sh h2{margin:0; font-size:24px; font-weight:800; letter-spacing:-.03em}
+.st-sheet .sfoot{flex:none; display:grid; gap:8px; padding-top:12px}
+.st-toast{position:fixed; left:50%; top:80px; z-index:95; transform:translate(-50%,-160%); opacity:0; display:flex; align-items:center; gap:12px; min-height:56px; padding:0 8px 0 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:min(400px, calc(100% - 24px))}
+.st-toast.on{transform:translate(-50%,0); opacity:1}
+.st-toast span{padding:14px 0; line-height:1.3}
+.st-toast button{min-height:44px; padding:0 16px; border:0; border-radius:999px; background:var(--red); color:var(--on-red); font-weight:800; cursor:pointer; white-space:nowrap}
+.st-toast.solo{padding-right:20px}
+
+/* ---------- misc ---------- */
+.hero{padding:16px 16px 0}
+.bigno{font-size:52px; font-weight:800; letter-spacing:-.06em; line-height:1; font-variant-numeric:tabular-nums}
+.kvs .kv{font-size:16px}
+.kvs .kv.tot{font-size:20px; font-weight:800}
+.notice{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface-2); font-size:15px; line-height:1.4}
+.notice .ic{margin-top:1px}
+.notice.warn{background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn)}
+.notice.warn .ic{color:var(--warn)}
+.prop{display:inline-flex; align-items:center; gap:5px; min-height:28px; padding:0 10px 0 8px; border-radius:999px; background:var(--ember-soft); color:var(--ink); font-size:14px; font-weight:800; white-space:nowrap}
+.prop .ic{color:var(--ember)}
+.st-empty{display:grid; justify-items:center; gap:10px; text-align:center; padding:48px 20px 24px}
+.st-empty .ill{width:104px; height:104px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ok)}
+.st-empty h2{margin:6px 0 0; font-size:24px; font-weight:800; letter-spacing:-.03em}
+.st-empty p{margin:0; color:var(--muted); max-width:30ch}
+.chk{display:flex; align-items:center; gap:12px; min-height:56px; padding:6px 0; cursor:pointer; font-weight:700}
+.chk input{width:26px; height:26px; accent-color:var(--red); flex:none; margin:0}
+.chk .price{margin-left:auto}
+.chk + .chk{border-top:1px solid var(--line)}
+.notechips{display:flex; flex-wrap:wrap; gap:8px}
+
+/* offline full screen */
+.offline{display:grid; gap:16px; padding:28px 16px 0}
+.offline .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 2px var(--warn)}
+.offline ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s}
+.offline li{counter-increment:s; display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:start; padding:14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); line-height:1.4}
+.offline li::before{content:counter(s); width:36px; height:36px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-weight:800}
+
+/* prototype-only panel (bottom of each page) */
+.proto{margin:40px 16px 0; padding:16px; border-radius:24px; border:2px dashed var(--line-strong); display:grid; gap:12px}
+.proto h2{margin:0; font-size:16px; font-weight:800}
+.proto .row{flex-wrap:wrap; gap:6px}
+.proto .chip{min-height:44px; font-size:14px; padding:0 14px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+
+@container app (max-width:370px){
+  .tile .no{font-size:30px}
+  .tile{padding:10px 10px 10px 12px; min-height:106px}
+  .callc .t1 b{font-size:22px}
+  .callc .timer b{font-size:26px}
+  .st-top .tt b{font-size:18px}
+  .st-me{padding:0 12px 0 10px}
+  .cstrip .tx{font-size:16px}
+  .cstrip .pill{padding:0 14px}
+}

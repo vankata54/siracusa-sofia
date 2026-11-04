@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Изчерпано днес | Кухня · Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+<style>
+.io{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; align-items:start}
+.io-h{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:6px}
+.eff{display:flex; flex-wrap:wrap; gap:6px 18px; margin:10px 0 0; padding:0; list-style:none; font-size:16px; color:var(--muted); font-weight:600}
+.eff li{display:flex; gap:6px; align-items:center}
+.eff .ic{color:var(--ok)}
+.cath{font-size:15px; font-weight:800; color:var(--muted); margin:22px 0 10px; letter-spacing:.01em}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:10px}
+.tile{position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:center; min-height:88px; padding:14px 14px 14px 18px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), inset 0 0 0 2px var(--line); color:var(--ink); text-align:left; cursor:pointer}
+.tile:active{transform:scale(.98)}
+.tile b{font-size:21px; line-height:1.2; letter-spacing:-.015em}
+.tile small{display:block; font-size:15px; color:var(--muted); font-weight:600; margin-top:2px}
+.tile .act{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-weight:800; font-size:15px; white-space:nowrap}
+.tile.out{background:var(--surface-2); box-shadow:inset 0 0 0 2.5px var(--warn)}
+.tile.out b{color:var(--muted); text-decoration:line-through; text-decoration-thickness:2px}
+.tile.out .act{background:var(--ink); color:var(--bg)}
+.tile .st{grid-column:1 / -1; display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--warn)}
+.side{position:sticky; top:0; padding:18px; display:grid; gap:4px}
+.side h2{margin:0; font-size:24px; letter-spacing:-.03em; font-weight:800; display:flex; align-items:center; gap:10px}
+.side h2 .n{min-width:32px; height:32px; padding:0 9px; border-radius:16px; background:var(--warn); color:var(--bg); display:inline-grid; place-items:center; font-size:17px}
+.orow{display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding:14px 0; border-top:1px solid var(--line)}
+.orow b{font-size:20px; line-height:1.2; letter-spacing:-.01em}
+.orow small{display:block; font-size:15px; color:var(--muted); font-weight:600; margin-top:2px}
+.orow .kb{min-height:56px; font-size:17px}
+.side .foot2{margin:8px 0 0; font-size:15px; color:var(--muted); display:flex; gap:8px}
+.side .none{font-size:17px; color:var(--muted); margin:8px 0}
+@container app (max-width:1100px){ .io{grid-template-columns:minmax(0,1fr) 320px} .tiles{grid-template-columns:repeat(auto-fill, minmax(220px,1fr))} }
+@container app (max-width:899px){ .io{grid-template-columns:1fr} .side{position:static; order:-1} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, esc = SC.esc;
+var main = K.mount({page:"item-out", title:"Изчерпано днес · " + K.sec.n});
+
+function strip(){
+  var o = K.outs(), mine = o.filter(function(x){ return x.sec === K.secId; }).length;
+  K.strip.innerHTML = K.st === "offline" ? K.offlineHTML() : '<div class="kcount"><span>Изчерпани в ' + esc(K.sec.n) + ' <b>' + mine + '</b></span><span class="sep"></span><span>Във всички секции <b>' + o.length + '</b></span></div>';
+}
+function render(){
+  var outs = K.outs(), cats = K.sec.cats.filter(function(c){ return SC.inCat(c).length; });
+  var mineOut = outs.filter(function(x){ return x.sec === K.secId; }), otherOut = outs.filter(function(x){ return x.sec !== K.secId; });
+  function orow(o){ var x = SC.byId[o.id];
+    return '<div class="orow"><div><b>' + esc(x.n) + '</b><small>' + esc(K.secById[o.sec] ? K.secById[o.sec].n : "") + ' · от ' + o.at + '</small></div>' +
+      '<button class="kb line" type="button" data-back="' + o.id + '">' + ic("arrow-counter-clockwise",22) + 'Върни в менюто</button></div>'; }
+  main.innerHTML = '<div class="kpage"><div class="io"><section aria-labelledby="h1">' +
+    '<div class="io-h"><div><h1 class="kh1" id="h1">Изчерпано днес</h1><p class="klead">Докоснете ястие, което свърши. Действа веднага.</p></div></div>' +
+    '<ul class="eff"><li>' + ic("check",18) + 'Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“</li><li>' + ic("check",18) + 'Wolt и Foodpanda: скрито</li></ul>' +
+    cats.map(function(c){ return '<h2 class="cath">' + esc(SC.catById[c].n) + '</h2><div class="tiles">' + SC.inCat(c).map(function(x){ var out = K.isOut(x.id);
+      return '<button class="tile' + (out ? " out" : "") + '" type="button" data-id="' + x.id + '" aria-pressed="' + out + '"><span><b>' + esc(x.n) + '</b>' + (x.g ? '<small>' + esc(x.g) + '</small>' : '') + '</span>' +
+        '<span class="act">' + (out ? ic("arrow-counter-clockwise",18) + 'Върни' : ic("x",18) + 'Изчерпано') + '</span>' +
+        (out ? '<span class="st">' + ic("clock",18) + 'Изчерпано днес</span>' : '') + '</button>'; }).join("") + '</div>'; }).join("") +
+    '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Изчерпани днес <span class="n num">' + outs.length + '</span></h2>' +
+    (outs.length ? mineOut.concat(otherOut).map(orow).join("") : '<p class="none">Всичко от менюто е налично.</p>') +
+    '<p class="foot2">' + ic("info",20) + '<span>Утре в 10:00 всичко се връща в менюто само. <span class="miss">[за потвърждение]</span></span></p></aside></div></div>';
+  main.querySelectorAll("[data-id]").forEach(function(b){ b.addEventListener("click", function(){ toggle(b.getAttribute("data-id")); }); });
+  main.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ toggle(b.getAttribute("data-back")); }); });
+  strip(); K.outBadge();
+}
+function toggle(id){
+  var was = K.isOut(id), prev = K.outs(), x = SC.byId[id];
+  K.setOut(id, !was); render();
+  K.toast(was ? '<b>' + esc(x.n) + ' е отново в менюто</b><small>Бутонът „+“ се върна навсякъде.</small>' : '<b>' + esc(x.n) + ' · изчерпано днес</b><small>Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.</small>',
+    function(){ K.store("outs", prev); render(); });
+}
+render();
+})();
+</script>
+</body>
+</html>

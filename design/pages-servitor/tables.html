@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Залата | Siracusa · Персонал</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_staff.css">
+<style>
+.sum{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.sum a{display:grid; gap:2px; padding:12px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink); min-height:76px}
+.sum b{font-size:28px; font-weight:800; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums}
+.sum span{font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.sum a.hot{background:var(--red); color:var(--on-red)} .sum a.hot span{color:var(--on-red); opacity:.85}
+.sum a.emb{background:var(--ember); color:var(--on-ember)} .sum a.emb span{color:var(--on-ember); opacity:.8}
+.strips{display:grid; gap:8px}
+.more{display:flex; justify-content:center}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_staff.js"></script>
+<script>
+var main = ST.mount({page:"tables", title:"Залата", nav:"tables"});
+var ic = SC.ic, esc = SC.esc;
+var zone = ST.hash.zone || "salon", showCached = false;
+var SHORT = {call:"Вика", bill:"Сметка", qr:"QR поръчка", ready:"Готово", wait:"Чака поръчка", busy:"Заета", free:"Свободна"};
+
+function tile(n){ var t = ST.tableByN[n], s = ST.tStatus(n), mine = ST.isMine(n);
+  var tm = s.wait ? '<span class="tm">чака '+ST.timer(s.since)+'</span>' : s.k==="busy" ? '<span class="tm" style="font-weight:700;opacity:.8">от '+Math.max(1,Math.round(ST.secs(s.since)/60))+' мин</span>' : '<span class="tm" style="font-weight:700;opacity:.8">'+t.seats+' места</span>';
+  var label = "Маса "+n+", "+ST.ZONE[t.zone]+(mine?", моя":"")+", "+s.w;
+  return '<a class="tile '+s.k+(mine?"":" other")+'" href="table.html#'+n+'" aria-label="'+esc(label)+'"'+(s.wait?' data-lvl':'')+'>'+
+    (mine?'<span class="own">Моя</span>':'')+'<span class="no">'+n+'</span><span class="w">'+ic(s.i,18)+SHORT[s.k]+'</span>'+tm+'</a>'; }
+
+function strip(c){ var mine = ST.isMine(c.t), r = ST.REASONS[c.r];
+  if (c.taken === "other") return "";
+  return '<div class="cstrip'+(mine?"":" other")+'"><a class="tx" href="table.html#'+c.t+'" style="color:inherit;text-decoration:none">'+ic(r[1],24)+'<span>Маса '+c.t+' · '+r[0]+'</span></a><span class="tm">'+ST.timer(c.since)+'</span>'+
+    (c.taken==="me" ? '<button class="pill" type="button" data-done="'+c.id+'">'+ic("check",20)+'Обслужено</button>' : '<button class="pill" type="button" data-take="'+c.id+'">Отивам</button>')+'</div>'; }
+
+function offlineScreen(){
+  return '<div class="offline"><div class="ill">'+ic("warning",44)+'</div><h1 class="h2">Няма връзка с ресторанта</h1>'+
+    '<p class="lead" style="color:var(--ink)">Повикванията от масите и „Готово“ от кухнята не стигат до вас. Поръчките, които въведете, се пазят на телефона и тръгват сами, щом връзката се върне.</p>'+
+    '<ol><li><span>Проверете дали телефонът е в мрежата на ресторанта <span class="missing">[ЛИПСВА: име на Wi-Fi мрежата]</span>.</span></li><li><span>Изключете и включете Wi-Fi. Ако мрежата не работи, ползвайте мобилни данни.</span></li><li><span>Докато няма връзка, обиколете залата и попитайте кухнята за готовите ястия.</span></li><li><span>Ако до 2 минути не стане, кажете на управителя.</span></li></ol>'+
+    '<button class="pill pill-red pill-lg pill-block" type="button" data-act="retry">'+ic("arrow-clockwise",22)+'Опитай пак</button>'+
+    '<button class="pill pill-line pill-lg pill-block" type="button" data-cached>Виж последните данни</button></div>'; }
+
+function render(){
+  if (ST.offline && !showCached){ main.innerHTML = offlineScreen(); return; }
+  var calls = ST.openCalls(), qr = ST.pendingQR(), ready = ST.readyGroups();
+  var myCalls = calls.filter(function(c){ return c.taken !== "other" && (ST.isMine(c.t) || !c.taken); });
+  var mineFirst = myCalls.slice().sort(function(a,b){ return (ST.isMine(b.t)-ST.isMine(a.t)) || (a.since-b.since); });
+  var html = '<section class="st-sec"><div class="sum">'+
+    '<a href="calls.html" class="'+(myCalls.length+qr.length?"hot":"")+'"><b>'+(myCalls.length+qr.length)+'</b><span>повиквания и QR</span></a>'+
+    '<a href="ready.html" class="'+(ready.length?"emb":"")+'"><b>'+ready.length+'</b><span>маси с готово</span></a>'+
+    '<a href="#zala"><b>'+SC.TABLES.filter(function(t){ return ST.tStatus(t.n).k==="free"; }).length+'</b><span>свободни маси</span></a></div></section>';
+  if (mineFirst.length){
+    html += '<section class="st-sec"><div class="st-h"><h2>Чакат сега</h2><span class="muted">най-старото отгоре</span></div><div class="strips">'+mineFirst.slice(0,3).map(strip).join("")+'</div>'+
+      (mineFirst.length>3?'<div class="more"><a class="link" href="calls.html">Още '+(mineFirst.length-3)+' повиквания'+ic("caret-right",18)+'</a></div>':'')+'</section>';
+  }
+  html += '<section class="st-sec"><div class="st-h"><h2>Моите маси</h2><span class="muted">'+ST.MINE.length+' маси</span></div><div class="tgrid">'+ST.MINE.map(tile).join("")+'</div></section>';
+  var zs = SC.TABLES.filter(function(t){ return t.zone===zone; });
+  html += '<section class="st-sec" id="zala"><div class="st-h"><h2>Цялата зала</h2></div>'+
+    '<div class="st-seg" role="group" aria-label="Зона" style="margin-bottom:12px">'+["salon","garden"].map(function(z){ return '<button type="button" data-zone="'+z+'" aria-pressed="'+(zone===z)+'">'+ST.ZONE[z]+' <span class="n">'+SC.TABLES.filter(function(t){ return t.zone===z; }).length+'</span></button>'; }).join("")+'</div>'+
+    '<div class="tgrid">'+zs.map(function(t){ return tile(t.n); }).join("")+'</div>'+
+    '<p class="st-cap" style="margin-top:18px">Какво значат цветовете</p><div class="legend">'+
+    ST.stt("call","Вика","bell-ringing")+ST.stt("bill","Чака сметка","receipt")+ST.stt("qr","QR поръчка","qr-code")+ST.stt("ready","Готово за сервиране","bell-ringing")+ST.stt("wait","Чака поръчка","hourglass")+ST.stt("busy","Заета","users")+ST.stt("free","Свободна","chair")+
+    '</div><p class="small muted" style="margin:12px 0 0">Масите и местата са условни за макета. Планът на залата идва от админ панела <span class="missing">[ЛИПСВА: истински план и брой места]</span>.</p></section>';
+  main.innerHTML = html; ST.tick();
+}
+render(); ST.on(render);
+main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.zone){ zone = b.dataset.zone; render(); return; }
+  if (b.hasAttribute("data-cached")){ showCached = true; render(); return; }
+  if (b.dataset.take){ var id = b.dataset.take, c = ST.db.calls.filter(function(x){ return x.id===id; })[0]; ST.takeCall(id); ST.haptic(); ST.toast("Маса "+c.t+": отивате. Колегите виждат, че сте я поели."); return; }
+  if (b.dataset.done){ var c2 = ST.db.calls.filter(function(x){ return x.id===b.dataset.done; })[0]; ST.doneCall(c2.id); ST.toast("Маса "+c2.t+" е обслужена", function(){ ST.restoreCall(c2); }); return; }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Опашка | Кухня · Siracusa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_kitchen.css">
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_kitchen.js"></script>
+<script>
+(function(){
+var ic = SC.ic, esc = SC.esc;
+var main = K.mount({page:"queue", title:"Опашка · " + K.sec.n});
+var orders = K.orders().filter(function(o){ return K.mine(o).length; });
+var offline = K.st === "offline", newO = null;
+
+function counts(){
+  var late = 0, soon = 0; orders.forEach(function(o){ var s = K.stateOf(o); if (s === "late") late++; else if (s === "soon") soon++; });
+  return {n:orders.length, late:late, soon:soon}; }
+
+function strip(){
+  if (offline){ var q0 = document.querySelector("[data-qn]"); if (q0) q0.textContent = orders.length; return; }
+  var c = counts(), b = K.busy();
+  var qn = document.querySelector("[data-qn]"); if (qn) qn.textContent = c.n;
+  K.strip.innerHTML =
+    '<div class="kcount"><span>Чакат <b>' + c.n + '</b></span>' + (c.late ? '<span class="sep"></span><span class="late">' + ic("warning",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px;color:var(--danger)"') + ' Закъсняват <b>' + c.late + '</b></span>' : '') +
+      (c.soon ? '<span class="sep s2"></span><span class="soonc">Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
+    (newO && orders.indexOf(newO) > -1 ? '<button class="knew" type="button" data-newgo>' + ic("bell-ringing",22) + 'Нова поръчка · ' + esc(K.srcText(newO)) + '<span class="go2">Виж' + ic("arrow-right",16) + '</span></button>' : '') +
+    '<button class="kpill" type="button" data-sound aria-pressed="' + K.sound() + '">' + ic(K.sound() ? "bell-ringing" : "bell", 22) + 'Звук ' + (K.sound() ? "вкл." : "изкл.") + '</button>' +
+    '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>';
+  var ng = K.strip.querySelector("[data-newgo]");
+  if (ng) ng.addEventListener("click", function(){ var q = main.querySelector("[data-q]"); q.scrollTo({left:q.scrollWidth, behavior:SC.reduce ? "auto" : "smooth"}); newO = null; strip(); });
+  K.strip.querySelector("[data-sound]").addEventListener("click", function(){ K.store("sound", !K.sound()); strip(); if (K.sound()) K.beep(); });
+}
+
+function render(){
+  if (!orders.length){
+    main.innerHTML = '<div class="kempty"><div><div class="ill">' + ic("check-circle",64) + '</div><h2>Няма поръчки в момента</h2>' +
+      '<p>Новите поръчки за ' + esc(K.sec.n) + ' ще се появят тук сами' + (K.sound() ? ', със звуков сигнал' : '') + '.</p>' +
+      '<p style="font-size:17px">Последна изпълнена: Маса 11 в 19:40</p></div></div>';
+    strip(); return; }
+  main.innerHTML = '<div class="kq" data-q>' + orders.map(function(o, i){ return K.ticket(o, i); }).join("") + '</div><button class="kmore" type="button" data-more hidden></button>';
+  bind(); strip(); more();
+}
+
+function bind(){
+  main.querySelectorAll(".tk").forEach(function(card){
+    var o = orders[+card.getAttribute("data-o")];
+    card.querySelectorAll("[data-ln]").forEach(function(btn){ btn.addEventListener("click", function(){
+      var l = o.lines[+btn.getAttribute("data-ln")], was = l.o.st === "done";
+      l.o.st = was ? "" : "done"; render();
+      if (!was) K.toast('<b>' + l.q + ' × ' + esc(SC.byId[l.id].n) + '</b> е готово<small>' + esc(K.srcText(o)) + '</small>', function(){ l.o.st = ""; render(); });
+    }); });
+    var st = card.querySelector("[data-start]");
+    if (st) st.addEventListener("click", function(){ o.startedBy = o.startedBy || {}; o.startedBy[K.secId] = K.hm(K.now()); o.isNew = false; render(); });
+    K.hold(card.querySelector("[data-done]"), function(){ finish(o, card); });
+  });
+}
+
+function finish(o, card){
+  var src = K.src(o), idx = orders.indexOf(o), prev = K.mine(o).map(function(l){ return l.o.st; });
+  K.mine(o).forEach(function(l){ l.o.st = "done"; });
+  var waiting = K.others(o).filter(function(l){ return l.o.st !== "done"; }).map(function(l){ return K.shortSec[K.secOf(l.id)]; })
+    .filter(function(v, i, a){ return a.indexOf(v) === i; });
+  card.classList.add("gone");
+  var msg = '<b>' + esc(K.srcText(o)) + ' · готово</b><small>' + (offline ? 'Ще се изпрати, щом връзката се върне.' :
+    o.kind === "table" ? 'Известихме сервитьора.' + (waiting.length ? ' Още чака: ' + waiting.join(", ") + '.' : '') :
+    waiting.length ? 'Чака още ' + waiting.join(", ") + '. ' + (o.kind === "delivery" ? "Шофьорът" : "Клиентът") + ' ще бъде известен, когато всичко е готово.' :
+    'Известихме ' + src.who + '.') + '</small>';
+  setTimeout(function(){ orders.splice(idx, 1); render();
+    K.toast(msg, function(){ K.mine(o).forEach(function(l, i){ l.o.st = prev[i]; }); orders.splice(idx, 0, o); render(); });
+  }, 300);
+}
+
+/* "Още N →" when cards are off to the right */
+function more(){
+  var q = main.querySelector("[data-q]"), b = main.querySelector("[data-more]"); if (!q) return;
+  function upd(){ var hidden = 0, r = q.getBoundingClientRect().right;
+    q.querySelectorAll(".tk").forEach(function(c){ if (c.getBoundingClientRect().left > r - 60) hidden++; });
+    b.hidden = !hidden; b.innerHTML = ic("arrow-right",26) + '<b>+' + hidden + '</b><small>още</small>'; b.setAttribute("aria-label", "Още " + hidden + (hidden === 1 ? " поръчка" : " поръчки") + " вдясно"); }
+  q.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd); upd();
+  b.onclick = function(){ q.scrollBy({left:q.clientWidth * .8, behavior:SC.reduce ? "auto" : "smooth"}); };
+}
+
+/* live timers: only text and state class change, no re-render */
+setInterval(function(){
+  main.querySelectorAll(".tk").forEach(function(card){ var o = orders[+card.getAttribute("data-o")]; if (!o) return;
+    var s = K.stateOf(o); if (!card.classList.contains(s)){ card.classList.remove("ok","soon","late"); card.classList.add(s); strip(); }
+    card.querySelector("[data-tmr]").innerHTML = K.timerHTML(o); });
+}, 1000);
+
+/* new order: lands at the end of the FIFO line, with a banner that scrolls to it */
+function arrive(){
+  var o = K.newOrder(); newO = o; orders.push(o); render(); K.beep();
+}
+render();
+if (K.st === "new") setTimeout(arrive, 250);
+})();
+</script>
+</body>
+</html>
