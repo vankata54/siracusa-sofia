@@ -1,6 +1,7 @@
 /* AI assistant v1: rule-based, answers only from the menu data (same scripted scenarios as the prototype). */
 import { items, menu, isOut } from "./data.ts";
 import { art, ic } from "./render.ts";
+import "./icons/paper-plane-right.ts";
 import { esc, fmt } from "./format.ts";
 import { url } from "./routes.ts";
 

@@ -1,6 +1,6 @@
 /* Delivery zones by address. v1 has no geocoder: sample addresses (as in the cart prototype) + a quarter-name parser
    (as in delivery.html). Free: Дружба 1 и 2, НПЗ Искър, Бусманци. Paid [ЛИПСВА: такса]: Горубляне, Гара Искър. */
-import { ZONES, type Zone } from "./data.ts";
+import { ZONES, type Zone } from "./consts.ts";
 
 export const SAMPLE_ADDRESSES: [string, string][] = [
   ["ж.к. Дружба 2, бл. 311", "Дружба 2"], ["ж.к. Дружба 2, бл. 402", "Дружба 2"], ["ж.к. Дружба 1, бл. 72", "Дружба 1"], ["ж.к. Дружба 1, бл. 19", "Дружба 1"],

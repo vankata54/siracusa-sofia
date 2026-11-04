@@ -10,17 +10,21 @@ src/
   styles/               tokens.css + components.css (1:1 от design/ds/sc.css), preview.css (само за рамките в админа)
   data/                 menu.json (генериран от design/data/menu.js, не се пипа на ръка), menu.ts (типове)
   lib/                  чиста логика, без DOM; работи в Node и в браузъра
-    data.ts             items, byId, cats, catById, inCat, isOut, lunch, lunchIsToday, RESTAURANT, ZONES, TAGS, ALLERGENS, FILTERS, TABLES ...
+    consts.ts           RESTAURANT, ZONES, TAGS, ALLERGENS, FILTERS, TABLES, EVENT_CATS ... (без менюто, малко)
+    data.ts             менюто: items, byId, cats, catById, inCat, isOut, lunch, lunchIsToday (+ всичко от consts.ts)
     time.ts status.ts   now, minutes, setClock; state, status, eta, lastSaturday
     format.ts           fmt (10,22 €), esc, plural, dateLong („сб, 28 ноември“), dateShort, hhmm, normPhone
     routes.ts           ЕДИНСТВЕНОТО място за адреси: url.*, fromProto()
-    render.ts art.ts    ic, art, pic, badges, plusBtn, dishCard, header, bottomNav, footer, cookieBanner, morePanel
+    icons.ts icons/     регистър на иконите: ic(); icons/<име>.ts = една икона; icons-all.ts = всички
+    chrome.ts           header, bottomNav, footer, cookieBanner, morePanel, sheetHTML (без менюто)
+    render.ts art.ts    art, pic, badges, plusBtn, dishCard (с менюто) + всичко от chrome.ts
     suggest.ts offers.ts events.ts filters.ts pricing.ts zones.ts cart.ts assistant.ts
     index.ts            всичко наведнъж: import { url, fmt, dishCard } from "../lib/index.ts"
   core/                 бизнес ядро (поръчки, резервации, празници, офис, абонамент, SMS вход, профил, оценка,
                         бележки от молива, персонал и роли, дневник); хранилище по интерфейс Repo
   client/
-    sc.ts               браузърният runtime (window.SC, същото API като прототипа)
+    sc.ts               браузърният runtime на всяка страница (window.SC), БЕЗ менюто: под 30 KB
+    sc-menu.ts          същият SC + менюто (SC.items, SC.byId, SC.dishCard, SC.suggest, SC.offers ...)
     api.ts              един клиент за всички екрани (сървър или демо)
   layouts/Base.astro    SEO head + обвивката на всяка страница
   pages/                маршрутите (един файл = една страница)
@@ -71,7 +75,8 @@ import { cats, inCat, dishCard, ic, url } from "../../lib/index.ts";
 </style>
 
 <script>
-  import { SC } from "../../client/sc.ts";
+  import { SC } from "../../client/sc-menu.ts";   // страница с ястия; без ястия: "../../client/sc.ts"
+  import "../../lib/icons/map-pin.ts";             // иконите, които скриптът рисува сам
   import { api } from "../../client/api.ts";
   const main = SC.mount();            // вече изрисуваният <main>
   SC.reveal();
@@ -82,7 +87,17 @@ import { cats, inCat, dishCard, ic, url } from "../../lib/index.ts";
 - **Каквото може, се рисува на сървъра** (Astro, функциите от `render.ts`): SEO и скорост. Зависимото от часа, количката или потребителя се дорисува в браузъра.
 - **Динамични маршрути** (категория, ястие, събитие): `getStaticPaths()` от `cats`, `items`, `EVENT_SLUGS`.
 - **Десктоп:** само `@container app (min-width:900px)` (и 700 / 1100 / 1180), не `@media` за ширина.
-- **Плаващи неща** (`.abar`, свои листове): в `slot="ov"` или в `SC.ov`. Слоят `.ov` е `position:fixed` върху екрана.
+- **Плаващи неща: само в слоя `.ov`, никога в `<main>`.** Своята `.abar`, свои листове, панели и бутони, които стоят над съдържанието, се слагат в `slot="ov"` на Base (рисувани на сървъра) или се добавят от скрипта в `SC.ov` (`SC.sheet()` вече го прави). Слоят `.ov` е `position:fixed` върху екрана и е контейнер `app`, затова `@container` правилата на `.abar`, `.nav`, `.aifab` и `.sheet` работят. Ако страницата има `.abar`, сложи `actionBar` на Base (асистентът се вдига над лентата).
+
+## 3а. Скорост: какво влиза в JS на страницата
+
+Общият `sc.ts` е на всяка страница и не съдържа менюто, илюстрациите и пълния набор икони (цел: под 30 KB некомпресиран). Затова:
+
+- **Менюто:** страница, която в браузъра ползва ястия (филтри, търсене, количка, ястие, асистент), внася `../client/sc-menu.ts` (или директно `../lib/data.ts`, `../lib/render.ts`). Vite ги слага в общ отделен chunk, който се зарежда само там. На сървъра (frontmatter на Astro) менюто е безплатно: ползвай го свободно, то не влиза в JS.
+- **Количката без менюто:** бутоните „+“ (`plusBtn`) носят `data-p` с цената; `SC.cart.add(id, q, {p})` пази цената и името в реда, така броячът работи навсякъде. Цената на поръчката винаги се смята от менюто (`pricing.ts`).
+- **`SC.url.dish("id")` без менюто** не знае категорията и връща менюто. Подай обект (`SC.url.dish(x)`) или внеси `sc-menu.ts`.
+- **Иконите:** на сървъра всяка икона се вгражда в HTML-а (Base зарежда пълния набор само там). В браузъра `SC.ic(име)` знае само регистрираните: тези от общия runtime (x, check, caret-right, phone, question), от `render.ts` (plus, fire, sparkle, leaf, pepper, clock) и тези, които страницата е внесла с `import "../lib/icons/<име>.ts"`. Непознатата икона излиза като „?“. Ако наистина трябват много, `await SC.icons()` зарежда всички (отделен файл 64 KB, само при нужда).
+- **Асистентът** се зарежда при първото отваряне.
 
 ## 4. Пренасяне на скрипт от прототипа
 
@@ -93,7 +108,8 @@ import { cats, inCat, dishCard, ic, url } from "../../lib/index.ts";
 3. **Скролът е на документа.** `SC.scroller.scrollTop`, `scrollTo`, `scrollBy`, `addEventListener("scroll")` и `getBoundingClientRect()` работят чрез тънка обвивка, но в нов код пиши `window.scrollY` / `window.scrollTo`. В `IntersectionObserver` смени `root: SC.scroller` с `root: null` (задължително, иначе не работи).
 4. Часът: `SC.state()`, `SC.minutes()` и т.н. четат часа в София; в преглед `?preview=1&t=21:30`. Слушай `document.addEventListener("sc:tick", ...)`, ако страницата трябва да се смени, когато мине часът.
 5. Нищо от `previewBar`/`pv-*` (панелът „Само в прототипа“ остава само ако страницата има симулирани състояния; пази го зад `SC.preview`).
-6. Типизиран импорт вместо глобала: `import { SC } from "../client/sc.ts"`.
+6. Типизиран импорт вместо глобала: `import { SC } from "../client/sc-menu.ts"` (с менюто) или `"../client/sc.ts"` (без). `SC.items`, `SC.byId`, `SC.cats`, `SC.inCat`, `SC.lunch`, `SC.art`, `SC.pic`, `SC.dishCard`, `SC.suggest`, `SC.offers` съществуват само след `sc-menu.ts`.
+7. Всяко `SC.ic("име")` в пренесения скрипт: провери, че иконата е внесена (`import "../lib/icons/име.ts"`).
 
 ## 5. Данни и действия: `api`
 

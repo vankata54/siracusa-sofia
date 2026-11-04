@@ -2,7 +2,7 @@
    Server build: absolute pretty paths ("/menu/pitsi/"). Demo build (static files, no server): the HTML is rewritten
    to relative "../menu/index.html" by scripts/relativize.mjs, and in the browser `configureRoutes()` (called by
    src/client/sc.ts from <html data-root data-demo>) makes url() return relative "index.html" paths as well. */
-import type { Dish } from "../data/menu.ts";
+import { resolveDish } from "./registry.ts";
 
 type Opts = { root: string; demo: boolean };
 let cfg: Opts = { root: "/", demo: false };
@@ -50,7 +50,7 @@ export const PAGES = {
 } as const;
 export type PageKey = keyof typeof PAGES;
 
-type DishLike = Pick<Dish, "id" | "cat"> & { lunch?: boolean };
+type DishLike = { id: string; cat: string; lunch?: boolean };
 
 export const url = {
   page: (k: PageKey, hash?: string) => p(PAGES[k], hash),
@@ -81,9 +81,8 @@ export const url = {
   asset: (path: string) => p(path.replace(/^\//, "")),
 };
 
-/* dish lookup is injected (to keep routes.ts free of the 40 KB menu in pages that only need links) */
-let resolveDish: (id: string) => DishLike | undefined = () => undefined;
-export function setDishResolver(fn: (id: string) => DishLike | undefined): void { resolveDish = fn; }
+/* url.dish("id") needs the menu loaded (import from lib/data.ts) or a dish object; otherwise it falls back to the menu. */
+export { setDishResolver } from "./registry.ts";
 
 /** Prototype file -> page key (for porting prototype scripts). */
 export const PROTO: Record<string, PageKey> = {

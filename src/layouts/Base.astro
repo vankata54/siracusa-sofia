@@ -4,9 +4,10 @@
    Page content goes into the default slot (inside <main>); floating page UI (.abar) goes into slot="ov". */
 import "../styles/tokens.css";
 import "../styles/components.css";
+import "../lib/icons-all.ts"; /* server only: every icon can be embedded in the HTML */
 import latinFont from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
 import cyrFont from "@fontsource-variable/manrope/files/manrope-cyrillic-wght-normal.woff2?url";
-import { header, footer, bottomNav, aiFab, cookieBanner, type HeaderOpts } from "../lib/render.ts";
+import { header, footer, bottomNav, aiFab, cookieBanner, type HeaderOpts } from "../lib/chrome.ts";
 
 export interface Props {
   page: string;                      // id of the page (data-page), e.g. "menu"

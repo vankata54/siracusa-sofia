@@ -3,7 +3,7 @@
 import { COL, emit, iso, nowDate, rid, randomDigits, type Ctx } from "./ctx.ts";
 import { CoreError, type Customer, type Order, type Rating, type Session, type SmsCode } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
-import { RESTAURANT } from "../lib/data.ts";
+import { RESTAURANT } from "../lib/consts.ts";
 import { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
 export const SMS_TTL_MS = 5 * 60_000;

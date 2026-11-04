@@ -5,7 +5,7 @@ import { audit } from "./audit.ts";
 import { normPhone } from "../lib/format.ts";
 import { zoneOfAddress } from "../lib/zones.ts";
 import { createOrder, type OrderInput } from "./orders.ts";
-import { TABLES } from "../lib/data.ts";
+import { TABLES } from "../lib/consts.ts";
 import type { Mode } from "../lib/cart.ts";
 
 /* The prototype's polite refusal is demonstrated with this number (reservation.html, login.html). */

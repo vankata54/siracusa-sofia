@@ -5,11 +5,19 @@
      - links: "dish.html#id" -> SC.url.dish(id) (or SC.fromProto("dish.html#id")),
      - the document scrolls (not SC.scroller): use window.scrollY / window.scrollTo and IntersectionObserver root:null.
        SC.scroller keeps scrollTop / scrollTo / scrollBy / scroll listeners / getBoundingClientRect working as a shim. */
-import * as L from "../lib/index.ts";
-import { cartLib } from "../lib/index.ts";
+/* SIZE BUDGET: this file is on every page. It must NOT import the menu (lib/data.ts), the illustrations (art.ts) or
+   the full icon set. Pages that need menu data import "./sc-menu.ts" (same SC object, with SC.items, SC.dishCard ...). */
+import * as F from "../lib/format.ts";
+import * as T from "../lib/status.ts";
+import * as C from "../lib/consts.ts";
+import * as cartLib from "../lib/cart.ts";
+import { events, EVENT_SLUGS } from "../lib/events.ts";
+import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, footer, MORE_PAGES } from "../lib/chrome.ts";
 import { configureRoutes, url, fromProto } from "../lib/routes.ts";
-import { setClock, parseTime } from "../lib/time.ts";
+import { setClock, parseTime, now, minutes } from "../lib/time.ts";
+import { resolveDish } from "../lib/registry.ts";
 import type { Cart, CartLine, Mode } from "../lib/cart.ts";
+import type { AiKind } from "../lib/assistant.ts";
 
 const de = document.documentElement;
 const DEMO = de.dataset.demo === "1";
@@ -65,7 +73,11 @@ const cartApi = {
   lines: () => cart.lines,
   count: () => cartLib.count(cart),
   subtotal: () => cartLib.subtotal(cart),
-  add: (id: string, q = 1, opts: { mods?: string[]; extra?: number } = {}) => saveCart(cartLib.addLine(cart, id, q, opts)),
+  /** opts.p / opts.n: price and name when the menu is not loaded on this page (the "+" buttons carry data-p) */
+  add: (id: string, q = 1, opts: { mods?: string[]; extra?: number; p?: number; n?: string } = {}) => {
+    saveCart(cartLib.addLine(cart, id, q, opts));
+    if (!resolveDish(id) && opts.p == null) import("../lib/data.ts").then(() => saveCart(cartLib.sanitize({ ...cart, lines: cart.lines.map((l) => (l.id === id && l.p == null ? { ...l, p: resolveDish(id)?.p, n: resolveDish(id)?.n } : l)) })));
+  },
   setQty: (key: string, q: number) => saveCart(cartLib.setQty(cart, key, q)),
   remove: (key: string): CartLine | undefined => { const r = cartLib.removeLine(cart, key); saveCart(r.cart); return r.gone; },
   restore: (line: CartLine) => saveCart({ ...cart, lines: [...cart.lines, line] }),
@@ -80,7 +92,7 @@ function updateCartUI(bump: boolean) {
     el.textContent = String(n); el.hidden = n === 0;
     if (bump && !reduce) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
   });
-  document.querySelectorAll("[data-cartnav]").forEach((b) => b.setAttribute("aria-label", n ? "Количка, " + L.plural(n, "ястие", "ястия") + ", " + L.fmt(s) : "Количка, празна"));
+  document.querySelectorAll("[data-cartnav]").forEach((b) => b.setAttribute("aria-label", n ? "Количка, " + F.plural(n, "ястие", "ястия") + ", " + F.fmt(s) : "Количка, празна"));
 }
 
 /* ---------- motion helpers ---------- */
@@ -89,7 +101,9 @@ function fly(fromEl: Element | null, id: string) {
   const to = document.querySelector("[data-cartnav]");
   if (!to) return;
   const a = fromEl.getBoundingClientRect(), b = to.getBoundingClientRect(), el = document.createElement("div");
-  el.className = "fly"; el.innerHTML = L.art(id);
+  /* the illustration is cloned from the page (no art.ts in the runtime); without one, a plain dot */
+  const src = (fromEl.closest(".dcard, .drow, .prow, [data-dish-card]") || document).querySelector('svg[data-dish="' + id + '"]') || document.querySelector('svg[data-dish="' + id + '"]');
+  el.className = "fly"; el.innerHTML = src ? src.outerHTML : '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="var(--red)"/></svg>';
   const x0 = a.left + a.width / 2 - 20, y0 = a.top + a.height / 2 - 20, dx = b.left + b.width / 2 - 20 - x0, dy = b.top + b.height / 2 - 20 - y0;
   el.style.left = x0 + "px"; el.style.top = y0 + "px"; ov.appendChild(el);
   el.animate([{ transform: "translate(0,0) scale(1) rotate(0)" }, { transform: "translate(" + dx * .5 + "px," + (dy * .5 - 40) + "px) scale(.9) rotate(120deg)", offset: .5 }, { transform: "translate(" + dx + "px," + dy + "px) scale(.35) rotate(240deg)", opacity: .7 }], { duration: 400, easing: "cubic-bezier(.32,.72,0,1)" }).onfinish = () => el.remove();
@@ -99,7 +113,7 @@ let toastT: ReturnType<typeof setTimeout> | undefined;
 function toast(text: string, undo?: () => void) {
   let t = ov.querySelector<HTMLElement>(".toast");
   if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); ov.appendChild(t); }
-  t.innerHTML = "<span>" + L.esc(text) + "</span>" + (undo ? '<button type="button">Отмени</button>' : "");
+  t.innerHTML = "<span>" + F.esc(text) + "</span>" + (undo ? '<button type="button">Отмени</button>' : "");
   if (undo) t.querySelector("button")!.onclick = () => { undo(); t!.classList.remove("on"); };
   requestAnimationFrame(() => t!.classList.add("on"));
   clearTimeout(toastT); toastT = setTimeout(() => t!.classList.remove("on"), undo ? 5000 : 2400);
@@ -112,7 +126,7 @@ function flash(btn: HTMLElement, html: string, ms?: number) {
 function sheet(opts: { title?: string; html?: string; onClose?: () => void }) {
   const w = document.createElement("div"), id = "sh" + Math.random().toString(36).slice(2, 7), back = document.activeElement as HTMLElement | null;
   w.className = "sheetwrap";
-  w.innerHTML = L.sheetHTML(id, opts.title || "", opts.html || "");
+  w.innerHTML = sheetHTML(id, opts.title || "", opts.html || "");
   ov.appendChild(w); de.classList.add("sheet-open");
   const close = () => {
     w.classList.remove("on");
@@ -136,9 +150,9 @@ function reveal(root?: Element) {
 
 /* ---------- live status (every minute) ---------- */
 function tick() {
-  const st = L.status(), box = document.querySelector<HTMLElement>("[data-status]");
-  if (box) { const html = L.statusHTML(); if (box.innerHTML !== html) box.innerHTML = html; }
-  document.dispatchEvent(new CustomEvent("sc:tick", { detail: { state: L.state(), status: st } }));
+  const st = T.status(), box = document.querySelector<HTMLElement>("[data-status]");
+  if (box) { const html = statusHTML(); if (box.innerHTML !== html) box.innerHTML = html; }
+  document.dispatchEvent(new CustomEvent("sc:tick", { detail: { state: T.state(), status: st } }));
 }
 tick();
 setInterval(tick, 60_000);
@@ -152,16 +166,19 @@ if (sent && "IntersectionObserver" in window) new IntersectionObserver((es) => {
   if (f) { f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t = setTimeout(() => f.classList.add("mini"), 2600); }
 }, { rootMargin: "40px 0px 0px 0px" }).observe(sent);
 
-/* ---------- assistant ---------- */
-function aiAsk(text: string, kind: L.AiKind) {
+/* ---------- assistant (loaded on first use: it needs the menu) ---------- */
+const assistant = () => import("../lib/assistant.ts");
+function aiAsk(text: string, kind: AiKind) {
   const box = ov.querySelector<HTMLElement>("[data-aimsgs]");
   if (!box) return;
-  box.insertAdjacentHTML("beforeend", '<div class="msg me">' + L.esc(text) + '</div><div class="msg bot typing" data-typing><span></span><span></span><span></span></div>');
+  box.insertAdjacentHTML("beforeend", '<div class="msg me">' + F.esc(text) + '</div><div class="msg bot typing" data-typing><span></span><span></span><span></span></div>');
   box.scrollTop = box.scrollHeight;
-  setTimeout(() => { const t = box.querySelector("[data-typing]"); if (t) { t.outerHTML = '<div class="msg bot">' + L.aiReply(kind) + "</div>"; box.scrollTop = box.scrollHeight; } }, reduce ? 50 : 700);
+  const wait = new Promise((r) => setTimeout(r, reduce ? 50 : 700));
+  Promise.all([assistant(), wait]).then(([A]) => { const t = box.querySelector("[data-typing]"); if (t) { t.outerHTML = '<div class="msg bot">' + A.aiReply(kind) + "</div>"; box.scrollTop = box.scrollHeight; } });
 }
-function openAI() {
-  const s = sheet({ title: "Асистент", html: L.aiPanelHTML() });
+async function openAI() {
+  const A = await assistant();
+  const s = sheet({ title: "Асистент", html: A.aiPanelHTML() });
   s.el.classList.add("aisheetwrap");
   setTimeout(() => { const i = s.el.querySelector<HTMLInputElement>("#aiq"); i && i.focus({ preventScroll: true }); }, 60);
 }
@@ -169,7 +186,7 @@ function openAI() {
 /* ---------- cookie banner ---------- */
 function cookieChoice(v: string) {
   store("sc-cookie", v); de.dataset.ck = "1";
-  if (v === "set") sheet({ title: "Бисквитки", html: L.cookieSettings() });
+  if (v === "set") sheet({ title: "Бисквитки", html: cookieSettings() });
 }
 
 /* ---------- share ---------- */
@@ -185,11 +202,11 @@ document.addEventListener("click", (e) => {
   const t = (e.target as Element).closest<HTMLElement>("button, a");
   if (!t) return;
   if (t.matches("a[data-noop]")) { e.preventDefault(); toast("Правната страница се прави отделно."); return; }
-  if (t.dataset.add) { e.preventDefault(); cartApi.add(t.dataset.add, 1); fly(t, t.dataset.add); haptic(); flash(t, L.ic("check", 22)); toast("Добавено ✓"); return; }
+  if (t.dataset.add) { e.preventDefault(); cartApi.add(t.dataset.add, 1, t.dataset.p ? { p: +t.dataset.p } : {}); fly(t, t.dataset.add); haptic(); flash(t, ic("check", 22)); toast("Добавено ✓"); return; }
   if (t.hasAttribute("data-ai")) { openAI(); return; }
-  if (t.dataset.aiq) { aiAsk(t.textContent || "", t.dataset.aiq as L.AiKind); return; }
-  if (t.dataset.aiadd) { t.dataset.aiadd.split(",").forEach((k, i) => { cartApi.add(k, 1); setTimeout(() => fly(t, k), i * 120); }); flash(t, L.ic("check", 22) + "Добавено в количката", 1600); return; }
-  if (t.hasAttribute("data-more")) { sheet({ title: "Още", html: L.morePanel() }); return; }
+  if (t.dataset.aiq) { aiAsk(t.textContent || "", t.dataset.aiq as AiKind); return; }
+  if (t.dataset.aiadd) { t.dataset.aiadd.split(",").forEach((k, i) => { cartApi.add(k, 1); setTimeout(() => fly(t, k), i * 120); }); flash(t, ic("check", 22) + "Добавено в количката", 1600); return; }
+  if (t.hasAttribute("data-more")) { sheet({ title: "Още", html: morePanel() }); return; }
   if (t.hasAttribute("data-lang")) { toast("Английската версия идва след българската."); return; }
   if (t.hasAttribute("data-share")) { share(); return; }
   if (t.dataset.cookie) { cookieChoice(t.dataset.cookie); return; }
@@ -202,7 +219,7 @@ document.addEventListener("submit", (e) => {
   const inp = af.querySelector("input")!, v = inp.value.trim();
   if (!v) return;
   inp.value = "";
-  aiAsk(v, L.aiClassify(v));
+  assistant().then((A) => aiAsk(v, A.aiClassify(v)));
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
@@ -214,30 +231,27 @@ updateCartUI(false);
 
 /* ---------- window.SC: the prototype API ---------- */
 type MountOpts = { title?: string; docTitle?: string; [k: string]: unknown };
-const manualPairs: L.ManualPairs = {};
 export const SC = {
   reduce, demo: DEMO, preview: previewMode, load, store, prefs,
   /* format */
-  fmt: L.fmt, esc: L.esc, ic: L.ic, plural: L.plural, dateLong: L.dateLong, dateShort: L.dateShort, hhmm: L.hhmm,
-  /* data */
-  menu: L.menu, items: L.items, byId: L.byId, lunch: L.lunch, lunchIsToday: () => L.lunchIsToday(), cats: L.cats, catById: L.catById,
-  inCat: L.inCat, isOut: L.isOut, RESTAURANT: L.RESTAURANT, ZONES: L.ZONES, TAGS: L.TAGS, ALLERGENS: L.ALLERGENS, allergenName: L.allergenName,
-  FILTERS: L.FILTERS, TABLES: L.TABLES, EVENT_CATS: L.EVENT_CATS, COURSE_NAME: L.COURSE_NAME, MON: L.MON, MONTHS: L.MONTHS, DAYS: L.DAYS,
+  fmt: F.fmt, esc: F.esc, ic, plural: F.plural, dateLong: F.dateLong, dateShort: F.dateShort, hhmm: F.hhmm, MON: F.MON, MONTHS: F.MONTHS, DAYS: F.DAYS,
+  /** load the full icon set (lazy chunk); SC.ic works synchronously afterwards for every icon */
+  icons: loadAllIcons,
+  /* constants (no menu) */
+  RESTAURANT: C.RESTAURANT, ZONES: C.ZONES, TAGS: C.TAGS, ALLERGENS: C.ALLERGENS, allergenName: C.allergenName, FILTERS: C.FILTERS,
+  TABLES: C.TABLES, EVENT_CATS: C.EVENT_CATS, COURSE_NAME: C.COURSE_NAME, EVENT_SLUGS,
   /* time */
-  now: () => L.now(), minutes: () => L.minutes(), state: () => L.state(), status: () => L.status(), eta: () => L.eta(), lastSaturday: () => L.lastSaturday(),
-  events: () => L.events(), offers: () => L.offers(),
-  MANUAL_PAIRS: manualPairs, suggest: (id: string, inCart?: string[]) => L.suggest(id, inCart, manualPairs),
-  /* render */
-  kind: L.kind, art: L.art, pic: L.pic, badges: L.badges, plusBtn: L.plusBtn, dishCard: L.dishCard, footer: () => L.footer(),
+  now: () => now(), minutes: () => minutes(), state: () => T.state(), status: () => T.status(), eta: () => T.eta(), lastSaturday: () => T.lastSaturday(),
+  events: () => events(),
   /** compat with SC.href("dish", id) from the prototype */
   href: (page: string, id?: string) => fromProto(page + ".html" + (id ? "#" + id : "")),
-  url, fromProto, PAGES: L.MORE_PAGES,
+  url, fromProto, PAGES: MORE_PAGES, footer: () => footer(),
   /* cart & user */
   cart: cartApi, updateCartUI, user: () => load<Record<string, unknown> | null>("sc-user", null),
   /* ui */
   fly, haptic, toast, flash, sheet, reveal, aiAsk, openAI,
   device, scroller, ov, main,
-  /** Already rendered by Base.astro: returns <main>. Only docTitle/title update document.title if given. */
+  /** Already rendered by Base.astro: returns <main>. Only docTitle updates document.title if given. */
   mount: (o: MountOpts = {}) => { if (o.docTitle) document.title = o.docTitle + " | Siracusa Bar & Grill"; return main; },
 };
 export type SCType = typeof SC;
