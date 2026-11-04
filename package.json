@@ -20,7 +20,8 @@
     "check": "astro check",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "shoot": "node scripts/shoot.mjs"
+    "shoot": "node scripts/shoot.mjs",
+    "pretest": "npm run gen"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",
