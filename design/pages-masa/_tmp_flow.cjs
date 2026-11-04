@@ -23,7 +23,7 @@ await A.goto(base+'call.html');await A.waitForTimeout(500);await A.click('[data-
 await A.evaluate(()=>{const s=JSON.parse(localStorage.getItem('sc-masa'));s.calls.order.at-=240000;localStorage.setItem('sc-masa',JSON.stringify(s));});
 await A.reload();await A.waitForTimeout(1300);
 log('order tile:', (await A.textContent('[data-locked="order"]')).replace(/\s+/g,' '), '| wt:', await A.textContent('.coming [data-wt]'));
-await A.click('[data-locked="order"]');await A.waitForTimeout(300);log('after re-tap wt:', await A.textContent('.coming [data-wt]'));
+await A.click('[data-locked="order"]',{force:true});await A.waitForTimeout(300);log('after re-tap wt:', await A.textContent('.coming [data-wt]'));
 await A.screenshot({path:'/tmp/claude-0/flow/call-active.png'});
 await A.click('[data-cancel="order"]');await A.waitForTimeout(400);log('after cancel tile:', (await A.textContent('[data-call="order"]')).replace(/\s+/g,' '));
 await A.click('.toast button');await A.waitForTimeout(400);log('after undo locked:', !!(await A.$('[data-locked="order"]')));

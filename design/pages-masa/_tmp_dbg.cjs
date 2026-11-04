@@ -1,12 +1,9 @@
 const {chromium}=require('playwright');
 const base='file:///home/user/siracusa-sofia/design/pages-masa/';
-(async()=>{const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844}});
-await ctx.addInitScript(()=>{ if(!localStorage.getItem('sc-cookie')){localStorage.setItem('sc-cookie','"min"');localStorage.setItem('sc-prefs',JSON.stringify({theme:'light',view:'phone',time:'19:30'}));} });
-const A=await ctx.newPage();A.on('console',m=>console.log('console',m.text()));
+(async()=>{const b=await chromium.launch();const ctx=await b.newContext();
+const A=await ctx.newPage(), B=await ctx.newPage();
 await A.goto(base+'welcome.html');await A.waitForTimeout(600);
-console.log('name', await A.evaluate(()=>window.name), 'me', await A.evaluate(()=>MASA.me));
-await A.click('.wl-lang [data-mlang="en"]');await A.waitForTimeout(1000);
-console.log('name', await A.evaluate(()=>window.name), 'me', await A.evaluate(()=>MASA.me), await A.evaluate(()=>JSON.stringify(Object.keys(localStorage))), await A.evaluate(()=>localStorage.getItem('sc-masa-lang-me')));
-await A.goto(base+'call.html');await A.waitForTimeout(600);await A.click('[data-call="order"]');await A.waitForTimeout(400);
-console.log(await A.evaluate(()=>localStorage.getItem('sc-masa')));
+console.log('A', await A.evaluate(()=>[window.name, MASA.me, localStorage.getItem('sc-masa-tabs')]));
+await B.goto(base+'cart.html');await B.waitForTimeout(600);
+console.log('B', await B.evaluate(()=>[window.name, MASA.me, localStorage.getItem('sc-masa-tabs')]));
 await b.close();})();

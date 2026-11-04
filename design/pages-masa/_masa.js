@@ -22,16 +22,17 @@ function seedDraft(){ return [ln("pitsa-margarita","g2",1,140), ln("shopska-sala
 function fresh(){ return {v:2, mode:"open", draft:seedDraft(), rounds:[], calls:{}, picks:{}, bill:null, rating:null, sim:{}, skew:0, opened:Date.now()-14*60000}; }
 
 /* ---------- this phone: every browser tab is its own phone (window.name survives reloads, not new tabs) ---------- */
-var HB = "sc-masa-tabs";
+var HB = "sc-masa-tab-"; /* one key per tab: no read-modify-write races between tabs */
 if (!/^masa-/.test(window.name || "")) window.name = "masa-" + uid();
 var TAB = window.name;
-M.me = (function(){ var tabs = SC.load(HB, {}), now = Date.now();
-  if (tabs[TAB] && tabs[TAB].id) return tabs[TAB].id;
-  var taken = Object.keys(tabs).filter(function(k){ return k !== TAB && now - tabs[k].ts < 5000; }).map(function(k){ return tabs[k].id; });
+function tabs(){ var out = {}; try{ for (var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if (k && k.indexOf(HB) === 0){ var v = SC.load(k, null); if (v) out[k.slice(HB.length)] = v; } } }catch(e){} return out; }
+M.me = (function(){ var t = tabs(), now = Date.now();
+  if (t[TAB] && t[TAB].id) return t[TAB].id;
+  var taken = Object.keys(t).filter(function(k){ return k !== TAB && now - t[k].ts < 5000; }).map(function(k){ return t[k].id; });
   return M.WHO.filter(function(w){ return taken.indexOf(w) < 0; })[0] || "me"; })();
-function beat(){ var tabs = SC.load(HB, {}), now = Date.now(); Object.keys(tabs).forEach(function(k){ if (now - tabs[k].ts > 60000) delete tabs[k]; }); tabs[TAB] = {id:M.me, ts:now}; SC.store(HB, tabs); }
+function beat(){ var t = tabs(), now = Date.now(); Object.keys(t).forEach(function(k){ if (now - t[k].ts > 60000) try{ localStorage.removeItem(HB+k); }catch(e){} }); SC.store(HB+TAB, {id:M.me, ts:now}); }
 beat(); setInterval(beat, 1500);
-M.livePhones = function(){ var tabs = SC.load(HB, {}), now = Date.now(); return Object.keys(tabs).filter(function(k){ return now - tabs[k].ts < 5000; }).map(function(k){ return tabs[k].id; }); };
+M.livePhones = function(){ var t = tabs(), now = Date.now(); return Object.keys(t).filter(function(k){ return now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }); };
 /* language and connection belong to the phone, never to the table */
 var LKEY = "sc-masa-lang-" + M.me, OKEY = "sc-masa-off-" + M.me;
 function local(){ S.lang = SC.load(LKEY, "bg"); S.offline = !!SC.load(OKEY, false); }
