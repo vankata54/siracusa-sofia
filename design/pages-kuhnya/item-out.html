@@ -58,7 +58,7 @@ function render(){
   var outs = K.outs(), groups = K.sec.cats.map(function(c){ return c === "obedno" ? {n:"Обедно меню", note:"условно в „Топла кухня“", items:SC.lunch} : {n:SC.catById[c].n, items:SC.inCat(c)}; })
     .concat(K.SHARED_CATS.map(function(c){ return {n:SC.catById[c].n, note:"за всички секции: готвят се с основното ястие", items:SC.inCat(c)}; }))
     .filter(function(g){ return g.items.length; });
-  var mineOut = K.outMine(), otherOut = outs.filter(function(x){ return mineOut.indexOf(x) < 0; });
+  var mineOut = K.outMine(), mineIds = mineOut.map(function(x){ return x.id; }), otherOut = outs.filter(function(x){ return mineIds.indexOf(x.id) < 0; });
   function orow(o){ var x = SC.byId[o.id];
     return '<div class="orow"><div><b>' + esc(x.n) + '</b><small>' + esc(K.secById[o.sec] ? K.secById[o.sec].n : o.sec === "shared" ? "Добавка, всички секции" : "") + ' · от ' + o.at + '</small></div>' +
       '<button class="kb line" type="button" data-back="' + o.id + '">' + ic("arrow-counter-clockwise",22) + 'Върни в менюто</button></div>'; }

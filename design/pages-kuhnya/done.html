@@ -43,7 +43,6 @@
 var ic = SC.ic, esc = SC.esc;
 var main = K.mount({page:"done", title:"Изпълнени · " + K.sec.n});
 var list = K.st === "empty" ? [] : K.doneToday();
-if (K.st === "offline") K.strip.innerHTML = K.offlineHTML();
 
 function render(){
   var onTime = list.filter(function(o){ return K.s(o.doneAt) <= o.due; }).length;

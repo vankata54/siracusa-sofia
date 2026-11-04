@@ -134,7 +134,8 @@ K.srcText = function(o){ return o.kind === "table" ? "Маса " + o.num : (o.ki
 /* ---------- ticket ---------- */
 function mods(l){ var o = l.o, h = "";
   (o.no||[]).forEach(function(t){ h += '<span class="md no">' + ic("minus",18) + 'без ' + esc(t) + '</span>'; });
-  (o.add||[]).forEach(function(t){ h += '<span class="md add">' + ic("plus",18) + esc(t) + '</span>'; });
+  (o.add||[]).forEach(function(t){ var out = K.outs().some(function(x){ var d = SC.byId[x.id]; return d && d.cat === "dobavki" && d.n.toLowerCase() === t.toLowerCase(); });
+    h += '<span class="md add">' + ic("plus",18) + esc(t) + (out ? ' · изчерпано днес' : '') + '</span>'; });
   if (o.nt) h += '<span class="md nt">' + ic("note",18) + esc(o.nt) + '</span>';
   if (K.isOut(l.id)) h += '<span class="md out">' + ic("x",18) + 'Изчерпано днес</span>';
   return h ? '<span class="mds">' + h + '</span>' : ""; }
