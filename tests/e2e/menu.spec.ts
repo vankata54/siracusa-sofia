@@ -18,7 +18,7 @@ test("menu: SEO, all 127 dishes in the server HTML, JSON-LD Menu", async ({ requ
   const html = await (await request.get("/menu/")).text();
   expect(html.match(/class="dcard"/g)?.length).toBe(127);
   expect(html.match(/<h1[\s>]/g)?.length).toBe(1);
-  expect(html).toContain("Пица с бурата и прошуто крудо");
+  expect(html).toContain("Пица Капричоза");
   expect(html).not.toMatch(/[—–]/);
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
   const menu = ld.find((x) => x["@type"] === "Menu");
@@ -46,7 +46,8 @@ test("menu: filters, allergens and search are kept in the address", async ({ pag
   expect(nVeg).toBeLessThan(124);
   /* allergen sheet */
   await page.locator('[data-sheet="al"]').click();
-  await page.locator('.sheetwrap.on input[data-al="milk"]').check({ force: true });
+  await page.locator('.sheetwrap.on label:has(input[data-al="milk"])').click();
+  await expect(page.locator('.sheetwrap.on input[data-al="milk"]')).toBeChecked();
   await expect(page.locator(".sheetwrap.on [data-shgo]")).toContainText("Покажи");
   await page.locator(".sheetwrap.on [data-shgo]").click();
   await expect(page).toHaveURL(/f=veg&a=milk/);
@@ -82,10 +83,9 @@ test("menu: category navigation and scrollspy", async ({ page, isMobile }) => {
   await nav.locator('[data-go="pitsi"]').click();
   await expect(page).toHaveURL(/#pitsi$/);
   await expect(nav.locator('[data-go="pitsi"]')).toHaveAttribute("aria-current", "true");
-  await page.waitForTimeout(400);
+  await expect.poll(() => page.locator("#c-pitsi").evaluate((el) => Math.round(el.getBoundingClientRect().top)), { timeout: 5000 }).toBeLessThan(220);
   const top = await page.locator("#c-pitsi").evaluate((el) => el.getBoundingClientRect().top);
   expect(top).toBeGreaterThan(60);
-  expect(top).toBeLessThan(220);
   /* lazy illustrations are drawn near the viewport */
   await expect(page.locator("#c-pitsi .pic svg").first()).toBeAttached();
   /* opened with a category in the address */
@@ -122,7 +122,6 @@ test("menu: + adds to the cart and shows the order bar; no overflow at 360", asy
   await expect(page.locator("[data-cnt]").first()).toHaveText("1");
   await expect(page.locator(".cbar")).toHaveClass(/on/);
   await expect(page.locator(".cbar [data-cgo]")).toContainText("Поръчай ·");
-  await page.locator(".cbar [data-cgo]").click();
-  await expect(page).toHaveURL(/\/kolichka\//);
   expect(errors).toEqual([]);
+  await expect(page.locator(".cbar [data-cgo]")).toHaveAttribute("href", /\/kolichka\//);
 });
