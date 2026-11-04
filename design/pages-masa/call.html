@@ -34,7 +34,7 @@
 .tile .ti{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
 .tile b{font-size:19px; line-height:1.2; letter-spacing:-.02em}
 .tile .d{font-size:15px; color:var(--muted); font-weight:600; line-height:1.35}
-.tile .msg{font-size:16px; color:var(--ink); font-weight:700; line-height:1.3}
+.tile .tmsg{font-size:16px; color:var(--ink); font-weight:700; line-height:1.3}
 .tile .lock .t{font-variant-numeric:tabular-nums}
 .tile .tgo{position:absolute; top:18px; right:16px; color:var(--muted)}
 .tile[aria-disabled="true"]{background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--line); cursor:not-allowed}
@@ -89,8 +89,8 @@ function tileHTML(t){ var c = M.CALLS[t], st = M.callState(t), active = st === "
   var inner = '<span class="ti">'+ic(c.icon,30)+'</span><b>'+L(c.bg,c.en)+'</b>';
   if (t === "bill"){ var req = S.bill;
     return '<a class="tile'+(active?" on":"")+'" href="bill.html">'+ic("caret-right",20).replace('class="ic"','class="ic tgo"')+inner+'<span class="d">'+(req ? L("Поискана в ","Asked at ")+M.clock(req.at) : L(c.sub[0],c.sub[1]))+'</span></a>'; }
-  if (active) return '<button class="tile on" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="msg">'+L("Вече повикахме","Already called")+'</span><span class="lock">'+ic("timer",18)+L("чакате ","waiting ")+'<span class="t" data-wt="'+t+'">'+M.mmss(el(t))+'</span></span></button>';
-  if (st === "cool") return '<button class="tile" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="msg">'+L("Сервитьорът току-що дойде","The waiter has just been here")+'</span><span class="lock">'+ic("timer",18)+L("Пак след ","Again in ")+'<span class="t" data-lt="'+t+'">'+M.mmss(M.callLeft(t))+'</span></span></button>';
+  if (active) return '<button class="tile on" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="tmsg">'+L("Вече повикахме","Already called")+'</span><span class="lock">'+ic("timer",18)+L("чакате ","waiting ")+'<span class="t" data-wt="'+t+'">'+M.mmss(el(t))+'</span></span></button>';
+  if (st === "cool") return '<button class="tile" type="button" aria-disabled="true" data-locked="'+t+'" aria-describedby="why">'+inner+'<span class="tmsg">'+L("Сервитьорът току-що дойде","The waiter has just been here")+'</span><span class="lock">'+ic("timer",18)+L("Пак след ","Again in ")+'<span class="t" data-lt="'+t+'">'+M.mmss(M.callLeft(t))+'</span></span></button>';
   return '<button class="tile" type="button" data-call="'+t+'"'+(S.offline?' aria-disabled="true"':'')+'>'+inner+'<span class="d">'+L(c.sub[0],c.sub[1])+'</span></button>'; }
 
 function render(){

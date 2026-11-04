@@ -24,46 +24,50 @@
 var main = DR.mount({page:"login", title:"Вход", bare:true, nav:null});
 var ic = SC.ic, esc = SC.esc;
 var view = DR.hash.car!==undefined ? "car" : DR.hash.km!==undefined ? "km" : DR.hash.err!==undefined ? "err" : "login";
-var car = DR.db.car, kmv = "", kmErr = "";
+var car = DR.db.car, kmv = "", flv = "", kmErr = "", uErr = "", pErr = view==="err" ? "Грешна парола. Опитайте пак или попитайте управителя." : "", uv = "", shown = false;
 var DEF = "a1"; /* the car marked as "most used" in the driver's profile */
-function stepper(i){ var names = ["Вход","Автомобил","Километраж"];
+var bar = document.createElement("div"); bar.className = "st-bar nonav"; document.body.appendChild(bar);
+function stepper(i){ var names = ["Вход","Автомобил","Километраж и ресто"];
   return '<div class="stepper" style="--n:3"><div class="bar">'+names.map(function(n,k){ return '<span class="'+(k<=i?"on":"")+'"></span>'; }).join("")+'</div><div class="t"><b>Стъпка '+(i+1)+' от 3</b><span>'+names[i]+'</span></div></div>'; }
 function render(){ var h = '<div class="lg">';
   if (view==="login" || view==="err"){
     h += stepper(0)+'<div><h1 class="h1">Вход за шофьора</h1><p class="lead" style="margin-top:6px">Влезте със своя потребител. Паролата ви дава управителят.</p></div>'+
-      '<form class="stack" style="gap:16px" novalidate><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="username" autocapitalize="none" value="'+(view==="err"?"shofyor1":"")+'" placeholder="например shofyor1"></div>'+
-      '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" type="password" autocomplete="current-password"'+(view==="err"?' aria-invalid="true" aria-describedby="perr" value="1234567"':'')+'><button class="show" type="button" data-show>'+ic("eye",20)+'Покажи</button></div>'+
-      (view==="err"?'<span class="err" id="perr">Грешна парола. Опитайте пак или попитайте управителя.</span>':'')+'</div>'+
-      '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("sign-in",22)+'Влез</button></form>'+
+      '<form class="stack" style="gap:16px" novalidate id="lf"><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="username" autocapitalize="none" value="'+esc(uv)+'" placeholder="например shofyor1"'+(uErr?' aria-invalid="true" aria-describedby="uerr"':'')+'>'+(uErr?'<span class="err" id="uerr">'+uErr+'</span>':'')+'</div>'+
+      '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" type="'+(shown?"text":"password")+'" autocomplete="current-password"'+(pErr?' aria-invalid="true" aria-describedby="perr"':'')+'><button class="show" type="button" data-show aria-pressed="'+shown+'">'+ic("eye",20)+(shown?"Скрий":"Покажи")+'</button></div>'+
+      (pErr?'<span class="err" id="perr">'+pErr+'</span>':'')+'</div></form>'+
       '<p class="small muted" style="margin:0;text-align:center">Забравена парола? Управителят я сменя от админ панела.</p>';
+    bar.innerHTML = '<button class="pill pill-red" type="submit" form="lf">'+ic("sign-in",22)+'Влез</button>';
   } else if (view==="car"){
     h += stepper(1)+'<div><h1 class="h2">С коя кола карате днес?</h1><p class="lead" style="margin-top:6px">Отбелязаната стои по подразбиране. Сменете само ако днес карате друга.</p></div>'+
       '<div class="cars" role="group" aria-label="Автомобил">'+DR.CARS.map(function(c){ return '<button class="car" type="button" data-car="'+c.id+'" aria-pressed="'+(car===c.id)+'"><span class="ii">'+ic("car",24)+'</span><span><b>'+c.n+'</b><span>'+(c.id===DEF?"Най-често ползвана · ":"")+'рег. № <span class="missing">[ЛИПСВА]</span></span></span></button>'; }).join("")+'</div>'+
-      '<p class="small muted" style="margin:0">Автомобилите се въвеждат в админ панела <span class="missing">[ЛИПСВА: брой автомобили, марка, гориво]</span>.</p>'+
-      '<button class="pill pill-red pill-lg pill-block" type="button" data-go="km">Продължи с '+DR.CARS.filter(function(c){ return c.id===car; })[0].n+'</button>';
+      '<p class="small muted" style="margin:0">Автомобилите се въвеждат в админ панела <span class="missing">[ЛИПСВА: брой автомобили, марка, гориво]</span>. Ако смените колата по време на смяната, записваме края на едната и началото на другата.</p>';
+    bar.innerHTML = '<button class="pill pill-line" type="button" data-go="login" style="flex:0 0 auto;background:var(--surface)">'+ic("caret-left",22)+'Назад</button><button class="pill pill-red grow" type="button" data-go="km">С '+DR.carName(car)+ic("caret-right",22)+'</button>';
   } else if (view==="km"){
-    var c = DR.CARS.filter(function(x){ return x.id===car; })[0];
-    h += stepper(2)+'<div><h1 class="h2">Начален километраж</h1><p class="lead" style="margin-top:6px">Препишете числото от таблото на '+c.n+'. По него се смятат изминатите километри и разходът.</p></div>'+
+    h += stepper(2)+'<div><h1 class="h2">Километраж и ресто</h1><p class="lead" style="margin-top:6px">Препишете числото от таблото на '+DR.carName(car)+'. По него се смятат изминатите километри и разходът.</p></div>'+
       '<div class="field bigf"><label for="kmnow">Километраж сега</label><div class="wrapi"><input class="input" id="kmnow" inputmode="numeric" autocomplete="off" placeholder="0" value="'+esc(kmv)+'"'+(kmErr?' aria-invalid="true" aria-describedby="kerr"':' aria-describedby="khelp"')+'><span class="u">км</span></div>'+
       (kmErr?'<span class="err" id="kerr">'+kmErr+'</span>':'<span class="help" id="khelp">Последно записан за тази кола: '+DR.db.kmStart.toLocaleString("bg-BG")+' км (условно за макета).</span>')+'</div>'+
-      '<div class="park">'+ic("car",22)+'<span>Ползвайте приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>'+
-      '<button class="pill pill-red pill-lg pill-block" type="button" data-start>'+ic("moped",22)+'Започни смяната</button>'+
-      '<button class="pill pill-line pill-lg pill-block" type="button" data-go="car">'+ic("caret-left",22)+'Назад: автомобил</button>';
+      '<div class="field bigf"><label for="fl">Ресто, което взимате от ресторанта</label><div class="wrapi"><input class="input" id="fl" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+esc(flv)+'" aria-describedby="flh"><span class="u">€</span></div><span class="help" id="flh">Брои се към парите за предаване в края на смяната. Колко ресто се дава: <span class="missing">[ЛИПСВА]</span>.</span></div>'+
+      '<div class="park">'+ic("car",22)+'<span>Ползвайте приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>';
+    bar.innerHTML = '<button class="pill pill-line" type="button" data-go="car" style="flex:0 0 auto;background:var(--surface)">'+ic("caret-left",22)+'Назад</button><button class="pill pill-red grow" type="button" data-start>'+ic("moped",22)+'Започни смяната</button>';
   }
   main.innerHTML = h + '</div>';
 }
+DR.app.classList.add("withbar");
 render();
-main.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p");
-  if (!u.value.trim() || !p.value){ view = "err"; render(); return; } view = "car"; render(); window.scrollTo(0,0); });
-main.addEventListener("input", function(e){ if (e.target.id==="kmnow") kmv = e.target.value; });
-main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
-  if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"), sh = p.type==="password"; p.type = sh ? "text" : "password"; b.innerHTML = ic("eye",20)+(sh?"Скрий":"Покажи"); return; }
+main.addEventListener("submit", function(e){ e.preventDefault(); });
+document.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p"); uv = u.value;
+  uErr = u.value.trim() ? "" : "Въведете потребител."; pErr = p.value ? "" : "Въведете парола.";
+  if (uErr || pErr){ render(); main.querySelector(uErr?"#u":"#p").focus(); return; } view = "car"; render(); window.scrollTo(0,0); });
+main.addEventListener("input", function(e){ if (e.target.id==="kmnow") kmv = e.target.value; if (e.target.id==="fl") flv = e.target.value; if (e.target.id==="u") uv = e.target.value; });
+document.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b || b.closest(".proto")) return;
+  if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"); shown = p.type==="password"; p.type = shown ? "text" : "password"; b.setAttribute("aria-pressed", shown); b.innerHTML = ic("eye",20)+(shown?"Скрий":"Покажи"); return; }
   if (b.dataset.car){ car = b.dataset.car; render(); return; }
-  if (b.dataset.go){ view = b.dataset.go; render(); window.scrollTo(0,0); return; }
+  if (b.dataset.go){ view = b.dataset.go; if (view==="login"){ pErr = ""; } render(); window.scrollTo(0,0); return; }
   if (b.hasAttribute("data-start")){ var v = parseInt(kmv.replace(/\s/g,""),10);
     kmErr = !v ? "Въведете километража от таблото." : v < DR.db.kmStart ? "По-малко е от последно записания ("+DR.db.kmStart.toLocaleString("bg-BG")+" км). Проверете пак." : "";
     if (kmErr){ render(); main.querySelector("#kmnow").focus(); return; }
-    DR.db.car = car; DR.db.kmStart = v; DR.db.shiftStart = Date.now(); DR.db.parkSeen = false; DR.save(); location.href = "list.html"; }
+    var f = parseFloat(flv.replace(",", ".")); DR.db.float = isNaN(f) ? null : f;
+    DR.db.car = car; DR.db.kmStart = v; DR.db.legs = []; DR.db.shiftStart = Date.now(); DR.db.parked = false; DR.save(); location.href = "list.html"; }
 });
 </script>
 </body>
