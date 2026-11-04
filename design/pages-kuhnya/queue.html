@@ -23,7 +23,8 @@ var main = K.mount({page:"queue", title:"Опашка · " + K.sec.n});
 var orders = K.orders().filter(function(o){ return K.active(o); });
 var offline = K.st === "offline", newO = null, laterOpen = false, lastTouch = Date.now();
 var seen = {}; orders.forEach(function(o){ if (o.sched) seen[o.num] = 1; });
-document.addEventListener("pointerdown", function(){ lastTouch = Date.now(); }, {capture:true});
+document.addEventListener("pointerdown", function(e){ lastTouch = Date.now();
+  if (laterOpen && !e.target.closest(".klater")){ laterOpen = false; strip(); } }, {capture:true});
 K.onAudio = function(){ strip(); if (!orders.length) render(); };
 
 function counts(){

@@ -20,8 +20,8 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .st-word{font-weight:800; font-size:22px; letter-spacing:-.05em}
 
 /* offline strip under the top bar */
-.st-net{position:sticky; top:68px; z-index:29; display:flex; align-items:center; gap:10px; min-height:52px; padding:8px 16px; background:var(--warn); color:var(--on-ember); font-weight:700; font-size:15px; line-height:1.3}
-.st-net button{margin-left:auto; min-height:44px; padding:0 14px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-weight:800; cursor:pointer; white-space:nowrap}
+.st-net{position:sticky; top:68px; z-index:29; display:flex; align-items:center; gap:10px; min-height:52px; padding:8px 16px; background:var(--ember); color:var(--on-ember); font-weight:700; font-size:16px; line-height:1.3}
+.st-net button{margin-left:auto; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-weight:800; cursor:pointer; white-space:nowrap}
 
 /* ---------- bottom nav (4 tabs) ---------- */
 .st-nav{position:fixed; z-index:40; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
@@ -69,7 +69,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .bigno{font-size:52px; font-weight:800; letter-spacing:-.06em; line-height:1; font-variant-numeric:tabular-nums}
 .kvs .kv{font-size:16px}
 .kvs .kv.tot{font-size:20px; font-weight:800}
-.notice{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface-2); font-size:15px; line-height:1.4}
+.notice{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface-2); font-size:16px; line-height:1.4}
 .notice .ic{margin-top:1px}
 .notice.warn{background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn)}
 .notice.warn .ic{color:var(--warn)}
@@ -171,14 +171,14 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .notebox{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn); font-size:17px; font-weight:700; line-height:1.4}
 .notebox .ic{color:var(--warn); margin-top:2px; flex:none}
 .flow{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0; padding:0; list-style:none}
-.flow li{display:grid; gap:6px; justify-items:start; font-size:14px; font-weight:800; color:var(--muted); line-height:1.2}
+.flow li{display:grid; gap:6px; justify-items:start; font-size:16px; font-weight:800; color:var(--muted); line-height:1.2}
 .flow li::before{content:""; width:100%; height:6px; border-radius:3px; background:var(--surface-3)}
 .flow li.on{color:var(--ink)}
 .flow li.on::before{background:var(--ink)}
 .flow li.now::before{background:var(--ember)}
 .flow li .t{font-weight:700; font-variant-numeric:tabular-nums}
 .paygrid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
-.paygrid > div{display:grid; justify-items:center; gap:4px; padding:10px 6px; border-radius:18px; background:var(--surface-2); color:var(--muted); font-size:14px; font-weight:800; text-align:center; line-height:1.2}
+.paygrid > div{display:grid; justify-items:center; gap:4px; padding:10px 6px; border-radius:18px; background:var(--surface-2); color:var(--muted); font-size:16px; font-weight:800; text-align:center; line-height:1.2}
 .paygrid > div.on{background:var(--ink); color:var(--bg)}
 .change{display:flex; flex-wrap:wrap; gap:8px}
 .change .chip{min-width:72px; justify-content:center; font-variant-numeric:tabular-nums}
@@ -264,7 +264,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .cashbox .big{font-size:44px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
 
 /* parked-only notice + moving overlay */
-.park{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface-2); font-size:15px; font-weight:700; line-height:1.35}
+.park{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface-2); font-size:16px; font-weight:700; line-height:1.35}
 .park .ic{flex:none}
 .park span{flex:1}
 .park .iconbtn{background:transparent}
@@ -300,3 +300,17 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
   .st-bar .pill .price{font-size:16px}
 }
 a.chip{text-decoration:none; color:var(--ink)}
+
+/* fixes after review 1 */
+.st-toast.low{top:136px}
+.big16 .stt, .next .stt, .acard .stt{font-size:16px; min-height:36px}
+.dsum.one{display:flex; justify-content:space-between; align-items:center; gap:8px; min-height:56px; padding:6px 18px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.dsum.one > *{display:flex; align-items:baseline; gap:6px; min-height:0; padding:0; background:none; box-shadow:none; border-radius:0}
+.dsum.one b{font-size:22px} .dsum.one span{font-size:14px}
+.st-bar .pill-line{flex:0 0 auto; background:var(--surface)}
+.st-bar .pill-ink{flex:0 0 auto}
+.arr{display:flex; align-items:center; gap:8px; margin-top:10px; font-weight:700; color:var(--ok)}
+.chg.big{font-size:24px; letter-spacing:-.02em}
+.otherf{display:flex; gap:8px; margin-top:10px}
+.otherf .wrapi{flex:1}
+.lockh{grid-column:2/-1; font-size:14px; font-weight:700; color:var(--muted); display:flex; align-items:center; gap:6px}

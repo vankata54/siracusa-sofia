@@ -1,5 +1,5 @@
 const {chromium}=require('playwright');
-const base='file:///home/user/siracusa-sofia/design/pages-masa/';
+const base='http://127.0.0.1:8765/pages-masa/';
 (async()=>{const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844}});
 await ctx.addInitScript(()=>{ if(!localStorage.getItem('sc-cookie')){localStorage.setItem('sc-cookie','"min"');localStorage.setItem('sc-prefs',JSON.stringify({theme:'light',view:'phone',time:'19:30'}));} });
 const errs=[];const A=await ctx.newPage(), B=await ctx.newPage();[A,B].forEach((p,i)=>{p.on('pageerror',e=>errs.push(i+': '+e.message));p.on('console',m=>{if(m.type()==='error')errs.push(i+': '+m.text())});});

@@ -35,12 +35,12 @@ DR.NAVAPP = {google:"Google Maps", waze:"Waze"};
 DR.zone = function(n){ return SC.ZONES.filter(function(z){ return z.n === n; })[0] || null; };
 
 /* schematic positions (viewBox 360 x 250); NOT a map, only the rough direction of each zone from the restaurant */
-DR.POS = {home:[156,142], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
+DR.POS = {home:[140,150], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
 
 /* ---------- mock data ---------- */
 function seed(kind){ var now = Date.now(), M = 60000;
-  var db = {v:2, kind:kind, shiftStart: now - 3*60*M - 12*M, car:"a1", kmStart:48250, outbox:[], route:{pick:"A", own:null}, fuel:[], dels:[], parkSeen:false, ended:false};
-  function D(id, zone, addr, sub, pay, items, agoMin, st, note, dx, dy){ db.dels.push({id:String(id), zone:zone, addr:addr, sub:sub, client:"Клиент от № "+id, phone:"0888 12 34 56", pay:pay, items:items, at: now - agoMin*M, st:st, note:note||"", dx:dx||0, dy:dy||0, doneAt: st==="done" ? now - (agoMin-28)*M : null, prob:null}); }
+  var db = {v:3, kind:kind, shiftStart: now - 3*60*M - 12*M, car:"a1", kmStart:48250, legs:[], float:null, outbox:[], route:{pick:"A", own:null}, driving:null, fuel:[], dels:[], parked:false, ended:false};
+  function D(id, zone, addr, sub, pay, items, agoMin, st, note, dx, dy){ db.dels.push({id:String(id), zone:zone, addr:addr, sub:sub, client:"Клиент от № "+id, phone:"0888 12 34 56", pay:pay, items:items, at: now - agoMin*M, st:st, note:note||"", dx:dx||0, dy:dy||0, doneAt: st==="done" ? now - (agoMin-28)*M : null, prob:null, arrivedAt:null}); }
   /* delivered earlier in the shift */
   D(1031, "Дружба 2", "бл. 3xx, вх. А", "ет. 2", "cash", [["pitsa-margarita",1],["kebapcheta",1]], 150, "done", "", -14, 10);
   D(1034, "Дружба 1", "бл. 5xx, вх. В", "ет. 6", "card", [["svinski-rebra",1],["gratska-salata",1]], 128, "done", "", 12, -6);
@@ -55,11 +55,12 @@ function seed(kind){ var now = Date.now(), M = 60000;
   D(1045, "НПЗ Искър", "ул. [ЛИПСВА], № xx", "офис, рецепция", "cash", [["salata-tsezar-s-pileshki-prachki",1],["pitsa-vegetariana",1],["kyunefe",1]], 9, on ? "picked" : "wait", "", 0, 10);
   if (kind === "outzone") D(1046, null, "ул. [ЛИПСВА], № xx", "къща", "cash", [["kebapcheta",2],["pitsa-dyavolo",1]], 6, "wait", "", 0, 0);
   else D(1046, "Горубляне", "ул. [ЛИПСВА], № xx", "къща", "voucher", [["svinski-kyufteta",2],["pitsa-margarita",1]], 3, on ? "picked" : "wait", "", 8, -6);
+  if (on) db.driving = "1042";
   if (kind === "offline") db.outbox = [{id:"1042", w:"Взех от ресторанта", at: now - 4*M}, {id:"1042", w:"На път", at: now - 3*M}];
   return db; }
 var KEY = "dr-db-" + DR.state;
 DR.db = load(KEY, null);
-if (!DR.db || DR.db.v !== 2) DR.db = seed(DR.state);
+if (!DR.db || DR.db.v !== 3) DR.db = seed(DR.state);
 DR.save = function(){ store(KEY, DR.db); DR.emit(); };
 DR.reset = function(){ DR.STATES.forEach(function(s){ try{ localStorage.removeItem("dr-db-"+s[0]); }catch(e){} }); };
 var subs = []; DR.on = function(fn){ subs.push(fn); }; DR.emit = function(){ subs.forEach(function(f){ f(); }); updateBadges(); };
@@ -88,30 +89,47 @@ function measure(order){ var t = 0, k = 0, prev = "home", legs = [], wait = 0, l
   order.forEach(function(d, i){ var lm = mins(prev, d), lk = km(prev, d); t += lm; k += lk; wait += t + 2*i; late += Math.max(0, Date.now() + (t + 2*i)*60000 - DR.due(d)); legs.push({m:lm, k:lk}); prev = d; });
   var rk = km(prev, "home"), rm = mins(prev, "home");
   return {order:order, min:Math.round(t + rm), km:k + rk, legs:legs, back:{m:rm, k:rk}, wait:wait, late:late}; }
-DR.plan = function(){ var stops = DR.active(); if (!stops.length) return null;
-  var all = perms(stops).filter(function(o){ return !stops.some(function(d){ return d.st==="road"; }) || o[0].st === "road"; }).map(measure);
-  /* A: by the promised time (VROOM with time windows: the one on the road first, then the earliest deadline) */
-  var A = measure(stops.slice().sort(function(a,b){ return (b.st==="road") - (a.st==="road") || DR.due(a) - DR.due(b); }));
+/* the delivery the driver is already driving to is locked at the top; the order applies to the rest */
+DR.lock = function(){ var d = DR.db.driving && DR.byId(DR.db.driving); return d && d.st === "road" ? d : null; };
+DR.plan = function(){ var stops = DR.active(); if (!stops.length) return null; var L = DR.lock();
+  /* mock only: brute force over permutations (fine for 4-5 stops); the real app asks VROOM, never permutations */
+  var all = perms(stops).filter(function(o){ return !L || o[0] === L; }).map(measure);
+  /* A: by the promised time (VROOM with time windows: the locked one first, then the earliest deadline) */
+  var A = measure(stops.slice().sort(function(a,b){ return (b===L) - (a===L) || DR.due(a) - DR.due(b); }));
   var B = all.slice().sort(function(a,b){ return a.km - b.km || a.min - b.min; })[0];
-  var own = null; if (DR.db.route.own){ var o = DR.db.route.own.map(DR.byId).filter(function(d){ return d && stops.indexOf(d) > -1; }); stops.forEach(function(d){ if (o.indexOf(d) < 0) o.push(d); }); own = measure(o); }
+  var own = null; if (DR.db.route.own){ var o = DR.db.route.own.map(DR.byId).filter(function(d){ return d && stops.indexOf(d) > -1; }); stops.forEach(function(d){ if (o.indexOf(d) < 0) o.push(d); }); if (L){ o.splice(o.indexOf(L),1); o.unshift(L); } own = measure(o); }
   return {A:A, B:B, own:own}; };
 DR.current = function(){ var p = DR.plan(); if (!p) return null; var k = DR.db.route.pick; return (k === "own" && p.own) ? p.own : k === "B" ? p.B : p.A; };
 /* ETA: legs + 2 min for every previous address (pack 10.1) */
 DR.etas = function(){ var r = DR.current(), out = {}; if (!r) return out; var t = Date.now(), cum = 0;
   r.order.forEach(function(d, i){ cum += r.legs[i].m; out[d.id] = t + (cum + 2*i)*60000; }); return out; };
 DR.ordered = function(){ var r = DR.current(); return r ? r.order : []; };
-DR.next = function(){ var o = DR.ordered(); return o.filter(function(d){ return d.st === "road"; })[0] || o[0] || null; };
+DR.next = function(){ var o = DR.ordered(); return DR.lock() || o.filter(function(d){ return d.st === "road"; })[0] || o[0] || null; };
 DR.lvl = function(d){ if (d.st === "done" || d.st === "prob") return ""; var left = DR.due(d) - Date.now(); return left < 0 ? "late" : left < 5*60000 ? "soon" : ""; };
 
 /* ---------- actions ---------- */
 function queue(d, w){ if (DR.offline) DR.db.outbox.push({id:d.id, w:w, at:Date.now()}); }
-DR.setSt = function(id, st){ var d = DR.byId(id); if (!d) return null; var prev = {st:d.st, doneAt:d.doneAt, prob:d.prob};
-  d.st = st; if (st === "done") d.doneAt = Date.now(); if (st === "road"){ DR.db.dels.forEach(function(x){ if (x !== d && x.st === "road") x.st = "picked"; }); }
+/* never changes another delivery silently: several can be "На път" at once (taken together) */
+function snap(d){ return {st:d.st, doneAt:d.doneAt, prob:d.prob, arrivedAt:d.arrivedAt, driving:DR.db.driving}; }
+function relock(){ if (DR.lock()) return; DR.db.driving = null; var o = DR.ordered().filter(function(x){ return x.st === "road"; }); DR.db.driving = o.length ? o[0].id : null; }
+DR.setSt = function(id, st){ var d = DR.byId(id); if (!d) return null; var prev = snap(d);
+  d.st = st; if (st === "done") d.doneAt = Date.now(); if (st === "road" && !DR.lock()) DR.db.driving = d.id;
+  if (st === "done" && DR.db.driving === d.id) DR.db.driving = null; relock();
   queue(d, st === "picked" ? "Взех от ресторанта" : DR.ST[st][0]); DR.save(); return prev; };
-DR.restore = function(id, prev){ var d = DR.byId(id); if (!d) return; d.st = prev.st; d.doneAt = prev.doneAt; d.prob = prev.prob; if (DR.offline) DR.db.outbox.pop(); DR.save(); };
+DR.restore = function(id, prev){ var d = DR.byId(id); if (!d) return; d.st = prev.st; d.doneAt = prev.doneAt; d.prob = prev.prob; d.arrivedAt = prev.arrivedAt; DR.db.driving = prev.driving; if (DR.offline) DR.db.outbox.pop(); DR.save(); };
+DR.goAll = function(){ var ids = []; DR.ordered().forEach(function(d){ if (d.st === "picked"){ d.st = "road"; ids.push(d.id); queue(d, "На път"); } }); relock(); DR.save(); return ids; };
+DR.arrived = function(id){ var d = DR.byId(id), prev = snap(d); d.arrivedAt = Date.now(); queue(d, "Пристигнах (SMS: шофьорът е пред входа)"); DR.save(); return prev; };
+DR.returned = function(id){ var d = DR.byId(id); d.prob.returned = Date.now(); queue(d, "Върнах в ресторанта"); DR.save(); };
 DR.pickAll = function(){ var n = 0; DR.db.dels.forEach(function(d){ if (d.st === "wait"){ d.st = "picked"; n++; queue(d, "Взех от ресторанта"); } }); DR.save(); return n; };
-DR.problem = function(id, k, note){ var d = DR.byId(id), prev = {st:d.st, doneAt:d.doneAt, prob:d.prob}; d.st = "prob"; d.prob = {k:k, note:note||"", at:Date.now()}; d.doneAt = Date.now(); queue(d, "Проблем: "+DR.PROB[k][0]); DR.save(); return prev; };
+DR.problem = function(id, k, note){ var d = DR.byId(id), prev = snap(d); d.st = "prob"; d.prob = {k:k, note:note||"", at:Date.now()}; d.doneAt = Date.now(); if (DR.db.driving === d.id) DR.db.driving = null; relock(); queue(d, "Проблем: "+DR.PROB[k][0]); DR.save(); return prev; };
 DR.cash = function(){ return DR.db.dels.filter(function(d){ return d.st === "done" && d.pay === "cash"; }).reduce(function(s,d){ return s + DR.total(d); }, 0); };
+DR.fuelCash = function(){ return DR.db.fuel.filter(function(x){ return x.cash; }).reduce(function(s,x){ return s + x.s; }, 0); };
+/* to hand over = cash from orders + starting change - fuel paid in cash */
+DR.handover = function(){ return DR.cash() + (DR.db.float || 0) - DR.fuelCash(); };
+DR.lastKm = function(){ var k = DR.db.kmStart; DR.db.fuel.forEach(function(x){ if (x.car === DR.db.car && x.km > k) k = x.km; }); return k; };
+/* changing the car mid-shift: end of car 1 (end km) + start of car 2 (start km), same shift */
+DR.switchCar = function(id, kmEnd, kmStart){ DR.db.legs.push({car:DR.db.car, kmStart:DR.db.kmStart, kmEnd:kmEnd, at:Date.now()}); DR.db.car = id; DR.db.kmStart = kmStart; DR.save(); };
+DR.carName = function(id){ return (DR.CARS.filter(function(c){ return c.id === id; })[0] || DR.CARS[0]).n; };
 
 /* ---------- navigation links (free, no API key) ---------- */
 DR.navUrl = function(d, app){ var q = encodeURIComponent((d.zone ? "ж.к. " + d.zone + ", " : "") + d.addr + ", София");
@@ -131,21 +149,25 @@ DR.zoneLine = function(d){ if (!d.zone) return '<span class="stt out">'+ic("warn
   var z = DR.zone(d.zone); return esc(d.zone) + (z.free ? "" : ' · платена зона'); };
 DR.payWord = function(d){ return '<span class="payw">'+ic(DR.PAY[d.pay][1],18)+esc(DR.PAY[d.pay][0])+'</span>'; };
 DR.haptic = function(p){ try{ var ua = navigator.userActivation; if (ua && !ua.hasBeenActive) return; navigator.vibrate && navigator.vibrate(p||12); }catch(e){} };
+DR.MASK = '<span class="missing">[ЛИПСВА: доставчик за маскирани обаждания]</span>';
 DR.exTag = '<span class="ex">'+ic("info",16)+'примерен адрес</span>';
 
 /* sheet & toast (same as the waiter app) */
 DR.sheet = function(o){ var w = document.createElement("div"); w.className = "st-sheetwrap"; var id = "sh"+Math.random().toString(36).slice(2,7);
   w.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="st-sheet" role="dialog" aria-modal="true" aria-labelledby="'+id+'"><div class="handle"></div><div class="sh"><h2 id="'+id+'">'+o.title+'</h2><button class="iconbtn" type="button" data-close aria-label="Затвори">'+ic("x",22)+'</button></div><div class="body">'+o.html+'</div>'+(o.foot?'<div class="sfoot">'+o.foot+'</div>':'')+'</div>';
   document.body.appendChild(w); var prev = document.activeElement;
+  var bg = [DR.app, document.querySelector(".st-nav"), document.querySelector(".st-bar")].filter(Boolean); bg.forEach(function(el){ el.inert = true; });
+  w.addEventListener("keydown", function(e){ if (e.key !== "Tab") return; var f = Array.prototype.filter.call(w.querySelectorAll(".st-sheet button:not([disabled]), .st-sheet a[href], .st-sheet input, .st-sheet textarea, .st-sheet select"), function(el){ return el.offsetParent !== null; });
+    if (!f.length) return; var a = f[0], z = f[f.length-1]; if (e.shiftKey && document.activeElement === a){ e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z){ e.preventDefault(); a.focus(); } });
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ w.classList.add("on"); var f = w.querySelector("[data-close]"); f && f.focus({preventScroll:true}); }); });
-  function close(){ w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 340); prev && prev.focus && prev.focus({preventScroll:true}); }
+  function close(){ if (document.querySelectorAll(".st-sheetwrap.on").length <= 1) bg.forEach(function(el){ el.inert = false; }); w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 340); prev && prev.focus && prev.focus({preventScroll:true}); }
   w.querySelector(".scrim").onclick = close; w.querySelector("[data-close]").onclick = close;
-  return {el:w, close:close}; };
+  return {el:w, close:close, body:w.querySelector(".body")}; };
 document.addEventListener("keydown", function(e){ if (e.key==="Escape"){ var w = document.querySelectorAll(".st-sheetwrap.on"); if (w.length) w[w.length-1].querySelector("[data-close]").click(); } });
 var toastT;
 DR.toast = function(text, undo, label){ var t = document.querySelector(".st-toast"); if (!t){ t = document.createElement("div"); t.className = "st-toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
   t.innerHTML = '<span>'+text+'</span>' + (undo ? '<button type="button">'+(label||"Отмени")+'</button>' : '');
-  t.classList.toggle("solo", !undo);
+  t.classList.toggle("solo", !undo); t.classList.toggle("low", !!document.querySelector(".st-net"));
   if (undo) t.querySelector("button").onclick = function(){ undo(); t.classList.remove("on"); };
   t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, undo ? 5000 : 2600); };
 
@@ -157,8 +179,9 @@ function nav(cur){ var n = DR.active().length;
   var tabs = [["list","list.html","moped","Доставки",1],["route","route.html","path","Маршрут"],["fuel","fuel.html","drop","Гориво"],["shift","shift.html","wallet","Смяна"]];
   return '<nav class="st-nav" aria-label="Приложение на шофьора">'+tabs.map(function(t){
     return '<a href="'+t[1]+'"'+(cur===t[0]?' aria-current="page"':'')+'>'+ic(t[2],26)+t[3]+(t[4]?'<span class="cnt" data-cnt="list"'+(n?'':' hidden')+'>'+n+'</span>':'')+'</a>'; }).join("")+'</nav>'; }
-function netStrip(){ var q = DR.db.outbox.length;
-  return '<div class="st-net" role="status">'+ic("warning",22)+'<span>Няма връзка. '+(q ? SC.plural(q,"статус чака","статуса чакат")+' и тръгват сами.' : 'Статусите се пазят тук.')+'</span><button type="button" data-act="queue">Виж</button></div>'; }
+DR.queued = function(){ return DR.db.outbox.length + DR.db.fuel.filter(function(x){ return x.q; }).length; };
+function netStrip(){ var q = DR.queued();
+  return '<div class="st-net" role="status">'+ic("warning",22)+'<span>Няма връзка. '+(q ? SC.plural(q,"запис чака","записа чакат")+' и тръгват сами.' : 'Записите се пазят тук.')+'</span><button type="button" data-act="queue">Виж</button></div>'; }
 function topbar(o){ var since = DR.clock(DR.db.shiftStart);
   if (o.bare) return '<header class="st-top"><div class="tt"><b class="st-word">Siracusa</b><span>Шофьор</span></div>'+(o.right||'')+'</header>';
   var left = o.back ? '<a class="st-back" href="'+o.back.href+'">'+ic("caret-left",22)+esc(o.back.label)+'</a>' : '';
@@ -168,14 +191,13 @@ function topbar(o){ var since = DR.clock(DR.db.shiftStart);
 DR.netStrip = function(){ var s = document.querySelector(".st-net"); if (s) s.outerHTML = netStrip(); };
 
 /* moving overlay: the app is used only when parked (proposal: GPS speed) */
-var parked = false;
-function movingOverlay(){ if (!DR.moving || parked) return;
+function movingOverlay(){ if (!DR.moving || DR.db.parked) return;
   var o = document.createElement("div"); o.className = "moving"; o.setAttribute("role","alertdialog"); o.setAttribute("aria-modal","true"); o.setAttribute("aria-labelledby","mvh");
   o.innerHTML = '<div class="ill">'+ic("car",52)+'</div><h1 id="mvh">Колата е в движение</h1><p>За ваша безопасност приложението се ползва само в паркирано положение. Навигацията в '+DR.NAVAPP[DR.prefs.nav||"google"]+' продължава.</p>'+
     '<span class="prop">'+ic("sparkle",14)+'Предложение: по скоростта от GPS</span>'+
-    '<button class="pill pill-red pill-lg" type="button" data-park>'+ic("check",22)+'Паркирах</button><button class="pill pill-line pill-lg" type="button" data-park>Аз съм пътник</button>';
+    '<button class="pill pill-red pill-lg" type="button" data-park="parked">'+ic("check",22)+'Паркирах</button><button class="pill pill-line pill-lg" type="button" data-park="passenger">Аз съм пътник</button><p class="small" style="max-width:34ch">„Аз съм пътник“ важи до края на смяната. „Паркирах“ важи, докато колата не тръгне отново.</p>';
   document.body.appendChild(o); o.querySelector("[data-park]").focus();
-  o.addEventListener("click", function(e){ if (e.target.closest("[data-park]")){ parked = true; o.remove(); } }); }
+  o.addEventListener("click", function(e){ var b = e.target.closest("[data-park]"); if (b){ DR.db.parked = b.dataset.park; DR.save(); o.remove(); } }); }
 
 /* DR.mount({page, title, sub, back:{href,label}, nav:"list"|"route"|"fuel"|"shift"|null, bar:true}) -> <main> */
 DR.mount = function(o){ o = o || {};
@@ -194,16 +216,28 @@ function navSeg(){ var n = DR.prefs.nav || "google"; return '<div class="st-seg"
 DR.themeSeg = themeSeg; DR.navSeg = navSeg;
 function menuSheet(){
   DR.sheet({title:"Смяна", html:
-    '<div class="kvs"><div class="kv"><span class="muted">Шофьор</span><b>'+DR.ME+'</b></div><div class="kv"><span class="muted">Автомобил</span><b>'+DR.car().n+'</b></div><div class="kv"><span class="muted">На смяна от</span><b class="tnum">'+DR.clock(DR.db.shiftStart)+'</b></div><div class="kv"><span class="muted">Начален километраж</span><b class="tnum">'+DR.db.kmStart.toLocaleString("bg-BG")+' км</b></div><div class="kv"><span class="muted">Връзка</span><b>'+(DR.offline?'Няма връзка':'Свързано')+'</b></div></div>'+
+    '<div class="kvs"><div class="kv"><span class="muted">Шофьор</span><b>'+DR.ME+'</b></div><div class="kv"><span class="muted">Автомобил</span><button class="link" type="button" data-act="car">'+DR.car().n+' · смени</button></div><div class="kv"><span class="muted">На смяна от</span><b class="tnum">'+DR.clock(DR.db.shiftStart)+'</b></div><div class="kv"><span class="muted">Начален километраж</span><b class="tnum">'+DR.db.kmStart.toLocaleString("bg-BG")+' км</b></div><div class="kv"><span class="muted">Връзка</span><b>'+(DR.offline?'Няма връзка':'Свързано')+'</b></div></div>'+
     '<p class="st-cap" style="margin-top:18px">Навигация с</p>'+navSeg()+'<p class="small muted" style="margin:8px 0 0">Бутонът „Навигация“ отваря адреса направо в избраното приложение.</p>'+
     '<p class="st-cap" style="margin-top:18px">Тема</p>'+themeSeg()+'<p class="small muted" style="margin:8px 0 0">„По часа“ е тъмна от 18:00 до 07:00. <span class="prop">'+ic("sparkle",14)+'Предложение</span></p>'+
     '<p class="st-cap" style="margin-top:18px">Местоположение</p><p class="small muted" style="margin:0">Споделя се само по време на активна доставка и го виждат само собственикът и управителят.</p>',
     foot:'<a class="pill pill-line pill-lg pill-block" href="shift.html">'+ic("sign-out",22)+'Приключи смяната</a>'}); }
-function queueSheet(){ var q = DR.db.outbox;
-  DR.sheet({title:"Чакат връзка", html: (q.length ? '<p class="muted" style="margin:0 0 6px">Тези статуси са записани на телефона и тръгват сами към ресторанта, щом има връзка. Не ги натискайте пак.</p><div class="hist">'+q.map(function(x){ return '<div class="h"><b>№ '+x.id+' · '+esc(x.w)+'</b><span class="tnum">'+DR.clock(x.at)+'</span></div>'; }).join("")+'</div>' : '<p class="muted" style="margin:0">Нищо не чака. Всички статуси са изпратени.</p>')+
+function queueSheet(){ var q = DR.db.outbox.concat(DR.db.fuel.filter(function(x){ return x.q; }).map(function(x){ return {id:"", w:"Зареждане "+x.l.toFixed(2).replace(".",",")+" л", at:x.at}; }));
+  DR.sheet({title:"Чакат връзка", html: (q.length ? '<p class="muted" style="margin:0 0 6px">Тези статуси са записани на телефона и тръгват сами към ресторанта, щом има връзка. Не ги натискайте пак.</p><div class="hist">'+q.map(function(x){ return '<div class="h"><b>'+(x.id?'№ '+x.id+' · ':'')+esc(x.w)+'</b><span class="tnum">'+DR.clock(x.at)+'</span></div>'; }).join("")+'</div>' : '<p class="muted" style="margin:0">Нищо не чака. Всички статуси са изпратени.</p>')+
     '<div class="notice" style="margin-top:12px">'+ic("phone",22)+'<span>Ако е спешно (отказ, грешен адрес), обадете се в ресторанта: <a class="link" href="tel:'+SC.RESTAURANT.phone.replace(/\s/g,"")+'" style="min-height:0;display:inline">'+SC.RESTAURANT.phone+'</a>.</span></div>',
     foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-act="retry">'+ic("arrow-clockwise",22)+'Опитай пак сега</button>'}); }
 DR.queueSheet = queueSheet;
+DR.carSheet = function(onDone){ var pick = DR.db.car;
+  function body(){ return '<div class="cars" role="group" aria-label="Автомобил">'+DR.CARS.map(function(c){ return '<button class="car" type="button" data-c="'+c.id+'" aria-pressed="'+(pick===c.id)+'"><span class="ii">'+ic("car",24)+'</span><span><b>'+c.n+'</b><span>'+(c.id===DR.db.car?"Карате я сега · ":"")+'рег. № <span class="missing">[ЛИПСВА]</span></span></span></button>'; }).join("")+'</div>'+
+    (pick !== DR.db.car ? '<p class="small muted" style="margin:14px 0 8px">Смяната продължава. Записваме края на '+DR.car().n+' и началото на '+DR.carName(pick)+'.</p><div class="fgrid"><div class="field"><label for="cke">Краен км на '+DR.car().n+'</label><input class="input" id="cke" inputmode="numeric" placeholder="0"></div><div class="field"><label for="cks">Начален км на '+DR.carName(pick)+'</label><input class="input" id="cks" inputmode="numeric" placeholder="0"></div></div><p class="err" id="ckerr" style="margin:6px 0 0;color:var(--danger);font-weight:600;font-size:14px"></p>' : ''); }
+  var s = DR.sheet({title:"С коя кола карате?", html:'<div id="carb">'+body()+'</div>', foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-csave>Готово</button>'});
+  var b = s.el.querySelector("#carb");
+  s.el.addEventListener("click", function(e){ var t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.c){ pick = t.dataset.c; b.innerHTML = body(); return; }
+    if (t.hasAttribute("data-csave")){ if (pick === DR.db.car){ s.close(); return; }
+      var ke = parseInt((s.el.querySelector("#cke").value||"").replace(/\s/g,""),10), ks = parseInt((s.el.querySelector("#cks").value||"").replace(/\s/g,""),10), er = s.el.querySelector("#ckerr");
+      if (!ke || ke < DR.lastKm()){ er.textContent = "Крайният км трябва да е поне "+DR.lastKm().toLocaleString("bg-BG")+"."; return; }
+      if (!ks){ er.textContent = "Въведете началния км на "+DR.carName(pick)+"."; return; }
+      DR.switchCar(pick, ke, ks); s.close(); DR.toast("Карате "+DR.car().n+". Километрите се пазят поотделно за всяка кола."); onDone && onDone(); } }); };
 
 /* ---------- prototype panel ---------- */
 function protoPanel(){ return '<section class="proto" aria-label="Само в прототипа"><h2>Само в прототипа</h2><p>Състояние на смяната (данните са условни за макета):</p><div class="row">'+
@@ -214,6 +248,7 @@ function protoPanel(){ return '<section class="proto" aria-label="Само в п
 document.addEventListener("click", function(e){ var t = e.target.closest("[data-act]"); if (!t) return; var a = t.dataset.act;
   if (a==="menu"){ menuSheet(); return; }
   if (a==="queue"){ queueSheet(); return; }
+  if (a==="car"){ DR.carSheet(function(){ location.reload(); }); return; }
   if (a==="theme"){ DR.prefs.theme = t.dataset.v; savePrefs(); applyTheme(); document.querySelectorAll('[data-act="theme"]').forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.v===DR.prefs.theme); }); return; }
   if (a==="navapp"){ DR.prefs.nav = t.dataset.v; savePrefs(); document.querySelectorAll('[data-act="navapp"]').forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.v===DR.prefs.nav); }); DR.emit(); return; }
   if (a==="state"){ DR.prefs.state = t.dataset.v; savePrefs(); var h = location.hash.replace(/(^#|&)s=[a-z]+/,""); location.hash = h; location.reload(); return; }
