@@ -13,7 +13,8 @@ export function goHTML(st: State): string {
   let o: { t: string; s: string; pickup?: boolean };
   if (st.delivery) o = { t: "Поръчай", s: "Доставка или вземане от място" };
   else if (st.kitchen) o = { t: "Поръчай за вземане", s: "Вземане от място до 22:30", pickup: true };
-  else o = { t: "Поръчай за утре", s: st.m < 600 ? "Отваряме в 10:00" : "Кухнята приема поръчки до 22:30" };
+  else if (st.m < 600) o = { t: "Поръчай за днес", s: "Отваряме в 10:00" };
+  else o = { t: "Поръчай за утре", s: "Кухнята приема поръчки от 10:00" };
   return '<a class="pill pill-red go" data-go href="' + url.menu() + '"' + (o.pickup ? " data-pickup" : "") + '><span class="gol"><span>' + o.t + "</span><small>" + o.s + '</small></span><span class="knob">' + ic("arrow-right", 22) + "</span></a>";
 }
 

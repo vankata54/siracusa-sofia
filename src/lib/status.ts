@@ -25,10 +25,13 @@ export function status(o?: ClockInput): Status {
 }
 
 export interface Eta { min: number; busy: boolean; text: string }
-/** Honest delivery estimate (fixed by hour until the kitchen load is known). Busy 12:00-13:30 and 19:00-20:30. */
-export function eta(o?: ClockInput): Eta {
-  const m = minutes(o);
-  const busy = (m >= 720 && m < 810) || (m >= 1140 && m < 1230);
+/* "Натоварено" is ONLY the manual switch in the kitchen (decision 04.11.2026); +20 min. The runtime sets it from the settings. */
+let kitchenBusy = false;
+export function setKitchenBusy(b: boolean): void { kitchenBusy = !!b; }
+export function isKitchenBusy(): boolean { return kitchenBusy; }
+/** Honest delivery estimate: "около 35 мин", or "около 55 мин" while the kitchen has switched on "Натоварено". */
+export function eta(_o?: ClockInput, busyOverride?: boolean): Eta {
+  const busy = busyOverride ?? kitchenBusy;
   return busy ? { min: 55, busy: true, text: "Възможни са закъснения · около 55 мин" } : { min: 35, busy: false, text: "около 35 мин" };
 }
 

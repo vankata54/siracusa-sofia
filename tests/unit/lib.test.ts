@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { setKitchenBusy } from "../../src/lib/status.ts";
 import { fmt, plural, dateLong, dateShort, hhmm, normPhone, esc } from "../../src/lib/format.ts";
 import { items, byId, lunch, isOut, inCat, ALLERGENS, FILTERS } from "../../src/lib/data.ts";
 import { suggest, courseOf } from "../../src/lib/suggest.ts";
@@ -128,7 +129,10 @@ describe("pricing: -30% lunch after 15:00 only for pickup, zones and fees", () =
   it("zone ETA (+20 when busy)", () => {
     const c = addLine(emptyCart(), trad.id);
     expect(price(c, { clock: "16:30", zone: zoneByName("Дружба 2") }).etaMin).toBe(25);
+    expect(price(c, { clock: "12:30", zone: zoneByName("Гара Искър") }).etaMin).toBe(45);
+    setKitchenBusy(true);
     expect(price(c, { clock: "12:30", zone: zoneByName("Гара Искър") }).etaMin).toBe(65);
+    setKitchenBusy(false);
   });
   it("kitchen closed", () => {
     expect(price(addLine(emptyCart(), trad.id), { clock: "23:30" }).closed).toBe(true);

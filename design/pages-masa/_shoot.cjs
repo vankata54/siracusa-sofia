@@ -22,7 +22,7 @@ const name = path.basename(page).replace(/[#.=&]/g,'_');
       const c2 = await b.newContext({viewport:{width:390,height:844}}); const q = await c2.newPage();
       await q.addInitScript(([time]) => { localStorage.setItem('sc-prefs', JSON.stringify({theme:'light', view:'phone', time:time||'12:30'})); localStorage.setItem('sc-cookie','"min"'); }, [opt.time]);
       await q.goto(url); await q.waitForTimeout(1200);
-      const h = await q.evaluate(()=>{ const s=document.querySelector('[data-scroller]'); document.querySelector('.device').style.height=s.scrollHeight+'px'; return s.scrollHeight; });
+      const h = await q.evaluate(()=>{ const s=document.querySelector('[data-scroller]'); if (!s || !document.querySelector('.device')) return document.documentElement.scrollHeight; document.querySelector('.device').style.height=s.scrollHeight+'px'; return s.scrollHeight; });
       await q.setViewportSize({width:390, height:Math.min(h, 12000)}); await q.waitForTimeout(400);
       await q.screenshot({path:`${out}/${name}-full.png`, fullPage:true}); await c2.close();
     }

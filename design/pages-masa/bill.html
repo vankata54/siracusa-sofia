@@ -11,7 +11,13 @@
 <link rel="stylesheet" href="_masa.css">
 <style>
 /* bill.html (QR table): page-only styles, tokens only */
-.bg{display:grid; gap:24px}
+.bg{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
+.reqbtn{white-space:normal; text-align:center; line-height:1.2; padding:10px 20px}
+.payer{grid-column:2; font-size:14px; font-weight:700; color:var(--muted)}
+.payer.mine{color:var(--ok)}
+.unas{display:flex; justify-content:space-between; gap:12px; margin-top:12px; padding:12px 14px; border-radius:var(--r-field); background:var(--ember-soft); font-weight:700}
+.unas.ok{background:var(--surface-2)}
+.gsep{border:0; border-top:1px solid var(--line); margin:4px 0 0}
 .blk-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 12px}
 .lines{padding:6px 18px 14px}
 .bl{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:12px 0; align-items:center}
@@ -27,12 +33,12 @@
 .tot{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:14px 0 0; margin-top:4px; border-top:1.5px solid var(--line-strong)}
 .tot b{font-size:18px}
 .tot .price{font-size:28px; letter-spacing:-.03em}
-.fine{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.fine{margin:10px 0 0; font-size:16px; color:var(--muted)}
 .qh{margin:0 0 10px; font-size:17px; font-weight:800}
 .seg.pay button{min-height:64px; font-size:17px}
 .seg.pay button .ic{color:var(--muted)}
 .seg.pay button[aria-pressed="true"] .ic{color:var(--red)}
-.seg.split button{min-height:56px; font-size:15px; line-height:1.15; padding:0 6px; text-align:center}
+.seg.split button{min-height:56px; font-size:16px; line-height:1.15; padding:0 6px; text-align:center}
 .splitbox{margin-top:14px}
 .ppl{padding:4px 18px}
 .pp{display:flex; align-items:center; gap:12px; min-height:60px}
@@ -71,7 +77,7 @@
 .code .k{font-size:14px; font-weight:800}
 .code .v{font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; line-height:1}
 .code .row{justify-content:space-between; flex-wrap:wrap}
-.code p{font-size:15px}
+.code p{font-size:16px}
 .code .pill{background:var(--on-ember); color:var(--ember)}
 .gq{display:grid; gap:10px}
 .gq .missing{font-size:14px}
@@ -101,26 +107,39 @@ var M = MASA, L = M.L, ic = SC.ic, esc = SC.esc, S = M.st, fmt = SC.fmt;
 var main = M.mount({page:"bill", title:"Сметката", docTitle:"Сметката · QR маса", allowClosed:true});
 if (!main) return;
 /* choices before asking for the bill (per phone; not shared state) */
-var C = {pay:"cash", split:"one", mine:null};
+var C = {pay:"cash", split:"one"};
 function sent(){ return M.sent(); }
 function all(){ return sent().map(function(z){ return z.l; }); }
-function myDefault(){ return all().filter(function(l){ return l.who === "me"; }).map(function(l){ return l.key; }); }
-if (!C.mine) C.mine = myDefault();
+/* who pays which dish is shared by the whole table: S.picks = {lineKey: phone} */
+function picks(){ if (!S.picks) S.picks = {}; return S.picks; }
+function myPicks(){ var P = picks(); return all().filter(function(l){ return P[l.key] === M.me; }).map(function(l){ return l.key; }); }
+function autoPick(){ var P = picks(), ch = false; all().forEach(function(l){ if (l.who === M.me && !P[l.key]){ P[l.key] = M.me; ch = true; } });
+  if (ch) M.save("picks");
+  if (!S.sim.picks){ S.sim.picks = 1; setTimeout(function(){ var live = M.livePhones(), left = all().filter(function(l){ return l.who !== M.me && !P[l.key] && live.indexOf(l.who) < 0; }), n = 0;
+    left.slice(0, -1).forEach(function(l){ P[l.key] = l.who; n++; }); /* one dish stays unassigned on purpose, to show the warning */
+    if (n){ M.save("picks"); SC.toast(L("Другите телефони отбелязаха своите ястия","The other phones ticked their dishes")); } }, 1500); } }
 function lineSum(l){ var x = SC.byId[l.id]; return x ? x.p*l.q : 0; }
 function mineSum(keys){ return all().filter(function(l){ return keys.indexOf(l.key) > -1; }).reduce(function(a,l){ return a+lineSum(l); }, 0); }
-function share(){ var B = S.bill || C; if (B.split === "people") return M.sum(all().filter(function(l){ return l.who === "me"; })); if (B.split === "dishes") return mineSum(B.mine || []); return M.sum(all()); }
+function share(){ var B = S.bill || C; if (B.split === "people") return M.sum(all().filter(function(l){ return l.who === M.me; })); if (B.split === "dishes") return mineSum(S.bill ? (B.mine || []) : myPicks()); return M.sum(all()); }
 function plural(n){ return SC.plural(n, L("ястие","dish"), L("ястия","dishes")); }
 var PAY = {cash:["В брой","Cash","money"], card:["С карта","By card","credit-card"]};
-var SPLIT = {one:["Една сметка","One bill"], people:["По хора","By person"], dishes:["По ястия","By dish"]};
+var SPLIT = {one:["Заедно","Together"], people:["По хора","By person"], dishes:["По ястия","By dish"]};
 
 function linesHTML(pick){ var ls = sent();
   if (!ls.length) return '<div class="shell"><div class="core empty bempty"><span class="ill">'+ic("receipt",40)+'</span><h2 class="h3">'+L("Още нищо не е поръчано","Nothing ordered yet")+'</h2><p>'+L("Сметката се пълни с изпратените поръчки.","The bill fills up with the orders you send.")+'</p><a class="pill pill-red" href="menu.html">'+ic("fork-knife",20)+L("Към менюто","Go to the menu")+'</a></div></div>';
-  return '<div class="shell"><div class="core lines">'+ls.map(function(z){ var l = z.l, x = SC.byId[l.id], on = pick && C.mine.indexOf(l.key) > -1;
+  return '<div class="shell"><div class="core lines">'+ls.map(function(z){ var l = z.l, x = SC.byId[l.id], owner = pick && picks()[l.key], on = owner === M.me;
     var body = '<span class="nm">'+(l.q>1?l.q+' × ':'')+esc(x.n)+'</span>'+M.whoTag(l.who)+'<span class="price">'+fmt(lineSum(l))+'</span>';
-    return pick ? '<label class="bl pick"><input type="checkbox" data-pick="'+l.key+'"'+(on?" checked":"")+'>'+body+'</label>' : '<div class="bl">'+body+'</div>'; }).join("")+
+    if (pick){ var pay = owner ? '<span class="payer'+(on?" mine":"")+'">'+(on ? L("Плащате вие","You pay") : esc(M.name(owner))+L(" плаща"," pays"))+'</span>' : '<span class="payer">'+L("Още никой не го плаща","Nobody pays for it yet")+'</span>';
+      if (owner && !on) return '<div class="bl pick taken"><input type="checkbox" checked disabled aria-label="'+esc(x.n)+': '+esc(M.name(owner))+L(" плаща"," pays")+'">'+body+pay+'</div>';
+      return '<label class="bl pick"><input type="checkbox" data-pick="'+l.key+'"'+(on?" checked":"")+'>'+body+pay+'</label>'; }
+    return '<div class="bl">'+body+'</div>'; }).join("")+
+    (pick ? unassigned() : '')+
     '<div class="tot"><b>'+L("Общо за масата","Table total")+'</b><span class="price">'+fmt(M.sum(all()))+'</span></div>'+
-    '<p class="fine">'+L("Цените са с ДДС. Касовата бележка ви носи сервитьорът.","Prices include VAT. The waiter brings your receipt.")+'</p></div></div>'; }
+    '<p class="fine">'+L("Касовата бележка ви носи сервитьорът.","The waiter brings your receipt.")+'</p></div></div>'; }
 
+function unassigned(){ var P = picks(), u = all().filter(function(l){ return !P[l.key]; });
+  return u.length ? '<div class="unas" role="status"><span>'+L("Още никой не плаща: ","Nobody pays yet for: ")+plural(M.qty(u))+'</span><span class="price">'+fmt(M.sum(u))+'</span></div>'
+    : '<div class="unas ok" role="status"><span>'+ic("check-circle",20)+' '+L("Всички ястия са разпределени","Every dish has a payer")+'</span></div>'; }
 function splitBox(){
   if (C.split === "people"){ return '<div class="splitbox"><div class="shell"><div class="core ppl">'+M.WHO.map(function(w){ var s = M.sum(all().filter(function(l){ return l.who===w; })); return s ? '<div class="pp">'+M.av(w)+'<b>'+esc(M.name(w))+'</b><span class="price">'+fmt(s)+'</span></div>' : ''; }).join("")+'</div></div>'+
     '<p class="fine">'+L("Всеки плаща ястията, които е добавил от своя телефон.","Everyone pays for the dishes they added from their phone.")+'</p></div>'; }
@@ -140,6 +159,7 @@ function codeHTML(){ return '<div class="code ember-card"><span class="k">'+L("�
 var GOOGLE_MISSING = '<span class="missing">[ЛИПСВА: линк към профила в Google]</span>';
 function rateHTML(){ if (!S.bill) return ""; var r = S.rating || {}, a = r.ans, ans = "";
   if (a === "yes") ans = '<div class="ans"><h3 tabindex="-1" data-focus>'+L("Благодарим! Радваме се, че ви хареса.","Thank you! We are glad you liked it.")+'</h3>'+codeHTML()+
+    '<hr class="gsep"><p class="muted">'+L("Кодът е за оценката ви тук. Отзивът в Google е по желание и не носи отстъпка.","The code is for your rating here. A Google review is optional and brings no discount.")+'</p>'+
     '<div class="gq"><p><b>'+L("Ще ни помогнете ли с отзив в Google?","Would you help us with a Google review?")+'</b></p><a class="pill pill-line pill-lg pill-block" href="#" data-google>'+ic("google-logo",20)+L("Напиши отзив в Google","Write a Google review")+ic("arrow-up-right",18)+'</a>'+GOOGLE_MISSING+'</div>'+
     '<button class="link change" type="button" data-rate-reset>'+L("Промени отговора","Change your answer")+'</button></div>';
   if (a === "no") ans = '<div class="ans"><h3 tabindex="-1" data-focus>'+L("Съжаляваме. Благодарим, че ни казвате.","We are sorry. Thank you for telling us.")+'</h3>'+
@@ -147,6 +167,7 @@ function rateHTML(){ if (!S.bill) return ""; var r = S.rating || {}, a = r.ans, 
       : '<div class="field"><label for="fb">'+L("Как да подобрим обслужването?","How can we improve our service?")+'</label><textarea class="input" id="fb" rows="4" aria-describedby="fbh'+(r.err?' fbe':'')+'"'+(r.err?' aria-invalid="true"':'')+'>'+esc(r.fb||"")+'</textarea><span class="help" id="fbh">'+L("Стига само до управителя.","Only the manager reads it.")+'</span>'+(r.err?'<span class="err" id="fbe">'+r.err+'</span>':'')+'</div>'+
         '<button class="pill pill-red pill-lg pill-block" type="button" data-fb>'+ic("paper-plane-right",20)+L("Изпрати на управителя","Send to the manager")+'</button>')+
     codeHTML()+
+    '<hr class="gsep"><p class="muted">'+L("Кодът е за оценката ви тук. Отзивът в Google е по желание и не носи отстъпка.","The code is for your rating here. A Google review is optional and brings no discount.")+'</p>'+
     '<p class="muted">'+L("Ако желаете, можете да оставите и отзив в Google.","If you like, you can also leave a Google review.")+'</p><div><a class="link" href="#" data-google>'+ic("google-logo",20)+L("Отзив в Google","Google review")+ic("arrow-up-right",16)+'</a><br>'+GOOGLE_MISSING+'</div>'+
     '<button class="link change" type="button" data-rate-reset>'+L("Промени отговора","Change your answer")+'</button></div>';
   return '<section class="shell rate" id="rate"><div class="core cpad"><span class="offer">'+ic("seal-percent",18)+L("-10% за оценката","10% off for your rating")+'</span><h2 id="rate-h">'+L("Останахте ли доволни?","Did you enjoy your visit?")+'</h2><p class="lead">'+L("От храната и обслужването. За отговора ви даваме -10% от следващата поръчка, каквото и да изберете.","With the food and the service. For your answer you get 10% off your next order, whatever you choose.")+'</p>'+
@@ -160,7 +181,7 @@ function askHTML(){ var n = sent().length; if (!n) return "";
     '<div class="seg split" role="group" aria-label="'+L("Разделяне","Split")+'">'+["one","people","dishes"].map(function(k){ return '<button type="button" data-split="'+k+'" aria-pressed="'+(C.split===k)+'">'+L(SPLIT[k][0],SPLIT[k][1])+'</button>'; }).join("")+'</div>'+
     splitBox()+
     (C.split !== "one" ? '<div class="mine"><b>'+L("Вие плащате","You pay")+'</b><span class="price">'+fmt(s)+'</span></div>' : '')+
-    (canPay ? '<button class="pill pill-red pill-lg pill-block reqbtn" type="button" data-req'+(C.split==="dishes"&&!C.mine.length?' aria-disabled="true"':'')+'>'+ic("receipt",20)+btnTxt+'</button>'
+    (canPay ? '<button class="pill pill-red pill-lg pill-block reqbtn" type="button" data-req'+(C.split==="dishes"&&!myPicks().length?' aria-disabled="true"':'')+'>'+ic("receipt",20)+btnTxt+'</button>'
       : '<button class="pill pill-ink pill-lg pill-block reqbtn" type="button" data-mretry>'+ic("arrow-clockwise",20)+L("Няма връзка · Опитай пак","No connection · Try again")+'</button>')+
     '</div></div>'; }
 
@@ -177,18 +198,18 @@ function render(){ var y = SC.scroller.scrollTop, draftN = M.qty(S.draft), close
 
 main.addEventListener("click", function(e){ var t = e.target.closest("button, a"); if (!t) return;
   if (t.dataset.pay){ C.pay = t.dataset.pay; render(); return; }
-  if (t.dataset.split){ C.split = t.dataset.split; render(); return; }
+  if (t.dataset.split){ C.split = t.dataset.split; if (C.split === "dishes") autoPick(); render(); return; }
   if (t.hasAttribute("data-req")){ if (t.getAttribute("aria-disabled")){ SC.toast(L("Отметнете поне едно ястие","Tick at least one dish")); return; }
-    if (M.requestBill({pay:C.pay, split:C.split, mine:C.mine.slice()})){ SC.toast(L("Сервитьорът идва със сметката","The waiter is bringing the bill")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }
+    if (M.requestBill({pay:C.pay, split:C.split, mine:myPicks()})){ SC.toast(L("Сервитьорът идва със сметката","The waiter is bringing the bill")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }
   if (t.dataset.rate){ S.rating = {ans:t.dataset.rate, fb:"", sent:false}; M.save("rate"); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
   if (t.hasAttribute("data-rate-reset")){ S.rating = null; M.save("rate"); return; }
   if (t.hasAttribute("data-fb")){ var v = (main.querySelector("#fb")||{}).value || ""; if (v.trim().length < 3){ S.rating.fb = v; S.rating.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.save("rate"); main.querySelector("#fb").focus(); return; }
     S.rating.fb = v; S.rating.err = ""; S.rating.sent = true; M.save("rate"); SC.toast(L("Изпратено на управителя","Sent to the manager")); return; }
   if (t.hasAttribute("data-copy")){ try{ navigator.clipboard.writeText(code()).catch(function(){}); }catch(x){} SC.flash(t, ic("check",18)+L("Копирано","Copied")); return; }
   if (t.hasAttribute("data-google")){ e.preventDefault(); SC.toast(L("Тук ще се отвори профилът в Google","Our Google profile opens here")); return; }
-  if (t.hasAttribute("data-pclose")){ if (!S.bill) M.requestBill({pay:C.pay, split:C.split, mine:C.mine.slice()}); M.close(); return; }
+  if (t.hasAttribute("data-pclose")){ if (!S.bill) M.requestBill({pay:C.pay, split:C.split, mine:myPicks()}); M.close(); return; }
 });
-main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; C.mine = C.mine.filter(function(z){ return z!==k; }); if (e.target.checked) C.mine.push(k); render(); });
+main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; if (e.target.checked) picks()[k] = M.me; else delete picks()[k]; M.save("picks"); });
 render();
 M.on(function(){ render(); });
 M.tick(function(){ var s = main.querySelector("[data-wt]"); if (s && S.bill) s.textContent = M.mmss((Date.now()-S.bill.at)/1000); });

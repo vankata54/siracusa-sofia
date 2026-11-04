@@ -10,12 +10,13 @@ describe("hours and the three states", () => {
     expect(s).toMatchObject({ open: false, kitchen: false, delivery: false, lunch: false, lunchDiscount: false, breakfast: false });
     expect(status("08:30")).toEqual({ cls: "", html: '<b>Затворено</b> <span class="nw">· отваряме в 10:00</span>' });
   });
-  it("12:30 open: delivery, lunch, busy estimate", () => {
+  it("12:30 open: delivery, lunch; busy only from the kitchen switch", () => {
     const s = state("12:30");
     expect(s).toMatchObject({ open: true, kitchen: true, delivery: true, lunch: true, lunchDiscount: false, breakfast: false });
     expect(status("12:30").cls).toBe("ok");
     expect(status("12:30").html).toContain("Отворено до 23:00");
-    expect(eta("12:30")).toEqual({ min: 55, busy: true, text: "Възможни са закъснения · около 55 мин" });
+    expect(eta("12:30").min).toBe(35);
+    expect(eta("12:30", true)).toEqual({ min: 55, busy: true, text: "Възможни са закъснения · около 55 мин" });
   });
   it("10:30 breakfast and lunch", () => {
     expect(state("10:30")).toMatchObject({ breakfast: true, lunch: true });
