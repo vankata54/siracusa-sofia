@@ -16,13 +16,13 @@ body{background:var(--bg); padding-left:max(16px, env(safe-area-inset-left, 0px)
 .flows{display:grid; gap:28px}
 .flow h2{font-size:22px; letter-spacing:-.03em; margin:0 0 12px}
 .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px}
-.tile{display:grid; gap:6px; padding:18px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; min-height:118px; align-content:space-between; transition:transform var(--t-fast) var(--ease)}
+.tile{display:grid; gap:6px; padding:18px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; min-height:118px; align-content:start; transition:transform var(--t-fast) var(--ease)}
 .tile:active{transform:scale(.98)}
 .tile b{font-size:17px; letter-spacing:-.01em}
 .tile span{font-size:14px; color:var(--muted)}
 .tile .ic{color:var(--red)}
 .meta{display:flex; flex-wrap:wrap; gap:8px}
-.meta .badge{font-size:13px}
+.meta .badge{font-size:14px}
 </style>
 </head>
 <body>
@@ -38,10 +38,10 @@ body{background:var(--bg); padding-left:max(16px, env(safe-area-inset-left, 0px)
 <script>
 var I=window.SC_ICONS; function ic(n){ return '<svg class="ic" viewBox="0 0 256 256" width="24" height="24" fill="currentColor" aria-hidden="true">'+(I[n]||"")+'</svg>'; }
 var F=[
- ["Поръчка",[["home","Начало","house","Видео, оферти, популярни, доставка"],["menu","Меню","fork-knife","Менюта, филтри, алергени, търсене"],["category","Категория","list","SEO страница: Пици на пещ","#pitsi"],["dish","Ястие","pizza","Добавки, алергени, върви добре с","#pitsa-s-burata-i-proshuto-krudo"],["lunch","Обедно меню","bowl-food","Днешното меню, -30% след 15:00"],["cart","Количка и поръчка","shopping-bag","3 стъпки, успех, състояния"],["tracking","Проследяване","moped","Статуси, време, оценка"],["office","Обедна поръчка за офиса","briefcase","Обща поръчка с краен час"]]],
+ ["Поръчка",[["home","Начало","house","Видео, оферти, популярни, доставка"],["menu","Меню","fork-knife","Менюта, филтри, алергени, търсене"],["category","Категория","list","SEO страница: Пици на пещ","#pitsi"],["dish","Ястие","pizza","Добавки, алергени, върви добре с","#pitsa-s-burata-i-proshuto-krudo"],["lunch","Обедно меню","bowl-food","Обедното меню, -30% след 15:00 при вземане"],["cart","Количка и поръчка","shopping-bag","3 стъпки, успех, състояния"],["tracking","Проследяване","moped","Статуси, време, оценка"],["office","Обедна поръчка за офиса","briefcase","Обща поръчка с краен час"]]],
  ["Ела при нас",[["reservation","Резервирай маса","calendar-blank","Карта на залата, 3 стъпки"],["events","Събития и поводи","confetti","Предстоящи, минали, категории"],["event","Събитие","calendar-check","Гръцка вечер","#gratska-vecher"],["celebration","Празник при нас","cake","Калкулатор с пакети и собствено меню"]]],
  ["Изгода и профил",[["offers","Оферти","seal-percent","Промоции, лоялност, ваучери"],["login","Вход","sign-in","Телефон и SMS код"],["profile","Профил","user","Поръчки, точки, съгласия"]]],
- ["Информация",[["delivery","Доставка","truck","Зони, такси, проверка на адрес"],["pickup","Вземи от място","storefront","Click & collect"],["bertha","Фурната Bertha","fire","Технологията и ястията"],["about","За нас","users-three","Историята и мястото"],["gallery","Галерия","images","Ястия, салон, градина, събития"],["contacts","Контакти","map-pin","Адрес, часове, форма"],["allergens","Алергени","grains","14-те алергена по ястия"],["404","404","question","Страницата я няма"]]]];
+ ["Информация",[["delivery","Доставка","truck","Зони, такси, проверка на адрес"],["pickup","Вземи от място","storefront","Поръчай и вземи от ресторанта"],["bertha","Фурната Bertha","fire","Технологията и ястията"],["about","За нас","users-three","Историята и мястото"],["gallery","Галерия","images","Ястия, салон, градина, събития"],["contacts","Контакти","map-pin","Адрес, часове, форма"],["allergens","Алергени","grains","14-те алергена по ястия"],["404","404","question","Страницата я няма"]]]];
 document.getElementById("flows").innerHTML=F.map(function(f){ return '<section class="flow"><h2>'+f[0]+'</h2><div class="grid">'+f[1].map(function(p){ return '<a class="tile" href="pages/'+p[0]+'.html'+(p[4]||"")+'">'+ic(p[2])+'<div><b>'+p[1]+'</b><br><span>'+p[3]+'</span></div></a>'; }).join("")+'</div></section>'; }).join("");
 </script>
 </body>
