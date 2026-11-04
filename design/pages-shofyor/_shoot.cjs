@@ -1,6 +1,6 @@
 /* Screenshots for the driver app (copy of pages-servitor/_shoot.cjs) (modelled on tools/shoot.js; the staff pages use their own chrome, no SC.mount).
-   Usage (from design/): node pages-servitor/_shoot.cjs pages-shofyor/list.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--scroll=600] [--only=390-light,390-dark]
-   Shots: 390-light, 390-dark, 360-dark (viewport) and 390-full (whole page, light). Prints console errors. */
+   Usage (from design/): node pages-shofyor/_shoot.cjs pages-shofyor/list.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--scroll=600] [--only=390-light,390-dark]
+   Shots: 390-light, 390-dark, 360-light, 360-dark (viewport) and 390-full (whole page, light). Prints console errors. */
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
 const args = process.argv.slice(2); const page = args[0]; const out = (args[1] && !args[1].startsWith('--')) ? args[1] : 'shots';
@@ -9,7 +9,7 @@ fs.mkdirSync(out, {recursive:true});
 const file = page.split('#')[0]; const hash = page.includes('#') ? '#'+page.split('#')[1] : '';
 const url = 'file://' + path.resolve(__dirname, '..', file) + hash;
 const name = path.basename(file, '.html') + (opt.tag ? '-'+opt.tag : '');
-const runs = [['390-light',390,844,'light',false],['390-dark',390,844,'dark',false],['360-dark',360,740,'dark',false],['390-full',390,844,'light',true]]
+const runs = [['390-light',390,844,'light',false],['390-dark',390,844,'dark',false],['360-light',360,740,'light',false],['360-dark',360,740,'dark',false],['390-full',390,844,'light',true]]
   .filter(r => !opt.only || opt.only.split(',').includes(r[0]));
 (async () => {
   const b = await chromium.launch(); const errors = [];
