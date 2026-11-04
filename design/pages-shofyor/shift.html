@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Край на смяната | Siracusa · Шофьор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_driver.css">
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_driver.js"></script>
+<script>
+var main = DR.mount({page:"shift", title:"Край на смяната", nav:"shift", bar:true});
+var ic = SC.ic, esc = SC.esc, kmEnd = "", handed = false, err = "", ended = false;
+var bar = document.createElement("div"); bar.className = "st-bar"; document.body.appendChild(bar);
+function n(v){ return parseInt(String(v||"").replace(/\s/g,""), 10); }
+function render(){
+  var all = DR.db.dels, done = all.filter(function(d){ return d.st==="done"; }), prob = all.filter(function(d){ return d.st==="prob"; }), act = DR.active();
+  var cashL = done.filter(function(d){ return d.pay==="cash"; }), cardL = done.filter(function(d){ return d.pay==="card"; }), vouL = done.filter(function(d){ return d.pay==="voucher"; });
+  var cash = DR.cash(), sum = function(l){ return l.reduce(function(s,d){ return s+DR.total(d); },0); };
+  var feeMissing = done.some(function(d){ return !DR.feeKnown(d); });
+  if (ended){ bar.hidden = true; DR.app.classList.remove("withbar");
+    main.innerHTML = '<section class="st-sec"><div class="st-empty"><div class="ill">'+ic("check-circle",48)+'</div><h2>Смяната приключи</h2><p>Предадохте '+SC.fmt(cash)+' в брой. Благодарим и приятна вечер!</p><a class="pill pill-red pill-lg" href="login.html" style="margin-top:8px">'+ic("sign-out",22)+'Към входа</a></div></section>'; return; }
+  var h = '<section class="st-sec"><p class="lead" style="color:var(--ink)">На смяна от '+DR.clock(DR.db.shiftStart)+' с '+DR.car().n+'. Проверете сумите и предайте парите.</p></section>';
+  if (act.length) h += '<section class="st-sec"><div class="notice warn">'+ic("warning",22)+'<span><b>'+SC.plural(act.length,"поръчка не е доставена","поръчки не са доставени")+'.</b> Доставете ги или ги върнете в ресторанта, преди да приключите. <a class="link" href="list.html" style="min-height:0;display:inline">Към доставките</a></span></div></section>';
+  h += '<section class="st-sec"><div class="dsum"><div><b>'+done.length+'</b><span>доставени</span></div><div><b>'+prob.length+'</b><span>с проблем</span></div><div><b>'+DR.db.fuel.length+'</b><span>зареждания</span></div></div></section>';
+  h += '<section class="st-sec"><div class="cashbox"><div class="hd">'+ic("money",22)+'Пари в брой за предаване</div><div class="in"><div class="big">'+SC.fmt(cash)+'</div>'+(feeMissing?'<p class="small muted" style="margin:6px 0 0">Без таксите за платените зони <span class="missing">[ЛИПСВА: такси]</span>.</p>':'')+
+    '<div class="kvs" style="margin-top:10px">'+(cashL.length ? cashL.map(function(d){ return '<div class="kv"><span>№ '+d.id+' · '+esc(d.zone||"извън зоните")+'</span><b class="price">'+SC.fmt(DR.total(d))+'</b></div>'; }).join("") : '<div class="kv"><span class="muted">Няма плащания в брой</span></div>')+'</div></div></div></section>';
+  h += '<section class="st-sec"><div class="icard" style="padding-top:8px"><div class="kv"><span>'+ic("credit-card",20)+' Карта при получаване · '+cardL.length+'</span><b class="price">'+SC.fmt(sum(cardL))+'</b></div><div class="kv"><span>'+ic("ticket",20)+' Ваучери за предаване · '+vouL.length+'</span><b class="price">'+SC.fmt(sum(vouL))+'</b></div></div>'+
+    '<p class="small muted" style="margin:8px 4px 0">Плащанията с карта минават през терминала; ваучерите се предават с парите.</p></section>';
+  var ke = n(kmEnd), diff = ke > DR.db.kmStart ? ke - DR.db.kmStart : null;
+  h += '<section class="st-sec"><div class="st-h"><h2>Километри</h2></div><div class="fgrid"><div class="field"><label>В началото</label><div class="input tnum" style="display:flex;align-items:center;min-height:64px;font-size:22px;font-weight:800;background:var(--surface-2);box-shadow:none">'+DR.db.kmStart.toLocaleString("bg-BG")+'</div></div>'+
+    '<div class="field bigf"><label for="ke">Сега</label><div class="wrapi"><input class="input" id="ke" inputmode="numeric" placeholder="км" value="'+esc(kmEnd)+'"'+(err?' aria-invalid="true" aria-describedby="eke"':'')+' style="font-size:22px;padding-right:56px"><span class="u">км</span></div></div>'+
+    (err?'<span class="err full" id="eke" style="color:var(--danger);font-weight:600;font-size:14px">'+err+'</span>':'')+'</div>'+
+    '<div class="calc" style="margin-top:12px"><span>Изминати за смяната</span><b id="diff">'+(diff!==null?diff.toLocaleString("bg-BG")+' км':'-')+'</b></div></section>';
+  h += '<section class="st-sec"><label class="chk"><input type="checkbox" id="hd"'+(handed?' checked':'')+'><span>Предадох '+SC.fmt(cash)+' и ваучерите на <span class="missing">[ЛИПСВА: на кого, управител или каса]</span></span></label></section>';
+  main.innerHTML = h;
+  bar.innerHTML = '<button class="pill pill-red" type="button" data-end'+(act.length?' disabled':'')+'>'+ic("sign-out",22)+'Приключи смяната</button>';
+}
+render();
+main.addEventListener("input", function(e){ if (e.target.id==="ke"){ kmEnd = e.target.value; var ke = n(kmEnd); main.querySelector("#diff").textContent = ke > DR.db.kmStart ? (ke-DR.db.kmStart).toLocaleString("bg-BG")+" км" : "-"; } });
+main.addEventListener("change", function(e){ if (e.target.id==="hd") handed = e.target.checked; });
+bar.addEventListener("click", function(e){ if (!e.target.closest("[data-end]")) return; var ke = n(kmEnd);
+  err = !ke ? "Въведете километража от таблото." : ke <= DR.db.kmStart ? "Трябва да е повече от началния ("+DR.db.kmStart.toLocaleString("bg-BG")+" км)." : "";
+  if (err){ render(); main.querySelector("#ke").focus(); return; }
+  if (!handed){ DR.toast("Отбележете, че сте предали парите."); main.querySelector("#hd").focus(); return; }
+  ended = true; render(); window.scrollTo({top:0}); });
+</script>
+</body>
+</html>

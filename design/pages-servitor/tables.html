@@ -38,10 +38,10 @@ function tile(n){ var t = ST.tableByN[n], s = ST.tStatus(n), mine = ST.isMine(n)
 
 /* one strip per waiting item; colour by waiting time (2 / 5 min), words say whose table it is */
 function strip(it){ var mine = ST.isMine(it.t), off = ST.offline ? ' aria-disabled="true" data-off' : '';
-  if (it.qr) return '<div class="cstrip" data-lvl><a class="tx" href="table.html#'+it.t+'">'+ic("qr-code",24)+'<span class="w"><span>Маса '+it.t+' · QR поръчка</span><small>чака потвърждение</small></span></a><span class="tm">'+ST.timer(it.since)+'</span><a class="pill" href="table.html#'+it.t+'">Виж</a></div>';
+  if (it.qr) return '<div class="cstrip" data-lvl><a class="tx" href="table.html#'+it.t+'">'+ic("qr-code",24)+'<span class="w"><span>Маса '+it.t+'</span><small>QR поръчка · чака потвърждение</small></span></a><span class="tm">'+ST.timer(it.since)+'</span><a class="pill" href="table.html#'+it.t+'">Виж</a></div>';
   var c = it.c, r = ST.REASONS[c.r];
-  var sub = c.taken==="me" ? 'отивам' : '<span class="escl">при управителя · </span>'+(mine ? 'моя маса' : 'маса на '+ST.OTHER);
-  return '<div class="cstrip'+(c.taken==="me"?" taken":"")+'"'+(c.taken?'':' data-lvl')+'><a class="tx" href="table.html#'+c.t+'">'+ic(r[1],24)+'<span class="w"><span>Маса '+c.t+' · '+r[0]+'</span><small>'+sub+'</small></span></a><span class="tm">'+ST.timer(c.since)+'</span>'+
+  var sub = r[0]+' · '+(c.taken==="me" ? 'отивам' : '<span class="escl">при управителя · </span>'+(mine ? 'моя маса' : 'на '+ST.OTHER));
+  return '<div class="cstrip'+(c.taken==="me"?" taken":"")+'"'+(c.taken?'':' data-lvl')+'><a class="tx" href="table.html#'+c.t+'">'+ic(r[1],24)+'<span class="w"><span>Маса '+c.t+'</span><small>'+sub+'</small></span></a><span class="tm">'+ST.timer(c.since)+'</span>'+
     (c.taken==="me" ? '<button class="pill" type="button" data-done="'+c.id+'"'+off+'>'+ic("check",20)+'Обслужено</button>' : '<button class="pill" type="button" data-take="'+c.id+'"'+off+'>Отивам</button>')+'</div>'; }
 function queue(){ return ST.myCalls().map(function(c){ return {t:c.t, since:c.since, c:c}; }).concat(ST.myQR().map(function(o){ return {t:o.t, since:o.at, qr:true}; }))
   .sort(function(a,b){ return (ST.isMine(b.t)-ST.isMine(a.t)) || (a.since-b.since); }); }

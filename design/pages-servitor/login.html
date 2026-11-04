@@ -17,6 +17,8 @@
 .dots{display:flex; justify-content:center; gap:16px; padding:8px 0}
 .dots span{width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--line-strong)}
 .dots span.on{background:var(--ink); box-shadow:none}
+.dots.bad span{box-shadow:inset 0 0 0 2px var(--danger)}
+.pinerr{margin:0; text-align:center; color:var(--danger); font-weight:700; font-size:15px; min-height:22px}
 .pinpad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
 .pinpad button{min-height:72px; border:0; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-size:28px; font-weight:800; color:var(--ink); cursor:pointer; font-variant-numeric:tabular-nums; display:grid; place-items:center; transition:transform var(--t-fast) var(--ease)}
 .pinpad button:active{transform:scale(.94)}
@@ -29,7 +31,7 @@
 .hello .av{width:64px; height:64px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; color:var(--ink); flex:none}
 .endrow{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .endrow b{display:block; font-size:18px}
-.endrow span{font-size:15px; color:var(--muted); font-weight:600}
+.endrow > div > span{display:block; font-size:15px; color:var(--muted); font-weight:600}
 .endrow .stt{margin-left:auto}
 </style>
 </head>
@@ -41,50 +43,60 @@
 <script>
 var main = ST.mount({page:"login", title:"Вход", bare:true, nav:null});
 var ic = SC.ic, esc = SC.esc;
-var view = ST.hash.pin!==undefined ? "pin" : ST.hash.shift!==undefined ? "shift" : ST.hash.end!==undefined ? "end" : ST.hash.err!==undefined ? "err" : "login";
-var pin = "", who = ST.ME, myT = ST.MINE.slice();
+var H = ST.hash, view = H.pass!==undefined ? "pass" : H.err!==undefined ? "pass" : H.pinerr!==undefined ? "pin" : H.shift!==undefined ? "shift" : H.end!==undefined ? "end" : "pin";
+var pin = "", who = ST.ME, myT = ST.MINE.slice(), perr = H.err!==undefined ? {p:"Грешна парола. Опитай пак или попитай управителя."} : {}, pinBad = H.pinerr!==undefined;
+var DAY = ["нд","пн","вт","ср","чт","пт","сб"];
+function today(){ var d = new Date(); return DAY[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; }
 
-function seg(){ return '<div class="st-seg" role="group" aria-label="Начин на вход"><button type="button" data-v="login" aria-pressed="'+(view!=="pin")+'">Парола</button><button type="button" data-v="pin" aria-pressed="'+(view==="pin")+'">Бърз ПИН</button></div>'; }
+function seg(){ return '<div class="st-seg" role="group" aria-label="Начин на вход"><button type="button" data-v="pin" aria-pressed="'+(view==="pin")+'">Личен ПИН</button><button type="button" data-v="pass" aria-pressed="'+(view==="pass")+'">Парола</button></div>'; }
 function render(){ var h = '<div class="lg">';
-  if (view==="login" || view==="err"){
-    h += '<div><h1 class="h1">Вход за персонала</h1><p class="lead" style="margin-top:6px">Влезте със своя потребител. Паролата ви дава управителят.</p></div>'+seg()+
-      '<form class="stack" style="gap:16px" novalidate><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="username" autocapitalize="none" value="'+(view==="err"?"servitor1":"")+'" placeholder="например servitor1"></div>'+
-      '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" type="password" autocomplete="current-password"'+(view==="err"?' aria-invalid="true" aria-describedby="perr" value="1234567"':'')+'><button class="show" type="button" data-show>'+ic("eye",20)+'Покажи</button></div>'+
-      (view==="err"?'<span class="err" id="perr">Грешна парола. Опитайте пак или попитайте управителя.</span>':'')+'</div>'+
+  if (view==="pin"){
+    h += '<div><h1 class="h1">Вход за персонала</h1><p class="lead" style="margin-top:6px">Личен 4-цифрен ПИН, който дава управителят.</p></div>'+seg()+
+      '<div><p class="st-cap">Кой влиза?</p><div class="who">'+[ST.ME, ST.OTHER].map(function(n){ return '<button class="chip" type="button" data-who="'+n+'" aria-pressed="'+(who===n)+'">'+ic("user",18)+n+'</button>'; }).join("")+'</div><p class="small muted" style="margin:8px 0 0">Имената идват от админ панела <span class="missing">[ЛИПСВА: списък на персонала]</span>. На личен телефон изборът се помни.</p></div>'+
+      '<div class="dots'+(pinBad?' bad':'')+'" aria-hidden="true">'+[0,1,2,3].map(function(i){ return '<span class="'+(i<pin.length?"on":"")+'"></span>'; }).join("")+'</div>'+
+      '<p class="pinerr" role="status" aria-live="polite">'+(pinBad?'Грешен ПИН. Опитай пак.':'<span class="vh">Въведени '+pin.length+' от 4 цифри</span>')+'</p>'+
+      '<div class="pinpad">'+[1,2,3,4,5,6,7,8,9].map(function(d){ return '<button type="button" data-d="'+d+'">'+d+'</button>'; }).join("")+'<button class="fn" type="button" data-clear>Изчисти</button><button type="button" data-d="0">0</button><button class="fn" type="button" data-del aria-label="Изтрий последната цифра">'+ic("arrow-left",24)+'</button></div>'+
+      '<p class="small muted" style="margin:0;text-align:center">В макета всеки ПИН влиза, освен 0000 (показва грешката).</p>';
+  } else if (view==="pass"){
+    h += '<div><div class="row" style="gap:8px;flex-wrap:wrap"><h1 class="h1">Вход с парола</h1><span class="prop">'+ic("sparkle",14)+'Алтернатива</span></div><p class="lead" style="margin-top:6px">За личен телефон. Паролата дава управителят.</p></div>'+seg()+
+      '<form class="stack" style="gap:16px" novalidate><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="username" autocapitalize="none" placeholder="например servitor1"'+(perr.u?' aria-invalid="true" aria-describedby="uerr"':'')+'>'+(perr.u?'<span class="err" id="uerr">'+perr.u+'</span>':'')+'</div>'+
+      '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" type="password" autocomplete="current-password"'+(perr.p?' aria-invalid="true" aria-describedby="perr"':'')+'><button class="show" type="button" data-show aria-pressed="false">'+ic("eye",20)+'Покажи</button></div>'+
+      (perr.p?'<span class="err" id="perr">'+perr.p+'</span>':'')+'</div>'+
       '<button class="pill pill-red pill-lg pill-block" type="submit">'+ic("sign-in",22)+'Влез</button></form>'+
       '<p class="small muted" style="margin:0;text-align:center">Забравена парола? Управителят я сменя от админ панела.</p>';
-  } else if (view==="pin"){
-    h += '<div><div class="row" style="gap:8px;flex-wrap:wrap"><h1 class="h1">Бърз вход</h1><span class="prop">'+ic("sparkle",14)+'Предложение</span></div><p class="lead" style="margin-top:6px">За споделен телефон: изберете себе си и въведете 4-цифрен ПИН.</p></div>'+seg()+
-      '<div><p class="st-cap">Кой влиза?</p><div class="who">'+[ST.ME, ST.OTHER].map(function(n){ return '<button class="chip" type="button" data-who="'+n+'" aria-pressed="'+(who===n)+'">'+ic("user",18)+n+'</button>'; }).join("")+'</div><p class="small muted" style="margin:8px 0 0">Имената идват от админ панела <span class="missing">[ЛИПСВА: списък на персонала]</span>.</p></div>'+
-      '<div class="dots" aria-label="Въведени '+pin.length+' от 4 цифри">'+[0,1,2,3].map(function(i){ return '<span class="'+(i<pin.length?"on":"")+'"></span>'; }).join("")+'</div>'+
-      '<div class="pinpad">'+[1,2,3,4,5,6,7,8,9].map(function(d){ return '<button type="button" data-d="'+d+'">'+d+'</button>'; }).join("")+'<button class="fn" type="button" data-clear>Изчисти</button><button type="button" data-d="0">0</button><button class="fn" type="button" data-del aria-label="Изтрий последната цифра">'+ic("arrow-left",24)+'</button></div>';
   } else if (view==="shift"){
-    h += '<div class="hello"><span class="av">'+ic("user",32)+'</span><div><h1 class="h2">Здравейте, '+esc(who)+'</h1><p class="muted" style="margin:2px 0 0;font-weight:700">'+SC.DAYS[new Date().getDay()]+' · смяната започва в '+ST.clock(Date.now())+'</p></div></div>'+
+    h += '<div class="hello"><span class="av">'+ic("user",32)+'</span><div><h1 class="h2">Смяна · '+esc(who)+'</h1><p class="muted" style="margin:2px 0 0;font-weight:700">'+today()+' · от '+ST.clock(Date.now())+'</p></div></div>'+
       '<div><p class="st-cap">Моите маси днес</p><div class="tchips">'+SC.TABLES.map(function(t){ return '<button class="chip" type="button" data-t="'+t.n+'" aria-pressed="'+(myT.indexOf(t.n)>-1)+'" aria-label="Маса '+t.n+', '+ST.ZONE[t.zone]+'">'+t.n+'</button>'; }).join("")+'</div>'+
       '<p class="small muted" style="margin:10px 0 0">Салон: 1-12 · Градина: 13-20 (условно). Кой разпределя масите, управителят или сервитьорът: <span class="missing">[ЛИПСВА: решение]</span>.</p></div>'+
-      '<div class="notice">'+ic("bell-ringing",22)+'<span>Повикванията от вашите маси идват на телефона и на часовника. Свободните повиквания от другите маси също се виждат.</span></div>'+
-      '<a class="pill pill-red pill-lg pill-block" href="tables.html" data-start>Започни смяната · '+SC.plural(myT.length,"маса","маси")+'</a>';
+      '<div class="notice">'+ic("bell-ringing",22)+'<span>Повикванията от моите маси идват на телефона и на часовника. Повикванията от другите маси, които никой не е поел, също се виждат.</span></div>'+
+      '<a class="pill pill-red pill-lg pill-block" href="tables.html" data-start'+(myT.length?'':' aria-disabled="true"')+'>Започни смяната · '+SC.plural(myT.length,"маса","маси")+'</a>';
   } else if (view==="end"){
     var open = ST.MINE.filter(function(n){ return ST.db.tables[n].st!=="free"; });
-    h += '<div><h1 class="h1">Приключване на смяната</h1><p class="lead" style="margin-top:6px">На смяна от '+ST.clock(ST.db.shiftStart)+'. Преди да излезете, предайте отворените маси.</p></div>'+
+    h += '<div><h1 class="h1">Край на смяната</h1><p class="lead" style="margin-top:6px">На смяна от '+ST.clock(ST.db.shiftStart)+'. Отворените маси се предават, преди изход.</p></div>'+
       (open.length ? '<div class="stack">'+open.map(function(n){ var s = ST.tStatus(n); return '<div class="endrow"><div><b>Маса '+n+'</b><span>'+ST.ZONE[ST.tableByN[n].zone]+'</span></div>'+ST.stt(s.k, s.k==="call"?"Вика":s.w, s.i)+'</div>'; }).join("")+'</div>'+
-        '<div class="field"><label for="to">Предай масите на</label><select class="input" id="to"><option>'+ST.OTHER+'</option><option>Управителя</option></select></div>' : '<div class="notice">'+ic("check-circle",22)+'<span>Всички ваши маси са затворени.</span></div>')+
+        '<div class="field"><label for="to">Предай масите на</label><select class="input" id="to"><option>'+ST.OTHER+'</option><option>Управителя</option></select></div>' : '<div class="notice">'+ic("check-circle",22)+'<span>Всички мои маси са затворени.</span></div>')+
       '<a class="pill pill-red pill-lg pill-block" href="login.html" data-end>'+ic("sign-out",22)+(open.length?'Предай '+SC.plural(open.length,"маса","маси")+' и излез':'Излез')+'</a>'+
       '<a class="pill pill-line pill-lg pill-block" href="tables.html">Остани на смяна</a>';
   }
   main.innerHTML = h + '</div>';
 }
 render();
+function digit(d){ if (view!=="pin") return; pinBad = false; if (pin.length<4) pin += d; render();
+  if (pin.length===4) setTimeout(function(){ if (pin==="0000"){ pinBad = true; pin = ""; render(); return; } view = "shift"; render(); window.scrollTo(0,0); }, 250); }
+document.addEventListener("keydown", function(e){ if (view!=="pin" || document.querySelector(".st-sheetwrap.on")) return; if (/^[0-9]$/.test(e.key)) digit(e.key); else if (e.key==="Backspace"){ pin = pin.slice(0,-1); render(); } });
 main.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p");
-  if (!u.value.trim() || !p.value){ view = "err"; render(); return; } view = "shift"; render(); window.scrollTo(0,0); });
+  perr = {}; if (!u.value.trim()) perr.u = "Въведи потребител."; if (!p.value) perr.p = "Въведи парола.";
+  if (perr.u || perr.p){ var uv = u.value; render(); main.querySelector("#u").value = uv; main.querySelector(perr.u ? "#u" : "#p").focus(); return; }
+  view = "shift"; render(); window.scrollTo(0,0); });
 main.addEventListener("click", function(e){ var b = e.target.closest("button,a"); if (!b) return;
-  if (b.dataset.v){ view = b.dataset.v; pin = ""; render(); return; }
-  if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"); var sh = p.type==="password"; p.type = sh ? "text" : "password"; b.innerHTML = ic(sh?"eye":"eye",20)+(sh?"Скрий":"Покажи"); return; }
+  if (b.dataset.v){ view = b.dataset.v; pin = ""; pinBad = false; perr = {}; render(); return; }
+  if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"); var sh = p.type==="password"; p.type = sh ? "text" : "password"; b.setAttribute("aria-pressed", sh); b.innerHTML = ic(sh?"lock":"eye",20)+(sh?"Скрий":"Покажи"); return; }
   if (b.dataset.who){ who = b.dataset.who; render(); return; }
-  if (b.dataset.d){ if (pin.length<4) pin += b.dataset.d; render(); if (pin.length===4) setTimeout(function(){ view = "shift"; render(); }, 250); return; }
+  if (b.dataset.d){ digit(b.dataset.d); return; }
   if (b.hasAttribute("data-del")){ pin = pin.slice(0,-1); render(); return; }
-  if (b.hasAttribute("data-clear")){ pin = ""; render(); return; }
+  if (b.hasAttribute("data-clear")){ pin = ""; pinBad = false; render(); return; }
   if (b.dataset.t){ var n = +b.dataset.t, i = myT.indexOf(n); if (i>-1) myT.splice(i,1); else myT.push(n); render(); return; }
+  if (b.hasAttribute("data-start")){ if (!myT.length){ e.preventDefault(); ST.toast("Избери поне една маса."); return; } ST.setMine(myT.sort(function(a,c){ return a-c; })); return; }
 });
 </script>
 </body>

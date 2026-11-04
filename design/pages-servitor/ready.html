@@ -26,7 +26,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_staff.js"></script>
 <script>
-var main = ST.mount({page:"ready", title:"Готови за сервиране", nav:"ready"});
+var main = ST.mount({page:"ready", title:"Готови", nav:"ready"});
 var ic = SC.ic, esc = SC.esc;
 function card(g){ var mine = ST.isMine(g.t), t = ST.tableByN[g.t];
   return '<article class="rcard'+(mine?'':' other')+'" aria-label="Маса '+g.t+', готово за сервиране"><div class="hd">'+ic("chef-hat",26)+'<b>Маса '+g.t+'</b><span>'+ST.ZONE[t.zone]+'</span><span class="tm">чака '+ST.timer(g.since)+'</span></div><div class="in">'+
@@ -36,7 +36,7 @@ function card(g){ var mine = ST.isMine(g.t), t = ST.tableByN[g.t];
 function render(){ var gs = ST.readyGroups();
   var html = '';
   if (!gs.length) html += '<div class="st-empty"><div class="ill">'+ic("check-circle",52)+'</div><h2>Нищо не чака</h2><p>Щом кухнята отбележи „Готово“, ястието се появява тук, а телефонът и часовникът вибрират (3 кратки).</p><a class="pill pill-line pill-lg" href="tables.html">'+ic("squares-four",22)+'Към залата</a></div>';
-  else html += '<section class="st-sec"><div class="st-h"><h2>Да се вземат от кухнята</h2><span class="muted">най-старото отгоре</span></div>'+gs.map(card).join("")+'</section>';
+  else html += '<section class="st-sec"><div class="st-h"><h2>От кухнята</h2><span class="muted">най-старото отгоре</span></div>'+gs.map(card).join("")+'</section>';
   main.innerHTML = html; ST.tick(); }
 render(); ST.on(render);
 main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b || !b.dataset.serve) return; var n = +b.dataset.serve;

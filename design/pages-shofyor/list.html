@@ -25,7 +25,7 @@ var ic = SC.ic, esc = SC.esc;
 var bar = document.createElement("div"); bar.className = "st-bar"; document.body.appendChild(bar);
 
 function nextCard(d, eta){ var late = DR.lvl(d) === "late", app = DR.prefs.nav || "google";
-  return '<div class="next'+(late?' late':'')+'"><div class="hd"><span class="n1">1</span><span>Следваща · № '+d.id+'</span>'+DR.dStt(d)+'</div><div class="in">'+
+  return '<div class="next'+(late?' late':'')+'"><div class="hd"><span class="n1">1</span><span>№ '+d.id+'</span>'+DR.dStt(d)+'</div><div class="in">'+
     '<a href="delivery.html#'+d.id+'" style="color:inherit;text-decoration:none;display:block"><div class="addr"><b>'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</b><span>'+esc(d.sub)+'</span>'+DR.exTag+'</div></a>'+
     '<div class="meta">'+(d.zone?'':DR.zoneLine(d))+DR.dueStt(d, eta)+(eta?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+'</div>'+
     '<div class="money'+(d.pay==="cash"?' cash':'')+'"><span class="w">'+ic(DR.PAY[d.pay][1],22)+'<span>'+(d.pay==="cash"?"Вземете в брой":DR.PAY[d.pay][0])+'</span></span><span class="price">'+DR.money(d)+'</span></div>'+
@@ -36,7 +36,7 @@ function row(d, n, eta){ var l = DR.lvl(d), cls = d.st==="done" ? "done" : d.st=
   return '<a class="drow2 '+cls+'" href="delivery.html#'+d.id+'" aria-label="'+(n?"Номер "+n+" в маршрута, ":"")+'поръчка '+d.id+', '+esc((d.zone||"извън зоните")+", "+d.addr)+'">'+
     '<span class="no">'+(d.st==="done"?ic("check",22):d.st==="prob"?ic("warning",22):n)+'</span><span><span class="a">'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</span><span class="s">№ '+d.id+' · '+esc(d.sub)+(eta?' · пристигане ~'+DR.clock(eta):'')+'</span>'+
     '<span class="ln"><span class="price">'+DR.money(d)+'</span>'+DR.payWord(d)+'</span>'+
-    '<span class="ln">'+(d.zone?'':DR.zoneLine(d))+(d.st==="wait"||d.st==="road"?DR.dStt(d):'')+DR.dueStt(d)+'</span></span></a>'; }
+    '<span class="ln">'+(d.zone?'':DR.zoneLine(d))+(d.st==="wait"||d.st==="road"?DR.dStt(d):'')+DR.dueStt(d, eta)+'</span></span></a>'; }
 
 function render(){
   var act = DR.active(), ord = DR.ordered(), etas = DR.etas(), done = DR.doneList(), waiting = act.filter(function(d){ return d.st==="wait"; });

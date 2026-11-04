@@ -27,19 +27,19 @@
 var main = ST.mount({page:"index", title:"Сервитьор и часовник", sub:"Етап D · жив прототип · 8 екрана", bare:false, nav:null});
 var ic = SC.ic;
 var S = [
-  ["login.html","sign-in","Вход и смяна","Потребител и парола; бърз ПИН за споделен телефон (предложение); моите маси днес; приключване на смяната."],
+  ["login.html","sign-in","Вход и смяна","Личен ПИН (по подразбиране) или парола; моите маси днес; край на смяната с предаване на масите."],
   ["tables.html","squares-four","Залата","Повикванията отгоре, моите маси, Салон и Градина със статус и таймер на всяка маса."],
   ["calls.html","bell-ringing","Повиквания","Опашка по време на чакане: „Отивам“, „Обслужено“, цвят при закъснение, към управителя след X мин."],
-  ["table.html#12","receipt","Една маса","Поръчки по сметки със статус на всяко ястие, „Сервирах“, сметка (в брой, карта, разделяне), „Затвори масата“."],
-  ["table.html#3","qr-code","Маса с QR поръчка","Първата поръчка от QR чака потвърждение: „Потвърди и прати“ или „Откажи“."],
-  ["order.html#12","plus","Бърза поръчка","Търсене на латиница или кирилица, последно поръчвани, категории, бройки, бележка, отделни сметки."],
-  ["ready.html","bell","Готови за сервиране","Известия от кухнята по маси, най-старото отгоре, „Сервирах“."],
-  ["watch.html","clock","Смарт часовник","Кръгъл и правоъгълен екран: повикване, поето, готово, закъснява, празно, без връзка."]
+  ["table.html#12","receipt","Маса","Поръчки по сметки със статус на всяко ястие, „Сервирах“, сметка (в брой, карта, разделяне), „Затвори масата“."],
+  ["table.html#3","qr-code","Маса с QR поръчка","Първата поръчка от QR чака потвърждение: „Потвърди и прати“ или „Откажи“ (от „Повиквания“ води „Отвори масата“)."],
+  ["order.html#12","plus","Нова поръчка","Търсене на латиница или кирилица, последно поръчвани, категории, бройки, грамаж за стековете, бележка, отделни сметки, „Изпрати в кухнята“."],
+  ["ready.html","chef-hat","Готови","Готовото от кухнята по маси, най-старото отгоре, „Сервирах“."],
+  ["watch.html","clock","Смарт часовник","Кръгъл и правоъгълен екран: повикване („Отивам“), отивам, готово („Сервирах“), закъснява, празно, без връзка."]
 ];
 main.innerHTML = '<section class="st-sec"><p class="lead" style="color:var(--ink)">Приложението на сервитьора е на телефона (PWA), с известия и на часовника. Данните са условни за макета: масите са от общия план, ястията са истинските от менюто.</p></section>'+
   '<section class="st-sec"><div class="scr">'+S.map(function(s){ return '<a class="it" href="'+s[0]+'"><span class="ico">'+ic(s[1],26)+'</span><span><b>'+s[2]+'</b><span class="d">'+s[3]+'</span></span>'+ic("caret-right",22)+'</a>'; }).join("")+'</div></section>'+
   '<section class="st-sec"><div class="st-h"><h2>Състояния</h2></div><div class="states">'+
-  '<a class="chip" href="calls.html#s=rush">'+ic("warning",18)+'Много повиквания</a><a class="chip" href="calls.html#s=empty">'+ic("check-circle",18)+'Празна опашка</a><a class="chip" href="tables.html#s=offline">'+ic("warning-circle",18)+'Няма връзка</a><a class="chip" href="order.html#12&q=pitsa">'+ic("magnifying-glass",18)+'Търсене „pitsa“</a><a class="chip" href="login.html#err">'+ic("lock",18)+'Грешна парола</a><a class="chip" href="login.html#end">'+ic("sign-out",18)+'Край на смяната</a>'+
+  '<a class="chip" href="calls.html#s=rush">'+ic("warning",18)+'Много повиквания</a><a class="chip" href="calls.html#s=empty">'+ic("check-circle",18)+'Празна опашка</a><a class="chip" href="tables.html#s=offline">'+ic("warning-circle",18)+'Няма връзка</a><a class="chip" href="order.html#12&q=pitsa">'+ic("magnifying-glass",18)+'Търсене „pitsa“</a><a class="chip" href="login.html#pinerr">'+ic("lock",18)+'Грешен ПИН</a><a class="chip" href="login.html#err">'+ic("lock",18)+'Грешна парола</a><a class="chip" href="order.html#12&demo=1">'+ic("plus",18)+'Поръчка с грамаж</a><a class="chip" href="login.html#end">'+ic("sign-out",18)+'Край на смяната</a>'+
   '</div><p class="small muted" style="margin:12px 0 0">Тъмната тема: панелът „Само в прототипа“ най-долу на всеки екран или „Смяна“ горе вдясно. „По часа“ включва тъмна от 18:00.</p></section>';
 </script>
 </body>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Зареждане | Siracusa · Шофьор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_driver.css">
+<style>
+.carline{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.carline .ii{width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; flex:none}
+.carline span{flex:1; min-width:0}
+.carline b{display:block; font-size:18px}
+.carline small{font-size:14px; color:var(--muted); font-weight:600}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_driver.js"></script>
+<script>
+var main = DR.mount({page:"fuel", title:"Зареждане", nav:"fuel", bar:true});
+var ic = SC.ic, esc = SC.esc, photo = false, full = false, errs = {};
+var bar = document.createElement("div"); bar.className = "st-bar"; document.body.appendChild(bar);
+bar.innerHTML = '<button class="pill pill-red" type="button" data-save>'+ic("check",22)+'Запиши зареждането</button>';
+function num(v){ return parseFloat(String(v||"").replace(",", ".").replace(/\s/g,"")); }
+function f2(n){ return n.toFixed(2).replace(".", ","); }
+function field(id, label, unit, mode, ph, help){ return '<div class="field bigf'+(id==="km"?' full':'')+'"><label for="'+id+'">'+label+'</label><div class="wrapi"><input class="input" id="'+id+'" inputmode="'+mode+'" autocomplete="off" placeholder="'+ph+'"'+(errs[id]?' aria-invalid="true" aria-describedby="e-'+id+'"':'')+'><span class="u">'+unit+'</span></div>'+(errs[id]?'<span class="err" id="e-'+id+'">'+errs[id]+'</span>':help?'<span class="help">'+help+'</span>':'')+'</div>'; }
+function render(keep){ var v = {}; if (keep) ["l","s","km"].forEach(function(k){ var el = main.querySelector("#"+k); v[k] = el ? el.value : ""; });
+  var h = '<section class="st-sec"><div class="carline"><span class="ii">'+ic("car",24)+'</span><span><b>'+DR.car().n+'</b><small>Гориво <span class="missing">[ЛИПСВА: вид]</span> · рег. № <span class="missing">[ЛИПСВА]</span></small></span><a class="pill pill-soft" href="login.html#car">Смени</a></div></section>';
+  h += '<section class="st-sec"><div class="fgrid">'+field("l","Литри","л","decimal","0,00")+field("s","Сума","€","decimal","0,00")+field("km","Километраж","км","numeric","например 48 312","Числото от таблото на колата. В началото на смяната: "+DR.db.kmStart.toLocaleString("bg-BG")+" км.")+'</div>'+
+    '<div class="calc" style="margin-top:12px" id="calc"><span>Цена на литър</span><b>-</b></div>'+
+    '<label class="chk" style="margin-top:6px"><input type="checkbox" id="full"'+(full?' checked':'')+'><span>Напълних резервоара догоре <span class="small muted" style="display:block;font-weight:600">Така системата смята реалния разход (л/100 км).</span></span></label></section>';
+  h += '<section class="st-sec"><p class="st-cap">Снимка на касовата бележка</p><button class="slot'+(photo?' has':'')+'" type="button" data-photo><span class="ii">'+ic(photo?"check":"image",30)+'</span><b>'+(photo?"Снимката е добавена":"Снимай бележката")+'</b><span>'+(photo?"Докоснете, за да смените снимката":"Отваря камерата. Бележката трябва да се чете ясно.")+'</span></button>'+
+    (errs.photo?'<p class="err" style="margin:6px 4px 0;color:var(--danger);font-weight:600;font-size:14px">'+errs.photo+'</p>':'')+'</section>';
+  var list = DR.db.fuel;
+  h += '<section class="st-sec"><div class="st-h"><h2>Тази смяна</h2></div>'+(list.length ? '<div class="icard hist">'+list.map(function(x){ return '<div class="h"><b>'+f2(x.l)+' л · '+SC.fmt(x.s)+'</b><span class="tnum">'+DR.clock(x.at)+'</span><span>'+x.km.toLocaleString("bg-BG")+' км'+(x.full?' · пълен резервоар':'')+'</span><span>'+(x.q?'чака връзка':'изпратено')+'</span></div>'; }).join("")+'</div>' : '<p class="muted" style="margin:0">Още няма зареждания.</p>')+
+    '<p class="small muted" style="margin:12px 0 0">Отчетът за гориво (по ден, шофьор и автомобил) е в админ панела. Колко харчи всеки автомобил: <span class="missing">[ЛИПСВА: брой автомобили и разход]</span>.</p></section>';
+  main.innerHTML = h;
+  if (keep) ["l","s","km"].forEach(function(k){ main.querySelector("#"+k).value = v[k]||""; });
+  calc(); }
+function calc(){ var l = num(main.querySelector("#l").value), s = num(main.querySelector("#s").value), c = main.querySelector("#calc b");
+  c.textContent = l > 0 && s > 0 ? f2(s/l)+" €/л" : "-"; }
+render();
+main.addEventListener("input", calc);
+main.addEventListener("change", function(e){ if (e.target.id === "full") full = e.target.checked; });
+main.addEventListener("click", function(e){ if (e.target.closest("[data-photo]")){ photo = true; delete errs.photo; render(true); DR.toast("Снимката е добавена (в прототипа без камера)"); } });
+bar.addEventListener("click", function(e){ if (!e.target.closest("[data-save]")) return;
+  var l = num(main.querySelector("#l").value), s = num(main.querySelector("#s").value), km = num(main.querySelector("#km").value); errs = {};
+  if (!(l > 0)) errs.l = "Въведете литрите от бележката.";
+  else if (l > 120) errs.l = "Проверете литрите: повече от 120 л.";
+  if (!(s > 0)) errs.s = "Въведете сумата в евро.";
+  if (!(km > 0)) errs.km = "Въведете километража от таблото.";
+  else if (km < DR.db.kmStart) errs.km = "По-малко е от началния километраж ("+DR.db.kmStart.toLocaleString("bg-BG")+" км).";
+  if (!photo) errs.photo = "Снимайте бележката, за да мине в отчета.";
+  if (Object.keys(errs).length){ render(true); var f = main.querySelector('[aria-invalid="true"]'); f && f.focus(); return; }
+  DR.db.fuel.unshift({l:l, s:s, km:km, full:full, at:Date.now(), q:DR.offline}); DR.save(); photo = false; full = false; render(false); window.scrollTo({top:0});
+  DR.toast(DR.offline ? "Записано на телефона. Тръгва, щом има връзка." : "Зареждането е записано: "+f2(l)+" л · "+SC.fmt(s)); });
+</script>
+</body>
+</html>

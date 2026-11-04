@@ -15,6 +15,7 @@ DR.prefs = load("dr-prefs", {}); if (!DR.prefs.theme) DR.prefs.theme = "system";
 DR.hash = {}; (location.hash||"").slice(1).split("&").forEach(function(p){ if (!p) return; if (/^\d+$/.test(p)) DR.hash.id = p; else { var kv = p.split("="); DR.hash[kv[0]] = decodeURIComponent(kv[1]||""); } });
 DR.STATES = [["normal","Нов курс"],["road","На път · закъснява"],["outzone","Адрес извън зоните"],["empty","Няма доставки"],["offline","Няма връзка"],["moving","В движение"]];
 DR.state = DR.hash.s || DR.prefs.state || "normal";
+if (DR.hash.s && DR.prefs.state !== DR.hash.s){ DR.prefs.state = DR.hash.s; try{ localStorage.setItem("dr-prefs", JSON.stringify(DR.prefs)); }catch(e){} }
 DR.offline = DR.state === "offline";
 DR.moving = DR.state === "moving";
 function savePrefs(){ store("dr-prefs", DR.prefs); }
@@ -34,7 +35,7 @@ DR.NAVAPP = {google:"Google Maps", waze:"Waze"};
 DR.zone = function(n){ return SC.ZONES.filter(function(z){ return z.n === n; })[0] || null; };
 
 /* schematic positions (viewBox 360 x 250); NOT a map, only the rough direction of each zone from the restaurant */
-DR.POS = {home:[176,138], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[74,200], out:[30,130]};
+DR.POS = {home:[156,142], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
 
 /* ---------- mock data ---------- */
 function seed(kind){ var now = Date.now(), M = 60000;
@@ -49,11 +50,11 @@ function seed(kind){ var now = Date.now(), M = 60000;
     D(1041, "НПЗ Искър", "ул. [ЛИПСВА], № xx", "офис, ет. 1", "voucher", [["salata-tsezar-s-pileshki-prachki",2]], 58, "done", "", -8, 6);
     return db; }
   var on = kind === "road" || kind === "offline" || kind === "moving";
-  D(1042, "Дружба 2", "бл. 3xx, вх. Б", "ет. 4, ап. xx", "cash", [["pitsa-margarita",2],["gratska-salata",1],["tiramisu",1]], kind==="road" ? 38 : 14, on ? "road" : "wait", "Звънецът не работи. Обадете се, когато пристигнете.", 14, 14);
-  D(1043, "Дружба 1", "бл. 5xx, вх. А", "ет. 7", "card", [["svinski-vrat",1],["pitsa-kaprichoza",1]], 12, on ? "picked" : "wait", "", -10, 6);
+  D(1042, "Дружба 2", "бл. 3xx, вх. Б", "ет. 4, ап. xx", "cash", [["pitsa-margarita",2],["gratska-salata",1],["tiramisu",1]], kind==="road" ? 38 : 14, on ? "road" : "wait", "Звънецът не работи. Обадете се, когато пристигнете.", 24, 8);
+  D(1043, "Дружба 1", "бл. 5xx, вх. А", "ет. 7", "card", [["svinski-vrat",1],["pitsa-kaprichoza",1]], 16, on ? "picked" : "wait", "", -10, 6);
   D(1045, "НПЗ Искър", "ул. [ЛИПСВА], № xx", "офис, рецепция", "cash", [["salata-tsezar-s-pileshki-prachki",1],["pitsa-vegetariana",1],["kyunefe",1]], 9, on ? "picked" : "wait", "", 0, 10);
   if (kind === "outzone") D(1046, null, "адрес извън зоните (примерен)", "къща", "cash", [["kebapcheta",2],["pitsa-dyavolo",1]], 6, "wait", "", 0, 0);
-  else D(1046, "Горубляне", "ул. [ЛИПСВА], № xx", "къща", "voucher", [["svinski-kyufteta",2],["pitsa-margarita",1]], 6, on ? "picked" : "wait", "", 8, -6);
+  else D(1046, "Горубляне", "ул. [ЛИПСВА], № xx", "къща", "voucher", [["svinski-kyufteta",2],["pitsa-margarita",1]], 3, on ? "picked" : "wait", "", 8, -6);
   if (kind === "offline") db.outbox = [{id:"1042", w:"Взех от ресторанта", at: now - 4*M}, {id:"1042", w:"На път", at: now - 3*M}];
   return db; }
 var KEY = "dr-db-" + DR.state;
@@ -83,13 +84,13 @@ function km(a, b){ var p = pt(a), q = pt(b); return Math.hypot(p[0]-q[0], p[1]-q
 function inTown(d){ return d === "home" || d.zone === "Дружба 1" || d.zone === "Дружба 2"; }
 function mins(a, b){ var k = km(a, b); return 1 + k * (inTown(a) && inTown(b) ? 3.0 : inTown(a) || inTown(b) ? 2.1 : 1.4); }
 function perms(a){ if (a.length < 2) return [a]; var r = []; a.forEach(function(x, i){ perms(a.slice(0,i).concat(a.slice(i+1))).forEach(function(p){ r.push([x].concat(p)); }); }); return r; }
-function measure(order){ var t = 0, k = 0, prev = "home", legs = [];
-  order.forEach(function(d){ var lm = mins(prev, d), lk = km(prev, d); t += lm; k += lk; legs.push({m:lm, k:lk}); prev = d; });
+function measure(order){ var t = 0, k = 0, prev = "home", legs = [], wait = 0, late = 0;
+  order.forEach(function(d, i){ var lm = mins(prev, d), lk = km(prev, d); t += lm; k += lk; wait += t + 2*i; late += Math.max(0, Date.now() + (t + 2*i)*60000 - DR.due(d)); legs.push({m:lm, k:lk}); prev = d; });
   var rk = km(prev, "home"), rm = mins(prev, "home");
-  return {order:order, min:Math.round(t + rm), km:k + rk, legs:legs, back:{m:rm, k:rk}}; }
+  return {order:order, min:Math.round(t + rm), km:k + rk, legs:legs, back:{m:rm, k:rk}, wait:wait, late:late}; }
 DR.plan = function(){ var stops = DR.active(); if (!stops.length) return null;
   var all = perms(stops).map(measure);
-  var A = all.slice().sort(function(a,b){ return a.min - b.min || a.km - b.km; })[0];
+  var A = all.slice().sort(function(a,b){ return Math.round((a.late - b.late)/60000) || a.wait - b.wait || a.km - b.km; })[0]; /* A: least lateness against the promised times, then least waiting for the clients */
   var B = all.slice().sort(function(a,b){ return a.km - b.km || a.min - b.min; })[0];
   var own = null; if (DR.db.route.own){ var o = DR.db.route.own.map(DR.byId).filter(function(d){ return d && stops.indexOf(d) > -1; }); stops.forEach(function(d){ if (o.indexOf(d) < 0) o.push(d); }); own = measure(o); }
   return {A:A, B:B, own:own}; };

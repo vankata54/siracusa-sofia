@@ -69,7 +69,7 @@ var KEY = "st-db-" + ST.state;
 ST.db = load(KEY, null);
 if (!ST.db || ST.db.v !== 4) ST.db = seed(ST.state);
 ST.save = function(){ store(KEY, ST.db); ST.emit(); };
-ST.reset = function(){ ST.STATES.forEach(function(s){ try{ localStorage.removeItem("st-db-"+s[0]); }catch(e){} }); };
+ST.reset = function(){ try{ Object.keys(localStorage).forEach(function(k){ if (/^st-(db|cart|mine)/.test(k)) localStorage.removeItem(k); }); }catch(e){} };
 SC.TABLES.forEach(function(t){ if (ST.db.tables[t.n]) ST.db.tables[t.n].owner = ST.MINE.indexOf(t.n)>-1 ? "me" : "other"; });
 var subs = []; ST.on = function(fn){ subs.push(fn); }; ST.emit = function(){ subs.forEach(function(f){ f(); }); updateBadges(); };
 
@@ -229,4 +229,5 @@ ST.recent = function(){ var c = {}; ST.db.orders.forEach(function(o){ o.lines.fo
   return ids.filter(function(id){ return SC.byId[id]; }).slice(0,6); };
 
 if (ST.db) setTimeout(updateBadges, 0);
+window.addEventListener("hashchange", function(){ location.reload(); });
 })();

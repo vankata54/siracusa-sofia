@@ -26,7 +26,7 @@
 .res-h{font-size:14px; font-weight:800; color:var(--muted); margin:6px 0 0}
 .out-b{display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 10px; border-radius:999px; background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor; font-size:14px; font-weight:800; white-space:nowrap}
 .grams{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
-.grams .chip{justify-content:center; font-variant-numeric:tabular-nums}
+.grams .chip{justify-content:center; font-variant-numeric:tabular-nums; padding:0 4px; min-width:0}
 </style>
 </head>
 <body>
@@ -38,7 +38,7 @@
 var ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
 var N = ST.hash.table && ST.tableByN[ST.hash.table] ? ST.hash.table : null;
 var main;
-window.addEventListener("hashchange", function(){ location.reload(); });
+
 var SHORT = {bill:"Сметка", qr:"QR поръчка", ready:"Готово", wait:"Чака поръчка", busy:"Заета", free:"Свободна"};
 
 /* ---------- step 0: which table ---------- */

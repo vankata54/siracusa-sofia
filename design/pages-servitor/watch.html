@@ -16,7 +16,7 @@
 .dev{display:grid; justify-items:center; gap:8px}
 .dev figcaption{font-size:14px; font-weight:700; color:var(--muted)}
 /* bezels: always dark, like the hardware */
-.w{position:relative; padding:10px; background:var(--surface-3); box-shadow:0 0 0 1px var(--line-strong), 0 24px 40px -20px rgba(0,0,0,.6)}
+.w{position:relative; padding:10px; background:var(--surface-3); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg)}
 .w.round{width:232px; height:232px; border-radius:50%}
 .w.rect{width:204px; height:244px; border-radius:52px}
 .face{position:relative; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--ink); display:grid; align-content:center; justify-items:center; text-align:center; gap:4px}
@@ -58,32 +58,33 @@
 <script>
 var main = ST.mount({page:"watch", title:"Смарт часовник", sub:"Само известия", back:{href:"index.html", label:"Екрани"}, nav:null});
 var ic = SC.ic;
-var now = Date.now(), c12 = now - 80000, r4 = now - 45000, late9 = now - 412000;
+var now = Date.now(), c12 = now - 80000, r4 = now - 90000, late9 = now - 412000;
 function pair(id, round, rect){ return '<div class="pair">'+
   '<figure class="dev" style="margin:0"><div class="w round st-dark" id="'+id+'-r">'+round+'</div><figcaption>Кръгъл · 232 px</figcaption></figure>'+
   '<figure class="dev" style="margin:0"><div class="w rect st-dark" id="'+id+'-q">'+rect+'</div><figcaption>Правоъгълен · 204 × 244 px</figcaption></figure></div>'; }
 function callFace(cls, n, why, icon, since, btn){ return '<div class="face '+cls+'" data-lvl><div class="t">Маса '+n+'</div><div class="why">'+ic(icon,20)+why+'</div><div class="tm">'+ST.timer(since)+'</div>'+btn+'</div>'; }
 function callRect(cls, n, why, icon, since, btn, top){ return '<div class="face '+cls+'" data-lvl><div class="wtop">'+(top||ic("bell-ringing",18)+'Повикване')+'</div><div style="display:grid;gap:6px;justify-items:center"><div class="t">Маса '+n+'</div><div class="why">'+ic(icon,20)+why+'</div><div class="tm">'+ST.timer(since)+'</div></div>'+btn+'</div>'; }
-var take = '<button class="btn" type="button" data-take>Поемам</button>';
+var take = '<button class="btn" type="button" data-take>Отивам</button>';
+var served = '<button class="btn" type="button" data-served>'+ic("check",20)+'Сервирах</button>';
 var html = '';
-html += '<section class="wsec"><h2>1. Повикване от маса</h2><p>Един ред и вибрация. „Поемам“ казва на колегите, че отивате; масата и причината са най-едрите.</p>'+
+html += '<section class="wsec"><h2>1. Повикване от маса</h2><p>Един ред и вибрация. „Отивам“ (същата дума като на телефона) казва на колегите, че съм я поел. Масата и причината са най-едрите.</p>'+
   pair("call", callFace("call", 12, "Сметка", "receipt", c12, take), callRect("call", 12, "Сметка", "receipt", c12, take))+'</section>';
-html += '<section class="wsec"><h2>2. Поето от вас</h2><p>Таймерът продължава, докато отбележите „Обслужено“.</p>'+
-  pair("ok", '<div class="face ok"><div class="why">'+ic("check-circle",20)+'Поехте</div><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div><button class="btn" type="button">'+ic("check",20)+'Обслужено</button></div>',
-    '<div class="face ok"><div class="wtop">'+ic("check-circle",18)+'Поехте</div><div style="display:grid;gap:6px"><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div></div><button class="btn" type="button">'+ic("check",20)+'Обслужено</button></div>')+'</section>';
-html += '<section class="wsec"><h2>3. Готова поръчка</h2><p>Друга вибрация (3 кратки), цвят жар като на телефона.</p>'+
-  pair("ready", '<div class="face ready" ><div class="t">Маса 4</div><div class="why">'+ic("bell-ringing",20)+'Готово</div><div class="muted">2 ястия</div><div class="tm">'+ST.timer(r4)+'</div><button class="btn" type="button">Поемам</button></div>',
-    '<div class="face ready"><div class="wtop">'+ic("chef-hat",18)+'От кухнята</div><div style="display:grid;gap:6px;justify-items:center"><div class="t">Маса 4</div><div class="why">'+ic("bell-ringing",20)+'Готово</div><div class="muted">2× Пица Маргарита</div></div><button class="btn" type="button">Поемам</button></div>')+'</section>';
+html += '<section class="wsec"><h2>2. Отивам</h2><p>Таймерът продължава до „Обслужено“.</p>'+
+  pair("ok", '<div class="face ok" style="padding-bottom:34px"><div class="why">'+ic("check-circle",20)+'Отивам</div><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div><button class="btn" type="button" data-done>'+ic("check",20)+'Обслужено</button></div>',
+    '<div class="face ok"><div class="wtop">'+ic("check-circle",18)+'Отивам</div><div style="display:grid;gap:6px"><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div></div><button class="btn" type="button" data-done>'+ic("check",20)+'Обслужено</button></div>')+'</section>';
+html += '<section class="wsec"><h2>3. Готова поръчка</h2><p>Друга вибрация (3 кратки), цвят жар и готварска шапка като на телефона. „Сервирах“ е същото действие като в „Готови“.</p>'+
+  pair("ready", '<div class="face ready"><div class="t">Маса 4</div><div class="why">'+ic("chef-hat",20)+'Готово</div><div class="muted">2× Пица Маргарита</div><div class="tm">'+ST.timer(r4)+'</div>'+served+'</div>',
+    '<div class="face ready"><div class="wtop">'+ic("chef-hat",18)+'От кухнята</div><div style="display:grid;gap:6px;justify-items:center"><div class="t">Маса 4</div><div class="why">'+ic("chef-hat",20)+'Готово</div><div class="muted">2× Пица Маргарита</div></div>'+served+'</div>')+'</section>';
 html += '<section class="wsec"><h2>4. Закъснява · няколко наведнъж</h2><p>След 5 мин (условно) рамката става червена и повикването отива и при управителя. С плъзгане към следващото; точките казват колко чакат.</p>'+
-  pair("late", '<div class="face call late"><div class="pager" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></div><div class="t">Маса 9</div><div class="why">'+ic("chat-circle-dots",20)+'Друго</div><div class="tm">'+ST.timer(late9)+'</div>'+take+'</div>',
-    callRect("call late", 9, "Друго", "chat-circle-dots", late9, take, '<span class="pager" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></span>'))+'</section>';
+  pair("late", '<div class="face call late"><div class="pager" role="img" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></div><div class="t">Маса 9</div><div class="why">'+ic("chat-circle-dots",20)+'Друго</div><div class="tm">'+ST.timer(late9)+'</div>'+take+'</div>',
+    callRect("call late", 9, "Друго", "chat-circle-dots", late9, take, '<span class="pager" role="img" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></span>'))+'</section>';
 html += '<section class="wsec"><h2>5. Празно и без връзка</h2><p>Часовникът е тих, докато няма нищо. Без връзка с телефона казва какво да се направи.</p>'+
   pair("idle", '<div class="face"><span class="big">'+ic("check-circle",40)+'</span><div class="why">Няма повиквания</div><div class="muted">Маси: 3, 4, 7, 12, 14, 16</div></div>',
     '<div class="face" style="align-content:center;gap:10px"><span class="warn">'+ic("warning",40)+'</span><div class="why">Няма връзка</div><div class="muted">Дръжте телефона с вас и проверете Bluetooth</div></div>')+'</section>';
 html += '<section class="wsec"><h2>Вибрации</h2><div class="vib"><div class="r">'+ic("bell-ringing",24)+'<b>Повикване</b><span class="bars" aria-label="2 дълги"><i style="width:44px"></i><i style="width:44px"></i></span></div><div class="r">'+ic("chef-hat",24)+'<b>Готово от кухнята</b><span class="bars" aria-label="3 кратки"><i style="width:14px"></i><i style="width:14px"></i><i style="width:14px"></i></span></div><div class="r">'+ic("warning",24)+'<b>Закъснява (5 мин)</b><span class="bars" aria-label="повтаря се"><i style="width:44px"></i><i style="width:14px"></i><i style="width:44px"></i></span></div></div></section>';
 html += '<section class="wsec"><h2>Правила за часовника</h2><ul class="rules"><li>Нито един текст под 14 px; номерът на масата е 28-30 px.</li><li>Една цел на екран, поне 52 px висока, на цялата ширина.</li><li>Винаги тъмен екран (пести батерия, не свети в салона вечер).</li><li>Само известия: без меню и без поръчки от часовника.</li><li>Кои часовници поддържаме (Wear OS, Apple Watch, или известия от телефона): <span class="missing">[ЛИПСВА: решение]</span>.</li></ul></section>';
 main.innerHTML = html; ST.tick();
-main.addEventListener("click", function(e){ var b = e.target.closest("[data-take]"); if (!b) return; b.innerHTML = ic("check",20)+"Поето"; b.style.background = "var(--ok)"; b.style.color = "var(--on-ok)"; ST.haptic([200,100,200]); });
+main.addEventListener("click", function(e){ var b = e.target.closest("[data-take],[data-served],[data-done]"); if (!b) return; var t = b.hasAttribute("data-take") ? "Отивам ✓" : b.hasAttribute("data-served") ? "Сервирано ✓" : "Обслужено ✓"; b.textContent = t; b.style.background = "var(--ok)"; b.style.color = "var(--on-ok)"; ST.haptic(12); });
 </script>
 </body>
 </html>

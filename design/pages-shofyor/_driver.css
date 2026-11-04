@@ -124,9 +124,9 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .dsum span{font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
 
 /* the "next" card: biggest thing on the list screen */
-.next{position:relative; border-radius:30px; padding:6px; background:var(--ink); color:var(--bg)}
+.next{position:relative; border-radius:30px; padding:6px; background:var(--surface-3); color:var(--ink)}
 .next .hd{display:flex; align-items:center; gap:10px; padding:8px 12px 10px; font-weight:800; font-size:16px}
-.next .hd .n1{width:32px; height:32px; border-radius:50%; background:var(--bg); color:var(--ink); display:grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
+.next .hd .n1{width:32px; height:32px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
 .next .hd .stt{margin-left:auto}
 .next.late{background:var(--red); color:var(--on-red)}
 .next.late .hd .n1{background:var(--on-red); color:var(--red)}
@@ -206,7 +206,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 /* route schematic (not a map) */
 .scheme{border-radius:28px; padding:6px; background:var(--surface-2)}
 .scheme .in{position:relative; border-radius:22px; background:var(--surface); box-shadow:var(--hi); overflow:hidden}
-.scheme svg{display:block; width:100%; height:auto}
+.scheme .in svg{display:block; width:100%; height:auto}
 .scheme .cap{display:flex; align-items:center; gap:6px; padding:8px 10px 4px; font-size:14px; font-weight:700; color:var(--muted)}
 .sv-zone{fill:var(--surface-2)}
 .sv-zl{fill:var(--muted); font:700 14px var(--font)}
@@ -258,7 +258,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .hist .h span{font-size:15px; color:var(--muted); font-weight:600}
 
 /* shift end */
-.cashbox{border-radius:30px; padding:6px; background:var(--ink); color:var(--bg)}
+.cashbox{border-radius:30px; padding:6px; background:var(--surface-3); color:var(--ink)}
 .cashbox .hd{display:flex; align-items:center; gap:8px; padding:8px 12px 8px; font-weight:800}
 .cashbox .in{border-radius:24px; background:var(--surface); color:var(--ink); padding:14px 16px}
 .cashbox .big{font-size:44px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}

@@ -149,7 +149,7 @@ document.addEventListener("click", function(e){ var b = e.target.closest("button
       foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-yes>'+ic("door-open",22)+(un.length?'Затвори въпреки това':'Затвори масата')+'</button><button class="pill pill-line pill-lg pill-block" type="button" data-no>Остави отворена</button>'});
     sh2.el.addEventListener("click", function(ev){ var x = ev.target.closest("button"); if (!x) return; if (x.hasAttribute("data-yes")){ ST.closeTable(N); sh2.close(); ST.toast("Маса "+N+" е свободна"); } if (x.hasAttribute("data-no")) sh2.close(); }); return; }
 });
-window.addEventListener("hashchange", function(){ location.reload(); });
+
 </script>
 </body>
 </html>
