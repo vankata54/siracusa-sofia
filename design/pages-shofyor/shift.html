@@ -35,7 +35,7 @@ function render(){
     '<p class="small muted" style="margin:8px 4px 0">Плащанията с карта минават през терминала; ваучерите се предават с парите.</p></section>';
   var ke = n(kmEnd), diff = ke > DR.db.kmStart ? ke - DR.db.kmStart : null;
   h += '<section class="st-sec"><div class="st-h"><h2>Километри</h2></div><div class="fgrid"><div class="field"><label>В началото</label><div class="input tnum" style="display:flex;align-items:center;min-height:64px;font-size:22px;font-weight:800;background:var(--surface-2);box-shadow:none">'+DR.db.kmStart.toLocaleString("bg-BG")+'</div></div>'+
-    '<div class="field bigf"><label for="ke">Сега</label><div class="wrapi"><input class="input" id="ke" inputmode="numeric" placeholder="км" value="'+esc(kmEnd)+'"'+(err?' aria-invalid="true" aria-describedby="eke"':'')+' style="font-size:22px;padding-right:56px"><span class="u">км</span></div></div>'+
+    '<div class="field bigf"><label for="ke">Сега</label><div class="wrapi"><input class="input" id="ke" inputmode="numeric" placeholder="0" value="'+esc(kmEnd)+'"'+(err?' aria-invalid="true" aria-describedby="eke"':'')+' style="font-size:22px;padding-right:56px"><span class="u">км</span></div></div>'+
     (err?'<span class="err full" id="eke" style="color:var(--danger);font-weight:600;font-size:14px">'+err+'</span>':'')+'</div>'+
     '<div class="calc" style="margin-top:12px"><span>Изминати за смяната</span><b id="diff">'+(diff!==null?diff.toLocaleString("bg-BG")+' км':'-')+'</b></div></section>';
   h += '<section class="st-sec"><label class="chk"><input type="checkbox" id="hd"'+(handed?' checked':'')+'><span>Предадох '+SC.fmt(cash)+' и ваучерите на <span class="missing">[ЛИПСВА: на кого, управител или каса]</span></span></label></section>';

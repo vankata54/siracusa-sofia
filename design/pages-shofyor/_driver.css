@@ -299,3 +299,4 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
   .st-bar .pill{padding:0 12px; font-size:16px; gap:6px}
   .st-bar .pill .price{font-size:16px}
 }
+a.chip{text-decoration:none; color:var(--ink)}

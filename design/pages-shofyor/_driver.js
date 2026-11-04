@@ -53,7 +53,7 @@ function seed(kind){ var now = Date.now(), M = 60000;
   D(1042, "Дружба 2", "бл. 3xx, вх. Б", "ет. 4, ап. xx", "cash", [["pitsa-margarita",2],["gratska-salata",1],["tiramisu",1]], kind==="road" ? 38 : 14, on ? "road" : "wait", "Звънецът не работи. Обадете се, когато пристигнете.", 24, 8);
   D(1043, "Дружба 1", "бл. 5xx, вх. А", "ет. 7", "card", [["svinski-vrat",1],["pitsa-kaprichoza",1]], 16, on ? "picked" : "wait", "", -10, 6);
   D(1045, "НПЗ Искър", "ул. [ЛИПСВА], № xx", "офис, рецепция", "cash", [["salata-tsezar-s-pileshki-prachki",1],["pitsa-vegetariana",1],["kyunefe",1]], 9, on ? "picked" : "wait", "", 0, 10);
-  if (kind === "outzone") D(1046, null, "адрес извън зоните (примерен)", "къща", "cash", [["kebapcheta",2],["pitsa-dyavolo",1]], 6, "wait", "", 0, 0);
+  if (kind === "outzone") D(1046, null, "ул. [ЛИПСВА], № xx", "къща", "cash", [["kebapcheta",2],["pitsa-dyavolo",1]], 6, "wait", "", 0, 0);
   else D(1046, "Горубляне", "ул. [ЛИПСВА], № xx", "къща", "voucher", [["svinski-kyufteta",2],["pitsa-margarita",1]], 3, on ? "picked" : "wait", "", 8, -6);
   if (kind === "offline") db.outbox = [{id:"1042", w:"Взех от ресторанта", at: now - 4*M}, {id:"1042", w:"На път", at: now - 3*M}];
   return db; }
@@ -80,7 +80,7 @@ DR.money = function(d){ return fmt(DR.total(d)) + (DR.feeKnown(d) ? "" : " + т�
 
 /* ---------- route (VROOM on OSRM, own server; numbers here are only for the mock) ---------- */
 function pt(d){ if (d === "home") return DR.POS.home; var p = DR.POS[d.zone || "out"]; return [p[0] + (d.dx||0), p[1] + (d.dy||0)]; }
-function km(a, b){ var p = pt(a), q = pt(b); return Math.hypot(p[0]-q[0], p[1]-q[1]) * 0.05; }
+function km(a, b){ var p = pt(a), q = pt(b); return Math.hypot(p[0]-q[0], p[1]-q[1]) * 0.032; }
 function inTown(d){ return d === "home" || d.zone === "Дружба 1" || d.zone === "Дружба 2"; }
 function mins(a, b){ var k = km(a, b); return 1 + k * (inTown(a) && inTown(b) ? 2.6 : 1.9); }
 function perms(a){ if (a.length < 2) return [a]; var r = []; a.forEach(function(x, i){ perms(a.slice(0,i).concat(a.slice(i+1))).forEach(function(p){ r.push([x].concat(p)); }); }); return r; }
