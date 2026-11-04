@@ -150,8 +150,8 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.dataset.q){ var l = S.draft.filter(function(z){ return z.key===t.dataset.k; })[0]; if (!l) return; var q = l.q + (+t.dataset.q);
     if (q <= 0){ var gone = M.removeLine(l.key), x = SC.byId[gone.id]; SC.toast(L("Махнахме ","Removed ")+x.n, function(){ M.restoreLine(gone); }); } else M.setQty(l.key, q); return; }
   if (t.hasAttribute("data-pconf")){ if (!M.confirm()) SC.toast("Няма поръчка, която чака"); return; }
-  if (t.hasAttribute("data-pnext")){ S.skew = (S.skew||0) + 25; M.save("skew"); return; }
-  if (t.hasAttribute("data-psim")){ S.sim.btn = 0; M.simOther("btn", "shopska-salata", "g2", 50); return; }
+  if (t.hasAttribute("data-pnext")){ M.sync(); S.skew = (S.skew||0) + 25; M.save("skew"); return; }
+  if (t.hasAttribute("data-psim")){ M.sync(); S.sim.btn = 0; M.simOther("btn", "shopska-salata", "g2", 50); return; }
 });
 document.addEventListener("click", function(e){ var t = e.target.closest("button"); if (!t) return;
   if (t.hasAttribute("data-send")){ var r = M.send(); if (r){ SC.toast(r.conf ? L("Изпратено в кухнята ✓","Sent to the kitchen ✓") : L("Изпратено. Чака сервитьора.","Sent. Waiting for the waiter.")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }

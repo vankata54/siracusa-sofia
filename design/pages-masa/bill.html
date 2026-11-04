@@ -113,9 +113,9 @@ function all(){ return sent().map(function(z){ return z.l; }); }
 /* who pays which dish is shared by the whole table: S.picks = {lineKey: phone} */
 function picks(){ if (!S.picks) S.picks = {}; return S.picks; }
 function myPicks(){ var P = picks(); return all().filter(function(l){ return P[l.key] === M.me; }).map(function(l){ return l.key; }); }
-function autoPick(){ var P = picks(), ch = false; all().forEach(function(l){ if (l.who === M.me && !P[l.key]){ P[l.key] = M.me; ch = true; } });
+function autoPick(){ M.sync(); var P = picks(), ch = false; all().forEach(function(l){ if (l.who === M.me && !P[l.key]){ P[l.key] = M.me; ch = true; } });
   if (ch) M.save("picks");
-  if (!S.sim.picks){ S.sim.picks = 1; setTimeout(function(){ var live = M.livePhones(), left = all().filter(function(l){ return l.who !== M.me && !P[l.key] && live.indexOf(l.who) < 0; }), n = 0;
+  if (!S.sim.picks){ S.sim.picks = 1; setTimeout(function(){ M.sync(); P = picks(); var live = M.livePhones(), left = all().filter(function(l){ return l.who !== M.me && !P[l.key] && live.indexOf(l.who) < 0; }), n = 0;
     left.slice(0, -1).forEach(function(l){ P[l.key] = l.who; n++; }); /* one dish stays unassigned on purpose, to show the warning */
     if (n){ M.save("picks"); SC.toast(L("Другите телефони отбелязаха своите ястия","The other phones ticked their dishes")); } }, 1500); } }
 function lineSum(l){ var x = SC.byId[l.id]; return x ? x.p*l.q : 0; }
@@ -201,15 +201,15 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.dataset.split){ C.split = t.dataset.split; if (C.split === "dishes") autoPick(); render(); return; }
   if (t.hasAttribute("data-req")){ if (t.getAttribute("aria-disabled")){ SC.toast(L("Отметнете поне едно ястие","Tick at least one dish")); return; }
     if (M.requestBill({pay:C.pay, split:C.split, mine:myPicks()})){ SC.toast(L("Сервитьорът идва със сметката","The waiter is bringing the bill")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }
-  if (t.dataset.rate){ S.rating = {ans:t.dataset.rate, fb:"", sent:false}; M.save("rate"); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
-  if (t.hasAttribute("data-rate-reset")){ S.rating = null; M.save("rate"); return; }
-  if (t.hasAttribute("data-fb")){ var v = (main.querySelector("#fb")||{}).value || ""; if (v.trim().length < 3){ S.rating.fb = v; S.rating.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.save("rate"); main.querySelector("#fb").focus(); return; }
+  if (t.dataset.rate){ M.sync(); S.rating = {ans:t.dataset.rate, fb:"", sent:false}; M.save("rate"); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-rate-reset")){ M.sync(); S.rating = null; M.save("rate"); return; }
+  if (t.hasAttribute("data-fb")){ M.sync(); var v = (main.querySelector("#fb")||{}).value || ""; if (v.trim().length < 3){ S.rating.fb = v; S.rating.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.save("rate"); main.querySelector("#fb").focus(); return; }
     S.rating.fb = v; S.rating.err = ""; S.rating.sent = true; M.save("rate"); SC.toast(L("Изпратено на управителя","Sent to the manager")); return; }
   if (t.hasAttribute("data-copy")){ try{ navigator.clipboard.writeText(code()).catch(function(){}); }catch(x){} SC.flash(t, ic("check",18)+L("Копирано","Copied")); return; }
   if (t.hasAttribute("data-google")){ e.preventDefault(); SC.toast(L("Тук ще се отвори профилът в Google","Our Google profile opens here")); return; }
   if (t.hasAttribute("data-pclose")){ if (!S.bill) M.requestBill({pay:C.pay, split:C.split, mine:myPicks()}); M.close(); return; }
 });
-main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; if (e.target.checked) picks()[k] = M.me; else delete picks()[k]; M.save("picks"); });
+main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; M.sync(); if (e.target.checked) picks()[k] = M.me; else delete picks()[k]; M.save("picks"); });
 render();
 M.on(function(){ render(); });
 M.tick(function(){ var s = main.querySelector("[data-wt]"); if (s && S.bill) s.textContent = M.mmss((Date.now()-S.bill.at)/1000); });

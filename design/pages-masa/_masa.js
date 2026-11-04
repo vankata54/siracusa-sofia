@@ -38,7 +38,7 @@ function local(){ S.lang = SC.load(LKEY, "bg"); S.offline = !!SC.load(OKEY, fals
 M.setLang = function(l){ SC.store(LKEY, l); S.lang = l; };
 M.setOffline = function(v){ SC.store(OKEY, !!v); S.offline = !!v; emit("offline"); };
 
-var S = SC.load(KEY, null); if (!S || S.v !== 2) S = fresh();
+var S = SC.load(KEY, null); if (!S || S.v !== 2){ S = fresh(); SC.store(KEY, S); } /* stored at once, so every phone starts from the same session */
 local();
 M.st = S;
 function replace(n){ Object.keys(S).forEach(function(k){ delete S[k]; }); Object.assign(S, n); local(); }
@@ -48,6 +48,9 @@ function emit(why){ subs.forEach(function(f){ try{ f(why); }catch(e){ console.er
 /* only the table state is shared; lang and offline stay on this phone */
 function persist(){ var c = Object.assign({}, S); delete c.lang; delete c.offline; SC.store(KEY, c); }
 M.save = function(why){ persist(); emit(why || "save"); };
+/* read the latest stored session before every change: a phone must never write back an old copy (that was the "session went back to the start" bug) */
+function sync(){ var n = SC.load(KEY, null); if (n && n.v === 2) replace(n); }
+M.sync = sync;
 M.reset = function(){ replace(fresh()); persist(); };
 /* another tab = another phone at the same table */
 window.addEventListener("storage", function(e){ if (e.key === KEY){ var n = SC.load(KEY, null); if (n && n.v === 2){ replace(n); emit("remote"); } } });
@@ -83,18 +86,18 @@ M.canOrder = function(){ return S.mode === "open" && !S.offline && M.kitchen(); 
 /* ---------- shared cart (draft = not sent yet) ---------- */
 M.sum = function(list){ return list.reduce(function(a,l){ var x = SC.byId[l.id]; return a + (x ? x.p*l.q : 0); }, 0); };
 M.qty = function(list){ return list.reduce(function(a,l){ return a + l.q; }, 0); };
-M.add = function(id, who){ who = who || M.me; var l = S.draft.filter(function(z){ return z.id === id && z.who === who; })[0];
+M.add = function(id, who){ sync(); who = who || M.me; var l = S.draft.filter(function(z){ return z.id === id && z.who === who; })[0];
   if (l) l.q++; else S.draft.push(ln(id, who, 1, 0)); M.save("add"); return l || S.draft[S.draft.length-1]; };
-M.setQty = function(key, q){ S.draft = S.draft.map(function(l){ if (l.key === key) l.q = q; return l; }).filter(function(l){ return l.q > 0; }); M.save("qty"); };
-M.removeLine = function(key){ var gone = S.draft.filter(function(l){ return l.key === key; })[0]; S.draft = S.draft.filter(function(l){ return l.key !== key; }); M.save("remove"); return gone; };
-M.restoreLine = function(l){ S.draft.push(l); M.save("restore"); };
+M.setQty = function(key, q){ sync(); S.draft = S.draft.map(function(l){ if (l.key === key) l.q = q; return l; }).filter(function(l){ return l.q > 0; }); M.save("qty"); };
+M.removeLine = function(key){ sync(); var gone = S.draft.filter(function(l){ return l.key === key; })[0]; S.draft = S.draft.filter(function(l){ return l.key !== key; }); M.save("remove"); return gone; };
+M.restoreLine = function(l){ sync(); S.draft.push(l); M.save("restore"); };
 M.inDraft = function(id){ return S.draft.filter(function(l){ return l.id === id; }); };
 
 /* ---------- sent orders: the first one waits for the waiter, the next ones go straight to the kitchen ---------- */
-M.send = function(){ if (!S.draft.length || !M.canOrder()) return null;
+M.send = function(){ sync(); if (!S.draft.length || !M.canOrder()) return null;
   var first = !S.rounds.length || M.waiting(), r = {no:S.rounds.length+1, at:Date.now(), conf: first ? null : Date.now(), via: first, lines:S.draft};
   S.rounds.push(r); S.draft = []; M.save("send"); return r; };
-M.confirm = function(){ var n = 0; S.rounds.forEach(function(r){ if (!r.conf){ r.conf = Date.now(); n++; } }); if (n) M.save("confirm"); return n > 0; };
+M.confirm = function(){ sync(); var n = 0; S.rounds.forEach(function(r){ if (!r.conf){ r.conf = Date.now(); n++; } }); if (n) M.save("confirm"); return n > 0; };
 M.waiting = function(){ return S.rounds.some(function(r){ return !r.conf; }); };
 /* prototype: statuses move by time since the waiter confirmed; "Следващ етап" adds a skew */
 M.status = function(r, i){ if (!r.conf) return "wait"; var e = (Date.now() - r.conf)/1000 + (S.skew||0), c = 8 + i*8, s = 40 + i*12; return e < c ? "ok" : e < s ? "cook" : "served"; };
@@ -115,15 +118,15 @@ M.callName = function(t){ var c = M.CALLS[t]; return L(c.bg, c.en); };
 M.callState = function(t){ var c = S.calls[t]; if (!c) return "free"; if (!c.done) return "active"; if (c.done === "cancel") return "free";
   return (Date.now() - (c.doneAt || c.at)) < CFG.cooldown*60000 ? "cool" : "free"; };
 M.callLeft = function(t){ if (M.callState(t) !== "cool") return 0; var c = S.calls[t]; return Math.max(0, Math.ceil((CFG.cooldown*60000 - (Date.now() - (c.doneAt || c.at)))/1000)); };
-M.call = function(t, text){ if (M.callState(t) !== "free" || S.offline || S.mode !== "open") return false; S.calls[t] = {at:Date.now(), text:text||"", done:false}; M.save("call"); return true; };
-M.cancelCall = function(t){ var c = S.calls[t]; if (c && !c.done){ c.done = "cancel"; c.doneAt = Date.now(); M.save("cancel"); return true; } return false; };
-M.undoCancel = function(t){ var c = S.calls[t]; if (c && c.done === "cancel"){ c.done = false; delete c.doneAt; M.save("undo"); } };
-M.serveCall = function(t){ var c = S.calls[t]; if (c && !c.done){ c.done = "served"; c.doneAt = Date.now(); M.save("served"); } };
+M.call = function(t, text){ sync(); if (M.callState(t) !== "free" || S.offline || S.mode !== "open") return false; S.calls[t] = {at:Date.now(), text:text||"", done:false}; M.save("call"); return true; };
+M.cancelCall = function(t){ sync(); var c = S.calls[t]; if (c && !c.done){ c.done = "cancel"; c.doneAt = Date.now(); M.save("cancel"); return true; } return false; };
+M.undoCancel = function(t){ sync(); var c = S.calls[t]; if (c && c.done === "cancel"){ c.done = false; delete c.doneAt; M.save("undo"); } };
+M.serveCall = function(t){ sync(); var c = S.calls[t]; if (c && !c.done){ c.done = "served"; c.doneAt = Date.now(); M.save("served"); } };
 M.active = function(){ return Object.keys(S.calls).filter(function(k){ return !S.calls[k].done; }).sort(function(a,b){ return S.calls[a].at - S.calls[b].at; }); };
 
 /* ---------- bill & session ---------- */
-M.requestBill = function(o){ if (S.offline || S.mode !== "open") return false; S.bill = Object.assign({at:Date.now()}, o); S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
-M.close = function(){ S.mode = "closed"; M.save("close"); };
+M.requestBill = function(o){ sync(); if (S.offline || S.mode !== "open") return false; S.bill = Object.assign({at:Date.now()}, o); S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
+M.close = function(){ sync(); S.mode = "closed"; M.save("close"); };
 
 /* ---------- prototype scenarios via the address: page.html#demo=cooking ---------- */
 function round1(confAgo){ var now = Date.now(), ls = seedDraft().concat([ln("pitsa-s-burata-i-proshuto-krudo","me",1,60), ln("svezha-salata-s-koze-sirene-i-krushi","me",1,55)]);
@@ -238,7 +241,7 @@ M.fly = function(fromEl, id){ if (SC.reduce || !fromEl) return; var dev = SC.dev
   var x0 = A.left-b.left+A.width/2-20, y0 = A.top-b.top+A.height/2-20, dx = B.left-b.left+B.width/2-20-x0, dy = B.top-b.top+B.height/2-20-y0; el.style.left = x0+"px"; el.style.top = y0+"px"; dev.appendChild(el);
   el.animate([{transform:"translate(0,0) scale(1) rotate(0)"},{transform:"translate("+dx*.5+"px,"+(dy*.5-40)+"px) scale(.9) rotate(120deg)",offset:.5},{transform:"translate("+dx+"px,"+dy+"px) scale(.35) rotate(240deg)",opacity:.7}],{duration:400,easing:"cubic-bezier(.32,.72,0,1)"}).onfinish = function(){ el.remove(); }; };
 /* another phone adds a dish (prototype simulation, once per session and tag) */
-M.simOther = function(tag, id, who, ms){ setTimeout(function(){ if (S.sim[tag] || S.mode !== "open" || !M.kitchen()) return; if (who === M.me) who = M.others()[0]; S.sim[tag] = 1; var l = M.add(id, who);
+M.simOther = function(tag, id, who, ms){ setTimeout(function(){ sync(); if (S.sim[tag] || S.mode !== "open" || !M.kitchen()) return; if (who === M.me) who = M.others()[0]; S.sim[tag] = 1; var l = M.add(id, who);
   emit("other:"+l.key); SC.toast(M.name(who)+L(" добави "," added ")+SC.byId[id].n); }, ms); };
 
 /* ---------- mount ---------- */
@@ -268,7 +271,7 @@ document.addEventListener("click", function(e){ var t = e.target.closest("button
   if (t.dataset.mtheme){ SC.prefs.theme = t.dataset.mtheme; SC.store("sc-prefs", SC.prefs); location.reload(); return; }
   if (t.hasAttribute("data-mretry")){ t.setAttribute("aria-busy","true"); setTimeout(function(){ M.setOffline(false); SC.toast(L("Връзката се върна","You are back online")); }, 700); return; }
   if (t.hasAttribute("data-mreset")){ M.reset(); location.reload(); return; }
-  if (t.dataset.mstate){ var v = t.dataset.mstate;
+  if (t.dataset.mstate){ var v = t.dataset.mstate; sync();
     if (SC.prefs.time === "22:45" && v !== "kitchen") SC.prefs.time = "now";
     S.mode = v === "invalid" || v === "closed" ? v : "open"; SC.store(OKEY, v === "offline");
     if (v === "kitchen") SC.prefs.time = "22:45";

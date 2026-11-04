@@ -6,10 +6,10 @@ const errs=[];const A=await ctx.newPage(), B=await ctx.newPage();[A,B].forEach((
 const log=(...a)=>console.log(...a);
 await A.goto(base+'welcome.html');await A.waitForTimeout(600);
 await B.goto(base+'cart.html');await B.waitForTimeout(800);
-log('A proto:', (await A.textContent('.ptxt')).match(/Телефон \d\./)[0], ' B proto:', (await B.textContent('.ptxt')).match(/Телефон \d\./)[0]);
+log('A proto:', (await A.textContent('.ptxt')).match(/страница: Телефон \d/)[0], ' B proto:', (await B.textContent('.ptxt')).match(/страница: Телефон \d/)[0]);
 log('B groups:', await B.$$eval('.grp-h b', e=>e.map(x=>x.textContent)));
 // language per phone
-await A.click('[data-mlang="en"]');await A.waitForTimeout(800);await B.reload();await B.waitForTimeout(800);
+await A.click('.wl-lang [data-mlang="en"]');await A.waitForTimeout(1500);await B.reload();await B.waitForTimeout(800);
 log('A lang', await A.getAttribute('html','lang'), 'B lang', await B.getAttribute('html','lang'));
 // A adds from menu, B sees
 await A.goto(base+'menu.html');await A.waitForTimeout(600);await A.click('[data-madd="pitsa-s-burata-i-proshuto-krudo"]');await B.waitForTimeout(600);

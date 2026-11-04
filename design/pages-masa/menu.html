@@ -158,7 +158,7 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.hasAttribute("data-al")){ alSheet(); return; }
   if (t.hasAttribute("data-clr")){ st = {q:"", f:[], a:[]}; elQ.value = ""; $("[data-qclr]").hidden = true; render(); return; }
   if (t.hasAttribute("data-qclr")){ elQ.value = ""; st.q = ""; t.hidden = true; render(); elQ.focus(); return; }
-  if (t.hasAttribute("data-simadd")){ S.sim.btn = 0; M.simOther("btn", "salata-sirakuza", "g2", 50); return; }
+  if (t.hasAttribute("data-simadd")){ M.sync(); S.sim.btn = 0; M.simOther("btn", "salata-sirakuza", "g2", 50); return; }
 });
 var qt; elQ.addEventListener("input", function(){ $("[data-qclr]").hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(function(){ st.q = elQ.value; render(); }, 120); });
 
