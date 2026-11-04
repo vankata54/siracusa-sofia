@@ -315,3 +315,4 @@ a.chip{text-decoration:none; color:var(--ink)}
 .otherf{display:flex; gap:8px; margin-top:10px}
 .otherf .wrapi{flex:1}
 .lockh{grid-column:2/-1; font-size:14px; font-weight:700; color:var(--muted); display:flex; align-items:center; gap:6px}
+.st-toast{width:max-content}

@@ -133,7 +133,7 @@ export function gramRange(list: Dish[]): string {
   const a = Math.min(...g), b = Math.max(...g);
   return (a === b ? a : a + " - " + b) + " " + unit + ".";
 }
-const priceText = (pr: { min: number; max: number }): string => (pr.min === pr.max ? fmt(pr.min) : "от " + fmt(pr.min).replace(" €", "") + " до " + fmt(pr.max));
+const priceText = (pr: { min: number; max: number }): string => (pr.min === pr.max ? fmt(pr.min) : "от " + fmt(pr.min) + " до " + fmt(pr.max));
 
 /* ---------- hero ---------- */
 export function crumbsHTML(c: Category | null): string {
@@ -162,7 +162,7 @@ export function factsHTML(c: Category): string {
 }
 export function introHTML(c: Category): string {
   const it = inCat(c.id), pr = priceRange(it), gr = gramRange(it);
-  let t = "В менюто има <b>" + count(c.id, it.length) + "</b>" + (gr ? ", по " + gr + " " : ", ") + "с цени от " + fmt(pr.min).replace(" €", "") + " до " + fmt(pr.max) + ". ";
+  let t = "В менюто има <b>" + count(c.id, it.length) + "</b>" + (gr ? ", по " + gr + " " : ", ") + "с цени от " + fmt(pr.min) + " до " + fmt(pr.max) + ". ";
   if (FACT[c.id]) t += FACT[c.id] + " ";
   t += "Доставяме безплатно в " + listJoin(FREE) + " всеки ден до 21:00, а поръчки за вземане от място приемаме до 22:30.";
   const gap = '<span class="seo-gap"><span class="missing">[ЛИПСВА: SEO текст за „' + esc(c.n) + "“, 150&nbsp;-&nbsp;300 думи, над ястията]</span><small>" +
@@ -295,7 +295,7 @@ export function catLd(c: Category, site: URL | undefined): object[] {
   const qs = faqData(c).filter((z) => z[1].indexOf("[ЛИПСВА") < 0);
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage",
-    mainEntity: qs.map((z) => ({ "@type": "Question", name: z[0], acceptedAnswer: { "@type": "Answer", text: z[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/\s+([.,:])/g, "$1").trim() } })),
+    mainEntity: qs.map((z) => ({ "@type": "Question", name: z[0], acceptedAnswer: { "@type": "Answer", text: z[1].replace(/<p><a class="link"[\s\S]*?<\/p>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/\s+([.,:])/g, "$1").trim() } })),
   };
   return [menu, crumbs, faq];
 }
