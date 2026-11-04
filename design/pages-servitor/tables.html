@@ -58,7 +58,7 @@ function render(){
     '<a href="ready.html" class="'+(ready.length?"emb":"")+'"><b>'+ready.length+'</b><span>маси с готово</span></a>'+
     '<a href="#zala"><b>'+SC.TABLES.filter(function(t){ return ST.tStatus(t.n).k==="free"; }).length+'</b><span>свободни маси</span></a></div></section>';
   if (mineFirst.length){
-    html += '<section class="st-sec"><div class="st-h"><h2>Чакат сега</h2><span class="muted">най-старото отгоре</span></div><div class="strips">'+mineFirst.slice(0,3).map(strip).join("")+'</div>'+
+    html += '<section class="st-sec"><div class="st-h"><h2>Чакат сега</h2><span class="muted">първо вашите маси</span></div><div class="strips">'+mineFirst.slice(0,3).map(strip).join("")+'</div>'+
       (mineFirst.length>3?'<div class="more"><a class="link" href="calls.html">Още '+(mineFirst.length-3)+' повиквания'+ic("caret-right",18)+'</a></div>':'')+'</section>';
   }
   html += '<section class="st-sec"><div class="st-h"><h2>Моите маси</h2><span class="muted">'+ST.MINE.length+' маси</span></div><div class="tgrid">'+ST.MINE.map(tile).join("")+'</div></section>';

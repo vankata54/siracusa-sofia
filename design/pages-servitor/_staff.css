@@ -108,14 +108,14 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .callc .meta{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:14px; font-weight:700; color:var(--muted)}
 .callc .timer{display:grid; justify-items:end; line-height:1}
 .callc .timer b{font-size:30px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
-.callc .timer span{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:4px}
+.callc .timer > span{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:4px}
 .callc .acts{grid-column:1/-1; display:flex; gap:8px; margin-top:6px}
 .callc .acts .pill{flex:1; min-height:56px; font-size:17px}
 .callc .acts .pill-line{flex:0 0 auto}
 .callc.warn{box-shadow:inset 0 0 0 2.5px var(--warn), var(--shadow)}
 .callc.warn .timer b{color:var(--warn)}
 .callc.late{background:var(--red); color:var(--on-red); box-shadow:var(--shadow)}
-.callc.late .meta,.callc.late .timer span{color:var(--on-red); opacity:.85}
+.callc.late .meta,.callc.late .timer > span{color:var(--on-red); opacity:.85}
 .callc.late .pill-red{background:var(--on-red); color:var(--red)}
 .callc.late .pill-line{color:var(--on-red); box-shadow:inset 0 0 0 1.5px var(--on-red)}
 .callc.mine-taken{box-shadow:inset 0 0 0 2.5px var(--ok), var(--shadow)}
@@ -263,4 +263,9 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
   .st-me{padding:0 12px 0 10px}
   .cstrip .tx{font-size:16px}
   .cstrip .pill{padding:0 14px}
+}
+.st-bar .pill{min-width:0}
+@media (max-width:370px){
+  .st-bar .pill{padding:0 12px; font-size:16px; gap:6px}
+  .st-bar .pill .price{font-size:16px}
 }

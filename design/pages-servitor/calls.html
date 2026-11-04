@@ -59,7 +59,7 @@ function render(){
   } else {
     var oldest = calls.filter(function(c){ return !c.taken; })[0];
     if (calls.length + qr.length >= 5) html += '<section class="st-sec"><div class="lead2">'+ic("warning",24)+'<span><b>'+(calls.length+qr.length)+'</b> чакат наведнъж'+(oldest?' · най-старото: Маса '+oldest.t+', '+ST.mmss(ST.secs(oldest.since)):'')+'. Поемете най-старото, колегите виждат кое сте взели.</span></div></section>';
-    html += '<section class="st-sec"><div class="list">'+qr.map(qrCard).join("")+calls.map(card).join("")+'</div></section>';
+    html += '<section class="st-sec"><div class="list">'+qr.map(function(o){ return {s:o.at, h:qrCard(o), t:0}; }).concat(calls.map(function(c){ return {s:c.since, h:card(c), t:c.taken?1:0}; })).sort(function(a,b){ return (a.t-b.t) || (a.s-b.s); }).map(function(r){ return r.h; }).join("")+'</div></section>';
   }
   html += '<section class="st-sec"><div class="notice">'+ic("info",22)+'<span>Цветът се сменя след 2 мин (жълто) и след 5 мин (червено). Ако никой не поеме повикването, след 5 мин то отива и при управителя. Тези минути са условни: <span class="missing">[ЛИПСВА: настройва се в админ панела]</span>.</span></div></section>';
   main.innerHTML = html; ST.tick(); escTick();

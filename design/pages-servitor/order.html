@@ -45,7 +45,7 @@ if (!N){
   main.innerHTML = '<div class="pick"><section class="st-sec"><div class="st-h"><h2>Моите маси</h2></div><div class="tgrid">'+ST.MINE.map(tileFor).join("")+'</div></section>'+
     ["salon","garden"].map(function(z){ return '<section class="st-sec"><div class="st-h"><h2>'+ST.ZONE[z]+'</h2></div><div class="tgrid">'+SC.TABLES.filter(function(t){ return t.zone===z && ST.MINE.indexOf(t.n)<0; }).map(function(t){ return tileFor(t.n); }).join("")+'</div></section>'; }).join("")+'</div>';
 } else {
-  main = ST.mount({page:"order", title:"Поръчка · Маса "+N, sub:ST.ZONE[ST.tableByN[N].zone], back:{href:"table.html#"+N, label:"Маса"}, nav:null, bar:true});
+  main = ST.mount({page:"order", title:"Маса "+N, sub:"Нова поръчка · "+ST.ZONE[ST.tableByN[N].zone], back:{href:"table.html#"+N, label:"Маса"}, nav:null, bar:true});
   initOrder();
 }
 

@@ -56,7 +56,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_staff.js"></script>
 <script>
-var main = ST.mount({page:"watch", title:"Смарт часовник", sub:"Само известия · кръгъл и правоъгълен", back:{href:"index.html", label:"Екрани"}, nav:null});
+var main = ST.mount({page:"watch", title:"Смарт часовник", sub:"Само известия", back:{href:"index.html", label:"Екрани"}, nav:null});
 var ic = SC.ic;
 var now = Date.now(), c12 = now - 80000, r4 = now - 45000, late9 = now - 412000;
 function pair(id, round, rect){ return '<div class="pair">'+
@@ -72,7 +72,7 @@ html += '<section class="wsec"><h2>2. Поето от вас</h2><p>Таймер
   pair("ok", '<div class="face ok"><div class="why">'+ic("check-circle",20)+'Поехте</div><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div><button class="btn" type="button">'+ic("check",20)+'Обслужено</button></div>',
     '<div class="face ok"><div class="wtop">'+ic("check-circle",18)+'Поехте</div><div style="display:grid;gap:6px"><div class="t">Маса 12</div><div class="muted">Сметка · '+ST.timer(c12)+'</div></div><button class="btn" type="button">'+ic("check",20)+'Обслужено</button></div>')+'</section>';
 html += '<section class="wsec"><h2>3. Готова поръчка</h2><p>Друга вибрация (3 кратки), цвят жар като на телефона.</p>'+
-  pair("ready", '<div class="face ready" ><div class="t">Маса 4</div><div class="why">'+ic("bell-ringing",20)+'Готово · 2 ястия</div><div class="tm">'+ST.timer(r4)+'</div><button class="btn" type="button">Поемам</button></div>',
+  pair("ready", '<div class="face ready" ><div class="t">Маса 4</div><div class="why">'+ic("bell-ringing",20)+'Готово</div><div class="muted">2 ястия</div><div class="tm">'+ST.timer(r4)+'</div><button class="btn" type="button">Поемам</button></div>',
     '<div class="face ready"><div class="wtop">'+ic("chef-hat",18)+'От кухнята</div><div style="display:grid;gap:6px;justify-items:center"><div class="t">Маса 4</div><div class="why">'+ic("bell-ringing",20)+'Готово</div><div class="muted">2× Пица Маргарита</div></div><button class="btn" type="button">Поемам</button></div>')+'</section>';
 html += '<section class="wsec"><h2>4. Закъснява · няколко наведнъж</h2><p>След 5 мин (условно) рамката става червена и повикването отива и при управителя. С плъзгане към следващото; точките казват колко чакат.</p>'+
   pair("late", '<div class="face call late"><div class="pager" aria-label="1 от 4"><span class="on"></span><span></span><span></span><span></span></div><div class="t">Маса 9</div><div class="why">'+ic("chat-circle-dots",20)+'Друго</div><div class="tm">'+ST.timer(late9)+'</div>'+take+'</div>',

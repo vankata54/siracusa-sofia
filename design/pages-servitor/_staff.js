@@ -124,7 +124,7 @@ ST.closeTable = function(n){ ST.db.orders = ST.db.orders.filter(function(o){ ret
 ST.stt = function(k, word, icon, extra){ return '<span class="stt '+k+'">'+ic(icon,18)+'<span>'+esc(word)+'</span>'+(extra||"")+'</span>'; };
 ST.lineStt = function(st){ return ST.stt(st, ST.LINE[st][0], ST.LINE[st][1]); };
 ST.timer = function(since, cls){ return '<span class="tnum '+(cls||"")+'" data-since="'+since+'">'+ST.mmss(ST.secs(since))+'</span>'; };
-ST.haptic = function(p){ try{ navigator.vibrate && navigator.vibrate(p||12); }catch(e){} };
+ST.haptic = function(p){ try{ var ua = navigator.userActivation; if (ua && !ua.hasBeenActive) return; navigator.vibrate && navigator.vibrate(p||12); }catch(e){} };
 
 /* ticking timers + warn/late classes on [data-lvl] ancestors */
 function tick(){ document.querySelectorAll("[data-since]").forEach(function(el){ var s = ST.secs(+el.dataset.since); el.textContent = ST.mmss(s);
