@@ -76,6 +76,7 @@ test("cart: closed kitchen offers an order for tomorrow", async ({ page }) => {
   await expect(cta(page)).toContainText("Поръчай за утре");
   await cta(page).click();
   await expect(page.locator(".note.info").first()).toContainText("Поръчвате за утре");
+  await page.locator('.seg.ff [data-v="pickup"]').click();
   await expect(page.locator(".slot").first()).toHaveAttribute("data-v", "10:30");
 });
 
