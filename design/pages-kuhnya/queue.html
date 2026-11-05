@@ -25,7 +25,10 @@ var offline = K.st === "offline", newO = null, laterOpen = false, lastTouch = Da
 var seen = {}; orders.forEach(function(o){ if (o.sched) seen[o.num] = 1; });
 document.addEventListener("pointerdown", function(e){ lastTouch = Date.now();
   if (laterOpen && !e.target.closest(".klater")){ laterOpen = false; strip(); } }, {capture:true});
-K.onAudio = function(){ strip(); if (!orders.length) render(); };
+K.onAudio = function(){ /* сменя само бутона „Звук“: лентата не се прерисува, затова първото щракване (напр. „Виж“) стига до целта си */
+  var sb = K.strip.querySelector("[data-unlock]");
+  if (sb){ sb.removeAttribute("data-unlock"); sb.setAttribute("aria-pressed", "true"); sb.innerHTML = ic("bell-ringing",22) + 'Звук вкл.'; }
+  if (!orders.length) setTimeout(render, 0); };
 
 function counts(){
   var late = 0, soon = 0; orders.forEach(function(o){ var s = K.stateOf(o); if (s === "late") late++; else if (s === "soon") soon++; });
@@ -115,7 +118,7 @@ function edges(){
       if (r.right > qr.right + 4) hidden++;
       if (r.left < qr.left + 8){ older++; if (c.classList.contains("late")) late++; } });
     b.hidden = !hidden; b.innerHTML = ic("arrow-right",26) + '<b>+' + hidden + '</b><small>още</small>'; b.setAttribute("aria-label", "Още " + hidden + (hidden === 1 ? " поръчка" : " поръчки") + " вдясно");
-    a.hidden = !older; a.innerHTML = ic("arrow-left",26) + '<b>' + older + '</b><small>по-стари</small>' + (late ? '<small class="late">' + late + ' закъсн.</small>' : '');
+    a.hidden = !older; a.innerHTML = ic("arrow-left",26) + '<b>' + older + '</b><small>по-стари</small>' + (late ? '<small class="late">' + late + '<br>закъснява</small>' : '');
     a.setAttribute("aria-label", older + " по-стари поръчки вляво" + (late ? ", " + late + " закъсняват" : "") + ". Към началото"); }
   q.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd); upd();
   b.onclick = function(){ q.scrollBy({left:q.clientWidth * .8, behavior:SC.reduce ? "auto" : "smooth"}); };

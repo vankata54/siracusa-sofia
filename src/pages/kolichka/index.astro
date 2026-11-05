@@ -1,0 +1,321 @@
+---
+/* Cart and checkout (/kolichka/): port of design/pages/cart.html. Not indexed (noindex).
+   Everything on this page depends on the visitor's cart and the hour, so the server draws the loading skeleton
+   ("Проверяваме цените и наличността...") and ./_cart.ts draws the 3 steps in the browser. */
+import Base from "../../layouts/Base.astro";
+import { url } from "../../lib/index.ts";
+
+const sk = (w: string, h: number) => `<span class="skel" style="display:block;width:${w};height:${h}px"></span>`;
+const line = `<div class="sk-line">${sk("72px", 72)}<div>${sk("70%", 18)}${sk("40%", 14)}${sk("55%", 36)}</div></div>`;
+const skeleton =
+  `<div class="ck" aria-busy="true"><div class="ck-grid"><div class="ck-main">` +
+  `<nav class="stepper steps" aria-label="Стъпки на поръчката"><div class="t"><b>Стъпка 1 от 3</b><span>Следва: Къде и кога</span></div>` +
+  `<div class="bar" style="--n:3"><span class="on"></span><span></span><span></span></div>` +
+  `<ol><li class="cur" aria-current="step"><span class="sl">Количка</span></li><li><span class="sl">Къде и кога</span></li><li><span class="sl">Данни</span></li></ol></nav>` +
+  `<h1 class="h1 ck-title" tabindex="-1">Количка</h1><p class="lead ck-lead">Проверяваме цените и наличността...</p>` +
+  `<div class="shell" style="margin-top:22px"><div class="core" style="padding:2px 18px">${line}${line}${line}</div></div></div>` +
+  `<div class="ck-side"><div class="shell"><div class="core pad" style="display:grid;gap:14px">${sk("40%", 22)}${sk("100%", 16)}${sk("100%", 16)}${sk("60%", 28)}</div></div></div></div></div>`;
+---
+<Base page="cart" nav={null} back={{ href: url.menu(), label: "Меню" }} title="Количка" docTitle="Количка и поръчка"
+  description="Количката и поръчката в Siracusa Bar & Grill: доставка до 21:00 или вземане от място до 22:30. Плащане при получаване."
+  footer={false} ai={false} bottomNav={false} cart={false} actionBar noindex>
+  <Fragment set:html={skeleton} />
+  <noscript><p class="ck lead">За поръчка през сайта е нужен JavaScript. Можете да поръчате и по телефона: <a href="tel:+359894365577">0894 36 55 77</a>.</p></noscript>
+  <div class="abar nonav ck-bar" data-ckbar hidden slot="ov"></div>
+</Base>
+
+<style is:global>
+/* ---------- page frame ---------- */
+.ck{padding:20px 16px 0}
+.ck-grid{display:grid; gap:36px}
+.ck-main{min-width:0}
+.ck-side{min-width:0}
+.blk + .blk{margin-top:36px}
+.blk-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 12px}
+.blk-h p{margin:0}
+.ck-title{outline:none}
+.ck-lead{margin-top:6px}
+@container app (min-width:900px){
+  .ck{padding:40px max(40px, calc((100% - 1200px)/2)) 0}
+  .ck-grid{grid-template-columns:minmax(0,1fr) 384px; gap:56px; align-items:start}
+  .ck-side{position:sticky; top:164px}
+  .blk + .blk{margin-top:44px}
+}
+
+/* enter motion on step change (transform + opacity only) */
+.enter{animation:ckIn var(--t-slow) var(--ease) both}
+.enter.back{animation-name:ckBack}
+@keyframes ckIn{from{transform:translateX(18px); opacity:0}to{transform:none; opacity:1}}
+@keyframes ckBack{from{transform:translateX(-18px); opacity:0}to{transform:none; opacity:1}}
+
+/* ---------- stepper (uses .stepper from the DS + labels) ---------- */
+.steps{margin-bottom:22px}
+.steps .bar span{transform-origin:left}
+.steps .bar span.grow{animation:barGrow 520ms var(--ease) both}
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:none}}
+.steps ol{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+.steps li{min-width:0}
+.steps .sl{display:flex; align-items:center; gap:5px; min-height:48px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2; padding:0; border:0; background:transparent; text-align:left; width:100%}
+.steps li.cur .sl{color:var(--ink); font-weight:800}
+.steps button.sl{cursor:pointer; color:var(--ink); text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:4px; min-height:48px}
+.steps button.sl .ic{color:var(--ok)}
+
+/* ---------- notices ---------- */
+.note{display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 12px; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); margin-bottom:16px}
+.note > .ic{margin-top:1px}
+.note.warn > .ic{color:var(--warn)}
+.note.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+.note.bad > .ic{color:var(--danger)}
+.note.ok > .ic{color:var(--ok)}
+.note.promo{background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.note.promo > .ic{color:var(--ink)}
+.note.info > .ic{color:var(--muted)}
+.note b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em; text-wrap:balance}
+.note p{margin:2px 0 0; color:var(--muted)}
+.note .acts{grid-column:2; display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.note .acts .pill{min-height:48px}
+
+/* ---------- cart lines ---------- */
+.lines{list-style:none; margin:0; padding:2px 18px}
+.ln{display:grid; grid-template-columns:72px minmax(0,1fr); grid-template-areas:"pic info" "act act"; column-gap:14px; row-gap:12px; padding:16px 0}
+.ln + .ln{border-top:1px solid var(--line)}
+.ln-pic{grid-area:pic; display:block; text-decoration:none}
+.ln-pic .pic{width:72px; height:72px; border-radius:18px}
+.ln-info{grid-area:info; min-width:0; align-self:center}
+.ln-name{display:block; font-weight:800; font-size:17px; line-height:1.25; letter-spacing:-.015em; text-decoration:none; color:inherit}
+.ln-sub{display:block; font-size:15px; color:var(--muted); margin-top:3px; font-variant-numeric:tabular-nums}
+.ln-tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.tag{display:inline-flex; align-items:center; gap:4px; min-height:28px; padding:0 10px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1}
+.tag.add{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.tag.lunch .ic{color:var(--muted)}
+.tag.promo{background:var(--ember); color:var(--on-ember)}
+.ln-act{grid-area:act; display:flex; align-items:center; gap:6px; min-width:0}
+.ln-rm{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--ink); font-weight:700; font-size:15px; cursor:pointer}
+.ln-rm .ic{color:var(--muted)}
+.ln-rm:active{transform:scale(.96)}
+.ln-tot{margin-left:auto; display:grid; justify-items:end; line-height:1.15}
+.ln-tot .price{font-size:18px}
+.ln-tot .old{font-size:14px}
+.ln.out .ln-pic, .ln.out .ln-name{opacity:.55}
+.ln-outmsg{grid-column:1 / -1; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:10px; padding:14px; border-radius:18px; background:var(--surface-2); font-size:15px}
+.ln-outmsg > .ic{color:var(--warn); margin-top:2px}
+.ln-outmsg b{color:var(--warn)}
+.ln-outmsg .pill{grid-column:1 / -1; min-height:48px; white-space:normal; text-align:center; line-height:1.25; padding:8px 18px}
+@container app (min-width:700px){ .ln-outmsg .pill{grid-column:2; justify-self:start} }
+@container app (min-width:700px){
+  .lines{padding:4px 24px}
+  .ln{grid-template-columns:84px minmax(0,1fr) auto; grid-template-areas:"pic info act"; padding:18px 0}
+  .ln-pic .pic{width:84px; height:84px; border-radius:20px}
+  .ln-act{gap:10px}
+  .ln-tot{min-width:96px}
+}
+
+details.allerg{margin-top:12px; border-radius:var(--r-core); background:transparent}
+details.allerg summary{list-style:none; display:flex; align-items:center; gap:8px; min-height:48px; padding:0 4px; font-weight:700; cursor:pointer}
+details.allerg summary::-webkit-details-marker{display:none}
+details.allerg summary .ic:last-child{margin-left:auto; transition:transform var(--t-base) var(--ease)}
+details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
+.allerg ul{list-style:none; margin:0; padding:4px 4px 0; display:grid; gap:8px}
+.allerg li{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 12px; font-size:15px}
+.allerg li span:last-child{color:var(--muted)}
+.allerg .note-auto{margin:12px 4px 4px}
+
+/* suggestions: reuses .drow */
+.sugg .drow small{display:block; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:2px}
+.sugg .core{padding:4px 18px}
+@container app (min-width:700px){ .sugg .core{padding:6px 24px} }
+
+/* ---------- fulfillment toggle (extends .seg) ---------- */
+.seg.ff button{min-height:84px; flex-direction:column; gap:2px; padding:10px 8px; line-height:1.2; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.seg.ff button:active{transform:scale(.98)}
+.seg.ff button .ic{color:var(--muted); margin-bottom:2px}
+.seg.ff button[aria-pressed="true"] .ic{color:var(--red)}
+.seg.ff b{font-size:17px; font-weight:800}
+.seg.ff small{font-size:14px; font-weight:600; color:var(--muted)}
+.seg.ff button[disabled]{opacity:1}
+.seg.ff button[disabled] b, .seg.ff button[disabled] .ic{opacity:.5}
+.ff-note{margin-top:12px}
+
+/* ---------- summary ---------- */
+.sum .core{padding:20px 20px 18px}
+.sum h2{margin:0 0 6px}
+.sum .kv{align-items:flex-start; padding:11px 0}
+.sum .kv > span:first-child{min-width:0}
+.sum .kv small{display:block; font-size:14px; color:var(--muted); font-weight:500; line-height:1.35; margin-top:2px}
+.sum .kv > :last-child{text-align:right; font-weight:700; white-space:nowrap}
+.sum .kv.tot{border-top:1.5px solid var(--line-strong); margin-top:4px; padding-top:14px; align-items:baseline}
+.sum .kv.tot > span:first-child{font-weight:800; font-size:18px}
+.sum .kv.tot .price{font-size:26px; letter-spacing:-.03em}
+.sum .kv.tot small{font-size:14px; font-weight:600}
+.disc-b{display:inline-flex; align-items:center; min-height:26px; padding:0 9px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800; margin-right:6px}
+.eta-row{display:flex; gap:12px; align-items:center; margin-top:12px; padding:14px 16px; border-radius:18px; background:var(--surface-2)}
+.eta-row b{display:block; font-size:17px; letter-spacing:-.01em; line-height:1.25}
+.eta-row span span{display:block; font-size:14px; color:var(--muted); font-weight:600; text-wrap:balance}
+.sum .fine{margin:12px 0 0; font-size:14px; color:var(--muted)}
+.sum details{margin:0 0 6px; border-bottom:1px solid var(--line)}
+.sum details summary{list-style:none; display:flex; align-items:center; gap:8px; min-height:48px; font-weight:700; cursor:pointer}
+.sum details summary::-webkit-details-marker{display:none}
+.sum details summary .ic:last-child{margin-left:auto}
+.sum details[open] summary .ic:last-child{transform:rotate(180deg)}
+.sum details ul{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:6px; font-size:15px}
+.sum details li{display:flex; justify-content:space-between; gap:12px}
+.sum details li span:first-child{min-width:0}
+.sum-cta{display:none}
+.sum-cta .pill-red{margin-top:16px}
+.sum-cta .link{width:100%; justify-content:center; margin-top:4px; color:var(--ink)}
+@container app (min-width:900px){ .sum-cta{display:block} }
+
+/* ---------- step 2 ---------- */
+.combo{position:relative}
+.combo .input{padding-left:48px; padding-right:52px}
+.combo > .ic{position:absolute; left:16px; top:15px; color:var(--muted); pointer-events:none}
+.combo-x{position:absolute; right:2px; top:2px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; display:grid; place-items:center; cursor:pointer; color:var(--muted)}
+.combo-list{list-style:none; margin:6px 0 0; padding:6px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.combo-list[hidden]{display:none}
+.combo-list li{display:flex; align-items:center; gap:12px; min-height:56px; padding:6px 12px; border-radius:16px; cursor:pointer; line-height:1.25}
+.combo-list li .ic{color:var(--muted)}
+.combo-list li small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.combo-list li[aria-selected="true"], .combo-list li:hover{background:var(--surface-2)}
+.combo-list .none{cursor:default; color:var(--muted); font-size:15px}
+.combo-list .none:hover{background:transparent}
+.try{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px; padding:10px 12px; border-radius:22px; box-shadow:inset 0 0 0 1.5px var(--line); }
+.try span{font-size:14px; font-weight:700; color:var(--muted); margin-right:2px}
+.try .chip{min-height:48px; font-size:15px}
+.res{margin-top:14px}
+.res .note{margin:0}
+.res .skel{height:76px; border-radius:var(--r-core)}
+.when{display:flex; align-items:center; gap:14px; padding:16px 18px}
+.when b{display:block; font-size:17px}
+.when span span{display:block; color:var(--muted); font-size:15px}
+.when > .ic{color:var(--red)}
+
+.opts{display:grid; gap:10px}
+.opt{position:relative; display:grid; grid-template-columns:auto auto minmax(0,1fr); align-items:center; gap:14px; min-height:68px; padding:10px 24px 10px 18px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.opt:active{transform:scale(.985)}
+.opt input{width:24px; height:24px; margin:0; accent-color:var(--red)}
+.opt > .ic{color:var(--muted)}
+.opt b{display:block; font-size:17px; line-height:1.25}
+.opt small{display:block; font-size:14px; color:var(--muted); font-weight:600; line-height:1.3}
+.opt:has(input:checked){box-shadow:inset 0 0 0 2.5px var(--ink); background:var(--surface)}
+.opt:has(input:checked) > .ic{color:var(--red)}
+.opt:has(input:focus-visible){outline:3px solid var(--red); outline-offset:2px}
+
+.slots-h{margin:22px 0 10px; font-weight:800; font-size:17px}
+.slots{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+@container app (min-width:700px){ .slots{grid-template-columns:repeat(4,1fr)} }
+.slot{display:grid; place-items:center; align-content:center; gap:1px; min-height:56px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-weight:800; font-size:17px; font-variant-numeric:tabular-nums; cursor:pointer; line-height:1.15; transition:transform var(--t-fast) var(--ease)}
+.slot:active{transform:scale(.96)}
+.slot small{font-size:14px; font-weight:600; color:var(--muted)}
+.slot[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.slot[aria-pressed="true"] small{color:var(--bg); opacity:.8}
+.slot[disabled]{cursor:not-allowed; background:var(--surface-2); box-shadow:none; color:var(--muted); text-decoration:line-through; text-decoration-thickness:1.5px}
+.slot[disabled] small{text-decoration:none}
+.slot-why{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.more-slots{margin-top:10px}
+
+.place{display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 14px; padding:18px}
+.place > .ic{color:var(--red); margin-top:2px}
+.place b{font-size:17px}
+.place p{margin:0; color:var(--muted)}
+.place .link{grid-column:2; min-height:48px; margin-top:4px}
+
+/* ---------- step 3 ---------- */
+.form{display:grid; gap:18px}
+@container app (min-width:900px){ .form, .opts, .consent-wrap{max-width:620px} }
+.field .err{display:flex; gap:6px; align-items:flex-start; margin:0}
+.field .err[hidden]{display:none}
+.field .err .ic{margin-top:1px}
+.opt-tag{font-weight:600; color:var(--muted); font-size:14px; margin-left:4px}
+.recap{padding:6px 18px}
+.recap .kv{align-items:center; min-height:64px}
+.recap .kv > span:first-child{min-width:0}
+.recap small{display:block; font-size:14px; color:var(--muted); font-weight:700}
+.recap b{display:block; line-height:1.3; font-weight:700}
+.recap .link{flex:none}
+.consent{padding:8px 18px 8px}
+.consent .check{padding:14px 0}
+.consent .check span span{display:block; font-size:15px; color:var(--muted); margin-top:3px}
+.legal{margin:14px 2px 0; font-size:14px; color:var(--muted)}
+.legal a{color:var(--ink); font-weight:700}
+
+/* busy button */
+.pill[aria-busy="true"]{cursor:progress}
+.dots{display:inline-flex; gap:4px; margin-left:2px}
+.dots i{width:6px; height:6px; border-radius:50%; background:currentColor; animation:tdot 900ms ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:150ms} .dots i:nth-child(3){animation-delay:300ms}
+
+/* ---------- action bar ---------- */
+.ck-bar[hidden]{display:none}
+.ck-bar .pill.back{flex:none; padding:0 16px 0 14px; gap:6px}
+.ck-bar .pill-red{min-width:0; overflow:hidden; text-overflow:ellipsis}
+.ck-bar .pill-red{padding:0 14px}
+@container app (min-width:900px){ .ck-bar{display:none} }
+@container app (max-width:370px){ .ck-bar .pill{font-size:16px} .ck-bar .pill.back{padding:0 12px 0 10px} }
+
+/* ---------- empty ---------- */
+.emp{padding-top:24px}
+.emp .empty{padding:24px 0 8px}
+.emp .ill{width:120px; height:120px}
+.emp .empty .h1{margin-top:6px}
+.emp .btns{display:grid; gap:10px; width:100%; max-width:380px; margin-top:10px}
+.emp .rail{margin-top:2px}
+.emp-h{font-size:24px; letter-spacing:-.03em}
+.blk-h .link{white-space:nowrap; flex:none}
+@container app (min-width:900px){ .emp .rail{display:grid; grid-template-columns:repeat(4,1fr); gap:24px; overflow:visible} .emp .dcard{flex:auto} }
+
+/* ---------- prototype panel ---------- */
+.proto{margin-top:48px; padding:16px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 2px var(--line-strong); background:repeating-linear-gradient(135deg, transparent 0 14px, var(--line) 14px 15px)}
+.proto h2{display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; margin:0 0 4px}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+.proto .row{flex-wrap:wrap; gap:8px}
+.proto .pill{min-height:48px; font-size:15px; padding:0 16px; background:var(--surface)}
+.proto .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.proto-pill{border:2px dashed var(--line-strong)!important; background:transparent!important}
+
+/* ---------- loading ---------- */
+.sk-line{display:grid; grid-template-columns:72px 1fr; gap:14px; padding:16px 0}
+.sk-line + .sk-line{border-top:1px solid var(--line)}
+.sk-line .skel:first-child{width:72px; height:72px; border-radius:18px}
+.sk-line div{display:grid; gap:10px; align-content:center}
+
+/* ---------- success ---------- */
+.done-wrap{display:grid; gap:16px; max-width:640px; margin:0 auto; padding-top:20px}
+.okhead{display:grid; justify-items:center; text-align:center; gap:10px; padding:12px 0 8px}
+.okmark{position:relative; width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}
+.okmark::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:okRing 1100ms 260ms var(--ease) both}
+.okmark .ic{position:relative; animation:okTick 460ms 200ms var(--ease) both}
+@keyframes okPop{from{transform:scale(.5); opacity:0}to{transform:none; opacity:1}}
+@keyframes okTick{from{transform:scale(.2) rotate(-25deg); opacity:0}to{transform:none; opacity:1}}
+@keyframes okRing{0%{transform:scale(1); opacity:.35}100%{transform:scale(1.7); opacity:0}}
+.ono{font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.ono b{color:var(--ink); font-variant-numeric:tabular-nums}
+.big-eta{padding:22px 22px 20px}
+.big-eta .lbl{font-size:15px; font-weight:700; color:var(--muted)}
+.big-eta .t{font-size:44px; line-height:1.05; font-weight:800; letter-spacing:-.045em; font-variant-numeric:tabular-nums; margin:4px 0 8px}
+.big-eta p{margin:0}
+.big-eta .kvs{margin-top:14px; border-top:1px solid var(--line)}
+.big-eta .kv span:first-child{color:var(--muted); white-space:nowrap}
+.big-eta .kv span:last-child{text-align:right; font-weight:700; min-width:0}
+.offer{padding:20px; border-radius:var(--r-shell); display:grid; gap:12px}
+.offer b{font-size:20px; letter-spacing:-.02em; line-height:1.2; display:block; text-wrap:balance}
+.offer p{margin:0}
+.offer .pill{justify-self:start}
+.swrow{display:flex; align-items:center; gap:16px; width:100%; min-height:72px; padding:16px 18px; border:0; background:transparent; text-align:left; cursor:pointer; color:inherit}
+.swrow b{display:block; font-size:17px; line-height:1.3}
+.swrow span span{display:block; color:var(--muted); font-size:15px; margin-top:3px}
+.sw{position:relative; flex:none; width:60px; height:36px; border-radius:999px; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:background-color var(--t-base) var(--ease)}
+.sw::after{content:""; position:absolute; top:4px; left:4px; width:28px; height:28px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.swrow[aria-checked="true"] .sw{background:var(--ok); box-shadow:none}
+.swrow[aria-checked="true"] .sw::after{transform:translateX(24px)}
+.sw-state{font-size:14px; font-weight:800; color:var(--muted); min-width:32px; text-align:right}
+.bday{padding:0 18px 18px; display:grid; gap:10px}
+.bday .row{gap:10px}
+.bday select{flex:1}
+.done-wrap .pill.go{margin-top:2px}
+.after{display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:center; padding-top:4px}
+</style>
+
+<script>
+  import { start } from "./_cart.ts";
+  start();
+</script>
