@@ -108,7 +108,7 @@ export function start(): void {
   const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
   const dateOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd, 12); };
   /** seconds since midnight on the shop clock (in preview the fixed clock moves on from page load) */
-  const nowSec = () => SC.minutes() * 60 + (clockOverride() ? Math.floor((Date.now() - t0) / 1000) % 60 + Math.floor((Date.now() - t0) / 60000) * 0 : new Date().getSeconds());
+  const nowSec = () => SC.minutes() * 60 + (clockOverride() ? Math.floor((Date.now() - t0) / 1000) : new Date().getSeconds());
   const busy = () => SC.eta().busy;
   function copy(text: string) { try { navigator.clipboard?.writeText(text).catch(() => undefined); } catch { /* not allowed */ } }
   function scrollToEl(el: Element | null) { if (!el) return; const y = el.getBoundingClientRect().top + window.scrollY - 150; window.scrollTo({ top: Math.max(0, y), behavior: SC.reduce ? "auto" : "smooth" }); }
