@@ -203,10 +203,10 @@ body{background:var(--bg)}
 .miss{color:var(--muted); font-style:italic; text-decoration:underline dashed 1px; text-underline-offset:4px}
 
 /* ---------- left edge: older cards scrolled out of view ---------- */
-.kless{position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:80px; padding:14px 0; border:0; border-radius:0 24px 24px 0; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer; text-align:center}
+.kless{position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:96px; padding:14px 0; border:0; border-radius:0 24px 24px 0; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer; text-align:center}
 .kless b{font-size:24px; line-height:1; font-variant-numeric:tabular-nums}
 .kless small{font-size:14px; font-weight:700; line-height:1.15}
-.kless .late{color:var(--danger); background:var(--bg); border-radius:10px; padding:3px 6px; margin-top:4px; text-align:center}
+.kless .late{color:var(--danger); background:var(--bg); border-radius:10px; padding:3px 5px; margin-top:4px; text-align:center}
 .kless[hidden]{display:none}
 
 /* ---------- "По-късно": orders for a later time ---------- */
