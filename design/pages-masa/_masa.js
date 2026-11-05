@@ -149,7 +149,9 @@ M.serveCall = function(t){ sync(); var c = S.calls[t]; if (c && !c.done){ c.done
 M.active = function(){ return Object.keys(S.calls).filter(function(k){ return !S.calls[k].done; }).sort(function(a,b){ return S.calls[a].at - S.calls[b].at; }); };
 
 /* ---------- bill & session ---------- */
-M.requestBill = function(o){ sync(); if (S.offline || S.mode !== "open") return false; S.bills[M.me] = Object.assign({at:Date.now()}, o); S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
+M.requestBill = function(o){ sync(); if (S.offline || S.mode !== "open") return false; S.bills[M.me] = Object.assign({at:Date.now()}, o);
+  /* a second request joins the bill call that is already active: the waiting time and the manager escalation keep running from the first one */
+  var bc = S.calls.bill; if (!bc || bc.done) S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
 M.myBill = function(){ return (S.bills || {})[M.me] || null; };
 M.tableBill = function(){ var b = S.bills || {}, k = Object.keys(b).filter(function(w){ return b[w].split === "one"; })[0]; return k ? Object.assign({by:k}, b[k]) : null; };
 M.myRating = function(){ return (S.ratings || {})[M.me] || null; };
@@ -171,7 +173,7 @@ function demo(name){ var n = fresh(), now = Date.now(); SC.store(OKEY, name === 
   if (name === "bill" || name === "billreq" || name === "rated" || name === "closed"){ n.draft = []; n.rounds = [round1(1500)]; }
   if (name === "billreq" || name === "rated" || name === "closed"){ n.rounds[0].lines.forEach(function(l){ n.picks[l.key] = l.who; });
     var mine = n.rounds[0].lines.filter(function(l){ return l.who === M.me; }).map(function(l){ return l.key; });
-    n.bills[M.me] = {at:now-25000, pay:"card", split:"dishes", mine:mine}; n.calls.bill = {at:now-25000, text:"", done: name==="closed" ? "served" : false, doneAt: name==="closed" ? now-5000 : undefined}; }
+    n.bills[M.me] = {at:now-25000, pay:"card", split:"dishes", mine:mine, keys:mine}; n.calls.bill = {at:now-25000, text:"", done: name==="closed" ? "served" : false, doneAt: name==="closed" ? now-5000 : undefined}; }
   if (name === "rated") n.ratings[M.me] = {ans:"no", fb:"", sent:false};
   if (name === "closed") n.mode = "closed";
   if (name === "invalid") n.mode = "invalid";
