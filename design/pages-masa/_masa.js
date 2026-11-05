@@ -85,6 +85,7 @@ var L = M.L;
 var NUM = {me:1, g2:2, g3:3, g4:4, g5:5, g6:6, g7:7};
 M.name = function(who){ return who === M.me ? L("Вие","You") : L("Телефон ","Phone ")+(NUM[who]||2); };
 M.av = function(who, sm){ return '<span class="av '+(who==="me"?"":who)+(sm?" sm":"")+'" aria-hidden="true">'+(who === M.me ? L("В","Y") : (NUM[who]||2))+'</span>'; };
+M.num = function(w){ return NUM[w] || 2; };
 M.others = function(){ return M.WHO.filter(function(w){ return w !== M.me; }); };
 M.order = function(){ return [M.me].concat(M.others()); };
 M.phones = function(){ var used = {}; used[M.me] = 1; S.draft.concat([].concat.apply([], S.rounds.map(function(r){ return r.lines; }))).forEach(function(l){ used[l.who] = 1; }); M.livePhones().forEach(function(w){ used[w] = 1; }); return M.WHO.filter(function(w){ return used[w]; }); };

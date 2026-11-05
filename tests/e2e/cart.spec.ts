@@ -1,0 +1,133 @@
+import { test, expect, type Page } from "@playwright/test";
+
+/* Cart and checkout (/kolichka/): 3 steps, delivery / pickup, -30% lunch after 15:00 for pickup, zones, slots,
+   validation, api.orders.create -> tracking, server errors, empty, closed ("Поръчай за утре"), undo on remove. */
+const CART = {
+  mode: "delivery",
+  lines: [
+    { key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 },
+    { key: "l-lazanya-boloneze", id: "l-lazanya-boloneze", q: 2, mods: [], extra: 0 },
+  ],
+};
+function watch(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => { if (m.type() === "error" && !/status of (409|500)/.test(m.text())) errors.push(m.text()); });
+  return errors;
+}
+async function open(page: Page, t = "12:30", cart: unknown = CART, hash = "") {
+  await page.addInitScript(([c]) => {
+    if (sessionStorage.getItem("ck-init")) return;
+    sessionStorage.setItem("ck-init", "1");
+    localStorage.setItem("sc-cookie", '"min"');
+    localStorage.removeItem("sc-checkout");
+    if (c) localStorage.setItem("sc-cart", JSON.stringify(c)); else localStorage.removeItem("sc-cart");
+  }, [cart]);
+  await page.goto("/kolichka/?preview=1&t=" + t + hash);
+}
+const isPhone = (page: Page) => (page.viewportSize()?.width || 0) < 900;
+const cta = (page: Page) => (isPhone(page) ? page.locator(".ck-bar .js-next") : page.locator(".sum-cta .js-next"));
+
+test("cart: SEO noindex, one h1, lines and totals from the menu", async ({ page }) => {
+  const errors = watch(page);
+  await open(page);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page.locator("h1")).toHaveText("Количка");
+  await expect(page.locator(".ln")).toHaveCount(2);
+  await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 1 от 3");
+  await expect(cta(page)).toHaveText(/^Към адреса · \d+,\d{2} €$/);
+  const hs = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(hs).toBeLessThanOrEqual(0);
+  expect(errors).toEqual([]);
+});
+
+test("cart: remove with undo", async ({ page }) => {
+  await open(page);
+  await page.locator(".ln-rm").first().click();
+  await expect(page.locator(".ln")).toHaveCount(1);
+  await page.locator(".toast button", { hasText: "Отмени" }).click();
+  await expect(page.locator(".ln")).toHaveCount(2);
+  await expect(page.locator(".ln-name").first()).toHaveText("Пица Дяволо");
+});
+
+test("cart: lunch after 15:00 is pickup only with -30%", async ({ page }) => {
+  await open(page, "16:30");
+  await expect(page.locator(".note.warn")).toContainText("само за вземане");
+  await expect(cta(page)).toContainText("Смени на вземане · -30%");
+  await cta(page).click();
+  await expect(page.locator(".sum")).toContainText("Отстъпка след 15:00");
+  await expect(page.locator(".tag.promo")).toHaveText("-30% след 15:00");
+  await expect(cta(page)).toContainText("Избери час");
+});
+
+test("cart: 21:30 delivery is off, pickup slots until 22:30", async ({ page }) => {
+  await open(page, "21:30", { ...CART, lines: [CART.lines[0]] });
+  await expect(page.locator('.seg.ff [data-v="delivery"]')).toBeDisabled();
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Кога ще я вземете?");
+  const last = await page.locator(".slot").last().getAttribute("data-v");
+  expect(last).toBe("22:30");
+});
+
+test("cart: closed kitchen offers an order for tomorrow", async ({ page }) => {
+  await open(page, "23:30", { ...CART, lines: [CART.lines[0]] });
+  await expect(page.locator(".note.info").first()).toContainText("Поръчай за утре?");
+  await expect(cta(page)).toContainText("Поръчай за утре");
+  await cta(page).click();
+  await expect(page.locator(".note.info").first()).toContainText("Поръчвате за утре");
+  await expect(page.locator(".slot").first()).toHaveAttribute("data-v", "10:30");
+});
+
+test("cart: empty state", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "12:30", null);
+  await expect(page.locator("h1")).toHaveText("Количката е празна");
+  await expect(page.locator(".rail .dcard").first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("cart: full delivery flow -> api.orders.create -> tracking", async ({ page }) => {
+  const errors = watch(page);
+  let body: Record<string, unknown> | null = null;
+  await page.route("**/api/orders", async (r) => { body = r.request().postDataJSON(); await r.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ no: "1077" }) }); });
+  await page.route("**/porachka/1077/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<h1>ok</h1>" }));
+  await open(page, "12:30", { ...CART, lines: [CART.lines[0]] });
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Къде да я доставим?");
+  await page.locator("#addr").fill("Младост 1");
+  await page.locator("#addr-list li[data-i]").first().click();
+  await expect(page.locator("#addr-res")).toContainText("Извън зоната ни");
+  await page.locator(".combo-x").click();
+  await page.locator("#addr").fill("ул. Обиколна 5, Дружба 2");
+  await page.locator("#addr-list li[data-i]").first().click();
+  await expect(page.locator("#addr-res")).toContainText("Безплатна доставка");
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Вашите данни");
+  await expect(page.locator('[data-f="consent"]')).not.toBeChecked();
+  await cta(page).click();
+  await expect(page.locator("#e-name")).toBeVisible();
+  await page.fill("#f-name", "Мария");
+  await page.fill("#f-phone", "0888 12 34 56");
+  await page.locator('label.opt', { hasText: "Карта при получаване" }).click();
+  await expect(cta(page)).toHaveText(/^Поръчай · \d+,\d{2} €$/);
+  await cta(page).click();
+  await page.waitForURL("**/porachka/1077/");
+  expect(body).toMatchObject({ zone: "Дружба 2", pay: "card", name: "Мария", marketing: false });
+  expect((body as unknown as { cart: { mode: string } }).cart.mode).toBe("delivery");
+  expect(errors).toEqual([]);
+});
+
+test("cart: server refusal is shown and nothing is lost", async ({ page }) => {
+  await page.route("**/api/orders", (r) => r.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "closed", message: "Кухнята вече не приема поръчки за днес. Поръчайте за утре." }) }));
+  await open(page, "12:30", { ...CART, mode: "pickup", lines: [CART.lines[0]] });
+  await cta(page).click();
+  await cta(page).click();
+  await page.fill("#f-name", "Мария");
+  await page.fill("#f-phone", "0888123456");
+  await cta(page).click();
+  await expect(page.locator("#topnotes .note.bad")).toContainText("Поръчката не е изпратена");
+  await expect(cta(page)).toContainText("Опитай пак");
+  await expect(page.locator("#f-name")).toHaveValue("Мария");
+  await expect(page.locator(".ln, .recap")).toHaveCount(1);
+});

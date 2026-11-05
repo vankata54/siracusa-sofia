@@ -120,7 +120,7 @@ function autoPick(){ M.sync(); var P = picks(), ch = false; all().forEach(functi
     if (n){ M.save("picks"); SC.toast(L("Другите телефони отбелязаха своите ястия","The other phones ticked their dishes")); } }, 1500); } }
 function lineSum(l){ var x = SC.byId[l.id]; return x ? x.p*l.q : 0; }
 function mineSum(keys){ return all().filter(function(l){ return keys.indexOf(l.key) > -1; }).reduce(function(a,l){ return a+lineSum(l); }, 0); }
-function share(){ var B = S.bill || C; if (B.split === "people") return M.sum(all().filter(function(l){ return l.who === M.me; })); if (B.split === "dishes") return mineSum(S.bill ? (B.mine || []) : myPicks()); return M.sum(all()); }
+function share(){ var B = M.myBill() || C; if (B.split === "people") return M.sum(all().filter(function(l){ return l.who === M.me; })); if (B.split === "dishes") return mineSum(M.myBill() ? (B.mine || []) : myPicks()); return M.sum(all()); }
 function plural(n){ return SC.plural(n, L("ястие","dish"), L("ястия","dishes")); }
 var PAY = {cash:["В брой","Cash","money"], card:["С карта","By card","credit-card"]};
 var SPLIT = {one:["Заедно","Together"], people:["По хора","By person"], dishes:["По ястия","By dish"]};
@@ -146,18 +146,23 @@ function splitBox(){
   if (C.split === "dishes") return '<p class="fine" style="margin-top:12px">'+L("Отметнете в списъка „Поръчано“ какво плащате вие. Другите отбелязват своето от техните телефони.","Tick in the “Ordered” list what you pay for. The others tick theirs on their phones.")+'</p>';
   return ''; }
 
-function reqHTML(){ var B = S.bill, done = S.mode === "closed", w = (Date.now() - B.at)/1000;
+function reqHTML(){ var B = M.myBill(), done = S.mode === "closed";
+  if (!B) return '<div class="shell" role="status"><div class="core coming done"><span class="bell">'+ic("check",30)+'</span><h2>'+L("Сметката е платена","The bill is paid")+'</h2><p class="what">'+L("Масата е затворена. Благодарим, че бяхте при нас!","The table is closed. Thank you for coming!")+'</p></div></div>';
+  var w = (Date.now() - B.at)/1000;
   return '<div class="shell" role="status"><div class="core coming'+(done?" done":"")+'"><span class="bell">'+ic(done?"check":"receipt",30)+'</span>'+
     (done ? '<h2>'+L("Сметката е платена","The bill is paid")+'</h2><p class="what">'+L("Масата е затворена. Благодарим, че бяхте при нас!","The table is closed. Thank you for coming!")+'</p>'
-      : '<h2>'+L("Сервитьорът идва със сметката","The waiter is bringing the bill")+' · <span class="t">'+L("чакате ","waiting ")+'<span data-wt>'+M.mmss(w)+'</span></span></h2><p class="what">'+L("Поискана в ","Asked at ")+M.clock(B.at)+'</p>')+
+      : '<h2>'+L("Сервитьорът идва със сметката","The waiter is bringing the bill")+' · <span class="t">'+L("чакате ","waiting ")+'<span data-wt>'+M.mmss(w)+'</span></span></h2><p class="what">'+L("Поискахте в ","You asked at ")+M.clock(B.at)+'</p>')+
     '<div class="kvs"><div class="kv"><span>'+L("Плащане","Payment")+'</span><span>'+L(PAY[B.pay][0],PAY[B.pay][1])+'</span></div><div class="kv"><span>'+L("Разделяне","Split")+'</span><span>'+L(SPLIT[B.split][0],SPLIT[B.split][1])+'</span></div>'+
-    (B.split !== "one" ? '<div class="kv"><span>'+L("Вашата част","Your share")+'</span><span class="price">'+fmt(share())+'</span></div>' : '<div class="kv"><span>'+L("Общо","Total")+'</span><span class="price">'+fmt(M.sum(all()))+'</span></div>')+'</div>'+
+    (B.split !== "one" ? '<div class="kv"><span>'+L("Вашата част","Your share")+'</span><span class="price">'+fmt(share())+'</span></div>' : '<div class="kv"><span>'+L("Общо за масата","Table total")+'</span><span class="price">'+fmt(M.sum(all()))+'</span></div>')+'</div>'+
     (done ? '' : '<p class="fine" style="grid-column:1 / -1">'+L("Ако искате промяна, кажете на сервитьора, когато дойде.","If you want a change, tell the waiter when they come.")+'</p>')+'</div></div>'; }
-
-function code(){ return "SIR10-M"+M.table().n; }
+/* what the other phones asked for: one short line each (amounts stay private to each phone) */
+function othersHTML(){ var b = S.bills || {}, ks = Object.keys(b).filter(function(w){ return w !== M.me; }); if (!ks.length) return "";
+  return '<div class="mnote">'+ic("users-three",24)+'<div>'+ks.map(function(w){ var B = b[w];
+    return '<p style="margin:0">'+M.av(w,true)+' '+(B.split === "one" ? esc(M.name(w))+L(" поиска сметката за цялата маса"," asked for the bill for the whole table") : esc(M.name(w))+L(" поиска своята част"," asked for their share"))+' ('+L(PAY[B.pay][0],PAY[B.pay][1]).toLowerCase()+') · '+M.clock(B.at)+'</p>'; }).join("")+'</div></div>'; }
+function code(){ return "SIR10-M"+M.table().n+"-"+M.num(M.me); } /* personal: one code per phone */
 function codeHTML(){ return '<div class="code ember-card"><span class="k">'+L("Вашият код за -10% от следващата поръчка","Your code for 10% off your next order")+'</span><div class="row"><span class="v">'+code()+'</span><button class="pill pill-ink" type="button" data-copy>'+ic("copy",18)+L("Копирай кода","Copy code")+'</button></div><p>'+L("За следваща поръчка от сайта или на масата. Един код на телефонен номер.","For your next order on the website or at the table. One code per phone number.")+'</p></div>'; }
 var GOOGLE_MISSING = '<span class="missing">[ЛИПСВА: линк към профила в Google]</span>';
-function rateHTML(){ if (!S.bill) return ""; var r = S.rating || {}, a = r.ans, ans = "";
+function rateHTML(){ if (!M.myBill() && !M.tableBill() && S.mode !== "closed") return ""; var r = M.myRating() || {}, a = r.ans, ans = "";
   if (a === "yes") ans = '<div class="ans"><h3 tabindex="-1" data-focus>'+L("Благодарим! Радваме се, че ви хареса.","Thank you! We are glad you liked it.")+'</h3>'+codeHTML()+
     '<hr class="gsep"><p class="muted">'+L("Кодът е за оценката ви тук. Отзивът в Google е по желание и не носи отстъпка.","The code is for your rating here. A Google review is optional and brings no discount.")+'</p>'+
     '<div class="gq"><p><b>'+L("Ще ни помогнете ли с отзив в Google?","Would you help us with a Google review?")+'</b></p><a class="pill pill-line pill-lg pill-block" href="#" data-google>'+ic("google-logo",20)+L("Напиши отзив в Google","Write a Google review")+ic("arrow-up-right",18)+'</a>'+GOOGLE_MISSING+'</div>'+
@@ -189,8 +194,8 @@ function render(){ var y = SC.scroller.scrollTop, draftN = M.qty(S.draft), close
   main.innerHTML = '<section class="mpage" aria-labelledby="bl-h"><div class="mh"><h1 class="h1" id="bl-h">'+L("Сметката","The bill")+'</h1><p class="lead">'+esc(M.tableLabel())+' · '+L("всичко поръчано досега","everything ordered so far")+'</p></div>'+
     '<div class="bg">'+(S.offline ? '<div class="mnotes">'+M.banners({kitchen:false})+'</div>' : '')+
     (draftN && !closed ? '<div class="mnote warn">'+ic("shopping-bag",24)+'<div><b>'+plural(draftN)+L(" в количката още не са изпратени"," in the cart are not sent yet")+'</b><p>'+L("Не са в сметката. Изпратете ги или ги махнете.","They are not on the bill. Send or remove them.")+'</p><div class="acts"><a class="pill pill-line" href="cart.html">'+L("Към количката","To the cart")+'</a></div></div></div>' : '')+
-    '<div class="side">'+(S.bill ? reqHTML() : askHTML())+(S.bill ? rateHTML() : '')+'</div>'+
-    '<section><div class="blk-h"><h2 class="h3">'+L("Поръчано","Ordered")+'</h2><span class="muted small">'+plural(sent().reduce(function(a,z){ return a+z.l.q; },0))+'</span></div>'+linesHTML(!S.bill && C.split === "dishes")+'</section>'+
+    '<div class="side">'+othersHTML()+(M.myBill() || S.mode === "closed" ? reqHTML() : (M.tableBill() ? '<p class="fine" style="margin:0">'+L("Сметката за масата е поискана. Ако искате да платите отделно, поискайте своята част.","The table bill has been asked for. To pay separately, ask for your share.")+'</p>' : '')+askHTML())+rateHTML()+'</div>'+
+    '<section><div class="blk-h"><h2 class="h3">'+L("Поръчано","Ordered")+'</h2><span class="muted small">'+plural(sent().reduce(function(a,z){ return a+z.l.q; },0))+'</span></div>'+linesHTML(!M.myBill() && C.split === "dishes")+'</section>'+
     '</div>'+
     M.protoHTML('<button class="pill" type="button" data-pclose>'+ic("check",18)+'Сервитьорът затваря сметката</button><a class="pill" href="bill.html#demo=bill">Преди поискване</a><a class="pill" href="bill.html#demo=billreq">Поискана</a><a class="pill" href="bill.html#demo=rated">Отговор „Не“</a><a class="pill" href="bill.html#demo=closed">Сесията е затворена</a>')+
     '</section><div class="mend"></div>';
@@ -201,18 +206,19 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.dataset.split){ C.split = t.dataset.split; if (C.split === "dishes") autoPick(); render(); return; }
   if (t.hasAttribute("data-req")){ if (t.getAttribute("aria-disabled")){ SC.toast(L("Отметнете поне едно ястие","Tick at least one dish")); return; }
     if (M.requestBill({pay:C.pay, split:C.split, mine:myPicks()})){ SC.toast(L("Сервитьорът идва със сметката","The waiter is bringing the bill")); SC.scroller.scrollTo({top:0, behavior:SC.reduce?"auto":"smooth"}); } return; }
-  if (t.dataset.rate){ M.sync(); S.rating = {ans:t.dataset.rate, fb:"", sent:false}; M.save("rate"); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
-  if (t.hasAttribute("data-rate-reset")){ M.sync(); S.rating = null; M.save("rate"); return; }
-  if (t.hasAttribute("data-fb")){ M.sync(); var v = (main.querySelector("#fb")||{}).value || ""; if (v.trim().length < 3){ S.rating.fb = v; S.rating.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.save("rate"); main.querySelector("#fb").focus(); return; }
-    S.rating.fb = v; S.rating.err = ""; S.rating.sent = true; M.save("rate"); SC.toast(L("Изпратено на управителя","Sent to the manager")); return; }
+  if (t.dataset.rate){ M.setRating({ans:t.dataset.rate, fb:"", sent:false}); var h = main.querySelector("[data-focus]"); h && h.focus({preventScroll:true}); return; }
+  if (t.hasAttribute("data-rate-reset")){ M.setRating(null); return; }
+  if (t.hasAttribute("data-fb")){ var v = (main.querySelector("#fb")||{}).value || "", r = Object.assign({}, M.myRating());
+    if (v.trim().length < 3){ r.fb = v; r.err = L("Напишете няколко думи, за да го изпратим.","Write a few words so we can send it."); M.setRating(r); main.querySelector("#fb").focus(); return; }
+    r.fb = v; r.err = ""; r.sent = true; M.setRating(r); SC.toast(L("Изпратено на управителя","Sent to the manager")); return; }
   if (t.hasAttribute("data-copy")){ try{ navigator.clipboard.writeText(code()).catch(function(){}); }catch(x){} SC.flash(t, ic("check",18)+L("Копирано","Copied")); return; }
   if (t.hasAttribute("data-google")){ e.preventDefault(); SC.toast(L("Тук ще се отвори профилът в Google","Our Google profile opens here")); return; }
-  if (t.hasAttribute("data-pclose")){ if (!S.bill) M.requestBill({pay:C.pay, split:C.split, mine:myPicks()}); M.close(); return; }
+  if (t.hasAttribute("data-pclose")){ if (!M.myBill()) M.requestBill({pay:C.pay, split:C.split, mine:myPicks()}); M.close(); return; }
 });
 main.addEventListener("change", function(e){ var k = e.target.dataset.pick; if (!k) return; M.sync(); if (e.target.checked) picks()[k] = M.me; else delete picks()[k]; M.save("picks"); });
 render();
 M.on(function(){ render(); });
-M.tick(function(){ var s = main.querySelector("[data-wt]"); if (s && S.bill) s.textContent = M.mmss((Date.now()-S.bill.at)/1000); });
+M.tick(function(){ var s = main.querySelector("[data-wt]"); if (s && M.myBill()) s.textContent = M.mmss((Date.now()-M.myBill().at)/1000); });
 if (/rate/.test(location.hash)) requestAnimationFrame(function(){ var r = document.getElementById("rate"); r && r.scrollIntoView(); });
 })();
 </script>

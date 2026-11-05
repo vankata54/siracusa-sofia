@@ -112,7 +112,7 @@ function draftHTML(){ var n = M.qty(S.draft);
 
 function sentHTML(){ if (!S.rounds.length) return "";
   return '<section><div class="blk-h"><h2 class="h3">'+L("Поръчано","Ordered")+'</h2><span class="muted small">'+plural(M.sent().reduce(function(a,z){ return a+z.l.q; },0))+'</span></div>'+
-    '<p class="legend">'+L("Етапи:","Stages:")+' '+["ok","cook","served"].map(M.stp).join('<span aria-hidden="true">→</span>')+'</p>'+
+    '<p class="legend" aria-label="'+L("Етапи","Stages")+'">'+["ok","cook","served"].map(M.stp).join('<span aria-hidden="true">→</span>')+'</p>'+
     '<div class="shell"><div class="core">'+S.rounds.slice().reverse().map(function(r){
       return '<div class="rnd"><div class="rnd-h"><b>'+L("Поръчка ","Order ")+r.no+'</b><span>'+M.clock(r.at)+' · '+(r.conf ? ((r.via || (r.via===undefined && r.no===1)) ? L("потвърдена от сервитьора","confirmed by the waiter") : L("направо в кухнята","straight to the kitchen")) : L("чака сервитьора","waiting for the waiter"))+'</span></div>'+
         r.lines.map(function(l, i){ var x = SC.byId[l.id];
