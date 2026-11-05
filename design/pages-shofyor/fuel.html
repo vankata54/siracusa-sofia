@@ -37,7 +37,7 @@ function render(keep){ var v = {}; if (keep) ["l","s","km"].forEach(function(k){
     '<label class="chk"><input type="checkbox" id="pc"'+(paidCash?' checked':'')+'><span>Платих в брой от събраните пари <span class="small muted" style="display:block;font-weight:600">Сумата се вади от парите за предаване в края на смяната.</span></span></label></section>';
   h += '<section class="st-sec"><p class="st-cap">Снимка на касовата бележка</p><button class="slot'+(photo?' has':'')+'" type="button" data-photo><span class="ii">'+ic(photo?"check":"image",30)+'</span><b>'+(photo?"Снимката е добавена":"Снимай бележката")+'</b><span>'+(photo?"Докоснете, за да смените снимката":"Отваря камерата. Бележката трябва да се чете ясно.")+'</span></button>'+
     (photo?'':'<label class="chk"><input type="checkbox" id="np"'+(nophoto?' checked':'')+'><span>Камерата не работи: ще дам бележката на управителя</span></label>')+
-    (errs.photo?'<p class="err" style="margin:6px 4px 0;color:var(--danger);font-weight:600;font-size:14px">'+errs.photo+'</p>':'')+'</section>';
+    (errs.photo?'<p class="err" style="margin:6px 4px 0;color:var(--danger);font-weight:600;font-size:16px">'+errs.photo+'</p>':'')+'</section>';
   var list = DR.db.fuel;
   h += '<section class="st-sec"><div class="st-h"><h2>Тази смяна</h2></div>'+(list.length ? '<div class="icard hist">'+list.map(function(x){ return '<div class="h"><b>'+f2(x.l)+' л · '+SC.fmt(x.s)+'</b><span class="tnum">'+DR.clock(x.at)+'</span><span>'+DR.carName(x.car)+' · '+x.km.toLocaleString("bg-BG")+' км'+(x.full?' · пълен резервоар':'')+(x.cash?' · в брой':'')+'</span><span>'+(x.q?'чака връзка':'изпратено')+'</span></div>'; }).join("")+'</div>' : '<p class="muted" style="margin:0">Още няма зареждания.</p>')+
     '<p class="small muted" style="margin:12px 0 0">Отчетът за гориво (по ден, шофьор и автомобил) е в админ панела. Колко харчи всеки автомобил: <span class="missing">[ЛИПСВА: брой автомобили и разход]</span>.</p></section>';
@@ -55,6 +55,7 @@ bar.addEventListener("click", function(e){ if (!e.target.closest("[data-save]"))
   if (!(l > 0)) errs.l = "Въведете литрите от бележката.";
   else if (l > 120) errs.l = "Проверете литрите: повече от 120 л.";
   if (!(s > 0)) errs.s = "Въведете сумата в евро.";
+  else if (paidCash && s > DR.cashOnHand() + 0.004) errs.s = "Имате "+SC.fmt(DR.cashOnHand())+" в брой. Останалото платете с карта или питайте управителя.";
   if (!(km > 0)) errs.km = "Въведете километража от таблото.";
   else if (km < DR.lastKm()) errs.km = "По-малко е от последно записания ("+DR.lastKm().toLocaleString("bg-BG")+" км).";
   if (!photo && !nophoto) errs.photo = "Снимайте бележката, за да мине в отчета.";

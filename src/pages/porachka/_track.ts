@@ -34,6 +34,7 @@ import "../../lib/icons/arrow-left.ts";
 import "../../lib/icons/calendar-check.ts";
 import "../../lib/icons/pencil-simple.ts";
 import "../../lib/icons/arrow-clockwise.ts";
+import "../../lib/icons/user.ts";
 
 type View = "loading" | "order" | "notfound" | "none" | "error";
 type Stage = { id: "acc" | "cook" | "ready" | "way" | "done"; nm: string; ic: string };
@@ -66,14 +67,16 @@ export function startTracking(main: HTMLElement) {
     rating: null as Rated | null, choice: null as "yes" | "no" | null, fb: "", fbErr: "", sending: false,
     notify: null as string | null, ch: "push",
     first: true,
+    welcome: false, bday: false, bd: { d: "", m: "" },
     sim: { k: null as number | null, late: !!P.late, sched: !!P.tomorrow, sample: false },
   };
   if (P.offline) S.offline = true;
 
   /* ---------- per-order memory in this browser (rating answer and chosen notifications) ---------- */
   const memKey = () => "sc-track-" + S.no;
-  function loadMem() { const m = SC.load<{ rating?: Rated; notify?: string | null }>(memKey(), {}); S.rating = m.rating || null; S.choice = S.rating ? (S.rating.happy ? "yes" : "no") : null; S.notify = m.notify || null; }
-  function saveMem() { SC.store(memKey(), { rating: S.rating, notify: S.notify }); }
+  let welcomed = false;
+  function loadMem() { const m = SC.load<{ rating?: Rated; notify?: string | null; welcomed?: boolean }>(memKey(), {}); S.rating = m.rating || null; S.choice = S.rating ? (S.rating.happy ? "yes" : "no") : null; S.notify = m.notify || null; welcomed = !!m.welcomed; }
+  function saveMem() { SC.store(memKey(), { rating: S.rating, notify: S.notify, welcomed }); }
 
   /* ---------- the order model ---------- */
   const o = () => S.o as Order;
@@ -171,12 +174,12 @@ export function startTracking(main: HTMLElement) {
       label = D ? "Доставена в" : "Взехте я в";
       big = '<span class="enum clock"><b>' + clock(doneAt) + "</b></span>";
       say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас.";
-    } else if (sc && c.id === "acc" && sc.left > 45) {
-      /* pre-order: "Приета за <ден, час>" (docs/OPEN-QUESTIONS.md) */
-      label = "Приета за " + (sc.tomorrow ? "утре, " : "днес, ") + SC.dateLong(sc.date);
+    } else if (sc && sc.left > 45 && !(!D && c.id === "ready")) {
+      /* pre-order: "Приета за <ден, час>" (docs/OPEN-QUESTIONS.md); the minutes count only in the last 45 min */
+      label = (c.id === "acc" ? "Приета за " : "За ") + (sc.tomorrow ? "утре, " : "днес, ") + SC.dateLong(sc.date);
       big = '<span class="enum clock"><b>' + clock(sc.at) + "</b></span>";
-      say = D ? "Ще я доставим за този час" : "Ще е готова за този час";
-      sub = sc.left > 60 ? "Можете да я промените до " + clock(sc.at - 60) + " (1 час преди часа)." : "Вече я подготвяме. За промяна се обадете на " + esc(R.phone) + ".";
+      say = c.id === "acc" ? (D ? "Ще я доставим за този час" : "Ще е готова за този час") : c.id === "cook" ? cookSay() : c.id === "ready" ? "Поръчката е готова" : "Шофьорът е на път към вас";
+      sub = c.id === "acc" && sc.left > 60 ? "Можете да я промените до " + clock(sc.at - 60) + " (1 час преди часа)." : "Вече я подготвяме. За промяна се обадете на " + esc(R.phone) + ".";
     } else if (!D && c.id === "ready") {
       label = "Готова от"; big = '<span class="enum clock"><b>' + clock(stepAt("ready")) + "</b></span>";
       say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта. Вземане до " + R.kitchen + ".";
@@ -294,7 +297,23 @@ export function startTracking(main: HTMLElement) {
       '<button class="pill pill-soft" type="button" data-sim="reset">' + ic("arrow-left", 18) + "Отначало</button>" +
       '</div><p class="help">Етапите тук се сменят само на този екран. В истинския сайт ги сменят кухнята и шофьорът, а въпросът „Останахте ли доволни?“ идва и като известие 40 мин след доставката.</p></section>';
   }
-  const titleHTML = () => '<div class="trk-title"><h1>Поръчка <span class="no">№ ' + esc(S.no) + "</span></h1></div>";
+  /* right after checkout the cart comes straight here: the success content from the cart prototype sits on top
+     ("Благодарим! Поръчката е приета.", profile -10%, birthday gift switch, off by default) */
+  function welcomeHeadHTML() {
+    const x = o(), first = (x.name || "").trim().split(" ")[0];
+    return '<div class="okhead"><div class="okmark" aria-hidden="true">' + ic("check", 64) + '</div><p class="ono">Поръчка <b>№ ' + esc(S.no) + '</b></p><h1 class="h1 ok-h" tabindex="-1">Благодарим! Поръчката е приета.</h1><p class="lead">' + (first ? esc(first) + ", " : "") + (isD() && !schedInfo() ? "вече я подготвяме." : "ще я приготвим навреме.") + "</p></div>";
+  }
+  function welcomeCardsHTML() {
+    const U = SC.user();
+    const profile = U ? '<div class="card wl-offer"><b>Поръчката е запазена в профила ви</b><p class="muted">Следващия път я поръчвате отново с едно натискане.</p><a class="pill pill-line" href="' + SC.url.profile() + '">' + ic("user", 20) + "Към профила</a></div>"
+      : '<div class="wl-offer ember-card"><b>Направи профил и вземи -10% от следващата поръчка</b><p class="muted">Само с телефона, без парола. Поръчвате отново с едно натискане.</p><a class="pill pill-ink" href="' + SC.url.login() + '">' + ic("user", 20) + "Направи профил</a></div>";
+    let days = '<option value="">Ден</option>'; for (let i = 1; i <= 31; i++) days += "<option" + (S.bd.d === String(i) ? " selected" : "") + ">" + i + "</option>";
+    const months = '<option value="">Месец</option>' + SC.MONTHS.map((m) => "<option" + (S.bd.m === m ? " selected" : "") + ">" + m + "</option>").join("");
+    const bday = '<div class="card"><button class="swrow" type="button" role="switch" aria-checked="' + S.bday + '" data-bday><span><b>Искате ли подарък за рождения си ден и първи да научавате за събитията?</b><span>По желание. Можете да се откажете по всяко време.</span></span><span class="sw-state" aria-hidden="true">' + (S.bday ? "Да" : "Не") + '</span><span class="sw" aria-hidden="true"></span></button>' +
+      (S.bday ? '<div class="bday"><span class="label" id="bdl">Рожден ден</span><div class="row" role="group" aria-labelledby="bdl"><label class="vh" for="bd-d">Ден</label><select class="input" id="bd-d">' + days + '</select><label class="vh" for="bd-m">Месец</label><select class="input" id="bd-m">' + months + '</select></div><p class="help muted small" style="margin:0">Ще ви пишем седмица по-рано с подарък: -10% или малка торта.' + (U ? "" : " Записваме го, щом направите профил.") + "</p></div>" : "") + "</div>";
+    return profile + bday;
+  }
+  const titleHTML = () => S.welcome ? welcomeHeadHTML() : '<div class="trk-title"><h1>Поръчка <span class="no">№ ' + esc(S.no) + "</span></h1></div>";
 
   /* the live state sits in the shared status row (next to the cart) */
   const row2 = document.querySelector(".row2"), liveBox = document.createElement("div");
@@ -338,7 +357,7 @@ export function startTracking(main: HTMLElement) {
     if (S.view === "loading") html = skeletonHTML() + protoHTML();
     else if (S.view !== "order" || !S.o) html = '<div class="trk"><div class="trk-l">' + stateHTML(S.view) + '</div><div class="trk-r">' + protoHTML() + "</div></div>";
     else if (cancelled()) html = titleHTML() + '<div class="trk"><div class="trk-l">' + cancelledHTML() + '</div><div class="trk-r">' + orderHTML() + protoHTML() + "</div></div>";
-    else html = titleHTML() + '<div class="trk"><div class="trk-l">' + offlineHTML() + heroHTML() + actsHTML() + '</div><div class="trk-r">' + rateHTML() + notifyHTML() + orderHTML() + protoHTML() + "</div></div>";
+    else html = titleHTML() + '<div class="trk"><div class="trk-l">' + offlineHTML() + heroHTML() + actsHTML() + '</div><div class="trk-r">' + rateHTML() + (S.welcome ? welcomeCardsHTML() : "") + notifyHTML() + orderHTML() + protoHTML() + "</div></div>";
     main.innerHTML = '<section class="sec trk-s">' + html + "</section>";
     if (S.view === "order" && S.o) S.first = false;
     liveUpdate();
@@ -393,11 +412,11 @@ export function startTracking(main: HTMLElement) {
   function fromSaved(): Order | null {
     return saved && String(saved.no) === S.no && Array.isArray(saved.lines) ? saved : null;
   }
-  let loading = false;
+  let loading = false, again = false;
   async function load(opts: { quiet?: boolean } = {}) {
     if (!S.no) { S.view = "none"; render(); return; }
     if (S.sim.sample) return;
-    if (loading) return;
+    if (loading) { again = true; return; }
     loading = true;
     const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false;
     try {
@@ -414,7 +433,7 @@ export function startTracking(main: HTMLElement) {
       else if (S.o) S.offline = true;
       else { S.offline = err?.code === "offline" || navigator.onLine === false; S.view = "error"; }
       render();
-    } finally { loading = false; }
+    } finally { loading = false; if (again) { again = false; load({ quiet: true }); } }
   }
 
   /* ---------- interactions ---------- */
@@ -453,6 +472,10 @@ export function startTracking(main: HTMLElement) {
         '<a class="pill pill-red pill-lg pill-block" href="' + TEL + '">' + ic("phone", 20) + "Обади се на " + esc(R.phone) + "</a>" +
         '<p class="small muted" style="margin:0">Кажете номера на поръчката: № ' + esc(S.no) + ".</p></div>" });
       return;
+    }
+    if (t.hasAttribute("data-bday")) {
+      S.bday = !S.bday; render(); main.querySelector<HTMLElement>("[data-bday]")?.focus({ preventScroll: true });
+      saveBday(); return;
     }
     if (ds.ch) { S.ch = ds.ch; render(); const b = main.querySelector<HTMLElement>('[data-ch="' + S.ch + '"]'); b && b.focus({ preventScroll: true }); return; }
     if (t.hasAttribute("data-notify")) {
@@ -507,6 +530,17 @@ export function startTracking(main: HTMLElement) {
       return;
     }
   });
+  /* birthday: into the profile when signed in (consent.birthday + bday "28 ноември"), otherwise kept in this browser
+     ("sc-bday") until the profile is made (no guest consent API in v1, see the report) */
+  function saveBday() {
+    const v = { on: S.bday, d: S.bd.d, m: S.bd.m };
+    SC.store("sc-bday", v);
+    if (SC.user()) api.auth.update({ consent: { birthday: S.bday, bday: S.bday && S.bd.d && S.bd.m ? S.bd.d + " " + S.bd.m : "" } }).catch(() => {});
+  }
+  main.addEventListener("change", (e) => {
+    const el = e.target as HTMLSelectElement;
+    if (el.id === "bd-d" || el.id === "bd-m") { S.bd = { d: (main.querySelector("#bd-d") as HTMLSelectElement).value, m: (main.querySelector("#bd-m") as HTMLSelectElement).value }; saveBday(); }
+  });
   main.addEventListener("input", (e) => {
     const ta = e.target as HTMLTextAreaElement;
     if (ta.id === "fb") { S.fb = ta.value; if (S.fbErr && S.fb.trim().length >= 3) { S.fbErr = ""; ta.removeAttribute("aria-invalid"); main.querySelector("#fbe")?.remove(); } }
@@ -528,10 +562,14 @@ export function startTracking(main: HTMLElement) {
   if (!fromPath && !hashNo && S.no && SC.demo) history.replaceState(null, "", SC.url.tracking(S.no));
   else if (!fromPath && !hashNo && S.no && !SC.demo) history.replaceState(null, "", SC.url.tracking(S.no) + location.search);
   loadMem();
+  { const b = SC.load<{ on?: boolean; d?: string; m?: string }>("sc-bday", {}); S.bd = { d: b.d || "", m: b.m || "" }; /* the switch itself starts off */ }
   if (P.notfound) { S.view = "notfound"; render(); return; }
   if (P.none) { S.view = "none"; render(); return; }
   if (P.sample) { S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.view = "order"; }
   else { const s = fromSaved(); if (s) { S.o = s; S.view = "order"; } }
+  /* "just placed": the order from this browser's checkout, first opening, within 15 min (or the cart's flag) */
+  const fresh = fromSaved() as (Order & { fresh?: boolean }) | null;
+  if ((fresh && !welcomed && (fresh.fresh === true || Date.now() - (fresh.ts || 0) < 15 * 60000)) || P.welcome) { S.welcome = true; welcomed = true; saveMem(); }
   if (S.o) {
     if (P.pickup) S.o.mode = "pickup";
     if (P.delivery) S.o.mode = "delivery";

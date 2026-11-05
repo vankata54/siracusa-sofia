@@ -35,11 +35,11 @@ DR.NAVAPP = {google:"Google Maps", waze:"Waze"};
 DR.zone = function(n){ return SC.ZONES.filter(function(z){ return z.n === n; })[0] || null; };
 
 /* schematic positions (viewBox 360 x 250); NOT a map, only the rough direction of each zone from the restaurant */
-DR.POS = {home:[140,150], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
+DR.POS = {home:[126,146], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
 
 /* ---------- mock data ---------- */
 function seed(kind){ var now = Date.now(), M = 60000;
-  var db = {v:3, kind:kind, shiftStart: now - 3*60*M - 12*M, car:"a1", kmStart:48250, legs:[], float:null, outbox:[], route:{pick:"A", own:null}, driving:null, fuel:[], dels:[], parked:false, ended:false};
+  var db = {v:4, kind:kind, shiftStart: now - 3*60*M - 12*M, car:"a1", kmStart:48250, carKm:{a1:48250, a2:31540}, legs:[], float:null, outbox:[], route:{pick:"A", own:null}, driving:null, fuel:[], dels:[], parked:false, ended:false};
   function D(id, zone, addr, sub, pay, items, agoMin, st, note, dx, dy){ db.dels.push({id:String(id), zone:zone, addr:addr, sub:sub, client:"Клиент от № "+id, phone:"0888 12 34 56", pay:pay, items:items, at: now - agoMin*M, st:st, note:note||"", dx:dx||0, dy:dy||0, doneAt: st==="done" ? now - (agoMin-28)*M : null, prob:null, arrivedAt:null}); }
   /* delivered earlier in the shift */
   D(1031, "Дружба 2", "бл. 3xx, вх. А", "ет. 2", "cash", [["pitsa-margarita",1],["kebapcheta",1]], 150, "done", "", -14, 10);
@@ -60,8 +60,8 @@ function seed(kind){ var now = Date.now(), M = 60000;
   return db; }
 var KEY = "dr-db-" + DR.state;
 DR.db = load(KEY, null);
-if (!DR.db || DR.db.v !== 3) DR.db = seed(DR.state);
-DR.save = function(){ store(KEY, DR.db); DR.emit(); };
+if (!DR.db || DR.db.v !== 4) DR.db = seed(DR.state);
+DR.save = function(){ store(KEY, DR.db); if (DR.netStrip) DR.netStrip(); DR.emit(); };
 DR.reset = function(){ DR.STATES.forEach(function(s){ try{ localStorage.removeItem("dr-db-"+s[0]); }catch(e){} }); };
 var subs = []; DR.on = function(fn){ subs.push(fn); }; DR.emit = function(){ subs.forEach(function(f){ f(); }); updateBadges(); };
 
@@ -110,7 +110,7 @@ DR.lvl = function(d){ if (d.st === "done" || d.st === "prob") return ""; var lef
 /* ---------- actions ---------- */
 function queue(d, w){ if (DR.offline) DR.db.outbox.push({id:d.id, w:w, at:Date.now()}); }
 /* never changes another delivery silently: several can be "На път" at once (taken together) */
-function snap(d){ return {st:d.st, doneAt:d.doneAt, prob:d.prob, arrivedAt:d.arrivedAt, driving:DR.db.driving}; }
+function snap(d){ return {st:d.st, doneAt:d.doneAt, prob:d.prob ? JSON.parse(JSON.stringify(d.prob)) : null, arrivedAt:d.arrivedAt, driving:DR.db.driving}; }
 function relock(){ if (DR.lock()) return; DR.db.driving = null; var o = DR.ordered().filter(function(x){ return x.st === "road"; }); DR.db.driving = o.length ? o[0].id : null; }
 DR.setSt = function(id, st){ var d = DR.byId(id); if (!d) return null; var prev = snap(d);
   d.st = st; if (st === "done") d.doneAt = Date.now(); if (st === "road" && !DR.lock()) DR.db.driving = d.id;
@@ -119,16 +119,21 @@ DR.setSt = function(id, st){ var d = DR.byId(id); if (!d) return null; var prev 
 DR.restore = function(id, prev){ var d = DR.byId(id); if (!d) return; d.st = prev.st; d.doneAt = prev.doneAt; d.prob = prev.prob; d.arrivedAt = prev.arrivedAt; DR.db.driving = prev.driving; if (DR.offline) DR.db.outbox.pop(); DR.save(); };
 DR.goAll = function(){ var ids = []; DR.ordered().forEach(function(d){ if (d.st === "picked"){ d.st = "road"; ids.push(d.id); queue(d, "На път"); } }); relock(); DR.save(); return ids; };
 DR.arrived = function(id){ var d = DR.byId(id), prev = snap(d); d.arrivedAt = Date.now(); queue(d, "Пристигнах (SMS: шофьорът е пред входа)"); DR.save(); return prev; };
-DR.returned = function(id){ var d = DR.byId(id); d.prob.returned = Date.now(); queue(d, "Върнах в ресторанта"); DR.save(); };
+DR.returned = function(id){ var d = DR.byId(id), prev = snap(d); d.prob.returned = Date.now(); queue(d, "Върнах в ресторанта"); DR.save(); return prev; };
 DR.pickAll = function(){ var n = 0; DR.db.dels.forEach(function(d){ if (d.st === "wait" && d.zone){ d.st = "picked"; n++; queue(d, "Взех от ресторанта"); } }); DR.save(); return n; };
 DR.problem = function(id, k, note){ var d = DR.byId(id), prev = snap(d); d.st = "prob"; d.prob = {k:k, note:note||"", at:Date.now()}; d.doneAt = Date.now(); if (DR.db.driving === d.id) DR.db.driving = null; relock(); queue(d, "Проблем: "+DR.PROB[k][0]); DR.save(); return prev; };
 DR.cash = function(){ return DR.db.dels.filter(function(d){ return d.st === "done" && d.pay === "cash"; }).reduce(function(s,d){ return s + DR.total(d); }, 0); };
 DR.fuelCash = function(){ return DR.db.fuel.filter(function(x){ return x.cash; }).reduce(function(s,x){ return s + x.s; }, 0); };
 /* to hand over = cash from orders + starting change - fuel paid in cash */
 DR.handover = function(){ return DR.cash() + (DR.db.float || 0) - DR.fuelCash(); };
+/* cash the driver has on hand right now (for "paid fuel in cash") */
+DR.cashOnHand = function(){ return Math.max(0, DR.handover()); };
+/* deliveries that block the end of the shift: not delivered, or a problem not returned yet */
+DR.unfinished = function(){ return DR.db.dels.filter(function(d){ return d.st !== "done" && !(d.st === "prob" && d.prob.returned); }); };
+DR.carLast = function(id){ return (DR.db.carKm && DR.db.carKm[id]) || 0; };
 DR.lastKm = function(){ var k = DR.db.kmStart; DR.db.fuel.forEach(function(x){ if (x.car === DR.db.car && x.km > k) k = x.km; }); return k; };
 /* changing the car mid-shift: end of car 1 (end km) + start of car 2 (start km), same shift */
-DR.switchCar = function(id, kmEnd, kmStart){ DR.db.legs.push({car:DR.db.car, kmStart:DR.db.kmStart, kmEnd:kmEnd, at:Date.now()}); DR.db.car = id; DR.db.kmStart = kmStart; DR.save(); };
+DR.switchCar = function(id, kmEnd, kmStart){ DR.db.carKm[DR.db.car] = kmEnd; DR.db.legs.push({car:DR.db.car, kmStart:DR.db.kmStart, kmEnd:kmEnd, at:Date.now()}); DR.db.car = id; DR.db.kmStart = kmStart; DR.save(); };
 DR.carName = function(id){ return (DR.CARS.filter(function(c){ return c.id === id; })[0] || DR.CARS[0]).n; };
 
 /* ---------- navigation links (free, no API key) ---------- */
@@ -228,7 +233,7 @@ function queueSheet(){ var q = DR.db.outbox.concat(DR.db.fuel.filter(function(x)
 DR.queueSheet = queueSheet;
 DR.carSheet = function(onDone){ var pick = DR.db.car;
   function body(){ return '<div class="cars" role="group" aria-label="Автомобил">'+DR.CARS.map(function(c){ return '<button class="car" type="button" data-c="'+c.id+'" aria-pressed="'+(pick===c.id)+'"><span class="ii">'+ic("car",24)+'</span><span><b>'+c.n+'</b><span>'+(c.id===DR.db.car?"Карате я сега · ":"")+'рег. № <span class="missing">[ЛИПСВА]</span></span></span></button>'; }).join("")+'</div>'+
-    (pick !== DR.db.car ? '<p class="small muted" style="margin:14px 0 8px">Смяната продължава. Записваме края на '+DR.car().n+' и началото на '+DR.carName(pick)+'.</p><div class="fgrid"><div class="field"><label for="cke">Краен км на '+DR.car().n+'</label><input class="input" id="cke" inputmode="numeric" placeholder="0"></div><div class="field"><label for="cks">Начален км на '+DR.carName(pick)+'</label><input class="input" id="cks" inputmode="numeric" placeholder="0"></div></div><p class="err" id="ckerr" style="margin:6px 0 0;color:var(--danger);font-weight:600;font-size:14px"></p>' : ''); }
+    (pick !== DR.db.car ? '<p class="muted" style="margin:14px 0 8px">Смяната продължава. Записваме края на '+DR.car().n+' и началото на '+DR.carName(pick)+'.</p><div class="fgrid"><div class="field"><label for="cke">Краен км на '+DR.car().n+'</label><input class="input" id="cke" inputmode="numeric" placeholder="0"></div><div class="field"><label for="cks">Начален км на '+DR.carName(pick)+'</label><input class="input" id="cks" inputmode="numeric" placeholder="0"></div></div><p class="muted" style="margin:6px 0 0">Последно записан за '+DR.carName(pick)+': '+DR.carLast(pick).toLocaleString("bg-BG")+' км (условно за макета).</p><p class="err" id="ckerr" role="alert" style="margin:6px 0 0;color:var(--danger);font-weight:600;font-size:16px"></p>' : ''); }
   var s = DR.sheet({title:"С коя кола карате?", html:'<div id="carb">'+body()+'</div>', foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-csave>Готово</button>'});
   var b = s.el.querySelector("#carb");
   s.el.addEventListener("click", function(e){ var t = e.target.closest("button"); if (!t) return;
@@ -237,6 +242,8 @@ DR.carSheet = function(onDone){ var pick = DR.db.car;
       var ke = parseInt((s.el.querySelector("#cke").value||"").replace(/\s/g,""),10), ks = parseInt((s.el.querySelector("#cks").value||"").replace(/\s/g,""),10), er = s.el.querySelector("#ckerr");
       if (!ke || ke < DR.lastKm()){ er.textContent = "Крайният км трябва да е поне "+DR.lastKm().toLocaleString("bg-BG")+"."; return; }
       if (!ks){ er.textContent = "Въведете началния км на "+DR.carName(pick)+"."; return; }
+      if (ks < DR.carLast(pick)){ er.textContent = "По-малко е от последно записания за "+DR.carName(pick)+" ("+DR.carLast(pick).toLocaleString("bg-BG")+" км). Проверете таблото."; return; }
+      if (ks > DR.carLast(pick) + 2000){ er.textContent = "Над 2 000 км повече от последния запис. Проверете числото."; return; }
       DR.switchCar(pick, ke, ks); s.close(); DR.toast("Карате "+DR.car().n+". Километрите се пазят поотделно за всяка кола."); onDone && onDone(); } }); };
 
 /* ---------- prototype panel ---------- */

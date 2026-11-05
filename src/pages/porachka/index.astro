@@ -1,0 +1,248 @@
+---
+/* Order tracking: port of design/pages/tracking.html (design/PAGES.md "tracking.html"). Not indexed.
+   One static page: the server returns it for every /porachka/<номер>/, the demo opens porachka/index.html#<номер>.
+   Everything depends on the order, so the server draws the loading skeleton and ./_track.ts draws the rest. */
+import Base from "../../layouts/Base.astro";
+import { RESTAURANT } from "../../lib/index.ts";
+
+const sk = (w: string, h: number, r = "") => `<span class="skel" style="width:${w};height:${h}px${r ? ";border-radius:" + r : ""}"></span>`;
+const skeleton =
+  `<section class="sec trk-s"><div class="trk-title"><h1 class="vh">Проследяване на поръчка</h1>${sk("220px", 32)}</div>` +
+  `<div class="trk" aria-busy="true" aria-label="Зареждаме поръчката"><div class="trk-l"><div class="shell"><div class="core sk">` +
+  `${sk("100%", 40, "999px")}${sk("196px", 196, "50%")}${sk("52%", 18)}${sk("46%", 64)}${sk("70%", 24)}</div>` +
+  `<div class="skrow">${[1, 2, 3, 4, 5].map(() => sk("28px", 28, "50%")).join("")}</div></div>${sk("100%", 56, "999px")}</div>` +
+  `<div class="trk-r"><div class="shell"><div class="core cpad cgap">${sk("60%", 24)}${sk("100%", 56)}${sk("100%", 56)}</div></div></div></div></section>`;
+---
+<Base page="tracking" nav={null} title="Проследяване" docTitle="Проследяване на поръчка"
+  description="Проследяване на поръчка от Siracusa Bar & Grill: етап, около колко минути и обаждане до ресторанта."
+  status={false} ai={false} footer={false} noindex>
+  <Fragment set:html={skeleton} />
+  <noscript><p class="sec">За проследяване е нужен JavaScript. Обадете ни се: <a href={"tel:" + RESTAURANT.phoneIntl}>{RESTAURANT.phone}</a>.</p></noscript>
+</Base>
+
+<style is:global>
+/* tracking.html: order status + rating after delivery. Tokens only. One strong motion: the plate + ring entrance and the slow pulse of the current step. */
+.trk-s{padding-top:14px}
+.trk{display:grid; gap:16px}
+.trk-l,.trk-r{display:grid; gap:16px; align-content:start; min-width:0}
+.trk-title{display:flex; align-items:center; justify-content:space-between; gap:4px 12px; flex-wrap:wrap; margin-bottom:12px}
+.trk-title h1{font-size:28px; line-height:1.1; letter-spacing:-.035em; font-weight:800; margin:0}
+.trk-title h1 .no{font-variant-numeric:tabular-nums}
+.live{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.live i{position:relative; width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+.live i::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
+.live.off i{background:var(--off)} .live.off i::after,.live i.still::after{display:none}
+.trk-live[hidden]{display:none}
+.trk-live .live{flex:none}
+
+/* hero */
+.hero{display:grid; gap:0}
+.hero > .core{padding:10px 10px 22px; text-align:center}
+.hrow{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.mode{display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px 0 12px; border-radius:var(--r-pill); background:var(--surface-2); font-size:14px; font-weight:700}
+.hrow .hb{font-size:15px}
+.hgrid{display:grid; justify-items:center}
+.viz{position:relative; width:188px; height:188px; margin:4px auto 0}
+.viz .ring{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.ring path{fill:none; stroke-width:9; stroke-linecap:round}
+.ring .off{stroke:var(--surface-3)}
+.ring .on{stroke:var(--ok)}
+.ring .now{stroke:var(--ok); animation:breathe 2s ease-in-out infinite}
+.is-late .ring .now{stroke:var(--warn)}
+.viz .plate{position:absolute; inset:21px; border-radius:50%; box-shadow:var(--shadow)}
+.viz .plate > svg{filter:none; inset:6%; width:88%; height:88%}
+.is-cook .viz .plate > svg{animation:spin 48s linear infinite}
+.vb{position:absolute; left:50%; bottom:0; width:56px; height:56px; margin-left:-28px; margin-bottom:-16px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ok); box-shadow:var(--shadow), inset 0 0 0 1.5px var(--line)}
+.vb::before{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 3px var(--ok); opacity:0; animation:halo2 2s var(--ease-std) infinite}
+.is-done .vb{background:var(--ok); color:var(--on-ok)} .is-done .vb::before{display:none}
+.is-late .vb{color:var(--warn)} .is-late .vb::before{box-shadow:0 0 0 3px var(--warn)}
+.is-off .vb::before,.is-off .ring .now,.is-off .live i::after{animation:none}
+.enter .viz{animation:pop 700ms var(--ease) both}
+.enter .etxt{animation:rise 700ms 80ms var(--ease) both}
+
+.etxt{display:grid; justify-items:center; margin-top:28px; padding:0 8px}
+.latechip{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; margin-bottom:10px; border-radius:var(--r-pill); font-size:14px; font-weight:800; color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor}
+.elab{font-size:16px; font-weight:700; color:var(--muted)}
+.enum{display:flex; align-items:baseline; justify-content:center; gap:8px; margin-top:2px; font-weight:800; line-height:1; letter-spacing:-.05em; white-space:nowrap}
+.enum .ab{font-size:24px; letter-spacing:-.025em}
+.enum b{font-size:78px; font-weight:800; font-variant-numeric:tabular-nums}
+.enum .u{font-size:30px; letter-spacing:-.03em}
+.enum.clock b{font-size:72px}
+.say{margin:12px 0 0; font-size:24px; line-height:1.2; letter-spacing:-.03em; font-weight:800; text-wrap:balance}
+.sub{margin:8px 0 0; font-size:17px; color:var(--muted); text-wrap:balance; max-width:34ch}
+.sub .price{color:var(--ink)}
+.hnote{display:flex; gap:10px; align-items:flex-start; margin:0; padding:2px 14px 12px; font-size:15px; color:var(--muted)}
+.hnote .ic{margin-top:2px}
+.is-off .enum,.is-off .say{opacity:.55}
+
+/* status timeline (inside the shell, under the core) */
+.tl{position:relative; list-style:none; margin:0; padding:18px 10px 12px; display:flex; justify-content:space-between; gap:6px}
+.tl li{position:relative; z-index:2; display:grid; justify-items:center; align-content:start; gap:6px; text-align:center; min-width:0}
+.tl .dot{width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); position:relative}
+.tl .done .dot{background:var(--ok); color:var(--on-ok); box-shadow:none}
+.tl .now .dot{box-shadow:inset 0 0 0 3px var(--ok)}
+.tl .now .dot::before{content:""; width:10px; height:10px; border-radius:50%; background:var(--ok)}
+.tl .now .dot::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:halo 2s var(--ease-std) infinite}
+.is-late .tl .now .dot{box-shadow:inset 0 0 0 3px var(--warn)} .is-late .tl .now .dot::before,.is-late .tl .now .dot::after{background:var(--warn)}
+.is-off .tl .now .dot::after{display:none}
+.tl .nm{font-size:14px; font-weight:700; line-height:1.2; letter-spacing:-.01em; max-width:9.5em}
+.tl .next .nm{color:var(--muted); font-weight:600}
+.tl .tm{font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:600; min-height:1.5em}
+.tl .now .tm{color:var(--ink); font-weight:800}
+.tlw{position:relative}
+.tlw .track{position:absolute; z-index:1; top:32px; height:4px; margin-top:-2px; left:24px; right:24px; border-radius:2px; background:var(--surface-3); overflow:hidden}
+.tlw .fill{position:absolute; inset:0; background:var(--ok); transform-origin:left center; transform:scaleX(0); transition:transform 900ms var(--ease)}
+.is-late .tlw .fill{background:var(--ok)}
+
+.acts{display:grid; gap:10px}
+
+/* cards on the right */
+.card-h{display:flex; gap:14px; align-items:flex-start}
+.card-h .nic{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.card-h h2{font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800; margin:0}
+.card-h p{margin:4px 0 0; color:var(--muted)}
+.cpad{padding:20px}
+.cgap{display:grid; gap:16px}
+.okline{display:flex; gap:12px; align-items:flex-start}
+.okline .ic{color:var(--ok); margin-top:1px}
+.okline b{display:block; font-size:17px}
+.okline span{color:var(--muted)}
+
+/* rating */
+.rate{scroll-margin-top:150px}
+.rate h2{font-size:28px; line-height:1.08; letter-spacing:-.035em; font-weight:800; margin:10px 0 0}
+.rate .lead{margin-top:6px}
+.offer{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; border-radius:var(--r-pill); background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.yn{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+.yn button{min-height:64px; border:0; border-radius:var(--r-pill); display:inline-flex; align-items:center; justify-content:center; gap:10px; font-size:19px; font-weight:800; cursor:pointer; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:transform var(--t-fast) var(--ease)}
+.yn button:active{transform:scale(.97)}
+.yn button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.ans{display:grid; gap:16px; margin-top:20px; padding-top:20px; border-top:1px solid var(--line); animation:rise 420ms var(--ease) both}
+.ans h3{font-size:20px; letter-spacing:-.02em; margin:0}
+.ans h3:focus{outline:none}
+.ans p{margin:0}
+.code{border-radius:var(--r-core); padding:18px; display:grid; gap:12px}
+.code .k{font-size:14px; font-weight:800}
+.code .v{font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; line-height:1}
+.code .row{justify-content:space-between; flex-wrap:wrap}
+.code p{font-size:15px}
+.code .pill{background:var(--on-ember); color:var(--ember)}
+.gq{display:grid; gap:10px}
+.gq .missing{font-size:14px}
+.fbsent{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.fbsent .ic{color:var(--ok); margin-top:2px}
+.change{justify-self:start; color:var(--muted)}
+
+/* order summary */
+.oline{display:grid; grid-template-columns:56px 1fr auto; gap:14px; align-items:center; padding:10px 0}
+.oline + .oline{border-top:1px solid var(--line)}
+.oline .pic{width:56px; height:56px; border-radius:16px}
+.oline .nm{font-weight:700; line-height:1.25}
+.oline .mods{display:flex; flex-wrap:wrap; gap:4px; margin-top:4px}
+.oline .mod{display:inline-flex; align-items:center; gap:3px; min-height:24px; padding:0 8px; border-radius:var(--r-pill); background:var(--surface-2); font-size:14px; font-weight:700}
+.oline .q{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.okv .kv{align-items:baseline}
+.okv .kv span:first-child{color:var(--muted)}
+.okv .kv span:last-child{text-align:right; font-weight:700}
+.okv .tot span:last-child{font-size:20px}
+.okv .disc span:last-child{color:var(--ok)}
+
+/* banners & states */
+.banner{display:flex; gap:12px; align-items:flex-start; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.banner .ic{color:var(--warn); margin-top:2px}
+.banner b{display:block}
+.banner p{margin:2px 0 10px; color:var(--muted); font-size:15px}
+.banner .pill{min-height:48px}
+.state{padding:28px 18px 24px}
+.state .ill{color:var(--ink)}
+.state.err .ill{color:var(--warn)}
+.state h2{font-size:26px; line-height:1.12; letter-spacing:-.03em; margin:0}
+.state p{margin:0; color:var(--muted); max-width:34ch}
+.state .acts{width:100%; margin-top:8px}
+.sk{display:grid; justify-items:center; gap:14px; padding:22px 16px 26px}
+.skrow{display:flex; justify-content:space-between; padding:18px 18px 14px}
+
+/* prototype-only panel */
+.proto{border:1.5px dashed var(--line-strong); border-radius:var(--r-shell); padding:18px 16px; display:grid; gap:14px}
+.ptag{display:flex; align-items:center; gap:8px; margin:0; font-size:14px; font-weight:800; color:var(--muted)}
+.proto .seg button{font-size:15px; min-height:48px}
+.pbtns{display:flex; flex-wrap:wrap; gap:8px}
+.pbtns .pill{padding:0 16px; font-size:15px}
+.proto .help{margin:0; font-size:14px; color:var(--muted)}
+
+@keyframes halo{0%{transform:scale(1); opacity:.45}100%{transform:scale(2.4); opacity:0}}
+@keyframes halo2{0%{transform:scale(1); opacity:.5}100%{transform:scale(1.45); opacity:0}}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{transform:scale(.9); opacity:0}to{transform:none; opacity:1}}
+@keyframes rise{from{transform:translateY(12px); opacity:0}to{transform:none; opacity:1}}
+
+
+/* success content right after checkout (from design/pages/cart.html "viewDone") */
+.okhead{display:grid; justify-items:center; text-align:center; gap:10px; padding:12px 0 22px}
+.okhead .ok-h{outline:none; margin:0; text-wrap:balance}
+.okhead .lead{margin:0}
+.okmark{position:relative; width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}
+.okmark::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:okRing 1100ms 260ms var(--ease) both}
+.okmark .ic{position:relative; animation:okTick 460ms 200ms var(--ease) both}
+@keyframes okPop{from{transform:scale(.5); opacity:0}to{transform:none; opacity:1}}
+@keyframes okTick{from{transform:scale(.2) rotate(-25deg); opacity:0}to{transform:none; opacity:1}}
+@keyframes okRing{0%{transform:scale(1); opacity:.35}100%{transform:scale(1.7); opacity:0}}
+.ono{margin:0; font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.ono b{color:var(--ink); font-variant-numeric:tabular-nums}
+.wl-offer{padding:20px; border-radius:var(--r-shell); display:grid; gap:12px}
+.wl-offer b{font-size:20px; letter-spacing:-.02em; line-height:1.2; display:block; text-wrap:balance}
+.wl-offer p{margin:0}
+.wl-offer .pill{justify-self:start}
+.swrow{display:flex; align-items:center; gap:16px; width:100%; min-height:72px; padding:16px 18px; border:0; background:transparent; text-align:left; cursor:pointer; color:inherit; font:inherit}
+.swrow b{display:block; font-size:17px; line-height:1.3}
+.swrow span span{display:block; color:var(--muted); font-size:15px; margin-top:3px}
+.sw{position:relative; flex:none; width:60px; height:36px; border-radius:999px; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:background-color var(--t-base) var(--ease)}
+.sw::after{content:""; position:absolute; top:4px; left:4px; width:28px; height:28px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.swrow[aria-checked="true"] .sw{background:var(--ok); box-shadow:none}
+.swrow[aria-checked="true"] .sw::after{transform:translateX(24px)}
+.sw-state{font-size:14px; font-weight:800; color:var(--muted); min-width:32px; text-align:right}
+.bday{padding:0 18px 18px; display:grid; gap:10px}
+.bday .row{gap:10px}
+.bday select{flex:1; min-width:0}
+.state h1.h2{font-size:26px; line-height:1.12; letter-spacing:-.03em; margin:0}
+.okline .missing{display:block; margin-top:4px}
+.pbtns .pill[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
+@media (prefers-reduced-motion: reduce){
+  .live i::after,.ring .now,.vb::before,.tl .now .dot::after,.is-cook .viz .plate > svg,.enter .viz,.enter .etxt,.ans,.okmark,.okmark::before,.okmark .ic{animation:none}
+}
+@container app (max-width:370px){
+  .tl{padding-left:2px; padding-right:2px; gap:4px}
+  .tl.n5 .nm{max-width:min-content}
+  .enum b{font-size:70px}
+  .viz{width:176px; height:176px}
+}
+@container app (min-width:700px){
+  .hero > .core{padding:14px 14px 32px}
+  .hgrid{grid-template-columns:auto minmax(0,1fr); align-items:center; justify-items:start; gap:8px 36px; padding:6px 18px 0 22px}
+  .viz{margin:14px 0 18px}
+  .etxt{justify-items:start; text-align:left; margin-top:0; padding:0}
+  .enum{justify-content:flex-start}
+  .hnote{padding:0 26px 16px}
+  .tl{padding:22px 26px 16px}
+  .acts{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+}
+@container app (min-width:900px){
+  .trk-s{padding-top:40px}
+  .trk{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:28px; align-items:start}
+  .trk-l{position:sticky; top:150px}
+  .trk-title h1{font-size:40px}
+  .trk-title{margin-bottom:22px}
+  .viz{width:248px; height:248px}
+  .enum b{font-size:104px}
+  .enum.clock b{font-size:88px}
+  .say{font-size:30px}
+  .tl .nm{font-size:15px}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc-menu.ts";
+  import { startTracking } from "./_track.ts";
+  startTracking(SC.mount());
+</script>

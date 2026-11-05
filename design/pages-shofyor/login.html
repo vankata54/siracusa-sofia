@@ -24,7 +24,7 @@
 var main = DR.mount({page:"login", title:"Вход", bare:true, nav:null});
 var ic = SC.ic, esc = SC.esc;
 var view = DR.hash.car!==undefined ? "car" : DR.hash.km!==undefined ? "km" : DR.hash.err!==undefined ? "err" : "login";
-var car = DR.db.car, kmv = "", flv = "", kmErr = "", uErr = "", pErr = view==="err" ? "Грешна парола. Опитайте пак или попитайте управителя." : "", uv = "", shown = false;
+var car = DR.db.car, kmv = "", flv = "", kmErr = "", flErr = "", uErr = "", pErr = view==="err" ? "Грешна парола. Опитайте пак или попитайте управителя." : "", uv = "", shown = false;
 var DEF = "a1"; /* the car marked as "most used" in the driver's profile */
 var bar = document.createElement("div"); bar.className = "st-bar nonav"; document.body.appendChild(bar);
 function stepper(i){ var names = ["Вход","Автомобил","Километраж и ресто"];
@@ -45,8 +45,8 @@ function render(){ var h = '<div class="lg">';
   } else if (view==="km"){
     h += stepper(2)+'<div><h1 class="h2">Километраж и ресто</h1><p class="lead" style="margin-top:6px">Препишете числото от таблото на '+DR.carName(car)+'. По него се смятат изминатите километри и разходът.</p></div>'+
       '<div class="field bigf"><label for="kmnow">Километраж сега</label><div class="wrapi"><input class="input" id="kmnow" inputmode="numeric" autocomplete="off" placeholder="0" value="'+esc(kmv)+'"'+(kmErr?' aria-invalid="true" aria-describedby="kerr"':' aria-describedby="khelp"')+'><span class="u">км</span></div>'+
-      (kmErr?'<span class="err" id="kerr">'+kmErr+'</span>':'<span class="help" id="khelp">Последно записан за тази кола: '+DR.db.kmStart.toLocaleString("bg-BG")+' км (условно за макета).</span>')+'</div>'+
-      '<div class="field bigf"><label for="fl">Ресто, което взимате от ресторанта</label><div class="wrapi"><input class="input" id="fl" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+esc(flv)+'" aria-describedby="flh"><span class="u">€</span></div><span class="help" id="flh">Брои се към парите за предаване в края на смяната. Колко ресто се дава: <span class="missing">[ЛИПСВА]</span>.</span></div>'+
+      (kmErr?'<span class="err" id="kerr">'+kmErr+'</span>':'<span class="help" id="khelp">Последно записан за тази кола: '+DR.carLast(car).toLocaleString("bg-BG")+' км (условно за макета).</span>')+'</div>'+
+      '<div class="field bigf"><label for="fl">Ресто, което взимате от ресторанта</label><div class="wrapi"><input class="input" id="fl" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+esc(flv)+'"'+(flErr?' aria-invalid="true"':'')+' aria-describedby="flh"><span class="u">€</span></div>'+(flErr?'<span class="err">'+flErr+'</span>':'')+'<span class="help" id="flh">Брои се към парите за предаване в края на смяната. Колко ресто се дава: <span class="missing">[ЛИПСВА]</span>.</span></div>'+
       '<div class="park">'+ic("car",22)+'<span>Ползвайте приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>';
     bar.innerHTML = '<button class="pill pill-line" type="button" data-go="car" style="flex:0 0 auto;background:var(--surface)">'+ic("caret-left",22)+'Назад</button><button class="pill pill-red grow" type="button" data-start>'+ic("moped",22)+'Започни смяната</button>';
   }
@@ -64,9 +64,11 @@ document.addEventListener("click", function(e){ var b = e.target.closest("button
   if (b.dataset.car){ car = b.dataset.car; render(); return; }
   if (b.dataset.go){ view = b.dataset.go; if (view==="login"){ pErr = ""; } render(); window.scrollTo(0,0); return; }
   if (b.hasAttribute("data-start")){ var v = parseInt(kmv.replace(/\s/g,""),10);
-    kmErr = !v ? "Въведете километража от таблото." : v < DR.db.kmStart ? "По-малко е от последно записания ("+DR.db.kmStart.toLocaleString("bg-BG")+" км). Проверете пак." : "";
-    if (kmErr){ render(); main.querySelector("#kmnow").focus(); return; }
-    var f = parseFloat(flv.replace(",", ".")); DR.db.float = isNaN(f) ? null : f;
+    kmErr = !v ? "Въведете километража от таблото." : v < DR.carLast(car) ? "По-малко е от последно записания ("+DR.carLast(car).toLocaleString("bg-BG")+" км). Проверете пак." : "";
+    var f = flv.trim() ? Number(flv.replace(",", ".").replace(/\s/g,"")) : null;
+    flErr = f !== null && (isNaN(f) || f < 0) ? "Въведете сума в евро, например 20,00." : "";
+    if (kmErr || flErr){ render(); main.querySelector(kmErr?"#kmnow":"#fl").focus(); return; }
+    DR.db.float = f;
     DR.db.car = car; DR.db.kmStart = v; DR.db.legs = []; DR.db.shiftStart = Date.now(); DR.db.parked = false; DR.save(); location.href = "list.html"; }
 });
 </script>

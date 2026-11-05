@@ -29,7 +29,7 @@ function nextCard(d, eta){ var late = DR.lvl(d) === "late", app = DR.prefs.nav |
     '<a href="delivery.html#'+d.id+'" style="color:inherit;text-decoration:none;display:block"><div class="addr"><b>'+(d.zone?esc(d.zone)+', ':'')+esc(d.addr)+'</b><span>'+esc(d.sub)+'</span>'+DR.exTag+'</div></a>'+
     '<div class="meta">'+(d.zone?'':DR.zoneLine(d))+DR.dueStt(d, eta)+(eta?DR.stt("picked","Пристигане ~"+DR.clock(eta),"car"):"")+'</div>'+
     '<div class="money'+(d.pay==="cash"?' cash':'')+'"><span class="w">'+ic(DR.PAY[d.pay][1],22)+'<span>'+(d.pay==="cash"?"Вземете в брой":DR.PAY[d.pay][0])+'</span></span><span class="price">'+DR.money(d)+'</span></div>'+
-    (d.st==="wait"&&d.zone?'<p class="small muted" style="margin:10px 2px 0">Проверете бройките в торбите, преди да натиснете „Взех“.</p>':'')+
+    (d.st==="wait"&&d.zone?'<p class="muted" style="margin:10px 2px 0">Проверете бройките в торбите, преди да натиснете „Взех“.</p>':'')+
     (d.arrivedAt?'<div class="arr">'+ic("check-circle",20)+'Клиентът получи SMS в '+DR.clock(d.arrivedAt)+'</div>':'')+
     '<div class="acts"><a class="pill pill-line" href="delivery.html#'+d.id+'&call">'+ic("phone",22)+'Обади се</a><a class="pill pill-soft" href="delivery.html#'+d.id+'">Отвори'+ic("caret-right",20)+'</a></div></div></div>'; }
 
