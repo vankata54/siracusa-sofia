@@ -15,11 +15,11 @@ M.saveCfg = function(){ SC.store(CKEY, CFG); };
 
 /* ---------- people at the table: this phone + 2 simulated phones (no invented names) ---------- */
 M.GUESTS = {me:{bg:"Вие", en:"You", ini:["В","Y"]}, g2:{bg:"Телефон 2", en:"Phone 2", ini:["2","2"]}, g3:{bg:"Телефон 3", en:"Phone 3", ini:["3","3"]}};
-M.WHO = ["me","g2","g3"];
+M.WHO = ["me","g2","g3","g4","g5","g6","g7"]; /* live tabs take the first free; simulated guests never sit on a live tab */
 function uid(){ return Math.random().toString(36).slice(2,9); }
-function ln(id, who, q, ago){ return {key:uid(), id:id, q:q||1, who:who, at:Date.now()-(ago||0)*1000}; }
-function seedDraft(){ return [ln("pitsa-margarita","g2",1,140), ln("shopska-salata","g2",1,130), ln("kebapcheta","g3",1,90), ln("parzheni-kartofi","g3",1,80)]; }
-function fresh(){ return {v:2, mode:"open", draft:seedDraft(), rounds:[], calls:{}, picks:{}, bill:null, rating:null, sim:{}, skew:0, opened:Date.now()-14*60000}; }
+function ln(id, who, q, ago, sim){ var l = {key:uid(), id:id, q:q||1, who:who, at:Date.now()-(ago||0)*1000}; if (sim) l.sim = true; return l; }
+function seedDraft(){ return [ln("pitsa-margarita","g2",1,140,1), ln("shopska-salata","g2",1,130,1), ln("kebapcheta","g3",1,90,1), ln("parzheni-kartofi","g3",1,80,1)]; }
+function fresh(){ return {v:3, mode:"open", draft:seedDraft(), rounds:[], calls:{}, picks:{}, bills:{}, ratings:{}, sim:{}, skew:0, opened:Date.now()-14*60000}; }
 
 /* ---------- this phone: every browser tab is its own phone (window.name survives reloads, not new tabs) ---------- */
 var HB = "sc-masa-tab-"; /* one key per tab: no read-modify-write races between tabs */
@@ -39,13 +39,29 @@ function beat(){ var t = tabs(), now = Date.now(); Object.keys(t).forEach(functi
   SC.store(HB+TAB, {id:M.me, ts:now, since:SINCE}); }
 beat(); setInterval(beat, 1500);
 M.livePhones = function(){ var t = tabs(), now = Date.now(); return Object.keys(t).filter(function(k){ return now - t[k].ts < 5000; }).map(function(k){ return t[k].id; }); };
+/* a simulated guest must never speak as a live tab: lines, picks and bills of a simulated phone move away from a phone a tab has claimed */
+function allLines(n){ return n.draft.concat([].concat.apply([], n.rounds.map(function(r){ return r.lines; }))); }
+function relocate(n){ var live = M.livePhones(); if (live.indexOf(M.me) < 0) live.push(M.me);
+  var moved = false, map = {};
+  allLines(n).forEach(function(l){ if (!l.sim || live.indexOf(l.who) < 0) return;
+    if (!map[l.who]){ var used = allLines(n).map(function(z){ return z.who; }).concat(live).concat(Object.keys(map).map(function(k){ return map[k]; }));
+      map[l.who] = M.WHO.filter(function(w){ return used.indexOf(w) < 0; })[0] || l.who; }
+    if (map[l.who] !== l.who){ var from = l.who; l.who = map[from]; if (n.picks && n.picks[l.key] === from) n.picks[l.key] = l.who; moved = true; } });
+  return moved; }
+/* the phone a simulated action speaks for: the wanted one if no tab is on it, else another simulated phone */
+M.simPhone = function(want){ var live = M.livePhones(); if (live.indexOf(M.me) < 0) live.push(M.me);
+  if (want && live.indexOf(want) < 0) return want;
+  var simWho = allLines(S).filter(function(l){ return l.sim && live.indexOf(l.who) < 0; }).map(function(l){ return l.who; })[0];
+  if (simWho) return simWho; var used = allLines(S).map(function(l){ return l.who; }).concat(live);
+  return M.WHO.filter(function(w){ return used.indexOf(w) < 0; })[0] || "g7"; };
 /* language and connection belong to the phone, never to the table */
 var LKEY = "sc-masa-lang-" + M.me, OKEY = "sc-masa-off-" + M.me;
 function local(){ S.lang = SC.load(LKEY, "bg"); S.offline = !!SC.load(OKEY, false); }
 M.setLang = function(l){ SC.store(LKEY, l); S.lang = l; };
 M.setOffline = function(v){ SC.store(OKEY, !!v); S.offline = !!v; emit("offline"); };
 
-var S = SC.load(KEY, null); if (!S || S.v !== 2){ S = fresh(); SC.store(KEY, S); } /* stored at once, so every phone starts from the same session */
+var S = SC.load(KEY, null); if (!S || S.v !== 3){ S = fresh(); SC.store(KEY, S); }
+if (relocate(S)) SC.store(KEY, S); /* stored at once, so every phone starts from the same session */
 local();
 M.st = S;
 function replace(n){ Object.keys(S).forEach(function(k){ delete S[k]; }); Object.assign(S, n); local(); }
@@ -56,17 +72,17 @@ function emit(why){ subs.forEach(function(f){ try{ f(why); }catch(e){ console.er
 function persist(){ var c = Object.assign({}, S); delete c.lang; delete c.offline; SC.store(KEY, c); }
 M.save = function(why){ persist(); emit(why || "save"); };
 /* read the latest stored session before every change: a phone must never write back an old copy (that was the "session went back to the start" bug) */
-function sync(){ var n = SC.load(KEY, null); if (n && n.v === 2) replace(n); }
+function sync(){ var n = SC.load(KEY, null); if (n && n.v === 3) replace(n); }
 M.sync = sync;
 M.reset = function(){ replace(fresh()); persist(); };
 /* another tab = another phone at the same table */
-window.addEventListener("storage", function(e){ if (e.key === KEY){ var n = SC.load(KEY, null); if (n && n.v === 2){ replace(n); emit("remote"); } } });
+window.addEventListener("storage", function(e){ if (e.key === KEY){ var n = SC.load(KEY, null); if (n && n.v === 3){ replace(n); emit("remote"); } } });
 
 /* ---------- language ---------- */
 M.L = function(bg, en){ return S.lang === "en" && en != null ? en : bg; };
 var L = M.L;
 /* names are relative: this phone is "Вие", the others "Телефон N" */
-var NUM = {me:1, g2:2, g3:3};
+var NUM = {me:1, g2:2, g3:3, g4:4, g5:5, g6:6, g7:7};
 M.name = function(who){ return who === M.me ? L("Вие","You") : L("Телефон ","Phone ")+(NUM[who]||2); };
 M.av = function(who, sm){ return '<span class="av '+(who==="me"?"":who)+(sm?" sm":"")+'" aria-hidden="true">'+(who === M.me ? L("В","Y") : (NUM[who]||2))+'</span>'; };
 M.others = function(){ return M.WHO.filter(function(w){ return w !== M.me; }); };
@@ -132,17 +148,21 @@ M.serveCall = function(t){ sync(); var c = S.calls[t]; if (c && !c.done){ c.done
 M.active = function(){ return Object.keys(S.calls).filter(function(k){ return !S.calls[k].done; }).sort(function(a,b){ return S.calls[a].at - S.calls[b].at; }); };
 
 /* ---------- bill & session ---------- */
-M.requestBill = function(o){ sync(); if (S.offline || S.mode !== "open") return false; S.bill = Object.assign({at:Date.now()}, o); S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
+M.requestBill = function(o){ sync(); if (S.offline || S.mode !== "open") return false; S.bills[M.me] = Object.assign({at:Date.now()}, o); S.calls.bill = {at:Date.now(), text:"", done:false}; M.save("bill"); return true; };
+M.myBill = function(){ return (S.bills || {})[M.me] || null; };
+M.tableBill = function(){ var b = S.bills || {}, k = Object.keys(b).filter(function(w){ return b[w].split === "one"; })[0]; return k ? Object.assign({by:k}, b[k]) : null; };
+M.myRating = function(){ return (S.ratings || {})[M.me] || null; };
+M.setRating = function(r){ sync(); S.ratings = S.ratings || {}; if (r) S.ratings[M.me] = r; else delete S.ratings[M.me]; M.save("rate"); };
 M.close = function(){ sync(); S.mode = "closed"; M.save("close"); };
 
 /* ---------- prototype scenarios via the address: page.html#demo=cooking ---------- */
-function round1(confAgo){ var now = Date.now(), ls = seedDraft().concat([ln("pitsa-s-burata-i-proshuto-krudo","me",1,60), ln("svezha-salata-s-koze-sirene-i-krushi","me",1,55)]);
+function round1(confAgo){ var now = Date.now(), ls = seedDraft().concat([ln("pitsa-s-burata-i-proshuto-krudo",M.me,1,60), ln("svezha-salata-s-koze-sirene-i-krushi",M.me,1,55)]);
   return {no:1, at: now - ((confAgo==null ? 3 : confAgo+25)*1000), conf: confAgo==null ? null : now - confAgo*1000, lines:ls}; }
 function demo(name){ var n = fresh(), now = Date.now(); SC.store(OKEY, name === "offline");
   if (name === "empty") n.draft = [];
-  if (name === "mine") n.draft.push(ln("pitsa-s-burata-i-proshuto-krudo","me",1,30), ln("tiramisu","me",1,10));
+  if (name === "mine") n.draft.push(ln("pitsa-s-burata-i-proshuto-krudo",M.me,1,30), ln("tiramisu",M.me,1,10));
   if (name === "waiting"){ n.draft = []; n.rounds = [round1(null)]; }
-  if (name === "cooking" || name === "offline"){ n.draft = [ln("tiramisu","g3",1,20)]; n.rounds = [round1(45)]; }
+  if (name === "cooking" || name === "offline"){ n.draft = [ln("tiramisu","g3",1,20,1)]; n.rounds = [round1(45)]; }
   if (name === "offline") n.draft.push(ln("sufle",M.me,1,5));
   if (name === "called"){ n.draft = []; n.rounds = [round1(45)]; n.calls.water = {at:now-42000, text:"", done:false}; }
   if (name === "manager"){ n.draft = []; n.rounds = [round1(300)]; n.calls.order = {at:now-(CFG.manager*60+12)*1000, text:"", done:false}; }
@@ -150,12 +170,12 @@ function demo(name){ var n = fresh(), now = Date.now(); SC.store(OKEY, name === 
   if (name === "bill" || name === "billreq" || name === "rated" || name === "closed"){ n.draft = []; n.rounds = [round1(1500)]; }
   if (name === "billreq" || name === "rated" || name === "closed"){ n.rounds[0].lines.forEach(function(l){ n.picks[l.key] = l.who; });
     var mine = n.rounds[0].lines.filter(function(l){ return l.who === M.me; }).map(function(l){ return l.key; });
-    n.bill = {at:now-25000, pay:"card", split:"dishes", mine:mine}; n.calls.bill = {at:now-25000, text:"", done: name==="closed" ? "served" : false, doneAt: name==="closed" ? now-5000 : undefined}; }
-  if (name === "rated") n.rating = {ans:"no", fb:"", sent:false};
+    n.bills[M.me] = {at:now-25000, pay:"card", split:"dishes", mine:mine}; n.calls.bill = {at:now-25000, text:"", done: name==="closed" ? "served" : false, doneAt: name==="closed" ? now-5000 : undefined}; }
+  if (name === "rated") n.ratings[M.me] = {ans:"no", fb:"", sent:false};
   if (name === "closed") n.mode = "closed";
   if (name === "invalid") n.mode = "invalid";
   if (name === "kitchen"){ SC.prefs.time = "22:45"; }
-  replace(n); persist(); }
+  relocate(n); replace(n); persist(); }
 function readDemo(){ var m = /demo=([a-z]+)/.exec(location.hash); if (!m) return; demo(m[1]);
   try{ history.replaceState(null, "", location.pathname + location.hash.replace(/&?demo=[a-z]+/,"").replace(/^#$/,"")); }catch(e){} }
 
@@ -191,7 +211,7 @@ function gateHTML(){ var R = SC.RESTAURANT;
     '<div class="btns"><a class="pill pill-line pill-lg" href="../pages/menu.html">'+ic("fork-knife",20)+L("Разгледай менюто","Browse the menu")+'</a><a class="pill pill-soft pill-lg" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div></div>';
   return '<div class="gate ok" role="status"><span class="ill">'+ic("check",52)+'</span><p class="eyebrow">'+esc(M.tableLabel())+'</p><h1 class="h2">'+L("Благодарим, че бяхте при нас!","Thank you for coming!")+'</h1>'+
     '<p>'+L("Сметката е платена и масата е затворена. Нова поръчка от този телефон не може. Ако останете още, сканирайте кода на масата отново.","The bill is paid and the table is closed. You cannot order from this phone any more. If you stay longer, scan the table code again.")+'</p>'+
-    '<div class="btns">'+(S.rating ? '' : '<a class="pill pill-red pill-lg" href="bill.html#rate">'+ic("smiley",20)+L("Кажете ни как беше","Tell us how it was")+'</a>')+
+    '<div class="btns">'+(M.myRating() ? '' : '<a class="pill pill-red pill-lg" href="bill.html#rate">'+ic("smiley",20)+L("Кажете ни как беше","Tell us how it was")+'</a>')+
     '<a class="pill pill-line pill-lg" href="../pages/home.html">'+ic("house",20)+L("Към сайта на Siracusa","Go to the Siracusa website")+'</a></div></div>'; }
 
 /* ---------- prototype panel ---------- */
@@ -248,7 +268,7 @@ M.fly = function(fromEl, id){ if (SC.reduce || !fromEl) return; var dev = SC.dev
   var x0 = A.left-b.left+A.width/2-20, y0 = A.top-b.top+A.height/2-20, dx = B.left-b.left+B.width/2-20-x0, dy = B.top-b.top+B.height/2-20-y0; el.style.left = x0+"px"; el.style.top = y0+"px"; dev.appendChild(el);
   el.animate([{transform:"translate(0,0) scale(1) rotate(0)"},{transform:"translate("+dx*.5+"px,"+(dy*.5-40)+"px) scale(.9) rotate(120deg)",offset:.5},{transform:"translate("+dx+"px,"+dy+"px) scale(.35) rotate(240deg)",opacity:.7}],{duration:400,easing:"cubic-bezier(.32,.72,0,1)"}).onfinish = function(){ el.remove(); }; };
 /* another phone adds a dish (prototype simulation, once per session and tag) */
-M.simOther = function(tag, id, who, ms){ setTimeout(function(){ sync(); if (S.sim[tag] || S.mode !== "open" || !M.kitchen()) return; if (who === M.me) who = M.others()[0]; S.sim[tag] = 1; var l = M.add(id, who);
+M.simOther = function(tag, id, who, ms){ setTimeout(function(){ sync(); if (S.sim[tag] || S.mode !== "open" || !M.kitchen()) return; who = M.simPhone(who); S.sim[tag] = 1; var l = M.add(id, who); l.sim = true; persist();
   emit("other:"+l.key); SC.toast(M.name(who)+L(" добави "," added ")+SC.byId[id].n); }, ms); };
 
 /* ---------- mount ---------- */
