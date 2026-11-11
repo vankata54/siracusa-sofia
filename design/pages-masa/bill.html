@@ -190,7 +190,8 @@ function askHTML(){ var n = sent().length; if (!n) return "";
   var keys = wantKeys(), s = mineSum(keys), cov = covered(), covSum = mineSum(Object.keys(cov)), canPay = !S.offline, part = Object.keys(cov).length > 0;
   var whoPays = Object.keys(S.bills || {}).filter(function(w){ return w !== M.me; }).map(function(w){ return esc(M.name(w)); }).join(", ");
   var btnTxt = C.split === "one" ? (part ? L("Поискай останалото · ","Ask for the rest · ") : L("Поискай сметката · ","Ask for the bill · "))+fmt(s) : L("Поискай моята част · ","Ask for my share · ")+fmt(s);
-  var none = !keys.length, why = C.split === "dishes" && !myPicks().length ? L("Отметнете поне едно ястие","Tick at least one dish") : L("Всичко вече е поискано","Everything has already been asked for");
+  var none = !keys.length, mineAll = all().some(function(l){ return l.who === M.me; });
+  var why = C.split === "dishes" && !myPicks().length ? L("Отметнете поне едно ястие","Tick at least one dish") : C.split === "people" && !mineAll ? L("От този телефон няма поръчани ястия","No dishes ordered from this phone") : L("Всичко вече е поискано","Everything has already been asked for");
   return '<div class="shell"><div class="core cpad"><p class="qh">'+L("Как ще платите?","How will you pay?")+'</p>'+
     '<div class="seg pay" role="group" aria-label="'+L("Плащане","Payment")+'">'+["cash","card"].map(function(k){ return '<button type="button" data-pay="'+k+'" aria-pressed="'+(C.pay===k)+'">'+ic(PAY[k][2],22)+L(PAY[k][0],PAY[k][1])+'</button>'; }).join("")+'</div>'+
     '<p class="qh" style="margin-top:20px">'+L("Как да я разделим?","How should we split it?")+'</p>'+

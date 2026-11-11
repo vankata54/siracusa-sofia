@@ -122,6 +122,10 @@ M.send = function(){ sync(); if (!S.draft.length || !M.canOrder()) return null;
   var first = !S.rounds.length || M.waiting(), r = {no:S.rounds.length+1, at:Date.now(), conf: first ? null : Date.now(), via: first, lines:S.draft};
   S.rounds.push(r); S.draft = []; M.save("send"); return r; };
 M.confirm = function(){ sync(); var n = 0; S.rounds.forEach(function(r){ if (!r.conf){ r.conf = Date.now(); n++; } }); if (n) M.save("confirm"); return n > 0; };
+/* the waiter can refuse the first order (reasons as in the waiter app); its dishes go back to the shared cart */
+M.REJECT = {test:["Изглежда, че е изпратена по грешка или за проба.","It looks like it was sent by mistake or as a test."], gaveup:["Сервитьорът отбеляза, че сте се отказали от нея.","The waiter noted that you changed your mind."], manual:["Сервитьорът ще я приеме лично, на масата.","The waiter will take it in person, at the table."]};
+M.reject = function(reason){ sync(); var i = -1; S.rounds.forEach(function(r, k){ if (i < 0 && !r.conf) i = k; }); if (i < 0) return false;
+  var r = S.rounds.splice(i, 1)[0]; S.draft = r.lines.concat(S.draft); S.rejected = {at:Date.now(), reason:reason || "test", n:M.qty(r.lines)}; M.save("reject"); return true; };
 M.waiting = function(){ return S.rounds.some(function(r){ return !r.conf; }); };
 /* prototype: statuses move by time since the waiter confirmed; "Следващ етап" adds a skew */
 M.status = function(r, i){ if (!r.conf) return "wait"; var e = (Date.now() - r.conf)/1000 + (S.skew||0), c = 8 + i*8, s = 40 + i*12; return e < c ? "ok" : e < s ? "cook" : "served"; };
@@ -177,6 +181,7 @@ function demo(name){ var n = fresh(), now = Date.now(); SC.store(OKEY, name === 
   if (name === "rated") n.ratings[M.me] = {ans:"no", fb:"", sent:false};
   if (name === "closed") n.mode = "closed";
   if (name === "invalid") n.mode = "invalid";
+  if (name === "rejected"){ n.draft = round1(null).lines; n.rejected = {at:now-20000, reason:"test", n:M.qty(n.draft)}; }
   if (name === "kitchen"){ SC.prefs.time = "22:45"; }
   relocate(n); replace(n); persist(); }
 function readDemo(){ var m = /demo=([a-z]+)/.exec(location.hash); if (!m) return; demo(m[1]);
@@ -210,7 +215,7 @@ M.banners = function(o){ o = o || {}; var h = "", st = SC.state();
 /* ---------- blocking states ---------- */
 function gateHTML(){ var R = SC.RESTAURANT;
   if (S.mode === "invalid") return '<div class="gate bad" role="alert"><span class="ill">'+ic("qr-code",52)+'</span><p class="eyebrow">'+L("QR кодът","The QR code")+'</p><h1 class="h2">'+L("Този код вече не работи","This code no longer works")+'</h1>'+
-    '<p>'+L("Може да е от друга маса или от стара сметка. Попитайте сервитьора: той ще ви отвори масата за секунди.","It may be from another table or an old bill. Ask the waiter: they will open your table in seconds.")+'</p>'+
+    '<p>'+L("Може да е от маса, която вече не се ползва. Попитайте сервитьора: той ще ви помогне за секунди.","It may be from a table that is no longer in use. Ask the waiter: they will help you in seconds.")+'</p>'+
     '<div class="btns"><a class="pill pill-line pill-lg" href="../pages/menu.html">'+ic("fork-knife",20)+L("Разгледай менюто","Browse the menu")+'</a><a class="pill pill-soft pill-lg" href="tel:+359894365577">'+ic("phone",20)+R.phone+'</a></div></div>';
   return '<div class="gate ok" role="status"><span class="ill">'+ic("check",52)+'</span><p class="eyebrow">'+esc(M.tableLabel())+'</p><h1 class="h2">'+L("Благодарим, че бяхте при нас!","Thank you for coming!")+'</h1>'+
     '<p>'+L("Сметката е платена и масата е затворена. Нова поръчка от този телефон не може. Ако останете още, сканирайте кода на масата отново.","The bill is paid and the table is closed. You cannot order from this phone any more. If you stay longer, scan the table code again.")+'</p>'+
@@ -249,15 +254,17 @@ M.why = function(x){ if (SC.isOut(x)) return ""; if (x.cat === "zakuski" && !SC.
 /* who already has it in the shared cart: "2 · Телефон 2" */
 M.inCartTag = function(x){ var ls = M.inDraft(x.id); if (!ls.length) return "";
   return '<span class="incart"><span class="who">'+L("В количката:","In the cart:")+'</span>'+ls.map(function(l){ return '<span class="who">'+M.av(l.who, true)+(l.q > 1 ? l.q+" × " : "")+esc(M.name(l.who))+'</span>'; }).join("")+'</span>'; };
-M.card = function(x){ return '<div class="dcard"><button class="open" type="button" data-mdish="'+x.id+'"><span class="pw">'+SC.pic(x)+SC.badges(x,true)+'</span><span class="nm">'+esc(x.n)+'</span></button><div class="rowp"><span><span class="price">'+SC.fmt(x.p)+'</span><small>'+(x.per100?L("за 100 гр.","per 100 g"):esc(x.g))+'</small></span>'+M.plus(x)+M.why(x)+'</div></div>'; };
+M.card = function(x){ return '<div class="dcard"><button class="open" type="button" data-mdish="'+x.id+'"><span class="pw">'+SC.pic(x)+SC.badges(x,true)+'</span><span class="nm">'+esc(x.n)+'</span></button><div class="rowp"><span><span class="price">'+SC.fmt(x.p)+'</span><small>'+M.g(x)+'</small></span>'+M.plus(x)+M.why(x)+'</div></div>'; };
 M.row = function(x){ return '<div class="mrow'+(SC.isOut(x)?" out":"")+'" data-row="'+x.id+'"><button class="open" type="button" data-mdish="'+x.id+'">'+SC.pic(x)+'<span class="tx"><span class="nm">'+esc(x.n)+'</span>'+
-  '<span class="meta"><span class="price">'+SC.fmt(x.p)+'</span><span>'+(x.per100?L("за 100 гр.","per 100 g"):esc(x.g))+'</span></span>'+(x.t.length?SC.badges(x):"")+M.inCartTag(x)+'</span></button>'+(M.plus(x)||M.why(x)||'<span></span>')+'</div>'; };
+  '<span class="meta"><span class="price">'+SC.fmt(x.p)+'</span><span>'+M.g(x)+'</span></span>'+(x.t.length?SC.badges(x):"")+M.inCartTag(x)+'</span></button>'+(M.plus(x)||M.why(x)||'<span></span>')+'</div>'; };
 function cap(s){ s = String(s||"").trim().replace(/,(?=\S)/g, ", "); return s.charAt(0).toUpperCase() + s.slice(1); }
 M.cap = cap;
+/* grams from the data are Bulgarian ("400 гр."); in English the unit becomes "g" */
+M.g = function(x){ if (x.per100) return L("за 100 гр.","per 100 g"); var g = esc(x.g || ""); return S.lang === "en" ? g.replace(/\s*гр\.?/g, " g").replace(/\s*мл\.?/g, " ml").replace(/\s*бр\.?/g, " pcs") : g; };
 M.dishSheet = function(id){ var x = SC.byId[id]; if (!x) return;
   var al = x.al.length ? x.al.map(function(k){ var a = SC.ALLERGENS.filter(function(z){ return z[0]===k; })[0]; return '<span class="badge">'+ic(a?a[2]:"info",16)+SC.allergenName(k)+'</span>'; }).join("") : '<span class="muted">'+(x.comp ? L("Не открихме алергени в състава.","No allergens found in the ingredients.") : L("Няма данни за състава. Попитайте сервитьора.","No ingredient data. Please ask the waiter."))+'</span>';
   var ok = M.orderable(x), reason = SC.isOut(x) ? L("Изчерпано днес","Sold out today") : !M.kitchen() ? L("Кухнята приема поръчки до 22:30","The kitchen takes orders until 22:30") : (x.cat==="zakuski" && !SC.state().breakfast) ? L("Закуските са до 11:30","Breakfast is served until 11:30") : "";
-  var s = M.sheet({title:x.n, html:'<div class="dsh">'+SC.pic(x, "dsh-pic")+'<div class="dsh-m"><span class="price">'+SC.fmt(x.p)+'</span><span class="muted">'+(x.per100?L("за 100 гр.","per 100 g"):esc(x.g))+'</span>'+(x.t.length?SC.badges(x):"")+'</div>'+
+  var s = M.sheet({title:x.n, html:'<div class="dsh">'+SC.pic(x, "dsh-pic")+'<div class="dsh-m"><span class="price">'+SC.fmt(x.p)+'</span><span class="muted">'+M.g(x)+'</span>'+(x.t.length?SC.badges(x):"")+'</div>'+
     (x.comp ? '<p>'+esc(cap(x.comp))+'</p>' : '<p class="missing">[ЛИПСВА: състав]</p>')+
     '<h3>'+L("Алергени","Allergens")+'</h3><div class="badges">'+al+'</div><p class="note-auto">'+ic("info",18)+'<span>'+L("Предварително, от състава. Чака потвърждение от кухнята.","Preliminary, from the ingredients. Waiting for the kitchen to confirm.")+'</span></p>'+
     M.inCartTag(x)+

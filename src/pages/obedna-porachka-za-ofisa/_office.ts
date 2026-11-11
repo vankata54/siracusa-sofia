@@ -575,7 +575,9 @@ export function start(): void {
   }
   async function fetchO(code: string, quiet = false): Promise<boolean> {
     try { O = (await api.office.get(code)) as OfficeOrder | null; Ocode = code; loadErr = null; return true; }
-    catch (e) { if (!quiet) { loadErr = e instanceof ApiError ? e : new ApiError("server", "Нещо се обърка. Опитайте пак."); Ocode = code; O = null; } return false; }
+    catch (e) {
+      if (e instanceof ApiError && e.code === "not_found") { O = null; Ocode = code; loadErr = null; return true; }
+      if (!quiet) { loadErr = e instanceof ApiError ? e : new ApiError("server", "Нещо се обърка. Опитайте пак."); Ocode = code; O = null; } return false; }
   }
   /** a colleague joined (SSE on the server, BroadcastChannel in the demo) or the poll: refresh the visible order */
   let refreshing = false;
