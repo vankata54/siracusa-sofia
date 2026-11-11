@@ -1,2 +1,2 @@
 # siracusa-sofia
-Restuarant Siracusa
+Restaurant Siracusa
