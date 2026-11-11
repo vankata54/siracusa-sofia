@@ -1,0 +1,388 @@
+---
+/* Reservation (/rezervatsia/): port of design/pages/reservation.html. The hero and "Добре е да знаете" are drawn here
+   (SEO, no dependency on the hour); the 3-step flow depends on today's date, the hour and the taken tables, so the
+   server draws a skeleton and ./_res.ts draws the steps, the success screen and "Промяна или отказ" in the browser. */
+import Base from "../../layouts/Base.astro";
+import { ic, url, RESTAURANT as R } from "../../lib/index.ts";
+import { restaurantLd } from "../_home.ts";
+
+const abs = (p: string) => new URL(p, Astro.site).href;
+const jsonld = [
+  { ...restaurantLd(Astro.site), potentialAction: { "@type": "ReserveAction", target: { "@type": "EntryPoint", urlTemplate: abs(url.reservation()), inLanguage: "bg" }, result: { "@type": "FoodEstablishmentReservation", name: "Резервация на маса" } } },
+  { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+    { "@type": "ListItem", position: 2, name: "Резервирай маса", item: abs(url.reservation()) },
+  ] },
+];
+const sk = (w: string, h: number, r = 14) => `<span class="skel" style="display:block;width:${w};height:${h}px;border-radius:${r}px"></span>`;
+const skeleton =
+  `<div class="fgrid"><div class="fmain"><div class="stepper" role="group" aria-label="Стъпки на резервацията"><div class="t"><b>Стъпка 1 от 3</b><span>Кога и колко</span></div>` +
+  `<div class="bar" aria-hidden="true"><span class="on"></span><span></span><span></span></div></div>` +
+  `<div class="s1"><div class="q"><h2 class="qh">Кой ден?</h2>${sk("100%", 380, 28)}</div><div class="qcol"><div class="q"><h2 class="qh">В колко часа?</h2>${sk("100%", 64, 22)}<div style="height:12px"></div>${sk("100%", 116, 22)}</div><div class="q">${sk("100%", 96, 28)}</div></div></div></div>` +
+  `<aside class="aside" aria-hidden="true"><div class="shell sum"><div class="core">${sk("60%", 24)}${sk("100%", 200)}${sk("100%", 64, 999)}</div></div></aside></div>`;
+---
+<Base page="reservation" nav="reserve" title="Резервирай маса" docTitle="Резервирай маса в Дружба 2"
+  description="Резервирайте маса в Siracusa Bar & Grill, ж.к. Дружба 2: изберете ден, час и маса в салона или в отопляваната градина. Без депозит, потвърждение по SMS или Viber."
+  ai={false} actionBar jsonld={jsonld}>
+  <section class="sec rhero" data-rhero>
+    <h1 class="h1">Резервирай маса</h1>
+    <p class="lead">Изберете ден, час и маса в салона или в отопляваната градина. Без депозит, потвърждение по SMS или Viber.</p>
+    <ul class="facts"><li set:html={ic("wallet", 20) + "Без депозит"}></li><li set:html={ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber"}></li><li set:html={ic("bell", 20) + "Напомняне ден преди и 3 часа преди"}></li><li set:html={ic("clock", 20) + "Промяна до 1 - 2 ч преди"}></li></ul>
+  </section>
+  <section class="sec flowsec" id="flow" data-flow aria-busy="true" set:html={skeleton}></section>
+  <noscript><p class="sec lead">За резервация през сайта е нужен JavaScript. Обадете ни се на <a href={"tel:" + R.phoneIntl}>{R.phone}</a>.</p></noscript>
+  <div data-rview hidden></div>
+  <section class="sec" data-rinfo>
+    <h2 class="h2">Добре е да знаете</h2>
+    <div class="infog">
+      <div class="card ic-card"><span class="ni" set:html={ic("wallet", 22)}></span><span><b>Без депозит</b><p>Резервацията е безплатна. Плащате само това, което поръчате.</p></span></div>
+      <div class="card ic-card"><span class="ni" set:html={ic("bell", 22)}></span><span><b>Напомняне</b><p>Потвърждение веднага, напомняне ден преди и 3 часа преди. По SMS или Viber.</p></span></div>
+      <div class="card ic-card"><span class="ni" set:html={ic("clock", 22)}></span><span><b>Промяна или отказ</b><p>От линка в съобщението: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</p></span></div>
+      <div class="card ic-card"><span class="ni" set:html={ic("confetti", 22)}></span><span><b>Повече от 12 души?</b><p>Рожден ден, кръщене, фирмено парти: -5% при ранна резервация.</p><a class="link" href={url.page("celebration")} set:html={"Празник при нас" + ic("caret-right", 18)}></a></span></div>
+    </div>
+    <div class="card ic-card addr"><span class="ni" set:html={ic("map-pin", 22)}></span><span><b>{R.address}</b><p>Всеки ден {R.open} - {R.close}. Кухнята приема до {R.kitchen}. Паркиране: <span class="missing">[ЛИПСВА: паркиране]</span></p>
+      <span class="row" style="flex-wrap:wrap;gap:4px 20px"><a class="link" href={R.maps} target="_blank" rel="noopener" set:html={ic("path", 20) + "Маршрут в Google Maps"}></a><a class="link" href={"tel:" + R.phoneIntl} set:html={ic("phone", 20) + R.phone}></a></span></span></div>
+  </section>
+  <div data-rproto></div>
+  <div class="abar rabar" role="region" aria-label="Следваща стъпка" data-rbar hidden slot="ov"></div>
+</Base>
+
+<style is:global>
+
+/* ---------- hero ---------- */
+.rhero{padding-top:20px}
+.rhero .lead{margin-top:10px; max-width:34em}
+.facts{display:none; flex-wrap:wrap; gap:8px; margin:20px 0 0; padding:0; list-style:none}
+.facts li{display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px 0 10px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:15px; font-weight:700}
+.facts .ic{color:var(--muted)}
+
+/* ---------- flow layout ---------- */
+.flowsec{padding-top:24px}
+.fgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:0}
+.fmain{min-width:0}
+.aside{display:none}
+.enter{animation:rIn var(--t-slow) var(--ease-std) both}
+@keyframes rIn{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+
+/* ---------- stepper (3 labelled bars, done steps are buttons) ---------- */
+.stepper{margin-bottom:22px}
+.stepper .t span{color:var(--ink)}
+.stepper .bar span.now{animation:rFill 520ms var(--ease) both}
+@keyframes rFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* ---------- step 1 ---------- */
+.qh{font-size:20px; line-height:1.2; font-weight:800; letter-spacing:-.02em; margin:0 0 12px}
+.q + .q, .qcol{margin-top:30px}
+.qcol{display:grid; gap:30px}
+.qcol .q + .q{margin-top:0}
+.cal{padding:12px 8px 10px}
+.cal-h{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 4px 6px 10px}
+.cal-m{margin:0; font-size:20px; font-weight:800; letter-spacing:-.025em}
+.cal-nav{display:flex; gap:6px}
+.mbtn{min-height:48px; padding:0 14px 0 10px; gap:4px; font-size:15px}
+.mbtn.nx{padding:0 10px 0 14px}
+.mbtn[disabled]{opacity:.45}
+.cal-g{display:grid; grid-template-columns:repeat(7,minmax(0,1fr))}
+.wd{font-size:14px; font-weight:700; color:var(--muted); text-align:center; padding:4px 0 6px}
+.day{position:relative; height:50px; padding:0; border:0; background:transparent; color:var(--ink); cursor:pointer; display:grid; place-items:center; font:inherit; font-weight:700; font-size:17px; font-variant-numeric:tabular-nums}
+.day > span{width:46px; height:46px; display:grid; place-items:center; border-radius:50%; transition:transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease)}
+.day:active > span{transform:scale(.92)}
+.day.today > span{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.day[aria-pressed="true"] > span{background:var(--ink); color:var(--bg); box-shadow:none}
+.day:disabled{cursor:default; color:var(--muted); opacity:.42}
+.day .ev{position:absolute; left:50%; bottom:5px; width:6px; height:6px; margin-left:-3px; border-radius:50%; background:var(--ember)}
+.cal-lg{display:flex; flex-wrap:wrap; gap:6px 18px; margin:6px 10px 0; padding-top:10px; border-top:1px solid var(--line); font-size:14px; font-weight:600; color:var(--muted)}
+.cal-lg span{display:inline-flex; align-items:center; gap:8px}
+.cal-lg .o{width:14px; height:14px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.cal-lg .e{width:8px; height:8px; border-radius:50%; background:var(--ember); margin:0 3px}
+.evnote{display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:start; margin-top:12px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.evnote .evic{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember)}
+.evnote b{display:block; font-size:17px; line-height:1.3}
+.evnote p{margin:4px 0 0; color:var(--muted); font-size:16px}
+.evnote .link{min-height:44px}
+.note{display:flex; gap:10px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:16px; font-weight:600}
+.note .ic{flex:none; margin-top:1px; color:var(--muted)}
+.slots{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px}
+.slot{min-height:52px; padding:4px 0; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font:inherit; font-weight:800; font-size:17px; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-content:center; line-height:1.1; transition:transform var(--t-fast) var(--ease)}
+.slot:active{transform:scale(.95)}
+.slot[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.slot.full{background:var(--surface-2); color:var(--muted); box-shadow:none; font-size:16px}
+.slot.full small{font-size:14px; font-weight:700}
+.hint{margin:10px 2px 0; font-size:14px; color:var(--muted); font-weight:600}
+.ppl{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 14px 14px 18px}
+.ppl .qh{margin:0}
+.ppl p{margin:4px 0 0; font-size:16px; color:var(--muted)}
+.ppl .counter output{min-width:40px; font-size:22px}
+.ppl .counter button[disabled]{opacity:.35; cursor:not-allowed}
+.ppl-more{margin:10px 2px 0; font-size:16px; color:var(--muted)}
+
+/* ---------- step 2 ---------- */
+.recap{display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:56px; padding:4px 4px 4px 16px; border-radius:28px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-weight:700; margin-bottom:16px}
+.recap span{min-width:0; font-size:15px; line-height:1.3; padding:6px 0}
+.recap .ic{color:var(--muted)}
+.recap .pill{min-height:48px; padding:0 16px; flex:none}
+.zseg button{flex-direction:row; gap:10px; min-height:60px; text-align:left}
+.zseg button span{display:grid; line-height:1.2}
+.zseg button small{font-size:14px; font-weight:700; color:var(--muted)}
+.zseg button[aria-pressed="true"] small{color:var(--ok)}
+.znote{display:flex; gap:8px; align-items:center; margin:10px 4px 0; font-size:16px; color:var(--muted); font-weight:600}
+.lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:16px 4px 10px; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.lgd li{display:inline-flex; align-items:center; gap:7px}
+.sw{width:18px; height:18px; border-radius:6px; flex:none}
+.sw.free{background:var(--surface); box-shadow:inset 0 0 0 2.5px var(--red)}
+.sw.sel{background:var(--red)}
+.sw.taken{background:repeating-linear-gradient(45deg, var(--surface-3) 0 3px, var(--line-strong) 3px 4.5px)}
+.sw.unfit{background:var(--surface); border:2px dashed var(--line-strong)}
+.sw.win{height:7px; border-radius:2px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--muted)}
+.mapbox{padding:4px}
+.mapbox .core{padding:6px 2px 4px}
+.fp{display:block; width:100%; height:auto; margin:0 auto; overflow:visible}
+.fp .floor{fill:var(--surface)}
+.fp .lawn{fill:var(--ok); opacity:.07}
+.fp .wall{fill:none; stroke:var(--line-strong); stroke-width:3}
+.fp .gap{stroke:var(--surface); stroke-width:7}
+.fp .win{fill:var(--surface); stroke:var(--muted); stroke-width:1.5}
+.fp .bush{fill:var(--ok); opacity:.3}
+.fp .lbl{fill:var(--muted); font-size:17px; font-weight:700; font-family:var(--font)}
+.fp .door{fill:none; stroke:var(--muted); stroke-width:1.5; stroke-dasharray:3 3}
+.tbl{cursor:pointer; outline:none}
+.tbl .hit{fill:transparent}
+.tbl .ring{fill:none; stroke:var(--red); stroke-width:3; opacity:0}
+.tbl:focus-visible .ring{opacity:1}
+.tbl .shp{transform-box:fill-box; transform-origin:center; transition:transform var(--t-slow) var(--ease)}
+.tbl .top{stroke-width:2.5}
+.tbl .no{font-family:var(--font); font-size:22px; font-weight:800; text-anchor:middle}
+.tbl .lb{font-family:var(--font); font-size:17px; font-weight:700; text-anchor:middle; fill:var(--muted)}
+.tbl.free .top{fill:var(--surface); stroke:var(--red)}
+.tbl.free .ch{fill:var(--red); opacity:.32}
+.tbl.free .no{fill:var(--red)}
+.tbl.free .lb{fill:var(--ink)}
+.tbl.free:hover .shp{transform:scale(1.05)}
+.tbl.sel .top{fill:var(--red); stroke:var(--red)}
+.tbl.sel .ch{fill:var(--red)}
+.tbl.sel .no{fill:var(--on-red)}
+.tbl.sel .lb{fill:var(--red); font-weight:800}
+.tbl.sel .shp{transform:scale(1.1)}
+.tbl.taken .top{fill:var(--surface-3); stroke:none}
+.tbl.taken .ch{fill:var(--surface-3)}
+.tbl.taken .no{fill:var(--muted)}
+.tbl.unfit .top{fill:var(--surface); stroke:var(--line-strong); stroke-dasharray:5 4; stroke-width:2}
+.tbl.unfit .ch{fill:var(--surface-2)}
+.tbl.unfit .no{fill:var(--muted)}
+.tbl.unfit .no, .tbl.unfit .lb{opacity:.8}
+.fp .hatch line{stroke:var(--line-strong); stroke-width:1.5}
+.below{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 16px; margin-top:8px}
+.needs{margin:0 0 4px}
+.s2{display:flex; flex-direction:column}
+.s2 .side{order:-1}
+.needs .label{display:block; margin:0 0 8px 2px}
+.needs .chips{flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px}
+.needs .chip{min-height:48px}
+.needs .chip .ic{color:var(--muted)}
+.needs .chip[aria-pressed="true"] .ic{color:inherit}
+.selc{margin-top:20px}
+.selc .core{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:16px}
+.alert > div{min-width:0}
+.alert .acts .pill{white-space:normal; text-align:center; line-height:1.2}
+.selrow{display:grid; grid-template-columns:52px 1fr; gap:14px; align-items:center}
+.tno{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; font-weight:800; font-size:20px; background:var(--surface-2); color:var(--ink); font-variant-numeric:tabular-nums}
+.tno.on{background:var(--red); color:var(--on-red)}
+.selrow b{display:block; font-size:17px; line-height:1.3}
+.selrow p{margin:2px 0 0; font-size:16px; color:var(--muted)}
+.hold{display:inline-flex; align-items:center; gap:8px; justify-self:start; min-height:44px; padding:0 16px 0 12px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums}
+.hold .ic{color:var(--ok)}
+.hold.urgent{box-shadow:inset 0 0 0 1.5px var(--warn)}
+.hold.urgent .ic{color:var(--warn)}
+.alert{display:grid; grid-template-columns:24px 1fr; gap:12px; align-items:start; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.alert.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+.alert.bad > .ic{color:var(--danger)}
+.alert.warn{box-shadow:inset 0 0 0 2px var(--warn)}
+.alert.warn > .ic{color:var(--warn)}
+.alert > .ic{margin-top:1px; color:var(--muted)}
+.alert b{display:block; font-size:17px; line-height:1.3}
+.alert p{margin:4px 0 0; color:var(--muted); font-size:16px}
+.alert .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.zempty{margin-bottom:14px}
+.grp .core{display:grid; gap:14px; padding:18px}
+.grp .gic{width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.grp p{margin:4px 0 0; color:var(--muted)}
+.grp .opts{display:grid; gap:8px}
+.gopt{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:8px 8px 8px 16px; border-radius:20px; background:var(--surface-2)}
+.gopt b{display:block}
+.gopt small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.gopt.on{background:var(--surface); box-shadow:inset 0 0 0 2px var(--red)}
+.tlist{list-style:none; margin:0; padding:0}
+.tlist h3{margin:18px 2px 6px; font-size:15px; font-weight:800; color:var(--muted)}
+.trow{display:grid; grid-template-columns:52px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line)}
+.trow b{display:block; line-height:1.3}
+.trow .ft{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.trow .pill{min-height:48px; padding:0 18px}
+.trow.taken .tno, .trow.unfit .tno{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted)}
+.trow .st{font-size:14px; font-weight:700; color:var(--muted); text-align:right; max-width:9em}
+.trow .st.sel{color:var(--red); display:inline-flex; align-items:center; gap:4px}
+.skmap{height:300px; border-radius:var(--r-core)}
+
+/* ---------- step 3 ---------- */
+.rc{display:grid; gap:10px}
+.rc .core{padding:14px 16px; display:grid; gap:4px}
+.rc .li{display:flex; align-items:center; gap:10px; font-weight:700; min-height:32px}
+.rc .li .ic{color:var(--muted)}
+.rc .acts{display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:4px}
+.rc .acts .link{min-height:44px}
+.form{display:grid; gap:20px; margin-top:22px}
+.form .two{display:grid; gap:20px}
+.opt{font-weight:600; color:var(--muted)}
+.occ .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+.occ .chip{min-height:48px}
+.consent{padding:14px 16px; border-radius:20px; background:var(--surface-2)}
+.consent .check{padding:0; min-height:0}
+.consent b{display:block; line-height:1.35}
+.consent .muted{display:block; font-size:14px; margin-top:2px}
+.rules{display:flex; gap:10px; align-items:flex-start; margin:0; font-size:14px; color:var(--muted); font-weight:600}
+.rules .ic{flex:none; margin-top:1px}
+.spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:rSpin 800ms linear infinite; flex:none}
+@keyframes rSpin{to{transform:rotate(360deg)}}
+
+/* ---------- action bar (phone) + summary (desktop) ---------- */
+.rabar .back{flex:none; padding:0 16px 0 12px; gap:6px; min-height:56px}
+.rabar[hidden]{display:none}
+.ov.rfocus .nav{display:none}
+.cta{justify-content:space-between; gap:10px; min-height:56px; padding:0 6px 0 22px; text-align:left}
+.cta.solo{padding-right:6px}
+.cta .ct{display:grid; gap:1px; min-width:0}
+.cta .ct b{font-size:17px; font-weight:800; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cta .ct small{font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
+.cta .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; flex:none; background:color-mix(in srgb, var(--on-red) 20%, transparent); transition:transform var(--t-slow) var(--ease)}
+.cta:hover .knob{transform:translateX(2px)}
+.rabar .cta{padding-right:18px}
+.rabar .cta.solo{padding-right:6px}
+.sum .core{padding:20px; display:grid; gap:4px}
+.sum h2{margin:0 0 6px; font-size:20px; letter-spacing:-.02em}
+.sum .kv{align-items:center}
+.sum .kv span{color:var(--muted)}
+.sum .kv b{text-align:right}
+.sum .kv b.no{color:var(--muted); font-weight:600}
+.sum .hold{margin:8px 0 2px}
+.sum .cta{width:100%; margin-top:12px; min-height:64px}
+.sum .back{margin-top:4px; justify-self:center}
+.trust{list-style:none; margin:16px 0 0; padding:0 8px; display:grid; gap:10px; font-size:15px; font-weight:600; color:var(--muted)}
+.trust li{display:flex; gap:10px; align-items:center}
+
+/* ---------- success / manage ---------- */
+.rdone{padding-top:24px}
+.dhero{display:grid; justify-items:center; text-align:center; gap:10px}
+.okm{position:relative; width:96px; height:96px; margin-bottom:8px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface); animation:rPop 560ms var(--ease) both}
+.okm::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:rRing 1100ms 200ms var(--ease) both}
+.okm.off{background:var(--surface-3); color:var(--ink)}
+.okm.off::before{display:none}
+@keyframes rPop{0%{transform:scale(.5); opacity:0}60%{transform:scale(1.06); opacity:1}100%{transform:none}}
+@keyframes rRing{0%{transform:scale(1); opacity:.35}100%{transform:scale(1.7); opacity:0}}
+.dhero .lead{max-width:30em; text-wrap:balance; color:var(--ink); font-size:18px; font-weight:600}
+.dgrid{display:grid; gap:16px; margin-top:28px}
+.dcard .core{padding:6px 18px}
+.dcard .kv{padding:12px 0}
+.dcard .kv span{color:var(--muted)}
+.dcard .kv b{text-align:right}
+.dside{display:grid; gap:10px; align-content:start; order:-1}
+.sms{display:flex; gap:12px; align-items:flex-start; padding:16px; border-radius:var(--r-core); background:var(--surface-2); font-weight:600}
+.sms .ic{flex:none; color:var(--ok); margin-top:1px}
+.dside .two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.dside .two .pill{padding:0 12px}
+.gcal{justify-self:center}
+.nexts{list-style:none; margin:14px 0 0; padding:0; display:grid; gap:2px}
+.nexts li{display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:start; padding:12px 0}
+.nexts li + li{border-top:1px solid var(--line)}
+.nexts .ni{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.nexts b{display:block}
+.nexts p{margin:2px 0 0; color:var(--muted); font-size:16px}
+.mng .core{padding:18px; display:grid; gap:14px}
+.mng .acts{display:grid; gap:8px}
+.confirm{padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
+.confirm b{display:block; font-size:18px}
+.confirm p{margin:6px 0 14px; color:var(--muted)}
+.confirm .acts{display:grid; gap:8px}
+
+/* ---------- info + prototype ---------- */
+.infog{display:grid; gap:12px; margin-top:16px}
+.ic-card{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:18px}
+.ic-card .ni{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.ic-card b{display:block; font-size:17px; line-height:1.3}
+.ic-card p{margin:4px 0 0; color:var(--muted); font-size:16px}
+.ic-card .link{min-height:44px}
+.proto{border-radius:var(--r-core); border:1.5px dashed var(--line-strong); padding:0 16px}
+.proto summary{min-height:56px; display:flex; align-items:center; gap:10px; font-weight:800; cursor:pointer; list-style:none}
+.proto summary::-webkit-details-marker{display:none}
+.proto summary .ic:last-child{margin-left:auto; transition:transform var(--t-base) var(--ease)}
+.proto[open] summary .ic:last-child{transform:rotate(180deg)}
+.proto .pg{display:flex; flex-wrap:wrap; gap:8px; padding:0 0 16px}
+.proto .pg .pill{min-height:48px; font-size:15px; white-space:normal; text-align:left; line-height:1.25; padding:6px 16px}
+.proto .pg .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+
+/* ---------- sheets ---------- */
+.ts{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:4px 2px 2px}
+.ts-top{display:grid; grid-template-columns:72px 1fr; gap:14px; align-items:center}
+.ts-top .tno{width:72px; height:72px; border-radius:22px; font-size:28px}
+.ts-top b{display:block; font-size:20px; letter-spacing:-.02em}
+.ts-top p{margin:2px 0 0; color:var(--muted)}
+.feats{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+.feats li{display:flex; align-items:center; gap:12px; min-height:44px; font-weight:700}
+.feats .ic{color:var(--ok)}
+.phs{display:flex; align-items:center; gap:12px; padding:16px; border-radius:var(--r-img); background:var(--surface-2)}
+.phs .ic{color:var(--muted)}
+.center{text-align:center}
+.wl{display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:4px 2px 2px}
+.wl .pill, .ts .pill{white-space:normal; text-align:center; line-height:1.2}
+.wl p{margin:0}
+.wl .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+.wl .okm{width:72px; height:72px; margin:4px auto 0}
+
+/* ---------- small phones ---------- */
+@container app (max-width:370px){
+  .cta .ct b{font-size:16px}
+  .rabar .back{padding:0 12px 0 10px}
+  .slot{font-size:16px}
+  .recap span{font-size:14px}
+  .hold{font-size:14px; padding:0 12px 0 10px}
+}
+
+/* ---------- tablet / desktop ---------- */
+@container app (min-width:700px){
+  .infog{grid-template-columns:1fr 1fr}
+  .form .two{grid-template-columns:1fr 1fr}
+  .dgrid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:start}
+  .dside{order:0}
+}
+@container app (min-width:900px){
+  .rhero{padding-top:44px}
+  .facts{display:flex}
+  .flowsec{padding-top:36px}
+  .fgrid{grid-template-columns:minmax(0,1fr) 360px; gap:40px; align-items:start}
+  .aside{display:block; position:sticky; top:164px}
+  .rabar{display:none}
+  .recap, .rc{display:none}
+  .mapbox{max-width:440px}
+  .rdone{padding-top:56px}
+  .done-in{max-width:980px; margin:0 auto}
+  .infog{grid-template-columns:repeat(4,1fr)}
+  .ic-card{grid-template-columns:1fr; gap:12px}
+}
+@container app (min-width:1100px){
+  .s1{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:32px; align-items:start}
+  .s1 .q + .q{margin-top:0}
+  .s1 .qcol{margin-top:0; align-content:start}
+  .s2{display:grid; grid-template-columns:minmax(0,1fr) 210px; gap:28px; align-items:start; margin-top:16px}
+  .s2 .side{order:0}
+  .s2 .side .needs{margin-top:0}
+  .s2 .side .lgd{flex-direction:column; margin:0 0 22px}
+  .s2 .side .chips{flex-direction:column; align-items:stretch; flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+}
+.ic-card.addr{margin-top:12px; grid-template-columns:44px 1fr}
+@container app (min-width:900px){ .ic-card.addr{grid-template-columns:44px 1fr} }
+.fgrid .aside .skel + .skel{margin-top:14px}
+</style>
+
+<script>
+  import { start } from "./_res.ts";
+  start();
+</script>
