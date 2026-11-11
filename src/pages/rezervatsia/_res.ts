@@ -125,13 +125,13 @@ export function start(): void {
   }
   /** fetch what the current view needs, then draw again */
   function want(): void {
-    if (st.view !== "flow" || !st.date) return;
+    if (st.view !== "flow" || !st.date || takenErr) return; /* after a failure only "Опитай пак" asks again */
     const d = st.date;
     let list: number[] = [];
     if (st.step === 1) { const per = PERIODS.filter((p) => p.id === st.period)[0] || PERIODS[2]; list = SLOTS.filter((m) => m >= per.from && m <= per.to && slotOpen(d, m)); }
     if (st.slot != null) list.push(st.slot);
-    const missing = list.filter((m) => !taken.has(key(d, m)));
-    if (!missing.length) return;
+    const missing = list.filter((m) => !taken.has(key(d, m)) && !loading.has(key(d, m)));
+    if (!missing.length) return; /* in flight: its own .then() draws again */
     loadTaken(d, missing).then(() => { if (st.date && same(st.date, d)) render(); });
   }
   const known = (d: Date, m: number) => taken.has(key(d, m));
@@ -583,7 +583,7 @@ export function start(): void {
   function go(n: number): void {
     if (n === st.step) return;
     st.step = n; st.anim = true; st.err = {}; st.fail = null;
-    if (n === 2 && st.date && st.slot != null) { takenErr = false; loadTaken(st.date, [st.slot], true).then(() => render()); taken.delete(key(st.date, st.slot)); }
+    if (n === 2 && st.date && st.slot != null) { takenErr = false; taken.delete(key(st.date, st.slot)); loadTaken(st.date, [st.slot], true).then(() => render()); }
     render(); toTop(true);
   }
   function next(): void {
