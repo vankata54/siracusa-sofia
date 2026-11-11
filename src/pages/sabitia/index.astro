@@ -1,0 +1,536 @@
+---
+/* Events (/sabitia/): port of design/pages/events.html (design/PAGES.md "events.html", decision 28).
+   The server draws everything with the build date: hero, tabs, chips, the list (Гръцка вечер + honest "Скоро" cards),
+   the calendar, "Празник при нас" (-5% only for a celebration), the subscribe form, FAQ and JSON-LD (Event for every
+   real event without an invented price, BreadcrumbList, FAQPage without [ЛИПСВА]). The browser redraws the dates with
+   the date in Sofia from api.events(), keeps the tab and category in the address (#minali/zhiva-muzika), sends the
+   subscription through api.subscribe and, only in preview (?preview=1), shows the states panel. */
+import Base from "../../layouts/Base.astro";
+import { url } from "../../lib/routes.ts";
+import { RESTAURANT } from "../../lib/consts.ts";
+import { events } from "../../lib/events.ts";
+import { ic } from "../../lib/icons.ts";
+import { buildItems, listHTML, chipsHTML, calHTML, subFormHTML, eventsLd, sofiaToday, TYPES } from "./_events.ts";
+import { partyArt } from "./_party.ts";
+
+const today = sofiaToday();
+const evs = events(today);
+const all = buildItems(evs);
+const first = listHTML({ tab: "up", cat: null, mode: "ok" }, all, today);
+const cal = calHTML(all, today, 0, "ok");
+const FAQ: [string, string, boolean][] = [
+  ["Как да запазя място за тематичната вечер?", "Натиснете „Запази място“ на картата на вечерта и изберете час и брой хора. Можете и да се обадите на " + RESTAURANT.phone + ".", true],
+  ["Може ли да празнуваме в градината през зимата?", "Да. Градината е отоплявана и работи целогодишно. Изберете я като място в калкулатора на празника.", true],
+  ["Колко гости събира мястото за частно парти?", '<span class="missing">[ЛИПСВА: капацитет на салона, градината и цялото място]</span>', false],
+  ["Как работи отстъпката за ранна резервация?", 'При ранна резервация на празник получавате -5% от крайната сума. <span class="missing">[ЛИПСВА: колко дни по-рано и за кои поводи]</span>', false],
+  ["Мога ли да донеса своя торта?", '<span class="missing">[ЛИПСВА: правило за собствена торта и такса]</span>', false],
+];
+const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.filter((f) => f[2]).map((f) => ({ "@type": "Question", name: f[0], acceptedAnswer: { "@type": "Answer", text: f[1] } })) };
+const jsonld = [...eventsLd(Astro.site, evs), faqLd];
+const description = "Тематични вечери всяка последна събота от месеца, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, юбилей, фирмено парти. -5% при ранна резервация на празник.";
+---
+<Base page="events" nav="events" title="Събития и поводи" description={description} jsonld={jsonld}>
+  <section class="sec ev-top" aria-labelledby="h-ev">
+    <div class="lay">
+      <div class="hero">
+        <p class="eyebrow"><Fragment set:html={ic("map-pin", 18)} />Дружба 2 · салон и отоплявана градина</p>
+        <h1 class="h1" id="h-ev">Събития и поводи</h1>
+        <p class="lead">Тематична вечер всяка последна събота от месеца, празници и вашите поводи: рожден ден, кръщене, фирмено парти.</p>
+      </div>
+      <div class="side">
+        <div class="ctrl">
+          <div class="seg tabs" role="tablist" aria-label="Събития">
+            <button type="button" role="tab" id="tab-up" data-tab="up" aria-controls="evpanel" aria-selected="true" tabindex="0"><Fragment set:html={ic("calendar-dots", 20)} />Предстоящи</button>
+            <button type="button" role="tab" id="tab-past" data-tab="past" aria-controls="evpanel" aria-selected="false" tabindex="-1"><Fragment set:html={ic("images", 20)} />Минали</button>
+          </div>
+          <div class="chips evchips" role="group" aria-label="Категории" set:html={chipsHTML(null)}></div>
+        </div>
+        <div class="hcal"><h2 class="hcal-l">Календар</h2><div data-cal set:html={cal}></div></div>
+      </div>
+      <div class="lcol">
+        <p class="cnt-line" data-count aria-live="polite" set:html={first.count}></p>
+        <div class="evlist" id="evpanel" role="tabpanel" aria-labelledby="tab-up" data-list set:html={first.html}></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec cal-m rv" id="kalendar" aria-labelledby="h-cal"><div class="sec-h"><h2 class="h2" id="h-cal">Календар</h2></div><div data-cal set:html={cal}></div></section>
+
+  <section class="sec rv" id="praznik" aria-labelledby="h-party">
+    <div class="party shell"><div class="core">
+      <Fragment set:html={partyArt()} />
+      <div class="party-body">
+        <span class="offer"><Fragment set:html={ic("seal-percent", 18)} />-5% при ранна резервация</span>
+        <h2 class="h1" id="h-party">Празник при нас</h2>
+        <p class="lead">Изберете повода, броя на гостите и меню от нашите ястия. Добавете торта, украса и място, а ние ще ви изпратим оферта.</p>
+        <div class="types">{TYPES.map((t) => <a class="type" href={url.page("celebration", t[2])}><span class="ic-c" set:html={ic(t[1], 22)}></span>{t[0]}</a>)}</div>
+        <ul class="zones">
+          <li><Fragment set:html={ic("chair", 20)} />Салон</li>
+          <li><Fragment set:html={ic("tree", 20)} />Отоплявана градина, работи целогодишно</li>
+          <li><Fragment set:html={ic("house", 20)} />Цялото място за вашия празник</li>
+        </ul>
+        <a class="pill pill-red go" href={url.page("celebration")}>Сметни своя празник<span class="knob" set:html={ic("arrow-right", 22)}></span></a>
+        <p class="fine">Запитването е без задължение. Управителят ви се обажда за подробностите. Ранна резервация: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="sec rv" id="uvedomi" aria-labelledby="h-sub">
+    <div class="sub shell"><div class="core">
+      <div class="sub-h"><span class="ic-c" set:html={ic("bell-ringing", 28)}></span><h2 class="h2" id="h-sub">Уведоми ме за нови събития</h2><p class="lead">Пишем само когато обявим нова вечер или празник. По един имейл, без досаждане.</p></div>
+      <div data-sub set:html={subFormHTML([], "")}></div>
+    </div></div>
+  </section>
+
+  <section class="sec rv" aria-labelledby="h-faq">
+    <div class="faq-wrap"><h2 class="h2" id="h-faq" style="margin-bottom:14px">Често питани</h2>
+      <div class="faq shell"><div class="core">
+        {FAQ.map((f) => <details><summary>{f[0]}<Fragment set:html={ic("caret-down", 22)} /></summary><p set:html={f[1]}></p></details>)}
+      </div></div>
+    </div>
+  </section>
+  <div data-proto></div>
+</Base>
+
+<style is:global>
+/* events page only (design/pages/events.html), tokens from tokens.css */
+/* events.html: page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.ev-top{padding-top:24px}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.eyebrow .ic{color:var(--ink)}
+.hero .lead{margin-top:10px; max-width:34em}
+.hcal{display:none}
+.hcal-l{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--muted)}
+
+/* ---------- tabs + chips ---------- */
+.ctrl{display:grid; gap:14px; margin-top:24px}
+.lcol{margin-top:14px}
+.tabs{max-width:440px}
+.tabs [role="tab"]{min-height:52px; border:0; border-radius:16px; background:transparent; color:var(--muted); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform var(--t-fast) var(--ease)}
+.tabs [role="tab"]:active{transform:scale(.97)}
+.tabs [role="tab"][aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.tabs [role="tab"][aria-selected="true"] .ic{color:var(--red)}
+.evchips .chip .ic{opacity:.8}
+.evchips .chip[aria-pressed="true"] .ic{opacity:1}
+.evchips .cdiv{flex:none; align-self:center; width:1.5px; height:26px; margin:0 6px; border-radius:1px; background:var(--line-strong)}
+.cnt-line{margin:0 0 10px; min-height:24px; font-size:15px; font-weight:600; color:var(--muted)}
+.cnt-line b{color:var(--ink)}
+
+/* ---------- event cards ---------- */
+.evlist{display:grid; gap:16px}
+.ev-grid{display:grid; gap:16px}
+.ev{min-width:0; height:100%}
+.ev > .core{display:flex; flex-direction:column; height:100%}
+.ev-media{position:relative; aspect-ratio:16/10; flex:none}
+.ev.feat .ev-media{aspect-ratio:16/10}
+.ev-body{flex:1; display:flex; flex-direction:column; gap:10px; padding:18px 18px 20px}
+.ev-cat{display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:800; color:var(--muted)}
+.ev-ttl{margin:0}
+.ev-ttl a{text-decoration:none; color:inherit}
+.ev-ttl a:hover{text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px}
+.ev-txt{margin:0}
+.ev-facts{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.ev-facts li{display:flex; align-items:center; gap:10px; min-height:30px; font-weight:600}
+.ev-facts .ic{color:var(--muted)}
+.ev-facts .seats{color:var(--warn); font-weight:800}
+.ev-act{display:grid; gap:4px; margin-top:auto; padding-top:8px}
+.ev-act .link{justify-self:center; padding:0 12px}
+.ev.soon .ev-body{gap:8px; padding-top:14px}
+.ev.soon .ev-act .pill{width:100%}
+.ev-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:14px 14px 0}
+.ev.soon .ctile,.ev.soon .flag{position:static}
+.ev.soon .ctile{width:66px}
+.ev.soon .ctile .d{font-size:28px}
+.ev-head .cic{width:66px; height:66px; border-radius:18px; display:grid; place-items:center; background:var(--surface-2)}
+.soon-h{display:flex; align-items:center; gap:8px; margin:22px 0 0}
+.soon-h .ic{color:var(--muted)}
+.rl{display:flex; gap:12px; overflow-x:auto; margin:0 -16px; padding:2px 16px 10px; scroll-snap-type:x mandatory; scroll-padding:0 16px; scrollbar-width:none}
+.rl::-webkit-scrollbar{display:none}
+.rl > .ev{flex:0 0 min(300px, 84%); height:auto; scroll-snap-align:start}
+
+/* photo slot ([ЛИПСВА] until the new photo shoot) */
+.slot{position:relative; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
+.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.075; color:var(--ink); -webkit-mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%); mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%)}
+.slot .big{position:relative; width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.slot .cap{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 24px); display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; line-height:1.25; color:var(--muted)}
+.slot .cap .missing{text-decoration:none}
+.slot .cap .ic{color:var(--muted)}
+
+/* calendar tile */
+.ctile{position:absolute; top:14px; left:14px; z-index:2; width:76px; border-radius:18px; overflow:hidden; display:grid; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.ctile .m{padding:5px 0 4px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.08em; line-height:1.2}
+.ctile .d{padding-top:6px; font-size:34px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+.ctile .w{padding:3px 0 8px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.flag{position:absolute; top:14px; right:14px; z-index:2; display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px 0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap; background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 2px 8px var(--line)}
+.flag .ic{color:var(--ember)}
+.flag.soft{background:var(--surface); color:var(--ink)}
+.flag.soft .ic{color:var(--muted)}
+
+/* occasion panel (private celebration categories) */
+.occ .core{display:grid; gap:12px; padding:24px 20px; justify-items:start}
+.occ .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.occ p{margin:0}
+.occ .pill{margin-top:6px}
+
+/* states */
+.ev-empty{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:36px 20px}
+.ev-empty .h3{max-width:22em}
+.ev-empty p{margin:0; max-width:30em}
+.ev-empty .row{flex-wrap:wrap; justify-content:center}
+.ev-empty .ill.warn{color:var(--warn)}
+.sk-media{aspect-ratio:4/3; border-radius:0}
+.sk-l{height:16px; border-radius:8px}
+
+/* ---------- past: gallery + internal reviews ---------- */
+.past-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:8px 0 14px}
+.gal{columns:2; column-gap:12px}
+.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img)}
+.gtile .big{width:56px; height:56px}
+.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gtile .cap{left:10px; bottom:10px; max-width:calc(100% - 20px); padding:4px 10px}
+.revs{display:grid; gap:12px}
+.rev{display:grid; gap:10px; padding:18px}
+.rev p{margin:0}
+.stars{display:inline-flex; align-items:center; gap:8px; font-size:15px; text-decoration:none}
+.stars .ic{color:var(--muted)}
+.rev .who{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.rev-note{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; font-size:16px; color:var(--muted)}
+.rev-note .ic{margin-top:2px}
+
+/* ---------- calendar ---------- */
+.calbox .core{padding:14px 6px 8px}
+.calbox .seg{margin:0 8px}
+.calbox .seg button{min-height:48px; font-size:16px}
+.cal-y{margin:12px 12px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.cal-wd,.cal-days{display:grid; grid-template-columns:repeat(7,1fr)}
+.cal-wd span{text-align:center; font-size:14px; font-weight:700; color:var(--muted); padding:6px 0}
+.cal-days{row-gap:2px}
+.cd{position:relative; justify-self:center; width:100%; max-width:48px; height:48px; display:grid; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; text-decoration:none; padding:0}
+.cd.past{color:var(--muted); font-weight:500}
+.cd.today{box-shadow:inset 0 0 0 1.5px var(--ink); font-weight:800}
+.cd.ev{background:var(--ink); color:var(--bg); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev::after{content:""; position:absolute; bottom:6px; left:50%; width:6px; height:6px; margin-left:-3px; border-radius:50%; background:var(--ember)}
+.cd.soon{border:2px dashed var(--line-strong); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev:active,.cd.soon:active{transform:scale(.92)}
+.cal-list{list-style:none; margin:10px 8px 0; padding:0; border-top:1px solid var(--line)}
+.cal-list li + li{border-top:1px solid var(--line)}
+.cal-list a,.cal-list button{width:100%; min-height:56px; display:grid; grid-template-columns:48px 1fr auto; gap:12px; align-items:center; padding:6px 4px; border:0; background:transparent; color:inherit; font:inherit; text-align:left; text-decoration:none; cursor:pointer; border-radius:16px}
+.cal-list .dd{display:grid; justify-items:center; line-height:1.1}
+.cal-list .dd b{font-size:20px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.cal-list .dd small{font-size:14px; color:var(--muted); font-weight:700}
+.cal-list .tt{display:grid; line-height:1.3}
+.cal-list .tt b{font-weight:800}
+.cal-list .tt small{font-size:14px; color:var(--muted); font-weight:600}
+.cal-list .ic{color:var(--muted)}
+.cal-none{margin:12px 12px 6px; color:var(--muted)}
+.cal-leg{display:flex; flex-wrap:wrap; gap:6px 16px; margin:8px 12px 6px; font-size:14px; color:var(--muted); font-weight:600}
+.cal-leg span{display:inline-flex; align-items:center; gap:8px}
+.cal-leg i{width:16px; height:16px; border-radius:50%; flex:none}
+.cal-leg .l-ev{background:var(--ink); position:relative}
+.cal-leg .l-ev::after{content:""; position:absolute; left:5px; top:5px; width:6px; height:6px; border-radius:50%; background:var(--ember)}
+.cal-leg .l-soon{border:2px dashed var(--line-strong)}
+.cal-leg .l-today{box-shadow:inset 0 0 0 1.5px var(--ink)}
+
+/* ---------- "Празник при нас" ---------- */
+.party > .core{display:grid}
+.party-art{position:relative; aspect-ratio:3/2; background:radial-gradient(120% 100% at 50% 40%, var(--plate-1), var(--plate-2))}
+.party-art svg.tbl{position:absolute; inset:0; width:100%; height:100%; display:block}
+.party-art .pl{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art:not(.in) .pl{opacity:0; transform:translateY(-18px) scale(1.08)}
+.rv-on .party-art:not(.in) .cf{opacity:0; transform:scale(.4)}
+.party-art .cf{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art .pl,.rv-on .party-art .cf{transition:transform 640ms var(--ease), opacity 480ms var(--ease); transition-delay:calc(160ms + var(--i,0) * 90ms)}
+.party-art.rv{transform:none!important; opacity:1!important}
+.party-body{display:grid; gap:14px; padding:22px 18px 22px; align-content:start}
+.party-body p{margin:0}
+.offer{justify-self:start; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 14px 0 10px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.types{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px}
+.type{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; min-height:92px; padding:12px 14px; border-radius:var(--r-core); background:var(--surface-2); color:var(--ink); font-weight:800; text-decoration:none; line-height:1.2; transition:transform var(--t-fast) var(--ease)}
+.type:active{transform:scale(.97)}
+.type .ic-c{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi)}
+.zones{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.zones li{display:flex; align-items:center; gap:10px; min-height:32px; font-weight:600}
+.zones .ic{color:var(--muted)}
+.party .go{margin-top:6px}
+.party .fine{font-size:16px; color:var(--muted)}
+
+/* ---------- subscribe ---------- */
+.sub > .core{display:grid; grid-template-columns:minmax(0,1fr); gap:20px; padding:22px 18px}
+.sub-h{display:grid; gap:12px; justify-items:start}
+.sub-h .ic-c{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.sub-h p{margin:0}
+.sub form{display:grid; gap:16px}
+.sub fieldset{border:0; margin:0; padding:0; display:grid; gap:8px; min-width:0}
+.sub legend{padding:0; margin-bottom:8px}
+.wrapchips{display:flex; flex-wrap:wrap; gap:8px}
+.sub .check{padding:4px 0}
+.sub .err{margin:0; font-size:14px; color:var(--danger); font-weight:600}
+.sub .check:has(input[aria-invalid="true"]) input{outline:2px solid var(--danger); outline-offset:2px}
+.sub .check span{line-height:1.4}
+.neterr[hidden]{display:none}
+.neterr{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.neterr .ic{color:var(--warn); margin-top:1px}
+.neterr p{margin:0}
+.sub-ok{display:grid; gap:12px; justify-items:start}
+.sub-ok .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.sub-ok p{margin:0}
+
+/* ---------- FAQ ---------- */
+.faq .core{padding:4px 18px}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{list-style:none; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; font-weight:800; font-size:17px; line-height:1.3; cursor:pointer}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{margin:0 0 18px; color:var(--muted); max-width:44em}
+
+/* ---------- prototype-only state switcher ---------- */
+.proto{border-radius:var(--r-core); padding:16px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:12px}
+.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.proto .chip{min-height:44px}
+
+/* ---------- tablet / desktop ---------- */
+@container app (min-width:700px){
+  .ev-grid{grid-template-columns:1fr 1fr}
+  .rl{display:grid; overflow:visible; margin:0; padding:0}
+  .rl > .ev{height:100%}
+  .ev.feat > .core{display:grid; grid-template-columns:1.12fr 1fr}
+  .ev.feat .ev-media{aspect-ratio:auto; min-height:360px}
+  .ev.feat .ev-body{padding:30px 30px 30px 32px; justify-content:center}
+  .ev.feat .ev-act{margin-top:12px}
+  .gal{columns:3}
+  .revs{grid-template-columns:repeat(3,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+@container app (min-width:900px){
+  .ev-top{padding-top:40px}
+  /* first screen on desktop: hero + Гръцка вечер on the left, filters and calendar on the right */
+  .lay{display:grid; grid-template-columns:minmax(0,1fr) 360px; grid-template-areas:"hero side" "list side"; grid-template-rows:auto 1fr; column-gap:48px; align-items:start}
+  .hero{grid-area:hero}
+  .hero .h1{font-size:56px}
+  .hero .lead{font-size:18px; margin-top:12px; max-width:40em}
+  .side{grid-area:side; display:grid; gap:32px}
+  .lcol{grid-area:list; margin-top:22px}
+  .lcol .ev-grid{grid-template-columns:1fr 1fr}
+  .hcal{display:block}
+  .cal-m{display:none}
+  .ctrl{margin-top:0}
+  .evchips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .evchips .cdiv{flex-basis:100%; width:auto; height:1px; margin:4px 0; background:var(--line)}
+  .ev.feat .ev-media{min-height:380px}
+  .ev.feat .ev-body{padding:32px}
+  .ev.feat .ev-facts{display:flex; flex-wrap:wrap; gap:4px 22px}
+  .ev.feat .ev-ttl{font-size:44px}
+  .ev.feat .ctile{top:20px; left:20px; width:88px}
+  .ev.feat .ctile .d{font-size:40px}
+  .ev.feat .flag{top:20px; right:20px}
+  .party > .core{grid-template-columns:1fr 1.05fr}
+  .party-art{order:2; aspect-ratio:auto; min-height:100%}
+  .party-body{padding:44px 40px; gap:16px}
+  .party-body .h1{font-size:48px}
+  .party .go{max-width:420px}
+  .sub > .core{grid-template-columns:1fr 1.1fr; gap:48px; padding:40px}
+  .sub-h{align-content:start}
+  .gal{columns:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .gal .gtile{aspect-ratio:3/2!important; margin:0}
+  .faq-wrap{display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:start}
+  .faq-wrap .h2{position:sticky; top:180px}
+}
+@container app (min-width:1100px){
+  .ev-grid{grid-template-columns:repeat(4,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+/* code: anchors under the sticky header (the document scrolls) */
+#kalendar,#praznik,#uvedomi{scroll-margin-top:150px}
+@container app (min-width:900px){ #kalendar,#praznik,#uvedomi{scroll-margin-top:130px} }
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { api, ApiError } from "../../client/api.ts";
+  import "../../lib/icons/map-pin.ts";
+  import {
+    buildItems, listHTML, calHTML, subFormHTML, subOkHTML, normEvent, sofiaToday,
+    PUBLIC, SLUG, BYSLUG, type Item, type ListState, type Mode,
+  } from "./_events.ts";
+  import type { SiteEvent } from "../../lib/events.ts";
+
+  const main = SC.mount();
+  const ic = SC.ic;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
+  const listEl = $("[data-list]"), countEl = $("[data-count]"), subEl = $("[data-sub]");
+
+  let today = sofiaToday();
+  let all: Item[] = [];
+  const st: ListState & { calM: number; offline: boolean; want: string[]; subDone: string | null } = { tab: "up", cat: null, mode: "loading", calM: 0, offline: false, want: [], subDone: null };
+  let draft = "";
+  let loaded = false;
+
+  /* ---------- address: #minali/zhiva-muzika ---------- */
+  function readHash(): string[] {
+    const parts = decodeURIComponent(location.hash.slice(1)).split("/");
+    st.tab = parts.includes("minali") ? "past" : "up"; st.cat = null;
+    parts.forEach((p) => { if (BYSLUG[p]) st.cat = BYSLUG[p]; });
+    return parts;
+  }
+  function writeHash() {
+    const p: string[] = [];
+    if (st.tab === "past") p.push("minali");
+    if (st.cat) p.push(SLUG[st.cat]);
+    try { history.replaceState(null, "", location.href.split("#")[0] + (p.length ? "#" + p.join("/") : "")); } catch { /* ignore */ }
+  }
+
+  /* ---------- render ---------- */
+  function renderList() {
+    /* while the first api.events() is on its way the server HTML stays (no skeleton flash) */
+    const mode: Mode = st.mode === "loading" && !loaded && !SC.preview ? "ok" : st.mode;
+    const r = listHTML({ tab: st.tab, cat: st.cat, mode }, all, today);
+    listEl.innerHTML = r.html; countEl.innerHTML = r.count;
+    listEl.setAttribute("aria-labelledby", st.tab === "past" ? "tab-past" : "tab-up");
+    SC.reveal(listEl);
+  }
+  function renderCtrl() {
+    main.querySelectorAll<HTMLElement>("[data-tab]").forEach((b) => { const on = b.dataset.tab === st.tab; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; });
+    main.querySelectorAll<HTMLElement>(".evchips [data-cat]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.cat || null) === (st.cat ? SLUG[st.cat] : null))));
+  }
+  function renderCal() { main.querySelectorAll("[data-cal]").forEach((el) => { el.innerHTML = calHTML(all, today, st.calM, st.mode === "loading" && !loaded ? "ok" : st.mode); }); }
+  function update() { renderCtrl(); renderList(); writeHash(); }
+
+  /* ---------- data: api.events() (server or demo core) ---------- */
+  async function load(show = false) {
+    if (show) { st.mode = "loading"; renderList(); }
+    try {
+      const evs = (await api.events()) as unknown as SiteEvent[];
+      all = buildItems(evs.map((e) => normEvent(e)));
+      loaded = true; st.mode = "ok";
+    } catch {
+      st.mode = "error";
+    }
+    today = sofiaToday();
+    syncMode(); renderList(); renderCal();
+  }
+
+  /* ---------- subscribe ---------- */
+  function renderSub() {
+    subEl.innerHTML = st.subDone ? subOkHTML(st.subDone, st.want) : subFormHTML(st.want, draft);
+  }
+  function fieldErr(input: HTMLElement | null, errEl: HTMLElement, msg: string) {
+    errEl.textContent = msg || ""; errEl.hidden = !msg;
+    if (input) input.setAttribute("aria-invalid", msg ? "true" : "false");
+  }
+  subEl.addEventListener("input", (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.id === "sub-email") { draft = t.value; if (t.getAttribute("aria-invalid") === "true") fieldErr(t, subEl.querySelector("#sub-email-err")!, ""); }
+  });
+  subEl.addEventListener("change", (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.id === "sub-ok" && t.checked) fieldErr(t, subEl.querySelector("#sub-ok-err")!, "");
+  });
+  subEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const em = subEl.querySelector<HTMLInputElement>("#sub-email")!, ok = subEl.querySelector<HTMLInputElement>("#sub-ok")!;
+    const emErr = subEl.querySelector<HTMLElement>("#sub-email-err")!, okErr = subEl.querySelector<HTMLElement>("#sub-ok-err")!;
+    const v = em.value.trim();
+    if (!v) fieldErr(em, emErr, "Напишете имейла си, за да ви пишем.");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) fieldErr(em, emErr, "Проверете имейла. Трябва да е като ime@primer.bg.");
+    else fieldErr(em, emErr, "");
+    if (!ok.checked) fieldErr(ok, okErr, "Отметнете съгласието, за да можем да ви пишем.");
+    const bad = em.getAttribute("aria-invalid") === "true" ? em : !ok.checked ? ok : null;
+    if (bad) { bad.focus(); return; }
+    const ne = subEl.querySelector<HTMLElement>("[data-neterr]")!;
+    if (st.offline || navigator.onLine === false) { ne.hidden = false; return; }
+    ne.hidden = true;
+    const btn = subEl.querySelector<HTMLButtonElement>("[type=submit]")!, label = btn.innerHTML;
+    btn.disabled = true; btn.textContent = "Записваме...";
+    try {
+      await api.subscribe(v, ok.checked);
+      st.subDone = v; renderSub();
+      const h = subEl.querySelector<HTMLElement>(".sub-ok h3");
+      if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+    } catch (err) {
+      btn.disabled = false; btn.innerHTML = label;
+      if (err instanceof ApiError) {
+        if (err.code === "offline") { ne.hidden = false; return; }
+        if (err.fields?.email) { fieldErr(em, emErr, err.fields.email); em.focus(); return; }
+        if (err.code === "consent") { fieldErr(ok, okErr, err.message); ok.focus(); return; }
+        SC.toast(err.message);
+      } else SC.toast("Нещо се обърка. Опитайте пак.");
+    }
+  });
+
+  /* ---------- scrolling ---------- */
+  function scrollToEl(el: Element | null, focusEl?: HTMLElement | null) {
+    if (!el) return;
+    if (el.matches("section")) el = el.querySelector(".shell, .sec-h") || el;
+    const off = SC.device.clientWidth >= 900 ? 130 : 150;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior: SC.reduce ? "auto" : "smooth" });
+    if (focusEl) setTimeout(() => focusEl.focus({ preventScroll: true }), SC.reduce ? 0 : 450);
+  }
+  function notify(cat: string) {
+    if (cat && PUBLIC.includes(cat) && !st.want.includes(cat)) st.want.push(cat);
+    if (st.subDone) { scrollToEl($("#uvedomi")); return; }
+    renderSub(); scrollToEl($("#uvedomi"), subEl.querySelector<HTMLElement>("#sub-email"));
+  }
+
+  /* ---------- preview-only: the states panel ---------- */
+  const MODES: [Mode, string][] = [["ok", "Обичайно"], ["loading", "Зареждане"], ["none", "Няма събития"], ["error", "Грешка"]];
+  if (SC.preview) {
+    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прототипа: покажи състояние</p><div class="wrapchips">' +
+      MODES.map((m) => '<button class="chip" type="button" data-mode="' + m[0] + '" aria-pressed="false">' + m[1] + "</button>").join("") +
+      '<button class="chip" type="button" data-offline aria-pressed="false">' + ic("globe", 18) + "Без интернет (абонамент)</button></div></div></section>";
+  }
+  function syncMode() { main.querySelectorAll<HTMLElement>("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === st.mode))); }
+
+  /* ---------- clicks ---------- */
+  main.addEventListener("click", (e) => {
+    const t = (e.target as HTMLElement).closest<HTMLElement>("button, a");
+    if (!t || !main.contains(t)) return;
+    if (t.dataset.tab) { st.tab = t.dataset.tab as "up" | "past"; update(); return; }
+    if (t.hasAttribute("data-cat")) {
+      st.cat = BYSLUG[t.dataset.cat || ""] || null; update();
+      if (t.closest(".evchips")) { try { t.scrollIntoView({ block: "nearest", inline: "center", behavior: SC.reduce ? "auto" : "smooth" }); } catch { /* ignore */ } }
+      else scrollToEl($(".ctrl"));
+      return;
+    }
+    if (t.dataset.calm) { st.calM = +t.dataset.calm; renderCal(); return; }
+    if (t.dataset.goto) {
+      st.tab = "up"; st.cat = null; if (st.mode !== "loading") st.mode = "ok"; update(); syncMode();
+      const card = main.querySelector("#ev-" + t.dataset.goto);
+      scrollToEl(card, card?.querySelector<HTMLElement>("button, a")); return;
+    }
+    if (t.hasAttribute("data-notify")) { notify(t.dataset.notify || ""); return; }
+    if (t.dataset.jump) { e.preventDefault(); scrollToEl(main.querySelector("#" + t.dataset.jump)); return; }
+    if (t.hasAttribute("data-retry")) { load(true); return; }
+    if (t.dataset.mode) { st.mode = t.dataset.mode as Mode; if (st.mode === "ok" && !loaded) { load(true); return; } syncMode(); renderList(); renderCal(); return; }
+    if (t.hasAttribute("data-offline")) {
+      st.offline = !st.offline; t.setAttribute("aria-pressed", String(st.offline));
+      if (st.subDone) { st.subDone = null; renderSub(); }
+      SC.toast(st.offline ? "Абонаментът ще покаже „Няма връзка“" : "Връзката е възстановена"); return;
+    }
+    if (t.dataset.want) {
+      const w = t.dataset.want, i = st.want.indexOf(w);
+      if (i > -1) st.want.splice(i, 1); else st.want.push(w);
+      t.setAttribute("aria-pressed", String(i < 0)); return;
+    }
+    if (t.hasAttribute("data-subreset")) { draft = st.subDone || draft; st.subDone = null; renderSub(); subEl.querySelector<HTMLElement>("#sub-email")?.focus(); return; }
+  });
+  /* arrow keys move between the two tabs */
+  $("[role=tablist]").addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault(); st.tab = st.tab === "up" ? "past" : "up"; update();
+    main.querySelector<HTMLElement>('[data-tab="' + st.tab + '"]')?.focus();
+  });
+  window.addEventListener("hashchange", () => { readHash(); renderCtrl(); renderList(); });
+  /* the date changes at midnight (Sofia) */
+  document.addEventListener("sc:tick", () => { const t = sofiaToday(); if (t.getTime() !== today.getTime()) { today = t; renderList(); renderCal(); } });
+
+  /* ---------- start ---------- */
+  const parts = readHash();
+  renderCtrl(); renderList(); renderCal(); renderSub();
+  const anchor = ["uvedomi", "praznik", "kalendar"].find((a) => parts.includes(a));
+  if (anchor) { const go = () => setTimeout(() => scrollToEl($("#" + anchor)), 80); try { document.fonts.ready.then(go, go); } catch { go(); } }
+  SC.reveal();
+  load().then(() => main.querySelector("[data-list]")?.setAttribute("data-ready", "1"));
+</script>

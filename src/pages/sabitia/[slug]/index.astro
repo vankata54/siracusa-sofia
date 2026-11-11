@@ -1,0 +1,435 @@
+---
+/* Event (/sabitia/<slug>/): port of design/pages/event.html (design/PAGES.md "event.html", hand-off 6.8).
+   One static page per event (SEO). The server draws everything that does not depend on the day: title, category,
+   text, facts, program, menu slot, photos, rules, BreadcrumbList and an Event JSON-LD with the recurring schedule.
+   The date of the evening ("последната събота") is computed in the browser from today: it redraws the ticket
+   (calendar leaf, countdown, main action), the next evening, <title>, the action bar and the Event startDate.
+   On the server the ticket says "Всяка последна събота от месеца" instead of a date that could get stale. */
+import type { GetStaticPaths } from "astro";
+import Base from "../../../layouts/Base.astro";
+import { ic, url, esc, events, EVENT_SLUGS, byId, dishCard, RESTAURANT as R } from "../../../lib/index.ts";
+import { ticketHTML, factsHTML, rulesHTML, nextInner, slot, barHTML, cta, eventLd, breadcrumbLd } from "./_event.ts";
+
+export const getStaticPaths = (() => EVENT_SLUGS.map((slug) => ({ params: { slug }, props: { slug } }))) satisfies GetStaticPaths;
+
+const ev = events().find((e) => e.id === Astro.props.slug)!;
+const site = String(Astro.site || "https://siracusa-sofia.com");
+const pageUrl = new URL(url.event(ev.id), site).href;
+const gs = byId["gratska-salata"];
+const description = ev.n + " в " + R.name + ", Дружба 2: всяка последна събота от месеца от " + ev.time + ". " + ev.text + " Запазете място онлайн или на " + R.phone + ".";
+const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
+---
+<Base page="event" nav={null} back={{ href: url.events(), label: "Събития" }} title={ev.n} docTitle={ev.n + " | Събития"} actionBar
+  description={description} jsonld={breadcrumbLd(ev, site, pageUrl)}>
+  <script type="application/ld+json" id="ev-ld" slot="head" set:html={evLd} />
+  <div data-ev={ev.id} data-url={pageUrl}>
+    <section class="sec ev-hero">
+      <div class="ev-head">
+        <div class="ev-eyebrow">
+          <span class="ev-cat"><Fragment set:html={ic("mask-happy", 18)} />{ev.cat}</span>
+          <button class="pill pill-soft ev-share" type="button" data-evshare><Fragment set:html={ic("share-network", 20)} />Сподели</button>
+        </div>
+        <h1 class="ev-title">{ev.n}</h1>
+        <p class="lead ev-lead">{ev.text}</p>
+      </div>
+      <div class="ev-ticket" data-ticket set:html={ticketHTML(ev, null)}></div>
+      <div class="ev-facts" data-facts set:html={factsHTML(ev, null)}></div>
+    </section>
+    <section class="sec rv">
+      <div class="ev-cols">
+        <div>
+          <div class="sec-h"><h2 class="h2">Програма</h2></div>
+          <ol class="tl">
+            <li><span class="t">{ev.time}</span><span class="dot em"></span><div><b>Начало на вечерта</b></div></li>
+            <li><span class="t muted">...</span><span class="dot miss"></span><div><span class="missing">[ЛИПСВА: програмата - музика, танци, специалитети]</span></div></li>
+            <li><span class="t">{R.kitchen}</span><span class="dot"></span><div><b>Последни поръчки от кухнята</b></div></li>
+            <li><span class="t">{R.close}</span><span class="dot"></span><div><b>Ресторантът затваря</b></div></li>
+          </ol>
+        </div>
+        <div>
+          <div class="sec-h"><h2 class="h2">Меню на вечерта</h2></div>
+          <Fragment set:html={slot("fork-knife", "ЛИПСВА: менюто на вечерта и цената му", "slot-menu")} />
+          {gs && <Fragment>
+            <p class="ev-also">За гръцко настроение и у дома, от основното меню:</p>
+            <div class="card ev-dish" set:html={dishCard(gs, "row")}></div>
+          </Fragment>}
+        </div>
+      </div>
+    </section>
+    <section class="sec rv">
+      <div class="sec-h"><h2 class="h2">Снимки от вечерта</h2></div>
+      <div class="ev-mosaic" set:html={slot("images", "ЛИПСВА: снимка от гръцката вечер") + slot("bowl-food", "ЛИПСВА: ястие от вечерта") + slot("music-notes", "ЛИПСВА: салонът вечерта")}></div>
+    </section>
+    <Fragment set:html={rulesHTML(ev)} />
+    <section class="sec rv">
+      <div class="sec-h"><h2 class="h2">Следващата тематична вечер</h2></div>
+      <div class="shell"><div class="core nx" data-next set:html={nextInner(null)}></div></div>
+    </section>
+  </div>
+  <div class="abar ev-abar off" data-abar aria-hidden="true" inert slot="ov" set:html={barHTML(cta(null))}></div>
+</Base>
+
+<style is:global>
+/* ---------- event page (page-only styles, tokens only); 1:1 from design/pages/event.html ---------- */
+/* events.html: page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.ev-top{padding-top:24px}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.eyebrow .ic{color:var(--ink)}
+.hero .lead{margin-top:10px; max-width:34em}
+.hcal{display:none}
+.hcal-l{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--muted)}
+
+/* ---------- tabs + chips ---------- */
+.ctrl{display:grid; gap:14px; margin-top:24px}
+.lcol{margin-top:14px}
+.tabs{max-width:440px}
+.tabs [role="tab"]{min-height:52px; border:0; border-radius:16px; background:transparent; color:var(--muted); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform var(--t-fast) var(--ease)}
+.tabs [role="tab"]:active{transform:scale(.97)}
+.tabs [role="tab"][aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.tabs [role="tab"][aria-selected="true"] .ic{color:var(--red)}
+.evchips .chip .ic{opacity:.8}
+.evchips .chip[aria-pressed="true"] .ic{opacity:1}
+.evchips .cdiv{flex:none; align-self:center; width:1.5px; height:26px; margin:0 6px; border-radius:1px; background:var(--line-strong)}
+.cnt-line{margin:0 0 10px; min-height:24px; font-size:15px; font-weight:600; color:var(--muted)}
+.cnt-line b{color:var(--ink)}
+
+/* ---------- event cards ---------- */
+.evlist{display:grid; gap:16px}
+.ev-grid{display:grid; gap:16px}
+.ev{min-width:0; height:100%}
+.ev > .core{display:flex; flex-direction:column; height:100%}
+.ev-media{position:relative; aspect-ratio:16/10; flex:none}
+.ev.feat .ev-media{aspect-ratio:16/10}
+.ev-body{flex:1; display:flex; flex-direction:column; gap:10px; padding:18px 18px 20px}
+.ev-cat{display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:800; color:var(--muted)}
+.ev-ttl{margin:0}
+.ev-ttl a{text-decoration:none; color:inherit}
+.ev-ttl a:hover{text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px}
+.ev-txt{margin:0}
+.ev-facts{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.ev-facts li{display:flex; align-items:center; gap:10px; min-height:30px; font-weight:600}
+.ev-facts .ic{color:var(--muted)}
+.ev-facts .seats{color:var(--warn); font-weight:800}
+.ev-act{display:grid; gap:4px; margin-top:auto; padding-top:8px}
+.ev-act .link{justify-self:center; padding:0 12px}
+.ev.soon .ev-body{gap:8px; padding-top:14px}
+.ev.soon .ev-act .pill{width:100%}
+.ev-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:14px 14px 0}
+.ev.soon .ctile,.ev.soon .flag{position:static}
+.ev.soon .ctile{width:66px}
+.ev.soon .ctile .d{font-size:28px}
+.ev-head .cic{width:66px; height:66px; border-radius:18px; display:grid; place-items:center; background:var(--surface-2)}
+.soon-h{display:flex; align-items:center; gap:8px; margin:22px 0 0}
+.soon-h .ic{color:var(--muted)}
+.rl{display:flex; gap:12px; overflow-x:auto; margin:0 -16px; padding:2px 16px 10px; scroll-snap-type:x mandatory; scroll-padding:0 16px; scrollbar-width:none}
+.rl::-webkit-scrollbar{display:none}
+.rl > .ev{flex:0 0 min(300px, 84%); height:auto; scroll-snap-align:start}
+
+/* photo slot ([ЛИПСВА] until the new photo shoot) */
+.slot{position:relative; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
+.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.075; color:var(--ink); -webkit-mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%); mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%)}
+.slot .big{position:relative; width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.slot .cap{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 24px); display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; line-height:1.25; color:var(--muted)}
+.slot .cap .missing{text-decoration:none}
+.slot .cap .ic{color:var(--muted)}
+
+/* calendar tile */
+.ctile{position:absolute; top:14px; left:14px; z-index:2; width:76px; border-radius:18px; overflow:hidden; display:grid; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.ctile .m{padding:5px 0 4px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.08em; line-height:1.2}
+.ctile .d{padding-top:6px; font-size:34px; font-weight:800; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+.ctile .w{padding:3px 0 8px; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.flag{position:absolute; top:14px; right:14px; z-index:2; display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px 0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap; background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:0 2px 8px var(--line)}
+.flag .ic{color:var(--ember)}
+.flag.soft{background:var(--surface); color:var(--ink)}
+.flag.soft .ic{color:var(--muted)}
+
+/* occasion panel (private celebration categories) */
+.occ .core{display:grid; gap:12px; padding:24px 20px; justify-items:start}
+.occ .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.occ p{margin:0}
+.occ .pill{margin-top:6px}
+
+/* states */
+.ev-empty{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:36px 20px}
+.ev-empty .h3{max-width:22em}
+.ev-empty p{margin:0; max-width:30em}
+.ev-empty .row{flex-wrap:wrap; justify-content:center}
+.ev-empty .ill.warn{color:var(--warn)}
+.sk-media{aspect-ratio:4/3; border-radius:0}
+.sk-l{height:16px; border-radius:8px}
+
+/* ---------- past: gallery + internal reviews ---------- */
+.past-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:8px 0 14px}
+.gal{columns:2; column-gap:12px}
+.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img)}
+.gtile .big{width:56px; height:56px}
+.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gtile .cap{left:10px; bottom:10px; max-width:calc(100% - 20px); padding:4px 10px}
+.revs{display:grid; gap:12px}
+.rev{display:grid; gap:10px; padding:18px}
+.rev p{margin:0}
+.stars{display:inline-flex; align-items:center; gap:8px; font-size:15px; text-decoration:none}
+.stars .ic{color:var(--muted)}
+.rev .who{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.rev-note{display:flex; gap:10px; align-items:flex-start; margin:14px 0 0; font-size:16px; color:var(--muted)}
+.rev-note .ic{margin-top:2px}
+
+/* ---------- calendar ---------- */
+.calbox .core{padding:14px 6px 8px}
+.calbox .seg{margin:0 8px}
+.calbox .seg button{min-height:48px; font-size:16px}
+.cal-y{margin:12px 12px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.cal-wd,.cal-days{display:grid; grid-template-columns:repeat(7,1fr)}
+.cal-wd span{text-align:center; font-size:14px; font-weight:700; color:var(--muted); padding:6px 0}
+.cal-days{row-gap:2px}
+.cd{position:relative; justify-self:center; width:100%; max-width:48px; height:48px; display:grid; place-items:center; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; text-decoration:none; padding:0}
+.cd.past{color:var(--muted); font-weight:500}
+.cd.today{box-shadow:inset 0 0 0 1.5px var(--ink); font-weight:800}
+.cd.ev{background:var(--ink); color:var(--bg); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev::after{content:""; position:absolute; bottom:6px; left:50%; width:6px; height:6px; margin-left:-3px; border-radius:50%; background:var(--ember)}
+.cd.soon{border:2px dashed var(--line-strong); font-weight:800; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.cd.ev:active,.cd.soon:active{transform:scale(.92)}
+.cal-list{list-style:none; margin:10px 8px 0; padding:0; border-top:1px solid var(--line)}
+.cal-list li + li{border-top:1px solid var(--line)}
+.cal-list a,.cal-list button{width:100%; min-height:56px; display:grid; grid-template-columns:48px 1fr auto; gap:12px; align-items:center; padding:6px 4px; border:0; background:transparent; color:inherit; font:inherit; text-align:left; text-decoration:none; cursor:pointer; border-radius:16px}
+.cal-list .dd{display:grid; justify-items:center; line-height:1.1}
+.cal-list .dd b{font-size:20px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.cal-list .dd small{font-size:14px; color:var(--muted); font-weight:700}
+.cal-list .tt{display:grid; line-height:1.3}
+.cal-list .tt b{font-weight:800}
+.cal-list .tt small{font-size:14px; color:var(--muted); font-weight:600}
+.cal-list .ic{color:var(--muted)}
+.cal-none{margin:12px 12px 6px; color:var(--muted)}
+.cal-leg{display:flex; flex-wrap:wrap; gap:6px 16px; margin:8px 12px 6px; font-size:14px; color:var(--muted); font-weight:600}
+.cal-leg span{display:inline-flex; align-items:center; gap:8px}
+.cal-leg i{width:16px; height:16px; border-radius:50%; flex:none}
+.cal-leg .l-ev{background:var(--ink); position:relative}
+.cal-leg .l-ev::after{content:""; position:absolute; left:5px; top:5px; width:6px; height:6px; border-radius:50%; background:var(--ember)}
+.cal-leg .l-soon{border:2px dashed var(--line-strong)}
+.cal-leg .l-today{box-shadow:inset 0 0 0 1.5px var(--ink)}
+
+/* ---------- "Празник при нас" ---------- */
+.party > .core{display:grid}
+.party-art{position:relative; aspect-ratio:3/2; background:radial-gradient(120% 100% at 50% 40%, var(--plate-1), var(--plate-2))}
+.party-art svg.tbl{position:absolute; inset:0; width:100%; height:100%; display:block}
+.party-art .pl{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art:not(.in) .pl{opacity:0; transform:translateY(-18px) scale(1.08)}
+.rv-on .party-art:not(.in) .cf{opacity:0; transform:scale(.4)}
+.party-art .cf{transform-box:fill-box; transform-origin:center}
+.rv-on .party-art .pl,.rv-on .party-art .cf{transition:transform 640ms var(--ease), opacity 480ms var(--ease); transition-delay:calc(160ms + var(--i,0) * 90ms)}
+.party-art.rv{transform:none!important; opacity:1!important}
+.party-body{display:grid; gap:14px; padding:22px 18px 22px; align-content:start}
+.party-body p{margin:0}
+.offer{justify-self:start; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 14px 0 10px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.types{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px}
+.type{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; min-height:92px; padding:12px 14px; border-radius:var(--r-core); background:var(--surface-2); color:var(--ink); font-weight:800; text-decoration:none; line-height:1.2; transition:transform var(--t-fast) var(--ease)}
+.type:active{transform:scale(.97)}
+.type .ic-c{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--hi)}
+.zones{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:4px}
+.zones li{display:flex; align-items:center; gap:10px; min-height:32px; font-weight:600}
+.zones .ic{color:var(--muted)}
+.party .go{margin-top:6px}
+.party .fine{font-size:16px; color:var(--muted)}
+
+/* ---------- subscribe ---------- */
+.sub > .core{display:grid; grid-template-columns:minmax(0,1fr); gap:20px; padding:22px 18px}
+.sub-h{display:grid; gap:12px; justify-items:start}
+.sub-h .ic-c{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.sub-h p{margin:0}
+.sub form{display:grid; gap:16px}
+.sub fieldset{border:0; margin:0; padding:0; display:grid; gap:8px; min-width:0}
+.sub legend{padding:0; margin-bottom:8px}
+.wrapchips{display:flex; flex-wrap:wrap; gap:8px}
+.sub .check{padding:4px 0}
+.sub .err{margin:0; font-size:14px; color:var(--danger); font-weight:600}
+.sub .check:has(input[aria-invalid="true"]) input{outline:2px solid var(--danger); outline-offset:2px}
+.sub .check span{line-height:1.4}
+.neterr[hidden]{display:none}
+.neterr{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.neterr .ic{color:var(--warn); margin-top:1px}
+.neterr p{margin:0}
+.sub-ok{display:grid; gap:12px; justify-items:start}
+.sub-ok .ic-c{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.sub-ok p{margin:0}
+
+/* ---------- FAQ ---------- */
+.faq .core{padding:4px 18px}
+.faq details + details{border-top:1px solid var(--line)}
+.faq summary{list-style:none; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; font-weight:800; font-size:17px; line-height:1.3; cursor:pointer}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{margin:0 0 18px; color:var(--muted); max-width:44em}
+
+/* ---------- prototype-only state switcher ---------- */
+.proto{border-radius:var(--r-core); padding:16px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:12px}
+.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.proto .chip{min-height:44px}
+
+/* ---------- tablet / desktop ---------- */
+@container app (min-width:700px){
+  .ev-grid{grid-template-columns:1fr 1fr}
+  .rl{display:grid; overflow:visible; margin:0; padding:0}
+  .rl > .ev{height:100%}
+  .ev.feat > .core{display:grid; grid-template-columns:1.12fr 1fr}
+  .ev.feat .ev-media{aspect-ratio:auto; min-height:360px}
+  .ev.feat .ev-body{padding:30px 30px 30px 32px; justify-content:center}
+  .ev.feat .ev-act{margin-top:12px}
+  .gal{columns:3}
+  .revs{grid-template-columns:repeat(3,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+@container app (min-width:900px){
+  .ev-top{padding-top:40px}
+  /* first screen on desktop: hero + Гръцка вечер on the left, filters and calendar on the right */
+  .lay{display:grid; grid-template-columns:minmax(0,1fr) 360px; grid-template-areas:"hero side" "list side"; grid-template-rows:auto 1fr; column-gap:48px; align-items:start}
+  .hero{grid-area:hero}
+  .hero .h1{font-size:56px}
+  .hero .lead{font-size:18px; margin-top:12px; max-width:40em}
+  .side{grid-area:side; display:grid; gap:32px}
+  .lcol{grid-area:list; margin-top:22px}
+  .lcol .ev-grid{grid-template-columns:1fr 1fr}
+  .hcal{display:block}
+  .cal-m{display:none}
+  .ctrl{margin-top:0}
+  .evchips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .evchips .cdiv{flex-basis:100%; width:auto; height:1px; margin:4px 0; background:var(--line)}
+  .ev.feat .ev-media{min-height:380px}
+  .ev.feat .ev-body{padding:32px}
+  .ev.feat .ev-facts{display:flex; flex-wrap:wrap; gap:4px 22px}
+  .ev.feat .ev-ttl{font-size:44px}
+  .ev.feat .ctile{top:20px; left:20px; width:88px}
+  .ev.feat .ctile .d{font-size:40px}
+  .ev.feat .flag{top:20px; right:20px}
+  .party > .core{grid-template-columns:1fr 1.05fr}
+  .party-art{order:2; aspect-ratio:auto; min-height:100%}
+  .party-body{padding:44px 40px; gap:16px}
+  .party-body .h1{font-size:48px}
+  .party .go{max-width:420px}
+  .sub > .core{grid-template-columns:1fr 1.1fr; gap:48px; padding:40px}
+  .sub-h{align-content:start}
+  .gal{columns:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+  .gal .gtile{aspect-ratio:3/2!important; margin:0}
+  .faq-wrap{display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:start}
+  .faq-wrap .h2{position:sticky; top:180px}
+}
+@container app (min-width:1100px){
+  .ev-grid{grid-template-columns:repeat(4,1fr)}
+  .types{grid-template-columns:repeat(3,1fr)}
+}
+/* server ticket without a date: "Последна / сб / от месеца" */
+.cal.nodate .m{letter-spacing:.04em}
+.cal.nodate .d{letter-spacing:-.03em}
+
+/* sticky action bar */
+.ev-abar{transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.ev-abar.off{transform:translateY(24px); opacity:0; pointer-events:none}
+</style>
+
+<script>
+  import { SC } from "../../../client/sc.ts";
+  import { model, cta, barHTML, ticketHTML, factsHTML, nextInner, eventLd, loadingHTML, errorHTML, protoHTML, googleCalUrl, icsText, type EvModel } from "./_event.ts";
+  import "../../../lib/icons/share-network.ts";
+
+  const { esc, ic, url, dateLong, RESTAURANT: R } = SC;
+  const main = SC.mount();
+  const ORIG = main.innerHTML;
+  const root0 = main.querySelector<HTMLElement>("[data-ev]")!;
+  const slug = root0.dataset.ev!, pageUrl = root0.dataset.url!;
+  const ev = SC.events().find((e) => e.id === slug)!;
+  const abar = SC.ov.querySelector<HTMLElement>("[data-abar]")!;
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  let io: IntersectionObserver | null = null, cur: EvModel | null = null;
+
+  /* preview / demo only: simulated states in the hash (#dnes, #pulno, #zarezhdane ...); never on the real site */
+  const demo = () => (SC.preview ? decodeURIComponent((location.hash || "").slice(1)) : "");
+
+  function setBar(on: boolean) {
+    abar.classList.toggle("off", !on);
+    const fab = SC.ov.querySelector(".aifab"); if (fab) fab.classList.toggle("up", on);
+    if (on) { abar.removeAttribute("aria-hidden"); abar.removeAttribute("inert"); } else { abar.setAttribute("aria-hidden", "true"); abar.setAttribute("inert", ""); }
+  }
+  function watchCta() {
+    if (io) { io.disconnect(); io = null; }
+    const hc = main.querySelector("[data-hero-cta]");
+    if (!("IntersectionObserver" in window) || !hc) return;
+    io = new IntersectionObserver((es) => { const x = es[0]; setBar(!x.isIntersecting && x.boundingClientRect.top < (x.rootBounds ? x.rootBounds.top + 150 : 150)); }, { root: null, rootMargin: "-150px 0px 0px 0px" });
+    io.observe(hc);
+  }
+  function setHtml(sel: string, h: string): boolean {
+    const el = main.querySelector<HTMLElement>(sel); if (!el || el.innerHTML === h) return false; el.innerHTML = h; return true;
+  }
+
+  function render() {
+    const st = demo(), proto = SC.preview ? protoHTML(st, url.event("nyama-takova")) : "";
+    if (st === "zarezhdane" || st === "greshka") {
+      if (io) { io.disconnect(); io = null; } setBar(false); cur = null;
+      main.innerHTML = (st === "zarezhdane" ? loadingHTML() : errorHTML()) + proto;
+      return;
+    }
+    if (!main.querySelector("[data-ev]")) main.innerHTML = ORIG;
+    main.querySelector("[data-proto]")?.remove();
+    if (proto) main.insertAdjacentHTML("beforeend", proto);
+    paint(true);
+    SC.reveal();
+  }
+  function paint(force = false) {
+    if (!main.querySelector("[data-ev]")) return;
+    const e = cur = model(ev, new Date(), SC.minutes(), navigator.onLine !== false, demo());
+    const c = cta(e);
+    const changed = setHtml("[data-ticket]", ticketHTML(ev, e));
+    setHtml("[data-facts]", factsHTML(ev, e));
+    setHtml("[data-next]", nextInner(e));
+    abar.innerHTML = barHTML(c);
+    document.title = e.n + " · " + dateLong(e.date) + " | Siracusa Bar & Grill";
+    if (meta) meta.setAttribute("content", e.n + " в Siracusa Bar & Grill, Дружба 2: " + dateLong(e.date) + " · " + e.time + ". " + e.text + " Запазете място онлайн или на " + R.phone + ".");
+    const ld = document.getElementById("ev-ld"); if (ld) ld.textContent = JSON.stringify(eventLd(ev, pageUrl, e));
+    if (changed || force) { setBar(false); watchCta(); }
+  }
+
+  /* ---------- calendar + share ---------- */
+  function openCalendar(e: EvModel) {
+    const s = SC.sheet({ title: "В календара", html: '<p class="sh-p">Изберете своя календар. Той ще ви напомни за вечерта.</p><div class="sh-list">' +
+      '<a class="pill pill-line pill-lg pill-block" href="' + googleCalUrl(e) + '" target="_blank" rel="noopener" data-calg>' + ic("calendar-check", 22) + "Google Календар</a>" +
+      '<button class="pill pill-line pill-lg pill-block" type="button" data-ics>' + ic("calendar-dots", 22) + "Apple, Outlook и други</button></div>" +
+      '<p class="sh-fine">Записваме: ' + dateLong(e.date) + " · " + e.time + " - " + R.close + ", " + esc(R.name) + ", Дружба 2.</p>" });
+    s.el.querySelector("[data-calg]")!.addEventListener("click", () => { setTimeout(s.close, 150); });
+    s.el.querySelector("[data-ics]")!.addEventListener("click", () => {
+      try {
+        const href = URL.createObjectURL(new Blob([icsText(e)], { type: "text/calendar;charset=utf-8" })), a = document.createElement("a");
+        a.href = href; a.download = e.id + "-" + e.iso + ".ics"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(href), 4000);
+        s.close(); SC.toast("Готово. Отворете файла, за да влезе в календара.");
+      } catch { SC.toast("Не успяхме да създадем файла. Ползвайте Google Календар."); }
+    });
+  }
+  function copyLink(u: string) {
+    const ok = () => SC.toast("Връзката е копирана");
+    try { navigator.clipboard.writeText(u).then(ok, ok); } catch { ok(); }
+  }
+  function openShare(e: EvModel) {
+    const u = location.href.split("#")[0].split("?")[0];
+    const text = e.n + " в Siracusa, " + dateLong(e.date) + " · " + e.time;
+    const coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    if (navigator.share && coarse) { navigator.share({ title: e.n, text, url: u }).catch(() => { /* cancelled */ }); return; }
+    const s = SC.sheet({ title: "Сподели", html: '<p class="sh-p">Поканете приятели за ' + esc(text) + '.</p><div class="sh-list">' +
+      '<a class="pill pill-line pill-lg pill-block" href="viber://forward?text=' + encodeURIComponent(text + " " + u) + '">' + ic("chat-circle-dots", 22) + "Изпрати във Viber</a>" +
+      '<a class="pill pill-line pill-lg pill-block" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(u) + '" target="_blank" rel="noopener">' + ic("facebook-logo", 22) + "Сподели във Facebook</a>" +
+      '<button class="pill pill-line pill-lg pill-block" type="button" data-copy>' + ic("copy", 22) + "Копирай връзката</button></div>" });
+    s.el.querySelector("[data-copy]")!.addEventListener("click", () => { copyLink(u); s.close(); });
+  }
+
+  main.addEventListener("click", (evt) => {
+    const t = (evt.target as Element).closest<HTMLElement>("button"); if (!t) return;
+    if (t.hasAttribute("data-retry")) { location.hash = ""; return; }
+    if (!cur) return;
+    if (t.hasAttribute("data-cal")) openCalendar(cur);
+    else if (t.hasAttribute("data-evshare")) openShare(cur);
+  });
+
+  window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+  window.addEventListener("online", () => paint()); window.addEventListener("offline", () => paint());
+  document.addEventListener("sc:tick", () => paint());
+  render();
+</script>
