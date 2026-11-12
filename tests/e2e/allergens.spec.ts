@@ -111,9 +111,9 @@ test("allergens: category sheet jumps to a category; no horizontal scroll at 360
 test("allergens: preview states panel only in preview", async ({ page }) => {
   const errors = watch(page);
   await open(page);
-  await expect(page.locator(".proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   await page.goto("/alergeni/?preview=1");
-  await expect(page.locator(".proto")).toBeVisible();
+  await expect(page.locator("[data-pv]")).toBeVisible();
   await page.locator('[data-view="error"]').click();
   await expect(page.locator("[data-state]")).toContainText("Не успяхме да заредим алергените");
   await page.locator("[data-state] [data-retry]").click();

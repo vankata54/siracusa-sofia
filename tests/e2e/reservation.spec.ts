@@ -112,7 +112,6 @@ test("reservation: event date from the address preselects 19:00", async ({ page 
 
 test("reservation: full hour -> waitlist (preview), large group joins tables", async ({ page }) => {
   await open(page);
-  await page.locator(".proto summary").click();
   await page.locator('[data-proto="event"]').click();
   await page.locator('.slot.full', { hasText: "19:00" }).click();
   await expect(page.locator(".sheet")).toContainText("Пълно в");
@@ -129,7 +128,6 @@ test("reservation: full hour -> waitlist (preview), large group joins tables", a
 
 test("reservation: manage late is locked (under 2 h / 1 h)", async ({ page }) => {
   await open(page, "", "18:10");
-  await page.locator(".proto summary").click();
   await page.locator('[data-proto="late"]').click();
   await expect(page.locator(".alert.warn")).toContainText("Онлайн промяна вече не е възможна");
   await expect(page.locator('.alert.warn a[href^="tel:"]')).toBeVisible();

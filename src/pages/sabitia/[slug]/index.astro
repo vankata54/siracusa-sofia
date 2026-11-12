@@ -10,8 +10,9 @@
 import type { GetStaticPaths } from "astro";
 import Base from "../../../layouts/Base.astro";
 import { ic, url, esc, events, EVENT_SLUGS, byId, dishCard, RESTAURANT as R } from "../../../lib/index.ts";
-import { ticketHTML, factsHTML, rulesHTML, nextInner, slot, barHTML, cta } from "./_event.ts";
+import { ticketHTML, factsHTML, rulesHTML, nextInner, barHTML, cta } from "./_event.ts";
 import { eventLd, crumbsLd, sofiaToday } from "../_ld.ts";
+import { crumbs, miss, photoSlot } from "../../../lib/ui.ts";
 
 export const getStaticPaths = (() => EVENT_SLUGS.map((slug) => ({ params: { slug }, props: { slug } }))) satisfies GetStaticPaths;
 
@@ -29,6 +30,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
   <div data-ev={ev.id} data-url={pageUrl}>
     <section class="sec ev-hero">
       <div class="ev-head">
+        <Fragment set:html={crumbs([["Събития и поводи", url.events()], [ev.n]])} />
         <div class="ev-eyebrow">
           <span class="ev-cat"><Fragment set:html={ic("mask-happy", 18)} />{ev.cat}</span>
           <button class="pill pill-soft ev-share" type="button" data-evshare><Fragment set:html={ic("share-network", 20)} />Сподели</button>
@@ -45,14 +47,14 @@ const evLd = JSON.stringify(eventLd(ev, site));
           <div class="sec-h"><h2 class="h2">Програма</h2></div>
           <ol class="tl">
             <li><span class="t">{ev.time}</span><span class="dot em"></span><div><b>Начало на вечерта</b></div></li>
-            <li><span class="t muted">...</span><span class="dot miss"></span><div><span class="missing">[ЛИПСВА: програмата - музика, танци, специалитети]</span></div></li>
+            <li><span class="t muted">...</span><span class="dot miss"></span><div set:html={miss("greek")}></div></li>
             <li><span class="t">{R.kitchen}</span><span class="dot"></span><div><b>Последни поръчки от кухнята</b></div></li>
             <li><span class="t">{R.close}</span><span class="dot"></span><div><b>Ресторантът затваря</b></div></li>
           </ol>
         </div>
         <div>
           <div class="sec-h"><h2 class="h2">Меню на вечерта</h2></div>
-          <Fragment set:html={slot("fork-knife", "ЛИПСВА: менюто на вечерта и цената му", "slot-menu")} />
+          <div class="card slot-menu"><Fragment set:html={ic("fork-knife", 24)} /><Fragment set:html={miss("greek")} /></div>
           {gs && <Fragment>
             <p class="ev-also">За гръцко настроение и у дома, от основното меню:</p>
             <div class="card ev-dish" set:html={dishCard(gs, "row")}></div>
@@ -62,7 +64,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
     </section>
     <section class="sec rv">
       <div class="sec-h"><h2 class="h2">Снимки от вечерта</h2></div>
-      <div class="ev-mosaic" set:html={slot("images", "ЛИПСВА: снимка от гръцката вечер") + slot("bowl-food", "ЛИПСВА: ястие от вечерта") + slot("music-notes", "ЛИПСВА: салонът вечерта")}></div>
+      <div class="ev-mosaic" set:html={photoSlot({ of: "гръцката вечер", ratio: "", tag: "div" }) + photoSlot({ of: "ястие от вечерта", ratio: "", tag: "div" }) + photoSlot({ of: "салона вечерта", ratio: "", tag: "div" })}></div>
     </section>
     <Fragment set:html={rulesHTML(ev)} />
     <section class="sec rv">
@@ -141,18 +143,14 @@ const evLd = JSON.stringify(eventLd(ev, site));
 .tl b{display:block; font-size:17px; line-height:1.4}
 .tl .sub{display:block; color:var(--muted); line-height:1.4; margin-top:2px}
 
-/* ---------- missing-content slots (no photos until the new shoot) ---------- */
-.slot{position:relative; overflow:hidden; border-radius:var(--r-img); background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
-.slot .bg{position:absolute; right:-18px; top:50%; transform:translateY(-58%) rotate(-10deg); color:var(--ink); opacity:.07}
-.slot .si{position:absolute; left:14px; top:14px; width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:var(--shadow); color:var(--muted)}
-.slot .sl{position:absolute; left:12px; right:12px; bottom:12px; padding:8px 12px; border-radius:14px; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); font-size:14px; line-height:1.35}
-.slot-menu{min-height:190px}
+/* ---------- missing content: the menu of the evening (the photos are the one photo slot of the site) ---------- */
+.slot-menu{min-height:120px; display:flex; align-items:center; gap:12px; padding:20px; color:var(--muted)}
 .ev-also{margin:18px 0 4px; font-weight:700}
 .ev-dish{padding:0 16px}
 .ev-mosaic{display:grid; grid-template-columns:1fr 1fr; grid-template-areas:"a a" "b c"; gap:10px}
-.ev-mosaic .slot:nth-child(1){grid-area:a; aspect-ratio:16/10}
-.ev-mosaic .slot:nth-child(2){grid-area:b; aspect-ratio:1}
-.ev-mosaic .slot:nth-child(3){grid-area:c; aspect-ratio:1}
+.ev-mosaic .ph-slot:nth-child(1){grid-area:a; aspect-ratio:16/10}
+.ev-mosaic .ph-slot:nth-child(2){grid-area:b; aspect-ratio:1}
+.ev-mosaic .ph-slot:nth-child(3){grid-area:c; aspect-ratio:1}
 
 /* ---------- good to know ---------- */
 .rules{padding:4px 18px}
@@ -162,7 +160,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
 .rule .ri.ok{color:var(--ok)}
 .rule h3{margin:0; font-size:17px; line-height:1.3; letter-spacing:-.01em}
 .rule p{margin:4px 0 0; color:var(--muted); line-height:1.45}
-.ev-call{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding:6px 6px 6px 20px; border-radius:var(--r-pill); background:var(--surface-2)}
+.ev-call{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; margin-top:14px; padding:10px 10px 10px 20px; border-radius:var(--r-core); background:var(--surface-2)}
 .ev-call span{font-weight:700}
 
 /* ---------- next evening ---------- */
@@ -180,8 +178,8 @@ const evLd = JSON.stringify(eventLd(ev, site));
 .ev-state .empty{padding:24px 0 8px}
 .ev-state .empty h1{max-width:18ch}
 .ev-state .empty p{margin:0; max-width:34ch}
-.ev-state .ill.err{color:var(--danger)}
-.ev-state .acts{display:grid; gap:10px; width:100%; max-width:360px; margin-top:8px}
+.ev-state .ill{color:var(--danger)}
+.ev-state .acts{display:grid; gap:10px; width:100%; max-width:360px; margin-top:8px; justify-content:stretch}
 .sk-line{height:18px; border-radius:9px}
 
 /* ---------- sticky action bar ---------- */
@@ -192,16 +190,11 @@ const evLd = JSON.stringify(eventLd(ev, site));
 .sh-list .pill{justify-content:flex-start; padding:0 20px}
 .sh-fine{margin:16px 0 4px; font-size:14px; color:var(--muted)}
 
-/* ---------- prototype-only state switcher (bottom of the page, BRIEF 8) ---------- */
-.proto{display:grid; gap:12px; padding:16px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
-.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
-.proto .pchips{display:flex; flex-wrap:wrap; gap:8px}
-.proto .chip{text-decoration:none}
 
 /* ---------- desktop ---------- */
 @container app (min-width:700px){
   .ev-mosaic{grid-template-columns:repeat(3,1fr); grid-template-areas:"a b c"; gap:16px}
-  .ev-mosaic .slot:nth-child(n){aspect-ratio:4/3}
+  .ev-mosaic .ph-slot:nth-child(n){aspect-ratio:4/3}
 }
 @container app (min-width:900px){
   .ev-hero{padding-top:56px; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); grid-template-areas:"head ticket" "facts ticket"; grid-template-rows:auto 1fr; gap:36px 64px; align-items:start}
@@ -220,7 +213,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
   .rules{display:grid; grid-template-columns:repeat(3,1fr); padding:8px}
   .rule{grid-template-columns:1fr; gap:14px; padding:20px 18px}
   .rule + .rule{border-top:0; box-shadow:-1px 0 0 var(--line)}
-  .ev-call{width:fit-content; gap:28px; padding-left:24px}
+  .ev-call{width:fit-content; gap:28px; padding:6px 6px 6px 24px; border-radius:var(--r-pill)}
   .nx{grid-template-columns:auto 1fr auto; padding:20px 20px 20px 22px; gap:22px}
   .nx-go{grid-column:auto}
   .ev-state{padding-top:72px}
@@ -272,7 +265,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
   }
 
   function render() {
-    const st = demo(), proto = SC.preview ? protoHTML(st, url.event("nyama-takova")) : "";
+    const st = demo(), proto = SC.preview ? protoHTML(st, SC.demo ? (document.documentElement.dataset.root || "./") + "404.html#/sabitia/nyama-takova/" : url.event("nyama-takova")) : ""; /* the demo has no server 404: the 404 page itself */
     if (st === "zarezhdane" || st === "greshka") {
       if (io) { io.disconnect(); io = null; } setBar(false); cur = null;
       main.innerHTML = (st === "zarezhdane" ? loadingHTML() : errorHTML()) + proto;

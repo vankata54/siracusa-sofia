@@ -12,9 +12,6 @@ export function events(today: Date = new Date()): SiteEvent[] {
 }
 export const EVENT_SLUGS = ["gratska-vecher"];
 
-/** For the API (server and demo): the date as "YYYY-MM-DD" (a Date would travel as UTC and lose a day at night). */
+/** For the API (server and demo): the date as "YYYY-MM-DD" (a Date would travel as UTC and lose a day at night).
+    The function is in events-json.ts (this module is in the shared runtime, size budget). */
 export type SiteEventJson = Omit<SiteEvent, "date"> & { date: string };
-export function eventsJson(today: Date = new Date()): SiteEventJson[] {
-  const ymd = (d: Date) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  return events(today).map((e) => ({ ...e, date: ymd(e.date) }));
-}

@@ -38,6 +38,8 @@ const fullTitle = !t ? `${SITE} | Пица на пещ и скара в Друж
 const description = p.description || "Пица на пещ и скара на дървени въглища в Дружба 2, София. Доставка до 21:00, кухня до 22:30, обедно меню всеки ден.";
 const path = Astro.url.pathname;
 const canonical = new URL(p.canonical || path, Astro.site).href;
+/* noindex pages (cart, tracking, login, profile, 404, the whole demo) have no canonical and no og:url (decision 12.11.2026) */
+const noindex = !!p.noindex || demo || p.page === "404";
 /* relative path to the site root, used by the demo (static files) for links built in the browser */
 const depth = path.replace(/^\/|\/?index\.html$/g, "").split("/").filter(Boolean).length;
 const root = depth && p.page !== "404" ? "../".repeat(depth) : "./";
@@ -56,8 +58,8 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{fullTitle}</title>
 <meta name="description" content={description}>
-{(p.noindex || demo) && <meta name="robots" content="noindex,nofollow">}
-{p.page !== "404" && <link rel="canonical" href={canonical}>}
+{noindex && <meta name="robots" content="noindex,nofollow">}
+{!noindex && <link rel="canonical" href={canonical}>}
 <meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
@@ -65,7 +67,7 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <meta property="og:site_name" content={SITE}>
 <meta property="og:title" content={fullTitle}>
 <meta property="og:description" content={description}>
-{p.page !== "404" && <meta property="og:url" content={canonical}>}
+{!noindex && <meta property="og:url" content={canonical}>}
 {p.ogImage && <meta property="og:image" content={new URL(p.ogImage, Astro.site).href}>}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href={cyrFont} as="font" type="font/woff2" crossorigin>

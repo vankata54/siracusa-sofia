@@ -5,7 +5,8 @@
    the next evening, the title and the action bar. The Event JSON-LD is in ../_ld.ts (the same for /sabitia/). */
 import { RESTAURANT as R } from "../../../lib/consts.ts";
 import { ic } from "../../../lib/icons.ts";
-import { esc, fmt, plural, MON, MONTHS, DAYS, dateLong } from "../../../lib/format.ts";
+import { esc, fmt, plural, MON, MONTHS, DAYS_SHORT, dateLong } from "../../../lib/format.ts";
+import { callBtn, stateBox, loadingText, previewPanel, PV } from "../../../lib/ui.ts";
 import { url } from "../../../lib/routes.ts";
 import type { SiteEvent } from "../../../lib/events.ts";
 import { sofiaOffset } from "../_ld.ts";
@@ -63,7 +64,7 @@ export function cta(e: EvModel | null): Cta {
   if (!e) return { t: "Запази място", bar: "Запази място", href: url.reservation(), ic: "arrow-right", barIc: "calendar-check" };
   const res = url.reservation(e.iso);
   if (e.phase === "over") return { t: "Виж следващите събития", bar: "Виж следващите събития", href: url.events(), ic: "arrow-right", barIc: "calendar-dots" };
-  if (e.offline || e.phase === "live") return { t: "Обади се за място", bar: "Обади се · " + R.phone, href: TEL, ic: "phone", barIc: "phone" };
+  if (e.offline || e.phase === "live") return { t: "Обади се · " + R.phone, bar: "Обади се · " + R.phone, href: TEL, ic: "phone", barIc: "phone" };
   if (e.full) return { t: "Запиши ме в чакащите", bar: "Запиши ме в списъка на чакащите", href: res, ic: "list-checks", barIc: "list-checks" };
   if (e.phase === "today") return { t: "Запази място за днес", bar: "Запази място за днес · " + e.time, href: res, ic: "arrow-right", barIc: "calendar-check" };
   return { t: "Запази място", bar: "Запази място · " + dateLong(e.date), href: res, ic: "arrow-right", barIc: "calendar-check" };
@@ -81,7 +82,7 @@ export function meander(id: string, h: number): string {
 /** Calendar leaf. Without a date (server): "Последна / сб / на месеца". */
 export function cal(d: Date | null, small?: boolean): string {
   if (!d) return '<span class="cal nodate" aria-hidden="true"><span class="m">Последна</span><span class="d">сб</span><span class="w">от месеца</span></span>';
-  return '<span class="cal" aria-hidden="true"><span class="m">' + (small ? MON[d.getMonth()] : MONTHS[d.getMonth()]) + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS[d.getDay()] + "</span></span>";
+  return '<span class="cal" aria-hidden="true"><span class="m">' + (small ? MON[d.getMonth()] : MONTHS[d.getMonth()]) + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>";
 }
 export function whenHTML(ev: SiteEvent, e: EvModel | null): string {
   let k: string, v: string, s: string, extra = "";
@@ -100,9 +101,6 @@ export function priceHTML(ev: SiteEvent): string {
   if (ev.free) return "Вход свободен";
   if (ev.price) return '<span class="price">' + fmt(ev.price) + "</span>";
   return '<span class="missing">[ЛИПСВА: цена, куверт или „Вход свободен“]</span>';
-}
-export function slot(icon: string, label: string, cls = ""): string {
-  return '<div class="slot ' + cls + '" role="img" aria-label="Място за снимка: ' + esc(label) + '"><span class="bg">' + ic(icon, 160) + '</span><span class="si">' + ic(icon, 24) + '</span><span class="sl"><span class="missing">[' + esc(label) + "]</span></span></div>";
 }
 
 /** The ticket. e = null on the server (no date yet). */
@@ -141,7 +139,7 @@ export function rulesHTML(ev: SiteEvent): string {
     ["pencil-simple", "", "Промяна или отказ", "До " + lockH + " часа преди часа на резервацията, от връзката в SMS-а. След това се обадете."]];
   return '<section class="sec rv"><div class="sec-h"><h2 class="h2">Добре е да знаете</h2></div><div class="shell"><div class="core rules">' +
     rows.map((r) => '<div class="rule"><span class="ri ' + r[1] + '">' + ic(r[0], 22) + "</span><div><h3>" + r[2] + "</h3><p>" + r[3] + "</p></div></div>").join("") +
-    '</div></div><div class="ev-call"><span>Или по телефона</span><a class="pill pill-ink" href="' + TEL + '">' + ic("phone", 20) + R.phone + "</a></div></section>";
+    '</div></div><div class="ev-call"><span>Или по телефона</span>' + callBtn("pill pill-ink") + "</div></section>";
 }
 
 /** "Следващата тематична вечер" inner: e = null on the server. */
@@ -153,24 +151,21 @@ export function nextInner(e: EvModel | null): string {
 
 /* ---------- page states (preview: loading / error) ---------- */
 export function errorHTML(): string {
-  return '<section class="sec ev-state"><div class="empty" role="alert"><span class="ill err">' + ic("warning-circle", 44) + "</span>" +
-    '<h1 class="h2">Не успяхме да заредим събитието</h1><p class="lead">Проверете връзката с интернет и опитайте пак. Ако не стане, обадете ни се.</p>' +
-    '<div class="acts"><button class="pill pill-red pill-lg" type="button" data-retry>' + ic("arrow-clockwise", 20) + 'Опитай пак</button><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div></section>";
+  return '<section class="sec ev-state">' + stateBox({ kind: "error", what: "събитието", text: "Проверете връзката с интернет и опитайте пак. Ако не стане, обадете ни се.", h: "h1" }) + "</section>";
 }
 export function loadingHTML(): string {
-  return '<section class="sec ev-hero" aria-busy="true"><span class="vh" role="status">Зареждаме събитието</span>' +
+  return '<section class="sec ev-hero" aria-busy="true"><span class="vh" role="status">' + loadingText("събитието") + "</span>" +
     '<div class="ev-head"><div class="skel" style="width:150px;height:36px;border-radius:18px;margin-bottom:18px"></div><div class="skel" style="width:78%;height:46px;border-radius:14px"></div><div class="skel sk-line" style="width:92%;margin-top:16px"></div><div class="skel sk-line" style="width:64%;margin-top:10px"></div></div>' +
     '<div class="ev-ticket"><div class="shell"><div class="core"><div class="skel" style="height:30px;border-radius:0"></div><div class="tk-main"><div class="skel" style="width:104px;height:122px;border-radius:20px"></div><div><div class="skel sk-line" style="width:70%"></div><div class="skel" style="width:80%;height:40px;margin-top:10px;border-radius:12px"></div><div class="skel sk-line" style="width:60%;margin-top:10px"></div></div></div><div class="tk-stub" style="padding-top:16px"><div class="skel" style="height:60px;border-radius:30px"></div><div class="skel" style="height:48px;border-radius:24px"></div></div></div></div></div>' +
     '<div class="ev-facts"><div class="shell"><div class="core" style="padding:18px"><div class="skel sk-line" style="width:55%"></div><div class="skel sk-line" style="width:75%;margin-top:22px"></div><div class="skel sk-line" style="width:65%;margin-top:22px"></div></div></div></div></section>';
 }
 
-/** Prototype-only state switcher (preview / demo only), last block of the page. */
-export const DEMO_STATES: [string, string][] = [["", "Обикновено"], ["dnes", "Днес, преди началото"], ["sega", "Тече в момента"], ["prikljuchi", "Приключи"], ["mesta", "Остават 6 места"], ["pulno", "Няма свободни места"], ["bez-internet", "Без интернет"], ["zarezhdane", "Зареждане"], ["greshka", "Грешка при зареждане"]];
+/** "Само в прегледа" (preview / demo only), last block of the page: the same panel and words as on every page. */
+export const DEMO_STATES: [string, string][] = [["", PV.normal], ["dnes", "Днес, преди началото"], ["sega", "Тече в момента"], ["prikljuchi", "Приключи"], ["mesta", "Остават 6 места"], ["pulno", "Няма свободни места"], ["bez-internet", PV.offline], ["zarezhdane", PV.loading], ["greshka", PV.error]];
 export function protoHTML(cur: string, invalidHref: string): string {
   const list: [string, string, boolean][] = DEMO_STATES.map((d) => ["#" + d[0], d[1], cur === d[0]] as [string, string, boolean]);
   list.push([invalidHref, "Невалидно събитие", false]);
-  return '<section class="sec" data-proto aria-label="Състояния на страницата (само в прегледа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прегледа: състояния</p><div class="pchips">' +
-    list.map((l) => '<a class="chip" href="' + l[0] + '"' + (l[2] ? ' aria-current="true"' : "") + ">" + l[1] + "</a>").join("") + "</div></div></section>";
+  return previewPanel(list.map((l) => '<a class="chip" href="' + l[0] + '"' + (l[2] ? ' aria-current="true"' : "") + ">" + esc(l[1]) + "</a>").join(""), { id: "ev1-pv" }).replace("<section ", "<section data-proto ");
 }
 
 /* ---------- calendar file (.ics) and Google Calendar link ---------- */

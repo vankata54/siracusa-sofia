@@ -5,7 +5,7 @@ import { createCore, KVRepo, CoreError, type Core, type Hasher, type StaffUser, 
 import { MENU } from "../data/menu.ts";
 import { state, status, eta, getKitchen } from "../lib/status.ts";
 import { offers } from "../lib/offers.ts";
-import { eventsJson } from "../lib/events.ts";
+import { eventsJson } from "../lib/events-json.ts";
 import { ApiError, busFire, demoChannel } from "./api.ts";
 import { publicSettings } from "../core/settings.ts";
 

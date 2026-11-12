@@ -9,7 +9,7 @@ import Base from "../../layouts/Base.astro";
 import { MENU_LUNCH_DATE } from "../../lib/data.ts";
 import { heroHTML, valuesHTML, storyHTML, spacesHTML, teamHTML, visitHTML, endHTML, aboutLd, mainItems, mainCats } from "./_about.ts";
 
-const description = "Siracusa Bar & Grill е квартален ресторант в ж.к. Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка, салон и отоплявана градина. " + mainItems.length + " ястия в " + mainCats.length + " категории.";
+const description = "Квартален ресторант в Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка, салон и отоплявана градина. " + mainItems.length + " ястия.";
 ---
 <Base page="about" nav="about" title="За нас" docTitle="За нас: ресторант с градина в Дружба 2" description={description} jsonld={aboutLd(Astro.site)}>
   <div class="ab" data-about data-lunch-date={MENU_LUNCH_DATE}>
@@ -43,15 +43,8 @@ const description = "Siracusa Bar & Grill е квартален ресторан
 @keyframes abRoll{from{transform:translate(38%,6%) rotate(-150deg) scale(.86); opacity:0} to{transform:none; opacity:1}}
 
 /* photo slot: designed placeholder until the new photo shoot */
-.ab-slot{position:relative; overflow:hidden; border-radius:var(--r-img); aspect-ratio:4/3; background:radial-gradient(120% 95% at 28% 18%, var(--plate-1), var(--plate-2)); color:var(--muted)}
-.ab-slot::before{content:""; position:absolute; inset:14px; border:2px solid var(--line-strong); border-radius:12px;
-  -webkit-mask:linear-gradient(#000 0 0) top left/26px 26px no-repeat, linear-gradient(#000 0 0) top right/26px 26px no-repeat, linear-gradient(#000 0 0) bottom left/26px 26px no-repeat, linear-gradient(#000 0 0) bottom right/26px 26px no-repeat;
-          mask:linear-gradient(#000 0 0) top left/26px 26px no-repeat, linear-gradient(#000 0 0) top right/26px 26px no-repeat, linear-gradient(#000 0 0) bottom left/26px 26px no-repeat, linear-gradient(#000 0 0) bottom right/26px 26px no-repeat}
-.ab-slot .big{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:.38}
-.ab-slot .tag{position:absolute; left:22px; top:22px; right:22px; display:flex; align-items:flex-start; gap:8px; font-size:14px; line-height:1.35}
-.ab-slot .tag span{padding:7px 12px; border-radius:16px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line)}
+.ab-slot{aspect-ratio:4/3}
 .ab-slot.ab-hero-slot{aspect-ratio:5/4}
-.ab-slot.ab-hero-slot .big{left:42%}
 .ab-slot.tall{aspect-ratio:3/4}
 
 /* values */
@@ -104,7 +97,6 @@ const description = "Siracusa Bar & Grill е квартален ресторан
 .ab-team{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
 .ab-team figure{margin:0; display:grid; gap:10px}
 .ab-team-miss{margin:0 0 18px}
-.ab-team .ab-slot .big{opacity:.32}
 .ab-team figcaption{font-weight:800; font-size:16px; letter-spacing:-.01em}
 .ab-team figcaption span{display:block; font-weight:600; font-size:14px; color:var(--muted)}
 
@@ -188,7 +180,6 @@ const description = "Siracusa Bar & Grill е квартален ресторан
 
 <script>
   import { SC } from "../../client/sc.ts";
-  import { sofiaYmd } from "../../lib/time.ts";
   import { endCta, lunchLinkText } from "./_cta.ts";
 
   const main = SC.mount();
@@ -213,7 +204,7 @@ const description = "Siracusa Bar & Grill е квартален ресторан
       if (lbl && lbl.textContent !== c.label) lbl.textContent = c.label;
     }
     /* "днес" only when the lunch menu in the data is for today's date (BRIEF 8) */
-    if (lunchLink) lunchLink.textContent = lunchLinkText(sofiaYmd() === root.dataset.lunchDate);
+    if (lunchLink) lunchLink.textContent = lunchLinkText(SC.lunchIsToday());
   }
   hour();
   document.addEventListener("sc:tick", hour);

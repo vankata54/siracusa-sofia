@@ -12,12 +12,15 @@ import { url } from "../../lib/routes.ts";
 import { ic } from "../../lib/icons.ts";
 import { items, cats, isOut, menu } from "../../lib/data.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
+import { callBtn, faqHead } from "../../lib/ui.ts";
+import { dateLong } from "../../lib/format.ts";
 import { AL, TEL, DESC, spriteHTML, maskURL, u, plural, faqData, faqText, ringHTML, chipsHTML, tableOpen, cathHTML, rowHTML, summaryText, lunchHTML } from "./_alergeni.ts";
 
 const N = items.length, WITH = items.filter((x) => x.comp).length, NODATA = N - WITH;
 const COUNT: Record<string, number> = {};
 for (const a of AL) COUNT[a[0]] = items.filter((x) => x.al.indexOf(a[0]) > -1).length;
-const UPD = (menu.updated || "").split("-").reverse().join(".");
+/* the date as everywhere on the site: "пн, 2 ноември" */
+const UPD = menu.updated ? dateLong(new Date(menu.updated + "T12:00:00")) : "";
 const pct = WITH / N;
 
 /* default order inside a category: dishes we can check first, then "no data", sold out always last (the browser uses the same rule) */
@@ -42,6 +45,8 @@ const jsonld = [
   { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: faqText(q[1]) } })) },
 ];
 const description = "Алергени във всички ястия на Siracusa Bar & Grill, Дружба 2: 14-те основни алергена по Регламент (ЕС) 1169/2011, търсене и филтър „Без глутен“, „Без мляко“ и други.";
+/* the phone icon of the shared call buttons from the page sprite (the HTML of this page has a size budget) */
+const sp = (h: string) => h.replace(ic("phone", 20), u("phone", 20));
 ---
 <Base page="allergens" nav={null} title="Алергени" docTitle="Алергени в менюто" description={description} jsonld={jsonld}>
   <Fragment set:html={spriteHTML()} />
@@ -54,13 +59,13 @@ const description = "Алергени във всички ястия на Siracu
       <div class="meter"><div class="mt"><b>Състав имаме за {WITH} от {N} ястия</b><span class="muted">За останалите {NODATA} попитайте ни</span></div>
         <div class="bar" role="img" aria-label={WITH + " от " + N + " ястия имат състав"}><span style={"transform:scaleX(" + pct.toFixed(3) + ")"}></span></div>
         <p class="chk">Проверка от кухнята: <span class="missing">[ЛИПСВА: дата на проверката от кухнята]</span></p></div>
-      <div class="acts"><a class="pill pill-ink" href={TEL}><Fragment set:html={ic("phone", 20)} />Обади се: {R.phone}</a><button class="link" type="button" data-goto="ref">Какво включва всеки алерген<Fragment set:html={ic("caret-down", 18)} /></button></div>
+      <div class="acts"><Fragment set:html={sp(callBtn("pill pill-ink"))} /><button class="link" type="button" data-goto="ref">Какво включва всеки алерген<Fragment set:html={ic("caret-down", 18)} /></button></div>
     </div></div>
   </section>
 
   <section class="sec ctl" id="filters" aria-labelledby="ctl-h"><h2 class="vh" id="ctl-h">Търсене и филтри</h2>
     <div class="search" role="search"><label for="q">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
-      <input id="q" type="search" placeholder="пица, моцарела, karbonara" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <input id="q" type="search" placeholder="пица, моцарела, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
       <button class="clr" type="button" data-clrq aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div></div>
     <div class="frow"><label class="check"><input type="checkbox" id="nd"><span><b>Скрий ястията без данни</b><small>{plural(NODATA)} още нямат състав</small></span></label>
       <button class="link" type="button" data-clear hidden><Fragment set:html={ic("x", 18)} />Изчисти всичко</button></div>
@@ -81,7 +86,7 @@ const description = "Алергени във всички ястия на Siracu
     ))}</div>
   </section>
 
-  <section class="sec" aria-labelledby="faq-h"><div class="faqwrap"><div><h2 class="h2" id="faq-h">Често задавани въпроси</h2></div>
+  <section class="sec" aria-labelledby="faq-h"><div class="faqwrap"><Fragment set:html={sp(faqHead("faq-h"))} />
     <div class="shell faqbox"><div class="core faq">{FAQ.map((z, i) => (
       <details open={i === 0}><summary>{z[0]}<span class="tg" aria-hidden="true" set:html={ic("plus", 18)}></span></summary><div class="a" set:html={z[1]}></div></details>
     ))}</div></div></div>
@@ -371,7 +376,8 @@ svg.ic{fill:currentColor}
   import { SC } from "../../client/sc.ts";
   import { api } from "../../client/api.ts";
   import "../../lib/icons/eye.ts";
-  import { AL, summaryText, ndSummaryHTML, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE } from "./_alergeni.ts";
+  import { AL, summaryText, ndSummaryHTML, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE, noun } from "./_alergeni.ts";
+  import { previewPanel, pvChip, PV, loadingText } from "../../lib/ui.ts";
   import type { Dish } from "../../lib/data.ts";
 
   const main = SC.mount();
@@ -495,12 +501,13 @@ svg.ic{fill:currentColor}
     clearAll.hidden = !active();
     clrQ.hidden = !st.q;
     main.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === st.view)));
-    if (st.view === "loading") { setSum("<b>Зареждаме</b> · момент"); showState(loadingHTML()); return; }
-    if (st.view === "error") { setSum("<b>Грешка</b> · опитайте пак"); showState(errorHTML()); return; }
-    if (st.view === "offline") { setSum("<b>Няма връзка</b> · опитайте пак"); showState(offlineHTML()); return; }
+    /* the states say it once, in the box (the summary line stays quiet) */
+    if (st.view === "loading") { setSum("<b>" + loadingText("алергените") + "</b>"); showState(loadingHTML()); return; }
+    if (st.view === "error") { setSum(""); showState(errorHTML()); return; }
+    if (st.view === "offline") { setSum(""); showState(offlineHTML()); return; }
     if (st.q.trim() && !search) {
-      if (searchErr) { setSum("<b>Грешка</b> · опитайте пак"); showState(errorHTML(true)); return; }
-      setSum("<b>Търсим</b> · момент"); showState(loadingHTML());
+      if (searchErr) { setSum(""); showState(errorHTML(true)); return; }
+      setSum("<b>" + loadingText("търсенето") + "</b>"); showState(loadingHTML());
       loadSearch().then(render);
       return;
     }
@@ -528,7 +535,7 @@ svg.ic{fill:currentColor}
   }
   function catSheet() {
     if (!last) return;
-    let h = '<div class="catlist">' + last.groups.map((g) => '<button type="button" data-jump="g-' + g.c + '">' + SC.esc(catName[g.c]) + "<span>" + SC.plural(g.items.length, "ястие", "ястия") + "</span></button>").join("");
+    let h = '<div class="catlist">' + last.groups.map((g) => '<button type="button" data-jump="g-' + g.c + '">' + SC.esc(catName[g.c]) + "<span>" + noun(g.c, g.items.length) + "</span></button>").join("");
     if (last.nd) h += '<p class="sep">Без данни за алергени</p><button type="button" data-jump="nodata">Не можем да проверим<span>' + SC.plural(last.nd, "ястие", "ястия") + "</span></button>";
     const sh = SC.sheet({ title: "Към категория", html: h + "</div>" });
     sh.el.addEventListener("click", (e) => {
@@ -579,9 +586,8 @@ svg.ic{fill:currentColor}
   /* ---------- lunch note: "today" only when the lunch menu in the data is for today (BRIEF 8) ---------- */
   (() => {
     const el = $("[data-lunch]");
-    let today = "";
-    try { today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date()); } catch { today = new Date().toISOString().slice(0, 10); }
-    if (today === el.dataset.date) el.innerHTML = lunchHTML(true, el.dataset.day || "", +(el.dataset.n || 0));
+    /* SC.lunchIsToday(): the one helper (preview and demo: today) */
+    if (SC.lunchIsToday()) el.innerHTML = lunchHTML(true, el.dataset.day || "", +(el.dataset.n || 0));
   })();
 
   /* ---------- live menu: "Изчерпано днес" from the kitchen, after the first paint ---------- */
@@ -607,8 +613,8 @@ svg.ic{fill:currentColor}
 
   /* ---------- preview only: the states panel ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<div class="proto"><p class="lbl">' + ic("eye", 18) + "Само в прегледа</p><p>Покажете как изглежда таблицата в другите състояния. Не влиза в сайта.</p>" +
-      '<div class="chips" role="group" aria-label="Състояние за прототипа">' + [["ok", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"], ["empty", "Без резултати"]].map((z) => '<button class="chip" type="button" data-view="' + z[0] + '" aria-pressed="false">' + z[1] + "</button>").join("") + "</div></div>";
+    $("[data-proto]").outerHTML = previewPanel(([["ok", PV.normal], ["loading", PV.loading], ["error", PV.error], ["offline", PV.offline], ["empty", PV.empty]] as [string, string][]).map((z) => pvChip(z[1], false, 'data-view="' + z[0] + '"')).join(""),
+      { id: "al-pv", text: "Вижте как изглежда таблицата в другите състояния. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- first paint: the HTML already shows everything; only an address with filters changes it ---------- */

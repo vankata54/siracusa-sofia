@@ -146,6 +146,9 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .hb.call{background:var(--ink); color:var(--bg); padding:0 14px}
 .hb.glass{background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); padding:0 16px}
 .dnav{display:none}
+/* pages with "Назад": the back bar on the phone, the full bar on the computer (lib/chrome.ts header()); "Профил" in the bar only on the computer */
+.top.desk,.hb.prof{display:none}
+@container app (min-width:900px){ .top.back{display:none} .top.desk{display:flex} .hb.prof{display:inline-flex} .hb.prof[aria-current="page"]{background:var(--surface-2)} }
 .row2{position:sticky; top:76px; z-index:19; margin:8px 8px 0; display:flex; align-items:flex-start; gap:8px; pointer-events:none}
 .row2 > *{pointer-events:auto}
 .status{flex:1; min-width:0; min-height:52px; display:flex; align-items:center; gap:8px; padding:8px 12px 8px 14px; letter-spacing:-.01em; border-radius:26px; background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:600; color:var(--muted); line-height:1.35; transition:transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease)}
@@ -306,3 +309,50 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 
 /* skip link (added in code: keyboard users jump past the header) */
 .skip:focus{position:fixed!important; left:12px; top:12px; width:auto; height:auto; clip:auto; z-index:2000; padding:12px 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; text-decoration:none}
+
+/* ---------- shared components of the site (src/lib/ui.ts; site.review-consistency, 12.11.2026) ---------- */
+.nw{white-space:nowrap}
+/* error / no connection: icon, title, one sentence, "Опитай пак" + "Обади се · 0894 36 55 77" */
+.sc-state{border-radius:var(--r-core); background:var(--surface)}
+.sc-state p{margin:0; max-width:36ch}
+.sc-state .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:4px}
+/* the hour note: after 21:00 / after 22:30 */
+.sc-note{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2); color:var(--ink)}
+.sc-note > .ic{color:var(--red); margin-top:1px}
+.sc-note b{display:block; line-height:1.3}
+.sc-note span{display:block; color:var(--muted)}
+.sc-note .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+/* the FAQ head */
+.faq-head{display:grid; gap:12px; align-content:start; justify-items:start}
+.faq-head .lead{margin:0}
+/* the photo / video placeholder and the map placeholder */
+.ph-slot{position:relative; margin:0; display:grid; place-items:center; align-content:center; gap:8px; padding:16px 16px 52px; border-radius:var(--r-img); overflow:hidden; text-align:center;
+  background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--line); color:var(--muted)}
+.ph-slot > .ic{opacity:.7}
+.ph-slot .missing{font-size:14px; max-width:28ch}
+.ph-slot .ph-l{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; min-height:28px; padding:0 12px; border-radius:var(--r-pill); background:var(--surface); color:var(--ink); font-size:14px; font-weight:700}
+.map-slot{position:relative; width:100%; height:100%; min-height:220px; display:grid; place-items:center; align-content:center; gap:4px; padding:16px; border:0; border-radius:var(--r-img); text-align:center; font:inherit; color:var(--muted);
+  background:radial-gradient(circle at 50% 42%, var(--surface) 0 18%, transparent 19%), repeating-linear-gradient(0deg, transparent 0 46px, var(--line) 46px 48px), repeating-linear-gradient(90deg, transparent 0 46px, var(--line) 46px 48px), var(--surface-2)}
+button.map-slot{cursor:pointer}
+button.map-slot:focus-visible{outline:3px solid var(--red); outline-offset:-3px}
+.map-slot .ms-pin{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red); box-shadow:var(--shadow)}
+.map-slot b{margin-top:6px; color:var(--ink); font-size:17px}
+.map-slot .missing{font-size:14px}
+.map-slot .ms-cta{margin-top:10px}
+/* "Само в прегледа" */
+.pv-panel{display:grid; gap:10px; padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.pv-panel h2{display:flex; align-items:center; gap:8px; margin:0; font-size:16px; font-weight:800; letter-spacing:0}
+.pv-panel p{margin:0; font-size:14px; color:var(--muted)}
+.pv-panel .pv-chips{display:flex; flex-wrap:wrap; gap:8px}
+.pv-panel .pv-chips h3{flex-basis:100%; margin:6px 0 0; font-size:14px; font-weight:700; color:var(--muted)}
+.pv-panel .chip{min-height:48px; text-decoration:none}
+.pv-panel .chip[aria-pressed="true"], .pv-panel .chip[aria-current="true"]{background:var(--ink); color:var(--bg)}
+/* breadcrumbs (lib/ui.ts crumbs) */
+.sc-crumbs ol{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; font-size:15px; font-weight:700; color:var(--muted)}
+.sc-crumbs li{display:flex; align-items:center}
+.sc-crumbs li + li::before{content:"›"; margin:0 8px; font-weight:600}
+.sc-crumbs a{min-height:48px; display:inline-flex; align-items:center; color:var(--red); text-decoration:none}
+.sc-crumbs a:hover{text-decoration:underline}
+.sc-crumbs [aria-current]{color:var(--ink)}
+/* a "+" that cannot add more (a per-person limit): still focusable, the click says why */
+.plus[aria-disabled="true"],.counter button[aria-disabled="true"]{opacity:.45; cursor:not-allowed}

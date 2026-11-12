@@ -31,7 +31,8 @@ test("gallery: SEO, tiles from the data, [ЛИПСВА], JSON-LD, light HTML", a
   expect(html.match(/class="gi"/g)?.length).toBe(24);
   const chips = [...html.matchAll(/data-cat="(\w+)"[^>]*>.*?<span class="n">(\d+)<\/span>/g)].map((m) => m[1] + ":" + m[2]);
   expect(chips).toEqual(["all:24", "yastia:12", "salon:4", "gradina:4", "sabitia:4"]);
-  expect(html.match(/\[ЛИПСВА: снимка\]/g)?.length).toBe(12);
+  /* the one photo slot of the site: "[ЛИПСВА: снимка на <what>]" (site.review-consistency В8) */
+  expect(html.match(/\[ЛИПСВА: снимка на [^\]]+\]/g)?.length).toBe(12);
   expect(html).toContain("[ЛИПСВА: снимки от новата фотосесия]");
   expect(html).toContain("10,22 €");
   /* the illustrations are drawn by the browser (lazy), not shipped in the HTML */
@@ -145,15 +146,15 @@ test("gallery: dish in the viewer, add to the cart, swipe, browser back closes",
 test("gallery: states panel only in preview; 360 without horizontal scroll", async ({ page }) => {
   const errors = watch(page);
   await open(page);
-  await expect(page.locator(".g-proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   await open(page, "?preview=1&t=12:30");
-  const proto = page.locator(".g-proto");
+  const proto = page.locator("[data-pv]");
   await expect(proto).toBeVisible();
-  await proto.getByRole("button", { name: "Зарежда се" }).click();
+  await proto.getByRole("button", { name: "Зареждане" }).click();
   await expect(page.locator(".g-skel .skel-it")).toHaveCount(8);
   await expect(page.locator(".mason")).toBeHidden();
-  await proto.getByRole("button", { name: "Няма връзка" }).click();
-  await expect(page.getByRole("alert")).toContainText("Снимките не се заредиха");
+  await proto.getByRole("button", { name: "Без интернет" }).click();
+  await expect(page.getByRole("alert")).toContainText("Няма връзка с интернет");
   await page.getByRole("alert").getByRole("button", { name: "Опитай пак" }).click();
   await expect(visible(page)).toHaveCount(24);
 

@@ -58,12 +58,7 @@ export function addDaysYmd(ymd: string, n: number): string {
   const [y, m, d] = ymd.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
-/** Is "YYYY-MM-DD" a real calendar date? */
-export function validYmd(ymd: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return false;
-  const [y, m, d] = ymd.split("-").map(Number), t = new Date(Date.UTC(y, m - 1, d));
-  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
-}
+/* validYmd lives in core/reservations.ts: time.ts is part of the shared runtime (size budget) and only the core needs it */
 /** Epoch ms of a wall-clock time in Sofia ("2026-11-12", 690 = 11:30). */
 export function sofiaEpoch(ymd: string, min: number): number {
   const [y, m, d] = ymd.split("-").map(Number);

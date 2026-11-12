@@ -83,7 +83,7 @@ test("category: filters, sort and allergens are kept in the address", async ({ p
   await open(page, "/menu/pitsi/");
   await expect(page.locator("h1")).toHaveText("Пици на пещ");
   await expect(cards(page)).toHaveCount(15);
-  await expect(page.locator("[data-tfact]")).toContainText("Доставка около 35 мин");
+  await expect(page.locator("[data-tfact]")).toContainText("Доставка сега · около 35 мин");
   await page.locator('.flt [data-f="veg"]').click();
   await expect(page).toHaveURL(/#f=veg$/);
   await expect(page.locator("#res-h")).toContainText("4 от 15 пици");

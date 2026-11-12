@@ -23,7 +23,7 @@ test("offers: SEO, server HTML, JSON-LD", async ({ request }) => {
   expect(html).toContain("Оферти и отстъпки | Siracusa Bar &amp; Grill");
   expect(html).toContain('rel="canonical"');
   for (const id of ["lunch", "greek", "signup", "rating", "birthday", "celebration", "loyalty", "voucher"]) expect(html).toContain('id="' + id + '"');
-  expect(html).toContain("[ЛИПСВА: дни преди празника]");
+  expect(html).toContain("[ЛИПСВА: колко дни по-рано]");
   expect(html).toContain("[ЛИПСВА: наградата]");
   expect(html).toContain("[ЛИПСВА: срок]");
   expect(html).not.toContain("печат за всяка поръчка");
@@ -119,12 +119,12 @@ test("offers: voucher inquiry through api.feedback, amount in the button", async
 test("offers: states panel only in preview, no horizontal scroll at 360", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await open(page);
-  await expect(page.locator(".proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.goto("/oferti/?preview=1&t=16:30");
-  await expect(page.locator(".proto")).toHaveCount(1);
+  await expect(page.locator("[data-pv]")).toHaveCount(1);
   await page.locator('[data-proto="error"]').click();
-  await expect(page.locator(".of-err")).toContainText("Офертите не се заредиха");
+  await expect(page.locator("[data-grid] [role=alert]")).toContainText("Не успяхме да заредим офертите");
   await page.locator("[data-retry]").click();
   await expect(page.locator("#lunch.cp")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

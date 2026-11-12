@@ -39,12 +39,12 @@ test("login: SEO, noindex, one h1, step 1, no overflow at 360", async ({ page })
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveText("Влезте с телефона си");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/vhod\/$/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0); /* noindex: no canonical (decision 12.11) */
   await expect(page.locator(".bonus")).toContainText("от следващата поръчка");
   await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 1 от 3");
   await expect(page.locator("#ph")).toHaveAttribute("placeholder", "0888 12 34 56");
   await expect(page.locator(".fine a").first()).toHaveAttribute("href", "/obshti-uslovia/");
-  await expect(page.locator(".lproto")).toHaveCount(0); /* prototype panel only with ?preview=1 */
+  await expect(page.locator("[data-pv]")).toHaveCount(0); /* prototype panel only with ?preview=1 */
   await page.setViewportSize({ width: 360, height: 800 });
   const hs = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(hs).toBeLessThanOrEqual(0);
@@ -194,7 +194,7 @@ test("login: \"Назад\" and the same number go back to the code that still w
 
 test("login: prototype panel and offline state only in preview", async ({ page }) => {
   await open(page, "?preview=1");
-  await expect(page.locator(".lproto")).toBeVisible();
+  await expect(page.locator("[data-pv]")).toBeVisible();
   await page.locator("[data-offline]").click();
   await page.locator("#ph").fill(rnd());
   await page.getByRole("button", { name: "Изпрати код по SMS" }).click();

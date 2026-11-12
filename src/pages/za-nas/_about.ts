@@ -1,6 +1,7 @@
 /* About page (/za-nas/): server-side HTML for every section of design/pages/about.html, plus the JSON-LD.
    Numbers come only from the data (menu, zones); history, team, photos, seats and parking stay [ЛИПСВА]. */
 import { payAnswer } from "../../lib/pay.ts";
+import { photoSlot, miss, faqHead } from "../../lib/ui.ts";
 import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT, ZONES } from "../../lib/consts.ts";
 import { items, cats, inCat, lunch } from "../../lib/data.ts";
@@ -22,9 +23,9 @@ const addrCity = R.address.slice(R.address.lastIndexOf(",") + 1).trim();
 const intl = (ph: string) => "+359" + ph.replace(/\D/g, "").replace(/^0/, "");
 const andList = (a: string[]) => (a.length > 1 ? a.slice(0, -1).join(", ") + " и " + a[a.length - 1] : a.join(""));
 
-function slot(icon: string, label: string, cls = ""): string {
-  return '<div class="ab-slot ' + cls + '" role="img" aria-label="Място за снимка: ' + esc(label) + '">' +
-    '<span class="big">' + ic(icon, 72) + '</span><span class="tag"><span class="missing">[ЛИПСВА: ' + esc(label) + "]</span></span></div>";
+/* the one photo slot of the site (lib/ui.ts photoSlot); the page sets only the size (.ab-slot) */
+function slot(_icon: string, of: string, cls = ""): string {
+  return photoSlot({ of, cls: "ab-slot " + cls, ratio: "", tag: "div" });
 }
 
 /* 1. hero */
@@ -37,7 +38,7 @@ export function heroHTML(): string {
       '<div class="ab-cta"><a class="pill pill-red pill-lg" href="' + url.reservation() + '">' + ic("calendar-blank", 20) + 'Резервирай маса</a><a class="pill pill-line pill-lg" href="' + url.menu() + '">' + ic("fork-knife", 20) + "Виж менюто</a></div>" +
       '<ul class="ab-facts"><li>' + ic("clock", 20) + "Всеки ден " + hours + "</li><li>" + ic("tree", 20) + "Салон и градина</li><li>" + ic("truck", 20) + "Доставка до " + R.delivery + "</li></ul>" +
     "</div>" +
-    '<div class="ab-vis">' + slot("storefront", "снимка на ресторанта", "ab-hero-slot") +
+    '<div class="ab-vis">' + slot("storefront", "ресторанта", "ab-hero-slot") +
       '<div class="ab-plate" aria-hidden="true">' + art("svinski-rebra") + "</div></div>" +
   "</section>";
 }
@@ -82,12 +83,12 @@ export function storyHTML(): string {
 /* 4. hall + heated garden (seats are [ЛИПСВА], never a sum of the mock tables) */
 export function spacesHTML(): string {
   return '<section class="sec" aria-labelledby="ab-sp-h"><div class="sec-h"><h2 class="h2" id="ab-sp-h">Салон и градина</h2><a class="link" href="' + url.page("gallery") + '">Галерия' + ic("caret-right", 18) + "</a></div>" +
-    '<p class="lead" style="margin:-4px 0 18px">Отворени всеки ден. Градината е затворена и се отоплява, затова работи и през зимата.</p>' +
+    '<p class="lead" style="margin:-4px 0 18px">Отворени всеки ден. Градината е отоплявана и работи целогодишно.</p>' +
     '<div class="ab-spaces">' +
-      '<article class="shell ab-space rv"><div class="core">' + slot("chair", "снимка на салона") +
-        '<div class="txt"><h3 class="h3">Салонът</h3><p>За обяд, вечеря и празници.</p><p class="missing">[ЛИПСВА: брой места]</p></div></div></article>' +
-      '<article class="shell ab-space rv"><div class="core">' + slot("tree", "снимка на градината") +
-        '<div class="txt"><h3 class="h3">Градината</h3><p>Затворена и отоплявана, работи целогодишно.</p><div class="feat"><span class="badge">' + ic("thermometer", 16) + 'Отоплява се</span><span class="badge">' + ic("calendar-check", 16) + 'Цяла година</span></div><p class="missing">[ЛИПСВА: брой места]</p></div></div></article>' +
+      '<article class="shell ab-space rv"><div class="core">' + slot("chair", "салона") +
+        '<div class="txt"><h3 class="h3">Салонът</h3><p>За обяд, вечеря и празници.</p><p>' + miss("capacity") + '</p></div></div></article>' +
+      '<article class="shell ab-space rv"><div class="core">' + slot("tree", "градината") +
+        '<div class="txt"><h3 class="h3">Градината</h3><p>Отоплявана, работи целогодишно.</p><div class="feat"><span class="badge">' + ic("thermometer", 16) + 'Отоплява се</span><span class="badge">' + ic("calendar-check", 16) + 'Цяла година</span></div><p>' + miss("capacity") + '</p></div></div></article>' +
     "</div>" +
     '<a class="pill pill-ink go ab-go" href="' + url.reservation() + '"><span>Избери маса по карта</span><span class="knob">' + ic("arrow-right", 22) + "</span></a>" +
   "</section>";
@@ -100,18 +101,18 @@ export function teamHTML(): string {
     '<p class="lead" style="margin:-4px 0 18px">Хората в кухнята, в салона и по пътя до вас. Показваме ги само със съгласието им.</p>' +
     '<p class="missing ab-team-miss">[ЛИПСВА: снимки и имена на екипа, ако се съгласят]</p></div>' +
     '<div class="ab-team">' + t.map((x) =>
-      '<figure class="rv"><div class="ab-slot tall" role="img" aria-label="Място за снимка: ' + x[1] + '"><span class="big">' + ic(x[0], 56) + "</span></div><figcaption>" + x[1] + "<span>" + x[2] + "</span></figcaption></figure>").join("") +
+      '<figure class="rv">' + photoSlot({ of: x[2], label: x[1], cls: "ab-slot tall", ratio: "", tag: "div" }) + "<figcaption>" + x[1] + "<span>" + x[2] + "</span></figcaption></figure>").join("") +
     "</div></div></section>";
 }
 
 /* 6. FAQ + visit. [question, answer HTML, plain answer for JSON-LD or null when it has [ЛИПСВА]] */
 export const FAQ: [string, string, string | null][] = [
-  ["Работи ли градината през зимата?", "<p>Да. Градината е затворена и се отоплява, затова работи през цялата година.</p>", "Да. Градината е затворена и се отоплява, затова работи през цялата година."],
+  ["Работи ли градината през зимата?", "<p>Да. Градината е отоплявана и работи целогодишно.</p>", "Да. Градината е отоплявана и работи целогодишно."],
   ["Къде се намирате?", "<p>" + esc(R.address) + '.</p><a class="link" href="' + R.maps + '" target="_blank" rel="noopener">Маршрут в Google Maps' + ic("arrow-up-right", 18) + "</a>", R.address + "."],
   ["Какво е работното време?", "<p>Всеки ден от " + R.open + " до " + R.close + ". Кухнята приема поръчки до " + R.kitchen + ", доставката е до " + R.delivery + ", а обедното меню до " + R.lunchUntil + ".</p>",
     "Всеки ден от " + R.open + " до " + R.close + ". Кухнята приема поръчки до " + R.kitchen + ", доставката е до " + R.delivery + ", а обедното меню до " + R.lunchUntil + "."],
   ["Как мога да платя?", "<p>" + payAnswer() + "</p>", null],
-  ["Има ли паркинг?", '<p class="missing">[ЛИПСВА: паркиране]</p>', null],
+  ["Има ли паркинг?", "<p>" + miss("parking") + "</p>", null],
   ["Може ли да направим празник при вас?", '<p>Да: рожден ден, кръщене, юбилей, фирмено парти. Изчислете празника онлайн, а при ранна резервация вземате -5%.</p><a class="link" href="' + url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a>",
     "Да: рожден ден, кръщене, юбилей, фирмено парти. Изчислете празника онлайн, а при ранна резервация вземате -5%."],
 ];
@@ -120,7 +121,7 @@ export function visitHTML(): string {
   /* the live row is drawn with the build hour (like the header status) and refreshed in the browser at once */
   const s = status();
   return '<section class="sec" aria-labelledby="ab-faq-h"><div class="ab-visit">' +
-    '<div><div class="sec-h"><h2 class="h2" id="ab-faq-h">Често задавани въпроси</h2></div><div class="ab-faq">' + FAQ.map((q, i) =>
+    "<div>" + faqHead("ab-faq-h") + '<div class="ab-faq">' + FAQ.map((q, i) =>
       "<details" + (i === 0 ? " open" : "") + "><summary>" + q[0] + '<span class="tw" aria-hidden="true">' + ic("caret-down", 18) + '</span></summary><div class="a">' + q[1] + "</div></details>").join("") + "</div></div>" +
     '<div><div class="sec-h"><h2 class="h2" id="ab-visit-h">Елате при нас</h2></div>' +
       '<div class="shell"><div class="core">' +

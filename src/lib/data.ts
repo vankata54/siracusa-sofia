@@ -31,10 +31,8 @@ export function sofiaDate(d: Date = new Date()): string {
 }
 /** The date of the lunch menu in the data ("YYYY-MM-DD"). */
 export const MENU_LUNCH_DATE: string = MENU.lunch.date;
-/** The lunch menu in the data is for one date; never present it as "today" on another day. */
-export function lunchIsToday(d: Date = new Date()): boolean {
-  return sofiaDate(d) === MENU.lunch.date;
-}
+/** The lunch menu is for today (preview / demo: always), one helper for every page: lib/lunch.ts */
+export { lunchIsToday } from "./lunch.ts";
 
 export const catById: Record<string, Category> = {};
 for (const c of cats) catById[c.id] = c;

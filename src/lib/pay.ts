@@ -3,8 +3,11 @@
    (RESTAURANT.cardOnDelivery, OPEN-QUESTIONS шофьор 24) and the brand of the vouchers. payAnswer() marks them [ЛИПСВА];
    payAnswerText() (JSON-LD, plain text) says only what is true: the card at the restaurant, ask us about the card at delivery. */
 import { RESTAURANT } from "./consts.ts";
+import { MISS } from "./miss.ts";
 
 const miss = (t: string) => '<span class="missing">[ЛИПСВА: ' + t + "]</span>";
+/** the three ways in the same words everywhere (headings, chips, the cart): "В брой", "Карта при получаване", "Ваучер" */
+export const PAY_METHODS: string[] = RESTAURANT.payment.map((x) => x.replace(/ \(.+\)$/, ""));
 const low = (x: string, i: number) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x);
 const isCard = (x: string) => /^карта при получаване/i.test(x);
 const isVoucher = (x: string) => /^ваучер$/i.test(x);
@@ -17,13 +20,13 @@ const ONLINE = "Онлайн плащане засега няма: плащат�
 export function payAnswer(): string {
   const d = RESTAURANT.cardOnDelivery;
   const p = RESTAURANT.payment.map(low).map((x) =>
-    isCard(x) ? (d === true ? x : addNote(x, d === false ? "в ресторанта; при доставка в брой" : "при доставка " + miss("терминал за карти в колата")))
-      : isVoucher(x) ? x + " " + miss("името на ваучерите") : x);
+    isCard(x) ? (d === true ? x : addNote(x, d === false ? "в ресторанта; при доставка в брой" : "при доставка " + miss(MISS.cardTerminal)))
+      : isVoucher(x) ? x + " " + miss(MISS.vouchers) + " " + RESTAURANT.voucherNote : x);
   return join(p) + ". " + ONLINE;
 }
 /** plain text without [ЛИПСВА] and without a promise that is not known (FAQPage JSON-LD) */
 export function payAnswerText(): string {
   const d = RESTAURANT.cardOnDelivery;
-  const p = RESTAURANT.payment.map(low).map((x) => (isCard(x) && d !== true ? x + " в ресторанта" : x));
+  const p = RESTAURANT.payment.map(low).map((x) => (isCard(x) && d !== true ? x + " в ресторанта" : isVoucher(x) ? x + " " + RESTAURANT.voucherNote : x));
   return join(p) + "." + (d === null ? " За карта при доставка ни попитайте по телефона." : d === false ? " При доставка се плаща в брой." : "") + " " + ONLINE;
 }

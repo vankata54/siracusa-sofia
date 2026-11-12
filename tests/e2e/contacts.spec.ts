@@ -24,7 +24,7 @@ test("contacts: SEO, facts from RESTAURANT, [ЛИПСВА], JSON-LD", async ({ r
   expect(html).not.toMatch(/[—–]/);
   expect(html).not.toMatch(/\.html["#]/);
   for (const s of ['href="tel:+359894365577"', 'href="tel:+35970019955"', 'href="mailto:menu@siracusa-sofia.com"', "https://www.facebook.com/BarGrillSiracusa"]) expect(html).toContain(s);
-  for (const miss of ["[ЛИПСВА: има ли места пред ресторанта и колко]", "[ЛИПСВА: паркиране пред ресторанта]", "[ЛИПСВА: профил в Instagram]", "[ЛИПСВА: статична карта Google]", "[ЛИПСВА: работно време в празнични дни]"]) expect(html).toContain(miss);
+  for (const miss of ["[ЛИПСВА: паркиране]", "[ЛИПСВА: профил в Instagram]", "[ЛИПСВА: статична карта Google]", "[ЛИПСВА: работно време в празнични дни]"]) expect(html).toContain(miss);
   /* the server does not know the date: no "today" in the table */
   expect(html).not.toContain('aria-current="date"');
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
@@ -66,8 +66,8 @@ test("contacts 21:30 and 23:30: status and main action follow the hour", async (
   await expect(page.locator("[data-cta] .pill-red")).toContainText("Обади се");
   await open(page, "23:30");
   await expect(page.locator("[data-today] .h3")).toHaveText("Затворено сега");
-  await expect(page.locator("[data-cta] .pill-red")).toHaveText("Пишете ни");
-  await expect(page.locator("[data-heronote]")).toContainText("Сега сме затворени");
+  await expect(page.locator("[data-cta] .pill-red")).toHaveText("Пиши ни");
+  await expect(page.locator("[data-heronote]")).toContainText("Кухнята затвори за днес");
   await expect(page.locator(".ct-week .chip-s", { hasText: "Утре" })).toHaveCount(1);
 });
 

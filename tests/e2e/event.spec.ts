@@ -85,7 +85,7 @@ test("event: preview states (seats, full, live, over, error)", async ({ page }) 
   await page.evaluate(() => { location.hash = "prikljuchi"; });
   await expect(page.locator("[data-hero-cta]")).toHaveAttribute("href", "/sabitia/");
   await expect(page.locator(".when .s")).toHaveText(/^Следващата: (пн|вт|ср|чт|пт|сб|нд), \d+\s\S+$/);
-  await expect(page.locator(".proto")).toContainText("Само в прегледа: състояния");
+  await expect(page.locator("[data-pv]")).toContainText("Само в прегледа");
   await page.evaluate(() => { location.hash = "greshka"; });
   await expect(page.locator("h1")).toHaveText("Не успяхме да заредим събитието");
   await page.locator("[data-retry]").click();

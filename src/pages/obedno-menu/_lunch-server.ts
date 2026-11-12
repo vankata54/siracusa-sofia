@@ -7,6 +7,7 @@ import { pic } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, plural } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
+import { faqHead } from "../../lib/ui.ts";
 import { canOrderIn, metaHTML, plusHTML, SLOT, weekHTML, dateText, FREE_TXT, PAID_TXT, DISC_PCT, type View, type Meta } from "./_lunch.ts";
 
 const R = RESTAURANT;
@@ -67,7 +68,7 @@ export function bottomHTML(v: View): string {
     '<div class="shell office"><div class="core"><span class="ill">' + ic("briefcase", 28) + '</span><h2 class="h3">Обща поръчка за офиса</h2><p class="muted">Без събиране на поръчки по телефона.</p>' +
     "<ol><li><span>Един колега отваря поръчка и праща връзка в чата.</span></li><li><span>Всеки добавя своето от обедното меню до 11:30.</span></li><li><span>Всичко пристига заедно, с обща сметка или поотделно.</span></li></ol>" +
     '<a class="pill pill-line" href="' + url.page("office") + '">' + ic("users-three", 20) + "Започни обща поръчка</a></div></div>" +
-    '<div class="faq"><h2 class="h3" style="margin:0 4px 12px">Често питани</h2><div class="shell"><div class="core">' + FAQ.map((q) => "<details><summary>" + q[0] + ic("caret-down", 20) + "</summary><p>" + esc(q[1]) + (q[2] || "") + "</p></details>").join("") + "</div></div></div>" +
+    '<div class="faq">' + faqHead("lfaq-h") + '<div class="shell"><div class="core">' + FAQ.map((q) => "<details><summary>" + q[0] + ic("caret-down", 20) + "</summary><p>" + esc(q[1]) + (q[2] || "") + "</p></details>").join("") + "</div></div></div>" +
     "</div></section>";
 }
 

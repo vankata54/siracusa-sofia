@@ -4,7 +4,7 @@
    as catsHTML in menu/[kategoria]/_cat.ts, copied here so that file stays untouched) and a missing event under
    /sabitia/... (the invalid-event state of design/pages/event.html with the "Предстои" card).
    Every variant is in the HTML; a small inline script in 404.astro shows the right one (data-v). */
-import { cats, inCat, isOut, events, lastSaturday, noun, RESTAURANT as R, MON, DAYS, art, esc, ic, url, dateLong, type Dish } from "../lib/index.ts";
+import { cats, inCat, isOut, events, lastSaturday, noun, RESTAURANT as R, MON, DAYS_SHORT, art, esc, ic, url, dateLong, type Dish } from "../lib/index.ts";
 
 export type Variant = "gen" | "cat" | "dish" | "ev";
 /** Wrapper attribute: the element is shown only for these variants (the general one is visible in the raw HTML). */
@@ -33,7 +33,7 @@ export function emptyPlate(): string {
 export const TEL = "tel:" + R.phoneIntl;
 export function callLine(st: { open: boolean; m: number } | null): string {
   const tel = '<a class="link" href="' + TEL + '">' + ic("phone", 18);
-  if (!st || st.open) return "Търсите нещо конкретно? " + tel + "Обадете се: " + R.phone + "</a>";
+  if (!st || st.open) return "Търсите нещо конкретно? " + tel + "Обади се · " + R.phone + "</a>";
   return "Търсите нещо конкретно? Обадете ни се " + (st.m < 600 ? "след 10:00" : "утре след 10:00") + ": " + tel + R.phone + "</a>";
 }
 
@@ -72,7 +72,7 @@ export function catsHTML(): string {
 /* ---------- missing event: the "Предстои" card of design/pages/event.html ---------- */
 export function calLeaf(d: Date | null): string {
   if (!d) return '<span class="cal nodate" aria-hidden="true"><span class="m">Последна</span><span class="d">сб</span><span class="w">от месеца</span></span>';
-  return '<span class="cal" aria-hidden="true"><span class="m">' + MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS[d.getDay()] + "</span></span>";
+  return '<span class="cal" aria-hidden="true"><span class="m">' + MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>";
 }
 /** The first event. A recurring "last Saturday" evening gets no date at build time (it would go stale);
     the browser fills in the date (data-ls). */

@@ -11,6 +11,13 @@ const sc = (): SCType => window.SC;
 const assistantChunk = () => import("../lib/assistant.ts");
 const assistant = () => loadModule(assistantChunk);
 
+/** "Добави всичко" in the assistant's answer (data-aiadd="id,id,..."): the chunk is loaded already when it is shown */
+export function aiAdd(t: HTMLElement): void {
+  const S = sc();
+  (t.dataset.aiadd || "").split(",").forEach((k, i) => { S.cart.add(k, 1); setTimeout(() => S.fly(t, k), i * 120); });
+  S.flash(t, S.ic("check", 22) + "Добавено в количката", 1600);
+}
+
 export function openMore(): void { sc().sheet({ title: "Още", html: morePanel() }); }
 
 export function cookieSettingsSheet(prefs: CookiePrefs, save: (p: CookiePrefs) => void): void {

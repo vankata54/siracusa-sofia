@@ -324,11 +324,10 @@ function cookieChoice(v: string) {
 document.addEventListener("click", (e) => {
   const t = (e.target as Element).closest<HTMLElement>("button, a");
   if (!t) return;
-  if (t.matches("a[data-noop]")) { e.preventDefault(); toast("Правната страница се прави отделно."); return; }
   if (t.dataset.add) { e.preventDefault(); cartApi.add(t.dataset.add, 1, t.dataset.p ? { p: +t.dataset.p } : {}); fly(t, t.dataset.add); haptic(); flash(t, ic("check", 22)); toast("Добавено ✓"); return; }
   if (t.hasAttribute("data-ai")) { openAI(); return; }
   if (t.dataset.aiq) { aiAsk(t.textContent || "", t.dataset.aiq as AiKind); return; }
-  if (t.dataset.aiadd) { t.dataset.aiadd.split(",").forEach((k, i) => { cartApi.add(k, 1); setTimeout(() => fly(t, k), i * 120); }); flash(t, ic("check", 22) + "Добавено в количката", 1600); return; }
+  if (t.dataset.aiadd) { ui().then((m) => m.aiAdd(t)); return; }
   if (t.hasAttribute("data-more")) { ui().then((m) => m.openMore()); return; }
   if (t.hasAttribute("data-lang")) { toast("Английската версия идва след българската."); return; }
   if (t.hasAttribute("data-share")) { ui().then((m) => m.share()); return; }
@@ -379,8 +378,6 @@ export const SC = {
   lunchIsToday: () => lunchIsToday(),
   now: () => now(), minutes: () => minutes(), state: () => T.state(), status: () => T.status(), eta: () => T.eta(), lastSaturday: () => T.lastSaturday(),
   events: () => events(),
-  /** compat with SC.href("dish", id) from the prototype */
-  href: (page: string, id?: string) => fromProto(page + ".html" + (id ? "#" + id : "")),
   url, fromProto,
   /* cart & user */
   cart: cartApi, updateCartUI, user: () => load<Record<string, unknown> | null>("sc-user", null),

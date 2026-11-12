@@ -3,11 +3,12 @@
    Pure string renderers, no DOM, no menu (the menu is only needed for the "Празник при нас" art, see _party.ts).
    Everything that depends on the date takes `today`: the server draws with the build date, the browser redraws
    with the date in Sofia. Real events come from events() / api.events(); the rest are honest "Скоро" cards. */
-import { EVENT_CATS, RESTAURANT } from "../../lib/consts.ts";
+import { EVENT_CATS } from "../../lib/consts.ts";
 import type { SiteEvent } from "../../lib/events.ts";
 import { ic } from "../../lib/icons.ts";
-import { esc, plural, MON, MONTHS, DAYS, DAYS_SHORT } from "../../lib/format.ts";
+import { esc, plural, MON, MONTHS, DAYS_SHORT } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
+import { photoSlot, stateBox, loadingText, missText, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
 import "../../lib/icons/music-notes.ts";
 import "../../lib/icons/globe.ts";
@@ -82,7 +83,7 @@ export function buildItems(evs: SiteEvent[]): Item[] {
     for (let k = 1; k <= 2; k++) {
       const d = lastSat(x.date!.getFullYear(), x.date!.getMonth() + k);
       soon.push({ key: "tema-" + iso(d), kind: "soon", cat: "Тематични вечери", date: d, n: "Тематична вечер",
-        text: "Последната събота на " + MONTHS[d.getMonth()] + ". Коя кухня ще бъде, обявяваме скоро.", miss: "[ЛИПСВА: кухня, програма и цена]" });
+        text: "Последната събота на " + MONTHS[d.getMonth()] + ". Коя кухня ще бъде, обявяваме скоро.", miss: missText("greek") });
     }
   });
   soon.push({ key: "muzika", kind: "soon", cat: "Жива музика", date: null, n: "Жива музика", text: "", miss: "[ЛИПСВА: дата, изпълнител и програма]" });
@@ -93,14 +94,14 @@ const byDate = (a: Item, b: Item) => (!a.date ? 1 : !b.date ? -1 : a.date.getTim
 export function upcoming(all: Item[], today: Date): Item[] { return all.filter((x) => !x.date || daysTo(x.date, today) >= 0).sort(byDate); }
 
 /* ---------- pieces ---------- */
-const MEANDER = '<svg class="tex" aria-hidden="true"><defs><pattern id="meander" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M0 25H28M25 25V3H6V19H19V9H12" fill="none" stroke="currentColor" stroke-width="3"/></pattern></defs><rect width="100%" height="100%" fill="url(#meander)"/></svg>';
-function ctile(d: Date) { return '<span class="ctile" aria-hidden="true"><span class="m">' + MON[d.getMonth()].toUpperCase() + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS[d.getDay()] + "</span></span>"; }
+/* the date tile: "сб" like every date of the site ("сб, 28 ноември") */
+function ctile(d: Date) { return '<span class="ctile" aria-hidden="true"><span class="m">' + MON[d.getMonth()].toUpperCase() + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>"; }
 
 export function realCard(x: Item, today: Date, feat?: boolean): string {
   const e = x.e!, d = x.date!, n = daysTo(d, today);
   const price = e.price != null ? '<span class="price">' + e.price.toFixed(2).replace(".", ",") + " €</span>" : e.free ? "Вход свободен" : '<span class="missing">[ЛИПСВА: цена или вход свободен]</span>';
-  const media = '<div class="slot ev-media" role="img" aria-label="Място за снимка от ' + esc(e.n) + '">' + (x.cat === "Тематични вечери" ? MEANDER : "") + ctile(d) +
-    '<span class="flag">' + ic("clock", 16) + inDays(n) + '</span><span class="big">' + ic(CATI[x.cat] || "calendar-blank", 36) + '</span><span class="cap">' + ic("image", 16) + '<span class="missing">[ЛИПСВА: снимка от ' + esc(e.n) + "]</span></span></div>";
+  /* the one photo slot of the site (lib/ui.ts) with the date tile and "След N дни" over it */
+  const media = '<div class="ev-media">' + photoSlot({ of: e.n, ratio: "", tag: "div" }) + ctile(d) + '<span class="flag">' + ic("clock", 16) + inDays(n) + "</span></div>";
   return '<article class="ev shell' + (feat ? " feat" : "") + '" id="ev-' + x.key + '" aria-labelledby="t-' + x.key + '"><div class="core">' + media +
     '<div class="ev-body"><span class="ev-cat">' + ic(CATI[x.cat], 18) + esc(x.cat) + "</span>" +
     '<h3 class="ev-ttl ' + (feat ? "h1" : "h2") + '" id="t-' + x.key + '"><a href="' + url.event(x.key) + '">' + esc(e.n) + "</a></h3>" +
@@ -135,7 +136,7 @@ function emptyBox(icon: string, title: string, text: string, btns: string, warn?
 export function skeletonHTML(): string {
   const big = '<div class="ev shell feat" aria-hidden="true"><div class="core"><div class="skel sk-media"></div><div class="ev-body"><div class="skel sk-l" style="width:40%"></div><div class="skel" style="height:36px;width:70%;border-radius:12px"></div><div class="skel sk-l" style="width:92%"></div><div class="skel sk-l" style="width:60%"></div><div class="skel" style="height:56px;border-radius:999px;margin-top:8px"></div></div></div></div>';
   const sm = '<div class="ev shell soon" aria-hidden="true"><div class="core"><div class="ev-head"><div class="skel" style="width:66px;height:84px;border-radius:18px"></div></div><div class="ev-body"><div class="skel sk-l" style="width:50%"></div><div class="skel sk-l" style="width:80%"></div><div class="skel" style="height:48px;border-radius:999px;margin-top:8px"></div></div></div></div>';
-  return '<p class="vh" role="status">Зареждаме събитията</p>' + big + '<div class="ev-grid rl" style="margin-top:6px">' + sm + sm + "</div>";
+  return '<p class="vh" role="status">' + loadingText("събитията") + "</p>" + big + '<div class="ev-grid rl" style="margin-top:6px">' + sm + sm + "</div>";
 }
 
 /* past events: gallery and internal reviews are not available yet ([ЛИПСВА]) */
@@ -148,11 +149,8 @@ export interface ListState { tab: "up" | "past"; cat: string | null; mode: Mode 
 /** The list and the count line for a state. `all` = buildItems(...) (ignored unless mode is "ok"). */
 export function listHTML(st: ListState, all: Item[], today: Date): { html: string; count: string } {
   let html = "", count = "";
-  if (st.mode === "loading") { html = skeletonHTML(); count = "Зареждаме..."; }
-  else if (st.mode === "error") {
-    html = emptyBox("warning-circle", "Не успяхме да заредим събитията", "Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите на " + RESTAURANT.phone + ".",
-      '<button class="pill pill-red pill-lg" type="button" data-retry>Опитай пак</button><a class="pill pill-line pill-lg" href="tel:' + RESTAURANT.phoneIntl + '">' + ic("phone", 20) + "Обади се</a>", true);
-  } else if (st.tab === "up") {
+  if (st.mode === "loading") { html = skeletonHTML(); count = loadingText("събитията"); }
+  else if (st.mode === "error") html = stateBox({ kind: "error", what: "събитията", text: "Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите.", h: "h3", cls: "ev-empty" }); else if (st.tab === "up") {
     if (st.cat && OCC[st.cat]) { html = occPanel(st.cat); count = "Празник по ваш избор: вие избирате датата"; }
     else {
       const L = (st.mode === "ok" ? upcoming(all, today) : []).filter((x) => !st.cat || x.cat === st.cat);
@@ -178,7 +176,7 @@ export function listHTML(st: ListState, all: Item[], today: Date): { html: strin
       count = "Нищо в тази категория";
     } else {
       html = (G.length ? '<div class="past-h"><h3 class="h2">Снимки от минали вечери</h3><a class="link" href="' + url.page("gallery") + '">Галерия' + ic("caret-right", 18) + '</a></div><div class="gal">' +
-          G.map((g) => '<div class="gtile slot" style="aspect-ratio:' + g.ar + '" role="img" aria-label="Място за снимка: ' + esc(g.cat) + '"><span class="gl">' + esc(g.cat) + '</span><span class="big">' + ic("image", 26) + '</span><span class="cap"><span class="missing">[ЛИПСВА: снимка]</span></span></div>').join("") + "</div>" : "") +
+          G.map((g) => photoSlot({ of: "минала вечер", label: g.cat, ratio: g.ar, tag: "div", cls: "gtile" })).join("") + "</div>" : "") +
         (V.length ? '<div class="past-h" style="margin-top:28px"><h3 class="h2">Какво казаха гостите</h3></div><div class="revs">' +
           V.map((r) => '<figure class="rev card" style="margin:0"><span class="stars missing">' + ic("chat-circle-dots", 20) + '[ЛИПСВА: оценка]</span><blockquote style="margin:0"><p class="missing">[ЛИПСВА: отзив от гост след вечерта, име и дата]</p></blockquote><figcaption class="who">' + ic(CATI[r.cat], 16) + esc(r.n) + "</figcaption></figure>").join("") +
           '</div><p class="rev-note">' + ic("info", 20) + "<span>Оценките са от кратката ни анкета след вечерта, не от Google. Показваме ги без подбор.</span></p>" : "");
@@ -229,10 +227,10 @@ export const WANT = ["Тематични вечери", "Жива музика",
 export function subFormHTML(want: string[], draft: string): string {
   return '<form novalidate data-subform>' +
     '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">' + WANT.map((c) => '<button class="chip" type="button" data-want="' + esc(c) + '" aria-pressed="' + want.includes(c) + '">' + ic(CATI[c], 18) + esc(c) + "</button>").join("") + '</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>' +
-    '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="например ime@primer.bg" aria-describedby="sub-email-err" value="' + esc(draft) + '"><p class="err" id="sub-email-err" hidden></p></div>' +
-    '<div><label class="check"><input type="checkbox" id="sub-ok" name="consent" aria-describedby="sub-ok-err"><span>Искам да получавам имейли от Siracusa за нови събития. <span class="muted">Отписвате се с едно натискане от всеки имейл.</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>' +
+    '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" aria-describedby="sub-email-err" value="' + esc(draft) + '"><p class="err" id="sub-email-err" hidden></p></div>' +
+    '<div><label class="check"><input type="checkbox" id="sub-ok" name="consent" aria-describedby="sub-ok-err"><span><b>' + MKT_TITLE + '</b><br><span class="muted small">' + MKT_SUB + '</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>' +
     '<div class="neterr" role="alert" data-neterr hidden>' + ic("warning", 22) + "<p><b>Няма връзка с интернет.</b> Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>" +
-    '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("bell", 20) + "Пишете ми за събитията</button>" +
+    '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("bell", 20) + "Абонирай ме за събитията</button>" +
     "</form>";
 }
 export function subOkHTML(email: string, want: string[]): string {

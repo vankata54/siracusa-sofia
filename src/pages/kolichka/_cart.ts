@@ -15,6 +15,8 @@ import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
+import { PAY_METHODS } from "../../lib/pay.ts";
+import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "../../lib/icons/arrow-left.ts";
@@ -134,7 +136,7 @@ export function start(): void {
 
   /* the lunch menu in the data is for one date; on another day its dishes are not sold (the core says lunch_stale).
      In preview and in the demo the core counts the menu as today's, so the page does the same. */
-  function lunchStale() { return !SC.preview && !api.demo && sofiaYmd() !== LUNCH_DATE; }
+  function lunchStale() { return !SC.lunchIsToday(); } /* preview / demo: today (lib/lunch.ts) */
   const lunchDay = () => SC.dateLong(ymdDate(LUNCH_DATE));
   /* over the limits of a web order (the core says too_big): known before the 3 steps */
   const tooBig = (I: Priced) => I.n > ORDER_RULES.maxPortions || I.sub > ORDER_RULES.maxTotal;
@@ -183,7 +185,7 @@ export function start(): void {
   function topNotes(I: Info, step: number) {
     let h = "";
     if (P.flash && P.flash.step === step) h += note(P.flash.kind, "warning-circle", P.flash.title, P.flash.text, P.flash.acts);
-    if (P.offline && !(step === 3 && P.err === "offline")) h += note("warn", "warning-circle", "Няма връзка с интернет", "Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
+    if (P.offline && !(step === 3 && P.err === "offline")) h += note("warn", "warning-circle", OFFLINE, "Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
     if (I.closed) h += I.m < 600
       ? note("info", "clock", "Кухнята отваря в 10:00", "Можете да поръчате още сега за днес. Изберете час и ще я приготвим точно тогава.")
       : note("info", "clock", "Кухнята приема поръчки до 22:30", "Поръчайте за утре: изберете час и ще я приготвим точно тогава.");
@@ -193,7 +195,7 @@ export function start(): void {
     if (I.conflict === "sched") h += note("warn", "warning-circle", "Обедното меню не се поръчва предварително", "Поръчва се в деня, от 10:00 до 15:00. Махнете обедните ястия, за да поръчате за " + (I.m < 600 ? "по-късно" : "утре") + ". Другото остава в количката.");
     if (step === 1 && tooBig(I)) h += note("bad", "warning-circle", "Голяма поръчка: обадете ни се",
       "През сайта се поръчват до " + ORDER_RULES.maxPortions + " порции и до " + fmt(ORDER_RULES.maxTotal) + " за ястията. За по-голяма поръчка се обадете на " + R.phone + ": ще я приготвим навреме.",
-      '<a class="pill pill-ink" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>");
+      callBtn("pill pill-ink"));
     if (step === 1 && I.stale.length) h += note("warn", "warning-circle", "Обедното меню за днес още не е качено",
       "Обедните ястия в количката са от менюто за " + lunchDay() + " и не се броят в поръчката. Махнете ги, а другото остава.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
@@ -276,32 +278,32 @@ export function start(): void {
     const e = etaText(I), zoneName = D.zone || "";
     const del = I.mode === "pickup" ? ["Вземане от място", "<small>Дружба 2, срещу бл. 311</small>", "Без такса"]
       : D.zk === "free" ? ["Доставка", "<small>" + esc(zoneName) + ", в зоната ни</small>", "Безплатна"]
-        : D.zk === "paid" ? ["Доставка", "<small>" + esc(zoneName) + ", по тарифа</small>", '<span class="missing">[ЛИПСВА: такса]</span>']
+        : D.zk === "paid" ? ["Доставка", "<small>" + esc(zoneName) + ", по тарифа</small>", miss("fee")]
           : ["Доставка", "<small>Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. Горубляне и Гара Искър по тарифа.</small>", '<span class="muted">Според адреса</span>'];
     const list = step > 1 ? "<details><summary>" + ic("receipt", 20) + "Виж ястията (" + I.n + ")" + ic("caret-down", 18) + "</summary><ul>" + I.rows.filter((r) => !r.out).map((r) => "<li><span>" + r.q + " × " + esc(r.x.n) + '</span><span class="price">' + fmt(r.tot - r.disc) + "</span></li>").join("") + "</ul></details>" : "";
-    return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Сметка</h2>' + list +
+    return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Вашата поръчка</h2>' + list +
       '<div class="kv"><span>Ястия · ' + I.n + '</span><span class="price">' + fmt(I.sub) + "</span></div>" +
       (I.discKind === "lunch" ? '<div class="kv"><span><span class="disc-b">-30%</span>Отстъпка след 15:00<small>Обедното меню при вземане</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
-      (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Бонусът за профила ви, веднъж</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
-      (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", върху ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
+      (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Бонусът за профила ви,&nbsp;веднъж</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
+      (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", на ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + del[0] + del[1] + "</span><span>" + del[2] + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span><span class="price" data-total>' + fmt(I.total) + "</span>" + (I.feeUnknown ? "<small>+ таксата за доставка</small>" : "") + "</span></div>" +
-      (e.big ? '<div class="eta-row">' + ic(I.conflict === "delivery" ? "storefront" : I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" : "") +
-      '<p class="fine">Плащате при получаване: в брой, с карта или ваучер. Опаковка и минимална поръчка: <span class="missing">[ЛИПСВА: от собственика]</span></p>' +
-      '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link" type="button" data-act="go" data-n="' + (step - 1) + '">' + ic("arrow-left", 18) + "Назад: " + STEPS[step - 2][1] + "</button>" : "") + "</div>" +
+      /* over the online limits the order cannot go through the site: no promise of a time */
+      (e.big && !tooBig(I) ? '<div class="eta-row">' + ic(I.conflict === "delivery" ? "storefront" : I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" : "") +
+      '<p class="fine">Плащане при получаване: ' + PAY_METHODS.join(" · ") + ". Минимална поръчка: " + miss("minOrder") + ". Опаковка: " + miss("packaging") + "</p>" +
+      '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link" type="button" data-act="go" data-n="' + (step - 1) + '" aria-label="' + BACK + ": " + STEPS[step - 2][1] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") + "</div>" +
       "</div></section>";
   }
 
   /* the prototype panel: only in preview (?preview=1, the admin frames, the demo) */
   function protoHTML(view: string) {
     if (!SC.preview) return "";
-    let h = '<aside class="proto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2><p>Тези бутони ги няма в истинския сайт.</p><div class=\"row\">";
-    h += '<button class="pill" type="button" data-act="demo">' + ic("shopping-bag", 18) + "Напълни примерна количка</button>";
-    if (view !== "empty") h += '<button class="pill" type="button" data-act="clear">' + ic("trash", 18) + "Изпразни количката</button>" +
-      '<button class="pill" type="button" data-act="addout">' + ic("clock", 18) + "Добави изчерпано ястие</button>" +
-      '<button class="pill" type="button" data-act="loading">' + ic("hourglass", 18) + "Покажи зареждане</button>";
-    h += '<button class="pill" type="button" data-act="offline" aria-pressed="' + P.offline + '">' + ic("warning-circle", 18) + "Няма интернет: " + (P.offline ? "вкл." : "изкл.") + "</button>";
-    return h + "</div></aside>";
+    let h = '<button class="chip" type="button" data-act="demo">' + ic("shopping-bag", 18) + "Напълни примерна количка</button>";
+    if (view !== "empty") h += '<button class="chip" type="button" data-act="clear">' + ic("trash", 18) + "Изпразни количката</button>" +
+      '<button class="chip" type="button" data-act="addout">' + ic("clock", 18) + "Добави изчерпано ястие</button>" +
+      '<button class="chip" type="button" data-act="loading">' + ic("hourglass", 18) + PV.loading + "</button>";
+    h += pvToggle(PV.offline, P.offline, 'data-act="offline"');
+    return previewPanel(h, { id: "ck-pv", cls: "ck-pv", bare: true, text: "Примерна количка и състояния. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- views ---------- */
@@ -312,14 +314,14 @@ export function start(): void {
       '<h1 class="h1 ck-title" tabindex="-1">Количката е празна</h1><p class="lead">Какво ви се хапва?</p>' +
       '<div class="btns"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.menu() + '">' + ic("fork-knife", 22) + "Към менюто</a>" +
       (s.lunch || s.lunchDiscount ? '<a class="pill pill-line pill-lg pill-block" href="' + SC.url.lunch() + '">' + ic("bowl-food", 22) + (SC.lunchIsToday() ? "Обедно меню днес" : "Обедно меню") + (s.lunchDiscount ? " · -30% при вземане" : "") + "</a>" : "") +
-      (SC.preview ? '<button class="pill pill-lg pill-block proto-pill" type="button" data-act="demo">' + ic("sparkle", 20) + 'Напълни примерна количка<span class="vh"> (само в прототипа)</span></button>' : "") + "</div></div>" +
+      (SC.preview ? '<button class="pill pill-lg pill-block proto-pill" type="button" data-act="demo">' + ic("sparkle", 20) + 'Напълни примерна количка<span class="vh"> (само в прегледа)</span></button>' : "") + "</div></div>" +
       '<section class="blk" style="margin-top:44px" aria-labelledby="hh"><div class="blk-h"><h2 class="h3 emp-h" id="hh">Хитове и новости</h2><a class="link" href="' + SC.url.menu() + '">Цялото меню' + ic("caret-right", 18) + "</a></div>" +
       '<div class="rail">' + picks.map((x) => SC.dishCard(x)).join("") + "</div></section>" + protoHTML("empty") + "</div>";
   }
 
   function viewLoading() {
     const sk = (w: string, h: number) => '<span class="skel" style="display:block;width:' + w + ";height:" + h + 'px"></span>';
-    return '<div class="ck" aria-busy="true"><div class="ck-grid"><div class="ck-main">' + stepper(1) + '<h1 class="h1 ck-title" tabindex="-1">Количка</h1><p class="lead ck-lead">Проверяваме цените и наличността...</p>' +
+    return '<div class="ck" aria-busy="true"><div class="ck-grid"><div class="ck-main">' + stepper(1) + '<h1 class="h1 ck-title" tabindex="-1">Количка</h1><p class="lead ck-lead">Проверяваме цените и наличността…</p>' +
       '<div class="shell" style="margin-top:22px"><div class="core" style="padding:2px 18px">' + [1, 2, 3].map(() => '<div class="sk-line">' + sk("72px", 72) + "<div>" + sk("70%", 18) + sk("40%", 14) + sk("55%", 36) + "</div></div>").join("") + "</div></div></div>" +
       '<div class="ck-side"><div class="shell"><div class="core pad" style="display:grid;gap:14px">' + sk("40%", 22) + sk("100%", 16) + sk("100%", 16) + sk("60%", 28) + "</div></div></div></div></div>";
   }
@@ -344,7 +346,7 @@ export function start(): void {
     if (D.zk === "out" || !z) return note("bad", "warning-circle", "Извън зоната ни", "Не доставяме до този адрес. Можете да я вземете от ресторанта.", '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + 'Вземи от място</button><a class="pill pill-line" href="' + SC.url.page("delivery") + '">' + ic("map-trifold", 20) + "Виж зоните</a>");
     const mins = zoneMin(z) + (I.busy ? 20 : 0), when = I.today ? "\u00a0· около\u00a0" + mins + "\u00a0мин" : "";
     if (D.zk === "free") return note("ok", "check-circle", "Безплатна доставка" + when, esc(D.zone) + " е в нашата зона." + (I.busy && I.today ? " Кухнята е натоварена, затова времето е по-дълго." : ""));
-    return note("info", "moped", 'Доставка <span class="missing">[ЛИПСВА: такса]</span>' + when, esc(D.zone) + " е в зоната по тарифа. Таксата ще се вижда тук, преди да поръчате.");
+    return note("info", "moped", "Доставка " + miss("fee") + when, esc(D.zone) + " е в зоната по тарифа. Таксата ще се вижда тук, преди да поръчате.");
   }
 
   function slotsHTML(I: Info, title: string) {
@@ -363,11 +365,11 @@ export function start(): void {
         '<div style="margin-top:22px">' + topNotes(I, 2) + "</div>" +
         '<section class="blk">' + ffHTML(I, 2) + "</section>" +
         '<section class="blk"><div class="field"><label for="addr">Адрес за доставка</label>' +
-        '<div class="combo">' + ic("map-pin", 22) + '<input id="addr" class="input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addr-list" autocomplete="street-address" placeholder="Квартал, улица, блок" value="' + esc(D.addr) + '" data-fk="addr" aria-describedby="addr-help">' +
+        '<div class="combo">' + ic("map-pin", 22) + '<input id="addr" class="input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addr-list" autocomplete="street-address" placeholder="Например: Дружба 2, бл. 311" value="' + esc(D.addr) + '" data-fk="addr" aria-describedby="addr-help">' +
         (D.addr ? '<button class="combo-x" type="button" data-act="addr-clear" aria-label="Изчисти адреса">' + ic("x", 20) + "</button>" : "") + "</div>" +
         '<ul class="combo-list" id="addr-list" role="listbox" aria-label="Предложени адреси" hidden></ul>' +
         '<p class="help" id="addr-help">Квартал и улица или блок, например: Дружба 2, бл. 311. Пише се и на латиница.</p>' +
-        (SC.preview ? '<div class="try" aria-label="Пробни адреси в прототипа"><span>Пробни адреси:</span>' + ([[0, "Дружба 2"], [6, "Горубляне"], [8, "Младост 1"]] as [number, string][]).map((a) => '<button class="chip" type="button" data-act="addr-sample" data-i="' + a[0] + '">' + a[1] + "</button>").join("") + "</div>" : "") +
+        (SC.preview ? '<div class="try" role="group" aria-label="Пробни адреси (само в прегледа)"><span>Пробни адреси:</span>' + ([[0, "Дружба 2"], [6, "Горубляне"], [8, "Младост 1"]] as [number, string][]).map((a) => '<button class="chip" type="button" data-act="addr-sample" data-i="' + a[0] + '">' + a[1] + "</button>").join("") + "</div>" : "") +
         '</div><div class="res" id="addr-res" aria-live="polite">' + addrResult(I) + "</div></section>" +
         (D.zk === "free" || D.zk === "paid"
           ? '<section class="blk"><div class="field"><label for="more">Вход, етаж, апартамент <span class="opt-tag">по желание</span></label><input id="more" class="input" type="text" data-f="addrMore" data-fk="more" value="' + esc(D.addrMore) + '" placeholder="Вх. Б, ет. 4, ап. 12" autocomplete="address-line2"><p class="help">За да ви намери шофьорът по-бързо.</p></div></section>' +
@@ -400,7 +402,7 @@ export function start(): void {
     let body: string;
     if (D.code) {
       const why = I.discKind === "code"
-        ? note("ok", "check-circle", "Кодът е приложен: -" + fmt(I.disc), esc(D.code) + " · -" + D.codePct + "% върху ястията" + (I.mode === "delivery" ? ", без таксата за доставка." : "."))
+        ? note("ok", "check-circle", "Кодът е приложен: -" + fmt(I.disc), esc(D.code) + " · -" + D.codePct + "% на ястията" + (I.mode === "delivery" ? ", без таксата за доставка." : "."))
         : note("info", "info", I.discKind === "lunch" ? "Обедната отстъпка -30% е по-изгодна" : "Отстъпката с профил вече е сметната", "Отстъпките не се събират. Кодът " + esc(D.code) + " остава за следващата поръчка.");
       body = why + '<button class="link code-rm" type="button" data-act="code-rm">' + ic("x", 18) + "Махни кода</button>";
     } else {
@@ -423,8 +425,8 @@ export function start(): void {
     const pays: [Pay, string, string, string][] = [["cash", "money", "В брой", deliv ? "На шофьора" : "В ресторанта"], ["card", "credit-card", "Карта при получаване", "Visa или Mastercard"], ["voucher", "ticket", "Ваучер", "Или подаръчна карта"]]; /* no brand names: which vouchers is [ЛИПСВА] */
     const h = stepper(3, true) + '<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">' + (U ? "Попълнихме ги от профила ви. Проверете ги." : "Без регистрация. Обаждаме се само ако нещо не е ясно.") + "</p>" +
       '<div style="margin-top:22px" id="topnotes">' + topNotes(I, 3) +
-      (P.err === "offline" ? note("bad", "warning-circle", "Няма връзка. Поръчката ви е запазена - опитайте пак.", "Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: " + R.phone + ".", '<a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>") : "") +
-      (P.err === "server" ? note("bad", "warning-circle", "Поръчката не е изпратена", esc(P.errMsg) + " Или ни се обадете: " + R.phone + ".", '<a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>") : "") +
+      (P.err === "offline" ? note("bad", "warning-circle", OFFLINE, "Поръчката ви е запазена: нищо не е изпратено и нищо не е изгубено. Опитайте пак или ни се обадете.", callBtn("pill pill-line")) : "") +
+      (P.err === "server" ? note("bad", "warning-circle", "Поръчката не е изпратена", esc(P.errMsg) + " Опитайте пак или ни се обадете.", callBtn("pill pill-line")) : "") +
       (P.err === "form" ? '<div id="form-note">' + note("bad", "warning-circle", "Попълнете отбелязаните полета", "Името и телефонът са задължителни.") + "</div>" : "") + "</div>" +
       '<section class="blk"><div class="card recap"><div class="kv">' + where + '<button class="link" type="button" data-act="go" data-n="2">Промени</button></div>' +
       '<div class="kv"><span><small>Поръчка</small><b>' + dishWord(I.n) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "") + '</b></span><button class="link" type="button" data-act="go" data-n="1">Промени</button></div></div></section>' +
@@ -440,7 +442,7 @@ export function start(): void {
       '</div><p class="legal">Не въвеждате карта онлайн. Плащате, когато получите поръчката.</p></section>' +
       '<section class="blk">' + (U && U.consent && U.consent.marketing
         ? '<div class="card consent"><p class="row" style="min-height:56px;margin:0">' + ic("check-circle", 22) + '<span>Вече получавате нашите оферти. Променя се от <a href="' + SC.url.profile() + '">профила</a>.</span></p></div>'
-        : '<div class="card consent"><label class="check"><input type="checkbox" data-f="consent" data-fk="consent"' + (D.consent ? " checked" : "") + "><span><b>Искам да получавам оферти и маркетингови предложения</b><span>Първи научавате за събитията и празничните менюта. Отписвате се с едно натискане.</span></span></label></div>") +
+        : '<div class="card consent"><label class="check"><input type="checkbox" data-f="consent" data-fk="consent"' + (D.consent ? " checked" : "") + "><span><b>" + MKT_TITLE + "</b><span>" + MKT_SUB + "</span></span></label></div>") +
       '<p class="legal">С натискане на „Поръчай“ приемате <a href="' + SC.url.page("terms") + '">Общите условия</a>.</p></section>';
     return '<div class="ck"><div class="ck-grid"><div class="ck-main">' + h + '</div><div class="ck-side">' + summaryHTML(I, 3) + "</div></div>" + protoHTML("cart") + "</div>";
   }
@@ -456,7 +458,7 @@ export function start(): void {
     hdrBack.innerHTML = ic("arrow-left", 20) + (toStep ? "Назад" : "Меню");
     hdrBack.setAttribute("href", toStep ? "#" + STEPS[toStep - 1][0] : SC.url.menu());
     hdrBack.dataset.back = toStep ? String(toStep) : "";
-    if (hdrTitle) hdrTitle.textContent = view === "cart" && step > 1 ? "Поръчка" : "Количка";
+    if (hdrTitle) hdrTitle.textContent = "Количка"; /* one title on every step (site.review-consistency Д10) */
   }
 
   function render(opts: { keepScroll?: boolean } = {}) {
@@ -635,7 +637,7 @@ export function start(): void {
     const bad = ["name", "phone", "email"].filter((k) => P.errs[k]);
     if (!bad.length && P.err === "form") P.err = ""; /* name and phone are fine now: the old "Попълнете…" note goes */
     if (bad.length) { P.err = "form"; render({ keepScroll: true }); const f = main.querySelector<HTMLElement>("#f-" + bad[0]); if (f) { f.focus({ preventScroll: true }); scrollToEl(f); } return; }
-    if (P.offline || (!api.demo && navigator.onLine === false)) { P.err = "offline"; render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad")); SC.toast("Няма връзка. Опитайте пак."); return; }
+    if (P.offline || (!api.demo && navigator.onLine === false)) { P.err = "offline"; render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad")); SC.toast(OFFLINE + ". Опитайте пак."); return; }
     /* a code typed but not applied: check it first, show the new sum, and let the person press again */
     if (!D.code && P.codeTxt.trim()) {
       const ok = await applyCode();

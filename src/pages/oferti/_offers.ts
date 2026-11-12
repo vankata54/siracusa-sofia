@@ -10,6 +10,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural, MON, MONTHS, DAYS, DAYS_SHORT } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import type { State } from "../../lib/status.ts";
+import { stateBox, missText } from "../../lib/ui.ts";
 
 /* ---------- data from the server (real lunch dishes, prices from pricing.ts) ---------- */
 export interface OfEx { n: string; p: number; now: number; disc: number }
@@ -31,7 +32,8 @@ export interface OfLive {
 const L = "15:00", K = "22:30";
 export const miss = (t: string) => '<span class="missing">[ЛИПСВА: ' + esc(t) + "]</span>";
 export function dur(n: number): string { const h = Math.floor(n / 60), m = n % 60; return h ? h + " ч" + (m ? " " + m + " мин" : "") : m + " мин"; }
-const longDate = (d: Date) => DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()];
+/* the date as everywhere on the site: "сб, 28 ноември" */
+const longDate = (d: Date) => DAYS_SHORT[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()];
 function ymdDate(s: string): Date | null { const p = (s || "").split("-"); return p.length < 3 ? null : new Date(+p[0], +p[1] - 1, +p[2]); }
 /** "Например" with today's menu; otherwise from which day the example is (never "днес" with another date) */
 export function exLabel(d: OfData, isToday: boolean): string {
@@ -64,12 +66,12 @@ export function coupons(live: OfLive | null): Coupon[] {
     greek = { id: "greek", on: true, icon: "calendar-blank",
       when: live.ls.days === 0 ? "Днес от " + ev.time : DAYS_SHORT[d.getDay()] + ", " + d.getDate() + " " + MON[d.getMonth()] + " · след " + plural(live.ls.days, "ден", "дни"),
       num: String(d.getDate()), sub: MONTHS[d.getMonth()] + " · " + DAYS_SHORT[d.getDay()] + ", " + ev.time, title: ev.n, text: ev.text,
-      terms: [esc(longDate(d)) + ", от " + ev.time, "Последната събота от всеки месец", "Програма, меню и цена: " + miss("от ресторанта")],
+      terms: [esc(longDate(d)) + " · " + ev.time, "Последната събота от всеки месец", '<span class="missing">' + missText("greek") + "</span>"],
       cta: { t: "Запази място", href: url.event(ev.id) } };
   } else {
     greek = { id: "greek", on: true, icon: "calendar-blank", when: "Последната събота от месеца", num: "19:00", sub: "последната събота от месеца", title: "Гръцка вечер",
       text: "Всяка последна събота от месеца кухнята сменя посоката. Този път: Гърция.",
-      terms: ["Последната събота от всеки месец, от 19:00", "Програма, меню и цена: " + miss("от ресторанта")],
+      terms: ["Последната събота от всеки месец, от 19:00", '<span class="missing">' + missText("greek") + "</span>"],
       cta: { t: "Запази място", href: url.event("gratska-vecher") } };
   }
   const u = live ? live.user : null, bdayOn = !!(u && u.birthday), bd = bdayOn && u!.bday ? u!.bday.split("-") : null;
@@ -85,17 +87,17 @@ export function coupons(live: OfLive | null): Coupon[] {
       terms: ["Прилага се сам на следващата ви поръчка", "Веднъж, когато направите профил", "В профила са и картата с печати, любимите ястия и адресите ви"],
       cta: { t: "Направи профил", href: url.login() } },
     { id: "rating", on: true, icon: "chat-circle-dots", when: "След всяка поръчка", num: "-10%", sub: "за кратка оценка", title: "Кажете ни как беше",
-      text: "След поръчката ви питаме „Останахте ли доволни?“. Отговорете и вземете код за -10% от следващата поръчка.",
+      text: "След поръчката ви питаме „Останахте ли доволни?“. Отговорете и вземете код за -10% на ястията.",
       terms: ["Еднакво при „Да“ и при „Не“", "Питаме 40 мин след доставката или когато поискате сметката в ресторанта",
         "Кодът е еднократен: въведете го в количката, в полето „Код за отстъпка“", "Отзивът в Google е по желание и не е свързан с отстъпката"],
       cta: { t: "Към менюто", href: url.menu() } },
     { id: "birthday", on: false, icon: "cake", when: bdayWhen, num: "-10%", sub: "или малка торта за рожденика", title: "Рожден ден при нас",
       text: "Празнувайте при нас и изберете: -10% от сметката или малка торта. Пишем ви седмица по-рано.",
       terms: ["Само с отделно съгласие „Искам подарък за рождения си ден“", "Пазим само деня и месеца, без годината", "Поздрав и за имения ден"],
-      cta: bdayOn ? { t: "Промени в профила", href: url.profile("saglasia") } : { t: "Искам подарък за рождения ден", sheet: "birthday" } },
+      cta: bdayOn ? { t: "Промени в профила", href: url.profile("saglasia") } : { t: "Искам подарък за рождения си ден", sheet: "birthday" } },
     { id: "celebration", on: true, icon: "confetti", when: "Важи сега", num: "-5%", sub: "от крайната цена", title: "Празник при нас",
       text: "Рожден ден, кръщене, юбилей или фирмено парти: резервирайте рано и вземете -5% от крайната цена.",
-      terms: ["Колко рано: " + miss("дни преди празника"), "Салон, отоплявана градина или цялото място", "Собствено меню: свържете се с нас за оферта"],
+      terms: ["Колко рано: " + '<span class="missing">' + missText("earlyDays") + "</span>", "Салон, отоплявана градина или цялото място", "Собствено меню: свържете се с нас за оферта"],
       cta: { t: "Изчисли празника", href: url.page("celebration") } },
   ];
   /* active first, the rest keep their order */
@@ -171,7 +173,8 @@ export function heroHTML(live: OfLive | null, d: OfData): string {
 }
 export const heroSkel = () => '<div class="shell" aria-hidden="true"><div class="core pad" style="display:grid;gap:14px"><span class="skel" style="height:34px;width:46%;border-radius:999px"></span><span class="skel" style="height:96px;width:58%"></span><span class="skel sk-line" style="width:90%"></span><span class="skel sk-line" style="width:70%"></span><span class="skel" style="height:60px;border-radius:999px"></span></div></div>';
 export const couponSkel = () => '<div class="shell" aria-hidden="true"><div class="core"><div class="skel sk-top"></div><div class="pad" style="display:grid;gap:12px"><span class="skel" style="height:24px;width:62%"></span><span class="skel sk-line"></span><span class="skel sk-line" style="width:84%"></span><span class="skel sk-line" style="width:70%"></span><span class="skel" style="height:48px;border-radius:999px;margin-top:8px"></span></div></div></div>';
-export function errorHTML(phone: string, phoneIntl: string): string {
-  return '<div class="empty of-err"><div class="ill">' + ic("warning-circle", 44) + '</div><h3 class="h3">Офертите не се заредиха</h3><p class="muted">Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите на <a href="tel:' + phoneIntl + '" style="font-weight:700">' + esc(phone) + '</a>.</p><button class="pill pill-red" type="button" data-retry>' + ic("arrow-clockwise", 20) + "Опитай пак</button></div>";
+/* the shared box (lib/ui.ts): same title words and buttons as on every page */
+export function errorHTML(_phone?: string, _phoneIntl?: string): string {
+  return stateBox({ kind: "error", what: "офертите", h: "h3", text: "Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите." });
 }
 export const netHTML = () => '<div class="of-net" role="status">' + ic("warning", 22) + "<p><b>Няма връзка с интернет.</b> Показваме последно заредените оферти. Запитванията можете да изпратите, когато връзката се върне.</p></div>";

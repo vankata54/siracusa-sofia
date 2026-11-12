@@ -15,7 +15,7 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
   { "@type": "ListItem", position: 2, name: "Вход", item: abs(url.page("login")) },
 ] };
 ---
-<Base page="login" nav="profile" title="Вход" docTitle="Вход и регистрация" description={DESCRIPTION} status={false} ai={false} footer={false} noindex jsonld={jsonld}>
+<Base page="login" nav="profile" title="Вход" docTitle="Вход и регистрация" description={DESCRIPTION} ai={false} bottomNav={false} noindex jsonld={jsonld}>
   <div class="lg" data-lg>
     <div class="lg-a">
       <p class="eyebrow" data-eyebrow>{HERO.eyebrow}</p>
@@ -67,6 +67,8 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
 @keyframes lg-spin{to{transform:rotate(360deg)}}
 .lg .pill.busy{pointer-events:none}
 .lg .acts2{display:grid; grid-template-columns:auto 1fr; gap:8px}
+/* a flow: "Назад" left of the main button in a bar at the bottom of the phone screen, as in the cart and the reservation */
+@container app (max-width:899px){ .lg .acts2{position:sticky; bottom:12px; z-index:5; margin:0 -6px; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)} }
 .lg .acts2 .pill{padding:0 18px}
 .lg.done .lg-a .bonus,.lg.done .lg-p{display:none}
 

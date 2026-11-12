@@ -4,6 +4,7 @@ import { defineConfig } from "astro/config";
 import crypto from "node:crypto";
 import { readEnv, staffFromEnv } from "./scripts/env.mjs";
 import { iconGroups } from "./scripts/icon-groups.mjs";
+import { buildChecks } from "./scripts/build-checks.mjs";
 
 const DEMO = process.env.DEMO === "1";
 /* modules of the shared runtime (keep in sync with the imports of src/client/sc.ts) */
@@ -21,8 +22,12 @@ function demoStaff() {
   });
 }
 
+const SITE = env.SITE_URL || "https://siracusa-sofia.com";
+
 export default defineConfig({
-  site: env.SITE_URL || "https://siracusa-sofia.com",
+  site: SITE,
+  /* after the build: the runtime budget (30 000 B) and robots.txt + sitemap.xml (scripts/build-checks.mjs) */
+  integrations: [buildChecks({ site: SITE, demo: DEMO })],
   output: "static",
   trailingSlash: "always",
   build: { format: "directory", assets: "_astro" },

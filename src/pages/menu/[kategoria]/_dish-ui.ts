@@ -4,6 +4,7 @@
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt } from "../../../lib/format.ts";
 import { ORDER_RULES } from "../../../lib/consts.ts";
+import { hourNote, type HourState } from "../../../lib/ui.ts";
 import "../../../lib/icons/caret-right.ts";
 import "../../../lib/icons/sliders-horizontal.ts";
 import "../../../lib/icons/minus.ts";
@@ -65,7 +66,8 @@ export function favHTML(on = false): string {
 }
 
 /** Kitchen closed (depends on the hour: drawn in the browser). m = minutes since midnight. */
-export function closedNote(kitchen: boolean, m: number, out: boolean): string {
-  if (kitchen || out) return "";
-  return '<div class="closednote">' + ic("clock", 20) + "<span>" + (m < 600 ? "Кухнята отваря в 10:00. Добавете сега и поръчайте, когато отворим." : "Кухнята приема поръчки до 22:30. Добавете сега и поръчайте за утре.") + "</span></div>";
+/** the one hour note of the site (lib/ui.ts): after 21:00 "Доставката приключи за днес", after 22:30 / before 10:00 the kitchen */
+export function closedNote(st: HourState, out: boolean): string {
+  if (out || st.delivery) return "";
+  return hourNote(st, { cls: "closednote", more: st.kitchen ? "" : st.m < 600 ? "Добавете сега и поръчайте, когато отворим" : "Добавете сега и поръчайте за утре" });
 }

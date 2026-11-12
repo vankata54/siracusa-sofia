@@ -93,7 +93,7 @@ test("events: states panel only in preview", async ({ page }) => {
   await open(page);
   await expect(page.locator("[data-mode]")).toHaveCount(0);
   await page.goto("/sabitia/?preview=1");
-  await expect(page.locator(".proto")).toContainText("Само в прегледа: състояния");
+  await expect(page.locator("[data-pv]")).toContainText("Само в прегледа");
   await page.locator('[data-mode="error"]').click();
   await expect(page.locator("[data-retry]")).toBeVisible();
   await page.locator("[data-retry]").click();

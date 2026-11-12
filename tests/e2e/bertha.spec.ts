@@ -14,7 +14,7 @@ async function open(page: Page, t?: string, hash = "") {
   await page.goto("/furna-bertha/" + (t ? "?preview=1&t=" + t : "") + hash);
   await expect(page.locator("#yastia[data-ready]")).toHaveCount(1);
 }
-const svc = (page: Page) => page.locator("[data-svc] .svc");
+const svc = (page: Page) => page.locator("[data-svc] > *");
 
 test("bertha: SEO, dishes in the server HTML, JSON-LD, no invented facts", async ({ request }) => {
   const html = await (await request.get("/furna-bertha/")).text();
@@ -31,7 +31,7 @@ test("bertha: SEO, dishes in the server HTML, JSON-LD, no invented facts", async
   expect(html).not.toMatch(/[—–]/);
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
   const crumbs = ld.find((x) => x["@type"] === "BreadcrumbList");
-  expect(crumbs.itemListElement.map((i: { name: string }) => i.name)).toEqual(["Начало", "Нашата фурна Bertha"]);
+  expect(crumbs.itemListElement.map((i: { name: string }) => i.name)).toEqual(["Начало", "Фурната Bertha"]);
   expect(crumbs.itemListElement[1].item).toBe("https://siracusa-sofia.com/furna-bertha/");
   const faq = ld.find((x) => x["@type"] === "FAQPage");
   expect(faq.mainEntity).toHaveLength(6);
@@ -54,7 +54,7 @@ test("bertha 12:30: no pizza claim, CTA to the dishes, + to the cart, delivery n
   expect(errors).toEqual([]);
 });
 
-for (const [t, txt] of [["21:30", "Доставката приключи за днес · Вземане до 22:30"], ["22:45", "Кухнята приема поръчки до 22:30"], ["08:30", "Затворено · отваряме в 10:00"]]) {
+for (const [t, txt] of [["21:30", "Вземане до 22:30"], ["22:45", "Кухнята затвори за днес"], ["08:30", "Кухнята още не е отворила"]]) {
   test("bertha " + t + ": service note", async ({ page }) => {
     const errors = watch(page);
     await open(page, t);
@@ -80,7 +80,7 @@ test("bertha: diagram steps and pause", async ({ page }) => {
 
 test("bertha: preview panel states (error, retry) and real offline", async ({ page, context }) => {
   await open(page);
-  await expect(page.locator(".proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   await open(page, "12:30");
   await page.locator('[data-demo="error"]').click();
   await expect(page.locator("[data-dishes] [role=alert]")).toContainText("Не успяхме да заредим ястията");

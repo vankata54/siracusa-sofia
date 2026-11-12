@@ -5,13 +5,14 @@
 import Base from "../../layouts/Base.astro";
 import { ic, url, type PageKey } from "../../lib/index.ts";
 import { LEGAL, M, breadcrumbLd, type LegalSection } from "./_legal.ts";
+import { crumbs } from "../../lib/ui.ts";
 
 export interface Props { k: PageKey; name: string; docTitle: string; description: string; lead: string; sections: LegalSection[] }
 const p = Astro.props;
 ---
 <Base page={p.k} nav={null} title={p.name} docTitle={p.docTitle} description={p.description} jsonld={breadcrumbLd(Astro.site, p.k, p.name)}>
   <section class="sec lg-hero">
-    <nav class="lg-crumbs" aria-label="Път до страницата"><a href={url.home()}>Начало</a><Fragment set:html={ic("caret-right", 16)} /><span aria-current="page">{p.name}</span></nav>
+    <Fragment set:html={crumbs([["Начало", url.home()], [p.name]])} />
     <h1 class="h1">{p.name}</h1>
     <p class="lead lg-lead" set:html={p.lead}></p>
     <p class="lg-upd">Последна промяна: <Fragment set:html={M("дата на текста от юрист")} /></p>
@@ -45,10 +46,7 @@ const p = Astro.props;
 <style is:global>
 /* ---------- legal pages (page-only, tokens only) ---------- */
 .lg-hero{padding-top:28px}
-.lg-crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:4px; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:14px}
-.lg-crumbs a{color:inherit; text-decoration:none; min-height:48px; display:inline-flex; align-items:center}
-.lg-crumbs a:hover{color:var(--ink)}
-.lg-crumbs [aria-current]{color:var(--ink)}
+.lg-hero .sc-crumbs{margin-bottom:14px}
 .lg-lead{margin-top:14px; max-width:60ch}
 .lg-upd{margin:14px 0 0; font-size:14px; color:var(--muted); font-weight:600}
 .lg-body{padding-top:36px}

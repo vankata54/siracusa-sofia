@@ -9,6 +9,7 @@ import Base from "../../../layouts/Base.astro";
 import { ic, pic, badges, url, fmt, esc, isOut, type Dish } from "../../../lib/index.ts";
 import { DISHES, ADDONS, catOf, canAdd, hasMods, modBtnInner, buyHTML, soldBarHTML, favHTML, similar, pairCard, pairsHTML, factsCard, metaDescription, dishLd, dishLite, docTitle } from "./_dish.ts";
 import { catById } from "../../../lib/data.ts";
+import { crumbs } from "../../../lib/ui.ts";
 
 export const getStaticPaths = (() => DISHES.map((x) => ({ params: { kategoria: x.cat, yastie: x.id }, props: { id: x.id } }))) satisfies GetStaticPaths;
 
@@ -25,7 +26,7 @@ const jsonld = dishLd(x, Astro.site);
 /* what the page script needs, so the browser does not load the whole menu at start (speed) */
 const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] }).replace(/</g, "\\u003c");
 ---
-<Base page="dish" nav="menu" back={{ href: cat.back, label: "Меню" }} title={x.n} docTitle={docTitle(x)} share actionBar
+<Base page="dish" nav="menu" back={{ href: cat.href, label: cat.n }} title={x.n} docTitle={docTitle(x)} actionBar
   description={metaDescription(x)} jsonld={jsonld}>
   <article class="dish" data-dish={x.id} data-cat={cat.id} data-catn={cat.n}>
     <script is:inline type="application/json" data-dishjson set:html={lite}></script>
@@ -39,10 +40,7 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
         <p class="note3d muted" data-note3d hidden>Прототип: истинският 3D модел идва след фотосесията. <span class="missing">[ЛИПСВА: 3D модел]</span></p>
       </div>
       <div class="info">
-        <nav aria-label="Хлебни трохи"><ol class="crumbs">
-          <li><a href={url.menu()}>Меню</a></li>
-          <li><Fragment set:html={ic("caret-right", 16)} /><a href={cat.href} data-catlink>{cat.n}</a></li>
-        </ol></nav>
+        <div class="crow"><Fragment set:html={crumbs([["Меню", url.menu()], [cat.n, cat.href]])} /><button class="pill pill-soft sharebtn" type="button" data-share><Fragment set:html={ic("export", 20)} />Сподели</button></div>
         <h1 class="h1" data-h1>{x.n}</h1>
         <div class="prow2">
           <span class="pg"><span class="price">{fmt(x.p)}</span>{x.per100 ? <span class="g">за 100 гр.</span> : x.g ? <span class="g">{x.g}</span> : null}</span>
@@ -105,11 +103,8 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
 .note3d{margin:10px 6px 2px; font-size:14px}
 
 /* info column */
-.crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:2px; list-style:none; margin:0 0 2px; padding:0; font-size:15px; font-weight:700; color:var(--muted)}
-.crumbs li{display:flex; align-items:center; gap:2px}
-.crumbs a{min-height:48px; display:inline-flex; align-items:center; text-decoration:none; color:var(--muted); padding:0 2px}
-.crumbs a:hover{color:var(--ink)}
-.crumbs .ic{opacity:.6}
+.dish .crow{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 2px}
+.sharebtn{flex:none}
 .dish .h1{font-size:36px}
 .prow2{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px}
 .prow2 .pg{display:flex; align-items:baseline; gap:12px; min-width:0}
@@ -126,8 +121,7 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
 .per100note{margin:10px 0 0; font-size:15px; color:var(--muted)}
 .dietlbl{margin:0 0 8px; font-size:14px; font-weight:700; color:var(--muted)}
 .desc{margin:14px 0 0; font-size:16px}
-.closednote{margin-top:14px; padding:12px 16px; border-radius:var(--r-field); background:var(--surface-2); color:var(--ink); font-size:15px; font-weight:600; display:flex; gap:10px; align-items:flex-start}
-.closednote .ic{color:var(--warn); margin-top:1px}
+.closednote{margin-top:14px}
 
 /* "Добавки и промени" opener */
 .modbtn{margin-top:18px; width:100%; display:grid; grid-template-columns:52px 1fr 20px; align-items:center; gap:14px; min-height:72px; padding:10px 20px 10px 10px; border:0; border-radius:var(--r-pill); background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
@@ -227,7 +221,7 @@ details.nutr .kv span:first-child{font-weight:600}
   .buy{display:flex}
   .dish-abar{display:none}
   .aifab.up{bottom:24px}
-  .top.back .ttl{opacity:1; transform:none; text-align:center}
+  .top.back .ttl{opacity:1; transform:none}
   .sheet .mfoot{margin:0 -18px}
 }
 </style>
@@ -253,27 +247,16 @@ details.nutr .kv span:first-child{font-weight:600}
   const out = !!x.out;
   const top = document.querySelector<HTMLElement>(".top.back")!;
   const ttl = top.querySelector<HTMLElement>(".ttl")!;
-  const backA = top.querySelector<HTMLAnchorElement>("a.hb")!;
   let qty = 1, rem: Rem = {}, add: Add = {};
   const unit = () => x.p + extra(ADDONS, add);
 
-  /* ---------- back: to the category when we came from it, else the menu. The crumb link is the category address as
-     written in the page (relative in the demo), so it works from any sub-folder too. ---------- */
-  try {
-    const catA = art.querySelector<HTMLAnchorElement>("[data-catlink]")!;
-    const norm = (u: URL) => u.pathname.replace(/index\.html$/, "");
-    const ref = document.referrer ? new URL(document.referrer) : null;
-    if (ref && ref.origin === location.origin && norm(ref) === norm(new URL(catA.href))) {
-      backA.href = catA.getAttribute("href")!;
-      backA.innerHTML = ic("arrow-left", 20) + esc(art.dataset.catn || "Меню");
-    }
-  } catch { /* keep the menu */ }
+  /* "Назад" (phone) always leads to the dish's own category, the same place as the breadcrumb (server-rendered) */
 
   /* ---------- hour: "kitchen closed" note ---------- */
   const slot = main.querySelector<HTMLElement>("[data-closedslot]")!;
   function paintClosed() {
     const st = SC.state();
-    const h = closedNote(st.kitchen, st.m, out);
+    const h = closedNote(st, out);
     if (slot.innerHTML !== h) slot.innerHTML = h;
   }
   paintClosed();

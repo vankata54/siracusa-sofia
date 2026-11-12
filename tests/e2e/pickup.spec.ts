@@ -34,7 +34,7 @@ test("pickup: SEO, server HTML, JSON-LD", async ({ request }) => {
   expect(faq.mainEntity).toHaveLength(5);
   expect(JSON.stringify(faq)).not.toContain("ЛИПСВА");
   expect(html).toContain("Не намерихте отговор? Обадете ни се, ще ви кажем.");
-  expect(html).toContain("Обади се · 0894 36 55 77");
+  expect(html).toMatch(/Обади се · (<span class="nw">)?0894 36 55 77/);
   expect(html).toContain("Карта при получаване");
 });
 
@@ -80,12 +80,12 @@ test("pickup 16:30: -30% now, add a lunch dish, CTA with the pickup total", asyn
 
 test("pickup 22:45 and 09:30: tomorrow, before opening", async ({ page }) => {
   await open(page, "22:45");
-  await expect(page.locator("[data-alert]")).toContainText("Кухнята приема поръчки до 22:30");
+  await expect(page.locator("[data-alert]")).toContainText("Кухнята затвори за днес");
   await expect(page.locator("[data-hero-cta] [data-pickup-go]")).toContainText("Поръчай за утре");
   await expect(big(page)).toContainText("утре около10:20");
   await expect(page.locator(".pk-pick")).toContainText("утре, ");
   await page.goto("/vzemi-ot-myasto/?preview=1&t=09:30");
-  await expect(page.locator("[data-alert]")).toContainText("Отваряме в 10:00");
+  await expect(page.locator("[data-alert]")).toContainText("Приемаме поръчки днес от 10:00");
   await page.locator('[data-kind="lunch"]').click();
   await expect(big(page)).toContainText("днес в10:00");
 });
@@ -93,7 +93,7 @@ test("pickup 22:45 and 09:30: tomorrow, before opening", async ({ page }) => {
 test("pickup 22:45 with a full cart: the button says \"Поръчай за утре\" like the alert", async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem("sc-cart", JSON.stringify({ mode: "pickup", lines: [{ key: "pitsa-kaprichoza", id: "pitsa-kaprichoza", q: 1, mods: [], extra: 0 }] })); } catch { /* ignore */ } });
   await open(page, "22:45");
-  await expect(page.locator("[data-alert]")).toContainText("Поръчайте за утре");
+  await expect(page.locator("[data-alert]")).toContainText("поръчате сега за утре");
   await expect(page.locator("[data-hero-cta] [data-pickup-go]")).toContainText(/Поръчай за утре · \d+,\d\d €/);
 });
 
@@ -106,7 +106,7 @@ test("pickup: states panel only in preview; busy and error states", async ({ pag
   await expect(page.locator(".pk-busy")).toBeVisible();
   await expect(page.locator(".pk-slot[disabled]").first()).toContainText("заето");
   await page.locator('[data-sim="error"]').click();
-  await expect(page.locator(".pk-err")).toContainText("Не успяхме да заредим");
+  await expect(page.locator(".sc-state[role=alert]")).toContainText("Не успяхме да заредим");
   await page.locator("[data-retry]").click();
   await expect(page.locator(".pk-asap")).toBeVisible();
 });

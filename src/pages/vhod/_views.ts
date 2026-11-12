@@ -4,6 +4,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, prettyPhone } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
+import { stepperHTML, callBtn, miss } from "../../lib/ui.ts";
 
 export const DESCRIPTION = "Вход и регистрация в Siracusa Bar & Grill с телефон и код по SMS, без парола. Поръчайте отново с едно докосване и вземете -10% от следващата поръчка с нов профил.";
 
@@ -17,7 +18,7 @@ export const HERO = {
 export const PERKS: [string, string, string][] = [
   ["receipt", "Поръчай отново", "Любимата поръчка с едно докосване."],
   ["map-pin", "Адресите са запомнени", "Не ги пишете всеки път."],
-  ["fire", "Карта с печати", "Събирате печати за подарък. <span class=\"missing\">[ЛИПСВА: правило и награда]</span>"],
+  ["fire", "Карта с печати", "Събирате печати за подарък. " + miss("stampRule") + " " + miss("stampReward")],
   ["ticket", "Купоните на едно място", "Кодовете и бонусът -10% са в профила ви."],
 ];
 
@@ -25,11 +26,11 @@ export function perksHTML(): string {
   return '<ul class="perks">' + PERKS.map((p) => '<li><span class="i">' + ic(p[0], 22) + "</span><span><b>" + p[1] + '</b><span class="s">' + p[2] + "</span></span></li>").join("") + "</ul>";
 }
 
-export function stepper(n: number, label: string, of = 3): string {
-  let bar = "";
-  for (let k = 1; k <= of; k++) bar += "<span" + (k <= n ? ' class="on"' : "") + "></span>";
-  return '<div class="stepper" style="--n:' + of + '" role="group" aria-label="Стъпки на входа"><div class="bar" aria-hidden="true">' + bar +
-    '</div><div class="t"><b>Стъпка ' + n + " от " + of + "</b><span>" + label + "</span></div></div>";
+/** the shared stepper (lib/ui.ts): "Стъпка 2 от 3" + "Следва: Име" / "Последна стъпка" (the label is the current step,
+    kept for the callers; the right side names the NEXT step, as in the cart, the reservation and the celebration) */
+const LOGIN_STEPS = ["Телефон", "Код от SMS", "Име"];
+export function stepper(n: number, _label: string, of = 3): string {
+  return stepperHTML(n, of, n < of ? LOGIN_STEPS[n] : "", { label: "Стъпки на входа" });
 }
 
 /** step 1: the phone. `phone` is the raw value kept between steps. */
@@ -51,7 +52,7 @@ export function blockedHTML(phone: string): string {
   return '<div class="view center"><span class="ring">' + ic("phone", 30) + "</span>" +
     '<h2 class="h3" tabindex="-1" data-focus>Нека го направим по телефона</h2>' +
     '<p class="sub">С номер <b>' + esc(prettyPhone(phone)) + "</b> не можем да направим профил онлайн. Обадете ни се и ще помогнем с удоволствие.</p>" +
-    '<a class="pill pill-red pill-lg pill-block" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>" +
+    callBtn("pill pill-red pill-lg pill-block") +
     '<button class="pill pill-line pill-lg pill-block" type="button" data-again>' + ic("arrow-left", 20) + "Въведи друг номер</button>" +
     '<p class="fine">Всеки ден от ' + R.open + " до " + R.close + ".</p></div>";
 }

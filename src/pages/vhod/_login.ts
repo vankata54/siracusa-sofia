@@ -11,6 +11,7 @@ import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Customer } from "../../client/api-types.ts";
 import { HERO, phoneHTML, blockedHTML, alertHTML, stepper } from "./_views.ts";
+import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
 import "../../lib/icons/paper-plane-right.ts";
 import "../../lib/icons/arrow-left.ts";
@@ -34,6 +35,8 @@ const SAMPLE = "0888123456";
 type User = Partial<Customer> & { phone?: string; name?: string };
 const S = {
   ready: false, phone: "", isNew: true, offline: false, sim: false,
+  /** the -10% is free for this number (sms/verify says so: customer.profileBonus); a used one is never promised */
+  bonus: true,
   timer: 0 as ReturnType<typeof setInterval> | 0, left: 0, finishing: false, mkt: false, name: "",
   last: null as null | { phone: string; demo: string; known?: boolean },
   view: "phone" as "phone" | "code" | "name" | "done" | "signed" | "blocked",
@@ -84,6 +87,8 @@ function hero(done: boolean, name = "", isNew = true) {
 }
 function show(html: string, focusSel?: string | null) {
   clearInterval(S.timer as number); S.timer = 0;
+  /* the -10% card next to the steps: only while the bonus is free for this number */
+  const card = main.querySelector<HTMLElement>(".bonus"); if (card) card.hidden = !S.bonus;
   if (!S.finishing) hero(false);
   box.innerHTML = '<div class="view' + (SC.reduce ? "" : " in") + '">' + html + "</div>";
   if (focusSel) { const f = box.querySelector<HTMLElement>(focusSel); if (f) setTimeout(() => f.focus({ preventScroll: true }), 30); }
@@ -117,6 +122,7 @@ function offlineAlert(slot: Element | null) {
   if (slot) slot.innerHTML = alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак.");
 }
 function viewPhone(err = "", focus = false, reuse = false) {
+  S.bonus = true;
   S.view = "phone";
   if (!reuse) show(phoneHTML(S.phone, err), focus ? "#ph" : null);
   const f = box.querySelector<HTMLFormElement>("form[data-f=phone]")!, inp = f.querySelector<HTMLInputElement>("#ph")!, er = f.querySelector<HTMLElement>("#ph-err")!;
@@ -228,6 +234,7 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
     try {
       const r = await call(() => api.auth.smsVerify(S.phone, code()));
       markKnown(S.phone);
+      S.bonus = (r.customer as { profileBonus?: boolean }).profileBonus !== false;
       if (r.isNew) { S.isNew = true; viewName(); } else { S.isNew = false; finish(r.customer, false); }
     } catch (x) {
       const ex = x as ApiError;
@@ -276,19 +283,21 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
 }
 
 /* ---------- step 3: name (new profiles only) ---------- */
+/** "Създай профил и вземи -10%" only while the bonus is free for this number; else just "Създай профил" */
+const nameBtn = () => (S.bonus ? ic("gift", 20) + "Създай профил и вземи -10%" : ic("check", 20) + "Създай профил");
 function viewName() {
   S.view = "name";
   show(stepper(3, "Име") +
     '<div class="head"><h2 class="h3">Как да ви наричаме?</h2><p class="sub">Името е за поръчките и резервациите, за да знае шофьорът кого да търси.</p></div>' +
     '<form class="view" data-f="name" novalidate>' +
       '<div class="field"><label for="nm">Име</label><input class="input" id="nm" type="text" autocomplete="given-name" placeholder="Например Мария" maxlength="60" value="' + esc(S.name) + '" aria-describedby="nm-err"><p class="err" id="nm-err" hidden></p></div>' +
-      '<label class="check"><input type="checkbox" id="mkt"' + (S.mkt ? " checked" : "") + "><span><b>Искам да получавам оферти и маркетингови предложения</b><br><span class=\"muted small\">По желание. Първи научавате за събитията и новите оферти. Спирате ги от профила с едно докосване.</span></span></label>" +
+      '<label class="check"><input type="checkbox" id="mkt"' + (S.mkt ? " checked" : "") + "><span><b>" + MKT_TITLE + '</b><br><span class="muted small">' + MKT_SUB + "</span></span></label>" +
       "<div data-alert></div>" +
-      '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("gift", 20) + "Създай профил и вземи -10%</button>" +
+      '<button class="pill pill-red pill-lg pill-block" type="submit">' + nameBtn() + "</button>" +
     "</form>", "#nm");
   const f = box.querySelector<HTMLFormElement>("form[data-f=name]")!, inp = f.querySelector<HTMLInputElement>("#nm")!, er = f.querySelector<HTMLElement>("#nm-err")!;
   const alert = f.querySelector("[data-alert]")!;
-  const BTN = ic("gift", 20) + "Създай профил и вземи -10%";
+  const BTN = nameBtn();
   inp.addEventListener("input", () => { S.name = inp.value; if (inp.value.trim()) { inp.removeAttribute("aria-invalid"); er.hidden = true; } });
   f.querySelector<HTMLInputElement>("#mkt")!.addEventListener("change", (e) => { S.mkt = (e.target as HTMLInputElement).checked; });
   f.addEventListener("submit", async (e) => {
@@ -346,11 +355,11 @@ let paintOffline: (() => void) | null = null;
 function proto() {
   const slot = main.querySelector<HTMLElement>("[data-lproto]");
   if (!slot || !SC.preview) return;
-  slot.innerHTML = '<aside class="lproto" aria-label="Само в прегледа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
-    "<p>Тези бутони ги няма в истинския сайт. Блокиран номер: " + prettyPhone(BLOCKED) + ". Докато няма SMS доставчик, кодът се показва на екрана.</p>" +
-    '<div class="btns"><button class="pill" type="button" data-offline aria-pressed="false"></button><a class="pill" href="' + SC.url.page("profile") + '">' + ic("user", 18) + "Примерен профил</a></div></aside>";
-  const b = slot.querySelector<HTMLButtonElement>("[data-offline]")!;
-  const paint = () => { b.setAttribute("aria-pressed", String(S.offline)); b.innerHTML = ic("warning", 18) + "Без интернет: " + (S.offline ? "включено" : "изключено"); };
+  /* the shared panel (lib/ui.ts): same title, sentence and switch words on every page */
+  slot.outerHTML = previewPanel(pvToggle(PV.offline, false, "data-offline") + '<a class="chip" href="' + SC.url.page("profile") + '">Примерен профил</a>',
+    { id: "lg-pv", text: "Вижте как изглежда входът в другите състояния. Тези бутони ги няма на истинския сайт. Блокиран номер: " + prettyPhone(BLOCKED) + ". Докато няма SMS доставчик, кодът се показва на екрана." });
+  const b = main.querySelector<HTMLButtonElement>("[data-pv] [data-offline]")!;
+  const paint = () => { b.setAttribute("aria-pressed", String(S.offline)); b.textContent = PV.offline + ": " + (S.offline ? "вкл." : "изкл."); };
   paint();
   b.onclick = () => { S.offline = !S.offline; paint(); SC.toast(S.offline ? "Симулираме липса на връзка" : "Връзката е обратно"); };
   paintOffline = paint;

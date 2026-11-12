@@ -112,7 +112,7 @@ test("menu: breakfast by the hour", async ({ page }) => {
   await expect(visibleCards(page)).toHaveCount(124);
   /* after the kitchen closes */
   await open(page, "23:30");
-  await expect(page.locator("[data-notices]")).toContainText("Поръчай за утре?");
+  await expect(page.locator("[data-notices]")).toContainText("Кухнята затвори за днес"); /* the one hour note (lib/ui.ts) */
   await expect(page.locator("[data-eta]")).toBeHidden();
 });
 

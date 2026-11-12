@@ -13,7 +13,7 @@ import { scryptHasher } from "./hasher.ts";
 import { createCore, CoreError, officeDueAt, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
-import { eventsJson } from "../src/lib/events.ts";
+import { eventsJson } from "../src/lib/events-json.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
 import { publicSettings } from "../src/core/settings.ts";
 import { normPhone } from "../src/lib/format.ts";

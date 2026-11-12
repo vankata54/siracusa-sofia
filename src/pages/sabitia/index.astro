@@ -8,6 +8,7 @@
 import Base from "../../layouts/Base.astro";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT } from "../../lib/consts.ts";
+import { miss, faqHead } from "../../lib/ui.ts";
 import { events } from "../../lib/events.ts";
 import { ic } from "../../lib/icons.ts";
 import { buildItems, listHTML, chipsHTML, calHTML, subFormHTML, TYPES } from "./_events.ts";
@@ -22,8 +23,8 @@ const cal = calHTML(all, today, 0, "ok");
 const FAQ: [string, string, boolean][] = [
   ["Как да запазя място за тематичната вечер?", "Натиснете „Запази място“ на картата на вечерта и изберете час и брой хора. Можете и да се обадите на " + RESTAURANT.phone + ".", true],
   ["Може ли да празнуваме в градината през зимата?", "Да. Градината е отоплявана и работи целогодишно. Изберете я като място в калкулатора на празника.", true],
-  ["Колко гости събира мястото за частно парти?", '<span class="missing">[ЛИПСВА: капацитет на салона, градината и цялото място]</span>', false],
-  ["Как работи отстъпката за ранна резервация?", 'При ранна резервация на празник получавате -5% от крайната сума. <span class="missing">[ЛИПСВА: колко дни по-рано и за кои поводи]</span>', false],
+  ["Колко гости събира мястото за частно парти?", miss("capacity"), false],
+  ["Как работи отстъпката за ранна резервация?", 'При ранна резервация на празник получавате -5% от крайната сума. ' + miss("earlyDays"), false],
   ["Мога ли да донеса своя торта?", '<span class="missing">[ЛИПСВА: правило за собствена торта и такса]</span>', false],
 ];
 const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.filter((f) => f[2]).map((f) => ({ "@type": "Question", name: f[0], acceptedAnswer: { "@type": "Answer", text: f[1] } })) };
@@ -31,7 +32,7 @@ const site = String(Astro.site || "https://siracusa-sofia.com");
 /* Event JSON-LD in its own script: the browser rewrites it with today's date (see _ld.ts) */
 const evsLd = JSON.stringify(evs.map((e) => eventLd(e, site)));
 const jsonld = [crumbsLd(site), faqLd];
-const description = "Тематични вечери всяка последна събота от месеца, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, юбилей, фирмено парти. -5% при ранна резервация на празник.";
+const description = "Тематична вечер всяка последна събота, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, фирмено парти. -5% при ранна резервация на празник.";
 ---
 <Base page="events" nav="events" title="Събития и поводи" description={description} jsonld={jsonld}>
   <script type="application/ld+json" id="evs-ld" slot="head" set:html={evsLd} />
@@ -76,8 +77,8 @@ const description = "Тематични вечери всяка последна
           <li><Fragment set:html={ic("tree", 20)} />Отоплявана градина, работи целогодишно</li>
           <li><Fragment set:html={ic("house", 20)} />Цялото място за вашия празник</li>
         </ul>
-        <a class="pill pill-red go" href={url.page("celebration")}>Сметни своя празник<span class="knob" set:html={ic("arrow-right", 22)}></span></a>
-        <p class="fine">Запитването е без задължение. Управителят ви се обажда за подробностите. Ранна резервация: <span class="missing">[ЛИПСВА: колко дни по-рано]</span>.</p>
+        <a class="pill pill-red go" href={url.page("celebration")}>Изчисли празника<span class="knob" set:html={ic("arrow-right", 22)}></span></a>
+        <p class="fine">Запитването е без задължение. Управителят ви се обажда за подробностите. Ранна резервация: <Fragment set:html={miss("earlyDays")} />.</p>
       </div>
     </div></div>
   </section>
@@ -90,7 +91,7 @@ const description = "Тематични вечери всяка последна
   </section>
 
   <section class="sec rv" aria-labelledby="h-faq">
-    <div class="faq-wrap"><h2 class="h2" id="h-faq" style="margin-bottom:14px">Често питани</h2>
+    <div class="faq-wrap"><Fragment set:html={faqHead("h-faq")} />
       <div class="faq shell"><div class="core">
         {FAQ.map((f) => <details><summary>{f[0]}<Fragment set:html={ic("caret-down", 22)} /></summary><p set:html={f[1]}></p></details>)}
       </div></div>
@@ -158,13 +159,8 @@ const description = "Тематични вечери всяка последна
 .rl::-webkit-scrollbar{display:none}
 .rl > .ev{flex:0 0 min(300px, 84%); height:auto; scroll-snap-align:start}
 
-/* photo slot ([ЛИПСВА] until the new photo shoot) */
-.slot{position:relative; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2)); color:var(--ink)}
-.slot .tex{position:absolute; inset:0; width:100%; height:100%; opacity:.075; color:var(--ink); -webkit-mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%); mask-image:radial-gradient(circle at 50% 50%, transparent 0 22%, #000 70%)}
-.slot .big{position:relative; width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
-.slot .cap{position:absolute; left:12px; bottom:12px; max-width:calc(100% - 24px); display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; line-height:1.25; color:var(--muted)}
-.slot .cap .missing{text-decoration:none}
-.slot .cap .ic{color:var(--muted)}
+/* the photo slot: the one look of the site (lib/ui.ts photoSlot), filling the media box under the date tile */
+.ev-media > .ph-slot{position:absolute; inset:0; border-radius:0}
 
 /* calendar tile */
 .ctile{position:absolute; top:14px; left:14px; z-index:2; width:76px; border-radius:18px; overflow:hidden; display:grid; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
@@ -186,7 +182,7 @@ const description = "Тематични вечери всяка последна
 .ev-empty{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:36px 20px}
 .ev-empty .h3{max-width:22em}
 .ev-empty p{margin:0; max-width:30em}
-.ev-empty .row{flex-wrap:wrap; justify-content:center}
+.ev-empty .row,.ev-empty .acts{flex-wrap:wrap; justify-content:center}
 .ev-empty .ill.warn{color:var(--warn)}
 .sk-media{aspect-ratio:4/3; border-radius:0}
 .sk-l{height:16px; border-radius:8px}
@@ -194,10 +190,7 @@ const description = "Тематични вечери всяка последна
 /* ---------- past: gallery + internal reviews ---------- */
 .past-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:8px 0 14px}
 .gal{columns:2; column-gap:12px}
-.gtile{break-inside:avoid; margin:0 0 12px; border-radius:var(--r-img)}
-.gtile .big{width:56px; height:56px}
-.gtile .gl{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border-radius:999px; background:var(--glass); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:700; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.gtile .cap{left:10px; bottom:10px; max-width:calc(100% - 20px); padding:4px 10px}
+.gal .gtile{break-inside:avoid; margin:0 0 12px}
 .revs{display:grid; gap:12px}
 .rev{display:grid; gap:10px; padding:18px}
 .rev p{margin:0}
@@ -295,9 +288,6 @@ const description = "Тематични вечери всяка последна
 .faq details p{margin:0 0 18px; color:var(--muted); max-width:44em}
 
 /* ---------- prototype-only state switcher ---------- */
-.proto{border-radius:var(--r-core); padding:16px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:12px}
-.proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
-.proto .chip{min-height:48px}
 
 /* ---------- tablet / desktop ---------- */
 @container app (min-width:700px){
@@ -344,7 +334,7 @@ const description = "Тематични вечери всяка последна
   .gal{columns:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
   .gal .gtile{aspect-ratio:3/2!important; margin:0}
   .faq-wrap{display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:start}
-  .faq-wrap .h2{position:sticky; top:180px}
+  .faq-wrap .faq-head{position:sticky; top:180px}
 }
 @container app (min-width:1100px){
   .ev-grid{grid-template-columns:repeat(4,1fr)}
@@ -359,6 +349,7 @@ const description = "Тематични вечери всяка последна
   import { SC } from "../../client/sc.ts";
   import { api, ApiError } from "../../client/api.ts";
   import "../../lib/icons/map-pin.ts";
+  import { previewPanel, pvChip, pvToggle, PV } from "../../lib/ui.ts";
   import {
     buildItems, listHTML, calHTML, subFormHTML, subOkHTML,
     PUBLIC, SLUG, BYSLUG, type Item, type ListState, type Mode,
@@ -496,11 +487,10 @@ const description = "Тематични вечери всяка последна
   }
 
   /* ---------- preview-only: the states panel ---------- */
-  const MODES: [Mode, string][] = [["ok", "Обичайно"], ["loading", "Зареждане"], ["none", "Няма събития"], ["error", "Грешка"]];
+  const MODES: [Mode, string][] = [["ok", PV.normal], ["loading", PV.loading], ["error", PV.error], ["none", PV.empty]];
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Състояния на страницата (само в прегледа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прегледа: състояния</p><div class="wrapchips">' +
-      MODES.map((m) => '<button class="chip" type="button" data-mode="' + m[0] + '" aria-pressed="false">' + m[1] + "</button>").join("") +
-      '<button class="chip" type="button" data-offline aria-pressed="false">' + ic("globe", 18) + "Без интернет (абонамент)</button></div></div></section>";
+    $("[data-proto]").outerHTML = previewPanel(MODES.map((m) => pvChip(m[1], false, 'data-mode="' + m[0] + '"')).join("") + pvToggle(PV.offline, false, "data-offline"),
+      { id: "ev-pv", text: "Вижте как изглежда страницата в другите състояния. „Без интернет“ важи за абонамента. Тези бутони ги няма на истинския сайт." });
   }
   function syncMode() { main.querySelectorAll<HTMLElement>("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === st.mode))); }
 
@@ -526,9 +516,9 @@ const description = "Тематични вечери всяка последна
     if (t.hasAttribute("data-retry")) { load(true); return; }
     if (t.dataset.mode) { st.mode = t.dataset.mode as Mode; if (st.mode === "ok" && !loaded) { load(true); return; } syncMode(); renderList(); renderCal(); return; }
     if (t.hasAttribute("data-offline")) {
-      st.offline = !st.offline; t.setAttribute("aria-pressed", String(st.offline));
+      st.offline = !st.offline; t.setAttribute("aria-pressed", String(st.offline)); t.textContent = PV.offline + ": " + (st.offline ? "вкл." : "изкл.");
       if (st.subDone) { st.subDone = null; renderSub(); }
-      SC.toast(st.offline ? "Абонаментът ще покаже „Няма връзка“" : "Връзката е възстановена"); return;
+      SC.toast(st.offline ? "Абонаментът ще покаже „Няма връзка с интернет“" : "Връзката е възстановена"); return;
     }
     if (t.dataset.want) {
       const w = t.dataset.want, i = st.want.indexOf(w);

@@ -32,6 +32,6 @@ export function skeletonHTML(): string {
     '<div class="ph" aria-hidden="true">' + sk("64px", 64, 32) + '<span style="flex:1;display:grid;gap:10px">' + sk("40%", 14) + sk("70%", 30) + sk("45%", 16) + "</span></div>" +
     '<div class="tiles" aria-hidden="true">' + sk("100%", 96, 24) + sk("100%", 96, 24) + sk("100%", 96, 24) + "</div>" +
     '<div class="ps"><div class="olist">' + orderSkel() + orderSkel() + "</div></div>" +
-    '<p class="vh" role="status">Зареждаме профила...</p>' +
+    '<p class="vh" role="status">Зареждаме профила…</p>' +
     "</div></div>";
 }

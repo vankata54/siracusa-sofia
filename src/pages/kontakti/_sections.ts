@@ -1,6 +1,7 @@
 /* Contacts (/kontakti/): server-side HTML of design/pages/contacts.html and the JSON-LD.
    Address, phones, e-mail, hours and socials come only from RESTAURANT (src/lib/consts.ts); parking, transport, access,
    holidays, Instagram, Google and the static map are [ЛИПСВА]. What depends on the hour or the day is in _live.ts. */
+import { mapSlot, callBtn, miss, faqHead } from "../../lib/ui.ts";
 import { payAnswer } from "../../lib/pay.ts";
 import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
@@ -38,9 +39,9 @@ export function topHTML(): string {
       '<h2 class="h2">Телефони и адрес</h2>' +
       '<div class="shell ct-list"><div class="core">' +
         row("phone", "Доставки и резервации", '<a class="val tel" href="tel:' + TEL1 + '">' + R.phone + "</a>",
-          '<a class="pill pill-soft" href="tel:' + TEL1 + '">' + ic("phone", 20) + "Обади се</a>", R.phone, "Номерът е копиран") +
+          callBtn("pill pill-soft"), R.phone, "Номерът е копиран") +
         row("phone", "Втори телефон", '<a class="val tel" href="tel:' + TEL2 + '">' + R.phone2 + "</a>",
-          '<a class="pill pill-soft" href="tel:' + TEL2 + '">' + ic("phone", 20) + "Обади се</a>", R.phone2, "Номерът е копиран") +
+          '<a class="pill pill-soft" href="tel:' + TEL2 + '">' + ic("phone", 20) + '<span>Обади се · <span class="nw">' + R.phone2 + "</span></span></a>", R.phone2, "Номерът е копиран") +
         row("paper-plane-right", "Имейл", '<a class="val mail" href="mailto:' + R.email + '">' + R.email + "</a>",
           '<a class="pill pill-soft" href="mailto:' + R.email + '">' + ic("paper-plane-right", 20) + "Напиши имейл</a>", R.email, "Имейлът е копиран") +
         row("map-pin", "Адрес", '<span class="val addr">' + ADDR + "</span>",
@@ -63,16 +64,8 @@ export function hoursHTML(): string {
 
 /* 3. map (abstract background + [ЛИПСВА], the real Google map loads on tap) + how to get here */
 export function mapSceneHTML(): string {
-  return '<button class="ct-mapbtn" type="button" data-mapgo aria-label="Покажи картата на Google">' +
-    '<span class="ct-dots" aria-hidden="true"></span>' +
-    '<span class="ct-missing missing">[ЛИПСВА: статична карта Google]</span>' +
-    '<span class="ct-mark">' +
-      '<span class="ct-pulse" aria-hidden="true"></span>' +
-      '<span class="ct-pin" aria-hidden="true"><svg viewBox="0 0 46 58"><path class="pb" d="M23 57C23 57 44 35.5 44 22A21 21 0 0 0 2 22C2 35.5 23 57 23 57Z"/><circle class="pd" cx="23" cy="22" r="8"/></svg></span>' +
-      '<span class="ct-flag"><b>Siracusa</b><span>срещу бл.&nbsp;311</span></span>' +
-    "</span>" +
-    '<span class="pill pill-ink ct-show">' + ic("map-trifold", 20) + "Покажи картата</span>" +
-  "</button>";
+  /* the one map placeholder of the site (lib/ui.ts); a button: the real Google map loads on tap. Its name is its visible text. */
+  return mapSlot({ tag: "button", attrs: "data-mapgo", cta: "Покажи картата", cls: "ct-mapbtn" });
 }
 export function wayHTML(): string {
   return '<section class="sec" id="marshrut" aria-labelledby="h-way">' +
@@ -87,9 +80,9 @@ export function wayHTML(): string {
         "</div>" +
         '<hr class="divider">' +
         '<ul class="ct-info">' +
-          '<li><span class="ct-tile">' + ic("car", 22) + '</span><span><b>Паркиране</b><p class="missing">[ЛИПСВА: има ли места пред ресторанта и колко]</p></span></li>' +
+          '<li><span class="ct-tile">' + ic("car", 22) + '</span><span><b>Паркиране</b><p>' + miss("parking") + "</p></span></li>" +
           '<li><span class="ct-tile">' + ic("path", 22) + '</span><span><b>С градски транспорт</b><p class="missing">[ЛИПСВА: най-близки спирки и линии]</p></span></li>' +
-          '<li><span class="ct-tile">' + ic("tree", 22) + '</span><span><b>Салон и градина</b><p>Градината е затворена и се отоплява. Работи целогодишно.</p><a class="link" href="' + url.reservation() + '">Резервирай маса' + ic("caret-right", 18) + "</a></span></li>" +
+          '<li><span class="ct-tile">' + ic("tree", 22) + '</span><span><b>Салон и градина</b><p>Градината е отоплявана и работи целогодишно.</p><a class="link" href="' + url.reservation() + '">Резервирай маса' + ic("caret-right", 18) + "</a></span></li>" +
           '<li><span class="ct-tile">' + ic("wheelchair", 22) + '</span><span><b>Достъп с количка</b><p class="missing">[ЛИПСВА: вход без стъпала, тоалетна]</p></span></li>' +
         "</ul>" +
       "</div></div>" +
@@ -103,15 +96,15 @@ export const FAQ: [string, string, string | null][] = [
   ["До колко часа доставяте?", "Доставяме до " + R.delivery + ". След това можете да вземете поръчката от ресторанта до " + R.kitchen + ".", null],
   ["До кои квартали е безплатна доставката?", 'Безплатна е за Дружба 1 и 2, НПЗ Искър и Бусманци. За Горубляне и Гара Искър е по тарифа <span class="missing">[ЛИПСВА: такса в €]</span>.', null],
   ["Как мога да платя?", payAnswer(), null],
-  ["Работи ли градината през зимата?", "Да. Градината е затворена и се отоплява, работи целогодишно.", null],
-  ["Има ли къде да паркирам?", '<span class="missing">[ЛИПСВА: паркиране пред ресторанта]</span>', null],
+  ["Работи ли градината през зимата?", "Да. Градината е отоплявана и работи целогодишно.", null],
+  ["Има ли къде да паркирам?", miss("parking"), null],
 ];
 /* the answers without [ЛИПСВА] are plain text and go to FAQPage as they are */
 for (const f of FAQ) if (!f[1].includes("ЛИПСВА")) f[2] = f[1];
 
 export function faqHTML(): string {
   return '<section class="sec" aria-labelledby="h-faq">' +
-    '<div class="sec-h"><h2 class="h2" id="h-faq">Често задавани въпроси</h2></div>' +
+    faqHead("h-faq") +
     '<div class="shell"><div class="core ct-faq">' +
       FAQ.map((f) => '<details class="ct-q"><summary>' + f[0] + ic("caret-down", 20) + "</summary><p>" + f[1] + "</p></details>").join("") +
     "</div></div>" +
@@ -141,7 +134,7 @@ export function fbIntroHTML(): string {
     '<p class="lead" style="margin-top:10px">Въпрос, похвала или нещо, което да подобрим. Четем всяко съобщение.</p>' +
     '<nav class="card ct-route" aria-label="По-бързи начини"><p class="t">По-бързо е онлайн</p>' +
       '<a href="' + url.reservation() + '"><span><small>Искате маса?</small><b>Резервирай маса</b></span>' + ic("caret-right", 20) + "</a>" +
-      '<a href="' + url.menu() + '"><span><small>Гладни сте?</small><b>Поръчай от менюто</b></span>' + ic("caret-right", 20) + "</a>" +
+      '<a href="' + url.menu() + '"><span><small>Гладни сте?</small><b>Поръчай</b></span>' + ic("caret-right", 20) + "</a>" +
       '<a href="' + url.events() + '"><span><small>Празник или фирмено парти?</small><b>Събития и поводи</b></span>' + ic("caret-right", 20) + "</a>" +
     "</nav>" +
   "</div>";

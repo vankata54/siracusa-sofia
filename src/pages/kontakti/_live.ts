@@ -4,6 +4,7 @@
 import { RESTAURANT as R } from "../../lib/consts.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
+import { callBtn, hourNote } from "../../lib/ui.ts";
 
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 export const OPEN = toMin(R.open), CLOSE = toMin(R.close), KITCHEN = toMin(R.kitchen), DELIVERY = toMin(R.delivery), LUNCH = toMin(R.lunchUntil);
@@ -29,12 +30,10 @@ const hhmm = (m: number) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + 
 const closedAt = (m: number) => m < OPEN || m >= CLOSE;
 
 /* ---------- hero: the main action follows the hour (after closing "Пишете ни" leads, "Обади се" is second) ---------- */
-function callB(main: boolean): string {
-  return '<a class="pill ' + (main ? "pill-red pill-lg pill-block" : "pill-line") + '" href="tel:' + TEL1 + '">' + ic("phone", main ? 22 : 20) +
-    "<span>Обади се" + (main ? ' · <span class="num">' + R.phone + "</span>" : "") + "</span></a>";
-}
+/* the one call button (lib/ui.ts): "Обади се · 0894 36 55 77" */
+function callB(main: boolean): string { return callBtn(main ? "pill pill-red pill-lg pill-block" : "pill pill-line"); }
 function writeB(main: boolean): string {
-  return '<a class="pill ' + (main ? "pill-red pill-lg pill-block" : "pill-line") + '" href="#pishete" data-jump="pishete">' + ic("chat-circle-dots", main ? 22 : 20) + "Пишете ни</a>";
+  return '<a class="pill ' + (main ? "pill-red pill-lg pill-block" : "pill-line") + '" href="#pishete" data-jump="pishete">' + ic("chat-circle-dots", main ? 22 : 20) + "Пиши ни</a>";
 }
 const routeB = () => '<a class="pill pill-line" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("map-trifold", 20) + "Маршрут</a>";
 
@@ -46,9 +45,9 @@ export function ctaHTML(m: number | null): string {
 }
 export function heroNoteHTML(m: number | null): string {
   if (m == null) return "";
-  if (closedAt(m)) return '<p class="ct-note">' + ic("clock", 20) + "<span><b>Сега сме затворени.</b> Обадете се " + (m < OPEN ? "днес" : "утре") + " след " + R.open + " или ни пишете.</span></p>";
-  if (m >= KITCHEN) return '<p class="ct-note">' + ic("clock", 20) + "<span><b>Кухнята затвори за днес.</b> Поръчки приемаме утре от " + R.open + ".</span></p>";
-  return "";
+  /* the one hour note (lib/ui.ts): after 21:00 "Доставката приключи за днес", closed "Кухнята затвори за днес" */
+  if (m < DELIVERY && m >= OPEN) return "";
+  return hourNote({ open: !closedAt(m), kitchen: m >= OPEN && m < KITCHEN, delivery: false, m });
 }
 
 /* ---------- "Днес": live status + the 4 tracks ---------- */
@@ -79,7 +78,7 @@ export function todayView(m: number, d: number): TodayView {
   const tm = (d + 1) % 7;
   if (m < OPEN) return { dot: "", st: "Затворено сега", sub: "Отваряме днес в " + R.open + ", след <b>" + dur(OPEN - m) + "</b>." };
   if (m < DELIVERY) return { dot: "ok", st: "Отворено сега", sub: "Доставяме още <b>" + dur(DELIVERY - m) + "</b>, до " + R.delivery + ". Кухнята приема поръчки до " + R.kitchen + "." };
-  if (m < KITCHEN) return { dot: "warn", st: "Отворено сега", sub: "Доставката приключи за днес. Вземане от място и салон до " + R.kitchen + ", още <b>" + dur(KITCHEN - m) + "</b>." };
+  if (m < KITCHEN) return { dot: "warn", st: "Отворено сега", sub: "Доставката приключи за днес. Вземане до " + R.kitchen + ", още <b>" + dur(KITCHEN - m) + "</b>." };
   if (m < CLOSE) return { dot: "warn", st: "Кухнята затвори", sub: "Отворено до " + R.close + ". Поръчки приемаме утре от " + R.open + "." };
   return { dot: "", st: "Затворено сега", sub: "Отваряме утре, <b>" + DAYS[tm].toLowerCase() + "</b>, в " + R.open + "." };
 }
@@ -126,7 +125,7 @@ export function okHTML(s: Sent, m: number): string {
     (closed ? '<p class="muted">Сега сме затворени, затова ще го прочетем ' + (m < OPEN ? "днес" : "утре") + " след " + R.open + ".</p>" : "") +
     '<div class="quote"><small>' + (s.topic ? esc(s.topic) : "Вашето съобщение") + "</small><p>" + esc(s.msg) + "</p></div>" +
     '<p class="muted">Спешно ли е? Обадете се, по-бързо е.</p>' +
-    '<div class="acts"><a class="pill pill-line" href="tel:' + TEL1 + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>" +
+    '<div class="acts">' + callBtn("pill pill-line") +
     '<button class="pill pill-soft" type="button" data-again>' + ic("pencil-simple", 20) + "Напиши ново съобщение</button></div>" +
   "</div>";
 }

@@ -7,7 +7,7 @@ import "./icons/phone.ts";
 import { RESTAURANT } from "./consts.ts";
 import { url, type PageKey } from "./routes.ts";
 
-export const MORE_PAGES: [PageKey, string][] = [["home", "Начало"], ["menu", "Меню"], ["lunch", "Обедно меню"], ["offers", "Оферти"], ["events", "Събития и поводи"], ["celebration", "Калкулатор на празник"], ["office", "Обедна поръчка за офиса"], ["reservation", "Резервирай маса"], ["delivery", "Доставка"], ["pickup", "Вземи от място"], ["bertha", "Нашата фурна Bertha"], ["about", "За нас"], ["gallery", "Галерия"], ["contacts", "Контакти"], ["allergens", "Алергени"], ["profile", "Профил"]];
+export const MORE_PAGES: [PageKey, string][] = [["home", "Начало"], ["menu", "Меню"], ["lunch", "Обедно меню"], ["offers", "Оферти"], ["events", "Събития и поводи"], ["celebration", "Празник при нас"], ["office", "Обща поръчка за офиса"], ["reservation", "Резервирай маса"], ["delivery", "Доставка"], ["pickup", "Вземи от място"], ["bertha", "Фурната Bertha"], ["about", "За нас"], ["gallery", "Галерия"], ["contacts", "Контакти"], ["allergens", "Алергени"], ["profile", "Профил"]];
 
 /** Stored cookie choices ("sc-cookie-prefs"): the necessary ones are always on. */
 export interface CookiePrefs { analytics: boolean; marketing: boolean }

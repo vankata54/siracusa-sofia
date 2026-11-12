@@ -3,6 +3,8 @@
    and filters the rows that the server drew, by their data attributes. The search alone loads the menu chunk lazily
    (src/lib/filters.ts, the same logic as the menu). Port of design/pages/allergens.html (design/PAGES.md "allergens.html"). */
 import type { Dish } from "../../lib/data.ts";
+import * as ui from "../../lib/ui.ts";
+import { noun } from "../../lib/nouns.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
@@ -22,9 +24,10 @@ import "../../lib/icons/bowl-food.ts";
 
 export { AL };
 export const TEL = "tel:" + R.phoneIntl;
+export { noun };
 export const plural = (n: number) => pl(n, "ястие", "ястия");
 /* ---------- icon sprite: every icon of the table once per page (<symbol>), the cells point to it with <use> ---------- */
-const SPRITE = [...AL.map((a) => a[2]), "caret-right", "info", "check"];
+const SPRITE = [...AL.map((a) => a[2]), "caret-right", "info", "check", "phone"];
 /** The sprite (server only; the page draws it once, the browser reuses it in the "cannot check" table). */
 export function spriteHTML(): string {
   return '<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden">' +
@@ -95,7 +98,7 @@ export function tableOpen(): string {
     AL.map(() => '<col class="ca">').join("") + "</colgroup>" + theadHTML();
 }
 export function cathHTML(pre: string, cat: string, name: string, n: number): string {
-  return '<tbody class="cath" id="' + pre + "-" + cat + '" data-cat="' + cat + '"><tr><th colspan="' + (AL.length + 1) + '" scope="colgroup"><span class="ch"><h3>' + esc(name) + '</h3><span class="cn">' + plural(n) + "</span></span></th></tr></tbody>";
+  return '<tbody class="cath" id="' + pre + "-" + cat + '" data-cat="' + cat + '"><tr><th colspan="' + (AL.length + 1) + '" scope="colgroup"><span class="ch"><h3>' + esc(name) + '</h3><span class="cn">' + noun(cat, n) + "</span></span></th></tr></tbody>";
 }
 export const OUT_BADGE = '<span class="badge out">' + ic("clock", 16) + "Изчерпано днес</span>";
 
@@ -150,19 +153,17 @@ export function emptyHTML(st: { a: string[]; q: string; nd: boolean }): string {
   return stateBox("funnel", "", "Няма ястия с тези филтри", "Всяко ястие съдържа поне един от избраните алергени. Махнете някой от тях, за да видите повече.",
     '<button class="pill pill-red" type="button" data-clear>' + ic("x", 20) + "Изчисти филтрите</button>");
 }
+/* error / no connection: the shared box (lib/ui.ts), same words and buttons as on every page */
 export function errorHTML(search = false): string {
-  return stateBox("warning-circle", "warn", search ? "Не успяхме да заредим търсенето" : "Не успяхме да заредим алергените",
-    "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона.",
-    '<button class="pill pill-red" type="button" data-retry>' + ic("arrow-clockwise", 20) + 'Опитай пак</button><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>");
+  return ui.stateBox({ kind: "error", what: search ? "търсенето" : "алергените", text: "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона." });
 }
 export function offlineHTML(): string {
-  return stateBox("globe", "warn", "Няма връзка с интернет", "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите: " + R.phone + ".",
-    '<button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>");
+  return ui.stateBox({ kind: "offline", what: "алергените", text: "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите." });
 }
 export function loadingHTML(): string {
   let rows = "";
   for (let i = 0; i < 5; i++) rows += '<div class="skrow"><div class="skel" style="height:20px;width:' + [70, 55, 82, 62, 48][i] + '%"></div><div class="skel" style="height:16px;width:' + [90, 76, 60, 84, 70][i] + '%"></div><div class="tks"><div class="skel" style="height:34px;width:96px;border-radius:999px"></div><div class="skel" style="height:34px;width:84px;border-radius:999px"></div></div></div>';
-  return '<div aria-busy="true" aria-label="Зареждаме алергените"><div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">' + rows + "</div></div></div>";
+  return '<div aria-busy="true" aria-label="' + ui.loadingText("алергените") + '"><div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">' + rows + "</div></div></div>";
 }
 
 /* ---------- the lunch note: never "today" unless the lunch menu in the data is for today (BRIEF 8) ---------- */

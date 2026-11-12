@@ -9,6 +9,7 @@ import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes } from "../../lib/time.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
+import { callBtn, stateBox, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
 import "../../lib/icons/receipt.ts";
 import "../../lib/icons/chef-hat.ts";
@@ -174,6 +175,8 @@ export function startTracking(main: HTMLElement) {
       return { m: toAt >= 1 && Math.abs(toAt - left) <= 2 ? toAt : Math.round(left), late: 0 };
     }
     if ((o().eta ?? 1) === 0) return { m: 5, late: 0 }; /* pickup "веднага" */
+    /* the minute of the promise and a few after it are not "late" yet (nobody moves the state in a preview) */
+    if (left > -5) return { m: 1, late: 0 };
     return { m: 5, late: Math.max(5, Math.ceil(-left / 5) * 5) };
   }
   const mainDish = () => {
@@ -231,7 +234,7 @@ export function startTracking(main: HTMLElement) {
       label = D ? "Пристига след" : "Готова след";
       big = '<span class="enum"><span class="ab">около</span><b>' + r.m + '</b><span class="u">мин</span></span>';
       say = c.id === "acc" ? "Получихме поръчката ви" : c.id === "cook" ? cookSay() : c.id === "ready" ? "Поръчката е готова" : "Шофьорът е на път към вас";
-      if (late) sub = "Съжаляваме, кухнята е натоварена. Новото време е около " + arrive + ".";
+      if (late) sub = (BUSY ? "Съжаляваме, кухнята е натоварена." : "Съжаляваме, малко закъсняваме.") + " Новото време е около " + arrive + ".";
       else if (c.id === "way") sub = "Пристига около " + arrive + '. Плащате при получаване: <span class="price">' + SC.fmt(o().total) + "</span>.";
       else if (c.id === "ready") sub = "Тръгва към вас до минута. Пристига около " + arrive + ".";
       else sub = D ? "Очакваме да пристигне около " + arrive + "." : "Ще е готова около " + arrive + ".";
@@ -252,7 +255,7 @@ export function startTracking(main: HTMLElement) {
     const sc = schedInfo(), canChange = !!sc && k() === 0 && sc.left > 60;
     const change = canChange ? '<button class="pill pill-line pill-lg pill-block" type="button" data-change>' + ic("pencil-simple", 20) + "Промени</button>" : "";
     const route = !isD() ? '<a class="pill pill-line pill-lg pill-block" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("map-pin", 20) + "Маршрут до ресторанта</a>" : "";
-    return '<div class="acts">' + change + '<a class="pill pill-line pill-lg pill-block" href="' + TEL + '" aria-label="Обади се в ресторанта на ' + R.phone + '">' + ic("phone", 20) + "Обади се в ресторанта</a>" + route + "</div>";
+    return '<div class="acts">' + change + callBtn("pill pill-line pill-lg pill-block") + route + "</div>";
   }
   function offlineHTML() {
     if (!S.offline) return "";
@@ -278,7 +281,7 @@ export function startTracking(main: HTMLElement) {
   }
   function codeHTML() {
     const code = S.rating ? S.rating.code : "";
-    const sampleNote = simulated() ? '<span class="small">Примерен код: само в прототипа.</span>' : "";
+    const sampleNote = simulated() ? '<span class="small">Примерен код: само в прегледа.</span>' : "";
     return '<div class="code ember-card"><span class="k">Вашият код за -10% от следващата поръчка</span><div class="row"><span class="v">' + esc(code) + '</span><button class="pill pill-ink" type="button" data-copy>' + ic("copy", 18) + "Копирай кода</button></div><p>При следващата поръчка го въведете в количката, в полето „Код за отстъпка“ (стъпка 3). Важи веднъж, за ястията.</p>" + sampleNote + "</div>";
   }
   function googleHref() { return (S.rating && S.rating.google) || R.googleReview || ""; }
@@ -316,7 +319,7 @@ export function startTracking(main: HTMLElement) {
     const kind = x.discKind || (x.codeDisc ? "code" : x.profileDisc ? "profile" : x.disc ? "lunch" : "");
     const amt = kind === "code" ? x.codeDisc || x.disc : kind === "profile" ? x.profileDisc || x.disc : x.disc;
     const discLabel = kind === "code" ? "Отстъпка с код" : kind === "profile" ? "Отстъпка с профил" : kind === "lunch" ? "Отстъпка след 15:00" : "Отстъпка";
-    const fee = x.fee === 0 ? "безплатна" : x.fee == null ? 'по тарифа <span class="missing">[ЛИПСВА: такса]</span>' : SC.fmt(x.fee);
+    const fee = x.fee === 0 ? "безплатна" : x.fee == null ? 'по тарифа <span class="missing">[ЛИПСВА: такса в €]</span>' : SC.fmt(x.fee);
     const kv = (D ? '<div class="kv"><span>Доставка до</span><span>' + esc(x.zone || "") + " · " + fee + "</span></div>"
       : '<div class="kv"><span>Вземане от</span><span>Siracusa, Дружба 2</span></div>') +
       (amt ? '<div class="kv disc"><span>' + discLabel + '</span><span class="price">-' + SC.fmt(amt) + "</span></div>" : "") +
@@ -330,19 +333,13 @@ export function startTracking(main: HTMLElement) {
   function protoHTML() {
     if (!SC.preview) return "";
     const has = S.view === "order" && S.o, D = has && isD();
-    return '<section class="proto" aria-label="Само в прегледа"><p class="ptag">' + ic("sliders-horizontal", 18) + "Само в прегледа</p>" +
-      '<div class="pbtns">' +
-      (has ? '<button class="pill pill-soft" type="button" data-sim="next"' + (finished() ? " disabled" : "") + ">" + ic("arrow-right", 18) + "Следващ етап</button>" +
-        '<button class="pill pill-ink" type="button" data-sim="done">' + ic("check", 18) + "Симулирай: " + (D ? "доставена" : "взета") + "</button>" +
-        '<button class="pill pill-soft" type="button" data-sim="late" aria-pressed="' + S.sim.late + '">' + ic("clock", 18) + (S.sim.late ? "Без закъснение" : "Закъснение") + "</button>" +
-        '<button class="pill pill-soft" type="button" data-sim="sched" aria-pressed="' + S.sim.sched + '">' + ic("calendar-check", 18) + (S.sim.sched ? "Не е за утре" : "За утре") + "</button>" +
-        '<button class="pill pill-soft" type="button" data-sim="offline">' + ic("warning-circle", 18) + (S.offline ? "Върни връзката" : "Без интернет") + "</button>" : "") +
-      '<button class="pill pill-soft" type="button" data-sim="sample">' + ic("receipt", 18) + "Примерна поръчка</button>" +
-      '<button class="pill pill-soft" type="button" data-sim="loading">' + ic("hourglass", 18) + "Зареждане</button>" +
-      '<button class="pill pill-soft" type="button" data-sim="notfound">' + ic("question", 18) + "Грешен номер</button>" +
-      '<button class="pill pill-soft" type="button" data-sim="none">' + ic("receipt", 18) + "Без поръчка</button>" +
-      '<button class="pill pill-soft" type="button" data-sim="reset">' + ic("arrow-left", 18) + "Отначало</button>" +
-      '</div><p class="help">Етапите тук се сменят само на този екран. В истинския сайт ги сменят кухнята и шофьорът, а въпросът „Останахте ли доволни?“ идва и като известие 40 мин след доставката.</p></section>';
+    const b = (k: string, t: string, dis = false) => '<button class="chip" type="button" data-sim="' + k + '"' + (dis ? " disabled" : "") + ">" + t + "</button>";
+    /* the shared panel (lib/ui.ts): same title, sentence and switch words on every page */
+    return previewPanel(
+      (has ? b("next", "Следващ етап", finished()) + b("done", "Симулирай: " + (D ? "доставена" : "взета")) +
+        pvToggle("Закъснение", S.sim.late, 'data-sim="late"') + pvToggle("За утре", S.sim.sched, 'data-sim="sched"') + pvToggle(PV.offline, S.offline, 'data-sim="offline"') : "") +
+      b("sample", "Примерна поръчка") + b("loading", PV.loading) + b("notfound", "Грешен номер") + b("none", PV.empty) + b("reset", "Отначало"),
+      { bare: true, id: "trk-pv", text: "Етапите тук се сменят само на този екран. В истинския сайт ги сменят кухнята и шофьорът, а въпросът „Останахте ли доволни?“ идва и като известие 40 мин след доставката." });
   }
   /* right after checkout the cart comes straight here: the success content from the cart prototype sits on top
      ("Благодарим! Поръчката е приета.", profile -10%, birthday gift switch, off by default) */
@@ -383,18 +380,20 @@ export function startTracking(main: HTMLElement) {
       '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div></div>';
   }
   function stateHTML(kind: View) {
-    const call = '<a class="pill pill-red pill-lg pill-block" href="' + TEL + '">' + ic("phone", 20) + "Обади се в ресторанта</a>";
+    const call = callBtn("pill pill-red pill-lg pill-block");
     if (kind === "notfound") return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h1 class="h2">Не намираме поръчка № ' + esc(S.no) + "</h1><p>Може връзката да е непълна. Обадете ни се и ще ви кажем докъде е поръчката.</p>" +
       '<div class="acts">' + call + '<button class="pill pill-line pill-lg pill-block" type="button" data-retry>' + ic("arrow-clockwise", 20) + "Опитай пак</button></div></div></div>";
-    if (kind === "error") return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h1 class="h2">Не успяхме да заредим поръчка № ' + esc(S.no) + "</h1><p>" + (S.offline ? "Няма връзка с интернет. Ще опитаме сами, щом връзката се върне." : "Опитайте пак след малко или ни се обадете.") + "</p>" +
-      '<div class="acts"><button class="pill pill-red pill-lg pill-block" type="button" data-retry>' + ic("arrow-clockwise", 20) + 'Опитай пак</button><a class="pill pill-line pill-lg pill-block" href="' + TEL + '">' + ic("phone", 20) + "Обади се в ресторанта</a></div></div></div>";
+    /* the shared state box (lib/ui.ts): same title words and buttons as on every page */
+    if (kind === "error") return '<div class="shell"><div class="core">' + stateBox(S.offline
+      ? { kind: "offline", what: "поръчката", h: "h1", text: "Ще опитаме сами, щом връзката се върне. Можете и да ни се обадите." }
+      : { kind: "error", what: "поръчка № " + esc(S.no), h: "h1" }) + "</div></div>";
     const closed = !SC.state().kitchen;
     return '<div class="shell"><div class="core empty state"><span class="ill">' + ic("receipt", 44) + '</span><h1 class="h2">Нямате поръчка в момента</h1>' +
-      "<p>" + (closed ? "Кухнята приема поръчки до 22:30. Поръчай за утре?" : "Щом поръчате, тук ще виждате на кой етап е поръчката и кога пристига.") + "</p>" +
+      "<p>" + (closed ? hourTitle(SC.state()) + ". " + hourLine(SC.state()) + "." : "Щом поръчате, тук ще виждате на кой етап е поръчката и кога пристига.") + "</p>" +
       '<div class="acts"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + (closed ? "Поръчай за утре" : "Към менюто") + "</a></div></div></div>";
   }
   function cancelledHTML() {
-    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2">Поръчката е отказана</h2><p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p><div class="acts"><a class="pill pill-red pill-lg pill-block" href="' + TEL + '">' + ic("phone", 20) + "Обади се в ресторанта</a></div></div></div>";
+    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2">Поръчката е отказана</h2><p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p><div class="acts">' + callBtn("pill pill-red pill-lg pill-block") + "</div></div></div>";
   }
 
   /* ---------- render ---------- */
@@ -530,7 +529,7 @@ export function startTracking(main: HTMLElement) {
       const sc = schedInfo(); if (!sc) return;
       SC.sheet({ title: "Промяна на поръчката", html:
         '<div style="display:grid;gap:14px"><p style="margin:0">Час, ястия или адрес: промени приемаме по телефона до <b>' + clock(sc.at - 60) + "</b>, 1 час преди часа на поръчката.</p>" +
-        '<a class="pill pill-red pill-lg pill-block" href="' + TEL + '">' + ic("phone", 20) + "Обади се на " + esc(R.phone) + "</a>" +
+        callBtn("pill pill-red pill-lg pill-block") +
         '<p class="small muted" style="margin:0">Кажете номера на поръчката: № ' + esc(S.no) + ".</p></div>" });
       return;
     }

@@ -9,6 +9,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural, MONTHS, DAYS_SHORT, prettyPhone } from "../../lib/format.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
 import { url } from "../../lib/routes.ts";
+import { stepperHTML, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
 export const TEL = "tel:" + R.phoneIntl;
 
@@ -85,15 +86,13 @@ const icInline = (n: string, s: number, va: number) => ic(n, s).replace('class="
 
 /* ---------- stepper (shared .stepper) ---------- */
 export function stepper(S: St): string {
-  const next = S.step < 3 ? "<span>Следва: <b>" + STEPS[S.step] + "</b></span>" : "<b>Последна стъпка</b>";
-  return '<div class="stepper" style="--n:3"><div class="t"><span>Стъпка ' + S.step + " от 3</span>" + next + '</div><div class="bar" aria-hidden="true">' +
-    STEPS.map((_, i) => '<span class="' + (i + 1 <= S.step ? "on" : "") + '"></span>').join("") + "</div></div>";
+  return stepperHTML(S.step, 3, STEPS[S.step]); /* the same words in every flow (lib/ui.ts) */
 }
 
 /* ---------- step 1: occasion, guests, date, place ---------- */
 export function step1(v: View): string {
   const S = v.S;
-  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 1 от 3: </span>Повод и гости</h2>' +
+  return '<h2 class="h2" tabindex="-1" data-focus>Повод и гости</h2>' +
     '<div class="blk" id="b-type"><div class="blk-h"><h3 class="h3" id="l-type">Какъв е поводът?</h3></div><div class="tiles" role="radiogroup" aria-labelledby="l-type">' +
     TYPES.map((t) => { const on = S.type === t.id; return '<label class="tile' + (t.wide ? " wide" : "") + (on ? " on" : "") + '"><input class="vh" type="radio" name="ctype" value="' + t.id + '"' + (on ? " checked" : "") + '><span class="bub">' + ic(t.ic, 24) + "</span><span>" + t.n + "</span></label>"; }).join("") + "</div>" + errHTML("e-type") + "</div>" +
     '<div class="blk"><div class="blk-h"><h3 class="h3"><label for="guests">Колко гости?</label></h3><span class="opt">заедно с децата</span></div><div class="guests">' +
@@ -131,7 +130,7 @@ export function skeletons(): string {
 }
 /** pkgs: the package cards (from the server's <template>, or skeletons); picker: the dish picker or "" */
 export function step2(pkgs: string, picker: string): string {
-  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 2 от 3: </span>Меню</h2><p class="lead">Изберете готов пакет от нашето меню или си направете собствено.</p>' +
+  return '<h2 class="h2" tabindex="-1" data-focus>Меню</h2><p class="lead">Изберете готов пакет от нашето меню или си направете собствено.</p>' +
     '<div class="pkgs" role="radiogroup" aria-label="Меню за празника" id="b-menu" data-pkgs>' + pkgs + "</div>" + errHTML("e-menu") +
     "<div data-picker>" + picker + "</div>" +
     '<p class="note-auto" style="margin-top:20px">' + ic("info", 18) + '<span>Напитките не са включени. <span class="missing">[ЛИПСВА: бар и винена карта]</span> Вегетарианци и алергии напишете в бележката на следващата стъпка.</span></p>';
@@ -149,7 +148,7 @@ function seg(name: string, opts: [string, string][], val: string): string {
 }
 export function step3(v: View): string {
   const S = v.S;
-  return '<h2 class="h2" tabindex="-1" data-focus><span class="vh">Стъпка 3 от 3: </span>Торта, украса и данни</h2>' +
+  return '<h2 class="h2" tabindex="-1" data-focus>Торта, украса и данни</h2>' +
     '<div class="blk"><div class="blk-h"><h3 class="h3" id="l-cake">Торта</h3></div>' + seg("cake", CAKES, S.cake) +
     '<div class="reveal-box" data-cakebox="ours"' + (S.cake === "ours" ? "" : " hidden") + '><div class="field"><label for="cakenote">Вкус и надпис <span class="opt">(по желание)</span></label><input class="input" id="cakenote" type="text" maxlength="200" value="' + esc(S.cakeNote) + '" placeholder="Например шоколад, „Честит рожден ден, Мария“"></div><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: видове торти и цени]</span></p></div>' +
     '<div class="reveal-box" data-cakebox="bring"' + (S.cake === "bring" ? "" : " hidden") + '><p class="help" style="margin:0">Ще я съхраним и сервираме. <span class="missing">[ЛИПСВА: условия за собствена торта]</span></p></div></div>' +
@@ -160,7 +159,7 @@ export function step3(v: View): string {
     '<div class="field"><label for="cphone">Телефон</label><input class="input" id="cphone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" value="' + esc(S.phone) + '" placeholder="0888 12 34 56" aria-describedby="e-phone">' + errHTML("e-phone") + "</div>" +
     '<div class="field"><label for="cemail">Имейл <span class="opt">(по желание, за писмена оферта)</span></label><input class="input" id="cemail" type="email" autocomplete="email" maxlength="120" value="' + esc(S.email) + '" placeholder="ime@primer.bg" aria-describedby="e-email">' + errHTML("e-email") + "</div>" +
     '<div class="field"><label for="cnote">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="cnote" rows="3" maxlength="1000" placeholder="Вегетарианци, алергии, детски столчета, музика">' + esc(S.note) + "</textarea></div>" +
-    '<label class="check"><input type="checkbox" id="cconsent"' + (S.consent ? " checked" : "") + '><span>Искам подарък за рождения си ден и първи да научавам за събитията.<br><span class="muted small">По желание. Можете да се откажете по всяко време.</span></span></label></div>' +
+    '<label class="check"><input type="checkbox" id="cconsent"' + (S.consent ? " checked" : "") + '><span><b>' + MKT_TITLE + '</b><br><span class="muted small">' + MKT_SUB + "</span></span></label></div>" +
     '<p class="fine">' + ic("lock", 18) + "<span>Запитването не ви задължава. Не плащате нищо онлайн. Телефонът ви е само за връзка за празника.</span></p>" +
     '<div class="alert" role="alert" data-alert hidden></div></div>';
 }
@@ -197,7 +196,8 @@ export function summaryHTML(v: View, forSheet: boolean): string {
 export function nextLabel(v: View, compact: boolean): string {
   if (v.sending) return '<span class="spin" aria-hidden="true"></span>Изпращаме...';
   const arr = compact ? "" : ic("arrow-right", 20), s = v.S.step;
-  return s === 1 ? "Към менюто" + arr : s === 2 ? "Към детайлите" + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
+  /* "Напред: <next step>": "Към менюто" leads to /menu/ everywhere else (site.review-consistency В5) */
+  return s < 3 ? "Напред: " + STEPS[s] + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
 }
 export function asideHTML(v: View): string {
   const S = v.S;

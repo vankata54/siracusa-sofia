@@ -22,3 +22,28 @@ test("home opens without console errors; + adds to the cart; assistant loads laz
   expect(overflow).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test("the shared runtime is at most 30 000 B; robots.txt and sitemap.xml; noindex pages without canonical", async ({ page, request }) => {
+  await page.goto("/");
+  const src = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLScriptElement>("script[src]")).map((s) => s.src).concat(
+    Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]')).map((l) => l.href)));
+  /* the runtime chunk is loaded by every page: find it among the loaded scripts */
+  const urls = await page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name).filter((n) => /\/_astro\/sc\.[\w-]+\.js$/.test(n)));
+  const all = Array.from(new Set([...src.filter((u) => /\/_astro\/sc\.[\w-]+\.js$/.test(u)), ...urls]));
+  expect(all.length).toBeGreaterThan(0);
+  for (const u of all) {
+    const body = await (await request.get(u, { headers: { "accept-encoding": "identity" } })).body();
+    expect(body.length, u).toBeLessThanOrEqual(30000);
+  }
+  const robots = await request.get("/robots.txt");
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain("Sitemap:");
+  const sm = await (await request.get("/sitemap.xml")).text();
+  expect(sm).toContain("/menu/pitsi/");
+  for (const p of ["/kolichka/", "/porachka/", "/vhod/", "/profil/"]) {
+    expect(sm).not.toContain(p);
+    await page.goto(p);
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  }
+});

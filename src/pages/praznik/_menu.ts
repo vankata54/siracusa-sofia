@@ -7,6 +7,7 @@ import { esc, fmt, plural } from "../../lib/format.ts";
 import { byId, inCat, catById, RESTAURANT as R, type Dish } from "../../lib/data.ts";
 import { art, badges } from "../../lib/render.ts";
 import { GROUP_IDS, GROUP_NAMES, SHARE_PER, TEL, type Group, type PkgInfo, type St } from "./_calc.ts";
+import { callBtn } from "../../lib/ui.ts";
 
 /* [id, share]: "share" dishes are counted 1 portion per SHARE_PER guests (prototype rule until the admin sets the logic) */
 type PkgDish = [string, 1?];
@@ -85,7 +86,7 @@ export function pickerHTML(S: St): string {
     '<div class="plist" role="tabpanel">' + itemsFor(g, cat).map((x) => { const on = S.picks.includes(x.id), cx = cleanTags(x);
       return '<button class="pk" type="button" data-pick="' + x.id + '" aria-pressed="' + on + '"><span class="pic" aria-hidden="true">' + art(x) + "</span><span><b>" + esc(x.n) + '</b><span class="m"><span class="price">' + fmt(x.p) + "</span>" + (x.g ? "<span>" + esc(x.g) + "</span>" : "") + '<span class="yes">' + ic("check", 14).replace('class="ic"', 'class="ic" style="display:inline;vertical-align:-2px"') + " Избрано</span></span>" + (cx.t.length ? '<span style="display:block;margin-top:6px">' + badges(cx) + "</span>" : "") + '</span><span class="tk">' + ic("check", 18) + "</span></button>"; }).join("") + "</div>" +
     errHTML("e-picks") + '<div class="mine shell" data-mine><div class="core">' + mineHTML(S) + "</div></div>" +
-    '<div class="callbox"><h4>Свържете се с нас за оферта</h4><p>Собственото меню го смятаме на ръка. Изпратете запитването или ни се обадете.</p><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div>";
+    '<div class="callbox"><h4>Свържете се с нас за оферта</h4><p>Собственото меню го смятаме на ръка. Изпратете запитването или ни се обадете.</p>' + callBtn("pill pill-line") + "</div></div>";
 }
 export function mineHTML(S: St): string {
   if (!S.picks.length) return '<div class="empty"><span class="ill">' + ic("fork-knife", 32) + '</span><h4>Още нищо не е избрано</h4><p class="muted" style="margin:0">Докоснете ястие, за да го добавите в менюто на празника.</p></div>';

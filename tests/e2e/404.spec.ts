@@ -32,7 +32,7 @@ test("404 general: menu and home", async ({ page }) => {
   await expect(visible(page)).toHaveText("Тази страница я няма в менюто");
   await expect(page.getByRole("link", { name: "Към менюто" }).first()).toBeVisible();
   await expect(page.locator("main").getByRole("link", { name: "Начало" })).toBeVisible();
-  await expect(page.locator("[data-call]")).toContainText("Обадете се: 0894 36 55 77");
+  await expect(page.locator("[data-call]")).toContainText("Обади се · 0894 36 55 77");
   await expect(page.locator(".nf-cats")).toBeHidden();
   await expect(page).toHaveTitle(/Страницата я няма/);
   expect(errors).toEqual([]);

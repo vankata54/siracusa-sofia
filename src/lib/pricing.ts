@@ -12,7 +12,7 @@ import type { Cart, Mode } from "./cart.ts";
 
 import { LUNCH_PICKUP_DISCOUNT } from "./lunch.ts";
 export { LUNCH_PICKUP_DISCOUNT };
-export const FEE_MISSING = "[ЛИПСВА: такса за доставка]";
+export const FEE_MISSING = "[ЛИПСВА: такса в €]";
 
 export interface PricedRow { key: string; x: Dish; q: number; mods: string[]; unit: number; tot: number; out: boolean; disc: number; badMod: string | null }
 export interface Priced {

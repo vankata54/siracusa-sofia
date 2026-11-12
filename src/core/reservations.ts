@@ -7,7 +7,14 @@ import { CoreError, type Celebration, type Reservation, type ReservationStatus, 
 import { audit } from "./audit.ts";
 import { normPhone, hhmm } from "../lib/format.ts";
 import { TABLES, EVENT_CATS } from "../lib/consts.ts";
-import { minutes, sofiaYmd, addDaysYmd, validYmd } from "../lib/time.ts";
+import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
+
+/** Is "YYYY-MM-DD" a real calendar date? (here, not in lib/time.ts: that module is in the shared runtime) */
+export function validYmd(ymd: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return false;
+  const [y, m, d] = ymd.split("-").map(Number), t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
 import { getSettings } from "./settings.ts";
 export { createOffice, getOffice, viewOffice, joinOffice, submitOffice, sendDueOffices } from "./office.ts";
 

@@ -1,4 +1,5 @@
 ---
+import { mapSlot, miss, faqHead } from "../../lib/ui.ts";
 /* Pickup (/vzemi-ot-myasto/): port of design/pages/pickup.html (design/PAGES.md "pickup.html", pack 6.10, 10.2).
    The server draws everything that does not depend on the hour, the cart or the kitchen: hero, 3 steps, the -30% card
    (neutral "every day from 15:00"), the hours timeline, where, payment, FAQ and JSON-LD (BreadcrumbList, FAQPage).
@@ -40,11 +41,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   </div></section>
 
   <section class="sec pk-where rv" aria-labelledby="pk-where"><div class="pk-where-grid">
-    <div class="shell"><div class="pk-map" role="img" aria-label={"Схема: Siracusa, " + R.address + ". Точната карта предстои."}>
-      <span class="blk" style="left:8%;top:12%;width:22%;height:20%"></span><span class="blk" style="left:64%;top:10%;width:26%;height:16%"></span><span class="blk" style="left:10%;top:60%;width:18%;height:14%"></span><span class="blk" style="left:70%;top:52%;width:20%;height:18%"></span>
-      <div class="pk-pin"><span class="bub"><Fragment set:html={ic("map-pin", 20)} />Siracusa</span><span class="tip"></span><span class="spot"></span></div>
-      <div class="cap"><span class="missing">[ЛИПСВА: статична карта]</span></div>
-    </div></div>
+    <div class="shell"><div class="pk-map" set:html={mapSlot()}></div></div>
     <div><div class="pk-sh" style="margin-bottom:8px"><span class="pk-kicker"><Fragment set:html={ic("map-pin-line", 18)} />Къде</span><h2 class="h2" id="pk-where">Къде да ни намерите</h2></div>
       <div class="pk-info">
         <div class="pk-irow"><span class="ib"><Fragment set:html={ic("map-pin", 22)} /></span><div><b>Адрес</b><span class="v">{R.address}</span></div></div>
@@ -61,7 +58,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
       <div class="card"><h3 class="h3"><span class="ib"><Fragment set:html={ic("wallet", 22)} /></span>Плащате при вземане</h3>
         <ul class="pk-list">
           {pay.map((t) => <li><Fragment set:html={ic("check", 20)} /><span set:html={t}></span></li>)}
-          <li><Fragment set:html={ic("check", 20)} /><span>Ваучер <span class="missing">[ЛИПСВА: кои ваучери, актуалното име]</span></span></li>
+          <li><Fragment set:html={ic("check", 20)} /><span>Ваучер {R.voucherNote} <Fragment set:html={miss("vouchers")} /></span></li>
         </ul>
         <p class="small" style="margin-top:14px">Без онлайн плащане и без въвеждане на карта в сайта.</p></div>
       <div class="card"><h3 class="h3"><span class="ib"><Fragment set:html={ic("bell-ringing", 22)} /></span>Пишем ви, щом е готова</h3>
@@ -69,7 +66,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
         <div class="pk-msg" aria-label="Пример за съобщение"><small>Siracusa · Viber</small>Поръчката ви е готова. Очакваме ви!</div></div>
     </div></section>
 
-  <section class="sec rv" aria-labelledby="pk-faq"><div class="pk-faq-grid"><div class="pk-sh"><h2 class="h2" id="pk-faq">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line" style="margin-top:16px" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{"Обади се · " + R.phone}</a></div><div class="pk-faq" set:html={faqHTML()}></div></div></section>
+  <section class="sec rv" aria-labelledby="pk-faq"><div class="pk-faq-grid"><Fragment set:html={faqHead("pk-faq", { cls: "pk-sh" })} /><div class="pk-faq" set:html={faqHTML()}></div></div></section>
 
   <div data-proto></div>
   <div class="abar pk-abar hide" slot="ov" role="region" aria-label="Поръчка за вземане" data-abar set:html={ctaHTML("", null)}></div>
@@ -218,7 +215,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   repeating-linear-gradient(0deg, transparent 0 46px, var(--line) 46px 48px),
   repeating-linear-gradient(90deg, transparent 0 58px, var(--line) 58px 60px),
   var(--surface-2)}
-.pk-map .blk{position:absolute; border-radius:10px; background:var(--surface-3)}
+.pk-map .map-slot{position:absolute; inset:0; border-radius:0}
 .pk-pin{position:absolute; left:50%; top:44%; transform:translate(-50%,-100%); display:grid; justify-items:center; gap:0}
 .pk-pin .bub{display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px 0 12px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:800; font-size:16px; box-shadow:var(--shadow-lg); white-space:nowrap}
 .pk-pin .bub .ic{color:var(--bg)}
@@ -305,6 +302,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
 
 <script>
   import { SC } from "../../client/sc-menu.ts";
+  import { previewPanel, pvChip, PV } from "../../lib/ui.ts";
   import { price } from "../../lib/pricing.ts";
   import "sc-icons:moon,truck,seal-percent,arrow-right,warning,warning-circle,arrow-clockwise,check-circle,shopping-bag,info,bowl-food,caret-right,sliders-horizontal"; /* the page's icons in one module (scripts/icon-groups.mjs) */
   import { ctaHTML, alertHTML, liveHTML, dealHTML, hoursHTML, plan, tomorrowName, KITCHEN_END, type Kind, type Sim, type CtaView } from "./_pickup.ts";
@@ -328,7 +326,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   let chosen: number | null = null; /* null = "възможно най-скоро" */
   const isToday = SC.lunchIsToday();
   /* a lunch menu for another date is not ordered on the real site (same rule as /obedno-menu/); preview keeps it */
-  const orderable = () => (isToday || SC.preview) && SC.state().kitchen;
+  const orderable = () => isToday && SC.state().kitchen;
 
   /* ---------- CTA: the pickup total (with -30% on lunch after 15:00) is the cart's own price() in pickup mode ---------- */
   function ctaView(): CtaView {
@@ -367,10 +365,9 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   ll.textContent = isToday ? "Обедно меню днес" : "Обедното меню";
 
   /* ---------- preview only: the states panel (bottom of the page) ---------- */
-  const SIMS: [Sim, string][] = [["normal", "Нормално"], ["loading", "Зареждане"], ["busy", "Пълна кухня"], ["offline", "Няма връзка"], ["error", "Грешка"]];
+  const SIMS: [Sim, string][] = [["normal", PV.normal], ["loading", PV.loading], ["busy", "Пълна кухня"], ["offline", PV.offline], ["error", PV.error]];
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-labelledby="pk-proto"><div class="pk-proto"><div><h2 id="pk-proto">' + SC.ic("sliders-horizontal", 20) + "Само в прегледа</h2><p>Покажи състоянията на часовете. Часът се сменя с ?t=21:30 в адреса.</p></div>" +
-      '<div class="chips" role="group" aria-label="Състояние">' + SIMS.map((x) => '<button class="chip" type="button" data-sim="' + x[0] + '" aria-pressed="' + (x[0] === sim) + '">' + x[1] + "</button>").join("") + "</div></div></section>";
+    $("[data-proto]").outerHTML = previewPanel(SIMS.map((x) => pvChip(x[1], x[0] === sim, 'data-sim="' + x[0] + '"')).join(""), { id: "pk-pv", text: "Вижте състоянията на часовете. Часът се сменя с ?t=21:30 в адреса. Тези бутони ги няма на истинския сайт." });
   }
   function setSim(v: Sim) {
     sim = v;

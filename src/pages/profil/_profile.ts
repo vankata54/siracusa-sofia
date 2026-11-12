@@ -13,6 +13,7 @@ import type { Customer, Order } from "../../client/api-types.ts";
 import type { CustomerView } from "../../client/api.ts";
 import type { Dish } from "../../lib/data.ts";
 import { inviteHTML, orderSkel } from "./_views.ts";
+import { MKT_TITLE, MKT_SUB, callBtn, missText, loadingText, previewPanel, pvToggle, PV, OFFLINE } from "../../lib/ui.ts";
 /* the icons this script draws, in one module (scripts/icon-groups.mjs) */
 import "sc-icons:user,sign-in,sign-out,receipt,heart,map-pin,ticket,bell,shield-check,sliders-horizontal,lock,house,briefcase,truck,warning-circle,warning,check-circle,info,arrow-right,arrow-clockwise,pencil-simple,fork-knife,gift,cake,caret-down,export,trash,flag,timer,copy,plus";
 
@@ -37,7 +38,7 @@ export function start(): void {
   const take = (c: Customer | CustomerView) => { if ("profileBonus" in c) BONUS = c.profileBonus === true; return c; };
   let ORD: Order[] | null = null;
   let OFF = false; /* preview: simulate no connection */
-  const offline = () => { if (OFF || navigator.onLine === false) { SC.toast("Няма връзка. Опитайте пак."); return true; } return false; };
+  const offline = () => { if (OFF || navigator.onLine === false) { SC.toast(OFFLINE + ". Опитайте пак."); return true; } return false; };
   const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Нещо се обърка. Опитайте пак.");
 
   /* notifications live in the profile (core: all off by default) */
@@ -51,7 +52,7 @@ export function start(): void {
     const z = zoneOf(n);
     if (!z) return { cls: "no", icon: "warning-circle", html: "Не доставяме до този адрес. Можете да я вземете от ресторанта." };
     if (z.free) return { cls: "ok", icon: "truck", html: 'Безплатна доставка · <span style="white-space:nowrap">' + esc(z.eta) + "</span>" };
-    return { cls: "tar", icon: "truck", html: 'Доставка по тарифа <span class="missing">[ЛИПСВА: такса]</span> · <span style="white-space:nowrap">' + esc(z.eta) + "</span>" };
+    return { cls: "tar", icon: "truck", html: 'Доставка по тарифа <span class="missing">' + missText("fee") + '</span> · <span style="white-space:nowrap">' + esc(z.eta) + "</span>" };
   }
   const sw = (key: string, title: string, sub: string, on: boolean) =>
     '<button class="psw" type="button" role="switch" aria-checked="' + on + '" data-sw="' + key + '"><span class="tx"><b>' + title + '</b><span class="s">' + sub + '</span></span><span class="tg" aria-hidden="true"><span class="tr"><span class="kn"></span></span><span class="st2">' + (on ? "Включено" : "Изключено") + "</span></span></button>";
@@ -82,7 +83,7 @@ export function start(): void {
   function renderLoadError(msg: string) {
     main.innerHTML = '<section class="gone"><div class="card empty" role="alert" style="padding:40px 20px"><span class="ill">' + ic("warning-circle", 44) + "</span>" +
       '<h1 class="h2">Не успяхме да отворим профила</h1><p class="muted" style="margin:0;max-width:30em">' + esc(msg) + " Нищо не е изгубено.</p>" +
-      '<button class="pill pill-red pill-lg" type="button" data-reload>' + ic("arrow-clockwise", 20) + "Опитай пак</button></div></section>" + protoHTML();
+      '<button class="pill pill-red pill-lg" type="button" data-reload>' + ic("arrow-clockwise", 20) + "Опитай пак</button>" + callBtn("pill pill-line") + "</div></section>" + protoHTML();
   }
 
   function renderProfile() {
@@ -137,7 +138,7 @@ export function start(): void {
       if (!box.isConnected) return;
       box.removeAttribute("aria-busy"); box.style.display = "block";
       box.innerHTML = '<div class="card empty" role="alert"><span class="ill">' + ic("warning-circle", 44) + '</span><h3 class="h3">Не успяхме да заредим поръчките</h3><p class="muted" style="margin:0;max-width:30em">' + esc(errText(e)) + " Нищо не е изгубено, опитайте пак.</p>" +
-        '<button class="pill pill-red" type="button" data-retry>' + ic("arrow-clockwise", 20) + "Опитай пак</button></div>";
+        '<button class="pill pill-red" type="button" data-retry>' + ic("arrow-clockwise", 20) + "Опитай пак</button>" + callBtn("pill pill-line") + "</div>";
       return;
     }
     if (!box.isConnected) return;
@@ -272,8 +273,8 @@ export function start(): void {
     const n = Math.min(U!.stamps || 0, STAMPS_MAX);
     let li = "";
     for (let i = 1; i <= STAMPS_MAX; i++) li += i <= n ? '<li class="f">' + ic("fire", 24) + '<span class="vh">Печат ' + i + "</span></li>" : i === STAMPS_MAX ? '<li class="g">' + ic("gift", 24) + '<span class="vh">Печат ' + STAMPS_MAX + ", награда</span></li>" : '<li class="e"><span>' + i + "</span></li>";
-    return '<div class="loyal rv" role="group" aria-label="Карта с печати, ' + n + " от " + STAMPS_MAX + '"><div class="lh"><span><b>Карта с печати</b><span class="s"><span class="missing">[ЛИПСВА: правило за печат]</span></span></span><span class="cnt2"><b>' + n + "</b> от " + STAMPS_MAX + "</span></div>" +
-      '<ol class="stamps">' + li + "</ol><p>Още " + (STAMPS_MAX - n) + ' до <span class="missing">[ЛИПСВА: награда при ' + STAMPS_MAX + " печата]</span>.</p></div>";
+    return '<div class="loyal rv" role="group" aria-label="Карта с печати, ' + n + " от " + STAMPS_MAX + '"><div class="lh"><span><b>Карта с печати</b><span class="s"><span class="missing">' + missText("stampRule") + '</span></span></span><span class="cnt2"><b>' + n + "</b> от " + STAMPS_MAX + "</span></div>" +
+      '<ol class="stamps">' + li + "</ol><p>Още " + (STAMPS_MAX - n) + ' до <span class="missing">' + missText("stampReward") + "</span>.</p></div>";
   }
   function couponsHTML() {
     const u = U!, c = u.consent;
@@ -293,7 +294,7 @@ export function start(): void {
   /* "Моите кодове": the -10% codes from the internal ratings (api.auth.codes) */
   function codesHTML() {
     const how = "Въведете го в количката, в полето „Код за отстъпка“.";
-    if (CODES == null) return '<div class="ticket off" data-codes aria-busy="true"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>Моите кодове</b><span class="s">Зареждаме...</span></span></div>';
+    if (CODES == null) return '<div class="ticket off" data-codes aria-busy="true"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>Моите кодове</b><span class="s">' + loadingText("кодовете") + '</span></span></div>';
     const list = CODES.map((k) => k.used
       ? '<div class="ticket off" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">За оценката на поръчка №&nbsp;' + esc(k.orderNo) + '.</span><span class="state">' + ic("check-circle", 18) + "Използван" + (k.usedBy ? " в поръчка №&nbsp;" + esc(k.usedBy) : "") + "</span></span></div>"
       : '<div class="ticket ember-card" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">' + how + '</span><button class="link" type="button" data-copy="' + esc(k.code) + '">' + ic("copy", 18) + "Копирай кода</button></span></div>").join("");
@@ -314,7 +315,7 @@ export function start(): void {
     const c = U!.consent;
     const bd = (c.bday || "").split("-"), bm = +bd[0] || 0, bdd = +bd[1] || 0;
     let days = ""; for (let d = 1; d <= 31; d++) days += "<option" + (d === bdd ? " selected" : "") + ">" + d + "</option>";
-    return sw("consent.marketing", "Искам да получавам оферти и маркетингови предложения", "Първи научавате за събитията и новите оферти.", c.marketing === true) +
+    return sw("consent.marketing", MKT_TITLE, MKT_SUB, c.marketing === true) +
       sw("consent.birthday", "Искам подарък за рождения си ден", "Седмица преди рождения ви ден ви пращаме имейл с подаръка: -10% от сметката или малка торта, когато празнувате при нас.", c.birthday === true) +
       (c.birthday && !U!.email ? '<div class="bday"><div class="needmail" role="status">' + ic("warning-circle", 22) + '<b>Добавете имейл, за да ви пишем</b><span class="muted small">Подаръкът идва по имейл. Без него няма къде да го изпратим.</span><button class="pill pill-line sm" type="button" data-edit="email">' + ic("plus", 18) + "Добави имейл</button></div></div>" : "") +
       (c.birthday ? '<div class="bday"><span class="label" id="bd-l">Рожден ден (по желание)</span><div class="two">' +
@@ -459,9 +460,8 @@ export function start(): void {
   /* ---------- preview-only panel (?preview=1): simulated states, never on the real page ---------- */
   function protoHTML() {
     if (!SC.preview) return "";
-    return '<div class="proto"><span class="t">' + ic("flag", 18) + "Само в прегледа</span><p>Симулирани състояния. Данните са истински, от ядрото.</p><div class=\"btns\">" +
-      (U ? '<button class="pill pill-soft" type="button" data-p="error">' + ic("warning", 18) + "Грешка при зареждане</button>" : "") +
-      '<button class="pill pill-soft" type="button" data-p="off" aria-pressed="' + OFF + '">' + ic("warning-circle", 18) + "Без интернет: " + (OFF ? "включено" : "изключено") + "</button></div></div>";
+    return previewPanel((U ? '<button class="chip" type="button" data-p="error">' + PV.error + "</button>" : "") + pvToggle(PV.offline, OFF, 'data-p="off"'),
+      { id: "pf-pv", cls: "pf-pv", text: "Симулирани състояния. Данните са истински, от ядрото. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- delegation ---------- */
@@ -484,7 +484,7 @@ export function start(): void {
     if (t.hasAttribute("data-delno")) { const b = main.querySelector<HTMLElement>("[data-del]")!; b.innerHTML = delBtn(); b.querySelector<HTMLElement>("[data-delask]")!.focus({ preventScroll: true }); return; }
     if (t.hasAttribute("data-delyes")) { doDelete(t as HTMLButtonElement); return; }
     if (t.hasAttribute("data-logout")) { logout(); return; }
-    if (t.dataset.p === "off") { OFF = !OFF; t.setAttribute("aria-pressed", String(OFF)); t.innerHTML = ic("warning-circle", 18) + "Без интернет: " + (OFF ? "включено" : "изключено"); SC.toast(OFF ? "Симулираме липса на връзка" : "Връзката е обратно"); return; }
+    if (t.dataset.p === "off") { OFF = !OFF; t.setAttribute("aria-pressed", String(OFF)); t.textContent = PV.offline + ": " + (OFF ? "вкл." : "изкл."); SC.toast(OFF ? "Симулираме липса на връзка" : "Връзката е обратно"); return; }
     if (t.dataset.p === "error") { loadOrders(true); main.querySelector("#porachki")?.scrollIntoView({ block: "start", behavior: smooth() }); return; }
   });
   main.addEventListener("change", (e) => { if ((e.target as Element).matches("[data-bday]")) saveBday(); });

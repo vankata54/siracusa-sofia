@@ -7,6 +7,7 @@ import { dishCard, art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
+import { hourNote } from "../../lib/ui.ts";
 import { NOUN, noun, passes, filterById, searchScores, sortInCat } from "../../lib/filters.ts";
 import "sc-icons:funnel,sliders-horizontal,plant,users-three,grains,drop,barbell,info,moped,storefront,caret-right,warning-circle,warning,sun,moon,magnifying-glass,x,phone"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
@@ -122,7 +123,7 @@ export function segSub(kind: "main" | "lunch" | "bf", S: State, lunchToday = tru
 
 /** The delivery / pickup line under the lead (empty when the kitchen is closed). */
 export function etaLine(S: State, e: Eta): string {
-  if (S.delivery) return '<p class="eta' + (e.busy ? " warn" : "") + '" data-eta>' + ic("moped", 20) + "<b>" + (e.busy ? "Доставка: " + e.text.charAt(0).toLowerCase() + e.text.slice(1) : "Доставка сега: " + e.text).replace(/около (\d+) мин/, "около&nbsp;$1&nbsp;мин") + "</b></p>";
+  if (S.delivery) return '<p class="eta' + (e.busy ? " warn" : "") + '" data-eta>' + ic("moped", 20) + "<b>" + "Доставка сега · " + (e.busy ? e.text.charAt(0).toLowerCase() + e.text.slice(1) : e.text).replace(/около (\d+) мин/, "около&nbsp;$1&nbsp;мин") + "</b></p>";
   if (S.kitchen) return '<p class="eta warn" data-eta>' + ic("storefront", 20) + "<b>Вземане от място <span>· готово след около&nbsp;20&nbsp;мин</span></b></p>";
   return '<p class="eta" data-eta hidden></p>';
 }
@@ -149,8 +150,8 @@ export function countHTML(st: MenuState, n: number): string {
 export function noticesHTML(S: State, st: MenuState, offline = false): string {
   let h = "";
   if (offline) h += '<div class="notice off" role="status"><span class="nic">' + ic("warning-circle", 24) + "</span><b>Няма връзка с интернет</b><p>Менюто е заредено, а количката ви е запазена. Поръчайте, когато връзката се върне.</p><div class=\"acts\"><button class=\"pill pill-line\" type=\"button\" data-retry>Опитай пак</button></div></div>";
-  if (S.m < 600) h += '<div class="notice"><span class="nic">' + ic("clock", 24) + "</span><b>Кухнята отваря в 10:00</b><p>Можете да поръчате още сега за днес.</p></div>";
-  else if (!S.kitchen) h += '<div class="notice warn"><span class="nic">' + ic("clock", 24) + "</span><b>Кухнята приема поръчки до 22:30. Поръчай за утре?</b><p>Изберете ястията сега, а в количката посочете час утре след 10:00.</p></div>";
+  /* the one hour note (lib/ui.ts): closed / before 10:00; after 21:00 the eta line says "Вземане" */
+  if (!S.kitchen) h += hourNote(S);
   if (st.menu === "bf") {
     if (S.breakfast) {
       const left = 690 - S.m;
@@ -190,6 +191,7 @@ export function menuLd(site: URL | undefined): object[] {
   const menu = {
     "@context": "https://schema.org", "@type": "Menu", "@id": abs(url.menu()) + "#menu",
     name: "Меню на " + RESTAURANT.name, url: abs(url.menu()), inLanguage: "bg",
+    provider: { "@type": "Restaurant", "@id": abs(url.home()) + "#restaurant", name: RESTAURANT.name },
     hasMenuSection: cats.map((c) => ({ "@type": "MenuSection", name: c.n, url: abs(url.cat(c.id)), hasMenuItem: inCat(c.id).map(item) })),
   };
   const crumbs = {

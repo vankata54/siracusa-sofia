@@ -2,6 +2,7 @@
    Port of design/pages/category.html (design/PAGES.md "category.html" + the common logic of menus and filters).
    Pure string renderers, no DOM. The card, the chip icons and the plural come from ../_menu.ts (same look as /menu/).
    Pieces that depend on the hour take a State; the server calls them without one and the browser fills them in. */
+import { crumbs, hourNote, hourTitle, hourLine, faqHead } from "../../../lib/ui.ts";
 import { cats, catById, inCat, isOut, FILTERS, ZONES, RESTAURANT, type Dish, type Category } from "../../../lib/data.ts";
 import type { State, Eta } from "../../../lib/status.ts";
 import { art } from "../../../lib/render.ts";
@@ -110,14 +111,13 @@ const priceText = (pr: { min: number; max: number }): string => (pr.min === pr.m
 
 /* ---------- hero ---------- */
 export function crumbsHTML(c: Category | null): string {
-  return '<nav class="crumbs" aria-label="Къде сте"><ol><li><a href="' + url.menu() + '">' + ic("fork-knife", 18) + "Меню</a></li>" +
-    (c ? '<li aria-current="page">' + esc(c.n) + "</li>" : "") + "</ol></nav>";
+  return crumbs(c ? [["Меню", url.menu()], [c.n]] : [["Меню", url.menu()]]); /* the one breadcrumb (lib/ui.ts) */
 }
 /** The hour line in the facts (delivery / pickup / breakfast hours / opens at 10:00). */
 export function timeFact(c: Category, S: State, e: Eta): string {
   if (c.id === "zakuski" && !S.breakfast) return '<span class="fi">' + ic("clock", 18) + "</span><span>Сервираме ги от 10:00 до 11:30</span>";
-  if (S.delivery) return '<span class="fi">' + ic("moped", 18) + "</span><span>Доставка около " + e.min + " мин" + (e.busy ? '<span class="sub">Възможни са закъснения</span>' : "") + "</span>";
-  if (S.kitchen) return '<span class="fi">' + ic("storefront", 18) + '</span><span>Вземане до 22:30<span class="sub">Доставката приключи</span></span>';
+  if (S.delivery) return '<span class="fi">' + ic("moped", 18) + "</span><span>Доставка сега · около " + e.min + "&nbsp;мин" + (e.busy ? '<span class="sub">Възможни са закъснения</span>' : "") + "</span>";
+  if (S.kitchen) return '<span class="fi">' + ic("storefront", 18) + "</span><span>" + hourTitle(S) + '<span class="sub">' + hourLine(S) + "</span></span>";
   return '<span class="fi">' + ic("clock", 18) + "</span><span>Поръчки от 10:00</span>";
 }
 export function timeFactCls(c: Category, S: State, e: Eta): string {
@@ -160,7 +160,7 @@ export function noticesHTML(c: Category, S: State, offline: boolean): string {
   if (offline) n.push(notice("warning-circle", "Няма връзка с интернет", "Показваме менюто от последното ви посещение. Количката е запазена; ще поръчате, когато връзката се върне.", '<button class="pill pill-line" type="button" data-retry>' + ic("arrow-up-right", 18) + "Опитай пак</button>"));
   if (c.id === "zakuski" && !S.breakfast && S.m >= 690) n.push(notice("coffee", "Закуските свършиха за днес", "Сервираме ги всеки ден от 10:00 до 11:30. Можете да изберете нещо друго от менюто.", '<a class="pill pill-line" href="' + url.menu() + '">Към менюто</a>'));
   else if (c.id === "zakuski" && S.m < 600) n.push(notice("coffee", "Закуските са от 10:00 до 11:30", "Отваряме в 10:00. Тогава можете да поръчате.", ""));
-  else if (!S.kitchen) n.push(notice("clock", S.m < 600 ? "Кухнята отваря в 10:00" : "Кухнята затвори за днес", "Приемаме поръчки всеки ден от 10:00 до 22:30. Изберете спокойно сега, количката ще ви чака" + (S.m < 600 ? "." : " за утре."), ""));
+  else if (!S.kitchen) n.push(hourNote(S)); /* the one hour note (lib/ui.ts) */
   return n.join("");
 }
 
@@ -227,7 +227,7 @@ export function faqData(c: Category): [string, string][] {
   const it = inCat(c.id), veg = it.filter((x) => x.t.indexOf("veg") > -1), gr = gramRange(it), nn = many(c.id);
   const more = (href: string, t: string) => '<p><a class="link" href="' + href + '">' + t + ic("caret-right", 16) + "</a></p>";
   const q: [string, string][] = [];
-  q.push(["Докъде доставяте?", "<p>Безплатно до " + listJoin(FREE) + ", всеки ден до 21:00, обикновено за около 35 мин. До " + listJoin(PAID) + ' доставяме по тарифа <span class="missing">[ЛИПСВА: такса в €]</span>.</p>' + more(url.page("delivery"), "Проверете адреса си")]);
+  q.push(["Докъде доставяте?", "<p>Безплатно до " + listJoin(FREE) + ", всеки ден до 21:00, обикновено за около 35 мин. До " + listJoin(PAID) + ' доставяме по тарифа <span class="missing">[ЛИПСВА: такса в €]</span>.</p>' + more(url.page("delivery"), "Провери адреса")]);
   q.push(["Мога ли да взема поръчката от ресторанта?", "<p>Да. Поръчки за вземане приемаме до 22:30 и са готови най-рано след 20 мин. Адресът е " + esc(RESTAURANT.address) + ".</p>" + more(url.page("pickup"), "Как работи вземането")]);
   if (c.id === "pitsi") q.push(["Колко голяма е една пица?", "<p>Пиците са " + gr + ' Диаметър: <span class="missing">[ЛИПСВА: диаметър в см]</span>.</p>']);
   if (c.id === "skara-bertha") q.push(["Какво е фурната Bertha?", "<p>Затворена фурна на дървени въглища: огънят нагрява стените и тавана, затова топлината е равномерна, около 250 - 350 °C. Оттам идва и опушеният вкус.</p>" + more(url.page("bertha"), "Повече за фурната")]);
@@ -238,7 +238,7 @@ export function faqData(c: Category): [string, string][] {
 }
 export function faqHTML(c: Category): string {
   const q = faqData(c);
-  return '<section class="sec" aria-labelledby="faq-h"><div class="faqwrap"><div><h2 class="h2" id="faq-h">Често задавани въпроси</h2><p class="muted faq-note">Отговорите са от данните на ресторанта. <span class="missing">[ЛИПСВА: окончателни въпроси и отговори от агенцията]</span></p></div>' +
+  return '<section class="sec" aria-labelledby="faq-h"><div class="faqwrap">' + faqHead("faq-h") +
     '<div class="shell faqbox"><div class="core faq">' + q.map((z, i) => "<details" + (i === 0 ? " open" : "") + "><summary>" + z[0] + '<span class="tg" aria-hidden="true">' + ic("plus", 18) + '</span></summary><div class="a">' + z[1] + "</div></details>").join("") + "</div></div></div></section>";
 }
 
@@ -262,6 +262,7 @@ export function catLd(c: Category, site: URL | undefined): object[] {
   const menu = {
     "@context": "https://schema.org", "@type": "Menu", "@id": abs(url.cat(c.id)) + "#menu", name: c.n + " · Меню на " + RESTAURANT.name, url: abs(url.cat(c.id)), inLanguage: "bg",
     isPartOf: { "@type": "Menu", "@id": abs(url.menu()) + "#menu", url: abs(url.menu()) },
+    provider: { "@type": "Restaurant", "@id": abs(url.home()) + "#restaurant", name: RESTAURANT.name },
     hasMenuSection: { "@type": "MenuSection", "@id": abs(url.cat(c.id)) + "#section", name: c.n, url: abs(url.cat(c.id)), hasMenuItem: inCat(c.id).map(item) },
   };
   const crumbs = {

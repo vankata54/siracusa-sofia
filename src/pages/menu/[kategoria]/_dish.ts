@@ -4,6 +4,7 @@
 import { items, byId, catById, inCat, isOut, ALLERGENS, allergenName, COURSE_NAME, RESTAURANT, type Dish } from "../../../lib/data.ts";
 import { pic, plusBtn } from "../../../lib/render.ts";
 import { ic } from "../../../lib/icons.ts";
+import { callBtn } from "../../../lib/ui.ts";
 import { esc, fmt } from "../../../lib/format.ts";
 import { url } from "../../../lib/routes.ts";
 import { suggest, type ManualPairs } from "../../../lib/suggest.ts";
@@ -62,7 +63,7 @@ export function allergenBlock(d: Dish): string {
     h += (al.length ? '<p class="algnone" style="margin-bottom:8px">Съдържа поне:</p><ul class="algs">' + li + "</ul>" : "") +
       '<p class="algnone">' + (al.length ? "Пълни данни за алергените още нямаме." : "Няма данни за алергени, попитайте ни.") + "</p>" +
       '<p class="note-auto" style="margin:0">' + ic("info", 18) + "<span>Кухнята въвежда състава и алергените на това ястие. Дотогава ви казваме по телефона.</span></p>" +
-      '<div class="ask"><a class="pill pill-line" href="tel:' + RESTAURANT.phoneIntl + '">' + ic("phone", 20) + "Попитай: " + RESTAURANT.phone + "</a></div>";
+      '<div class="ask">' + callBtn("pill pill-line") + "</div>";
   } else {
     h += (al.length ? '<ul class="algs" aria-label="Съдържа">' + li + "</ul>" : '<p class="algnone">По състава не открихме от 14-те основни алергена.</p>') +
       (diet.length ? '<p class="dietlbl">Също по състава:</p><ul class="algs" aria-label="По състава">' + diet.map((z) => '<li class="alg diet"><span class="ico">' + ic(z[0], 20) + "</span>" + z[1] + "</li>").join("") + "</ul>" : "") +

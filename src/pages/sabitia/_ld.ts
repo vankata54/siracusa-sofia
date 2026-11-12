@@ -38,7 +38,7 @@ export function normEvent(e: SiteEvent | (Omit<SiteEvent, "date"> & { date: stri
 
 export const BREAD_EVENTS = "Събития и поводи";
 const PLACE = (site: string) => ({
-  "@type": "Restaurant", name: R.name, telephone: R.phoneIntl, url: new URL(url.home(), site).href,
+  "@type": "Restaurant", "@id": new URL(url.home(), site).href + "#restaurant", name: R.name, telephone: R.phoneIntl, url: new URL(url.home(), site).href,
   address: { "@type": "PostalAddress", streetAddress: R.street, postalCode: R.postalCode, addressLocality: R.city, addressCountry: "BG" },
 });
 

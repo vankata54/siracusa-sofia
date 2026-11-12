@@ -173,13 +173,6 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
 .qa[open] summary .ic{transform:rotate(180deg)}
 .qa p{margin:0 0 18px; color:var(--muted); max-width:62ch}
 
-/* ---------- prototype panel ---------- */
-.proto{display:grid; gap:12px; padding:18px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent; border:0}
-.proto h2{margin:0; font-size:16px; display:flex; align-items:center; gap:8px}
-.proto p{margin:0; font-size:14px; color:var(--muted)}
-.proto .btns{display:flex; flex-wrap:wrap; gap:8px}
-.proto .pill{min-height:48px; font-size:16px}
-.proto .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
 
 /* ---------- forms in sheets ---------- */
 .of-form{display:grid; gap:18px; padding:4px 2px 6px}
@@ -242,7 +235,6 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
 
 <script>
   import { SC } from "../../client/sc.ts";
-  import { sofiaYmd } from "../../lib/time.ts";
   import "../../lib/icons/seal-percent.ts";
   import "../../lib/icons/arrow-right.ts";
   import "../../lib/icons/arrow-clockwise.ts";
@@ -256,7 +248,7 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
   import "../../lib/icons/warning.ts";
   import "../../lib/icons/warning-circle.ts";
   import "../../lib/icons/user.ts";
-  import "../../lib/icons/sliders-horizontal.ts";
+  import { previewPanel, pvChip, pvToggle, PV } from "../../lib/ui.ts";
   import { heroHTML, heroSkel, couponSkel, gridHTML, nowHTML, sumHTML, errorHTML, netHTML, type OfData, type OfLive, type OfUser } from "./_offers.ts";
 
   const main = SC.mount({ docTitle: "Оферти и отстъпки" });
@@ -274,10 +266,10 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
     return u ? { name: String(u.name || ""), birthday: !!(u.consent && u.consent.birthday), bday: String((u.consent && u.consent.bday) || "") } : null;
   }
   function live(): OfLive {
-    const isToday = sofiaYmd() === DATA.lunchDate;
+    const isToday = SC.lunchIsToday(); /* preview / demo: today (one helper for every page) */
     const ev = SC.events()[0];
     /* preview / demo: the lunch menu in the data counts as today's, so the -30% state can be seen (same as /vzemi-ot-myasto/) */
-    return { s: SC.state(), isToday, lunchLive: isToday || SC.preview, ls: SC.lastSaturday(), ev: { id: ev.id, n: ev.n, time: ev.time, text: ev.text }, user: me() };
+    return { s: SC.state(), isToday, lunchLive: isToday, ls: SC.lastSaturday(), ev: { id: ev.id, n: ev.n, time: ev.time, text: ev.text }, user: me() };
   }
 
   let lastKey = "";
@@ -422,7 +414,7 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
          : '<div class="field"><label for="b-mail">Имейл, на който да ви пишем</label><input class="input" id="b-mail" name="mail" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" aria-describedby="e-mail"><span class="err" id="e-mail" hidden></span></div>') +
       "<div data-alert></div>" +
       '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Включи подаръка за рождения ден</button>' +
-      (u ? "" : '<p class="fine">С профил датата се пази заедно с картата с печати. <a class="link" href="' + SC.url.login() + '">Направи профил</a></p>') + "</div>" +
+      (u ? "" : '<p class="fine">С профил датата се пази заедно с картата с печати. <a class="link" href="' + SC.url.login() + '">Влез с телефон</a></p>') + "</div>" +
       "</form>" });
     const f = s.el.querySelector("form") as F, btn = f.querySelector<HTMLButtonElement>("[data-go]")!, label = btn.textContent || "";
     const DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -467,11 +459,8 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
 
   /* ---------- preview only: the states panel (bottom of the page) ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec"><div class="proto" role="group" aria-labelledby="h-proto"><h2 id="h-proto">' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
-      "<p>Покажете състоянията на страницата. Часът се сменя с ?t=21:30 в адреса.</p>" +
-      '<div class="btns"><button class="pill pill-soft" type="button" data-proto="loading">Зареждане</button>' +
-      '<button class="pill pill-soft" type="button" data-proto="error">Грешка при зареждане</button>' +
-      '<button class="pill pill-soft" type="button" data-proto="offline" aria-pressed="false">Без интернет</button></div></div></section>';
+    $("[data-proto]").outerHTML = previewPanel(pvChip(PV.loading, false, 'data-proto="loading"') + pvChip(PV.error, false, 'data-proto="error"') + pvToggle(PV.offline, false, 'data-proto="offline"'),
+      { id: "h-proto", text: "Покажете състоянията на страницата. Часът се сменя с ?t=21:30 в адреса. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- page events ---------- */
@@ -487,7 +476,7 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
     const p = SC.preview ? t.dataset.proto : undefined;
     if (p === "loading") { view = "loading"; fill(true); $("[data-grid]").scrollIntoView({ block: "center" }); setTimeout(() => { view = "ok"; fill(true); }, 1800); return; }
     if (p === "error") { view = "error"; fill(true); $("[data-grid]").scrollIntoView({ block: "center" }); return; }
-    if (p === "offline") { net.sim = !net.sim; t.setAttribute("aria-pressed", String(net.sim)); showNet(); SC.toast(net.sim ? "Симулираме: няма интернет" : "Връзката е възстановена"); }
+    if (p === "offline") { net.sim = !net.sim; t.setAttribute("aria-pressed", String(net.sim)); t.textContent = PV.offline + ": " + (net.sim ? "вкл." : "изкл."); showNet(); SC.toast(net.sim ? "Симулираме: няма интернет" : "Връзката е възстановена"); }
   });
   window.addEventListener("hashchange", () => fromHash(true));
   window.addEventListener("offline", () => { net.offline = true; showNet(); });

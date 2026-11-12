@@ -3,9 +3,10 @@
    (SEO, fast first paint). The parts that depend on the hour, the date or the visitor (Поръчай, обедно меню, доставка сега,
    оферти, събития, бележката за доставка) are drawn here for the build moment and redrawn in the browser from _home.ts. */
 import Base from "../layouts/Base.astro";
+import { miss, mapSlot, callBtn } from "../lib/ui.ts";
 import { url, ic, art, dishCard, byId, isOut, inCat, lunchIsToday, offers, events, state, eta, lastSaturday, ZONES, RESTAURANT } from "../lib/index.ts";
 import { MENU } from "../data/menu.ts";
-import { goHTML, lunchTileText, etaInner, slideHTML, dotHTML, firstOfferKey, eventsHTML, deliveryNote, restaurantLd } from "./_home.ts";
+import { popErrHTML, goHTML, lunchTileText, etaInner, slideHTML, dotHTML, firstOfferKey, eventsHTML, deliveryNote, restaurantLd } from "./_home.ts";
 
 const R = RESTAURANT, MENU_LUNCH_DATE = MENU.lunch.date;
 const st = state(), et = eta(), lunchToday = lunchIsToday(), ls = lastSaturday();
@@ -40,13 +41,6 @@ const sparks = [[58, "5px", "4.8s", "0s", "-22px", "34%"], [66, "4px", "5.6s", "
 const free = ZONES.filter((z) => z.free), paid = ZONES.filter((z) => !z.free);
 const dnote = deliveryNote(st);
 
-const mapSvg = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
-  '<path class="park" d="M-10 214 C40 196 96 206 130 236 L150 310 L-10 310Z"/>' +
-  '<rect class="blk" x="22" y="26" width="92" height="58" rx="10"/><rect class="blk" x="22" y="108" width="62" height="72" rx="10"/><rect class="blk" x="150" y="20" width="70" height="44" rx="10"/>' +
-  '<rect class="blk" x="250" y="18" width="128" height="50" rx="10"/><rect class="blk" x="270" y="96" width="44" height="88" rx="10"/><rect class="blk" x="334" y="96" width="60" height="64" rx="10"/>' +
-  '<rect class="blk" x="164" y="196" width="80" height="60" rx="10"/><rect class="blk" x="276" y="214" width="108" height="64" rx="10"/><rect class="blk" x="112" y="112" width="30" height="64" rx="8"/>' +
-  '<path class="road big" d="M-20 94 C120 92 240 84 420 82"/><path class="road mid" d="M236 -10 C232 80 246 170 258 320"/><path class="road sm" d="M-10 192 C70 188 160 186 250 190"/>' +
-  '<path class="road sm" d="M132 -10 L138 92"/><path class="road sm" d="M256 196 C310 200 360 196 420 190"/><path class="road sm" d="M98 96 L104 300"/></svg>';
 /* Google Maps embed, loaded only after a tap (no third-party request before that) */
 const mapEmbed = "https://www.google.com/maps?output=embed&hl=bg&q=" + encodeURIComponent(R.name + ", " + R.address);
 
@@ -76,7 +70,7 @@ const jsonld = restaurantLd(Astro.site);
 
   <!-- ---------- promo banner (ember): offers(), 6 s, pause, dots; the first slide is static ---------- -->
   <section class="sec promo-sec" aria-label="Оферти">
-    <div class="promo" data-promo role="region" aria-roledescription="въртящ се банер" aria-label="Оферти">
+    <div class="promo" data-promo role="region" aria-roledescription="въртящ се банер" aria-label="Въртящ се банер с оферти">
       <div class="slides" data-slides aria-live="off" set:html={slidesHTML}></div>
       <div class="pctl"><div class="dots" role="group" aria-label="Избери оферта" data-dots set:html={dotsHTML}></div>
         <button class="pp" type="button" data-pp><Fragment set:html={ic("pause", 20)} /><span>Пауза</span></button></div>
@@ -91,7 +85,7 @@ const jsonld = restaurantLd(Astro.site);
     <div data-popbody>
       {popItems.length
         ? <div class="rail pop" set:html={popItems.map((x) => dishCard(x)).join("")}></div>
-        : <div class="errbox" role="alert"><Fragment set:html={ic("warning-circle", 28)} /><b>Не успяхме да заредим ястията.</b><p>Проверете връзката и опитайте пак. Можете да поръчате и по телефона: {R.phone}.</p><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div>}
+        : <Fragment set:html={popErrHTML()} />}
     </div>
   </section>
 
@@ -135,12 +129,12 @@ const jsonld = restaurantLd(Astro.site);
     <p class="dnote" data-dnote hidden={!dnote} set:html={dnote}></p>
     <div class="dlv"><div>
       <div class="zgroup"><h3>Безплатна доставка</h3><ul class="ztags">{free.map((z) => <li><Fragment set:html={ic("check-circle", 20)} />{z.n}</li>)}</ul></div>
-      <div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">{paid.map((z) => <li><Fragment set:html={ic("map-pin", 20)} />{z.n}</li>)}</ul><span class="missing">[ЛИПСВА: такси за доставка в €]</span></div>
+      <div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">{paid.map((z) => <li><Fragment set:html={ic("map-pin", 20)} />{z.n}</li>)}</ul><Fragment set:html={miss("fee")} /></div>
       <a class="link" href={url.page("delivery")}>Карта на зоните<Fragment set:html={ic("caret-right", 18)} /></a>
       <p class="pay"><Fragment set:html={ic("wallet", 20)} /><span>Плащане на място: В брой, Карта при получаване или Ваучер.</span></p>
     </div>
-    <form class="card chk rv" data-chk novalidate action={url.page("delivery")}><div class="field"><label for="addr">Провери адреса си</label>
-      <div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Квартал и блок" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>
+    <form class="card chk rv" data-chk novalidate action={url.page("delivery")}><div class="field"><label for="addr">Провери адреса</label>
+      <div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Например: Дружба 2, бл. 311" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>
       <p class="err" id="addr-err" hidden></p></div>
       <div class="res" data-res hidden aria-live="polite"></div></form></div>
   </section>
@@ -149,16 +143,13 @@ const jsonld = restaurantLd(Astro.site);
   <section class="sec" aria-labelledby="wh-h">
     <div class="sec-h"><h2 class="h2" id="wh-h">Как да стигнете</h2></div>
     <div class="where">
-      <div class="shell rv"><div class="core map" data-map data-embed={mapEmbed}><Fragment set:html={mapSvg} />
-        <div class="pinw" aria-hidden="true"><span class="lbl">Siracusa</span><span class="pin" set:html={ic("fork-knife", 22)}></span><span class="ring"></span></div>
-        <span class="mtag missing">[ЛИПСВА: статична карта от Google]</span>
-        <button class="pill live" type="button" data-maplive><Fragment set:html={ic("map-trifold", 20)} />Отвори картата</button></div></div>
+      <div class="shell rv"><div class="core map" data-map data-embed={mapEmbed}><Fragment set:html={mapSlot({ tag: "button", attrs: "data-maplive", cta: "Покажи картата" })} /></div></div>
       <div class="info"><p class="addr"><Fragment set:html={ic("map-pin", 24)} /><span>{R.address}</span></p>
         <div class="kv"><span>Всеки ден</span><b>{R.open} - {R.close}</b></div><div class="kv"><span>Кухнята приема</span><b>до {R.kitchen}</b></div>
         <div class="kv"><span>Доставка</span><b>до {R.delivery}</b></div><div class="kv"><span>Обедно меню</span><b>{R.open} - {R.lunchUntil}</b></div>
-        <div class="kv"><span>Паркиране</span><b class="missing">[ЛИПСВА]</b></div>
+        <div class="kv"><span>Паркиране</span><b set:html={miss("parking")}></b></div>
         <div class="btns"><a class="pill pill-ink pill-lg" href={R.maps} target="_blank" rel="noopener"><Fragment set:html={ic("path", 22)} />Маршрут в Google Maps</a>
-          <a class="pill pill-line pill-lg" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 22)} />{R.phone}</a></div></div>
+          <Fragment set:html={callBtn("pill pill-line pill-lg")} /></div></div>
     </div>
   </section>
   </div>
@@ -345,7 +336,7 @@ const jsonld = restaurantLd(Astro.site);
 /* ---------- how to get here ---------- */
 .where{display:grid; gap:16px}
 .map{position:relative; aspect-ratio:4/3; background:var(--surface-2)}
-.map > svg{position:absolute; inset:0; width:100%; height:100%; display:block}
+.map .map-slot{position:absolute; inset:0; border-radius:0}
 .map > iframe{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
 .map .blk{fill:var(--surface-3)} .map .road{stroke:var(--surface); fill:none; stroke-linecap:round} .map .park{fill:color-mix(in srgb, var(--ok) 22%, var(--surface-2))}
 .map .road.big{stroke-width:22} .map .road.mid{stroke-width:12} .map .road.sm{stroke-width:7}
@@ -434,7 +425,8 @@ const jsonld = restaurantLd(Astro.site);
 
 <script>
   import { SC } from "../client/sc.ts";
-  import { lunchTileText, goHTML, etaInner, eventsHTML, deliveryNote, dotHTML, firstOfferKey, greekLead, checkAddress } from "./_home.ts";
+  import { lunchTileText, goHTML, etaInner, eventsHTML, deliveryNote, dotHTML, firstOfferKey, greekLead, checkAddress, popErrHTML } from "./_home.ts";
+  import { previewPanel, PV } from "../lib/ui.ts";
   /* the icons this script draws itself (the server ones are already in the HTML) */
   import "sc-icons:pause,play,arrow-right,moped,warning-circle,check-circle,map-pin,storefront,calendar-check,calendar-blank,hourglass,confetti,seal-percent"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
@@ -444,11 +436,8 @@ const jsonld = restaurantLd(Astro.site);
   /* preview-only states (?preview=1#loading / #error / #offline), never on the real site */
   const demo = SC.preview ? (location.hash || "").slice(1) : "";
 
-  /* the lunch menu in the data is for one date; never call it "today" on another day (BRIEF 8) */
-  function sofiaDate(d = new Date()): string {
-    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(d); } catch { return d.toISOString().slice(0, 10); }
-  }
-  const lunchToday = () => sofiaDate() === home.dataset.lunchDate;
+  /* the lunch menu in the data is for one date; never call it "today" on another day (BRIEF 8); preview / demo: today */
+  const lunchToday = () => SC.lunchIsToday();
 
   /* ---------- the parts that depend on the hour (redrawn now and every minute on sc:tick) ---------- */
   let lastKey = "";
@@ -460,7 +449,7 @@ const jsonld = restaurantLd(Astro.site);
     const go = $("[data-go]");
     go.outerHTML = goHTML(st);
     $("[data-go]").addEventListener("click", (e) => { if ((e.currentTarget as HTMLElement).hasAttribute("data-pickup")) SC.cart.mode("pickup"); });
-    $("[data-lunchtile]").innerHTML = lunchTileText(st, lt || SC.preview); /* like the offers banner: -30% only on a day with a lunch menu */
+    $("[data-lunchtile]").innerHTML = lunchTileText(st, lt); /* like the offers banner: -30% only on a day with a lunch menu */
     $("[data-eta]").innerHTML = etaInner(st, eta);
     const dn = $("[data-dnote]"), note = deliveryNote(st);
     dn.innerHTML = note; dn.hidden = !note;
@@ -490,7 +479,7 @@ const jsonld = restaurantLd(Astro.site);
   let slides: HTMLElement[] = [], dots: HTMLButtonElement[] = [], cur = 0, timer: ReturnType<typeof setTimeout> | undefined, started = 0, left = DUR;
   let playing = !SC.reduce, userPaused = false;
   function promoSetup(st: ReturnType<typeof SC.state>, lt: boolean) {
-    const fk = firstOfferKey(st, lt || SC.preview); /* preview and the demo count the menu as today, like the other pages */
+    const fk = firstOfferKey(st, lt); /* SC.lunchIsToday(): preview and the demo count the menu as today, like the other pages */
     const first = variants.querySelector<HTMLElement>('[data-key="' + fk + '"]')!.cloneNode(true) as HTMLElement;
     first.removeAttribute("data-key");
     const rest = Array.from(slidesBox.querySelectorAll<HTMLElement>(".slide")).filter((s) => !/^(lunch|lunch30|tomorrow)$/.test(s.dataset.oid || ""));
@@ -558,7 +547,6 @@ const jsonld = restaurantLd(Astro.site);
   mapBtn.addEventListener("click", () => {
     const f = document.createElement("iframe");
     f.src = map.dataset.embed!; f.title = "Карта: " + SC.RESTAURANT.address; f.loading = "lazy"; f.referrerPolicy = "no-referrer-when-downgrade"; f.setAttribute("allowfullscreen", "");
-    map.querySelectorAll(":scope > svg, .pinw, .mtag").forEach((x) => x.remove());
     mapBtn.remove(); map.appendChild(f);
   });
   $("[data-vslot]").addEventListener("click", () => SC.toast("Видеото идва след новата фотосесия."));
@@ -577,11 +565,10 @@ const jsonld = restaurantLd(Astro.site);
       $("[data-popbody]").innerHTML = '<div class="rail pop" aria-busy="true" aria-label="Зареждане">' + [0, 1, 2, 3].map(() => '<div class="skcard"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>').join("") + "</div>";
       $("[data-evs]").innerHTML = '<div class="card ev" aria-busy="true"><div class="skel" style="height:96px"></div><div class="stack"><div class="skel" style="height:22px;width:70%"></div><div class="skel" style="height:18px;width:50%"></div><div class="skel" style="height:48px;width:60%;border-radius:999px"></div></div></div>';
     } else if (demo === "error") {
-      $("[data-popbody]").innerHTML = '<div class="errbox" role="alert">' + ic("warning-circle", 28) + "<b>Не успяхме да заредим ястията.</b><p>Проверете връзката и опитайте пак. Можете да поръчате и по телефона: " + SC.RESTAURANT.phone + '.</p><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div>';
+      $("[data-popbody]").innerHTML = popErrHTML();
     }
-    const states: [string, string][] = [["", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]];
-    home.insertAdjacentHTML("beforeend", '<section class="sec" aria-label="Само в прегледа"><div class="proto"><b>Само в прегледа</b><div class="chips" style="margin:8px 0 0;padding:2px 0;flex-wrap:wrap">' +
-      states.map((x) => '<a class="chip" href="#' + x[0] + '" data-demo="' + x[0] + '"' + (demo === x[0] ? ' aria-current="true"' : "") + ">" + x[1] + "</a>").join("") + "</div></div></section>");
+    const states: [string, string][] = [["", PV.normal], ["loading", PV.loading], ["error", PV.error], ["offline", PV.offline]];
+    home.insertAdjacentHTML("beforeend", previewPanel(states.map((x) => '<a class="chip" href="#' + x[0] + '" data-demo="' + x[0] + '"' + (demo === x[0] ? ' aria-current="true"' : "") + ">" + x[1] + "</a>").join(""), { id: "home-pv" }));
     home.querySelectorAll<HTMLAnchorElement>("[data-demo]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); location.hash = a.dataset.demo!; location.reload(); }));
   }
 

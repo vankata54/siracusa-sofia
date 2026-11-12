@@ -11,6 +11,7 @@ import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
 import type { Reservation } from "../../client/api-types.ts";
+import { callBtn, stepperHTML, pvChip, pvToggle, previewPanel, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* the icons this script draws in one module (sc.ts has x, check, caret-right, phone, question; scripts/icon-groups.mjs) */
 import "sc-icons:caret-left,caret-down,info,mask-happy,clock,minus,plus,timer,wallet,chat-circle-dots,bell,chair,tree,sun,baby,wheelchair,users-three,thermometer,map-trifold,list-bullets,calendar-blank,calendar-check,users,pencil-simple,cake,heart,briefcase,gift,confetti,warning-circle,warning,arrow-right,arrow-left,arrow-up-right,map-pin,fork-knife,lock,sliders-horizontal,image";
 
@@ -132,7 +133,7 @@ export function start(): void {
     view: "flow" as View, step: 1, date: null as Date | null, month: MIN_M, slot: null as number | null, period: "eve", n: 2, zone: "salon" as Zone,
     sel: null as string | null, hold: 0, expired: false, list: false, need: {} as Record<string, boolean>,
     f: { name: "", phone: "", email: "", occ: "", note: "", consent: false } as Draft, err: {} as Record<string, string>,
-    busy: false, fail: null as null | "offline" | "error", failText: null as string | null, blocked: false, msg: null as string | null, released: null as string | null,
+    busy: false, fail: null as null | "offline" | "error", failText: null as string | null, failCall: false, blocked: false, msg: null as string | null, released: null as string | null,
     anim: true, changing: null as Booking | null, booking: null as Booking | null,
     manage: null as null | { b: Booking; late: boolean; cancelled: boolean; was?: boolean; past?: boolean; busy?: boolean; err?: string }, confirmCancel: false, mload: false,
     proto: { offline: false, fail: false, eventFull: false }, protoOpen: false,
@@ -228,8 +229,8 @@ export function start(): void {
   /* ---------- pieces ---------- */
   const STEP_N = ["Кога и колко", "Маса", "Данни"];
   function stepper(): string {
-    return '<div class="stepper rstep" role="group" aria-label="Стъпки на резервацията"><div class="t"><b>Стъпка ' + st.step + " от 3</b><span>" + STEP_N[st.step - 1] + '</span></div><div class="bar" aria-hidden="true">' +
-      STEP_N.map((_, i) => { const k = i + 1; return '<span class="' + (k <= st.step ? "on" : "") + (k === st.step && st.anim ? " now" : "") + '"></span>'; }).join("") + "</div></div>";
+    /* the shared stepper (lib/ui.ts): "Стъпка 2 от 3" + "Следва: Данни" / "Последна стъпка", as in every flow */
+    return stepperHTML(st.step, 3, STEP_N[st.step], { cls: "rstep", label: "Стъпки на резервацията", now: st.anim });
   }
 
   /* step 1: calendar */
@@ -410,8 +411,10 @@ export function start(): void {
     h += '<div class="field occ"><span class="label" id="occl">Повод <span class="opt">(по желание)</span></span><div class="chips" role="group" aria-labelledby="occl">' + OCC.map((o) => '<button class="chip" type="button" data-occ="' + o + '" data-fk="o' + o + '" aria-pressed="' + (st.f.occ === o) + '">' + ic(occIc(o), 20) + o + "</button>").join("") + "</div>" +
       (st.f.occ === "Рожден ден" || st.f.occ === "Имен ден" ? '<span class="help">Искате торта или украса?</span><a class="link" href="' + SC.url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a>" : "") + "</div>";
     h += '<div class="field"><label for="f-note">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="f-note" data-f="note" data-fk="fnote" rows="3" placeholder="Например: идваме с бебе в количка">' + esc(st.f.note) + "</textarea></div>";
-    h += '<div class="consent"><label class="check"><input type="checkbox" data-consent data-fk="cs"' + (st.f.consent ? " checked" : "") + '><span><b>Искам да получавам оферти и първи да научавам за събитията</b><span class="muted">По желание. Можете да се откажете по всяко време.</span></span></label></div>';
-    if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + "<div><b>" + (st.fail === "offline" ? "Няма връзка" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : (st.failText ? esc(st.failText) : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".")) + '</p><div class="acts"><button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-right", 20) + "Опитай пак</button></div></div></div>";
+    h += '<div class="consent"><label class="check"><input type="checkbox" data-consent data-fk="cs"' + (st.f.consent ? " checked" : "") + '><span><b>' + MKT_TITLE + '</b><span class="muted">' + MKT_SUB + "</span></span></label></div>";
+    if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + '<div><b tabindex="-1" data-failh>' + (st.fail === "offline" ? "Няма връзка с интернет" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : (st.failText ? esc(st.failText) : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".")) + '</p><div class="acts">' +
+      /* too many tries (429): another try is refused too, so the action is the phone */
+      (st.failCall ? callBtn("pill pill-red") : '<button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-clockwise", 20) + "Опитай пак</button>") + "</div></div></div>";
     h += '<p class="rules">' + ic("info", 20) + "<span>Без депозит. Промяна или отказ от връзката в SMS-а: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</span></p>";
     h += '<button type="submit" class="vh" tabindex="-1">Резервирай</button></form>';
     return h;
@@ -421,12 +424,12 @@ export function start(): void {
   function cta(): { t: string; s: string; rehold?: boolean; tel?: boolean } {
     const s = selInfo();
     if (st.step === 1) {
-      if (!st.date) return { t: "Изберете ден", s: "Докоснете ден" };
-      if (st.slot == null) return { t: "Изберете час", s: fTiny(st.date) + " · " + ppl(st.n) };
+      if (!st.date) return { t: "Избери ден", s: "Докоснете ден" };
+      if (st.slot == null) return { t: "Избери час", s: fTiny(st.date) + " · " + ppl(st.n) };
       return { t: "Избери маса", s: fTiny(st.date) + " · " + hm(st.slot) + " · " + ppl(st.n) };
     }
     if (st.step === 2) {
-      if (!s) return { t: st.n > 6 ? "Изберете зона" : "Изберете маса", s: st.n > 6 ? "Салон или градина" : "Докоснете маса" };
+      if (!s) return { t: st.n > 6 ? "Избери зона" : "Избери маса", s: st.n > 6 ? "Салон или градина" : "Докоснете маса" };
       if (st.expired) return { t: "Задръж " + s.label.toLowerCase() + " пак", s: "Задържането изтече", rehold: true };
       return { t: "Попълни данните", s: s.short + ' · <span data-hold>' + holdTxt() + "</span> мин" };
     }
@@ -449,7 +452,7 @@ export function start(): void {
     const kv = (k: string, v: string | null | false | undefined) => '<div class="kv"><span>' + k + "</span>" + (v ? "<b>" + v + "</b>" : '<b class="no">избирате</b>') + "</div>";
     return '<aside class="aside" aria-label="Вашата резервация"><div class="shell sum"><div class="core"><h2>Вашата резервация</h2>' +
       kv("Ден", st.date && fShort(st.date)) + kv("Час", st.slot != null && hm(st.slot)) + kv("Хора", ppl(st.n)) + kv("Маса", s && (s.label + " · " + zoneName(s.zone))) +
-      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад към " + (st.step === 2 ? "деня и часа" : "масата") + "</button>" : "") +
+      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад</button>" : "") +
       '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + "Въпроси: " + R.phone + "</li></ul></aside>";
   }
 
@@ -480,7 +483,7 @@ export function start(): void {
     return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm" aria-hidden="true">' + ic("check", 48) + '</div><h1 class="h1" tabindex="-1" data-h>' + (b.changed ? "Резервацията е променена" : "Масата е запазена") + '</h1><p class="lead">Очакваме ви ' + fWhen(b.date) + ", в&nbsp;" + hm(b.slot) + ".</p></div>" +
       '<div class="dgrid"><div class="shell dcard"><div class="core">' + kvRows(b) + '</div></div><div class="dside"><p class="sms">' + ic("chat-circle-dots", 22) + "<span>Потвърждението идва по SMS или Viber на " + esc(b.phone) + ".</span></p>" +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-ics data-fk="ics">' + ic("calendar-check", 22) + 'Добави в календара</button><a class="link gcal" href="' + gcalUrl(b) + '" target="_blank" rel="noopener">или в Google Календар' + ic("arrow-up-right", 18) + "</a>" +
-      '<div class="two"><a class="pill pill-line" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("map-pin", 20) + 'Маршрут</a><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a></div></div></div>" +
+      '<div class="two"><a class="pill pill-line" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("map-pin", 20) + 'Маршрут</a>' + callBtn("pill pill-line") + "</div></div></div>" +
       (ev ? '<div class="evnote" style="margin-top:16px"><span class="evic">' + ic("mask-happy", 22) + "</span><div><b>Този ден е " + EV.n + "</b><p>Започва в " + EV.time + ". " + esc(EV.text) + '</p><a class="link" href="' + SC.url.event(EV.id) + '">За събитието' + ic("caret-right", 18) + "</a></div></div>" : "") +
       '<h2 class="h3" style="margin-top:36px">Какво следва</h2><ol class="nexts">' +
       '<li><span class="ni">' + ic("bell", 22) + "</span><span><b>Напомняме ви ден преди и 3 часа преди</b><p>По SMS или Viber, на същия номер.</p></span></li>" +
@@ -557,11 +560,11 @@ export function start(): void {
     let h = '<section class="sec rdone"><div class="done-in" style="max-width:640px"><p class="small muted" style="margin:0 0 6px;font-weight:700">Промяна или отказ</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>' +
       '<div class="shell dcard" style="margin-top:20px"><div class="core">' + kvRows(b) + '</div></div><div style="margin-top:16px">';
     const rule = lim === 120 ? "2 часа преди резервация след 17:00" : "1 час преди резервация през деня";
-    const callBtn = (cls: string) => '<a class="pill pill-red ' + cls + '" href="' + TEL + '">' + ic("phone", 20) + "<span>Обади се · " + nb(R.phone) + "</span></a>";
+    const callBtnR = (cls: string) => callBtn("pill pill-red " + cls);
     if (M.past) h += '<div class="alert">' + ic("calendar-blank", 22) + "<div><b>Тази резервация вече мина</b><p>Промяна и отказ вече не са нужни. Ако искате да дойдете пак, запазете нова маса.</p>" +
       '<div class="acts"><button class="pill pill-red" type="button" data-new data-fk="nw">' + ic("calendar-blank", 20) + "Резервирай нова маса</button></div></div></div>";
-    else if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts">' + callBtn("") + "</div></div></div>";
-    else if (!b.id && !SC.preview) h += '<div class="mng"><p class="rules">' + ic("info", 20) + "<span>Тази резервация не намираме онлайн. Промяна и отказ: по телефона, до " + rule + ".</span></p>" + callBtn("pill-lg pill-block") + "</div>";
+    else if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts">' + callBtnR("") + "</div></div></div>";
+    else if (!b.id && !SC.preview) h += '<div class="mng"><p class="rules">' + ic("info", 20) + "<span>Тази резервация не намираме онлайн. Промяна и отказ: по телефона, до " + rule + ".</span></p>" + callBtnR("pill-lg pill-block") + "</div>";
     else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><h2 id="cfh" class="cfh" tabindex="-1" data-fk="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</h2><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
     else h += '<div class="mng"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">' + ic("pencil-simple", 22) + '<span>Промени деня, часа или масата</span></button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">' + ic("x", 22) + "<span>Откажи резервацията</span></button>" +
       '<p class="rules">' + ic("info", 20) + "<span>Можете да промените или откажете тук или от връзката в SMS-а до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ". По-късно: на " + R.phone + ".</span></p></div>";
@@ -572,10 +575,11 @@ export function start(): void {
   function proto(): string {
     if (!SC.preview) return "";
     const p = st.proto;
-    const b = (k: string, t: string, pressed?: boolean) => '<button class="pill pill-line" type="button" data-proto="' + k + '" data-fk="x' + k + '"' + (pressed !== undefined ? ' aria-pressed="' + pressed + '"' : "") + ">" + t + "</button>";
-    return '<section class="sec"><details class="proto"' + (st.protoOpen ? " open" : "") + " data-protod><summary>" + ic("sliders-horizontal", 20) + "Само в прегледа: състояния" + ic("caret-down", 20) + "</summary><p>Бутоните симулират ситуации, които в живия сайт идват от системата.</p><div class=\"pg\">" +
-      b("event", EV.n + ": пълно 19:00 - 20:30", p.eventFull) + b("group", "Голяма група: 8 души") + b("expire", "Задържането изтича след 5 сек.") + b("offline", "Няма интернет", p.offline) + b("fail", "Грешка при запазване", p.fail) +
-      b("blocked", "Блокиран номер 0888 000 000") + b("manage", "Промяна или отказ: навреме") + b("late", "Промяна или отказ: по-малко от 2 ч / 1 ч") + "</div></details></section>";
+    const b = (k: string, t: string) => '<button class="chip" type="button" data-proto="' + k + '" data-fk="x' + k + '">' + t + "</button>";
+    const a = (k: string) => 'data-proto="' + k + '" data-fk="x' + k + '"';
+    /* the shared panel (lib/ui.ts): the same title, sentence and switch words as on every page */
+    return previewPanel(pvToggle(PV.offline, p.offline, a("offline")) + pvToggle(PV.error + " при запазване", p.fail, a("fail")) + pvToggle(EV.n + ": пълно 19:00 - 20:30", p.eventFull, a("event")) +
+      b("group", "Голяма група: 8 души") + b("expire", "Задържането изтича след 5 сек.") + b("blocked", "Блокиран номер 0888 00 00 00") + b("manage", "Промяна или отказ: навреме") + b("late", "Промяна или отказ: по-малко от 2 ч / 1 ч"), { id: "r-pv" });
   }
 
   /* ---------- render ---------- */
@@ -646,9 +650,13 @@ export function start(): void {
     submit();
   }
   async function submit(): Promise<void> {
-    st.busy = true; st.fail = null; st.failText = null; render();
+    st.busy = true; st.fail = null; st.failText = null; st.failCall = false; render();
     const s = selInfo()!, f = st.f, d = st.date!, m = st.slot!;
-    const done1 = (fail: "offline" | "error") => { st.busy = false; st.fail = fail; render(); scrollToEl(main.querySelector(".alert.bad")); };
+    /* the error: in sight, the focus on its title (never on <body>), and no toast over it */
+    const done1 = (fail: "offline" | "error") => {
+      st.busy = false; st.fail = fail; render(); SC.ov.querySelector(".toast")?.classList.remove("on");
+      scrollToEl(main.querySelector(".alert.bad")); main.querySelector<HTMLElement>("[data-failh]")?.focus({ preventScroll: true });
+    };
     if (SC.preview && (st.proto.offline || st.proto.fail)) { await new Promise((r) => setTimeout(r, 700)); done1(st.proto.offline ? "offline" : "error"); return; }
     if (navigator.onLine === false) { done1("offline"); return; }
     const old = st.changing;
@@ -690,7 +698,7 @@ export function start(): void {
           Object.keys(e.fields).forEach((k) => { if (map[k]) fe[map[k]] = e.fields![k]; });
           if (Object.keys(fe).length) { st.err = fe; render(); const first = main.querySelector<HTMLElement>('[aria-invalid="true"]'); if (first) { scrollToEl(first); first.focus({ preventScroll: true }); } return; }
         }
-        if (e.code === "too_late" || e.code === "throttled") { st.failText = e.message; done1("error"); return; }
+        if (e.code === "too_late" || e.code === "throttled") { st.failText = e.message; st.failCall = e.code === "throttled"; done1("error"); return; }
         done1(e.code === "offline" ? "offline" : "error"); return;
       }
       done1("error");
@@ -757,7 +765,7 @@ export function start(): void {
     } catch (e) {
       btn.removeAttribute("aria-busy"); (btn as HTMLButtonElement).disabled = false;
       if (e instanceof ApiError && e.code === "blocked") {
-        box.innerHTML = '<div class="alert" role="alert">' + ic("phone", 22) + '<div><b>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts"><a class="pill pill-red" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div></div>";
+        box.innerHTML = '<div class="alert" role="alert">' + ic("phone", 22) + '<div><b>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts">' + callBtn("pill pill-red") + "</div></div></div>";
         return;
       }
       pErr.hidden = false; pErr.textContent = e instanceof ApiError && e.code === "offline" ? "Няма връзка. Проверете интернета и опитайте пак." : e instanceof ApiError && e.code === "throttled" ? e.message : "Не успяхме да ви запишем. Опитайте пак или се обадете на " + R.phone + ".";
@@ -839,7 +847,7 @@ export function start(): void {
     }
     if (k === "group") { st.view = "flow"; releaseIfNeeded(); st.released = null; st.n = 8; st.step = 1; await ready(false); st.sel = null; st.hold = 0; go(2); return; }
     if (k === "expire") { st.view = "flow"; await ready(false); if (st.step < 2) st.step = 2; st.hold = Date.now() + 5000; st.expired = false; st.anim = true; render(); toTop(); SC.toast("Задържането ще изтече след 5 секунди"); return; }
-    if (k === "blocked") { st.view = "flow"; await ready(true); st.f.phone = "0888 000 000"; st.blocked = false; st.err = {}; st.step = 3; st.anim = true; render(); toTop(); SC.toast("Натиснете „Резервирай“, за да видите съобщението"); return; }
+    if (k === "blocked") { st.view = "flow"; await ready(true); st.f.phone = "0888 00 00 00"; st.blocked = false; st.err = {}; st.step = 3; st.anim = true; render(); toTop(); SC.toast("Натиснете „Резервирай“, за да видите съобщението"); return; }
     if (k === "manage" || k === "late") { openManage(k === "late"); if (k === "manage" && st.view !== "manage") { const b0: Booking = { date: addDays(TODAY, 1), slot: 1170, n: 4, selLabel: "Маса 5 · Салон", phone: "0888 12 34 56" }; st.manage = { b: b0, late: false, cancelled: false }; st.view = "manage"; } render(); toTop(); return; }
   }
   document.addEventListener("keydown", (e) => {

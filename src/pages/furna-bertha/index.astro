@@ -12,7 +12,7 @@ import { url } from "../../lib/routes.ts";
 import { ic } from "../../lib/icons.ts";
 import { inCat, isOut } from "../../lib/data.ts";
 import { dishCard } from "../../lib/render.ts";
-import { RESTAURANT as R } from "../../lib/consts.ts";
+import { crumbs, photoSlot, faqHead } from "../../lib/ui.ts";
 import { sortDishes, faq, faqHTML, gauge, diagram, stepsHTML, playHTML, serviceHTML, countHTML } from "./_bertha.ts";
 
 const dishes = sortDishes(inCat("skara-bertha"), isOut);
@@ -26,16 +26,16 @@ const abs = (p: string) => new URL(p, Astro.site || "https://siracusa-sofia.com"
 const jsonld = [
   { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
     { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
-    { "@type": "ListItem", position: 2, name: "Нашата фурна Bertha", item: abs(url.page("bertha")) },
+    { "@type": "ListItem", position: 2, name: "Фурната Bertha", item: abs(url.page("bertha")) },
   ] },
   { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: q[1] } })) },
 ];
-const description = "Скара на дървени въглища във фурна Bertha в Дружба 2, София. Затворена фурна, равномерна топлина около 250 - 350 °C и опушен вкус. Кебапчета, ребра, стекове Black Angus с доставка или на място.";
+const description = "Скара на дървени въглища във фурна Bertha в Дружба 2, София: равномерна топлина около 250 - 350 °C и опушен вкус. Кебапчета, ребра и стекове Black Angus.";
 const cta = "Виж ястията от скарата";
 ---
-<Base page="bertha" nav={null} title="Нашата фурна Bertha" docTitle="Фурната Bertha: скара на дървени въглища" description={description} jsonld={jsonld}>
+<Base page="bertha" nav={null} title="Фурната Bertha" docTitle="Фурната Bertha: скара на дървени въглища" description={description} jsonld={jsonld}>
   <div class="wrap">
-    <nav class="crumbs" aria-label="Къде сте"><a href={url.home()}>Начало</a><Fragment set:html={ic("caret-right", 14)} /><span aria-current="page">Нашата фурна Bertha</span></nav>
+    <Fragment set:html={crumbs([["Начало", url.home()], ["Фурната Bertha"]])} />
     <section class="fire hero" aria-labelledby="h1"><div class="glow"></div>
       <div class="txt"><span class="eyebrow"><Fragment set:html={ic("fire", 18)} />Нашата фурна Bertha</span>
         <h1 class="h1" id="h1" style="margin-top:16px">Скара на дървени въглища във фурна Bertha</h1>
@@ -55,7 +55,7 @@ const cta = "Виж ястията от скарата";
   </section>
 
   <section class="sec rv" aria-labelledby="h-vid"><div class="sec-h" style="display:block"><h2 class="h2" id="h-vid">Фурната в действие</h2><p class="lead" style="margin-top:8px">Въглищата, скарата и готовите ястия отблизо.</p></div>
-    <div class="shell"><div class="slot v pic"><span class="ring red" set:html={ic("play", 30)}></span><span class="missing">[ЛИПСВА: видео от фурната Bertha от новата фотосесия]</span><span class="tag"><Fragment set:html={ic("video-camera", 16)} />Видео</span></div></div>
+    <div class="shell" set:html={photoSlot({ kind: "video", of: "фурната Bertha", ratio: "", cls: "v", tag: "div" })}></div>
     {/* for the developer (hand-off 13): the video plays without sound, with a poster and "Пауза", loaded lazily on scroll */}
   </section>
 
@@ -73,7 +73,7 @@ const cta = "Виж ястията от скарата";
   </section>
 
   <section class="sec rv" aria-labelledby="h-pp"><div class="sec-h" style="display:block"><h2 class="h2" id="h-pp">Фурната накратко</h2></div>
-    <div class="pp"><div class="shell"><div class="slot p pic"><span class="ring" set:html={ic("image", 30)}></span><span class="missing">[ЛИПСВА: снимка на нашата Bertha от новата фотосесия]</span><span class="tag"><Fragment set:html={ic("images", 16)} />Снимка</span></div></div>
+    <div class="pp"><div class="shell" set:html={photoSlot({ of: "фурната Bertha", ratio: "", cls: "p", tag: "div" })}></div>
       <div class="shell"><div class="core"><dl>
         <div class="kv"><dt>Вид</dt><dd>Затворена фурна на дървени въглища</dd></div>
         <div class="kv"><dt>Марка</dt><dd>Bertha, Великобритания</dd></div>
@@ -86,7 +86,7 @@ const cta = "Виж ястията от скарата";
   </section>
 
   <section class="sec rv" aria-labelledby="h-faq"><div class="faq-grid">
-    <div class="faq-side"><h2 class="h2" id="h-faq">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{R.phone}</a></div>
+    <Fragment set:html={faqHead("h-faq", { cls: "faq-side" })} />
     <div class="faq" set:html={faqHTML(FAQ)}></div>
   </div></section>
 
@@ -120,10 +120,7 @@ const cta = "Виж ястията от скарата";
 @keyframes breathe{from{opacity:.75; transform:scale(.94)} to{opacity:1; transform:scale(1.04)}}
 
 /* ---------- breadcrumbs ---------- */
-.crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:14px 0 8px; font-size:14px; font-weight:600; color:var(--muted)}
-.crumbs a{min-height:48px; display:inline-flex; align-items:center; text-decoration:none; color:var(--muted)}
-.crumbs a:hover{color:var(--ink)}
-.crumbs [aria-current]{color:var(--ink)}
+.sc-crumbs{margin:6px 0 4px}
 
 /* ---------- hero ---------- */
 .hero{padding:26px 22px 22px; display:grid; gap:24px; grid-template-areas:"txt" "cta" "vis"}
@@ -198,18 +195,15 @@ const cta = "Виж ястията от скарата";
 .step:focus-visible{outline-color:var(--ember); outline-offset:-3px}
 
 /* ---------- photo / video slots ---------- */
-.slot{position:relative; display:grid; place-items:center; align-content:center; gap:12px; padding:24px; text-align:center; border-radius:var(--r-img); overflow:hidden}
-.slot.v{aspect-ratio:16/10}
-.slot.p{aspect-ratio:4/3}
-.slot .ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--glass); color:var(--ink); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
-.slot .ring.red{color:var(--red)}
-.slot .missing{max-width:24em; font-size:15px; color:var(--ink); opacity:.8}
-.slot .tag{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--glass); font-size:14px; font-weight:700; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+/* the photo / video slots: the one look of the site (lib/ui.ts photoSlot); the page sets only the size */
+.ph-slot.v{aspect-ratio:16/10}
+.ph-slot.p{aspect-ratio:4/3}
 
 /* ---------- dishes ---------- */
 .anchor{scroll-margin-top:150px}
 @container app (min-width:900px){ .anchor{scroll-margin-top:130px} }
 .svc{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); margin-bottom:20px}
+[data-svc] > .sc-note{margin-bottom:20px}
 .svc .ic{margin-top:2px; flex:none}
 .svc b{display:block; font-size:16px; line-height:1.35}
 .svc p{margin:2px 0 0; color:var(--muted); font-size:15px}
@@ -226,8 +220,6 @@ const cta = "Виж ястията от скарата";
 .skcard .a{aspect-ratio:1; border-radius:24px}
 .skcard .b{height:18px; width:80%}
 .skcard .c{height:18px; width:45%}
-.err-box .ill{color:var(--danger)}
-.err-box .row{flex-wrap:wrap; justify-content:center}
 .side .rail .dcard{flex-basis:180px}
 .side .lead{margin:-6px 0 14px}
 
@@ -251,11 +243,6 @@ const cta = "Виж ястията от скарата";
 .faq .ans{margin:0; padding:0 20px 18px; color:var(--muted)}
 
 /* ---------- preview-only panel (bottom, off by default) ---------- */
-.proto{padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:10px}
-.proto h2{margin:0; font-size:16px; letter-spacing:0; display:flex; align-items:center; gap:8px}
-.proto p{margin:0; font-size:14px; color:var(--muted)}
-.proto .chips{flex-wrap:wrap; margin:0; padding:0; overflow:visible}
-.proto .chip{min-height:48px}
 
 /* ---------- closing ---------- */
 .close{padding:30px 22px 22px; display:grid; gap:14px}
@@ -273,10 +260,10 @@ const cta = "Виж ястията от скарата";
   .cta{grid-template-columns:1fr 1fr}
   .pp{grid-template-columns:1fr 1fr; align-items:stretch}
   .pp > .shell{display:grid}
-  .pp .slot.p{aspect-ratio:auto; min-height:300px}
+  .pp .ph-slot.p{aspect-ratio:auto; min-height:300px; height:100%}
 }
 @container app (min-width:900px){
-  .crumbs{margin:20px 0 12px}
+  .sc-crumbs{margin:12px 0 8px}
   .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); column-gap:56px; row-gap:0; padding:64px 64px 56px; align-items:center}
   .hero .glow{width:90%; left:auto; right:-14%; top:-10%}
   .hero .h1{font-size:60px}
@@ -291,7 +278,7 @@ const cta = "Виж ястията от скарата";
   .stage{padding:40px 18px 24px}
   .dtools{top:18px; right:18px}
   .steps{padding:12px 12px 12px 0}
-  .slot.v{aspect-ratio:21/9}
+  .ph-slot.v{aspect-ratio:21/9}
   .side .rail{display:grid; grid-template-columns:repeat(4,1fr); overflow:visible; margin:0; padding:0; gap:28px 20px}
   .side .rail .dcard{flex:auto}
   .faq-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:56px; align-items:start}
@@ -306,7 +293,7 @@ const cta = "Виж ястията от скарата";
 <script>
   import { SC } from "../../client/sc.ts";
   import { api } from "../../client/api.ts";
-  import "../../lib/icons/sliders-horizontal.ts";
+  import { previewPanel, pvChip, PV } from "../../lib/ui.ts";
   import { serviceHTML, countHTML, skeletonHTML, errorHTML, playHTML, sortDishes } from "./_bertha.ts";
 
   const main = SC.mount();
@@ -316,7 +303,7 @@ const cta = "Виж ястията от скарата";
 
   /* ---------- preview-only states ("Само в прегледа"): #loading, #error, #offline ---------- */
   type Demo = "" | "loading" | "error" | "offline";
-  const DEMOS: [Demo, string][] = [["", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]];
+  const DEMOS: [Demo, string][] = [["", PV.normal], ["loading", PV.loading], ["error", PV.error], ["offline", PV.offline]];
   let demo: Demo = "";
   if (SC.preview) { const h = location.hash.slice(1) as Demo; if (DEMOS.some((d) => d[0] === h)) demo = h; }
 
@@ -398,8 +385,8 @@ const cta = "Виж ястията от скарата";
 
   /* ---------- preview only: the states panel at the bottom ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Само в прегледа"><aside class="proto"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа: състояния</h2><p>Не влиза в сайта. Показва как изглеждат ястията в другите случаи. Часът се сменя с ?t=21:30 в адреса.</p><div class=\"chips\">" +
-      DEMOS.map((z) => '<button class="chip" type="button" data-demo="' + z[0] + '" aria-pressed="' + (demo === z[0]) + '">' + z[1] + "</button>").join("") + "</div></aside></section>";
+    $("[data-proto]").outerHTML = previewPanel(DEMOS.map((z) => pvChip(z[1], demo === z[0], 'data-demo="' + z[0] + '"')).join(""),
+      { id: "bt-pv", text: "Вижте как изглеждат ястията в другите състояния. Часът се сменя с ?t=21:30 в адреса. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- first paint ---------- */

@@ -8,9 +8,9 @@ export interface EndCta { label: string; href: string; text: string }
 
 export function endCta(st: Pick<State, "kitchen" | "delivery">): EndCta {
   const R = RESTAURANT;
-  if (!st.kitchen) return { label: "Поръчай за утре", href: url.menu(), text: "Кухнята приема поръчки до " + R.kitchen + ". Поръчайте за утре или запазете маса." };
-  if (!st.delivery) return { label: "Вземи от място", href: url.page("pickup"), text: "Доставката приключи за днес. Кухнята приема за вземане до " + R.kitchen + "." };
-  return { label: "Поръчай за вкъщи", href: url.menu(), text: "Запазете маса в салона или в градината. Или поръчайте и ние ще донесем, до " + R.delivery + "." };
+  if (!st.kitchen) return { label: "Поръчай за утре", href: url.menu(), text: "Кухнята затвори за днес. Приемаме поръчки утре от " + R.open + ". Или запазете маса." };
+  if (!st.delivery) return { label: "Поръчай за вземане", href: url.page("pickup"), text: "Доставката приключи за днес. Вземане до " + R.kitchen + "." };
+  return { label: "Поръчай", href: url.menu(), text: "Запазете маса в салона или в градината. Или поръчайте и ние ще донесем, до " + R.delivery + "." };
 }
 
 /** The link under "Кварталът": "днес" only when the lunch menu in the data is for today's date (BRIEF 8). */

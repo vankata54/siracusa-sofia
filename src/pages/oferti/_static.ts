@@ -8,6 +8,8 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { miss, type OfData } from "./_offers.ts";
+import { payAnswer, payAnswerText } from "../../lib/pay.ts";
+import { faqHead } from "../../lib/ui.ts";
 
 /* ---------- real lunch dishes as examples (never invented) ---------- */
 const pick = (re: RegExp) => lunch.find((x) => re.test(x.n));
@@ -41,7 +43,7 @@ export function loyaltyHTML(): string {
         '<li><div><b>Събирайте печати</b><span class="d">Печат получавате за ' + miss("за какво се дава печат") + ".</span></div></li>" +
         '<li><div><b>Вземете подаръка</b><span class="d">На 10-ия печат: ' + miss("наградата") + ".</span></div></li>" +
       "</ol>" +
-      '<a class="pill pill-line of-cta" href="' + url.login() + '">Вземи картата в профила' + ic("arrow-right", 20) + "</a>" +
+      '<a class="pill pill-line of-cta" href="' + url.login() + '">Влез с телефон' + ic("arrow-right", 20) + "</a>" +
       '<p class="of-fine">Картата на снимката е пример. С колко печата започвате: ' + miss("от собственика") + "</p>" +
     "</div></div></section>";
 }
@@ -60,7 +62,7 @@ export function voucherHTML(): string {
       '<ol class="steps">' +
         '<li><div><b>Изпращате запитване</b><span class="d">С желаната сума и телефон за връзка.</span></div></li>' +
         '<li><div><b>Обаждаме ви се</b><span class="d">Уговаряме кога да минете. Срок: ' + miss("до кога се обаждаме") + ".</span></div></li>" +
-        '<li><div><b>Плащате на място</b><span class="d">В брой или с карта и взимате ваучера.</span></div></li>' +
+        '<li><div><b>Плащате на място</b><span class="d">Плащате в ресторанта, в брой или с карта, и взимате ваучера.</span></div></li>' +
       "</ol>" +
       '<button class="pill pill-line of-cta" type="button" data-sheet="voucher">Запитване за ваучер' + ic("caret-right", 20) + "</button>" +
       '<p class="of-fine">Валидност на ваучера: ' + miss("срок") + "</p>" +
@@ -69,23 +71,25 @@ export function voucherHTML(): string {
 
 /* ---------- FAQ (also FAQPage in JSON-LD) ---------- */
 const exOff = DATA.ex ? fmt(DATA.ex.disc) : "";
-export const FAQ: [string, string][] = [
+/* [question, answer HTML, answer text for JSON-LD] */
+export const FAQ: [string, string, string?][] = [
   ["Къде виждам отстъпката?", "В количката, на отделен ред, преди да поръчате." + (exOff ? " Например: „Отстъпка след 15:00: -" + exOff + "“." : "")],
   ["Мога ли да съчетая две отстъпки?", "Не, отстъпките не се събират. Ако за една поръчка важат и -30% на обедното меню, и код за отстъпка, количката сама избира по-изгодната за вас."],
   ["Къде въвеждам кода от оценката?", "В количката, в полето „Код за отстъпка“. Кодът е еднократен и дава -10% на ястията, без таксата за доставка."],
   ["Трябва ли ми профил?", "За -30% след 15:00 и за ранната резервация не. За -10% с профил и за картата с печати да. Профилът се прави с телефон и код по SMS, без парола."],
-  ["Как плащам?", "В брой или с карта, на място или при доставка. Приемаме и ваучери за храна. Онлайн плащане засега няма."],
+  /* the one answer about payment (decision 12.11): lib/pay.ts */
+  ["Как мога да платя?", payAnswer(), payAnswerText()],
 ];
 export function faqHTML(): string {
-  return '<section class="sec" aria-labelledby="h-faq"><div class="faq"><h2 class="h2" id="h-faq" style="margin-bottom:12px">Добре е да знаете</h2>' +
-    FAQ.map((x) => '<details class="qa"><summary>' + esc(x[0]) + ic("caret-down", 20) + "</summary><p>" + esc(x[1]) + "</p></details>").join("") + "</div></section>";
+  return '<section class="sec" aria-labelledby="h-faq"><div class="faq">' + faqHead("h-faq") +
+    FAQ.map((x) => '<details class="qa"><summary>' + esc(x[0]) + ic("caret-down", 20) + "</summary><p>" + x[1] + "</p></details>").join("") + "</div></section>";
 }
 
 /* ---------- JSON-LD ---------- */
 export function offersLd(site: URL | undefined): object[] {
   const abs = (p: string) => new URL(p, site || "https://siracusa-sofia.com").href;
-  const seller = { "@type": "Restaurant", name: R.name, telephone: R.phoneIntl, url: abs(url.home()),
-    address: { "@type": "PostalAddress", streetAddress: R.street, postalCode: R.postalCode, addressLocality: R.city, addressCountry: "BG" } };
+  /* the one restaurant node of the site (the full node with this @id is on /, /za-nas/, /kontakti/): a reference here */
+  const seller = { "@type": "Restaurant", "@id": abs(url.home()) + "#restaurant", name: R.name };
   /* only rules that are decided; no dates, validity or conditions marked [ЛИПСВА] */
   const offer = (id: string, name: string, description: string) => ({ "@type": "Offer", name, description, url: abs(url.offers(id)), seller });
   return [
@@ -96,10 +100,10 @@ export function offersLd(site: URL | undefined): object[] {
     { "@context": "https://schema.org", "@type": "OfferCatalog", name: "Оферти и отстъпки", url: abs(url.offers()), itemListElement: [
       offer("lunch", "-30% на обедното меню след 15:00", "Само за ястията от обедното меню и само при вземане от място, от 15:00 до 22:30. Отстъпката се смята сама в количката."),
       offer("signup", "-10% с профил", "-10% от следващата поръчка, когато направите профил с телефонен номер и код по SMS. Прилага се сам на следващата ви поръчка."),
-      offer("rating", "-10% за кратка оценка", "Код за -10% от следващата поръчка след отговор на „Останахте ли доволни?“, еднакво при „Да“ и при „Не“."),
+      offer("rating", "-10% за кратка оценка", "Код за -10% на ястията след отговор на „Останахте ли доволни?“, еднакво при „Да“ и при „Не“."),
       offer("birthday", "Рожден ден при нас", "-10% от сметката или малка торта за рожденика, с отделно съгласие."),
       offer("celebration", "-5% за празник при ранна резервация", "-5% от крайната цена на празник при ранна резервация."),
     ] },
-    { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: q[1] } })) },
+    { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: q[2] || q[1] } })) },
   ];
 }

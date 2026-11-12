@@ -10,6 +10,7 @@ import { url } from "../../lib/routes.ts";
 import { pic, plusBtn } from "../../lib/render.ts";
 import { price, pickupSlots, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
 import type { State } from "../../lib/status.ts";
+import { hourNote, stateBox, loadingText } from "../../lib/ui.ts";
 import type { Cart } from "../../lib/cart.ts";
 
 /* ---------- hours and rules (from src/lib) ---------- */
@@ -75,10 +76,10 @@ export function ctaHTML(cls: string, v: CtaView | null): string {
 /* ---------- hero alert (browser only: it needs the hour) ---------- */
 export function alertHTML(s: State): string {
   const m = s.m;
-  if (m < OPEN) return '<div class="pk-alert off">' + ic("moon", 22) + "<span><b>Затворено.</b> Отваряме в " + R.open + ". Можете да изберете час за днес още сега.</span></div>";
-  if (m >= CLOSE) return '<div class="pk-alert off">' + ic("moon", 22) + "<span><b>Затворено.</b> Отваряме утре в " + R.open + ". Поръчайте сега за утре.</span></div>";
-  if (!s.kitchen) return '<div class="pk-alert warn">' + ic("clock", 22) + "<span><b>Кухнята приема поръчки до " + K + ".</b> Поръчайте за утре, от " + R.open + ".</span></div>";
-  if (!s.delivery) return '<div class="pk-alert warn">' + ic("truck", 22) + "<span><b>Доставката приключи за днес.</b> Вземете поръчката от ресторанта до " + K + ". -" + PCT + "% на обедното меню още важи.</span></div>";
+  /* the one hour note of the site (lib/ui.ts) */
+  if (m < OPEN) return hourNote(s, { more: "Можете да изберете час за днес още сега." });
+  if (!s.kitchen) return hourNote(s, { more: "Можете да поръчате сега за утре." });
+  if (!s.delivery) return hourNote(s, { more: "-" + PCT + "% на обедното меню още важи." });
   if (s.lunchDiscount) return '<div class="pk-alert ember">' + ic("seal-percent", 22) + "<span><b>Сега: -" + PCT + "% на обедното меню</b> при вземане, до " + K + '. <a href="#deal">Как става</a></span></div>';
   return "";
 }
@@ -112,10 +113,11 @@ function resultHTML(p: Plan, s: State, chosen: number | null, tomorrow: string):
   const busy = p.busy ? '<div class="pk-busy">' + ic("warning", 20) + "<span>Кухнята е натоварена. Най-близките часове са заети.</span></div>" : "";
   return '<div class="pk-res" aria-live="polite"><span class="lbl">Готово</span><span class="pk-big" data-big>' + big + "</span><p>" + sub + "</p>" + tag + busy + "</div>";
 }
-function errHTML(type: "wifi" | "err", title: string, text: string): string {
-  return '<div class="pk-err" role="alert"><span class="ttl">' + ic(type === "wifi" ? "warning-circle" : "warning", 22) + title + "</span><p>" + text + '</p><div class="row"><button class="pill pill-soft" type="button" data-retry>' + ic("arrow-clockwise", 18) + 'Опитай пак</button><a class="pill pill-line" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + R.phone + "</a></div></div>";
+/* error / no connection: the shared box (lib/ui.ts), same title words and buttons as on every page */
+function errHTML(type: "wifi" | "err", text: string): string {
+  return stateBox({ kind: type === "wifi" ? "offline" : "error", what: "свободните часове", text, h: "h3" });
 }
-const skeletonHTML = () => '<div class="pk-pick">Или изберете час<span>Проверяваме кухнята</span></div><div class="pk-asap skel" style="box-shadow:none" aria-hidden="true"></div><div class="pk-slots" aria-busy="true">' + '<span class="skel"></span>'.repeat(8) + '</div><span class="vh" role="status">Зареждаме свободните часове</span>';
+const skeletonHTML = () => '<div class="pk-pick">Или изберете час<span>Проверяваме кухнята</span></div><div class="pk-asap skel" style="box-shadow:none" aria-hidden="true"></div><div class="pk-slots" aria-busy="true">' + '<span class="skel"></span>'.repeat(8) + '</div><span class="vh" role="status">' + loadingText("свободните часове") + "</span>";
 function slotsHTML(p: Plan, chosen: number | null, tomorrow: string): string {
   const asapLabel = p.now ? "Веднага" : p.kind === "lunch" ? (p.day === "tomorrow" ? "Утре в " : "В ") + hm(p.asap) : p.day === "tomorrow" ? "Утре, най-рано" : "Възможно най-скоро";
   const asapRight = p.now || p.kind === "lunch" ? "" : "около " + hm(p.asap);
@@ -132,8 +134,8 @@ export function liveHTML(v: LiveView): string {
   const s = v.s, sim = s ? v.sim : "loading", p = s ? plan(v.kind, s, v.busy) : null;
   const res = p && s && sim !== "offline" && sim !== "error" ? resultHTML(p, s, v.chosen, v.tomorrow) : "";
   const body = sim === "loading" || !p ? skeletonHTML()
-    : sim === "offline" ? errHTML("wifi", "Няма връзка.", "Свободните часове ще се покажат, щом се свържете. Можете и да ни се обадите.")
-    : sim === "error" ? errHTML("err", "Не успяхме да заредим свободните часове.", "Опитайте пак след малко или поръчайте по телефона.")
+    : sim === "offline" ? errHTML("wifi", "Свободните часове ще се покажат, щом се свържете. Можете и да ни се обадите.")
+    : sim === "error" ? errHTML("err", "Опитайте пак след малко или поръчайте по телефона.")
     : slotsHTML(p, v.chosen, v.tomorrow);
   return '<div class="pk-lh"><h2 class="h3" id="pk-live-h">Кога ще е готово?</h2>' + nowLine(s) + "</div>" +
     '<p class="pk-q">Какво ще поръчате?</p>' + segHTML(v.kind) +
@@ -205,7 +207,7 @@ export const FAQ: [string, string][] = [
 export const faqHTML = () => FAQ.map((f) => "<details><summary>" + f[0] + '<span class="cv">' + ic("caret-down", 20) + "</span></summary><p>" + f[1] + "</p></details>").join("");
 
 export const STEPS_TEXT = { step2: "Възможно най-скоро или точен час, през " + STEP + " минути, до " + aheadText() + " напред." };
-export const DESCRIPTION = "Поръчайте онлайн и вземете от Siracusa в Дружба 2. Обедното меню е готово веднага, ястията от менюто най-рано след " + LEAD + " минути. След " + L + " обедното меню е с -" + PCT + "% при вземане.";
+export const DESCRIPTION = "Поръчайте онлайн и вземете от Siracusa в Дружба 2. Обедното меню е готово веднага, ястията от менюто след " + LEAD + " минути. След " + L + " обедното меню е с -" + PCT + "%.";
 export const LEAD_TEXT = "Поръчайте онлайн и минете да вземете поръчката си. Обедното меню е готово веднага, ястията от менюто - най-рано след " + LEAD + " минути.";
 
 /** JSON-LD: BreadcrumbList + FAQPage. */

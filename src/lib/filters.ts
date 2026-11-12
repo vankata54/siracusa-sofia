@@ -4,20 +4,8 @@ import { FILTERS, catById, isOut, type Dish, type Filter } from "./data.ts";
 
 /* nouns per category: [one, "Всички ..." (plural), count form after a number] (decision 12.11.2026: "10 предястия",
    "3 бургера", "3 хлебчета"; categories without a noun count as "ястия", never "вида"). [0] also feeds the search. */
-export const NOUN: Record<string, [string, string, string]> = {
-  supi: ["супа", "супи", "супи"], salati: ["салата", "салати", "салати"],
-  "studeni-predyastia": ["предястие", "студени предястия", "предястия"], "topli-predyastia": ["предястие", "топли предястия", "предястия"],
-  pitsi: ["пица", "пици", "пици"], hlebcheta: ["хлебче", "хлебчета", "хлебчета"], garnituri: ["гарнитура", "гарнитури", "гарнитури"],
-  sosove: ["сос", "сосове", "соса"], burgeri: ["бургер", "бургери", "бургера"], dobavki: ["добавка", "добавки", "добавки"],
-  deserti: ["десерт", "десерти", "десерта"], zakuski: ["закуска", "закуски", "закуски"],
-};
-/** "12 пици", "1 сос", "3 соса", "10 ястия" */
-export function noun(cat: string, n: number): string {
-  const w = NOUN[cat] || ["ястие", "ястия", "ястия"];
-  return n + " " + (n === 1 ? w[0] : w[2]);
-}
-/** "Всички бургери" (or "Всички ястия" for a category without its own noun) */
-export function allOf(cat: string): string { return "Всички " + (NOUN[cat] ? NOUN[cat][1] : "ястия"); }
+import { NOUN, noun, allOf } from "./nouns.ts";
+export { NOUN, noun, allOf };
 
 /* ---------- filters ---------- */
 export interface FilterState { f: string[]; a: string[]; q: string }

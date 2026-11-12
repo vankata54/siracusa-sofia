@@ -19,7 +19,7 @@ async function open(page: Page, hash = "", t = "12:30") {
 const isPhone = (page: Page) => (page.viewportSize()?.width || 0) < 900;
 const next = (page: Page) => (isPhone(page) ? page.locator(".cbar [data-next]") : page.locator(".aside [data-next]"));
 const back = (page: Page) => (isPhone(page) ? page.locator(".cbar [data-back]") : page.locator(".aside [data-back]"));
-const stepIs = (page: Page, n: number) => expect(page.locator("[data-flow] .stepper .t > span").first()).toHaveText("Стъпка " + n + " от 3");
+const stepIs = (page: Page, n: number) => expect(page.locator("[data-flow] .stepper .t > b").first()).toHaveText("Стъпка " + n + " от 3");
 
 test("celebration: SEO, one h1, breadcrumb JSON-LD, no overflow at 360, no preview panel", async ({ page }) => {
   const errors = watch(page);

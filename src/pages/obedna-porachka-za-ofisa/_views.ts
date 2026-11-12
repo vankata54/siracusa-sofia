@@ -2,8 +2,10 @@
    (hero, "Как работи", subscription teaser, FAQ). Drawn on the server for SEO; the browser script (./_office.ts)
    draws the create form and the other views. Port of design/pages/office.html. */
 import { ic, pic, esc, fmt } from "../../lib/render.ts";
-import { byId, RESTAURANT, lunchIsToday, lunch, menu } from "../../lib/data.ts";
+import { byId, lunchIsToday, lunch, menu } from "../../lib/data.ts";
 import { url } from "../../lib/routes.ts";
+import { payAnswer, payAnswerText } from "../../lib/pay.ts";
+import { callBtn, faqHead } from "../../lib/ui.ts";
 
 /** The example in the hero (a picture of the idea, real dishes from the lunch menu). In the shared list the same
     three colleagues are simulated ONLY behind ?preview=1 (./_office.ts). */
@@ -56,14 +58,17 @@ export function howHTML(): string {
   `</ol></section>`;
 }
 
-/** [question, answer HTML]; answers with [ЛИПСВА] stay on the page but not in the FAQPage JSON-LD. */
-export const FAQ: [string, string][] = [
+/** [question, answer HTML, plain text for the JSON-LD]; answers with [ЛИПСВА] and without a plain text stay on the page
+    but not in the FAQPage JSON-LD. */
+const EACH = " Може да плати един за всички или всеки своето.";
+export const FAQ: [string, string, string?][] = [
   ["До колко часа може да е крайният час?", "До 14:00. Обедното меню се доставя до 15:00, а след крайния час ние приготвяме и тръгваме към вас."],
-  ["Как плащаме?", "В брой или с карта при получаване, без онлайн плащане. Може да плати един за всички или всеки своето."],
+  /* the one answer of the site (lib/pay.ts, decision 12.11.2026) */
+  ["Как мога да платя?", payAnswer() + EACH, payAnswerText() + EACH],
   ["Трябва ли колегите да имат профил?", "Не. Колегите отварят връзката, пишат само името си и избират от обедното меню."],
   ["Какво става в крайния час?", "Списъкът се затваря. Ако организаторът е дал телефон при създаването, поръчката тръгва към ресторанта сама. Без телефон организаторът я изпраща с един бутон. Може да я изпрати и по-рано."],
   ["Може ли организаторът да довърши поръчката от друго устройство?", "Да. След създаването получавате връзка само за вас. С нея отваряте списъка на друг телефон или компютър и изпращате поръчката."],
-  ["Има ли минимална поръчка?", '<span class="missing">[ЛИПСВА: минимална поръчка за обща доставка]</span>'],
+  ["Има ли минимална поръчка?", '<span class="missing">[ЛИПСВА: минимална поръчка в €]</span>'],
   ["Може ли фактура на фирмата?", '<span class="missing">[ЛИПСВА: фактура при обща поръчка]</span>'],
 ];
 
@@ -73,8 +78,8 @@ export function subFaqHTML(): string {
     `<div class="o-sub-card shell rv"><div class="core"><span class="o-tag">Скоро</span><h2 class="h3" style="font-size:24px;letter-spacing:-.03em">Обяд за офиса всеки ден</h2>` +
       `<p class="muted" style="margin:0">Абонамент за обедното меню: седмичен план с доставка в избран час и фактура.</p>` +
       `<p class="missing small" style="margin:0">[ЛИПСВА: условия и цени на абонамента за офиси]</p>` +
-      `<p style="margin:0;font-weight:600">Интересува ли ви? Обадете ни се:</p><a class="pill pill-line" href="tel:${RESTAURANT.phoneIntl}" style="justify-self:start" aria-label="Обади се на ${RESTAURANT.phone}">${ic("phone", 20)}${RESTAURANT.phone}</a></div></div>` +
-    `<div><h2 class="h2" style="margin-bottom:10px">Въпроси</h2><div class="o-faq">${faq}</div></div>` +
+      `<p style="margin:0;font-weight:600">Интересува ли ви? Обадете ни се:</p>${callBtn("pill pill-line")}</div></div>` +
+    `<div>${faqHead("o-faq-h", { cls: "o-faq-head" })}<div class="o-faq">${faq}</div></div>` +
   `</div></section>`;
 }
 
@@ -96,7 +101,7 @@ export function officeLd(site: URL | undefined): object[] {
   };
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage",
-    mainEntity: FAQ.filter((z) => z[1].indexOf("[ЛИПСВА") < 0).map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a.replace(/<[^>]+>/g, "") } })),
+    mainEntity: FAQ.filter((z) => z[2] || z[1].indexOf("[ЛИПСВА") < 0).map(([q, a, t]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: t || a.replace(/<[^>]+>/g, "") } })),
   };
   return [crumbs, faq];
 }

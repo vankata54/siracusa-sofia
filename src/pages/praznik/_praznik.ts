@@ -11,6 +11,7 @@
 import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
+import { previewPanel, callBtn, OFFLINE } from "../../lib/ui.ts";
 import "sc-icons:arrow-left,arrow-right,seal-percent,fork-knife,map-pin,phone,sliders-horizontal,cake,baby,heart,briefcase,star,balloon,confetti,minus,plus,caret-down,caret-up,info,chair,tree,house,check,receipt,list-checks,warning-circle,lock,clock,paper-plane-right,calendar-blank"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 import {
   TYPES, G_MIN, G_MAX, PRICE_DEFAULT, fresh, flowHTML, asideHTML, barHTML, summaryHTML, nextLabel, earlyHTML,
@@ -83,10 +84,10 @@ export function start(): void {
   function renderProto() {
     if (!SC.preview) { protoEl.hidden = true; return; }
     protoEl.hidden = false;
-    protoEl.innerHTML = '<div class="proto-h">' + ic("sliders-horizontal", 20) + "<span><b>Само в прегледа.</b> Тук пробвате решенията на админа и състоянията на страницата.</span></div>" +
-      '<div class="proto-row"><span class="label" id="pp-l">Цена за госта</span><div class="seg" role="group" aria-labelledby="pp-l"><button type="button" data-pp="show" aria-pressed="' + (P.price === "show") + '">Ориентировъчна</button><button type="button" data-pp="offer" aria-pressed="' + (P.price === "offer") + '">Ще ви изпратим оферта</button></div></div>' +
+    protoEl.innerHTML = previewPanel('<div class="proto-row"><span class="label" id="pp-l">Цена за госта</span><div class="seg" role="group" aria-labelledby="pp-l"><button type="button" data-pp="show" aria-pressed="' + (P.price === "show") + '">Ориентировъчна</button><button type="button" data-pp="offer" aria-pressed="' + (P.price === "offer") + '">Ще ви изпратим оферта</button></div></div>' +
       '<div class="proto-row"><label class="label" for="ps">При изпращане</label><div class="selw"><select class="input" id="ps" data-ps><option value="ok"' + (P.send === "ok" ? " selected" : "") + '>Успешно</option><option value="error"' + (P.send === "error" ? " selected" : "") + '>Грешка</option><option value="offline"' + (P.send === "offline" ? " selected" : "") + ">Без интернет</option></select>" + ic("caret-down", 18) + "</div></div>" +
-      '<div class="proto-row"><span class="label" id="pe-l">Ранна резервация -5%</span><div class="seg" role="group" aria-labelledby="pe-l"><button type="button" data-pe="0" aria-pressed="' + !P.early + '">Не важи</button><button type="button" data-pe="1" aria-pressed="' + P.early + '">Важи (пример)</button></div></div>';
+      '<div class="proto-row"><span class="label" id="pe-l">Ранна резервация -5%</span><div class="seg" role="group" aria-labelledby="pe-l"><button type="button" data-pe="0" aria-pressed="' + !P.early + '">Не важи</button><button type="button" data-pe="1" aria-pressed="' + P.early + '">Важи (пример)</button></div></div>',
+      { id: "pr-pv", bare: true, text: "Тук пробвате решенията на админа и състоянията на страницата. Тези бутони ги няма на истинския сайт." });
   }
 
   /* ---------- summary: desktop aside + phone bar ---------- */
@@ -186,8 +187,8 @@ export function start(): void {
   function showAlert(kind: "offline" | "error", msg?: string) {
     const al = flow.querySelector<HTMLElement>("[data-alert]"); if (!al) return;
     al.innerHTML = kind === "offline"
-      ? ic("warning-circle", 24) + '<span><b>Няма връзка с интернет.</b><p>Запитването ви е запазено на това устройство. Проверете връзката и опитайте пак.</p><span class="row"><button class="pill pill-ink" type="button" data-retry>Опитай пак</button></span></span>'
-      : ic("warning-circle", 24) + "<span><b>Не успяхме да изпратим запитването.</b><p>" + esc(msg || "Нищо не се изгуби. Опитайте пак след малко или ни се обадете.") + '</p><span class="row"><button class="pill pill-ink" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + R.phone + "</a></span></span>";
+      ? ic("warning-circle", 24) + '<span><b>' + OFFLINE + '</b><p>Запитването ви е запазено на това устройство. Проверете връзката и опитайте пак.</p><span class="row"><button class="pill pill-ink" type="button" data-retry>Опитай пак</button></span></span>'
+      : ic("warning-circle", 24) + "<span><b>Не успяхме да изпратим запитването.</b><p>" + esc(msg || "Нищо не се изгуби. Опитайте пак след малко или ни се обадете.") + '</p><span class="row"><button class="pill pill-ink" type="button" data-retry>Опитай пак</button>' + callBtn("pill pill-line") + "</span></span>";
     al.hidden = false; scrollToEl(al);
   }
   /* field errors from the core: kind / people belong to step 1, name / phone / email to step 3 */
@@ -228,7 +229,13 @@ export function start(): void {
 
   /* ---------- events ---------- */
   function changed() { save(); if (S.step === 1) { updGuests(); updEarly(); } if (S.step === 2) updPkgs(); updSummary(); }
-  function onNext() { if (sending) return; if (S.step < 3) { if (validate()) go(S.step + 1); } else submit(); }
+  /* step 2 with "Собствено меню": the dish list (and its error line) comes from a separate chunk; validate only once it is
+     drawn, so a fast tap never leaves the message without a place (site.review-tech Д9) */
+  function onNext() {
+    if (sending) return;
+    if (S.step === 2 && S.menu === "custom" && !M) { loadMenu().then(() => { updPicker(); onNext(); }).catch(() => { /* the picker shows the error */ }); return; }
+    if (S.step < 3) { if (validate()) go(S.step + 1); } else submit();
+  }
   document.addEventListener("click", (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>("button, a"); if (!t) return;
     if (!main.contains(t) && !SC.ov.contains(t)) return;

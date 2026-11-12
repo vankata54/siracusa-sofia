@@ -37,7 +37,7 @@ test("tracking: unknown number -> polite empty state, noindex, one h1", async ({
   await expect(page.locator("h1")).toHaveText("Не намираме поръчка № 999999");
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await expect(page.locator('a[href^="tel:"]', { hasText: "Обади се в ресторанта" })).toBeVisible();
+  await expect(page.locator('a[href^="tel:"]', { hasText: "Обади се · 0894 36 55 77" })).toBeVisible();
   await expect(page.getByText("Само в прегледа")).toHaveCount(0);
   await noHScroll(page);
   expect(errors.filter((e) => !/404/.test(e))).toEqual([]);
@@ -153,7 +153,7 @@ test("tracking: ?preview=1 shows the prototype panel and 'Симулирай: д
   /* a simulated state: the real order is not delivered, so no API call and a sample code, marked as such */
   await page.locator('[data-rate="yes"]').click();
   await expect(page.locator(".code .v")).toHaveText("SC10-0000000000");
-  await expect(page.locator(".code")).toContainText("Примерен код: само в прототипа.");
+  await expect(page.locator(".code")).toContainText("Примерен код: само в прегледа.");
   await noHScroll(page);
   expect(errors).toEqual([]);
 });

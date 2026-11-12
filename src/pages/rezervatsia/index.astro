@@ -23,7 +23,7 @@ const skeleton =
 ---
 <Base page="reservation" nav="reserve" title="Резервирай маса" docTitle="Резервирай маса в Дружба 2"
   description="Резервирайте маса в Siracusa, Дружба 2: изберете ден, час и маса в салона или в отопляваната градина. Без депозит, потвърждение по SMS или Viber."
-  ai={false} actionBar jsonld={jsonld}>
+  ai={false} bottomNav={false} actionBar jsonld={jsonld}>
   <section class="sec rhero" data-rhero>
     <h1 class="h1">Резервирай маса</h1>
     <p class="lead">Изберете ден, час и маса в салона или в отопляваната градина. Без депозит, потвърждение по SMS или Viber.</p>
@@ -44,7 +44,7 @@ const skeleton =
       <span class="row" style="flex-wrap:wrap;gap:4px 20px"><a class="link" href={R.maps} target="_blank" rel="noopener" set:html={ic("path", 20) + "Маршрут в Google Maps"}></a><a class="link" href={"tel:" + R.phoneIntl} set:html={ic("phone", 20) + R.phone}></a></span></span></div>
   </section>
   <div data-rproto></div>
-  <div class="abar rabar" role="region" aria-label="Следваща стъпка" data-rbar hidden slot="ov"></div>
+  <div class="abar nonav rabar" role="region" aria-label="Следваща стъпка" data-rbar hidden slot="ov"></div>
 </Base>
 
 <style is:global>

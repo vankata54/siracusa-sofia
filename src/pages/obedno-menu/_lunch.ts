@@ -9,6 +9,7 @@ import { esc, fmt, plural, MONTHS, MON, DAYS } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT, ORDER_RULES } from "../../lib/consts.ts";
 import type { Eta } from "../../lib/status.ts";
+import { stateBox, loadingText, callBtn, hourNote, hourTitle, hourLine, OFFLINE } from "../../lib/ui.ts";
 
 /** before 10:00 | 10:00-15:00 delivery or pickup | 15:00-22:30 pickup only -30% | after 22:30 */
 export type Phase = "before" | "lunch" | "discount" | "after";
@@ -114,7 +115,7 @@ export function todayCardHTML(v: View): string {
   else if (waiting) head = '<span class="dot"></span><span><b>Чакаме менюто за деня</b><span class="sub">Междувременно можете да поръчате от основното меню.</span></span>';
   else if (p === "lunch") head = '<span class="dot ok"></span><span><b>Сега: доставка и вземане</b><span class="sub">Поръчайте до 15:00 · остават ' + left(900 - (v.m ?? 0)) + "</span></span>";
   else if (p === "discount") head = '<span class="dot warn"></span><span><b>Сега: само вземане от място</b><span class="sub">До 22:30 · остават ' + left(1350 - (v.m ?? 0)) + "</span></span>";
-  else head = '<span class="dot"></span><span><b>Обедното меню е от 10:00 до 15:00</b><span class="sub">' + (p === "before" ? "Отваряме в 10:00. Тогава можете да поръчате." : "Кухнята затвори за днес. Утре сме тук от 10:00.") + "</span></span>";
+  else head = '<span class="dot"></span><span><b>Обедното меню е от 10:00 до 15:00</b><span class="sub">' + (p === "before" ? "Отваряме в 10:00. Тогава можете да поръчате." : hourTitle(hs(v)) + ". " + hourLine(hs(v)) + ".") + "</span></span>";
   const seg = p === "lunch" && can
     ? '<div class="seg" role="group" aria-label="Как да получите обеда"><button type="button" data-mode="delivery" aria-pressed="' + (v.mode !== "pickup") + '">' + ic("moped", 20) + 'Доставка</button><button type="button" data-mode="pickup" aria-pressed="' + (v.mode === "pickup") + '">' + ic("storefront", 20) + "Вземи от място</button></div>"
     : "";
@@ -134,29 +135,29 @@ export function plusHTML(id: string, p: number, n: string): string {
 export const SLOT = '<span class="slot" aria-hidden="true"></span>';
 
 /* ---------- notes above the list (browser only: they depend on the hour) ---------- */
+/** the hour state for the one hour note of the site (lib/ui.ts): the lunch page is locked only before 10:00 and after 22:30 */
+const hs = (v: View) => ({ open: false, kitchen: false, delivery: false, m: v.m ?? 0 });
 export function lockedNote(v: View): string {
   const p = v.phase;
   if (p === null || canOrderIn(p)) return "";
-  return '<div class="lnote" style="margin:0 0 20px">' + ic("clock", 22) + "<span><b>" + (p === "before" ? (v.isToday ? "Днешното меню, поръчки от 10:00" : "Поръчки от 10:00") : (v.isToday ? "Днешното меню приключи" : "Поръчките за днес приключиха")) + "</b>" +
-    (p === "before" ? "Разгледайте го сега. Бутоните за поръчка се появяват в 10:00." : "Оставяме го за справка. Поръчки отново утре от 10:00.") + "</span></div>";
+  return hourNote(hs(v), { cls: "lnote-h", more: p === "before" ? "Разгледайте менюто сега. Бутоните за поръчка се появяват в 10:00" : "Оставяме менюто за справка" });
 }
 export function offlineNote(): string {
-  return '<div class="lnote warn" role="status" style="margin:0 0 20px">' + ic("warning", 22) + "<span><b>Няма връзка</b>Показваме менюто, което заредихме последно. Количката ви е запазена, поръчайте, щом връзката се върне.</span></div>";
+  return '<div class="lnote warn" role="status" style="margin:0 0 20px">' + ic("warning", 22) + "<span><b>" + OFFLINE + "</b>Показваме менюто, което заредихме последно. Количката ви е запазена, поръчайте, щом връзката се върне.</span></div>";
 }
 
 /* preview-only states (?preview=1#loading | #empty | #error) */
 export function skeletonHTML(): string {
   const g = '<div class="shell"><div class="core"><div class="lrows">' + [0, 1, 2, 3].map(() => '<div class="sk-row"><span class="skel p"></span><span><span class="skel l1"></span><span class="skel l2"></span></span></div>').join("") + "</div></div></div>";
   const h = (w: number, top = 0) => '<div class="grp-h"' + (top ? ' style="margin-top:' + top + 'px"' : "") + '><span class="skel" style="width:44px;height:44px;border-radius:50%"></span><span class="skel" style="height:22px;width:' + w + 'px"></span></div>';
-  return '<div aria-busy="true" aria-live="polite"><span class="vh">Зареждаме обедното меню</span>' + h(120) + g + h(160, 32) + g + "</div>";
+  return '<div aria-busy="true" aria-live="polite"><span class="vh">' + loadingText("обедното меню") + "</span>" + h(120) + g + h(160, 32) + g + "</div>";
 }
 export function emptyHTML(): string {
   return '<div class="shell"><div class="core empty"><span class="ill">' + ic("bowl-food", 44) + '</span><h2 class="h3">Обедното меню още не е качено</h2><p class="muted" style="margin:0;max-width:34ch">Проверете пак след малко или поръчайте от основното меню.</p>' +
-    '<a class="pill pill-red pill-lg" href="' + url.menu() + '">Към основното меню' + ic("arrow-right", 20) + '</a><a class="pill pill-line" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се</a></div></div>";
+    '<a class="pill pill-red pill-lg" href="' + url.menu() + '">Към основното меню' + ic("arrow-right", 20) + '</a>' + callBtn("pill pill-line") + "</div></div>";
 }
 export function errorHTML(): string {
-  return '<div class="shell"><div class="core empty" role="alert"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h3">Не успяхме да заредим обедното меню</h2><p class="muted" style="margin:0;max-width:34ch">Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има в менюто.</p>' +
-    '<button class="pill pill-red pill-lg" type="button" data-demo="">Опитай пак</button><a class="pill pill-line" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div>";
+  return stateBox({ kind: "error", what: "обедното меню", text: "Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има в менюто.", retry: 'data-demo=""' });
 }
 
 /* ---------- week (the menu's day is filled, the other days are [ЛИПСВА]); short dates "2 ное" as on the site ---------- */
@@ -164,7 +165,7 @@ export function weekHTML(v: View): string {
   const M = v.meta, dd = menuDate(M), dow = (dd.getDay() + 6) % 7, mon = new Date(dd);
   mon.setDate(dd.getDate() - dow);
   const ABBR = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"], FULL = ["понеделник", "вторник", "сряда", "четвъртък", "петък", "събота", "неделя"];
-  return '<div class="week" role="list">' + ABBR.map((a, i) => {
+  return '<div class="week" role="list" tabindex="0" aria-label="Обедното меню по дни от седмицата">' + ABBR.map((a, i) => {
     const d = new Date(mon); d.setDate(mon.getDate() + i);
     const me = i === dow, past = i < dow;
     const body = me ? '<span class="tag">' + (v.isToday ? "Днес" : "Качено") + '</span><span class="cnt2">' + plural(M.count, "ястие", "ястия") + '</span><span class="from">от ' + fmt(M.minP) + "</span>"

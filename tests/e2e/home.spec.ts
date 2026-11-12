@@ -95,7 +95,7 @@ test("home: preview-only states stay behind ?preview=1", async ({ page }) => {
   await expect(page.locator(".proto")).toHaveCount(0);
   await expect(page.locator(".errbox")).toHaveCount(0);
   await open(page, "12:30", "#loading");
-  await expect(page.locator(".proto")).toBeVisible();
+  await expect(page.locator("[data-pv]")).toBeVisible();
   await expect(page.locator(".skcard").first()).toBeVisible();
 });
 

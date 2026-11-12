@@ -5,8 +5,9 @@ import { createCore, MemoryRepo, publicOrder, type Ctx, type Order } from "../..
 import { lunch, items, isOut, byId } from "../../src/lib/data.ts";
 import { price, parseMods, slotAllowed } from "../../src/lib/pricing.ts";
 import { eta, setKitchen, KITCHEN_DEFAULT } from "../../src/lib/status.ts";
-import { eventsJson } from "../../src/lib/events.ts";
-import { sofiaEpoch, addDaysYmd, validYmd } from "../../src/lib/time.ts";
+import { eventsJson } from "../../src/lib/events-json.ts";
+import { sofiaEpoch, addDaysYmd } from "../../src/lib/time.ts";
+import { validYmd } from "../../src/core/reservations.ts";
 import { url, configureRoutes } from "../../src/lib/routes.ts";
 import { mayReceive, pickEncoding } from "../../server/app.ts";
 
@@ -493,8 +494,9 @@ describe("round 3: nouns, SMS limits, profile bonus, celebration, offers", () =>
 describe("payAnswer: one answer about payment from RESTAURANT.payment", () => {
   it("HTML with [ЛИПСВА] for the voucher name, plain text without it", async () => {
     const { payAnswer, payAnswerText } = await import("../../src/lib/pay.ts");
-    expect(payAnswer()).toBe('В брой, карта при получаване (Visa, Mastercard; при доставка <span class="missing">[ЛИПСВА: терминал за карти в колата]</span>), ваучер <span class="missing">[ЛИПСВА: името на ваучерите]</span> или подаръчна карта. Онлайн плащане засега няма: плащате, когато получите поръчката.');
-    expect(payAnswerText()).toBe("В брой, карта при получаване (Visa, Mastercard) в ресторанта, ваучер или подаръчна карта. За карта при доставка ни попитайте по телефона. Онлайн плащане засега няма: плащате, когато получите поръчката.");
+    /* three ways (site.review-consistency Б2): the gift card is part of "Ваучер", never a fourth way */
+    expect(payAnswer()).toBe('В брой, карта при получаване (Visa, Mastercard; при доставка <span class="missing">[ЛИПСВА: терминал за карти в колата]</span>) или ваучер <span class="missing">[ЛИПСВА: името на ваучерите]</span> (и подаръчна карта). Онлайн плащане засега няма: плащате, когато получите поръчката.');
+    expect(payAnswerText()).toBe("В брой, карта при получаване (Visa, Mastercard) в ресторанта или ваучер (и подаръчна карта). За карта при доставка ни попитайте по телефона. Онлайн плащане засега няма: плащате, когато получите поръчката.");
     expect(payAnswer()).not.toMatch(/Sodexo/);
   });
 });

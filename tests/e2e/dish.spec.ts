@@ -29,8 +29,8 @@ test("dish: SEO (h1, JSON-LD MenuItem + BreadcrumbList, crumbs)", async ({ page 
   expect(mi.description).toContain("бурата");
   const bc = ld.find((x) => x["@type"] === "BreadcrumbList");
   expect(bc.itemListElement.map((i: { name: string }) => i.name)).toEqual(["Начало", "Меню", "Пици на пещ", "Пица с бурата и прошуто Крудо"]);
-  await expect(page.locator(".crumbs a")).toHaveText(["Меню", "Пици на пещ"]);
-  await expect(page.locator(".crumbs a").nth(1)).toHaveAttribute("href", "/menu/pitsi/");
+  await expect(page.locator(".sc-crumbs a")).toHaveText(["Меню", "Пици на пещ"]);
+  await expect(page.locator(".sc-crumbs a").nth(1)).toHaveAttribute("href", "/menu/pitsi/");
   await expect(page.locator(".fcard")).toContainText("Предварително, от състава. Потвърждава се от кухнята.");
   await expect(page.locator("[data-pairs] .pcard")).toHaveCount(2);
   const hs = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

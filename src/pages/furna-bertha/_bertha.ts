@@ -6,6 +6,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, plural } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ZONES } from "../../lib/consts.ts";
+import { stateBox, loadingText, hourNote, OFFLINE } from "../../lib/ui.ts";
 import "sc-icons:warning-circle,moon,storefront,shopping-bag,check-circle,phone,pause,play,caret-down"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const STEPS: [string, string][] = [
@@ -123,10 +124,12 @@ export function playHTML(playing: boolean): string {
 /* ---------- service note (depends on the hour: drawn again in the browser) ---------- */
 export type Svc = { m: number; kitchen: boolean; delivery: boolean; etaMin: number; offline: boolean };
 export function serviceHTML(v: Svc): string {
-  if (v.offline) return '<div class="svc err" role="status">' + ic("warning-circle", 24) + "<div><b>Няма връзка с интернет</b><p>Може да добавяте ястия в количката. Поръчката ви е запазена, изпратете я, щом връзката се върне.</p></div></div>";
-  if (v.m < 600) return '<div class="svc off">' + ic("moon", 24) + "<div><b>Затворено · отваряме в " + R.open + "</b><p>Кухнята приема поръчки от " + R.open + " до " + R.kitchen + ". Добавете ястията сега и поръчайте по-късно.</p></div></div>";
-  if (!v.kitchen) return '<div class="svc off">' + ic("moon", 24) + "<div><b>Кухнята приема поръчки до " + R.kitchen + "</b><p>Добавете ястията в количката и изберете час за утре от " + R.open + '.</p><a class="pill pill-line" href="' + url.cart() + '">' + ic("shopping-bag", 20) + "Поръчай за утре</a></div></div>";
-  if (!v.delivery) return '<div class="svc warn">' + ic("storefront", 24) + "<div><b>Доставката приключи за днес · Вземане до " + R.kitchen + '</b><p>Скарата е готова за вземане след около 20 мин.</p><a class="pill pill-line" href="' + url.page("pickup") + '">' + ic("storefront", 20) + "Вземи от място</a></div></div>";
+  if (v.offline) return '<div class="svc err" role="status">' + ic("warning-circle", 24) + "<div><b>" + OFFLINE + "</b><p>Може да добавяте ястия в количката. Поръчката ви е запазена, изпратете я, щом връзката се върне.</p></div></div>";
+  /* after 21:00 / 22:30 / before 10:00: the one hour note of the site (lib/ui.ts) */
+  const st = { open: true, kitchen: v.kitchen, delivery: v.delivery, m: v.m };
+  if (v.m < 600) return hourNote(st, { more: "Добавете ястията сега и поръчайте по-късно." });
+  if (!v.kitchen) return hourNote(st, { tomorrow: '<a class="pill pill-line" href="' + url.cart() + '">' + ic("shopping-bag", 20) + "Поръчай за утре</a>" });
+  if (!v.delivery) return hourNote(st, { more: "Скарата е готова за вземане след около 20 мин", pickup: '<a class="pill pill-line" href="' + url.page("pickup") + '">' + ic("storefront", 20) + "Поръчай за вземане</a>" });
   return '<div class="svc ok">' + ic("check-circle", 24) + '<div class="lines"><span><b>Доставка:</b> около ' + v.etaMin + ' мин</span><span><b>Вземане от място:</b> след около 20 мин</span></div></div>';
 }
 
@@ -138,8 +141,8 @@ export function countHTML(n: number, nOut: number): string {
 export function skeletonHTML(n: number): string {
   let s = "";
   for (let i = 0; i < n; i++) s += '<div class="skcard" aria-hidden="true"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>';
-  return '<p class="vh" role="status">Зареждаме ястията от фурната</p><div class="grid-dishes">' + s + "</div>";
+  return '<p class="vh" role="status">' + loadingText("ястията") + '</p><div class="grid-dishes">' + s + "</div>";
 }
 export function errorHTML(): string {
-  return '<div class="empty err-box" role="alert"><div class="ill">' + ic("warning-circle", 44) + '</div><h3 class="h3">Не успяхме да заредим ястията</h3><p class="muted" style="margin:0;max-width:26em">Проверете връзката и опитайте пак. Може да поръчате и по телефона.</p><div class="row"><button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + R.phone + "</a></div></div>";
+  return stateBox({ kind: "error", what: "ястията", text: "Опитайте пак след малко. Можете да поръчате и по телефона.", h: "h3" });
 }

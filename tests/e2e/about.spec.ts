@@ -25,7 +25,7 @@ test("about: SEO, numbers from the data, [ЛИПСВА], JSON-LD", async ({ requ
   /* numbers: 124 dishes in 14 categories (breakfast is a separate menu), 15 pizzas, 11 from Bertha, 4 free zones */
   const nums = [...html.matchAll(/class="ab-n[^"]*"[^>]*>.*?<b>(\d+)<\/b>/g)].map((m) => +m[1]);
   expect(nums).toEqual([124, 14, 15, 11, 7, 4]);
-  for (const miss of ["[ЛИПСВА: историята от собственика", "[ЛИПСВА: потвърждение на годината", "[ЛИПСВА: брой места]", "[ЛИПСВА: снимки и имена на екипа", "[ЛИПСВА: паркиране]", "[ЛИПСВА: снимка на салона]"]) expect(html).toContain(miss);
+  for (const miss of ["[ЛИПСВА: историята от собственика", "[ЛИПСВА: потвърждение на годината", "[ЛИПСВА: капацитет]", "[ЛИПСВА: снимки и имена на екипа", "[ЛИПСВА: паркиране]", "[ЛИПСВА: снимка на салона]"]) expect(html).toContain(miss);
   expect(html).not.toMatch(/Обедното меню днес/); /* the build does not know today's date */
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
   expect(ld.find((x) => x["@type"] === "BreadcrumbList").itemListElement.map((i: { name: string }) => i.name)).toEqual(["Начало", "За нас"]);
@@ -42,7 +42,7 @@ test("about 12:30: open, order home, FAQ, links", async ({ page }) => {
   await open(page, "12:30");
   await expect(page.locator("h1")).toHaveText("Вашият ресторант в Дружба 2");
   await expect(page.locator("[data-ab-live]")).toContainText("Отворено до 23:00");
-  await expect(page.locator("[data-end-btn]")).toHaveText("Поръчай за вкъщи");
+  await expect(page.locator("[data-end-btn]")).toHaveText("Поръчай"); /* site.review-consistency В3 */
   await expect(page.locator("[data-end-btn]")).toHaveAttribute("href", /\/menu\/$/);
   await expect(page.locator(".ab-cta a").first()).toHaveAttribute("href", "/rezervatsia/");
   /* FAQ: the first one is open, the others open on click */
@@ -60,12 +60,12 @@ test("about 12:30: open, order home, FAQ, links", async ({ page }) => {
 test("about 21:30 and 23:30: the closing action follows the hour", async ({ page }) => {
   await open(page, "21:30");
   await expect(page.locator("[data-ab-live]")).toContainText("Доставката приключи за днес");
-  await expect(page.locator("[data-end-btn]")).toHaveText("Вземи от място");
+  await expect(page.locator("[data-end-btn]")).toHaveText("Поръчай за вземане");
   await expect(page.locator("[data-end-btn]")).toHaveAttribute("href", "/vzemi-ot-myasto/");
   await open(page, "23:30");
   await expect(page.locator("[data-ab-live]")).toContainText("Затворено");
   await expect(page.locator("[data-end-btn]")).toHaveText("Поръчай за утре");
-  await expect(page.locator("[data-end-text]")).toContainText("Поръчайте за утре");
+  await expect(page.locator("[data-end-text]")).toContainText("Приемаме поръчки утре от 10:00");
 });
 
 test("about: no horizontal scroll at 360", async ({ page }) => {

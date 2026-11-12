@@ -43,7 +43,7 @@ test("delivery: SEO, zones and [ЛИПСВА] fees in the server HTML, JSON-LD",
   const pay = faq.mainEntity.find((q: { name: string }) => q.name === "Как мога да платя?");
   expect(pay.acceptedAnswer.text).toContain("карта при получаване (Visa, Mastercard)");
   expect(html).toContain("Не намерихте отговор? Обадете ни се, ще ви кажем.");
-  expect(html).toContain("Обади се · 0894 36 55 77");
+  expect(html).toMatch(/Обади се · (<span class="nw">)?0894 36 55 77/);
   expect(JSON.stringify(faq)).not.toContain("<");
 });
 
@@ -59,7 +59,7 @@ test("delivery 12:30: address check, map and table select the zone", async ({ pa
 
   await check(page, "druzhba 1");
   await expect(res(page)).toContainText("Доставяме безплатно до Дружба 1");
-  await expect(res(page).getByRole("link", { name: /Поръчай с безплатна доставка/ })).toHaveAttribute("href", /\/menu\/$/);
+  await expect(res(page).getByRole("link", { name: /^Поръчай$/ })).toHaveAttribute("href", /\/menu\/$/);
   await expect(zcard(page)).toContainText("Дружба 1");
   await expect(page.locator('[data-row="druzhba-1"] [data-pick]')).toHaveAttribute("aria-pressed", "true");
 
@@ -100,9 +100,9 @@ test("delivery 12:30: address check, map and table select the zone", async ({ pa
 test("delivery 21:30 and 23:30: pickup until 22:30, then tomorrow", async ({ page }) => {
   const errors = watch(page);
   await open(page, "21:30", "#npz-iskar");
-  await expect(page.locator("[data-live]")).toContainText("Утре доставяме от 10:00");
+  await expect(page.locator("[data-live]")).toContainText("Доставката приключи за днес · Вземане до 22:30");
   await expect(zcard(page)).toContainText("НПЗ Искър");
-  const go = zcard(page).getByRole("link", { name: /Вземи от място до 22:30/ });
+  const go = zcard(page).getByRole("link", { name: /Поръчай за вземане/ });
   await expect(go).toHaveAttribute("href", /\/vzemi-ot-myasto\/$/);
   await expect(page.locator("[data-end]")).toContainText("Доставката приключи за днес.");
   await expect(page.locator("[data-tl]")).toContainText("Доставката приключи за днес · Вземане до 22:30.");
@@ -112,15 +112,15 @@ test("delivery 21:30 and 23:30: pickup until 22:30, then tomorrow", async ({ pag
 
   await page.goto("/dostavka/?preview=1&t=23:30");
   await expect(page.locator("[data-dl][data-ready]")).toHaveCount(1);
-  await expect(page.locator("[data-live]")).toContainText("Сега не доставяме · утре от 10:00");
-  await expect(page.locator("[data-end]")).toContainText("Утре доставяме от 10:00.");
+  await expect(page.locator("[data-live]")).toContainText("Кухнята затвори за днес · Приемаме поръчки утре от 10:00");
+  await expect(page.locator("[data-end]")).toContainText("Кухнята затвори за днес.");
   await expect(zcard(page)).toContainText("утре от 10:00");
   expect(errors).toEqual([]);
 });
 
 test("delivery: simulated states only in preview, #adres= link", async ({ page }) => {
   await open(page, "12:30", "#greshka");
-  await expect(res(page)).toContainText("Не успяхме да проверим адреса.");
+  await expect(res(page)).toContainText("Не успяхме да проверим адреса");
   await res(page).getByRole("button", { name: "Опитай пак" }).click();
   await expect(res(page)).toContainText("Доставяме безплатно до Дружба 2");
 
@@ -150,7 +150,7 @@ test("delivery: no horizontal scroll at 360, the zone card and the fees table fi
 test("delivery: \"Натоварено\" from the kitchen adds the extra minutes everywhere", async ({ page }) => {
   await page.addInitScript(() => { try { sessionStorage.setItem("sc-kitchen", JSON.stringify({ at: Date.now(), k: { busy: true, etaMin: 35, etaBusyMin: 55 } })); } catch { /* ignore */ } });
   await open(page, "12:30");
-  await expect(page.locator("[data-live]")).toContainText("Натоварено · 45 - 65");
+  await expect(page.locator("[data-live]")).toContainText("Доставка сега · възможни са закъснения · около 55 мин"); /* one source for the time (decision 04.11) */
   await expect(zcard(page)).toContainText("около 45");
   await expect(zcard(page)).toContainText("натоварено сега");
   await expect(page.locator('[data-eta="druzhba-1"]')).toContainText("около 50");

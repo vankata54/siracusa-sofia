@@ -2,7 +2,8 @@
    used by index.astro on the server (first paint, SEO) and by its client script (redrawn with the real Sofia time).
    The "_" prefix keeps this file out of the routes. Port of the time logic in design/pages/home.html. */
 import { ic } from "../lib/icons.ts";
-import { esc, plural, MON, MONTHS, DAYS } from "../lib/format.ts";
+import { esc, plural, MON, dateLong, DAYS_SHORT } from "../lib/format.ts";
+import { hourTitle, hourLine, stateBox, miss } from "../lib/ui.ts";
 import { url } from "../lib/routes.ts";
 import { ZONES, RESTAURANT, type Zone } from "../lib/consts.ts";
 import type { State, Eta } from "../lib/status.ts";
@@ -14,7 +15,7 @@ import type { SiteEvent } from "../lib/events.ts";
 export function goHTML(st: State): string {
   let o: { t: string; s: string; pickup?: boolean };
   if (st.delivery) o = { t: "Поръчай", s: "Доставка или вземане от място" };
-  else if (st.kitchen) o = { t: "Поръчай за вземане", s: "Вземане от място до 22:30", pickup: true };
+  else if (st.kitchen) o = { t: "Поръчай за вземане", s: hourLine(st), pickup: true };
   else if (st.m < 600) o = { t: "Поръчай за днес", s: "Отваряме в 10:00" };
   else o = { t: "Поръчай за утре", s: "Кухнята приема поръчки от 10:00" };
   return '<a class="pill pill-red go" data-go href="' + url.menu() + '"' + (o.pickup ? " data-pickup" : "") + '><span class="gol"><span>' + o.t + "</span><small>" + o.s + '</small></span><span class="knob">' + ic("arrow-right", 22) + "</span></a>";
@@ -32,11 +33,10 @@ export function lunchTileText(st: State, lunchToday: boolean): string {
 /* ---------- hero: "Доставка сега: около 35 мин" ---------- */
 export function etaInner(st: State, eta: Eta): string {
   let dot: string, html: string;
-  if (st.delivery && !eta.busy) { dot = "ok"; html = "<b>Доставка сега: " + eta.text + "</b>"; }
-  else if (st.delivery) { dot = "warn"; html = "<b>Възможни са закъснения</b><span>Доставка сега: около " + eta.min + NBSP + "мин</span>"; }
-  else if (st.kitchen) { dot = "warn"; html = "<b>Доставката приключи</b><span>Вземане от място до 22:30</span>"; }
-  else if (st.open) { dot = ""; html = "<b>Кухнята затвори</b><span>Доставка утре от 10:00</span>"; }
-  else { dot = ""; html = "<b>Затворено</b><span>Доставка " + (st.m < 600 ? "днес" : "утре") + " от 10:00</span>"; }
+  if (st.delivery && !eta.busy) { dot = "ok"; html = "<b>Доставка сега · " + eta.text + "</b>"; }
+  else if (st.delivery) { dot = "warn"; html = "<b>Възможни са закъснения</b><span>Доставка сега · около " + eta.min + NBSP + "мин</span>"; }
+  /* after 21:00 and when closed: the one hour note's words (lib/ui.ts) */
+  else { dot = st.kitchen ? "warn" : ""; html = "<b>" + hourTitle(st) + "</b><span>" + hourLine(st) + "</span>"; }
   return '<span class="dot ' + dot + '"></span>' + ic("moped", 22) + '<span class="tx">' + html + "</span>" + ic("caret-right", 18);
 }
 
@@ -69,9 +69,9 @@ export function eventsHTML(evs: SiteEvent[], days: number): string {
   const list = evs.length
     ? evs.slice(0, 2).map((e) => {
       const d = e.date;
-      return '<article class="card ev rv"><div class="cal" aria-hidden="true"><span class="m">' + MON[d.getMonth()] + "</span><b>" + d.getDate() + '</b><span class="wd">' + DAYS[d.getDay()].slice(0, 3) + "</span></div>" +
+      return '<article class="card ev rv"><div class="cal" aria-hidden="true"><span class="m">' + MON[d.getMonth()] + "</span><b>" + d.getDate() + '</b><span class="wd">' + DAYS_SHORT[d.getDay()] + "</span></div>" +
         '<div><span class="badge">' + ic("calendar-check", 16) + esc(e.cat) + '</span><h3 class="h3">' + esc(e.n) + "</h3>" +
-        '<p class="when"><span>' + DAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()] + " · " + e.time + '</span><span class="cd">' + ic("hourglass", 16) + daysText(days) + "</span></p>" +
+        '<p class="when"><span>' + dateLong(d) + " · " + e.time + '</span><span class="cd">' + ic("hourglass", 16) + daysText(days) + "</span></p>" +
         '<p class="txt">' + esc(e.text) + '</p><span class="missing">' + esc(e.note) + "</span>" +
         '<a class="pill pill-ink" href="' + url.event(e.id) + '">Запази място' + ic("arrow-right", 20) + "</a></div></article>";
     }).join("")
@@ -79,13 +79,13 @@ export function eventsHTML(evs: SiteEvent[], days: number): string {
   return list +
     '<article class="card ev cel rv"><div class="ci" aria-hidden="true">' + ic("confetti", 36) + '</div><div><span class="tag-ember">' + ic("seal-percent", 16) + '-5% при ранна резервация</span><h3 class="h3">Празник при нас</h3>' +
     '<p class="txt">Рожден ден, кръщене, юбилей или фирмено парти. Изберете повод, брой гости и меню, а управителят ви изпраща оферта.</p>' +
-    '<a class="pill pill-line" href="' + url.page("celebration") + '">Планирай празник' + ic("arrow-right", 20) + "</a></div></article>";
+    '<a class="pill pill-line" href="' + url.page("celebration") + '">Изчисли празника' + ic("arrow-right", 20) + "</a></div></article>";
 }
 
 /* ---------- delivery: note when delivery is over ---------- */
 export function deliveryNote(st: State): string {
   if (st.delivery) return "";
-  return '<span class="dot"></span>' + (st.kitchen ? "Днес доставката приключи. Можете да вземете поръчката до 22:30." : "Доставяме отново " + (st.m < 600 ? "днес" : "утре") + " от 10:00");
+  return '<span class="dot"></span>' + hourTitle(st) + " · " + hourLine(st);
 }
 
 /* ---------- address check (districts by name, Latin too) ---------- */
@@ -117,7 +117,7 @@ export function checkAddress(v: string, st: State, eta: Eta): CheckResult {
   if (z === "out") h = { c: "no", i: "warning-circle", t: "Не доставяме до този адрес.", p: "Можете да вземете поръчката от ресторанта в Дружба 2.", a: pickup };
   else if (!z) h = { c: "q", i: "question", t: "Не разпознахме квартала.", p: "Напишете го към адреса, например „Дружба 1, бл. 12“. Безплатно доставяме в Дружба 1 и 2, НПЗ Искър и Бусманци.", a: "" };
   else if (z.free) h = { c: "ok", i: "check-circle", t: z.n + ": безплатна доставка", p: when, a: st.delivery ? order : pickup };
-  else h = { c: "paid", i: "map-pin", t: z.n + ": доставка по тарифа", p: 'Таксата се вижда в количката. <span class="missing">[ЛИПСВА: такса в €]</span>' + (when ? "<br>" + when : ""), a: st.delivery ? order : "" };
+  else h = { c: "paid", i: "map-pin", t: z.n + ": доставка по тарифа", p: 'Таксата се вижда в количката. ' + miss("fee") + '' + (when ? "<br>" + when : ""), a: st.delivery ? order : "" };
   return { c: h.c, html: ic(h.i, 24) + "<div><b>" + h.t + "</b>" + (h.p ? "<p>" + h.p + "</p>" : "") + h.a + "</div>" };
 }
 
@@ -135,3 +135,6 @@ export function restaurantLd(site: URL | undefined): Record<string, unknown> {
     sameAs: [R.social.facebook, R.social.instagram].filter(Boolean),
   };
 }
+
+/** "Популярни": the dishes did not load (the shared box, lib/ui.ts) */
+export const popErrHTML = () => stateBox({ kind: "error", what: "ястията", text: "Проверете връзката и опитайте пак. Можете да поръчате и по телефона." });

@@ -159,11 +159,12 @@ html[data-nf] .nf .lead{max-width:34ch}
 <script>
   import { SC } from "../client/sc.ts";
   import "../lib/icons/phone.ts";
+  import { DAYS_SHORT } from "../lib/format.ts";
   /* browser only, no menu: the same words as callLine() in _404.ts (that module loads the menu, so it stays on the server) */
   const R = SC.RESTAURANT;
   function callLine(st: { open: boolean; m: number }): string {
     const tel = '<a class="link" href="tel:' + R.phoneIntl + '">' + SC.ic("phone", 18);
-    if (st.open) return "Търсите нещо конкретно? " + tel + "Обадете се: " + R.phone + "</a>";
+    if (st.open) return "Търсите нещо конкретно? " + tel + "Обади се · " + R.phone + "</a>";
     return "Търсите нещо конкретно? Обадете ни се " + (st.m < 600 ? "след 10:00" : "утре след 10:00") + ": " + tel + R.phone + "</a>";
   }
   SC.mount();
@@ -176,7 +177,7 @@ html[data-nf] .nf .lead{max-width:34ch}
   const up = document.querySelector<HTMLElement>(".ev-upcard[data-ls]");
   if (up) {
     const d = SC.lastSaturday().d, leaf = up.querySelector(".cal"), when = up.querySelector("[data-when]");
-    if (leaf) leaf.outerHTML = '<span class="cal" aria-hidden="true"><span class="m">' + SC.MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + SC.DAYS[d.getDay()] + "</span></span>";
+    if (leaf) leaf.outerHTML = '<span class="cal" aria-hidden="true"><span class="m">' + SC.MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>";
     if (when) when.textContent = SC.dateLong(d);
   }
   SC.reveal();

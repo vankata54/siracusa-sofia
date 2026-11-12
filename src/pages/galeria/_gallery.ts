@@ -7,6 +7,7 @@ import { byId, catById, isOut, type Dish } from "../../lib/data.ts";
 import { pic, art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt } from "../../lib/format.ts";
+import { photoSlot } from "../../lib/ui.ts";
 
 export type CatId = "all" | "yastia" | "salon" | "gradina" | "sabitia";
 export const CATS: { id: CatId; n: string; icon: string }[] = [
@@ -20,7 +21,7 @@ const CAT = Object.fromEntries(CATS.map((c) => [c.id, c])) as Record<CatId, (typ
 
 type Go = { href: string; label: string; icon: string };
 type DishIt = { k: "dish"; cat: "yastia"; x: Dish; ar: number; title: string; sub: string };
-type SlotIt = { k: "slot"; cat: CatId; title: string; ic: string; ar: number; go: Go };
+type SlotIt = { k: "slot"; cat: CatId; title: string; of: string; ar: number; go: Go };
 export type Item = DishIt | SlotIt;
 
 /* real dishes; aspect ratios give the masonry its rhythm (sold-out dishes stay out of the gallery, as in the prototype) */
@@ -35,21 +36,22 @@ const DISHES: DishIt[] = ([
 
 /* empty slots: the shot list for the new photo shoot. Subjects only, no invented facts. */
 const RES: Go = { href: url.reservation(), label: "Резервирай маса", icon: "calendar-blank" };
-const PARTY: Go = { href: url.page("celebration"), label: "Планирай празник", icon: "arrow-right" };
+const PARTY: Go = { href: url.page("celebration"), label: "Изчисли празника", icon: "arrow-right" };
 const SLOTS: SlotIt[] = ([
-  ["salon", "Салонът, общ план", "chair", 1.25, RES],
-  ["gradina", "Градината през деня", "sun", 0.8, RES],
-  ["sabitia", "Гръцка вечер", "calendar-dots", 1, { href: url.event("gratska-vecher"), label: "Виж Гръцка вечер", icon: "arrow-right" }],
-  ["salon", "Маса до прозореца", "fork-knife", 0.8, RES],
-  ["gradina", "Градината вечер", "moon", 1.25, RES],
-  ["sabitia", "Рожден ден при нас", "cake", 0.8, PARTY],
-  ["salon", "Барът", "wine", 1, RES],
-  ["gradina", "Отопляваната градина зимата", "thermometer", 1, RES],
-  ["sabitia", "Жива музика", "music-notes", 1.25, { href: url.events(), label: "Виж събитията", icon: "arrow-right" }],
-  ["salon", "Подредена маса за празник", "confetti", 1, PARTY],
-  ["gradina", "Маса в градината", "tree", 0.8, RES],
-  ["sabitia", "Фирмено парти", "briefcase", 1, PARTY],
-] as [CatId, string, string, number, Go][]).map(([cat, title, icon, ar, go]) => ({ k: "slot", cat, title, ic: icon, ar, go }));
+  /* [cat, title, what the photo shows ("[ЛИПСВА: снимка на <of>]"), aspect ratio, the action in the viewer] */
+  ["salon", "Салонът, общ план", "салона, общ план", 1.25, RES],
+  ["gradina", "Градината през деня", "градината през деня", 0.8, RES],
+  ["sabitia", "Гръцка вечер", "гръцката вечер", 1, { href: url.event("gratska-vecher"), label: "Виж Гръцка вечер", icon: "arrow-right" }],
+  ["salon", "Маса до прозореца", "маса до прозореца", 0.8, RES],
+  ["gradina", "Градината вечер", "градината вечер", 1.25, RES],
+  ["sabitia", "Рожден ден при нас", "рожден ден при нас", 0.8, PARTY],
+  ["salon", "Барът", "бара", 1, RES],
+  ["gradina", "Отопляваната градина зимата", "отопляваната градина зимата", 1, RES],
+  ["sabitia", "Жива музика", "жива музика", 1.25, { href: url.events(), label: "Виж събитията", icon: "arrow-right" }],
+  ["salon", "Подредена маса за празник", "подредена маса за празник", 1, PARTY],
+  ["gradina", "Маса в градината", "маса в градината", 0.8, RES],
+  ["sabitia", "Фирмено парти", "фирмено парти", 1, PARTY],
+] as [CatId, string, string, number, Go][]).map(([cat, title, of, ar, go]) => ({ k: "slot", cat, title, of, ar, go }));
 
 /* "Всички": dishes and places interleaved, so the page reads as a mix and not as a menu */
 export const ALL: Item[] = (() => {
@@ -67,11 +69,13 @@ export function countText(cat: CatId): string {
   return CAT[cat].n + ": " + L.length + " " + (L.length === 1 ? "кадър" : "кадъра") + (cat === "all" ? ", " + nd + " ястия и " + (L.length - nd) + " места за снимки" : "");
 }
 
-/* the dish picture without its SVG: the browser draws it near the viewport (data-art) */
-const lazyPic = (x: Dish) => pic(x).replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ');
+/* the dish picture without its SVG: the browser draws it near the viewport (data-art). Inside the tile it is decoration:
+   the tile's name is its visible caption (WCAG 2.5.3, "Label in Name"). */
+const lazyPic = (x: Dish) => pic(x).replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ').replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true"');
 
+/* the one photo slot of the site (lib/ui.ts), filling the tile */
 function slotHTML(it: SlotIt): string {
-  return '<span class="slot"><span class="tag">' + ic(CAT[it.cat].icon, 16) + CAT[it.cat].n + '</span><span class="ring">' + ic(it.ic, 28) + "</span></span>";
+  return photoSlot({ of: it.of, ratio: "", tag: "span", cls: "g-slot" });
 }
 
 export function chipsHTML(): string {
@@ -84,13 +88,12 @@ export function tilesHTML(): string {
     const media = it.k === "dish" ? lazyPic(it.x) : slotHTML(it);
     const cap = it.k === "dish"
       ? "<b>" + esc(it.title) + "</b><small>" + esc(it.sub) + ' · <span class="price">' + fmt(it.x.p) + "</span></small>"
-      : "<b>" + esc(it.title) + '</b><small class="missing">[ЛИПСВА: снимка]</small>';
-    const label = (it.k === "dish" ? it.title : it.title + ", място за снимка") + ". Отвори на цял екран";
+      : "<b>" + esc(it.title) + "</b><small>" + esc(CAT[it.cat].n) + "</small>";
     /* what the viewer shows for this photo (the browser builds the caption from these, no second copy of the HTML) */
     const data = it.k === "dish"
       ? ' data-id="' + it.x.id + '" data-s="' + esc(it.sub) + '" data-g="' + esc(it.x.per100 ? "за 100 гр." : it.x.g) + '" data-p="' + it.x.p + '" data-href="' + url.dish(it.x) + '"'
       : ' data-href="' + it.go.href + '" data-go="' + esc(it.go.label) + '" data-goi="' + it.go.icon + '"';
-    return '<button class="gi" type="button" data-i="' + i + '" data-c="' + it.cat + '" data-t="' + esc(it.title) + '"' + data + ' aria-label="' + esc(label) + '"><span class="tile" style="--ar:' + it.ar + '">' + media + '</span><span class="gcap" aria-hidden="true">' + cap + "</span></button>";
+    return '<button class="gi" type="button" data-i="' + i + '" data-c="' + it.cat + '" data-t="' + esc(it.title) + '"' + data + ' aria-describedby="g-open"><span class="tile" style="--ar:' + it.ar + '">' + media + '</span><span class="gcap">' + cap + "</span></button>";
   }).join("");
 }
 

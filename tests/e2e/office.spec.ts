@@ -37,7 +37,7 @@ test("office: SEO, one h1, FAQ JSON-LD, no horizontal scroll, no prototype panel
   expect(ld.some((x) => x.includes("FAQPage"))).toBe(true);
   expect(ld.some((x) => x.includes("BreadcrumbList"))).toBe(true);
   await expect(page.locator(".o-slot[aria-pressed=true]")).toBeVisible();
-  await expect(page.locator(".o-proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   const hs = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(hs).toBeLessThanOrEqual(0);
   const html = await page.content();
@@ -104,7 +104,7 @@ test("office: full flow: create, colleague joins, list, send, sent", async ({ pa
 test("office: wrong link and simulated colleagues only in preview", async ({ page }) => {
   await open(page, "09:30", "#join-000000");
   await expect(page.locator("h1:visible")).toHaveText("Тази връзка не работи");
-  await expect(page.locator(".o-proto")).toBeVisible();
+  await expect(page.locator("[data-pv]")).toBeVisible();
 });
 
 test("office: after 15:00 the order is for tomorrow", async ({ page }) => {
@@ -212,7 +212,10 @@ test("office: a colleague stops at 10 portions (the sum of the counts)", async (
   for (let i = 0; i < 7; i++) await items.nth(0).locator('[data-q="1"]').click();
   await items.nth(1).locator(".plus").click();
   await items.nth(1).locator('[data-q="1"]').click();
-  await items.nth(1).locator('[data-q="1"]').click(); /* the 11th portion is refused */
+  /* at 10 portions every "+" is aria-disabled (site.review-tech Д10); a tap still says why */
+  await expect(items.nth(1).locator('[data-q="1"]')).toHaveAttribute("aria-disabled", "true");
+  await expect(items.nth(2).locator('[data-q="1"]')).toHaveAttribute("aria-disabled", "true");
+  await items.nth(1).locator('[data-q="1"]').click({ force: true }); /* the 11th portion is refused */
   await expect(items.nth(0).locator("output")).toHaveText("8");
   await expect(items.nth(1).locator("output")).toHaveText("2");
   await expect(page.locator(".toast, [role=status]").filter({ hasText: "До 10 порции на човек" }).first()).toBeVisible();

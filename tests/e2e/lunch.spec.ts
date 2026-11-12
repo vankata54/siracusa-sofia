@@ -67,7 +67,7 @@ test("lunch 12:30: delivery or pickup, add, order bar, sold out mock in preview"
   await expect(out.locator(".plus")).toHaveCount(0);
   /* order bar */
   const bar = page.locator("[data-abar]");
-  await expect(bar).toContainText("Поръчай обедно меню");
+  await expect(bar).toContainText("Поръчай");
   await page.locator('#g-supi [data-add="l-supa-topcheta"]').click();
   await expect(bar).toContainText("1 ястие");
   await expect(bar.locator("a")).toHaveText("Поръчай · 2,40 €");
@@ -91,7 +91,7 @@ test("lunch 16:30: -30% pickup only, old price struck, cart switches to pickup",
   await expect(soup.locator(".price")).toHaveText("1,68 €");
   await expect(soup.locator(".old")).toHaveCSS("text-decoration-line", "line-through");
   await page.locator('[data-add="l-supa-topcheta"]').click();
-  await expect(page.locator("[data-abar] a")).toHaveText("Вземи от място · 1,68 €");
+  await expect(page.locator("[data-abar] a")).toHaveText("Поръчай за вземане · 1,68 €");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).toBe("pickup");
   expect(errors).toEqual([]);
 });
@@ -112,7 +112,7 @@ test("lunch: real page (no preview) has no mock and no states panel", async ({ p
   const errors = watch(page);
   await open(page);
   await expect(page.locator("main")).not.toContainText("Изчерпано днес");
-  await expect(page.locator(".proto")).toHaveCount(0);
+  await expect(page.locator("[data-pv]")).toHaveCount(0);
   if (!(await isToday(page))) {
     await expect(page.locator("h1")).toContainText("Меню за");
     await expect(page.locator("[data-list] .plus")).toHaveCount(0); /* a menu for another date is not orderable */
@@ -185,7 +185,7 @@ test("lunch at 15:00 with a lunch cart for delivery: switches to pickup and says
   await page.clock.runFor(90_000);
   await expect(page.locator(".toast")).toContainText("само за вземане от място");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).toBe("pickup");
-  await expect(page.locator("[data-abar] a")).toHaveText("Вземи от място · 1,68 €");
+  await expect(page.locator("[data-abar] a")).toHaveText("Поръчай за вземане · 1,68 €");
 });
 
 test("lunch: no horizontal scroll on 360", async ({ page }) => {
