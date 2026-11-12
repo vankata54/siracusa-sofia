@@ -182,8 +182,14 @@ test("lunch at 15:00 with a lunch cart for delivery: switches to pickup and says
   await open(page);
   await page.locator('[data-add="l-supa-topcheta"]').click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).not.toBe("pickup");
+  /* the toast shows and hides inside the 90 s the clock jumps: record every text it gets while it is on screen */
+  await page.evaluate(() => {
+    const w = window as unknown as { __toasts: string[] }; w.__toasts = [];
+    new MutationObserver(() => document.querySelectorAll(".toast").forEach((t) => { if (t.textContent) w.__toasts.push(t.textContent); }))
+      .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+  });
   await page.clock.runFor(90_000);
-  await expect(page.locator(".toast")).toContainText("само за вземане от място");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __toasts: string[] }).__toasts.join(" | "))).toContain("само за вземане от място");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).toBe("pickup");
   await expect(page.locator("[data-abar] a")).toHaveText("Поръчай за вземане · 1,68 €");
 });

@@ -112,7 +112,9 @@ test("celebration: #krashtene preselects, own menu from the real dishes, the dra
   await page.locator(".pkg.custom").click();
   await expect(page.locator(".picker")).toBeVisible();
   await next(page).click();
-  await expect(page.locator("#e-picks")).toBeVisible();
+  /* a fast tap: the message waits for the dish list (a separate chunk with the menu, site.review-tech Д9) and is checked
+     only then; under a loaded machine (the whole suite in parallel) that chunk took over the default 5 s */
+  await expect(page.locator("#e-picks")).toBeVisible({ timeout: 15_000 });
   await page.locator('[data-pick="set-ot-balgarski-kolbasi"]').click();
   await page.locator('[data-pg="dessert"]').click();
   await page.locator('[data-pick="tiramisu"]').click();
