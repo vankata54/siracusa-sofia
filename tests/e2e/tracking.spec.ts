@@ -169,3 +169,47 @@ test("tracking: the key in the address, the number alone on screen; a wrong key 
   await expect(page.locator("h1")).toHaveText("Не намираме поръчка № " + o.no);
   expect(errors.filter((e) => !/404/.test(e))).toEqual([]);
 });
+
+test("tracking: pickup today for a chosen hour shows that hour, not 'около N мин'", async ({ page, request }) => {
+  const f = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).split(":");
+  const now = +f[0] * 60 + +f[1], at = Math.ceil((now + 90) / 15) * 15;
+  test.skip(now < 11 * 60 || at > 22 * 60 + 30, "the kitchen is closed at this hour");
+  const slot = String(Math.floor(at / 60)).padStart(2, "0") + ":" + String(at % 60).padStart(2, "0");
+  const errors = watch(page);
+  const o = await makeOrder(request, { cart: { mode: "pickup", lines: [{ id: "pitsa-s-burata-i-proshuto-krudo", q: 1, mods: [] }] }, sched: "", slot, zone: "", addr: "" });
+  expect(o.at).toBe(slot);
+  await cookies(page);
+  await page.goto(trk(o));
+  await expect(page.locator(".elab")).toContainText("Приета за днес");
+  await expect(page.locator(".enum.clock b")).toHaveText(slot);
+  await expect(page.locator(".say")).toHaveText("Ще е готова за този час");
+  await expect(page.locator(".enum .u")).toHaveCount(0);   /* no "мин" */
+  await expect(page.locator(".tl li")).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
+test("tracking: the times are in Sofia time in a browser in another zone", async ({ browser, request, playwright, baseURL }) => {
+  const ctx = await browser.newContext({ baseURL, timezoneId: "America/New_York" });
+  const page = await ctx.newPage();
+  const errors = watch(page);
+  const o = await makeOrder(request);
+  await cookies(page);
+  await page.goto(trk(o));
+  await expect(page.locator(".elab")).toContainText("Приета за утре");
+  await expect(page.locator(".enum.clock b")).toHaveText("19:00");
+  await expect(page.locator(".sub")).toContainText("до 18:00");
+  /* "Доставена в": updatedAt on the Sofia clock */
+  const E = env();
+  if (E.MANAGER_PASSWORD) {
+    const staff = await playwright.request.newContext({ baseURL });
+    expect((await staff.post("/api/auth/login", { data: { username: "manager", password: E.MANAGER_PASSWORD } })).ok()).toBe(true);
+    for (const st of ["cooking", "ready", "on_way", "delivered"]) expect((await staff.patch("/api/admin/orders/" + o.no, { data: { status: st } })).ok()).toBe(true);
+    await staff.dispose();
+    const sofia = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+    const before = sofia(new Date(Date.now() - 60000)), after = sofia(new Date(Date.now() + 60000)), mid = sofia(new Date());
+    await expect(page.locator(".elab")).toHaveText("Доставена в");
+    expect([before, mid, after]).toContain(await page.locator(".enum.clock b").textContent());
+  }
+  await ctx.close();
+  expect(errors).toEqual([]);
+});

@@ -132,6 +132,7 @@ const skeleton =
 .gq{display:grid; gap:10px}
 .gq .missing{font-size:14px}
 .fbsent{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.fbsent:focus{outline:none}
 .fbsent .ic{color:var(--ok); margin-top:2px}
 .change{justify-self:start; color:var(--muted)}
 
@@ -181,7 +182,7 @@ const skeleton =
 
 
 /* success content right after checkout (from design/pages/cart.html "viewDone") */
-.okhead{display:grid; justify-items:center; text-align:center; gap:6px; padding:0 0 14px}
+.okhead{display:grid; justify-items:center; text-align:center; gap:6px; padding:12px 0 14px}
 .okhead .ok-h{outline:none; margin:0; text-wrap:balance}
 .okhead .lead{margin:0}
 .okmark{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}

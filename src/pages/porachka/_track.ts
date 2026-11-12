@@ -7,6 +7,8 @@
 import { SC } from "../../client/sc.ts";
 import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
+import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch } from "../../lib/time.ts";
+import { ORDER_RULES } from "../../lib/consts.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
 import "../../lib/icons/receipt.ts";
 import "../../lib/icons/chef-hat.ts";
@@ -132,16 +134,20 @@ export function startTracking(main: HTMLElement) {
   function elapsed() { const e = (Date.now() - (o().ts || Date.now())) / 60000; return Math.max(0, e); }
   function placed() { const p = toMin(o().placedAt); return p != null ? p : SC.minutes() - elapsed(); }
   /** a pre-order ("утре" / later "днес"): the date and minute it is for, and the minutes left until then */
+  /** pickup today for an hour the customer chose (the cart sends sched "" and slot "HH:MM"; the core keeps at = that hour,
+      eta = minutes to it): "as soon as possible" is at most the lead time rounded up to 5 min */
+  const chosenToday = (x: Order) => !x.sched && x.mode === "pickup" && toMin(x.at) != null && (x.eta ?? 0) > ORDER_RULES.pickupLeadMin + 5;
+  /** all in Sofia time (src/lib/time.ts), not the browser's zone */
   function schedInfo() {
     const x = o();
-    if (!(x.sched || S.sim.sched)) return null;
+    if (!(x.sched || S.sim.sched || chosenToday(x))) return null;
     const at = toMin(x.at) ?? (S.sim.sched ? 19 * 60 : null);
     if (at == null) return null;
-    const d = new Date(x.ts || Date.now());
-    if (x.sched === "утре" || (S.sim.sched && !x.sched)) d.setDate(d.getDate() + 1);
-    d.setHours(Math.floor(at / 60), at % 60, 0, 0);
-    const left = (d.getTime() - Date.now()) / 60000;
-    return { at, date: d, left, tomorrow: d.toDateString() !== new Date().toDateString() };
+    let ymd = sofiaYmd(new Date(x.ts || Date.now()));
+    if (x.sched === "утре" || (S.sim.sched && !x.sched)) ymd = addDaysYmd(ymd, 1);
+    const left = (sofiaEpoch(ymd, at) - Date.now()) / 60000;
+    const [y, mo, d] = ymd.split("-").map(Number);
+    return { at, date: new Date(y, mo - 1, d, 12), left, tomorrow: ymd !== sofiaYmd() };
   }
   /** promised minutes from the order start (eta), or from the chosen hour of a pre-order */
   function total(): number { const sc = schedInfo(); if (sc) return Math.max(0, elapsed() + sc.left); return Math.max(0, o().eta ?? 35); }
@@ -204,7 +210,7 @@ export function startTracking(main: HTMLElement) {
     let label: string, big: string, say: string, sub: string, note = "", late = 0;
     const badgeIc = done ? "check" : sc && c.id === "acc" ? "calendar-check" : c.ic;
     if (done) {
-      const doneAt = S.sim.k != null ? SC.minutes() : toMin(SC.hhmm(new Date(o().updatedAt))) ?? SC.minutes();
+      const doneAt = S.sim.k != null ? SC.minutes() : (() => { const t = Date.parse(o().updatedAt); if (isNaN(t)) return SC.minutes(); const n = sofiaNow(new Date(t)); return n.h * 60 + n.m; })();
       label = D ? "Доставена в" : "Взехте я в";
       big = '<span class="enum clock"><b>' + clock(doneAt) + "</b></span>";
       say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас.";
@@ -286,7 +292,7 @@ export function startTracking(main: HTMLElement) {
       '<div class="gq"><p><b>Ще ни помогнете ли с отзив в Google?</b><br><span class="muted">Така и съседите ви ще ни намерят <span style="white-space:nowrap">по-лесно</span>.</span></p><a class="pill pill-line pill-lg pill-block" ' + gAttrs() + ">" + ic("google-logo", 20) + "Напиши отзив в Google" + ic("arrow-up-right", 18) + "</a>" + googleMiss() + "</div>" +
       '<button class="link change" type="button" data-rate-reset>Промени отговора</button></div>';
     else if (r === "no" && S.rating) ans = '<div class="ans"><h3 tabindex="-1" data-focus>Съжаляваме. Благодарим, че ни казвате.</h3>' +
-      (S.rating.fbSent ? '<div class="fbsent">' + ic("check-circle", 22) + '<span><b>Изпратихме го на управителя.</b><br><span class="muted">Ще го прочете лично.</span></span></div>'
+      (S.rating.fbSent ? '<div class="fbsent" tabindex="-1" role="status">' + ic("check-circle", 22) + '<span><b>Изпратихме го на управителя.</b><br><span class="muted">Ще го прочете лично.</span></span></div>'
         : '<div class="field"><label for="fb">Споделете с нас как бихме могли да подобрим вашето преживяване</label><textarea class="input" id="fb" rows="4" maxlength="2000" aria-describedby="fbh' + (S.fbErr ? " fbe" : "") + '"' + (S.fbErr ? ' aria-invalid="true"' : "") + ">" + esc(S.fb) + '</textarea><span class="help" id="fbh">Стига само до управителя.</span>' + (S.fbErr ? '<span class="err" id="fbe">' + esc(S.fbErr) + "</span>" : "") + "</div>" +
           '<button class="pill pill-red pill-lg pill-block" type="button" data-fb>' + ic("paper-plane-right", 20) + "Изпрати на управителя</button>") +
       codeHTML() +
@@ -305,13 +311,14 @@ export function startTracking(main: HTMLElement) {
       const d = dish(l.id);
       return '<div class="oline">' + pic(d) + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + (d && d.g ? " · " + esc(d.g) : "") + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
     }).join("");
-    /* which discount won (core: discKind); the code discount is codeDisc, the lunch one is disc */
-    const codeD = x.codeDisc || (x.discKind === "code" ? x.disc : 0), lunchD = x.discKind === "code" || codeD ? 0 : x.disc;
+    /* the label from the discount that won (core: discKind); only one of them applies */
+    const kind = x.discKind || (x.codeDisc ? "code" : x.profileDisc ? "profile" : x.disc ? "lunch" : "");
+    const amt = kind === "code" ? x.codeDisc || x.disc : kind === "profile" ? x.profileDisc || x.disc : x.disc;
+    const discLabel = kind === "code" ? "Отстъпка с код" : kind === "profile" ? "Отстъпка с профил" : kind === "lunch" ? "Отстъпка след 15:00" : "Отстъпка";
     const fee = x.fee === 0 ? "безплатна" : x.fee == null ? 'по тарифа <span class="missing">[ЛИПСВА: такса]</span>' : SC.fmt(x.fee);
     const kv = (D ? '<div class="kv"><span>Доставка до</span><span>' + esc(x.zone || "") + " · " + fee + "</span></div>"
       : '<div class="kv"><span>Вземане от</span><span>Siracusa, Дружба 2</span></div>') +
-      (lunchD ? '<div class="kv disc"><span>Отстъпка след 15:00</span><span class="price">-' + SC.fmt(lunchD) + "</span></div>" : "") +
-      (codeD ? '<div class="kv disc"><span>Отстъпка с код</span><span class="price">-' + SC.fmt(codeD) + "</span></div>" : "") +
+      (amt ? '<div class="kv disc"><span>' + discLabel + '</span><span class="price">-' + SC.fmt(amt) + "</span></div>" : "") +
       '<div class="kv"><span>Плащане</span><span>' + esc(x.payLabel || "В брой") + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span class="price">' + SC.fmt(x.total) + "</span></div>";
     const sub = x.lines.reduce((a, l) => a + lineSum(l), 0);
@@ -569,7 +576,7 @@ export function startTracking(main: HTMLElement) {
       S.fbErr = ""; (t as HTMLButtonElement).disabled = true;
       try {
         if (!simulated()) await api.ratings.submit({ orderNo: trackId(), happy: false, text: S.fb.trim() });
-        if (S.rating) S.rating.fbSent = true; if (!simulated()) saveMem(); S.fb = ""; render(); SC.toast("Изпратихме го на управителя");
+        if (S.rating) S.rating.fbSent = true; if (!simulated()) saveMem(); S.fb = ""; render(); main.querySelector<HTMLElement>(".fbsent")?.focus({ preventScroll: true }); /* the note says it: no toast over it */
       } catch (err) { (t as HTMLButtonElement).disabled = false; rateError(err, "Не успяхме да го изпратим. Опитайте пак."); }
       return;
     }
