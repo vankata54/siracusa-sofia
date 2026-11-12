@@ -56,6 +56,8 @@ export const feedbackNotes = sqliteTable("feedback_notes", { ...doc, status: tex
 export const auditLog = sqliteTable("audit_log", { ...doc, actor: text("actor"), action: text("action") });
 /* one document "main": kitchen "Натоварено" + minutes, reservation length (the admin edits them) */
 export const settings = sqliteTable("settings", { ...doc });
+/* phones that already used the one-time profile bonus: only a SHA-256 hash of the number (kept after a profile is deleted) */
+export const bonusUsed = sqliteTable("bonus_used", { ...doc });
 /* contact messages from /kontakti/ */
 export const feedback = sqliteTable("feedback", { ...doc, status: text("status") });
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });

@@ -115,6 +115,8 @@ function rememberUser(c: Customer | null) {
 }
 const noAuth = () => new ApiError("auth", "Влезте с телефона си.", 401);
 
+/** the signed-in customer as the API returns it: + profileBonus (unused -10%, the cart shows it as profilePct: 10) */
+export type CustomerView = Customer & { profileBonus: boolean };
 export type StatusInfo = { state: unknown; status: unknown; eta: { min: number; busy: boolean; text: string }; kitchen: Settings["kitchen"];
   /** the celebration calculator: "estimate" (show the price) or "offer" (only "Ще ви изпратим оферта"); earlyDays null = no -5% */
   celebrationPrice: Settings["celebrationPrice"]; earlyDays: number | null };
@@ -236,19 +238,19 @@ export const api = {
     smsRequest: pick((c, phone: string) => c.customers.requestCode(phone), (phone) => http<{ sent: true; phone: string; demoCode?: string; resendIn: number; known: boolean }>("POST", "auth/sms/request", { phone })),
     smsVerify: async (phone: string, code: string, extra: { name?: string; marketing?: boolean } = {}) => {
       const r = DEMO
-        ? await local(async (c) => { const v = await c.customers.verifyCode(phone, code, extra); setDemoTok("user", v.token); return { customer: v.customer, isNew: v.isNew }; })
+        ? await local(async (c) => { const v = await c.customers.verifyCode(phone, code, extra); setDemoTok("user", v.token); return { customer: (await c.customers.view(v.customer))!, isNew: v.isNew }; })
         : await http<{ customer: Customer; isNew: boolean }>("POST", "auth/sms/verify", { phone, code, ...extra });
       rememberUser(r.customer);
       return r;
     },
     logout: async () => { if (DEMO) { const t = demoTok("user"); if (t) await local((c) => c.customers.logout(t)); setDemoTok("user", null); } else await http("POST", "auth/sms/logout"); rememberUser(null); },
     /** the signed-in customer or null; null also clears "sc-user" (an expired session must not look signed in) */
-    me: async (): Promise<Customer | null> => {
-      const r = DEMO ? await local((c) => c.customers.bySession(demoTok("user"))) : await http<Customer | null>("GET", "me");
+    me: async (): Promise<CustomerView | null> => {
+      const r = DEMO ? await local(async (c) => c.customers.view(await c.customers.bySession(demoTok("user")))) : await http<CustomerView | null>("GET", "me");
       if (!r) rememberUser(null);
       return r;
     },
-    update: pick(async (c, patch: ProfilePatch) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = await c.customers.update(u.id, patch); rememberUser(r); return r; }, async (patch) => { const r = await http<Customer>("PATCH", "me", patch); rememberUser(r); return r; }),
+    update: pick(async (c, patch: ProfilePatch) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = (await c.customers.view(await c.customers.update(u.id, patch)))!; rememberUser(r); return r; }, async (patch) => { const r = await http<CustomerView>("PATCH", "me", patch); rememberUser(r); return r; }),
     remove: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (u) await c.customers.remove(u.id); setDemoTok("user", null); rememberUser(null); return { ok: true }; }, async () => { const r = await http<{ ok: boolean }>("DELETE", "me"); rememberUser(null); return r; }),
     orders: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); return u ? c.customers.orders(u) : []; }, () => http<Order[]>("GET", "me/orders")),
     export: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.export(u); }, () => http<unknown>("GET", "me/export")),

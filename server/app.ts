@@ -181,8 +181,25 @@ export function createApp(opts: AppOpts) {
   app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
   app.post("/api/celebrations", async (c) => c.json(await core.celebrations.create(await body(c)), 201));
   app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
-  app.get("/api/office/:code", async (c) => { const o = await coreFor(c).office.get(c.req.param("code"), c.req.query("k") || null); if (!o) throw new CoreError("not_found", "Тази обща поръчка не съществува.", 404); return c.json(o); });
-  app.post("/api/office/:code/join", async (c) => c.json(await coreFor(c).office.join(c.req.param("code"), await body(c))));
+  /* invite codes are 6 digits: at most 20 unknown codes per IP in 10 min (guessing a code must stay slow) */
+  const officeMiss = new Map<string, number[]>();
+  const officeGate = (c: Context) => {
+    const k = ip(c), now = Date.now(), list = (officeMiss.get(k) || []).filter((t) => t > now - 10 * 60_000);
+    officeMiss.set(k, list);
+    if (list.length >= 20 && !opts.previewApi) throw new CoreError("throttled", "Твърде много опити с грешна връзка. Опитайте след 10 минути.", 429);
+    return () => { list.push(now); };
+  };
+  app.get("/api/office/:code", async (c) => {
+    const miss = officeGate(c);
+    const o = await coreFor(c).office.get(c.req.param("code"), c.req.query("k") || null);
+    if (!o) { miss(); throw new CoreError("not_found", "Тази обща поръчка не съществува.", 404); }
+    return c.json(o);
+  });
+  app.post("/api/office/:code/join", async (c) => {
+    const miss = officeGate(c);
+    try { return c.json(await coreFor(c).office.join(c.req.param("code"), await body(c))); }
+    catch (e) { if (e instanceof CoreError && e.code === "not_found") miss(); throw e; }
+  });
   app.post("/api/office/:code/update", async (c) => { const b = await body(c); return c.json(await core.office.update(c.req.param("code"), String(b.orgKey || ""), { name: b.name, phone: b.phone, pay: b.pay })); });
   app.post("/api/office/:code/submit", async (c) => c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))));
   app.post("/api/subscribe", async (c) => { const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
@@ -211,11 +228,12 @@ export function createApp(opts: AppOpts) {
     const b = await body(c);
     const r = await core.customers.verifyCode(b.phone, b.code, { name: b.name, marketing: b.marketing });
     setCookie(c, USER_COOKIE, r.token, { ...cookieOpts, maxAge: 30 * 24 * 3600 });
-    return c.json({ customer: r.customer, isNew: r.isNew });
+    return c.json({ customer: await core.customers.view(r.customer), isNew: r.isNew });
   });
   app.post("/api/auth/sms/logout", async (c) => { const t = getCookie(c, USER_COOKIE); if (t) await core.customers.logout(t); deleteCookie(c, USER_COOKIE, { path: "/" }); return c.json({ ok: true }); });
-  app.get("/api/me", async (c) => c.json(await core.customers.bySession(getCookie(c, USER_COOKIE))));
-  app.patch("/api/me", async (c) => { const u = await customer(c); return c.json(await core.customers.update(u.id, await body(c))); });
+  /* the customer + profileBonus (an unused -10% the cart shows before the order); notify in the current shape */
+  app.get("/api/me", async (c) => c.json(await core.customers.view(await core.customers.bySession(getCookie(c, USER_COOKIE)))));
+  app.patch("/api/me", async (c) => { const u = await customer(c); return c.json(await core.customers.view(await core.customers.update(u.id, await body(c)))); });
   app.delete("/api/me", async (c) => { const u = await customer(c); await core.customers.remove(u.id); deleteCookie(c, USER_COOKIE, { path: "/" }); return c.json({ ok: true }); });
   app.get("/api/me/orders", async (c) => c.json(await core.customers.orders(await customer(c))));
   app.get("/api/me/codes", async (c) => c.json(await core.customers.codes(await customer(c))));

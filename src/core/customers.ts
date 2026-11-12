@@ -1,6 +1,6 @@
 /* Customers: sign-in with phone + SMS code (v1/demo: the code is returned and shown on screen), profile, consents
    (marketing always false by default), favourites, addresses, internal rating (-10% code; Google link always). */
-import { COL, iso, nowDate, rid, randomDigits, type Ctx } from "./ctx.ts";
+import { COL, iso, nowDate, phoneHash, rid, randomDigits, type Ctx } from "./ctx.ts";
 import { CoreError, type Customer, type Order, type Rating, type Session, type SmsCode } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
 import { BLOCKED_DEMO_PHONE } from "./reservations.ts";
@@ -51,7 +51,8 @@ export async function verifySmsCode(ctx: Ctx, rawPhone: string, code: string, ex
       id: rid(8), phone: phone!, name: String(extra.name || "").trim(), isNew: true, since: iso(ctx).slice(0, 10),
       consent: { marketing: extra.marketing === true, birthday: false, bday: "" },
       favs: [], addrs: [], stamps: 0,
-      coupons: [{ code: "PROFIL10", pct: 10, note: "-10% от следващата поръчка", used: false }],
+      /* the -10% bonus: once per phone number for ever (a deleted and new profile with the same number gets none) */
+      coupons: (await bonusTaken(ctx, phone!)) ? [] : [{ code: "PROFIL10", pct: 10, note: "-10% от следващата поръчка", used: false }],
       createdAt: iso(ctx),
     };
     await ctx.repo.put(COL.customers, c);
@@ -59,6 +60,25 @@ export async function verifySmsCode(ctx: Ctx, rawPhone: string, code: string, ex
   const s: Session = { id: rid(24), kind: "customer", userId: c.id, expiresAt: nowDate(ctx).getTime() + SESSION_TTL_MS, createdAt: iso(ctx) };
   await ctx.repo.put(COL.sessions, s);
   return { token: s.id, customer: c, isNew };
+}
+
+/** notify in the current shape (old records had events / offers: dropped, `order` kept) */
+export function normNotify(n: unknown): { order: boolean; reservation: boolean } {
+  const o = (n && typeof n === "object" ? n : {}) as Record<string, unknown>;
+  return { order: o.order === true, reservation: o.reservation === true };
+}
+/** Has this phone number already used the profile bonus (also in a deleted profile)? */
+export async function bonusTaken(ctx: Ctx, phone: string): Promise<boolean> {
+  return !!(await ctx.repo.get(COL.bonusUsed, await phoneHash(phone)));
+}
+export async function markBonusTaken(ctx: Ctx, phone: string, orderNo: string): Promise<void> {
+  await ctx.repo.put(COL.bonusUsed, { id: await phoneHash(phone), orderNo, createdAt: iso(ctx) });
+}
+/** The customer as the screens get it: + profileBonus (an unused -10% the cart can show before the order). */
+export async function customerView(ctx: Ctx, c: Customer | null): Promise<(Customer & { profileBonus: boolean }) | null> {
+  if (!c) return null;
+  const has = (c.coupons || []).some((x) => x.code === "PROFIL10" && !x.used) && !(await bonusTaken(ctx, c.phone));
+  return { ...c, notify: normNotify(c.notify), profileBonus: has };
 }
 
 export async function customerBySession(ctx: Ctx, token: string | undefined | null): Promise<Customer | null> {
@@ -79,9 +99,9 @@ export async function updateCustomer(ctx: Ctx, id: string, patch: ProfilePatch):
   if (patch.email != null) c.email = String(patch.email).trim() || undefined;
   if (patch.consent) c.consent = { ...c.consent, ...patch.consent, marketing: patch.consent.marketing === true ? true : patch.consent.marketing === false ? false : c.consent.marketing };
   if (patch.notify) {
-    const cur = c.notify || { order: false, events: false, offers: false }, n = patch.notify;
-    c.notify = { order: n.order == null ? cur.order : n.order === true, events: n.events == null ? cur.events : n.events === true, offers: n.offers == null ? cur.offers : n.offers === true };
-  }
+    const cur = normNotify(c.notify), n = patch.notify;
+    c.notify = { order: n.order == null ? cur.order : n.order === true, reservation: n.reservation == null ? cur.reservation : n.reservation === true };
+  } else if (c.notify) c.notify = normNotify(c.notify);
   c.isNew = false;
   await ctx.repo.put(COL.customers, c);
   return c;

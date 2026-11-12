@@ -95,4 +95,13 @@ describe("server API (in-memory SQLite)", async () => {
     expect((await send({ name: "Иван", contact: "0888123456", message: "Още едно" })).status).toBe(429);
     expect((await app.request("/api/admin/feedback")).status).toBe(401);
   });
+  it("office: unknown invite codes are limited per IP", async () => {
+    let last = 0;
+    for (let i = 0; i < 21; i++) last = (await app.request("/api/office/" + (100000 + i), { headers: { "x-forwarded-for": "7.7.7.7" } })).status;
+    expect(last).toBe(429);
+  });
+  it("a web order never takes a table from the body", async () => {
+    const o = await (await app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456", sched: "утре", slot: "12:00", table: "7" }))).json();
+    expect(o.table).toBeNull();
+  });
 });

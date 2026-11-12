@@ -82,6 +82,10 @@ export interface OfficeOrder {
   /** why the automatic send at the deadline did not happen ("no_contact" | "empty" | an error code) */
   autoFailed?: string;
   sentAt?: Iso;
+  /** of the sent order, the same on every device: "HH:MM" (or "веднага"), total in € */
+  orderAt?: string; orderTotal?: number;
+  /** created in the test preview of the server (x-sc-clock): the real-time sweep leaves it alone */
+  preview?: boolean;
   /** public view only: the caller holds the organizer token */
   isOrg?: boolean;
 }
@@ -91,8 +95,9 @@ export interface Subscription { id: string; email: string; topic: "events"; topi
 export interface Customer {
   id: string; phone: string; name: string; email?: string; isNew?: boolean; since: string;
   consent: { marketing: boolean; birthday: boolean; bday: string };
-  /** notifications the customer wants (all off by default): order status, new events, offers */
-  notify?: { order: boolean; events: boolean; offers: boolean };
+  /** notifications the customer wants (off by default): order status, reservation reminder. Events and offers come only
+      with the marketing consent (decision 12.11.2026). Old records {order, events, offers} are read as {order, reservation: false}. */
+  notify?: { order: boolean; reservation: boolean };
   favs: string[]; addrs: { id: string; label: string; addr: string; zone: string }[];
   stamps: number; coupons: { code: string; pct: number; note: string; used: boolean; orderNo?: string }[];
   blocked?: boolean; createdAt: Iso;

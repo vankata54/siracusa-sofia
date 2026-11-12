@@ -16,6 +16,7 @@ export const PROFILE_COUPON = "PROFIL10";
 import { audit } from "./audit.ts";
 import { getSettings } from "./settings.ts";
 import { findCode, markCodeUsed } from "./codes.ts";
+import { bonusTaken, markBonusTaken } from "./customers.ts";
 import { price, parseMods, slotAllowed } from "../lib/pricing.ts";
 import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
 import { zoneByName, zoneOfAddress } from "../lib/zones.ts";
@@ -67,6 +68,7 @@ export const MSG = {
   addr: "Напишете адреса за доставка.",
   addrOut: "Адресът е извън зоната ни. Изберете „Вземи от място“.",
   addrQuarter: "Добавете и квартала, например „Дружба 2, бл. 311“.",
+  addrStreet: "Добавете улица или блок, например „Дружба 2, бл. 311“, за да ви намери шофьорът.",
 };
 
 function invalid(fields: Record<string, string>): never {
@@ -97,15 +99,26 @@ export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, opts: { lunchOnly
     if (isOut(x)) throw new CoreError("sold_out", "„" + x.n + "“ е изчерпано днес. Махнете го от количката.", 409);
     if (opts.lunchOnly && !x.lunch) throw new CoreError("not_lunch", "В общата поръчка са само ястия от обедното меню.", 422);
     if (x.lunch && !lunchOk(ctx)) throw new CoreError("lunch_stale", MSG.lunchStale, 409);
-    out.push({ key: lineKey(x.id, mods), id: x.id, q, mods, extra: 0 });
+    out.push({ key: lineKey(x.id, pm.mods), id: x.id, q, mods: pm.mods, extra: 0 });
   }
   return sanitize({ lines: out, mode });
 }
 
 /** The delivery zone from the address (the server never trusts a zone sent by the client). */
-export function resolveZone(addr: string, clientZone?: string): { zone: Zone; addr: string } | { error: string } {
+/** Is there more than the quarter: after taking away "ж.к.", "кв.", "София" and the quarter names (Дружба 1/2, НПЗ Искър,
+    Гара Искър, Бусманци, Горубляне), something must remain: a number (block, street number) or a word (street, landmark). */
+export function hasStreet(addr: string): boolean {
+  const rest = String(addr).toLowerCase()
+    .replace(/ж\.?\s*к\.?|кв\.|гр\.|(^|\s)с\.|софия/g, " ")
+    .replace(/дружба\s*(1|2|i{1,2}|едно|две)?(?![0-9a-zа-я])|друба\s*(1|2)?|нпз\s*искър|гара\s*искър|искър|искар|бусманци|горубляне/g, " ")
+    .replace(/[^а-яa-z0-9]+/g, " ").trim();
+  return /\d/.test(rest) || /[а-яa-z]{3,}/.test(rest);
+}
+export function resolveZone(addr: string, clientZone?: string, requireStreet = false): { zone: Zone; addr: string } | { error: string } {
   const a = String(addr || "").trim().slice(0, 300);
   if (!a) return { error: MSG.addr };
+  /* a web order needs the street or block: "Дружба" alone does not get the driver to the door */
+  if (requireStreet && !hasStreet(a)) return { error: MSG.addrStreet };
   const r = zoneOfAddress(a), cz = clientZone ? zoneByName(clientZone) : null;
   if (r.type === "zone") return { zone: r.zone, addr: a };
   if (r.type === "ask") return cz && r.opts.some((z) => z.n === cz.n) ? { zone: cz, addr: a } : { error: "Уточнете квартала: " + r.q };
@@ -133,16 +146,17 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   if (codeIn) { const c = await findCode(ctx, codeIn); if ("error" in c) errs.code = c.error; else codePct = c.rating.pct; }
 
   let zone: Zone | null = null, addr = "";
-  if (mode === "delivery") { const z = resolveZone(input.addr || "", input.zone); if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; } }
+  if (mode === "delivery") { const z = resolveZone(input.addr || "", input.zone, (input.channel || "web") === "web"); if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; } }
   /* the profile bonus: signed in (userId from the session, never from the body) with the profile's phone, unused coupon */
   const phone0 = normPhone(input.phone);
   const prof = input.userId ? await ctx.repo.get<Customer>(COL.customers, input.userId) : null;
-  const bonus = prof && phone0 && prof.phone === phone0 ? (prof.coupons || []).find((c) => c.code === PROFILE_COUPON && !c.used) : undefined;
+  const bonus0 = prof && phone0 && prof.phone === phone0 ? (prof.coupons || []).find((c) => c.code === PROFILE_COUPON && !c.used) : undefined;
+  const bonus = bonus0 && !(await bonusTaken(ctx, phone0!)) ? bonus0 : undefined;
   const P = price(cart, { zone, scheduled: !!sched, clock: ctx.clock, busy: settings.kitchen.busy, codePct, profilePct: bonus ? bonus.pct : 0 });
   if (!String(input.name || "").trim()) errs.name = "Напишете името си.";
   const phone = normPhone(input.phone);
   if (!phone) errs.phone = "Телефонът трябва да е 10 цифри, например 0888 12 34 56.";
-  if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(input.email).trim())) errs.email = "Проверете имейла, например ime@primer.bg.";
+  if (input.email && (String(input.email).length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(input.email).trim()))) errs.email = "Проверете имейла, например ime@primer.bg.";
 
   const slot = String(input.slot || "asap");
   if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
@@ -169,6 +183,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       if (!c || k < 0) throw new CoreError("bonus_used", "Бонусът с профил вече е използван. Обновете страницата.", 409);
       c.coupons[k] = { ...c.coupons[k], used: true, orderNo: no } as Customer["coupons"][number];
       await ctx.repo.put(COL.customers, c);
+      await markBonusTaken(ctx, c.phone, no);
     }
     const ts = nowDate(ctx);
     const o: Order = {
@@ -179,7 +194,9 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       eta: atMin == null ? null : atMin - m, at, sched, placedAt: hhmm(m), ts: ts.getTime(),
       status: "accepted", name: String(input.name).trim().slice(0, 80), phone: phone!, email: input.email ? String(input.email).trim() : undefined,
       note: input.note ? String(input.note).trim().slice(0, 2000) : undefined,
-      marketing: input.marketing === true, userId: input.userId || null, table: input.table || null,
+      marketing: input.marketing === true, userId: input.userId || null,
+      /* a table only for QR / waiter orders (never from a web order's body) */
+      table: input.channel === "qr" || input.channel === "waiter" ? input.table || null : null,
       key: randomKey(8), discKind: P.discKind, ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
       createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
     };

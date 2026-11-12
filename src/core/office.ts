@@ -17,6 +17,8 @@ import { normPhone } from "../lib/format.ts";
 import type { Mode } from "../lib/cart.ts";
 
 export const OFFICE_FIRST = 630, OFFICE_LAST = 840; /* 10:30 .. 14:00 */
+/** dishes (lines) one colleague may choose */
+export const OFFICE_MAX_LINES = 10;
 export const OFFICE_MSG = {
   deadline: "Изберете краен час между 10:30 и 14:00.",
   notFound: "Тази обща поръчка не съществува.",
@@ -76,7 +78,7 @@ export async function createOffice(ctx: Ctx, o: OfficeInput): Promise<OfficeOrde
   const doc: OfficeOrder = {
     id: rid(8), code, office: String(o.office || "").trim().slice(0, 80), addr: mode === "delivery" ? String(o.addr || "").trim().slice(0, 300) : "", zone: mode === "delivery" && z.type === "zone" ? z.zone.n : "",
     deadline, payer: o.payer === "each" ? "each" : "one", mode, participants: [], status: "open", createdAt: iso(ctx),
-    date, orgKey: rid(12), contact,
+    date, orgKey: rid(12), contact, ...(ctx.preview && ctx.clock ? { preview: true } : {}),
   };
   await ctx.repo.put(COL.office, doc);
   emit(ctx, "office.created", { code: doc.code, date, deadline }, {});
@@ -103,6 +105,7 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   if (!isOrg && officeDue(ctx, o)) throw new CoreError("deadline", OFFICE_MSG.closedList, 409);
   const name = String(p.name || "").trim().slice(0, 40);
   if (!name) invalid({ name: "Напишете името си." });
+  if (Array.isArray(p.lines) && p.lines.length > OFFICE_MAX_LINES) throw new CoreError("too_many", "До " + OFFICE_MAX_LINES + " ястия на човек.", 422);
   const lines = Array.isArray(p.lines) && p.lines.length
     ? checkLines(ctx, { lines: p.lines }, o.mode, { lunchOnly: true }).lines.map((l) => {
       if (l.mods.length) throw new CoreError("bad_mod", "В общата поръчка ястията са без промени.", 422);
@@ -120,6 +123,7 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   let pid: string;
   if (i > -1) { pid = o.participants[i].pid || rid(12); o.participants[i] = { ...o.participants[i], name, lines, pid }; }
   else { pid = rid(12); o.participants.push({ name, lines, pid }); }
+  if (o.autoFailed === "empty" && lines.length) delete o.autoFailed; /* a dish now: the sweep tries again */
   await ctx.repo.put(COL.office, o);
   emit(ctx, "office.updated", { code: o.code, participants: o.participants.length }, { office: o.code });
   return { ...publicOffice(ctx, o, p.orgKey), pid };
@@ -156,13 +160,19 @@ export async function submitOffice(ctx: Ctx, code: string, contact: SubmitInput,
     if (!auto && !(contact.orgKey && contact.orgKey === o.orgKey)) throw new CoreError("forbidden", OFFICE_MSG.onlyOrg, 403);
     if (o.status !== "open") throw new CoreError("closed", "Поръчката вече е изпратена" + (o.orderNo ? " (№ " + o.orderNo + ")." : "."), 409);
     if (dateOf(o) > sofiaYmd(nowDate(ctx))) throw new CoreError("too_early", OFFICE_MSG.tooEarly, 409);
-    const lines = o.participants.flatMap((p) => p.lines);
+    /* the same dish of all colleagues in one line (at most 50 per line), so a big office never hits the 40-line limit */
+    const sum = new Map<string, number>();
+    for (const l of o.participants.flatMap((p) => p.lines)) sum.set(l.id, (sum.get(l.id) || 0) + l.q);
+    const lines: { key: string; id: string; q: number; mods: string[]; extra: number }[] = [];
+    for (const [id, q0] of sum) for (let q = q0, k = 0; q > 0; q -= 50, k++) lines.push({ key: id + (k ? "#" + k : ""), id, q: Math.min(q, 50), mods: [], extra: 0 });
     const c = auto && o.contact ? o.contact : contact;
+    /* the organizer's contact from the creation when this device did not send it (second device, the sweep) */
+    const first = o.participants[0] ? o.participants[0].name : "";
     const order = await createOrder(ctx, {
-      name: c.name || (o.contact && o.contact.name) || "", phone: c.phone || (o.contact && o.contact.phone) || "", pay: c.pay, email: c.email, note: (contact as SubmitInput).note,
-      cart: { mode: o.mode, lines: lines.map((l) => ({ key: l.id, id: l.id, q: l.q, mods: [], extra: 0 })) }, zone: o.zone, addr: o.addr, channel: "office",
+      name: c.name || (o.contact && o.contact.name) || first, phone: c.phone || (o.contact && o.contact.phone) || "", pay: c.pay || (o.contact && o.contact.pay) || undefined, email: c.email, note: (contact as SubmitInput).note,
+      cart: { mode: o.mode, lines }, zone: o.zone, addr: o.addr, channel: "office",
     });
-    o.status = "sent"; o.orderNo = order.no; o.sentAt = iso(ctx); delete o.autoFailed;
+    o.status = "sent"; o.orderNo = order.no; o.sentAt = iso(ctx); o.orderAt = order.at; o.orderTotal = order.total; delete o.autoFailed;
     await ctx.repo.put(COL.office, o);
     return { o, order };
   };
@@ -174,14 +184,14 @@ export async function submitOffice(ctx: Ctx, code: string, contact: SubmitInput,
 /** Open office orders whose deadline has come: send them (the server calls this at start, at each deadline and every minute).
     Without the organizer's phone or without dishes the order stays open and gets `autoFailed` (the organizer sends it). */
 export async function sendDueOffices(ctx: Ctx): Promise<{ sent: string[]; failed: [string, string][] }> {
-  const open = (await ctx.repo.list<OfficeOrder>(COL.office, { status: "open" } as Partial<OfficeOrder>)).filter((o) => !o.autoFailed && officeDue(ctx, o));
+  const open = (await ctx.repo.list<OfficeOrder>(COL.office, { status: "open" } as Partial<OfficeOrder>)).filter((o) => !o.autoFailed && (!o.preview || ctx.preview) && officeDue(ctx, o));
   const sent: string[] = [], failed: [string, string][] = [];
   for (const o of open) {
     let why = "";
     if (!o.participants.some((p) => p.lines.length)) why = "empty";
     else if (!o.contact || !o.contact.phone) why = "no_contact";
     else {
-      try { await submitOffice(ctx, o.code, { name: o.contact.name, phone: o.contact.phone, pay: o.contact.pay }, true); sent.push(o.code); await audit(ctx, "system", "office.auto_sent", o.code); continue; }
+      try { await submitOffice(ctx, o.code, { name: o.contact.name || (o.participants[0] ? o.participants[0].name : ""), phone: o.contact.phone, pay: o.contact.pay }, true); sent.push(o.code); await audit(ctx, "system", "office.auto_sent", o.code); continue; }
       catch (e) { why = e instanceof CoreError ? e.code : "error"; }
     }
     const cur = await getOffice(ctx, o.code);

@@ -498,3 +498,82 @@ describe("payAnswer: one answer about payment from RESTAURANT.payment", () => {
     expect(payAnswer()).not.toMatch(/Sodexo/);
   });
 });
+
+describe("round 6: bonus once per phone, mods normalized, street needed, office per person", () => {
+  const signIn = async (core: ReturnType<typeof createCore>, phone = "0888123456") => {
+    const s = await core.customers.requestCode(phone);
+    return core.customers.verifyCode(phone, s.demoCode!, { name: "Мария" });
+  };
+  it("profile bonus: shown before the order (profileBonus), used once per phone for ever, also after deleting the profile", async () => {
+    const core = createCore({ repo: new MemoryRepo(), clock: "12:30", now: () => NOW, smsDemo: true });
+    const v = await signIn(core);
+    expect((await core.customers.view(v.customer))!.profileBonus).toBe(true);
+    const cart = pickup([L(pizza.id, 2)]);
+    const P = price(cart, { clock: "12:30", profilePct: 10 });
+    const o = await core.orders.create({ ...base, cart, userId: v.customer.id });
+    expect(o.discKind).toBe(P.discKind);
+    expect(o.profileDisc).toBe(P.profileDisc);
+    expect((await core.customers.view((await core.customers.bySession(v.token))!))!.profileBonus).toBe(false);
+    await core.customers.remove(v.customer.id);
+    const again = await signIn(core);
+    expect(again.customer.coupons).toEqual([]);
+    expect((await core.customers.view(again.customer))!.profileBonus).toBe(false);
+    expect((await core.orders.create({ ...base, cart, userId: again.customer.id })).discKind).toBe("");
+    /* nothing personal is kept: only the hash */
+    const kept = await core.ctx.repo.list<{ id: string }>("bonus_used");
+    expect(kept).toHaveLength(1);
+    expect(JSON.stringify(kept)).not.toContain("0888123456");
+    expect(kept[0].id).toMatch(/^[0-9a-f]{64}$/);
+  });
+  it("notify is {order, reservation}; old records keep `order`", async () => {
+    const core = createCore({ repo: new MemoryRepo(), clock: "12:30", now: () => NOW, smsDemo: true });
+    const v = await signIn(core);
+    await core.ctx.repo.put("users", { ...v.customer, notify: { order: true, events: true, offers: true } } as never);
+    const old = (await core.customers.view((await core.customers.bySession(v.token))!))!;
+    expect(old.notify).toEqual({ order: true, reservation: false });
+    const u = await core.customers.update(v.customer.id, { notify: { reservation: true } });
+    expect(u.notify).toEqual({ order: true, reservation: true });
+  });
+  it("mods: the same add-on written differently is refused (never charged twice); the stored form is clean", async () => {
+    const { core } = mk();
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+ Кашкавал", "+кашкавал"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+  КАШКАВАЛ ", "+ кашкавал"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["без лук", "без  Лук"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+    const o = await core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+кашкавал", "без  лук"])]) });
+    expect(o.lines[0].mods).toEqual(["+ Кашкавал", "без лук"]);
+  });
+  it("a web order: no table from the body; the address needs a street or block", async () => {
+    const { core } = mk();
+    const o = await core.orders.create({ ...base, cart: pickup([L(pizza.id)]), table: "S1" });
+    expect(o.table).toBeNull();
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба 2" })).rejects.toMatchObject({ fields: { addr: "Добавете улица или блок, например „Дружба 2, бл. 311“, за да ви намери шофьорът." } });
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба" })).rejects.toMatchObject({ fields: { addr: expect.stringContaining("улица или блок") } });
+    expect((await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "ул. Обиколна, Дружба 2" })).zone).toBe("Дружба 2");
+  });
+  it("office: up to 10 dishes per person; 21 colleagues x 2 dishes send as merged lines; the order time for all devices", async () => {
+    const repo = new MemoryRepo();
+    const at = (clock: string, iso: string) => mk(clock, { preview: true, repo, now: () => new Date(iso) }).core;
+    const c0 = at("09:30", "2026-11-12T07:30:00Z");
+    const o = await c0.office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "11:30", name: "Мария", phone: "0888112233" });
+    const L2 = (id: string) => ({ id, q: 1, mods: [], extra: 0 });
+    await expect(c0.office.join(o.code, { name: "Много", lines: Array.from({ length: 11 }, () => L2(lunch[0].id)) })).rejects.toMatchObject({ code: "too_many", message: "До 10 ястия на човек." });
+    for (let i = 0; i < 21; i++) await c0.office.join(o.code, { name: "Колега " + i, lines: [L2(lunch[0].id), L2(lunch[1].id)] });
+    const r = await at("10:45", "2026-11-12T08:45:00Z").office.submit(o.code, { orgKey: o.orgKey } as never);
+    expect(r.order.lines.map((l) => l.q)).toEqual([21, 21]);
+    expect(r.order.name).toBe("Мария");
+    const pub = await c0.office.get(o.code);
+    expect(pub).toMatchObject({ status: "sent", orderAt: r.order.at, orderTotal: r.order.total });
+  });
+  it("office: autoFailed 'empty' clears when a dish comes; offices made in the server preview are left to the preview", async () => {
+    const repo = new MemoryRepo();
+    const prev = (clock: string, iso: string) => createCore({ repo, clock, preview: true, now: () => new Date(iso) });
+    const o = await prev("09:30", "2026-11-12T07:30:00Z").office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "10:30" });
+    expect(o.preview).toBe(true);
+    const real = createCore({ repo, clock: "11:00", now: () => new Date("2026-11-12T09:00:00Z") });
+    expect(await real.office.sendDue()).toEqual({ sent: [], failed: [] });
+    const p2 = prev("10:31", "2026-11-12T08:31:00Z");
+    expect((await p2.office.sendDue()).failed).toEqual([[o.code, "empty"]]);
+    await p2.office.join(o.code, { name: "Иван", lines: [{ id: lunch[0].id, q: 1, mods: [], extra: 0 }], orgKey: o.orgKey });
+    expect((await p2.office.get(o.code))!.autoFailed).toBeUndefined();
+  });
+});

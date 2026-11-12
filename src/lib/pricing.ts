@@ -57,24 +57,27 @@ export const takesAddons = (x: Dish): boolean => (ORDER_RULES.addonCats as reado
 
 /** Checks the modifications of one line against the menu. extra = the add-ons' prices from the menu.
     bad = the first modification that is not allowed (unknown add-on, an ingredient the dish does not have, a duplicate). */
-export function parseMods(x: Dish, mods: string[]): { extra: number; adds: string[]; bad: string | null } {
-  const A = addonLookup(), seen = new Set<string>(), adds: string[] = [];
+export function parseMods(x: Dish, mods: string[]): { extra: number; adds: string[]; bad: string | null; mods: string[] } {
+  /* normalized: "+кашкавал", "+  КАШКАВАЛ " and "+ Кашкавал" are the same add-on (by id), "без  Лук" = "без лук";
+     a repeated add-on or removal is refused, so nothing is charged twice. mods = the clean form ("+ Кашкавал", "без лук"). */
+  const A = addonLookup(), seen = new Set<string>(), adds: string[] = [], out: string[] = [];
   let extra = 0, bad: string | null = null;
   for (const raw of mods) {
-    const m = String(raw).trim();
+    const m = String(raw).trim().replace(/\s+/g, " ");
     if (bad) break;
-    if (!m || m.length > 120 || seen.has(norm(m))) { bad = m || "(празно)"; break; }
-    seen.add(norm(m));
+    if (!m || m.length > 120) { bad = m || "(празно)"; break; }
     if (m.startsWith("+")) {
       const a = A[norm(m.slice(1))];
-      if (!a || x.lunch || !takesAddons(x) || isOut(a)) { bad = m; break; }
-      adds.push(a.id); extra += a.p;
+      if (!a || x.lunch || !takesAddons(x) || isOut(a) || seen.has("add:" + a.id)) { bad = m; break; }
+      seen.add("add:" + a.id); adds.push(a.id); extra += a.p; out.push("+ " + a.n);
     } else if (/^без\s+\S/i.test(m)) {
       /* removals are free (no price effect): the dish's own ingredients or a short wish such as "без лук" */
-      if (m.length > 60 || /[<>{}]/.test(m)) { bad = m; break; }
+      const what = m.replace(/^без\s+/i, "").trim(), key = "rem:" + norm(what);
+      if (m.length > 60 || /[<>{}]/.test(m) || seen.has(key)) { bad = m; break; }
+      seen.add(key); out.push("без " + what);
     } else bad = m;
   }
-  return { extra: round2(extra), adds, bad };
+  return { extra: round2(extra), adds, bad, mods: out };
 }
 
 export interface PriceOpts { zone?: Zone | null; scheduled?: boolean; clock?: ClockInput; busy?: boolean; codePct?: number;

@@ -18,7 +18,7 @@ const TABLES: Record<string, Cols> = {
   sessions: { user_id: (d) => d.userId, kind: (d) => d.kind, expires_at: (d) => d.expiresAt },
   feedback_notes: { status: (d) => d.status, module: (d) => d.module },
   audit_log: { actor: (d) => d.actor, action: (d) => d.action },
-  events: {}, offers: {}, settings: {}, feedback: { status: (d) => d.status },
+  events: {}, offers: {}, settings: {}, bonus_used: {}, feedback: { status: (d) => d.status },
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {

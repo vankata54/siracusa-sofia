@@ -43,7 +43,7 @@ export function createCore(ctx: Ctx) {
     feedback: bind(ctx, { create: feedback.createFeedback, list: feedback.listFeedback }),
     subscriptions: bind(ctx, { subscribe: res.subscribe }),
     customers: bind(ctx, {
-      requestCode: cust.requestSmsCode, verifyCode: cust.verifySmsCode, bySession: cust.customerBySession, logout: cust.logout,
+      requestCode: cust.requestSmsCode, verifyCode: cust.verifySmsCode, bySession: cust.customerBySession, view: cust.customerView, logout: cust.logout,
       update: cust.updateCustomer, toggleFav: cust.toggleFavourite, addAddress: cust.addAddress, removeAddress: cust.removeAddress,
       orders: cust.customerOrders, codes: cust.customerCodes, export: cust.exportCustomer, remove: cust.deleteCustomer,
     }),

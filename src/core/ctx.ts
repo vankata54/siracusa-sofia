@@ -35,7 +35,7 @@ export interface Audience { public?: boolean; order?: string; office?: string }
 export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
-  notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback",
+  notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback", bonusUsed: "bonus_used",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }
@@ -55,6 +55,13 @@ export function randomDigits(n: number): string {
 
 export function emit(ctx: Ctx, type: string, data: unknown, to: Audience = {}): void {
   try { ctx.emit && ctx.emit(type, data, to); } catch { /* the bus must never break a write */ }
+}
+
+/** SHA-256 of a normalized phone with a fixed prefix (hex). Used only to remember that a number already took the
+    one-time profile bonus, also after the profile is deleted (no other data is kept with it). */
+export async function phoneHash(phone: string): Promise<string> {
+  const d = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode("sc-bonus-v1:" + phone));
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Codes people type: no 0/O, 1/I/L, 5/S confusion. */
