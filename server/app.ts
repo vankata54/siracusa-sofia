@@ -6,10 +6,11 @@ import zlib from "node:zlib";
 import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import { openDb, seedMenu, readMenu } from "./db/index.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { scryptHasher } from "./hasher.ts";
-import { createCore, CoreError, officeDueAt, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
+import { createCore, CoreError, officeDueAt, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events.ts";
@@ -27,6 +28,8 @@ export interface AppOpts {
   requireTrackKey?: boolean;
   /** no SMS provider yet: return the code as demoCode (SMS_DEMO=1, tests); otherwise 503 sms_unavailable */
   smsDemo?: boolean;
+  /** behind our own reverse proxy: take the client's address from X-Forwarded-For (TRUST_PROXY=1); default off */
+  trustProxy?: boolean;
   /** run the timers for the automatic office send (default true; off in unit tests) */
   timers?: boolean;
 }
@@ -89,7 +92,15 @@ export function createApp(opts: AppOpts) {
   }
   /* login throttling: 10 failed attempts per IP per 15 min */
   const fails = new Map<string, { n: number; until: number }>();
-  const ip = (c: Context) => c.req.header("x-forwarded-for")?.split(",")[0].trim() || "local";
+  /* the client's address: X-Forwarded-For only behind our own proxy (TRUST_PROXY=1), else the socket's address
+     (a header from the internet could be anything) */
+  const ip = (c: Context): string => {
+    if (opts.trustProxy) { const f = c.req.header("x-forwarded-for"); if (f) return f.split(",")[0].trim(); }
+    let a = "";
+    try { a = getConnInfo(c).remote.address || ""; } catch { /* no socket (tests, some runtimes) */ }
+    /* no address at all: never one key for the whole site; the device cookie (or the phone in the phone keys) separates people */
+    return a || "local:" + (getCookie(c, "sc_dev") || "anon");
+  };
 
   app.onError((err, c) => {
     if (err instanceof CoreError) { const x = err as CoreError & { fields?: unknown; retryIn?: number }; return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}) }, err.status as 400); }
@@ -128,9 +139,13 @@ export function createApp(opts: AppOpts) {
 
   /* ---------- orders ---------- */
   app.post("/api/orders", async (c) => {
-    const b = await body(c), u = await core.customers.bySession(getCookie(c, USER_COOKIE));
+    const b = await body(c), user = await core.customers.bySession(getCookie(c, USER_COOKIE));
+    /* at most 20 orders per IP and 5 per phone in 10 min (off in the test mode); an order refused as invalid (422) does not count */
+    const undos = [limit("ord-ip:" + ip(c), 20, 10, TRY_LATER(10))];
+    const ph = normPhone(b && b.phone);
+    if (ph) undos.push(limit("ord-phone:" + ph, 5, 10, "С този телефон вече има няколко поръчки за кратко време. Обадете ни се на 0894 36 55 77."));
     if (b && b.code) codeGate(c);
-    return c.json(await coreFor(c).orders.create({ ...b, channel: "web", userId: u ? u.id : null }), 201);
+    return c.json(await counted(undos, () => coreFor(c).orders.create({ ...b, channel: "web", userId: user ? user.id : null })), 201);
   });
   /* public tracking: /api/orders/1042-k7f3m2pq (or the number alone for orders without a key, until TRACK_KEY_REQUIRED) */
   /* unknown number or wrong key: 200 {found:false} (an expected answer, no console error; it does not tell whether the
@@ -176,20 +191,27 @@ export function createApp(opts: AppOpts) {
   /* ---------- rate limits (off in the test mode SC_PREVIEW_API=1) ---------- */
   const hits = new Map<string, number[]>();
   /** at most `max` requests per `key` in `minutes`; 429 "throttled" with a text for people */
-  const limit = (key: string, max: number, minutes: number, msg: string) => {
-    if (opts.previewApi) return;
+  /** returns undo(): a request refused for invalid data (422) gives its place back */
+  const limit = (key: string, max: number, minutes: number, msg: string): (() => void) => {
+    if (opts.previewApi) return () => {};
     const now = Date.now(), list = (hits.get(key) || []).filter((t) => t > now - minutes * 60_000);
     if (list.length >= max) { hits.set(key, list); throw new CoreError("throttled", msg, 429); }
     list.push(now); hits.set(key, list);
+    return () => { const i = list.lastIndexOf(now); if (i > -1) list.splice(i, 1); };
+  };
+  /** run fn; when it fails with 422 (invalid data), the places taken in the limits are given back */
+  const counted = async <T>(undos: (() => void)[], fn: () => Promise<T>): Promise<T> => {
+    try { return await fn(); }
+    catch (e) { if (e instanceof CoreError && e.status === 422) undos.forEach((u) => u()); throw e; }
   };
   const TRY_LATER = (m: number) => "Твърде много заявки за кратко време. Опитайте след " + m + " минути или ни се обадете на 0894 36 55 77.";
 
   /* ---------- reservations, celebrations, office, subscriptions ---------- */
   app.post("/api/reservations", async (c) => {
     const b = await body(c), ph = normPhone(b && b.phone);
-    limit("res-ip:" + ip(c), 10, 10, TRY_LATER(10));
-    if (ph) limit("res-phone:" + ph, 5, 60, "За този телефон вече има няколко заявки за резервация. Обадете ни се на 0894 36 55 77 и ще помогнем.");
-    return c.json(await coreFor(c).reservations.create(b), 201);
+    const u = [limit("res-ip:" + ip(c), 10, 10, TRY_LATER(10))];
+    if (ph) u.push(limit("res-phone:" + ph, 5, 60, "За този телефон вече има няколко заявки за резервация. Обадете ни се на 0894 36 55 77 и ще помогнем."));
+    return c.json(await counted(u, () => coreFor(c).reservations.create(b)), 201);
   });
   app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "")));
   app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
@@ -198,14 +220,20 @@ export function createApp(opts: AppOpts) {
   app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
   app.post("/api/celebrations", async (c) => { limit("celeb-ip:" + ip(c), 5, 10, TRY_LATER(10)); return c.json(await core.celebrations.create(await body(c)), 201); });
   app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
-  /* invite codes are 6 digits: at most 20 unknown codes per IP in 10 min (guessing a code must stay slow) */
+  /* wrong office codes (unknown or not the organizer's): at most 20 per IP + device (cookie sc_dev) in 10 min, and 200 per
+     IP whatever the cookie. Only wrong codes count, so colleagues behind one office IP are not blocked by one another;
+     a device that is over the limit gets 429 for every office code (the answer never tells whether a code exists). */
+  const DEV_COOKIE = "sc_dev";
   const officeMiss = new Map<string, number[]>();
+  const recent = (k: string) => { const now = Date.now(), l = (officeMiss.get(k) || []).filter((t) => t > now - 10 * 60_000); officeMiss.set(k, l); return l; };
   const officeGate = (c: Context) => {
-    const k = ip(c), now = Date.now(), list = (officeMiss.get(k) || []).filter((t) => t > now - 10 * 60_000);
-    officeMiss.set(k, list);
-    if (list.length >= 20 && !opts.previewApi) throw new CoreError("throttled", "Твърде много опити с грешна връзка. Опитайте след 10 минути.", 429);
-    return () => { list.push(now); };
+    let dev: string = getCookie(c, DEV_COOKIE) || "";
+    if (!dev || !/^[0-9a-f]{16,32}$/.test(dev)) { dev = rid(12); setCookie(c, DEV_COOKIE, dev, { ...cookieOpts, maxAge: 365 * 24 * 3600 }); }
+    const kIp = "ip:" + ip(c), kDev = "dev:" + ip(c) + ":" + dev;
+    if (!opts.previewApi && (recent(kDev).length >= 20 || recent(kIp).length >= 200)) throw new CoreError("throttled", "Твърде много опити с грешна връзка. Опитайте след 10 минути.", 429);
+    return () => { const now = Date.now(); recent(kDev).push(now); recent(kIp).push(now); };
   };
+  const wrongCode = (e: unknown) => e instanceof CoreError && (e.code === "not_found" || e.code === "forbidden");
   app.get("/api/office/:code", async (c) => {
     const miss = officeGate(c);
     const o = await coreFor(c).office.get(c.req.param("code"), c.req.query("k") || null);
@@ -215,10 +243,19 @@ export function createApp(opts: AppOpts) {
   app.post("/api/office/:code/join", async (c) => {
     const miss = officeGate(c);
     try { return c.json(await coreFor(c).office.join(c.req.param("code"), await body(c))); }
-    catch (e) { if (e instanceof CoreError && e.code === "not_found") miss(); throw e; }
+    catch (e) { if (wrongCode(e)) miss(); throw e; }
   });
-  app.post("/api/office/:code/update", async (c) => { const b = await body(c); return c.json(await core.office.update(c.req.param("code"), String(b.orgKey || ""), { name: b.name, phone: b.phone, pay: b.pay })); });
-  app.post("/api/office/:code/submit", async (c) => c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))));
+  /* update / submit: an unknown code and someone else's code get the same 403 and count as wrong tries */
+  app.post("/api/office/:code/update", async (c) => {
+    const miss = officeGate(c), b = await body(c);
+    try { return c.json(await core.office.update(c.req.param("code"), String(b.orgKey || ""), { name: b.name, phone: b.phone, pay: b.pay })); }
+    catch (e) { if (wrongCode(e)) miss(); throw e; }
+  });
+  app.post("/api/office/:code/submit", async (c) => {
+    const miss = officeGate(c);
+    try { return c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))); }
+    catch (e) { if (wrongCode(e)) miss(); throw e; }
+  });
   app.post("/api/subscribe", async (c) => { limit("sub-ip:" + ip(c), 10, 10, TRY_LATER(10)); const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
   app.post("/api/ratings", async (c) => c.json(await core.ratings.submit(await body(c)), 201));
   /* contact messages: at most 5 per IP in 10 min */

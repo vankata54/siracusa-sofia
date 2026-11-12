@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createApp } from "../../server/app.ts";
 
 describe("server API (in-memory SQLite)", async () => {
-  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
+  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true });
   await core.staff.upsert({ username: "admin", name: "Главен админ", role: "admin", password: "test-password-123" });
   const json = (method: string, body?: unknown, cookie?: string) => ({ method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
 
@@ -97,7 +97,9 @@ describe("server API (in-memory SQLite)", async () => {
   });
   it("office: unknown invite codes are limited per IP", async () => {
     let last = 0;
-    for (let i = 0; i < 21; i++) last = (await app.request("/api/office/" + (100000 + i), { headers: { "x-forwarded-for": "7.7.7.7" } })).status;
+    const first = await app.request("/api/office/100000", { headers: { "x-forwarded-for": "7.7.7.7" } });
+    const cookie = (first.headers.get("set-cookie") || "").split(";")[0];
+    for (let i = 1; i < 21; i++) last = (await app.request("/api/office/" + (100000 + i), { headers: { "x-forwarded-for": "7.7.7.7", cookie } })).status;
     expect(last).toBe(429);
   });
   it("a web order never takes a table from the body", async () => {
@@ -122,5 +124,48 @@ describe("server API (in-memory SQLite)", async () => {
     const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, previewApi: true });
     for (let i = 0; i < 12; i++) last = (await t.app.request("/api/subscribe", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "5.5.5.5" }, body: JSON.stringify({ email: "x" + i + "@b.bg", consent: true }) })).status;
     expect(last).toBe(201);
+  });
+  it("orders: per IP and per phone in 10 min; X-Forwarded-For only with trustProxy", async () => {
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true });
+    const order = (phone: string, ipAddr: string) => t.app.request("/api/orders", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ipAddr },
+      body: JSON.stringify({ cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone, sched: "утре", slot: "12:00" }) });
+    let last = 0;
+    for (let i = 0; i < 6; i++) last = (await order("0888111222", "9.0.0." + i)).status;
+    expect(last).toBe(429);
+    for (let i = 0; i < 21; i++) last = (await order("08881000" + String(i).padStart(2, "0"), "9.9.0.1")).status;
+    expect(last).toBe(429);
+    /* without trustProxy the header is ignored: every request is the same client */
+    const u = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
+    for (let i = 0; i < 21; i++) last = (await u.app.request("/api/codes/check", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "1.2.3." + i }, body: JSON.stringify({ code: "SC10-0000000000" }) })).status;
+    expect(last).toBe(200);
+    for (let i = 0; i < 15; i++) last = (await u.app.request("/api/codes/check", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "1.2.4." + i }, body: JSON.stringify({ code: "SC10-0000000000" }) })).status;
+    expect(last).toBe(429);
+  });
+  it("office: unknown and someone else's code answer the same on update / submit and count as wrong tries; a right link passes for another device", async () => {
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true });
+    const o = await (await t.app.request("/api/office", json("POST", { office: "", addr: "Дружба 2, бл. 311", deadline: "14:00" }))).json();
+    const req = (path: string, b: unknown, cookie = "") => t.app.request(path, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "6.6.6.6", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(b) });
+    const a = await req("/api/office/999999/submit", { name: "И", phone: "0888123456" });
+    const b = await req("/api/office/" + o.code + "/submit", { name: "И", phone: "0888123456", orgKey: "wrong" });
+    expect(a.status).toBe(403);
+    expect(await a.json()).toEqual(await b.json());
+    const dev = (a.headers.get("set-cookie") || "").split(";")[0];
+    let last = 0;
+    for (let i = 0; i < 20; i++) last = (await req("/api/office/" + (200000 + i) + "/update", { orgKey: "x" }, dev)).status;
+    expect(last).toBe(429);
+    /* another device on the same IP still opens the right link */
+    const other = await t.app.request("/api/office/" + o.code, { headers: { "x-forwarded-for": "6.6.6.6" } });
+    expect(other.status).toBe(200);
+  });
+  it("without TRUST_PROXY a forged X-Forwarded-For changes nothing; refused-as-invalid reservations do not use the quota", async () => {
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
+    const post = (b: unknown, fwd: string) => t.app.request("/api/reservations", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": fwd }, body: JSON.stringify(b) });
+    /* 15 invalid requests (422) from "different" forged addresses: none counts */
+    for (let i = 0; i < 15; i++) expect((await post({ date: "2020-01-01", time: "19:00", people: 2, name: "И", phone: "08882000" + String(i).padStart(2, "0") }, "10.0.0." + i)).status).toBe(422);
+    let last = 0;
+    for (let i = 0; i < 10; i++) last = (await post({ date: "2026-12-21", time: "13:00", people: 2, name: "И", phone: "08883000" + String(i).padStart(2, "0") }, "10.1.0." + i)).status;
+    expect(last).toBe(201);
+    /* the 11th valid one from the same connection is refused, whatever the forged header says */
+    expect((await post({ date: "2026-12-21", time: "13:30", people: 2, name: "И", phone: "0888399999" }, "10.2.0.1")).status).toBe(429);
   });
 });

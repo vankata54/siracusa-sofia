@@ -556,7 +556,7 @@ describe("round 6: bonus once per phone, mods normalized, street needed, office 
     const c0 = at("09:30", "2026-11-12T07:30:00Z");
     const o = await c0.office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "11:30", name: "Мария", phone: "0888112233" });
     const L2 = (id: string) => ({ id, q: 1, mods: [], extra: 0 });
-    await expect(c0.office.join(o.code, { name: "Много", lines: Array.from({ length: 11 }, () => L2(lunch[0].id)) })).rejects.toMatchObject({ code: "too_many", message: "До 10 ястия на човек." });
+    await expect(c0.office.join(o.code, { name: "Много", lines: Array.from({ length: 11 }, () => L2(lunch[0].id)) })).rejects.toMatchObject({ code: "too_many", message: "До 10 порции на човек." });
     for (let i = 0; i < 21; i++) await c0.office.join(o.code, { name: "Колега " + i, lines: [L2(lunch[0].id), L2(lunch[1].id)] });
     const r = await at("10:45", "2026-11-12T08:45:00Z").office.submit(o.code, { orgKey: o.orgKey } as never);
     expect(r.order.lines.map((l) => l.q)).toEqual([21, 21]);
@@ -575,5 +575,31 @@ describe("round 6: bonus once per phone, mods normalized, street needed, office 
     expect((await p2.office.sendDue()).failed).toEqual([[o.code, "empty"]]);
     await p2.office.join(o.code, { name: "Иван", lines: [{ id: lunch[0].id, q: 1, mods: [], extra: 0 }], orgKey: o.orgKey });
     expect((await p2.office.get(o.code))!.autoFailed).toBeUndefined();
+  });
+});
+
+describe("round 8: order size limits, office per person / people / sum", () => {
+  it("a web order over 60 portions or 500 € goes by phone; the office has its own limits", async () => {
+    const { ORDER_RULES } = await import("../../src/lib/consts.ts");
+    expect([ORDER_RULES.maxPortions, ORDER_RULES.maxTotal, ORDER_RULES.officePortionsPerPerson, ORDER_RULES.officeMaxPeople]).toEqual([60, 500, 10, 60]);
+    const { core } = mk();
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 50), L(items.find((x) => x.cat === "salati" && !isOut(x))!.id, 11)]) })).rejects.toMatchObject({ code: "too_big", status: 422, message: expect.stringContaining("0894 36 55 77") });
+    const steak = items.filter((x) => !isOut(x)).sort((a, b) => b.p - a.p)[0];
+    await expect(core.orders.create({ ...base, cart: pickup([L(steak.id, Math.ceil(501 / steak.p))]) })).rejects.toMatchObject({ code: "too_big" });
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id, 30)]) })).lines[0].q).toBe(30);
+  });
+  it("office: 10 portions per person (sum of q), 60 people, the sum of the whole order", async () => {
+    const { core } = mk("09:30", { preview: true, now: () => new Date("2026-11-12T07:30:00Z") });
+    const o = await core.office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "11:30" });
+    const ln = (q: number) => ({ id: lunch[0].id, q, mods: [], extra: 0 });
+    await expect(core.office.join(o.code, { name: "А", lines: [ln(11)] })).rejects.toMatchObject({ code: "too_many" });
+    expect((await core.office.join(o.code, { name: "А", lines: [ln(10)] })).participants).toHaveLength(1);
+    for (let i = 0; i < 59; i++) await core.ctx.repo.get("office_orders", o.id).then(async (d) => { const x = d as unknown as { participants: unknown[] }; x.participants.push({ name: "П" + i, lines: [], pid: "p" + i }); await core.ctx.repo.put("office_orders", x as never); });
+    await expect(core.office.join(o.code, { name: "Шейсет и едно", lines: [] })).rejects.toMatchObject({ code: "full", status: 409 });
+    const o2 = await core.office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "11:30" });
+    const priciest = lunch.slice().sort((a, b) => b.p - a.p)[0];
+    let n = 0;
+    await expect((async () => { for (; n < 60; n++) await core.office.join(o2.code, { name: "К" + n, lines: [{ id: priciest.id, q: 10, mods: [], extra: 0 }] }); })()).rejects.toMatchObject({ code: "too_big" });
+    expect(n * 10 * priciest.p).toBeLessThanOrEqual(500);
   });
 });

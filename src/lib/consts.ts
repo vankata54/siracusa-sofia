@@ -43,6 +43,12 @@ export const ORDER_RULES = {
   preorderFrom: 630, pickupUntil: 1350, preorderDeliveryUntil: 1245,
   /** -30% on lunch dishes after 15:00, pickup only */
   lunchPickupDiscount: 0.3,
+  /** a web order: at most this many portions (sum of q) and this sum in € (dishes); bigger: "За голяма поръчка се обадете" */
+  maxPortions: 60,
+  maxTotal: 500,
+  /** office group order: portions per colleague, colleagues per order; the sum limit is maxTotal */
+  officePortionsPerPerson: 10,
+  officeMaxPeople: 60,
 } as const;
 
 export interface Zone { n: string; slug: string; etaMin: number; free: boolean; fee?: number | null; eta: string }

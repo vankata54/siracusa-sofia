@@ -14,17 +14,19 @@ import { createOrder, checkLines, type OrderInput } from "./orders.ts";
 import { zoneOfAddress } from "../lib/zones.ts";
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 import { normPhone } from "../lib/format.ts";
+import { ORDER_RULES, byId } from "../lib/data.ts";
 import type { Mode } from "../lib/cart.ts";
 
 export const OFFICE_FIRST = 630, OFFICE_LAST = 840; /* 10:30 .. 14:00 */
-/** dishes (lines) one colleague may choose */
-export const OFFICE_MAX_LINES = 10;
+/** portions one colleague may choose (sum of q) and colleagues per order (src/lib/consts.ts ORDER_RULES) */
+export const OFFICE_MAX_LINES = ORDER_RULES.officePortionsPerPerson;
+export const OFFICE_MAX_PEOPLE = ORDER_RULES.officeMaxPeople;
 export const OFFICE_MSG = {
   deadline: "Изберете краен час между 10:30 и 14:00.",
   notFound: "Тази обща поръчка не съществува.",
   closedList: "Крайният час мина. Списъкът е затворен.",
   nameTaken: "Това име вече е в списъка. Добавете инициал, например „Иван П.“.",
-  onlyOrg: "Само организаторът може да изпрати поръчката.",
+  onlyOrg: "Тази връзка не е на организатора на поръчката. Отворете връзката за организатора.",
   tooEarly: "Поръчката е за друг ден. Изпраща се в деня на обяда.",
 };
 
@@ -105,7 +107,8 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   if (!isOrg && officeDue(ctx, o)) throw new CoreError("deadline", OFFICE_MSG.closedList, 409);
   const name = String(p.name || "").trim().slice(0, 40);
   if (!name) invalid({ name: "Напишете името си." });
-  if (Array.isArray(p.lines) && p.lines.length > OFFICE_MAX_LINES) throw new CoreError("too_many", "До " + OFFICE_MAX_LINES + " ястия на човек.", 422);
+  const portions = Array.isArray(p.lines) ? p.lines.reduce((a, l) => a + (Number.isFinite(+(l && l.q)) ? Math.max(0, +l.q) : 0), 0) : 0;
+  if ((Array.isArray(p.lines) && p.lines.length > OFFICE_MAX_LINES) || portions > OFFICE_MAX_LINES) throw new CoreError("too_many", "До " + OFFICE_MAX_LINES + " порции на човек.", 422);
   const lines = Array.isArray(p.lines) && p.lines.length
     ? checkLines(ctx, { lines: p.lines }, o.mode, { lunchOnly: true }).lines.map((l) => {
       if (l.mods.length) throw new CoreError("bad_mod", "В общата поръчка ястията са без промени.", 422);
@@ -120,6 +123,11 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   } else if (i > -1 && byName > -1 && byName !== i) {
     throw Object.assign(new CoreError("name_taken", OFFICE_MSG.nameTaken, 409), { fields: { name: OFFICE_MSG.nameTaken } });
   }
+  if (i < 0 && o.participants.length >= OFFICE_MAX_PEOPLE) throw new CoreError("full", "Поръчката е пълна: до " + OFFICE_MAX_PEOPLE + " души. Организаторът може да отвори втора.", 409);
+  /* the sum of the whole order stays under the limit of an order (a big lunch goes by phone) */
+  const others = o.participants.filter((_, k) => k !== i).flatMap((x) => x.lines);
+  const sum = [...others, ...lines].reduce((a, l) => a + (byId[l.id] ? byId[l.id].p * l.q : 0), 0);
+  if (sum > ORDER_RULES.maxTotal) throw new CoreError("too_big", "Общата поръчка стигна " + ORDER_RULES.maxTotal + " €. За по-голяма поръчка се обадете на 0894 36 55 77.", 422);
   let pid: string;
   if (i > -1) { pid = o.participants[i].pid || rid(12); o.participants[i] = { ...o.participants[i], name, lines, pid }; }
   else { pid = rid(12); o.participants.push({ name, lines, pid }); }
@@ -130,10 +138,11 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
 }
 
 /** The organizer adds or changes the contact (name, phone, how they pay) after creating: needed for the automatic send. */
+/** unknown code and someone else's code answer the same (nothing tells whether the code exists) */
+const notOrganizer = () => new CoreError("forbidden", OFFICE_MSG.onlyOrg, 403);
 export async function updateOffice(ctx: Ctx, code: string, orgKey: string, patch: { name?: string; phone?: string; pay?: PayMethod }): Promise<PublicOffice> {
   const o = await getOffice(ctx, code);
-  if (!o) throw new CoreError("not_found", OFFICE_MSG.notFound, 404);
-  if (!orgKey || orgKey !== o.orgKey) throw new CoreError("forbidden", "Само организаторът може да променя поръчката.", 403);
+  if (!o || !orgKey || orgKey !== o.orgKey) throw notOrganizer();
   if (o.status !== "open") throw new CoreError("closed", "Поръчката вече е изпратена" + (o.orderNo ? " (№ " + o.orderNo + ")." : "."), 409);
   const cur = o.contact || { name: "", phone: "", pay: "cash" as PayMethod };
   let phone = cur.phone;
@@ -156,8 +165,8 @@ export type SubmitInput = Pick<OrderInput, "name" | "phone" | "pay" | "email" | 
 export async function submitOffice(ctx: Ctx, code: string, contact: SubmitInput, auto = false): Promise<{ office: PublicOffice; order: Order }> {
   const run = async () => {
     const o = await getOffice(ctx, code);
-    if (!o) throw new CoreError("not_found", OFFICE_MSG.notFound, 404);
-    if (!auto && !(contact.orgKey && contact.orgKey === o.orgKey)) throw new CoreError("forbidden", OFFICE_MSG.onlyOrg, 403);
+    if (!o && auto) throw new CoreError("not_found", OFFICE_MSG.notFound, 404);
+    if (!o || (!auto && !(contact.orgKey && contact.orgKey === o.orgKey))) throw notOrganizer();
     if (o.status !== "open") throw new CoreError("closed", "Поръчката вече е изпратена" + (o.orderNo ? " (№ " + o.orderNo + ")." : "."), 409);
     if (dateOf(o) > sofiaYmd(nowDate(ctx))) throw new CoreError("too_early", OFFICE_MSG.tooEarly, 409);
     /* the same dish of all colleagues in one line (at most 50 per line), so a big office never hits the 40-line limit */

@@ -58,6 +58,7 @@ export const MSG = {
   unknown: "Едно от ястията вече го няма в менюто. Обновете количката.",
   qty: "Броят на едно ястие е от 1 до " + ORDER_RULES.maxQty + ". За по-голяма поръчка се обадете на 0894 36 55 77.",
   lines: "В една поръчка може до " + ORDER_RULES.maxLines + " различни ястия. За по-голяма поръчка се обадете на 0894 36 55 77.",
+  big: "За голяма поръчка (над " + ORDER_RULES.maxPortions + " порции или " + ORDER_RULES.maxTotal + " €) се обадете на 0894 36 55 77: ще я приготвим навреме.",
   closedEarly: "Кухнята отваря в 10:00. Поръчайте за днес с час от 10:30.",
   closed: "Кухнята вече не приема поръчки за днес. Поръчайте за утре.",
   deliveryClosed: "Доставката приключи за днес в 21:00. Можете да я вземете от ресторанта до 22:30.",
@@ -154,6 +155,9 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
   else if (mode === "pickup" && slot !== "asap" && !slotAllowed(P, slot, ctx.clock, false)) errs.slot = MSG.slot;
   if (Object.keys(errs).length) invalid(errs);
+  /* a big order goes by phone (the office has its own limits per person, the sum limit is the same) */
+  if ((input.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);
+  if (P.sub > ORDER_RULES.maxTotal) throw new CoreError("too_big", MSG.big, 422);
   if (P.conflict === "delivery") throw new CoreError("lunch_delivery", MSG.lunchDelivery, 409);
   if (P.conflict === "sched") throw new CoreError("lunch_sched", MSG.lunchSched, 409);
 
