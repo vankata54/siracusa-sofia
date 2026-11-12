@@ -321,11 +321,12 @@ function finish(c: User | null, isNew: boolean) {
   const name = (c && c.name) || (isNew ? S.name : "") || "";
   const t = target();
   const stamps = c && typeof c.stamps === "number" && c.stamps > 0 ? c.stamps : 0;
+  const bonus = !c || (c as { profileBonus?: boolean }).profileBonus !== false; /* the -10% is once per phone number, even after a deleted profile */
   const okRing = '<span class="ok-ring' + (SC.reduce ? "" : " in") + '">' + ic("check", 44) + "</span>";
   if (isNew) {
     show('<div class="view center">' + okRing +
-      '<div class="head"><h2 class="h3 done-big">Профилът е готов</h2><p class="sub">Ето подаръка ви за добре дошли:</p></div>' +
-      '<div class="ticket ember-card' + (SC.reduce ? "" : " in") + '"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>' +
+      (bonus ? '<div class="head"><h2 class="h3 done-big">Профилът е готов</h2><p class="sub">Ето подаръка ви за добре дошли:</p></div>' +
+      '<div class="ticket ember-card' + (SC.reduce ? "" : " in") + '"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>' : '<div class="head"><h2 class="h3 done-big">Профилът е готов</h2><p class="sub">Бонусът -10% вече е използван с този номер, затова този път го няма.</p></div>') +
       (stamps ? '<p class="sub" style="display:flex;gap:8px;align-items:center;justify-content:center">' + ic("fire", 20) + "И " + stamps + " от 10 печата на картата ви.</p>" : "") +
       '<a class="pill pill-red pill-lg pill-block" href="' + esc(t.href) + '" data-go>' + ic(t.icon, 20) + t.label + "</a>" +
       '<a class="link" href="' + SC.url.menu() + '">Към менюто' + ic("caret-right", 18) + "</a></div>");
