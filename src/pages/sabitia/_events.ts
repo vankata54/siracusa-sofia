@@ -69,28 +69,10 @@ export const daysTo = (d: Date, today: Date) => Math.round((new Date(d.getFullYe
 export const inDays = (n: number) => (n === 0 ? "Днес" : n === 1 ? "Утре" : "След " + plural(n, "ден", "дни"));
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export const longDate = (d: Date) => DAYS_SHORT[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()];
-/** Today in Sofia as a local midnight Date (the build machine or the browser may be in another time zone). */
-export function sofiaToday(now: Date = new Date()): Date {
-  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia", year: "numeric", month: "2-digit", day: "2-digit" }).format(now).split("-").map(Number);
-  return new Date(p[0], p[1] - 1, p[2]);
-}
-/** "+02:00" / "+03:00" for an evening in Sofia (JSON-LD startDate). */
-export function sofiaOffset(d: Date): string {
-  const s = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Sofia", timeZoneName: "longOffset" }).formatToParts(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12)).find((x) => x.type === "timeZoneName")?.value || "GMT+02:00";
-  return s.replace("GMT", "") || "+00:00";
-}
+export { sofiaToday, normEvent } from "./_ld.ts";
 
 /* ---------- the list: real events + "Скоро" placeholders ---------- */
 export interface Item { key: string; kind: "real" | "soon"; cat: string; date: Date | null; e?: SiteEvent; n?: string; text?: string; miss?: string }
-
-/** api.events() returns Date objects in the demo and ISO strings from the server: normalise to a local midnight. */
-export function normEvent(e: SiteEvent | (Omit<SiteEvent, "date"> & { date: string })): SiteEvent {
-  const raw = e.date as Date | string;
-  let d: Date;
-  if (raw instanceof Date) d = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
-  else d = sofiaToday(new Date(raw));
-  return { ...(e as SiteEvent), date: d };
-}
 
 export function buildItems(evs: SiteEvent[]): Item[] {
   const real: Item[] = evs.map((e) => ({ key: e.id, kind: "real", cat: e.cat, date: e.date, e }));
@@ -255,23 +237,4 @@ export function subFormHTML(want: string[], draft: string): string {
 }
 export function subOkHTML(email: string, want: string[]): string {
   return '<div class="sub-ok" role="status"><span class="ic-c">' + ic("check", 32) + '</span><h3 class="h2">Готово, ще ви пишем</h3><p class="lead">Ще получите имейл на <b>' + esc(email) + "</b>, когато обявим " + (want.length ? "ново събитие в: " + want.map(esc).join(", ") : "ново събитие") + '.</p><button class="pill pill-line" type="button" data-subreset>' + ic("pencil-simple", 20) + "Смени имейла</button></div>";
-}
-
-/* ---------- JSON-LD ---------- */
-export function eventsLd(site: URL | undefined, evs: SiteEvent[]): object[] {
-  const abs = (p: string) => new URL(p, site).href;
-  const addr = { "@type": "PostalAddress", streetAddress: "ж.к. Дружба 2, срещу бл. 311", addressLocality: "София", postalCode: "1582", addressCountry: "BG" };
-  const ev = evs.map((e) => ({
-    "@context": "https://schema.org", "@type": "Event", name: e.n, description: e.text, url: abs(url.event(e.id)),
-    startDate: iso(e.date) + "T" + e.time + ":00" + sofiaOffset(e.date),
-    eventStatus: "https://schema.org/EventScheduled", eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode", inLanguage: "bg",
-    location: { "@type": "Restaurant", name: RESTAURANT.name, address: addr, telephone: RESTAURANT.phoneIntl, url: abs(url.home()) },
-    organizer: { "@type": "Organization", name: RESTAURANT.name, url: abs(url.home()) },
-    /* no "offers": the price is [ЛИПСВА] and is never invented */
-  }));
-  const crumbs = {
-    "@context": "https://schema.org", "@type": "BreadcrumbList",
-    itemListElement: [{ "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) }, { "@type": "ListItem", position: 2, name: "Събития и поводи", item: abs(url.events()) }],
-  };
-  return [...ev, crumbs];
 }

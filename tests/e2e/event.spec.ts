@@ -31,6 +31,18 @@ test("event: server HTML has no date, SEO is complete", async ({ request }) => {
   expect(html).toContain('"@type":"BreadcrumbList"');
   expect(html).toContain('"eventSchedule"');
   expect(html).not.toContain('"offers"');
+  /* the Event JSON-LD in the server HTML has startDate (build date) and no invented end */
+  const ld = JSON.parse(html.match(/<script type="application\/ld\+json" id="ev-ld">(.*?)<\/script>/s)![1]);
+  expect(ld.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T19:00:00\+0[23]:00$/);
+  expect(ld.endDate).toBeUndefined();
+  expect(JSON.stringify(ld)).not.toContain("23:00");
+  expect(html).toContain('"name":"Събития и поводи"');
+  /* meta description: "последна събота" once */
+  const desc = html.match(/<meta name="description" content="([^"]*)"/)![1];
+  expect(desc.match(/последна събота/gi)?.length).toBe(1);
+  expect(desc.length).toBeLessThanOrEqual(160);
+  /* <dl>: dt and dd directly in div.fact under dl */
+  expect(html).toMatch(/<dl class="facts"><div class="fact"><dt>/);
 });
 
 test("event: date, reserve link, JSON-LD startDate, calendar and share", async ({ page }) => {
@@ -72,6 +84,8 @@ test("event: preview states (seats, full, live, over, error)", async ({ page }) 
   await expect(page.locator("[data-hero-cta]")).toHaveAttribute("href", "tel:+359894365577");
   await page.evaluate(() => { location.hash = "prikljuchi"; });
   await expect(page.locator("[data-hero-cta]")).toHaveAttribute("href", "/sabitia/");
+  await expect(page.locator(".when .s")).toHaveText(/^Следващата: (пн|вт|ср|чт|пт|сб|нд), \d+\s\S+$/);
+  await expect(page.locator(".proto")).toContainText("Само в прегледа: състояния");
   await page.evaluate(() => { location.hash = "greshka"; });
   await expect(page.locator("h1")).toHaveText("Не успяхме да заредим събитието");
   await page.locator("[data-retry]").click();
@@ -85,4 +99,15 @@ test("event: the action bar appears after the main button scrolls away", async (
   await page.evaluate(() => window.scrollTo(0, 1400));
   await expect(page.locator("[data-abar]")).not.toHaveClass(/off/);
   await expect(page.locator("[data-abar] a")).toContainText("Запази място");
+});
+
+test("event: an unknown event is the 404 with the event variant", async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  const r = await page.goto("/sabitia/nyama-takova/");
+  expect(r?.status()).toBe(404);
+  await expect(page.locator('h1 [data-v="ev"]')).toBeVisible();
+  await expect(page.locator('h1 [data-v="ev"]')).toHaveText("Това събитие го няма в\u00a0програмата");
+  await expect(page.locator('h1 [data-v="gen"]')).toBeHidden();
+  await expect(page.getByRole("link", { name: "Виж всички събития" })).toHaveAttribute("href", "/sabitia/");
+  await expect(page.locator(".ev-upcard")).toHaveAttribute("href", "/sabitia/gratska-vecher/");
 });

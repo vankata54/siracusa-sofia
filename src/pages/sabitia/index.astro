@@ -10,7 +10,8 @@ import { url } from "../../lib/routes.ts";
 import { RESTAURANT } from "../../lib/consts.ts";
 import { events } from "../../lib/events.ts";
 import { ic } from "../../lib/icons.ts";
-import { buildItems, listHTML, chipsHTML, calHTML, subFormHTML, eventsLd, sofiaToday, TYPES } from "./_events.ts";
+import { buildItems, listHTML, chipsHTML, calHTML, subFormHTML, TYPES } from "./_events.ts";
+import { eventLd, crumbsLd, sofiaToday } from "./_ld.ts";
 import { partyArt } from "./_party.ts";
 
 const today = sofiaToday();
@@ -26,10 +27,14 @@ const FAQ: [string, string, boolean][] = [
   ["Мога ли да донеса своя торта?", '<span class="missing">[ЛИПСВА: правило за собствена торта и такса]</span>', false],
 ];
 const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.filter((f) => f[2]).map((f) => ({ "@type": "Question", name: f[0], acceptedAnswer: { "@type": "Answer", text: f[1] } })) };
-const jsonld = [...eventsLd(Astro.site, evs), faqLd];
+const site = String(Astro.site || "https://siracusa-sofia.com");
+/* Event JSON-LD in its own script: the browser rewrites it with today's date (see _ld.ts) */
+const evsLd = JSON.stringify(evs.map((e) => eventLd(e, site)));
+const jsonld = [crumbsLd(site), faqLd];
 const description = "Тематични вечери всяка последна събота от месеца, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, юбилей, фирмено парти. -5% при ранна резервация на празник.";
 ---
 <Base page="events" nav="events" title="Събития и поводи" description={description} jsonld={jsonld}>
+  <script type="application/ld+json" id="evs-ld" slot="head" set:html={evsLd} />
   <section class="sec ev-top" aria-labelledby="h-ev">
     <div class="lay">
       <div class="hero">
@@ -48,13 +53,15 @@ const description = "Тематични вечери всяка последна
         <div class="hcal"><h2 class="hcal-l">Календар</h2><div data-cal set:html={cal}></div></div>
       </div>
       <div class="lcol">
+        <h2 class="vh" data-list-h>Предстоящи събития</h2>
         <p class="cnt-line" data-count aria-live="polite" set:html={first.count}></p>
         <div class="evlist" id="evpanel" role="tabpanel" aria-labelledby="tab-up" data-list set:html={first.html}></div>
       </div>
     </div>
   </section>
 
-  <section class="sec cal-m rv" id="kalendar" aria-labelledby="h-cal"><div class="sec-h"><h2 class="h2" id="h-cal">Календар</h2></div><div data-cal set:html={cal}></div></section>
+  <!-- one calendar in the HTML (in .hcal); on a phone the script moves it here, under the list -->
+  <section class="sec cal-m rv" id="kalendar" aria-labelledby="h-cal"><div class="sec-h"><h2 class="h2" id="h-cal">Календар</h2></div></section>
 
   <section class="sec rv" id="praznik" aria-labelledby="h-party">
     <div class="party shell"><div class="core">
@@ -102,6 +109,7 @@ const description = "Тематични вечери всяка последна
 .eyebrow .ic{color:var(--ink)}
 .hero .lead{margin-top:10px; max-width:34em}
 .hcal{display:none}
+.cal-m:not(:has([data-cal])){display:none}
 .hcal-l{margin:0 0 10px; font-size:14px; font-weight:800; color:var(--muted)}
 
 /* ---------- tabs + chips ---------- */
@@ -289,7 +297,7 @@ const description = "Тематични вечери всяка последна
 /* ---------- prototype-only state switcher ---------- */
 .proto{border-radius:var(--r-core); padding:16px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:12px}
 .proto p{margin:0; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
-.proto .chip{min-height:44px}
+.proto .chip{min-height:48px}
 
 /* ---------- tablet / desktop ---------- */
 @container app (min-width:700px){
@@ -352,20 +360,23 @@ const description = "Тематични вечери всяка последна
   import { api, ApiError } from "../../client/api.ts";
   import "../../lib/icons/map-pin.ts";
   import {
-    buildItems, listHTML, calHTML, subFormHTML, subOkHTML, normEvent, sofiaToday,
+    buildItems, listHTML, calHTML, subFormHTML, subOkHTML,
     PUBLIC, SLUG, BYSLUG, type Item, type ListState, type Mode,
   } from "./_events.ts";
+  import { normEvent, sofiaToday, eventLd, siteOrigin } from "./_ld.ts";
   import type { SiteEvent } from "../../lib/events.ts";
 
   const main = SC.mount();
   const ic = SC.ic;
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
-  const listEl = $("[data-list]"), countEl = $("[data-count]"), subEl = $("[data-sub]");
+  const listEl = $("[data-list]"), countEl = $("[data-count]"), subEl = $("[data-sub]"), listH = $("[data-list-h]"), calEl = $("[data-cal]");
 
   let today = sofiaToday();
   let all: Item[] = [];
   const st: ListState & { calM: number; offline: boolean; want: string[]; subDone: string | null } = { tab: "up", cat: null, mode: "loading", calM: 0, offline: false, want: [], subDone: null };
   let draft = "";
+  /* the topics the subscription really has (from the answer of api.subscribe; [] = all events) */
+  let subTopics: string[] = [];
   let loaded = false;
 
   /* ---------- address: #minali/zhiva-muzika ---------- */
@@ -389,22 +400,31 @@ const description = "Тематични вечери всяка последна
     const r = listHTML({ tab: st.tab, cat: st.cat, mode }, all, today);
     listEl.innerHTML = r.html; countEl.innerHTML = r.count;
     listEl.setAttribute("aria-labelledby", st.tab === "past" ? "tab-past" : "tab-up");
+    listH.textContent = st.tab === "past" ? "Минали събития" : "Предстоящи събития";
     SC.reveal(listEl);
   }
   function renderCtrl() {
     main.querySelectorAll<HTMLElement>("[data-tab]").forEach((b) => { const on = b.dataset.tab === st.tab; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; });
     main.querySelectorAll<HTMLElement>(".evchips [data-cat]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.cat || null) === (st.cat ? SLUG[st.cat] : null))));
   }
-  function renderCal() { main.querySelectorAll("[data-cal]").forEach((el) => { el.innerHTML = calHTML(all, today, st.calM, st.mode === "loading" && !loaded ? "ok" : st.mode); }); }
+  function renderCal() { calEl.innerHTML = calHTML(all, today, st.calM, st.mode === "loading" && !loaded ? "ok" : st.mode); }
+  /* one calendar in the HTML: beside the list on a computer (.hcal), under the list on a phone (#kalendar) */
+  function placeCal() {
+    const to = SC.device.clientWidth >= 900 ? $(".hcal") : $("#kalendar");
+    if (calEl.parentElement !== to) to.appendChild(calEl);
+  }
   function update() { renderCtrl(); renderList(); writeHash(); }
 
   /* ---------- data: api.events() (server or demo core) ---------- */
   async function load(show = false) {
     if (show) { st.mode = "loading"; renderList(); }
     try {
-      const evs = (await api.events()) as unknown as SiteEvent[];
-      all = buildItems(evs.map((e) => normEvent(e)));
+      const evs: SiteEvent[] = (await api.events()).map((e) => normEvent(e));
+      all = buildItems(evs);
       loaded = true; st.mode = "ok";
+      /* Event JSON-LD with today's date (the HTML has the build date) */
+      const ld = document.getElementById("evs-ld"), site = siteOrigin();
+      if (ld) ld.textContent = JSON.stringify(evs.map((x) => eventLd(x, site)));
     } catch {
       st.mode = "error";
     }
@@ -414,7 +434,7 @@ const description = "Тематични вечери всяка последна
 
   /* ---------- subscribe ---------- */
   function renderSub() {
-    subEl.innerHTML = st.subDone ? subOkHTML(st.subDone, st.want) : subFormHTML(st.want, draft);
+    subEl.innerHTML = st.subDone ? subOkHTML(st.subDone, subTopics) : subFormHTML(st.want, draft);
   }
   function fieldErr(input: HTMLElement | null, errEl: HTMLElement, msg: string) {
     errEl.textContent = msg || ""; errEl.hidden = !msg;
@@ -445,8 +465,9 @@ const description = "Тематични вечери всяка последна
     const btn = subEl.querySelector<HTMLButtonElement>("[type=submit]")!, label = btn.innerHTML;
     btn.disabled = true; btn.textContent = "Записваме...";
     try {
-      await api.subscribe(v, ok.checked);
-      st.subDone = v; renderSub();
+      /* the topics chosen above go with the subscription; none = all events */
+      const s = await api.subscribe(v, ok.checked, st.want.slice());
+      st.subDone = v; subTopics = (s.topics || []).slice(); renderSub();
       const h = subEl.querySelector<HTMLElement>(".sub-ok h3");
       if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
     } catch (err) {
@@ -477,7 +498,7 @@ const description = "Тематични вечери всяка последна
   /* ---------- preview-only: the states panel ---------- */
   const MODES: [Mode, string][] = [["ok", "Обичайно"], ["loading", "Зареждане"], ["none", "Няма събития"], ["error", "Грешка"]];
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прототипа: покажи състояние</p><div class="wrapchips">' +
+    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Състояния на страницата (само в прегледа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прегледа: състояния</p><div class="wrapchips">' +
       MODES.map((m) => '<button class="chip" type="button" data-mode="' + m[0] + '" aria-pressed="false">' + m[1] + "</button>").join("") +
       '<button class="chip" type="button" data-offline aria-pressed="false">' + ic("globe", 18) + "Без интернет (абонамент)</button></div></div></section>";
   }
@@ -526,8 +547,24 @@ const description = "Тематични вечери всяка последна
   /* the date changes at midnight (Sofia) */
   document.addEventListener("sc:tick", () => { const t = sofiaToday(); if (t.getTime() !== today.getTime()) { today = t; renderList(); renderCal(); } });
 
+  /* ---------- "Празник при нас": the table drawing is a separate file (keeps ~28 KB out of the HTML) ---------- */
+  function loadArt() {
+    const box = main.querySelector<HTMLElement>("[data-art]");
+    if (!box || box.firstElementChild) return;
+    const dir = location.pathname.replace(/[^/]*$/, "");
+    fetch(dir + "praznik-masa.svg").then((r) => (r.ok ? r.text() : "")).then((svg) => { if (svg.startsWith("<svg") && !box.firstElementChild) box.innerHTML = svg; }).catch(() => { /* decorative */ });
+  }
+  (() => {
+    const box = main.querySelector("[data-art]");
+    if (!box) return;
+    if (!("IntersectionObserver" in window)) { loadArt(); return; }
+    const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); loadArt(); } }, { rootMargin: "800px 0px" });
+    io.observe(box);
+  })();
+
   /* ---------- start ---------- */
   const parts = readHash();
+  placeCal(); window.addEventListener("resize", placeCal);
   renderCtrl(); renderList(); renderCal(); renderSub();
   const anchor = ["uvedomi", "praznik", "kalendar"].find((a) => parts.includes(a));
   if (anchor) { const go = () => setTimeout(() => scrollToEl($("#" + anchor)), 80); try { document.fonts.ready.then(go, go); } catch { go(); } }

@@ -2,12 +2,13 @@
    Port of design/pages/event.html (design/PAGES.md "event.html", hand-off 6.8). Pure string renderers: no DOM, no menu.
    The date of a recurring evening ("всяка последна събота") is NOT known at build time: the server draws an honest
    "Последна събота от месеца" ticket without a date, the browser computes the date from today and redraws the ticket,
-   the next evening, the title, the action bar and the Event JSON-LD (startDate). */
+   the next evening, the title and the action bar. The Event JSON-LD is in ../_ld.ts (the same for /sabitia/). */
 import { RESTAURANT as R } from "../../../lib/consts.ts";
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt, plural, MON, MONTHS, DAYS, dateLong } from "../../../lib/format.ts";
 import { url } from "../../../lib/routes.ts";
 import type { SiteEvent } from "../../../lib/events.ts";
+import { sofiaOffset } from "../_ld.ts";
 import "../../../lib/icons/users-three.ts";
 import "../../../lib/icons/arrow-right.ts";
 import "../../../lib/icons/arrow-up-right.ts";
@@ -28,7 +29,6 @@ import "../../../lib/icons/ticket.ts";
 import "../../../lib/icons/map-pin.ts";
 
 export const TEL = "tel:" + R.phoneIntl;
-export const SITE_URL = "https://siracusa-sofia.com";
 
 /* ---------- dates ---------- */
 export const mid = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -37,13 +37,6 @@ export const ymd = (d: Date): string => d.getFullYear() + "-" + pad(d.getMonth()
 export function toMin(t: string): number { const a = String(t || "19:00").split(":"); return (+a[0]) * 60 + (+a[1] || 0); }
 function lastSat(y: number, m: number): Date { const d = new Date(y, m + 1, 0); while (d.getDay() !== 6) d.setDate(d.getDate() - 1); return d; }
 export function nextLastSat(d: Date): Date { let m = d.getMonth() + 1, y = d.getFullYear(); if (m > 11) { m = 0; y++; } return lastSat(y, m); }
-/** Sofia offset: EEST from the last Sunday of March to the last Sunday of October. */
-export function sofiaOffset(d: Date): string {
-  const y = d.getFullYear();
-  const lastSun = (m: number) => { const x = new Date(y, m + 1, 0); while (x.getDay() !== 0) x.setDate(x.getDate() - 1); return x; };
-  return d >= lastSun(2) && d < lastSun(9) ? "+03:00" : "+02:00";
-}
-
 /* ---------- model: the event + everything that depends on the day and the clock ---------- */
 export type Phase = "soon" | "tomorrow" | "today" | "live" | "over";
 export interface EvModel extends SiteEvent { start: number; days: number; minsLeft: number; phase: Phase; offline: boolean; full: boolean; iso: string; next: Date; lockH: number }
@@ -99,7 +92,7 @@ export function whenHTML(ev: SiteEvent, e: EvModel | null): string {
     const h = Math.floor(e.minsLeft / 60), mm = e.minsLeft % 60;
     k = "Започва след " + (h ? h + "&nbsp;ч" : "") + (h && mm ? " " : "") + (mm ? mm + "&nbsp;мин" : ""); v = "Днес"; s = "Начало в " + e.time;
   } else if (e.phase === "live") { k = "В момента"; v = '<span class="live" aria-hidden="true"></span>Тече'; s = "Работим до " + R.close; }
-  else { k = "Тази вечер"; v = "Приключи"; s = "Следващата: " + e.next.getDate() + "&nbsp;" + MONTHS[e.next.getMonth()]; }
+  else { k = "Тази вечер"; v = "Приключи"; s = "Следващата: " + dateLong(e.next).replace(/ (\S+)$/, "&nbsp;$1"); }
   if (e && e.seatsLeft != null && e.phase !== "over") extra = '<span class="seats">' + ic("users-three", 18) + (e.seatsLeft > 0 ? "Остават " + plural(e.seatsLeft, "място", "места") : "Местата свършиха") + "</span>";
   return '<div class="when" role="group" aria-label="Кога"><span class="k">' + k + '</span><span class="v">' + v + '</span><span class="s">' + s + "</span>" + extra + "</div>";
 }
@@ -135,8 +128,9 @@ export function factsHTML(ev: SiteEvent, e: EvModel | null): string {
   const seats = e ? e.seatsLeft : ev.seatsLeft;
   if (seats != null) rows.push(["users-three", "Свободни места", seats > 0 ? plural(seats, "място", "места") : "Няма, само списък на чакащите"]);
   rows.push(["map-pin", "Място", R.name + '<br><span class="muted">' + R.address + '</span><br><a class="link" href="' + R.maps + '" target="_blank" rel="noopener">Маршрут в Google Maps' + ic("arrow-up-right", 18) + "</a>"]);
+  /* dl > div > dt + dd (the icon is inside dt, hidden from screen readers): "Начало: 19:00" is read as a pair */
   return '<h2 class="vh">Подробности</h2><div class="shell"><div class="core"><dl class="facts">' + rows.map((r) =>
-    '<div class="fact"><span class="fi">' + ic(r[0], 22) + "</span><div><dt>" + r[1] + "</dt><dd>" + r[2] + "</dd></div></div>").join("") + "</dl></div></div>";
+    '<div class="fact"><dt><span class="fi">' + ic(r[0], 22) + "</span>" + r[1] + "</dt><dd>" + r[2] + "</dd></div>").join("") + "</dl></div></div>";
 }
 
 export function rulesHTML(ev: SiteEvent): string {
@@ -175,40 +169,8 @@ export const DEMO_STATES: [string, string][] = [["", "Обикновено"], ["
 export function protoHTML(cur: string, invalidHref: string): string {
   const list: [string, string, boolean][] = DEMO_STATES.map((d) => ["#" + d[0], d[1], cur === d[0]] as [string, string, boolean]);
   list.push([invalidHref, "Невалидно събитие", false]);
-  return '<section class="sec" data-proto aria-label="Състояния на страницата (само в прототипа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прототипа: покажи състояние</p><div class="pchips">' +
+  return '<section class="sec" data-proto aria-label="Състояния на страницата (само в прегледа)"><div class="proto"><p>' + ic("eye", 18) + 'Само в прегледа: състояния</p><div class="pchips">' +
     list.map((l) => '<a class="chip" href="' + l[0] + '"' + (l[2] ? ' aria-current="true"' : "") + ">" + l[1] + "</a>").join("") + "</div></div></section>";
-}
-
-/* ---------- SEO ---------- */
-const PLACE = {
-  "@type": "Restaurant", name: R.name, telephone: R.phoneIntl,
-  address: { "@type": "PostalAddress", streetAddress: "ж.к. Дружба 2, срещу бл. 311", postalCode: "1582", addressLocality: "София", addressCountry: "BG" },
-};
-/** Event JSON-LD. Without a model (server): the recurring schedule only (no invented date, price or availability).
-    With a model (browser): the same + startDate / endDate of this month's evening. Offers only when the price is known. */
-export function eventLd(ev: SiteEvent, pageUrl: string, e: EvModel | null): Record<string, unknown> {
-  const ld: Record<string, unknown> = {
-    "@context": "https://schema.org", "@type": "Event", name: ev.n, description: ev.text, url: pageUrl,
-    eventStatus: "https://schema.org/EventScheduled", eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    eventSchedule: { "@type": "Schedule", repeatFrequency: "P1M", byDay: "https://schema.org/Saturday", byMonthWeek: -1, startTime: ev.time + ":00", endTime: R.close + ":00", scheduleTimezone: "Europe/Sofia" },
-    location: PLACE,
-    organizer: { "@type": "Organization", name: R.name, url: SITE_URL },
-  };
-  if (e) {
-    const off = sofiaOffset(e.date);
-    ld.startDate = e.iso + "T" + ev.time + ":00" + off;
-    ld.endDate = e.iso + "T" + R.close + ":00" + off;
-  }
-  if (ev.free || ev.price) ld.offers = { "@type": "Offer", price: ev.free ? 0 : ev.price, priceCurrency: "EUR", url: pageUrl };
-  return ld;
-}
-export function breadcrumbLd(ev: SiteEvent, site: string, pageUrl: string): Record<string, unknown> {
-  return {
-    "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Начало", item: new URL(url.home(), site).href },
-      { "@type": "ListItem", position: 2, name: "Събития", item: new URL(url.events(), site).href },
-      { "@type": "ListItem", position: 3, name: ev.n, item: pageUrl }],
-  };
 }
 
 /* ---------- calendar file (.ics) and Google Calendar link ---------- */

@@ -3,24 +3,28 @@
    One static page per event (SEO). The server draws everything that does not depend on the day: title, category,
    text, facts, program, menu slot, photos, rules, BreadcrumbList and an Event JSON-LD with the recurring schedule.
    The date of the evening ("последната събота") is computed in the browser from today: it redraws the ticket
-   (calendar leaf, countdown, main action), the next evening, <title>, the action bar and the Event startDate.
-   On the server the ticket says "Всяка последна събота от месеца" instead of a date that could get stale. */
+   (calendar leaf, countdown, main action), the next evening, <title> and the action bar.
+   On the server the ticket says "Всяка последна събота от месеца" instead of a date that could get stale.
+   Event JSON-LD (../_ld.ts, the same as on /sabitia/): startDate with the build date in the HTML, rewritten in the
+   browser with today's date in Sofia; no endDate (the end of the evening is not known). */
 import type { GetStaticPaths } from "astro";
 import Base from "../../../layouts/Base.astro";
 import { ic, url, esc, events, EVENT_SLUGS, byId, dishCard, RESTAURANT as R } from "../../../lib/index.ts";
-import { ticketHTML, factsHTML, rulesHTML, nextInner, slot, barHTML, cta, eventLd, breadcrumbLd } from "./_event.ts";
+import { ticketHTML, factsHTML, rulesHTML, nextInner, slot, barHTML, cta } from "./_event.ts";
+import { eventLd, crumbsLd, sofiaToday } from "../_ld.ts";
 
 export const getStaticPaths = (() => EVENT_SLUGS.map((slug) => ({ params: { slug }, props: { slug } }))) satisfies GetStaticPaths;
 
-const ev = events().find((e) => e.id === Astro.props.slug)!;
+const ev = events(sofiaToday()).find((e) => e.id === Astro.props.slug)!;
 const site = String(Astro.site || "https://siracusa-sofia.com");
 const pageUrl = new URL(url.event(ev.id), site).href;
 const gs = byId["gratska-salata"];
-const description = ev.n + " в " + R.name + ", Дружба 2: всяка последна събота от месеца от " + ev.time + ". " + ev.text + " Запазете място онлайн или на " + R.phone + ".";
-const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
+/* one mention of "последна събота" (ev.text already says it), under 160 characters */
+const description = ev.n + " от " + ev.time + " в Siracusa, Дружба 2. " + ev.text + " Запазете място: " + R.phone + ".";
+const evLd = JSON.stringify(eventLd(ev, site));
 ---
 <Base page="event" nav={null} back={{ href: url.events(), label: "Събития" }} title={ev.n} docTitle={ev.n + " | Събития"} actionBar
-  description={description} jsonld={breadcrumbLd(ev, site, pageUrl)}>
+  description={description} jsonld={crumbsLd(site, ev)}>
   <script type="application/ld+json" id="ev-ld" slot="head" set:html={evLd} />
   <div data-ev={ev.id} data-url={pageUrl}>
     <section class="sec ev-hero">
@@ -113,14 +117,15 @@ const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
 
 /* ---------- facts ---------- */
 .facts{margin:0; padding:4px 18px}
-.fact{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:14px 0}
+/* dl > div.fact > dt (with the icon) + dd; the icon sits in the left column as before */
+.fact{position:relative; min-height:72px; padding:14px 0 14px 58px}
 .fact + .fact{border-top:1px solid var(--line)}
-.fact .fi{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.fact .fi{position:absolute; left:0; top:14px; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
 .fact dt{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
 .fact dd{margin:2px 0 0; font-weight:700; font-size:17px; line-height:1.4}
 .fact dd .muted{font-weight:600; font-size:16px}
 .fact dd .missing{font-weight:600; font-size:16px}
-.fact .link{min-height:44px; margin-top:2px}
+.fact .link{min-height:48px; margin-top:2px}
 
 /* ---------- program timeline ---------- */
 .ev-cols{display:grid; gap:56px}
@@ -231,7 +236,9 @@ const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
 
 <script>
   import { SC } from "../../../client/sc.ts";
-  import { model, cta, barHTML, ticketHTML, factsHTML, nextInner, eventLd, loadingHTML, errorHTML, protoHTML, googleCalUrl, icsText, type EvModel } from "./_event.ts";
+  import { model, cta, barHTML, ticketHTML, factsHTML, nextInner, loadingHTML, errorHTML, protoHTML, googleCalUrl, icsText, type EvModel } from "./_event.ts";
+  import { eventLd, sofiaToday } from "../_ld.ts";
+  import { events } from "../../../lib/events.ts";
   import "../../../lib/icons/share-network.ts";
 
   const { esc, ic, url, dateLong, RESTAURANT: R } = SC;
@@ -239,7 +246,8 @@ const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
   const ORIG = main.innerHTML;
   const root0 = main.querySelector<HTMLElement>("[data-ev]")!;
   const slug = root0.dataset.ev!, pageUrl = root0.dataset.url!;
-  const ev = SC.events().find((e) => e.id === slug)!;
+  /* the date from src/lib/events.ts with today in Sofia (the same data as api.events()) */
+  let ev = events(sofiaToday()).find((e) => e.id === slug)!;
   const abar = SC.ov.querySelector<HTMLElement>("[data-abar]")!;
   const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
   let io: IntersectionObserver | null = null, cur: EvModel | null = null;
@@ -278,15 +286,17 @@ const evLd = JSON.stringify(eventLd(ev, pageUrl, null));
   }
   function paint(force = false) {
     if (!main.querySelector("[data-ev]")) return;
-    const e = cur = model(ev, new Date(), SC.minutes(), navigator.onLine !== false, demo());
+    const today = sofiaToday();
+    ev = events(today).find((x) => x.id === slug) || ev;
+    const e = cur = model(ev, today, SC.minutes(), navigator.onLine !== false, demo());
     const c = cta(e);
     const changed = setHtml("[data-ticket]", ticketHTML(ev, e));
     setHtml("[data-facts]", factsHTML(ev, e));
     setHtml("[data-next]", nextInner(e));
     abar.innerHTML = barHTML(c);
     document.title = e.n + " · " + dateLong(e.date) + " | Siracusa Bar & Grill";
-    if (meta) meta.setAttribute("content", e.n + " в Siracusa Bar & Grill, Дружба 2: " + dateLong(e.date) + " · " + e.time + ". " + e.text + " Запазете място онлайн или на " + R.phone + ".");
-    const ld = document.getElementById("ev-ld"); if (ld) ld.textContent = JSON.stringify(eventLd(ev, pageUrl, e));
+    if (meta) meta.setAttribute("content", e.n + ", " + dateLong(e.date) + " от " + e.time + ", Дружба 2. " + e.text + " Запазете място: " + R.phone + ".");
+    const ld = document.getElementById("ev-ld"); if (ld) ld.textContent = JSON.stringify(eventLd(ev, new URL("/", pageUrl).href));
     if (changed || force) { setBar(false); watchCta(); }
   }
 
