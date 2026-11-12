@@ -236,3 +236,41 @@ test("reservation: a link without its key says it is incomplete", async ({ page 
   await open(page, "r-deadbeef");
   await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Връзката е непълна");
 });
+
+test("reservation: focus goes to the heading of each step and screen (not <body>)", async ({ page, request }, info) => {
+  const errors = watch(page);
+  const tag = () => page.evaluate(() => { const a = document.activeElement as HTMLElement; return a.tagName + ":" + (a.textContent || "").trim().slice(0, 40); });
+  await toStep2(page, future(info.project.name === "phone" ? 32 : 33));
+  await page.waitForTimeout(600); /* the occupancy arrives and the step is drawn again */
+  expect(await tag()).toBe("H2:Изберете маса");
+  await pickFree(page);
+  await next(page).click();
+  expect(await tag()).toMatch(/^H2:Вашите данни/);
+  await page.locator(isPhone(page) ? ".rabar [data-act=back]" : ".aside [data-act=back]").click();
+  await page.waitForTimeout(600);
+  expect(await tag()).toBe("H2:Изберете маса");
+  /* manage: "Промени" -> step 1 heading, "Откажи" -> the question */
+  const r = await request.post("/api/reservations", { data: { date: future(info.project.name === "phone" ? 34 : 35), time: "13:00", people: 2, name: "Фокус", phone: "0888 99 88 77" } });
+  const b = await r.json();
+  await page.goto("/rezervatsia/?preview=1&t=12:30#r-" + b.id + "-" + b.key);
+  await page.locator("[data-cancel=ask]").click();
+  expect(await tag()).toMatch(/^H2:Да откажем ли резервацията/);
+  await page.locator("[data-cancel=no]").click();
+  await page.locator("[data-change]").click();
+  await page.waitForTimeout(600);
+  expect(await tag()).toBe("H2:Кой ден?");
+  expect(errors).toEqual([]);
+});
+
+test("reservation: 429 throttled shows the server's text", async ({ page }, info) => {
+  const msg = "За този телефон вече има няколко заявки. Обадете ни се на 0894 36 55 77.";
+  await page.route("**/api/reservations", (r) => r.request().method() === "POST"
+    ? r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "throttled", message: msg }) }) : r.continue());
+  await toStep2(page, future(info.project.name === "phone" ? 36 : 37));
+  await pickFree(page);
+  await next(page).click();
+  await page.fill("#f-name", "Тест");
+  await page.fill("#f-phone", "0888 12 34 56");
+  await next(page).click();
+  await expect(page.locator(".alert.bad")).toContainText(msg);
+});

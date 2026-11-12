@@ -105,8 +105,10 @@ export function start(): void {
   }
   /** a change: the guest's own old booking does not take its table (the core frees it in the same step, `replaces`).
      If another booking also holds that table, the core answers 409 "taken" and the page shows it. */
+  const heldByOther = new Set<string>();
   function ownOld(t: Table, d: Date, m: number): boolean {
     const o = st.changing;
+    if (heldByOther.has(key(d, m) + "|" + t.id)) return false;
     if (!o || !o.id || o.status === "cancelled" || !same(o.date, d)) return false;
     const no = /^Маса (\d+)/.exec(o.selLabel || ""); /* a booking stored before `table` was kept */
     const tid = o.table !== undefined ? o.table : no ? SC.TABLES.filter((x) => String(x.n) === no[1])[0]?.id : null;
@@ -235,8 +237,8 @@ export function start(): void {
     const y = st.month.getFullYear(), mo = st.month.getMonth(), first = new Date(y, mo, 1), off = (first.getDay() + 6) % 7, dim = new Date(y, mo + 1, 0).getDate();
     const pm = new Date(y, mo - 1, 1), nm = new Date(y, mo + 1, 1), canP = st.month > MIN_M, canN = st.month < MAX_M;
     let h = '<div class="card cal"><div class="cal-h"><h3 class="cal-m" id="calm" aria-live="polite">' + cap(MONTHS[mo]) + " " + y + '</h3><div class="cal-nav">' +
-      '<button class="pill pill-soft mbtn" type="button" data-mon="-1" data-fk="mp"' + (canP ? "" : " disabled") + ' aria-label="Предишен месец, ' + MONTHS[pm.getMonth()] + '">' + ic("caret-left", 18) + MON[pm.getMonth()] + "</button>" +
-      '<button class="pill pill-soft mbtn nx" type="button" data-mon="1" data-fk="mn"' + (canN ? "" : " disabled") + ' aria-label="Следващ месец, ' + MONTHS[nm.getMonth()] + '">' + MON[nm.getMonth()] + ic("caret-right", 18) + "</button></div></div>";
+      '<button class="pill pill-soft mbtn" type="button" data-mon="-1" data-fk="mp"' + (canP ? "" : " disabled") + ' aria-label="' + MON[pm.getMonth()] + ', предишен месец: ' + MONTHS[pm.getMonth()] + '">' + ic("caret-left", 18) + MON[pm.getMonth()] + "</button>" +
+      '<button class="pill pill-soft mbtn nx" type="button" data-mon="1" data-fk="mn"' + (canN ? "" : " disabled") + ' aria-label="' + MON[nm.getMonth()] + ', следващ месец: ' + MONTHS[nm.getMonth()] + '">' + MON[nm.getMonth()] + ic("caret-right", 18) + "</button></div></div>";
     h += '<div class="cal-g" role="group" aria-labelledby="calm">' + WD.map((w) => '<span class="wd" aria-hidden="true">' + w + "</span>").join("");
     for (let i = 0; i < off; i++) h += "<span></span>";
     for (let dd = 1; dd <= dim; dd++) {
@@ -351,7 +353,7 @@ export function start(): void {
 
   function step2(): string {
     const d = st.date!, m = st.slot!, n = st.n;
-    if (!known(d, m) && !takenErr) return recap() + '<div class="skel" style="height:64px;border-radius:22px"></div><div class="skel skmap" style="margin-top:16px"></div><p class="muted center" style="margin-top:12px">Проверяваме свободните маси за ' + hm(m) + "...</p>";
+    if (!known(d, m) && !takenErr) return recap() + '<h2 class="vh" tabindex="-1" data-h>' + (n > 6 ? "Изберете зона" : "Изберете маса") + '</h2><div class="skel" style="height:64px;border-radius:22px"></div><div class="skel skmap" style="margin-top:16px"></div><p class="muted center" style="margin-top:12px">Проверяваме свободните маси за ' + hm(m) + "...</p>";
     let h = recap();
     if (!known(d, m)) h += '<div class="alert bad" role="alert" style="margin-bottom:14px">' + ic("warning-circle", 22) + '<div><b>Не успяхме да проверим заетите маси</b><p>Изберете маса. Ако вече е заета, ще ви кажем при запазването.</p><div class="acts"><button class="pill pill-line" type="button" data-retake data-fk="rt">Опитай пак</button></div></div></div>';
     if (st.released) h += '<p class="note" role="status" style="margin:0 0 14px">' + ic("info", 20) + "<span>" + esc(st.released) + "</span></p>";
@@ -560,7 +562,7 @@ export function start(): void {
       '<div class="acts"><button class="pill pill-red" type="button" data-new data-fk="nw">' + ic("calendar-blank", 20) + "Резервирай нова маса</button></div></div></div>";
     else if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts">' + callBtn("") + "</div></div></div>";
     else if (!b.id && !SC.preview) h += '<div class="mng"><p class="rules">' + ic("info", 20) + "<span>Тази резервация не намираме онлайн. Промяна и отказ: по телефона, до " + rule + ".</span></p>" + callBtn("pill-lg pill-block") + "</div>";
-    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><b id="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</b><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
+    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><h2 id="cfh" class="cfh" tabindex="-1" data-fk="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</h2><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
     else h += '<div class="mng"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">' + ic("pencil-simple", 22) + '<span>Промени деня, часа или масата</span></button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">' + ic("x", 22) + "<span>Откажи резервацията</span></button>" +
       '<p class="rules">' + ic("info", 20) + "<span>Можете да промените или откажете тук или от връзката в SMS-а до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ". По-късно: на " + R.phone + ".</span></p></div>";
     return h + "</div></div></section>";
@@ -579,6 +581,8 @@ export function start(): void {
   /* ---------- render ---------- */
   function render(): void {
     const a = document.activeElement as HTMLInputElement | null, fk = a && a.getAttribute && a.getAttribute("data-fk"), selS = a && "selectionStart" in a ? a.selectionStart : null;
+    /* the step's heading had the focus (after a step change): a redraw (fresh occupancy) puts it on the new heading */
+    const onHead = !!(a && a.hasAttribute && a.hasAttribute("data-h") && !fk);
     const flow = st.view === "flow";
     heroEl.hidden = !flow; flowEl.hidden = !flow; infoEl.hidden = !flow; viewEl.hidden = flow;
     if (flow) {
@@ -589,6 +593,7 @@ export function start(): void {
     } else viewEl.innerHTML = st.view === "done" ? done() : manage();
     protoEl.innerHTML = proto();
     renderBar(); st.anim = false; moreChips();
+    if (onHead) focusHead();
     if (fk) { const el = document.querySelector<HTMLInputElement>('[data-fk="' + fk + '"]'); if (el) { try { el.focus({ preventScroll: true }); if (selS != null && el.setSelectionRange) el.setSelectionRange(selS, selS); } catch { /* ignore */ } } }
     want();
   }
@@ -604,11 +609,12 @@ export function start(): void {
   document.addEventListener("scroll", (e) => { const el = e.target as HTMLElement; if (el && el.matches && el.matches(".needs .chips")) moreChips(); }, true);
   window.addEventListener("resize", moreChips);
   const wide = () => SC.device.clientWidth >= 900;
-  function toTop(focusHead = false): void {
+  function focusHead(): void { const hd = main.querySelector<HTMLElement>("[data-h]:not([hidden] *)"); if (hd) hd.focus({ preventScroll: true }); }
+  function toTop(head = false): void {
     const tgt = st.view === "flow" ? flowEl : viewEl;
     const y = tgt.getBoundingClientRect().top + window.scrollY - (wide() ? 170 : 140);
     window.scrollTo({ top: Math.max(0, st.view === "flow" && !wide() ? y : 0), behavior: "auto" });
-    if (focusHead) { const hd = main.querySelector<HTMLElement>("[data-h]:not([hidden] *)"); hd && hd.focus({ preventScroll: true }); }
+    if (head) focusHead();
   }
   function scrollToEl(el: Element | null): void {
     if (!el) return;
@@ -664,6 +670,7 @@ export function start(): void {
       if (e instanceof ApiError) {
         if (e.code === "blocked") { st.blocked = true; render(); const bc = main.querySelector("[data-blocked]"); scrollToEl(bc); bc?.querySelector<HTMLElement>("[data-h]")?.focus({ preventScroll: true }); return; }
         if (e.code === "taken") { /* someone else was faster: back to the plan with fresh data */
+          if (s.t) heldByOther.add(key(d, m) + "|" + s.t.id); /* also the guest's own table during a change: another booking holds it then */
           st.released = (s.label) + " току-що беше заета от друг гост. Изберете друга маса."; st.sel = null; st.hold = 0; st.step = 2; st.anim = true;
           taken.delete(key(d, m)); takenErr = false; loadTaken(d, [m], true).then(() => render()); render(); toTop(true); return;
         }
@@ -683,7 +690,7 @@ export function start(): void {
           Object.keys(e.fields).forEach((k) => { if (map[k]) fe[map[k]] = e.fields![k]; });
           if (Object.keys(fe).length) { st.err = fe; render(); const first = main.querySelector<HTMLElement>('[aria-invalid="true"]'); if (first) { scrollToEl(first); first.focus({ preventScroll: true }); } return; }
         }
-        if (e.code === "too_late") { st.failText = e.message; done1("error"); return; }
+        if (e.code === "too_late" || e.code === "throttled") { st.failText = e.message; done1("error"); return; }
         done1(e.code === "offline" ? "offline" : "error"); return;
       }
       done1("error");
@@ -753,7 +760,7 @@ export function start(): void {
         box.innerHTML = '<div class="alert" role="alert">' + ic("phone", 22) + '<div><b>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts"><a class="pill pill-red" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div></div>";
         return;
       }
-      pErr.hidden = false; pErr.textContent = e instanceof ApiError && e.code === "offline" ? "Няма връзка. Проверете интернета и опитайте пак." : "Не успяхме да ви запишем. Опитайте пак или се обадете на " + R.phone + ".";
+      pErr.hidden = false; pErr.textContent = e instanceof ApiError && e.code === "offline" ? "Няма връзка. Проверете интернета и опитайте пак." : e instanceof ApiError && e.code === "throttled" ? e.message : "Не успяхме да ви запишем. Опитайте пак или се обадете на " + R.phone + ".";
     }
   }
 
@@ -808,7 +815,7 @@ export function start(): void {
     }
     if (ds.cancel) {
       const M = st.manage!;
-      if (ds.cancel === "ask") { st.confirmCancel = true; M.err = undefined; render(); return; }
+      if (ds.cancel === "ask") { st.confirmCancel = true; M.err = undefined; render(); main.querySelector<HTMLElement>("#cfh")?.focus({ preventScroll: true }); return; }
       if (ds.cancel === "no") { st.confirmCancel = false; render(); toTop(true); return; }
       if (!M.b.id) { if (SC.preview) { M.cancelled = true; render(); toTop(true); } return; } /* preview sample: no record */
       M.busy = true; render();
