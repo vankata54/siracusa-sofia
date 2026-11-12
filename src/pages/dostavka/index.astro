@@ -94,7 +94,7 @@ const description = "Доставка на пица и скара от Siracusa:
 .rcard h3{margin:0; font-size:19px; line-height:1.25; letter-spacing:-.02em; font-weight:800}
 .rcard p{margin:2px 0 0}
 /* the red link on --surface-2 is 4.36:1; a touch of --ink makes it ≥4.5:1 in both themes (darker in light, lighter in dark) */
-.rcard .link{color:color-mix(in srgb, var(--red) 82%, var(--ink))}
+.rcard .link{color:var(--danger-ink)}
 .rfacts{display:flex; flex-wrap:wrap; gap:6px 8px}
 .fact{display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:4px 12px 4px 10px; border-radius:999px; background:var(--surface); font-size:15px; font-weight:700; line-height:1.25}
 .fact .ic{color:var(--muted)}
@@ -184,7 +184,7 @@ const description = "Доставка на пица и скара от Siracusa:
 .fees .zbtn small{font-size:14px; color:var(--muted); font-weight:600}
 .fees tr.on .zbtn b{text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px}
 .fees td{text-align:right; font-weight:800; white-space:nowrap; padding-left:8px}
-.fees td .okt{display:inline-flex; align-items:center; gap:6px; color:color-mix(in srgb, var(--ok) 82%, var(--ink))} /* --ok on --bg is 4.49:1; with --ink ≥4.5:1 in both themes */
+.fees td .okt{display:inline-flex; align-items:center; gap:6px; color:var(--ok-ink)} /* text green with AA contrast in both themes (tokens.css) */
 .fees td.missing{font-weight:600; font-size:15px}
 .fees tr.outrow td,.fees tr.outrow th{padding:14px 0}
 .fees tr.outrow td{font-weight:700; color:var(--muted); white-space:normal}

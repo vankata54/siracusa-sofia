@@ -9,7 +9,7 @@ const DEMO = process.env.DEMO === "1";
 /* modules of the shared runtime (keep in sync with the imports of src/client/sc.ts) */
 const RUNTIME = ["/src/client/sc.ts", "/src/lib/format.ts", "/src/lib/status.ts", "/src/lib/consts.ts", "/src/lib/cart.ts", "/src/lib/events.ts",
   "/src/lib/chrome-core.ts", "/src/lib/icons.ts", "/src/lib/icons/x.ts", "/src/lib/icons/check.ts", "/src/lib/icons/caret-right.ts", "/src/lib/icons/phone.ts",
-  "/src/lib/icons/question.ts", "/src/lib/routes.ts", "/src/lib/time.ts", "/src/lib/registry.ts", "/src/lib/lunch.ts", "/src/lib/lunch-date.ts"];
+  "/src/lib/icons/question.ts", "/src/lib/routes.ts", "/src/lib/time.ts", "/src/lib/registry.ts", "/src/lib/lunch.ts", "/src/lib/lunch-date.ts", "/src/lib/load.ts"];
 const env = { ...readEnv(), ...process.env };
 
 function demoStaff() {

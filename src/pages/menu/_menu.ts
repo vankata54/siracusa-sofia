@@ -8,24 +8,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { NOUN, noun, passes, filterById, searchScores, sortInCat } from "../../lib/filters.ts";
-import "../../lib/icons/funnel.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/plant.ts";
-import "../../lib/icons/users-three.ts";
-import "../../lib/icons/grains.ts";
-import "../../lib/icons/drop.ts";
-import "../../lib/icons/barbell.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/moped.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/caret-right.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/warning.ts";
-import "../../lib/icons/sun.ts";
-import "../../lib/icons/moon.ts";
-import "../../lib/icons/magnifying-glass.ts";
-import "../../lib/icons/x.ts";
-import "../../lib/icons/phone.ts";
+import "sc-icons:funnel,sliders-horizontal,plant,users-three,grains,drop,barbell,info,moped,storefront,caret-right,warning-circle,warning,sun,moon,magnifying-glass,x,phone"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const MAIN_CATS: Category[] = cats.filter((c) => c.id !== "zakuski");
 export const MAIN_ITEMS: Dish[] = items.filter((x) => x.cat !== "zakuski");

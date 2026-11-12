@@ -436,19 +436,7 @@ const jsonld = restaurantLd(Astro.site);
   import { SC } from "../client/sc.ts";
   import { lunchTileText, goHTML, etaInner, eventsHTML, deliveryNote, dotHTML, firstOfferKey, greekLead, checkAddress } from "./_home.ts";
   /* the icons this script draws itself (the server ones are already in the HTML) */
-  import "../lib/icons/pause.ts";
-  import "../lib/icons/play.ts";
-  import "../lib/icons/arrow-right.ts";
-  import "../lib/icons/moped.ts";
-  import "../lib/icons/warning-circle.ts";
-  import "../lib/icons/check-circle.ts";
-  import "../lib/icons/map-pin.ts";
-  import "../lib/icons/storefront.ts";
-  import "../lib/icons/calendar-check.ts";
-  import "../lib/icons/calendar-blank.ts";
-  import "../lib/icons/hourglass.ts";
-  import "../lib/icons/confetti.ts";
-  import "../lib/icons/seal-percent.ts";
+  import "sc-icons:pause,play,arrow-right,moped,warning-circle,check-circle,map-pin,storefront,calendar-check,calendar-blank,hourglass,confetti,seal-percent"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
   const main = SC.mount();
   const home = main.querySelector<HTMLElement>("[data-home]")!;

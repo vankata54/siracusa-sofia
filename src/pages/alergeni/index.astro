@@ -435,7 +435,7 @@ svg.ic{fill:currentColor}
   function loadSearch(): Promise<void> {
     if (!searchP) {
       searchErr = false;
-      searchP = Promise.all([import("../../lib/filters.ts"), import("../../lib/data.ts")])
+      searchP = Promise.all([SC.loadModule(() => import("../../lib/filters.ts")), SC.loadModule(() => import("../../lib/data.ts"))]) /* retries after a failed load */
         .then(([f, d]) => { search = { searchScores: f.searchScores, byId: d.byId }; })
         .catch(() => { searchP = null; searchErr = true; });
     }

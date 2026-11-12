@@ -12,34 +12,7 @@ import { url } from "../../../lib/routes.ts";
 import { noun, NOUN, passes, searchScores, filterById } from "../../../lib/filters.ts";
 import { card, cap, fic, FICON } from "../_menu.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
-import "../../../lib/icons/pizza.ts";
-import "../../../lib/icons/bowl-food.ts";
-import "../../../lib/icons/cooking-pot.ts";
-import "../../../lib/icons/knife.ts";
-import "../../../lib/icons/flame.ts";
-import "../../../lib/icons/fork-knife.ts";
-import "../../../lib/icons/bread.ts";
-import "../../../lib/icons/carrot.ts";
-import "../../../lib/icons/jar.ts";
-import "../../../lib/icons/hamburger.ts";
-import "../../../lib/icons/cake.ts";
-import "../../../lib/icons/coffee.ts";
-import "../../../lib/icons/tag.ts";
-import "../../../lib/icons/scales.ts";
-import "../../../lib/icons/moped.ts";
-import "../../../lib/icons/storefront.ts";
-import "../../../lib/icons/list-bullets.ts";
-import "../../../lib/icons/funnel.ts";
-import "../../../lib/icons/sliders-horizontal.ts";
-import "../../../lib/icons/info.ts";
-import "../../../lib/icons/warning-circle.ts";
-import "../../../lib/icons/arrow-up-right.ts";
-import "../../../lib/icons/caret-down.ts";
-import "../../../lib/icons/caret-right.ts";
-import "../../../lib/icons/star.ts";
-import "../../../lib/icons/list-checks.ts";
-import "../../../lib/icons/x.ts";
-import "../../../lib/icons/phone.ts";
+import "sc-icons:pizza,bowl-food,cooking-pot,knife,flame,fork-knife,bread,carrot,jar,hamburger,cake,coffee,tag,scales,moped,storefront,list-bullets,funnel,sliders-horizontal,info,warning-circle,arrow-up-right,caret-down,caret-right,star,list-checks,x,phone"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 /** Categories that have dishes (one static page each). */
 export const CATS: Category[] = cats.filter((c) => inCat(c.id).length);

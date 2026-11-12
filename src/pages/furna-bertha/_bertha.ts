@@ -6,15 +6,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, plural } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ZONES } from "../../lib/consts.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/moon.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/shopping-bag.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/phone.ts";
-import "../../lib/icons/pause.ts";
-import "../../lib/icons/play.ts";
-import "../../lib/icons/caret-down.ts";
+import "sc-icons:warning-circle,moon,storefront,shopping-bag,check-circle,phone,pause,play,caret-down"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const STEPS: [string, string][] = [
   ["Огънят е затворен", "Дървените въглища горят в затворена камера, а не на открито."],

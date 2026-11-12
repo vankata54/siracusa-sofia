@@ -3,16 +3,18 @@
    so the chunk on every page stays small. Same DOM and behaviour as before. */
 import { morePanel, cookieSettings, type CookiePrefs } from "../lib/chrome-sheets.ts";
 import { esc } from "../lib/format.ts";
+import { loadModule } from "../lib/load.ts";
 import type { AiKind } from "../lib/assistant.ts";
 import type { SCType } from "./sc.ts";
 
 const sc = (): SCType => window.SC;
-const assistant = () => import("../lib/assistant.ts");
+const assistantChunk = () => import("../lib/assistant.ts");
+const assistant = () => loadModule(assistantChunk);
 
 export function openMore(): void { sc().sheet({ title: "Още", html: morePanel() }); }
 
 export function cookieSettingsSheet(prefs: CookiePrefs): void {
-  const S = sc(), s = S.sheet({ title: "Бисквитки", html: cookieSettings(prefs) });
+  const S = sc(), s = S.sheet({ title: "Бисквитки", html: cookieSettings(prefs), returnTo: () => document.querySelector("[data-ck-change], [data-cookie-settings]") });
   s.el.querySelector("[data-cookie-form]")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const f = e.target as HTMLFormElement, on = (n: string) => !!(f.elements.namedItem(n) as HTMLInputElement | null)?.checked;

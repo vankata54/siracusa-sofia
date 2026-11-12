@@ -13,6 +13,7 @@ import type { Core, OrderInput, ReservationInput, CelebrationInput, NoteInput, P
 import type { SettingsPatch } from "../core/settings.ts";
 import type { SiteEventJson } from "../lib/events.ts";
 import { clockOverride, isPreview } from "../lib/time.ts";
+import { loadModule } from "../lib/load.ts";
 
 /* the demo core exists only in the demo build (Vite drops the import from the server build) */
 const BUILD_DEMO: boolean = typeof __DEMO__ !== "undefined" && __DEMO__;
@@ -80,8 +81,9 @@ function watchOrder(id: string) { if (!watching.orders.has(id)) { [...watching.o
 function watchOffice(code: string) { if (code && !watching.offices.has(code)) { watching.offices.add(code); if (subs.size) connect(); } }
 
 /* ---------- transport ---------- */
+const demoChunk = () => import("./api-demo.ts");
 async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
-  const m = await import("./api-demo.ts");
+  const m = await loadModule(demoChunk);
   return m.local(fn);
 }
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -123,11 +125,11 @@ type OfficeCreate = { office: string; addr: string; deadline?: string; payer?: "
 export const api = {
   demo: DEMO,
   /* public data (in the demo straight from the bundled data) */
-  menu: async () => (DEMO ? (await import("./api-demo.ts")).MENU : http<unknown>("GET", "menu")),
-  status: async (): Promise<StatusInfo> => (DEMO ? (await import("./api-demo.ts")).statusInfo() : http<StatusInfo>("GET", "status")),
-  offers: async () => (DEMO ? (await import("./api-demo.ts")).offers() : http<unknown>("GET", "offers")),
+  menu: async () => (DEMO ? (await loadModule(demoChunk)).MENU : http<unknown>("GET", "menu")),
+  status: async (): Promise<StatusInfo> => (DEMO ? (await loadModule(demoChunk)).statusInfo() : http<StatusInfo>("GET", "status")),
+  offers: async () => (DEMO ? (await loadModule(demoChunk)).offers() : http<unknown>("GET", "offers")),
   /** events with the date as "YYYY-MM-DD" */
-  events: async (): Promise<SiteEventJson[]> => (DEMO ? (await import("./api-demo.ts")).eventsJson() : http<SiteEventJson[]>("GET", "events")),
+  events: async (): Promise<SiteEventJson[]> => (DEMO ? (await loadModule(demoChunk)).eventsJson() : http<SiteEventJson[]>("GET", "events")),
 
   orders: {
     /** returns the whole order (with `key`: the tracking address is SC.url.tracking(order)) */

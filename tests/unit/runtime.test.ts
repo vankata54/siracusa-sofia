@@ -38,3 +38,21 @@ describe("runtime size: on-demand parts stay out of the shared chunk", () => {
     expect(cookieSettings({ analytics: false, marketing: true })).toMatch(/name="marketing" checked/);
   });
 });
+
+describe("loadModule: a failed dynamic import is tried again", () => {
+  it("reads the chunk address from the error, keeps success, forgets failure", async () => {
+    const { loadModule, failedUrl } = await import("../../src/lib/load.ts");
+    expect(failedUrl(new TypeError("Failed to fetch dynamically imported module: https://x.bg/_astro/sc-ui.AB12.js"))).toBe("https://x.bg/_astro/sc-ui.AB12.js");
+    expect(failedUrl(new Error("Importing a module script failed."))).toBeNull();
+    let calls = 0;
+    const ok = () => { calls++; return Promise.resolve({ v: 1 }); };
+    expect(await loadModule(ok)).toEqual({ v: 1 });
+    await loadModule(ok);
+    expect(calls).toBe(1);
+    let fails = 0;
+    const bad = () => { fails++; return Promise.reject(new Error("offline")); };
+    await expect(loadModule(bad)).rejects.toThrow("offline");
+    await expect(loadModule(bad)).rejects.toThrow("offline");
+    expect(fails).toBe(2);
+  });
+});

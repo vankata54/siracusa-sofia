@@ -18,6 +18,7 @@ import { configureRoutes, url, fromProto } from "../lib/routes.ts";
 import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
 import { lunchIsToday } from "../lib/lunch.ts";
+import { loadModule } from "../lib/load.ts";
 import type { Cart, CartLine, Mode } from "../lib/cart.ts";
 import type { AiKind } from "../lib/assistant.ts";
 
@@ -128,18 +129,45 @@ function flash(btn: HTMLElement, html: string, ms?: number) {
   const old = btn.innerHTML; btn.classList.add("done"); btn.innerHTML = html;
   setTimeout(() => { if (btn.isConnected) { btn.classList.remove("done"); btn.innerHTML = old; } }, ms || 1200);
 }
-/* generic bottom sheet: returns {el, close}. While it is open everything behind it is inert (Tab stays in the sheet,
-   screen readers do not leave it); Escape closes it and the focus goes back to the button that opened it. */
+/* generic bottom sheet: returns {el, close}. While it is open everything else on the page is inert (also "Към
+   съдържанието" and the cookie layer); Tab and Shift+Tab go round the sheet's own stops (tabIndex >= 0, visible, one stop
+   per radio group); Escape closes it and the focus goes back to the button that opened it, or, when that button is gone
+   or hidden, to opts.returnTo, a visible "Настройки на бисквитките" / "Промени избора", the page's h1, <main>. */
 const inertMarks = new WeakSet<Element>();
 function setInert(top: HTMLElement | null) {
-  const behind = [device, ...Array.from(document.querySelectorAll("[data-ov-ck]")), ...Array.from(ov.children)].filter((el) => el !== top) as HTMLElement[];
+  const behind = [...Array.from(document.body.children).filter((el) => el !== ov && el.tagName !== "SCRIPT"), ...Array.from(ov.children)].filter((el) => el !== top) as HTMLElement[];
   behind.forEach((el) => {
     if (top) { if (!el.inert) { el.inert = true; inertMarks.add(el); } }
     else if (inertMarks.has(el)) { el.inert = false; inertMarks.delete(el); }
   });
   if (top) { top.inert = false; inertMarks.delete(top); }
 }
-function sheet(opts: { title?: string; html?: string; onClose?: () => void }) {
+const visible = (el: Element | null | undefined): el is HTMLElement =>
+  !!el && el.isConnected && (el as HTMLElement).getClientRects().length > 0 && !el.closest("[inert], [hidden]") && getComputedStyle(el).visibility !== "hidden";
+const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
+/** the Tab stops of a container in order: tabIndex >= 0, enabled, visible; a radio group counts once (the checked radio) */
+function tabStops(root: Element): HTMLElement[] {
+  const all = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled && visible(el));
+  const seen = new Set<string>();
+  return all.filter((el) => {
+    if (!(el instanceof HTMLInputElement) || el.type !== "radio" || !el.name) return true;
+    const group = all.filter((x) => x instanceof HTMLInputElement && x.type === "radio" && x.name === el.name) as HTMLInputElement[];
+    const rep = group.find((x) => x.checked) || group[0];
+    if (seen.has(el.name) || rep !== el) return false;
+    seen.add(el.name); return true;
+  });
+}
+function focusBack(...cands: (Element | null | undefined)[]) {
+  const h1 = main.querySelector<HTMLElement>("h1");
+  for (const c of [...cands, document.querySelector("[data-ck-change]"), document.querySelector("[data-cookie-settings]"), h1, main]) {
+    if (!visible(c) && c !== main) continue;
+    const el = c as HTMLElement;
+    if (el.tabIndex < 0 && !el.matches(FOCUSABLE)) el.setAttribute("tabindex", "-1");
+    el.focus({ preventScroll: el !== h1 && el !== main });
+    return;
+  }
+}
+function sheet(opts: { title?: string; html?: string; onClose?: () => void; returnTo?: () => Element | null }) {
   const w = document.createElement("div"), id = "sh" + Math.random().toString(36).slice(2, 7), back = document.activeElement as HTMLElement | null;
   w.className = "sheetwrap";
   w.innerHTML = sheetHTML(id, opts.title || "", opts.html || "");
@@ -155,18 +183,20 @@ function sheet(opts: { title?: string; html?: string; onClose?: () => void }) {
     if (open.length) setInert(open[open.length - 1]);
     setTimeout(() => { w.remove(); if (!ov.querySelector(".sheetwrap")) de.classList.remove("sheet-open"); }, 340);
     opts.onClose && opts.onClose();
-    back && back.isConnected && back.focus({ preventScroll: true });
+    if (!open.length) focusBack(back && back !== document.body ? back : null, opts.returnTo && opts.returnTo());
   };
   (w.querySelector(".scrim") as HTMLElement).onclick = close;
   (w.querySelector("[data-close]") as HTMLElement).onclick = close;
-  /* Tab cycles inside the sheet (inert already keeps it there; this also covers the browser UI edge) */
   w.addEventListener("keydown", (e) => {
-    if (e.key !== "Tab") return;
-    const f = Array.from(w.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    if (e.key !== "Tab" || e.defaultPrevented) return;
+    const sh = w.querySelector(".sheet") || w, f = tabStops(sh);
     if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    e.preventDefault();
+    const a = document.activeElement as HTMLElement | null;
+    let i = a ? f.indexOf(a) : -1;
+    if (i < 0 && a instanceof HTMLInputElement && a.type === "radio") i = f.findIndex((x) => x instanceof HTMLInputElement && x.type === "radio" && x.name === a.name);
+    const n = f.length, j = i < 0 ? (e.shiftKey ? n - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + n) % n;
+    f[j].focus();
   });
   requestAnimationFrame(() => { w.classList.add("on"); const f = w.querySelector<HTMLElement>("[data-close]"); f && f.focus({ preventScroll: true }); });
   return { el: w, close };
@@ -220,11 +250,33 @@ if (sent && "IntersectionObserver" in window) new IntersectionObserver((es) => {
   const sc = !es[0].isIntersecting;
   scroller.classList.toggle("scrolled", sc);
   const f = ov.querySelector<HTMLElement & { _t?: ReturnType<typeof setTimeout> }>(".aifab");
-  if (f) { f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t = setTimeout(() => f.classList.add("mini"), 2600); }
+  if (f) {
+    f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t = setTimeout(() => f.classList.add("mini"), 2600);
+    /* hidden on the phone's first screen ("away" is invisible below 900 px): then it is not a Tab stop either */
+    if (!sc && window.innerWidth < 900) f.tabIndex = -1; else f.removeAttribute("tabindex");
+  }
 }, { rootMargin: "40px 0px 0px 0px" }).observe(sent);
 
+/* ---------- the focused element never stays under the floating bars (.nav, .abar, assistant, cookie banner) ----------
+   scroll-padding covers the usual heights; this covers the rest (a page bar that lifts the assistant, a full cart). */
+document.addEventListener("focusin", (e) => {
+  const el = e.target as HTMLElement;
+  if (!el || !el.getBoundingClientRect || el.closest(".ov, .ov-ck, .top, .row2")) return;
+  const r = el.getBoundingClientRect();
+  let top = window.innerHeight;
+  ov.querySelectorAll<HTMLElement>(".nav, .abar, .aifab, .dish-abar").forEach((b) => {
+    if (!visible(b) || b.classList.contains("away") || b.closest("[hidden]")) return;
+    const q = b.getBoundingClientRect();
+    if (q.width && q.left < r.right && q.right > r.left && q.top < r.bottom && q.top > window.innerHeight / 3) top = Math.min(top, q.top);
+  });
+  const ck = document.querySelector<HTMLElement>(".ov-ck .cookie");
+  if (visible(ck)) { const q = ck.getBoundingClientRect(); if (q.left < r.right && q.right > r.left && q.top < r.bottom) top = Math.min(top, q.top); }
+  if (r.bottom > top - 8) window.scrollBy({ top: r.bottom - top + 16, behavior: "instant" as ScrollBehavior });
+});
+
 /* ---------- on-demand UI: "Още", cookie settings, assistant, share (src/client/sc-ui.ts) ---------- */
-const ui = () => import("./sc-ui.ts");
+const uiChunk = () => import("./sc-ui.ts");
+const ui = () => loadModule(uiChunk);
 const aiAsk = (text: string, kind: AiKind) => { ui().then((m) => m.aiAsk(text, kind)); };
 const openAI = () => ui().then((m) => m.openAI());
 /* start loading it as soon as a finger / the keyboard is on such a button: no wait on the tap */
@@ -279,6 +331,13 @@ document.addEventListener("keydown", (e) => {
 
 updateCartUI(false);
 
+/* the floating page bars (.abar in slot "ov", also added later by a page script) are named regions (axe "region") */
+function nameBars() {
+  ov.querySelectorAll<HTMLElement>(".abar:not([role])").forEach((b) => { b.setAttribute("role", "region"); if (!b.hasAttribute("aria-label") && !b.hasAttribute("aria-labelledby")) b.setAttribute("aria-label", "Действия на страницата"); });
+}
+nameBars();
+if ("MutationObserver" in window) new MutationObserver(nameBars).observe(ov, { childList: true });
+
 /* ---------- window.SC: the prototype API ---------- */
 type MountOpts = { title?: string; docTitle?: string; [k: string]: unknown };
 export const SC = {
@@ -306,6 +365,8 @@ export const SC = {
   fly, haptic, toast, flash, sheet, reveal, aiAsk, openAI,
   device, scroller, ov, main,
   /** Already rendered by Base.astro: returns <main>. Only docTitle updates document.title if given. */
+  /** loadModule(() => import("...")): a dynamic import that retries after a failed load (src/lib/load.ts) */
+  loadModule,
   mount: (o: MountOpts = {}) => { if (o.docTitle) document.title = o.docTitle + " | Siracusa Bar & Grill"; return main; },
 };
 export type SCType = typeof SC;

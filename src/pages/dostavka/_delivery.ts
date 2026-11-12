@@ -4,6 +4,7 @@
    the fees for Горубляне and Гара Искър are null there, so they are drawn as [ЛИПСВА]. Everything that depends on the
    hour, "Натоварено" or the cart takes a View: the server draws a neutral view (delivery open, no "now" marker),
    the browser redraws with SC.state(), SC.eta() and the cart. */
+import { payAnswer, payAnswerText } from "../../lib/pay.ts";
 import { ZONES, RESTAURANT, type Zone } from "../../lib/consts.ts";
 import type { State } from "../../lib/status.ts";
 import type { AddressResult } from "../../lib/zones.ts";
@@ -182,21 +183,15 @@ export function payHTML(): string {
   return '<div class="pay rv">' +
     '<div class="card"><span class="pi">' + ic("money", 26) + "</span><div><h3>В брой</h3><p>Плащате на шофьора, когато получите поръчката.</p></div></div>" +
     '<div class="card"><span class="pi">' + ic("credit-card", 26) + '</span><div><h3>Карта при получаване</h3><p>Visa или Mastercard. <span class="missing">[ЛИПСВА: потвърждение, че шофьорът приема карти]</span></p></div></div>' +
-    '<div class="card"><span class="pi">' + ic("ticket", 26) + '</span><div><h3>Ваучер</h3><p>Ваучери за храна Sodexo. <span class="missing">[ЛИПСВА: актуалното име на марката]</span></p></div></div>' +
+    '<div class="card"><span class="pi">' + ic("ticket", 26) + '</span><div><h3>Ваучер</h3><p>Ваучери за храна. <span class="missing">[ЛИПСВА: името на ваучерите]</span></p></div></div>' +
     '<div class="card"><span class="pi">' + ic("gift", 26) + '</span><div><h3>Подаръчна карта</h3><p><span class="missing">[ЛИПСВА: приема ли се при доставка]</span></p></div></div>' +
     "</div>" +
     '<p class="paynote">' + ic("info", 20) + "<span>Онлайн плащане засега няма. Никой няма да ви поиска данни за карта предварително.</span></p>";
 }
 
-/* ---------- the one answer about payment in the group (decision 12.11): from RESTAURANT.payment, [ЛИПСВА] for the
-   voucher name; the same text as /za-nas/ and /kontakti/ (request to the chief: one shared function in src/lib) ---------- */
+/* ---------- the one answer about payment (decision 12.11): src/lib/pay.ts ---------- */
+export { payAnswer };
 const plain = (h: string) => h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-const MISSING_SPAN = /\s*<span class="missing">[^<]*<\/span>/g;
-export function payAnswer(): string {
-  const p = R.payment.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x))
-    .map((x) => (/^ваучер$/i.test(x) ? x + ' Sodexo <span class="missing">[ЛИПСВА: актуалното име на ваучера]</span>' : x));
-  return p.slice(0, -1).join(", ") + " или " + p[p.length - 1] + ". Онлайн плащане засега няма: плащате, когато получите поръчката.";
-}
 
 /* ---------- FAQ (also FAQPage JSON-LD; ld = the answer for structured data, without [ЛИПСВА], null = left out) ---------- */
 interface Faq { q: string; a: string; ld: string | null }
@@ -211,7 +206,7 @@ export const FAQ: Faq[] = [
   { q: "Доставяте ли обедното меню?", a: 'Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class="link" href="' + url.page("pickup") + '">Вземи от място</a>.', ld: "" },
   { q: "Колко бързо пристига поръчката?", a: "Обикновено за " + etaRangeBase() + ", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате.", ld: "" },
   { q: "Как ще разбера кога идва шофьорът?", a: "Следите поръчката на живо: приета, готви се, готова, на път. 10 минути преди пристигане ви пращаме известие по SMS, Viber или в браузъра, както изберете.", ld: "" },
-  { q: "Как мога да платя?", a: payAnswer(), ld: plain(payAnswer().replace(MISSING_SPAN, "")) },
+  { q: "Как мога да платя?", a: payAnswer(), ld: payAnswerText() },
   { q: "Адресът ми не е в зоните. Какво да направя?", a: "Можете да вземете поръчката от ресторанта: " + esc(R.address) + '. Ако сте наблизо, обадете се на <a class="link" href="' + TEL + '">' + R.phone + "</a> и ще проверим.", ld: "" },
 ];
 export function faqHTML(): string {

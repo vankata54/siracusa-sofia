@@ -263,19 +263,7 @@ const jsonld = menuLd(Astro.site);
   } from "./_menu.ts";
   import type { Dish } from "../../lib/data.ts";
   /* icons this script draws itself (the server ones are already in the HTML; the rest come from _menu.ts) */
-  import "../../lib/icons/arrow-right.ts";
-  import "../../lib/icons/eye.ts";
-  import "../../lib/icons/shrimp.ts";
-  import "../../lib/icons/egg.ts";
-  import "../../lib/icons/fish.ts";
-  import "../../lib/icons/circles-three.ts";
-  import "../../lib/icons/acorn.ts";
-  import "../../lib/icons/carrot.ts";
-  import "../../lib/icons/jar.ts";
-  import "../../lib/icons/dots-nine.ts";
-  import "../../lib/icons/wine.ts";
-  import "../../lib/icons/flower.ts";
-  import "../../lib/icons/fish-simple.ts";
+  import "sc-icons:arrow-right,eye,shrimp,egg,fish,circles-three,acorn,carrot,jar,dots-nine,wine,flower,fish-simple"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
   type View = "ok" | "loading" | "error" | "offline";
   const main = SC.mount();

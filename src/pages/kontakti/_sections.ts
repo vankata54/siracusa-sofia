@@ -1,7 +1,8 @@
 /* Contacts (/kontakti/): server-side HTML of design/pages/contacts.html and the JSON-LD.
    Address, phones, e-mail, hours and socials come only from RESTAURANT (src/lib/consts.ts); parking, transport, access,
    holidays, Instagram, Google and the static map are [ЛИПСВА]. What depends on the hour or the day is in _live.ts. */
-import { url } from "../../lib/routes.ts";
+import { payAnswer } from "../../lib/pay.ts";
+import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
@@ -101,7 +102,7 @@ export const FAQ: [string, string, string | null][] = [
   ["Работите ли всеки ден?", "Да, всеки ден от " + R.open + " до " + R.close + ". Кухнята приема поръчки до " + R.kitchen + ".", null],
   ["До колко часа доставяте?", "Доставяме до " + R.delivery + ". След това можете да вземете поръчката от ресторанта до " + R.kitchen + ".", null],
   ["До кои квартали е безплатна доставката?", 'Безплатна е за Дружба 1 и 2, НПЗ Искър и Бусманци. За Горубляне и Гара Искър е по тарифа <span class="missing">[ЛИПСВА: такса в €]</span>.', null],
-  ["Как мога да платя?", 'В брой, с карта на място или при получаване, с ваучер Sodexo <span class="missing">[ЛИПСВА: актуалното име на ваучера]</span> или подаръчна карта. Онлайн плащане засега няма.', null],
+  ["Как мога да платя?", payAnswer(), null],
   ["Работи ли градината през зимата?", "Да. Градината е затворена и се отоплява, работи целогодишно.", null],
   ["Има ли къде да паркирам?", '<span class="missing">[ЛИПСВА: паркиране пред ресторанта]</span>', null],
 ];
@@ -154,7 +155,7 @@ export function contactsLd(site: URL | undefined): object[] {
     itemListElement: [{ "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) }, { "@type": "ListItem", position: 2, name: "Контакти", item: abs(url.page("contacts")) }],
   };
   const restaurant: Record<string, unknown> = {
-    "@type": "Restaurant", name: R.name, url: abs(url.home()),
+    "@type": "Restaurant", "@id": restaurantId(site), name: R.name, url: abs(url.home()),
     address: { "@type": "PostalAddress", streetAddress: addrStreet, postalCode: addrCity.split(" ")[0], addressLocality: addrCity.split(" ").slice(1).join(" "), addressCountry: "BG" },
     telephone: R.phoneIntl, email: R.email,
     /* the first number is "Доставки и резервации"; the second has no stated purpose, so it is not a ContactPoint */

@@ -57,7 +57,7 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <title>{fullTitle}</title>
 <meta name="description" content={description}>
 {(p.noindex || demo) && <meta name="robots" content="noindex,nofollow">}
-<link rel="canonical" href={canonical}>
+{p.page !== "404" && <link rel="canonical" href={canonical}>}
 <meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
@@ -65,7 +65,7 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <meta property="og:site_name" content={SITE}>
 <meta property="og:title" content={fullTitle}>
 <meta property="og:description" content={description}>
-<meta property="og:url" content={canonical}>
+{p.page !== "404" && <meta property="og:url" content={canonical}>}
 {p.ogImage && <meta property="og:image" content={new URL(p.ogImage, Astro.site).href}>}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href={cyrFont} as="font" type="font/woff2" crossorigin>

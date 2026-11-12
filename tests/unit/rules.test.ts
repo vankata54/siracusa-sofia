@@ -489,3 +489,12 @@ describe("round 3: nouns, SMS limits, profile bonus, celebration, offers", () =>
     setPreview(false);
   });
 });
+
+describe("payAnswer: one answer about payment from RESTAURANT.payment", () => {
+  it("HTML with [ЛИПСВА] for the voucher name, plain text without it", async () => {
+    const { payAnswer, payAnswerText } = await import("../../src/lib/pay.ts");
+    expect(payAnswer()).toBe('В брой, карта при получаване (Visa, Mastercard), ваучер <span class="missing">[ЛИПСВА: името на ваучерите]</span> или подаръчна карта. Онлайн плащане засега няма: плащате, когато получите поръчката.');
+    expect(payAnswerText()).toBe("В брой, карта при получаване (Visa, Mastercard), ваучер или подаръчна карта. Онлайн плащане засега няма: плащате, когато получите поръчката.");
+    expect(payAnswer()).not.toMatch(/Sodexo/);
+  });
+});

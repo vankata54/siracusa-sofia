@@ -115,3 +115,9 @@ export function fromProto(href: string): string {
   const k = PROTO[file];
   return k ? url.page(k, hash) : href;
 }
+
+/** The one id of the restaurant in JSON-LD on every page ("https://siracusa-sofia.com/#restaurant"):
+    { "@type": "Restaurant", "@id": restaurantId(Astro.site), ... } or a reference { "@id": restaurantId(site) }. */
+export function restaurantId(site: string | URL | undefined): string {
+  return new URL("/", site || "https://siracusa-sofia.com").href + "#restaurant";
+}

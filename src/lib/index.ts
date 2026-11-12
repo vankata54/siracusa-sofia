@@ -13,5 +13,6 @@ export * from "./zones.ts";
 export * as cartLib from "./cart.ts";
 export * from "./render.ts";
 export * from "./chrome-sheets.ts";
+export * from "./pay.ts";
 export * from "./assistant.ts";
 export { kind, artSvg } from "./art.ts";

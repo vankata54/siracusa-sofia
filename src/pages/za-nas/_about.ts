@@ -1,6 +1,7 @@
 /* About page (/za-nas/): server-side HTML for every section of design/pages/about.html, plus the JSON-LD.
    Numbers come only from the data (menu, zones); history, team, photos, seats and parking stay [ЛИПСВА]. */
-import { url } from "../../lib/routes.ts";
+import { payAnswer } from "../../lib/pay.ts";
+import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT, ZONES } from "../../lib/consts.ts";
 import { items, cats, inCat, lunch } from "../../lib/data.ts";
 import { art } from "../../lib/render.ts";
@@ -109,7 +110,7 @@ export const FAQ: [string, string, string | null][] = [
   ["Къде се намирате?", "<p>" + esc(R.address) + '.</p><a class="link" href="' + R.maps + '" target="_blank" rel="noopener">Маршрут в Google Maps' + ic("arrow-up-right", 18) + "</a>", R.address + "."],
   ["Какво е работното време?", "<p>Всеки ден от " + R.open + " до " + R.close + ". Кухнята приема поръчки до " + R.kitchen + ", доставката е до " + R.delivery + ", а обедното меню до " + R.lunchUntil + ".</p>",
     "Всеки ден от " + R.open + " до " + R.close + ". Кухнята приема поръчки до " + R.kitchen + ", доставката е до " + R.delivery + ", а обедното меню до " + R.lunchUntil + "."],
-  ["Как мога да платя?", '<p>В брой, карта при получаване (Visa, Mastercard), ваучер Sodexo <span class="missing">[ЛИПСВА: актуалното име на ваучера]</span> или подаръчна карта. Онлайн плащане засега няма.</p>', null],
+  ["Как мога да платя?", "<p>" + payAnswer() + "</p>", null],
   ["Има ли паркинг?", '<p class="missing">[ЛИПСВА: паркиране]</p>', null],
   ["Може ли да направим празник при вас?", '<p>Да: рожден ден, кръщене, юбилей, фирмено парти. Изчислете празника онлайн, а при ранна резервация вземате -5%.</p><a class="link" href="' + url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a>",
     "Да: рожден ден, кръщене, юбилей, фирмено парти. Изчислете празника онлайн, а при ранна резервация вземате -5%."],
@@ -152,7 +153,7 @@ export function aboutLd(site: URL | undefined): object[] {
     itemListElement: [{ "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) }, { "@type": "ListItem", position: 2, name: "За нас", item: abs(url.page("about")) }],
   };
   const restaurant: Record<string, unknown> = {
-    "@type": "Restaurant", name: R.name, url: abs(url.home()),
+    "@type": "Restaurant", "@id": restaurantId(site), name: R.name, url: abs(url.home()),
     address: { "@type": "PostalAddress", streetAddress: addrStreet, postalCode: addrCity.split(" ")[0], addressLocality: addrCity.split(" ").slice(1).join(" "), addressCountry: "BG" },
     telephone: R.phoneIntl, email: R.email,
     openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: R.open, closes: R.close }],
