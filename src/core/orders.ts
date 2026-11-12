@@ -189,7 +189,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
     const ts = nowDate(ctx);
     const o: Order = {
       id: no, no, mode, channel: input.channel || "web",
-      lines: P.rows.map((r) => ({ id: r.x.id, q: r.q, mods: r.mods || [], extra: Math.round((r.unit - r.x.p) * 100) / 100, name: r.x.n, unit: r.unit })),
+      lines: P.rows.map((r) => ({ id: r.x.id, q: r.q, mods: r.mods || [], extra: Math.round((r.unit - r.x.p) * 100) / 100, name: r.x.n, unit: r.unit, cat: r.x.cat, course: r.x.course })),
       lunchOnly: P.rows.every((r) => !!r.x.lunch), zone: zone ? zone.n : "", addr,
       pay, payLabel: PAY_LABEL[pay], sub: P.sub, disc: P.disc, fee: P.fee, total: P.total,
       eta: atMin == null ? null : atMin - m, at, sched, slot: sched || mode === "pickup" ? slot : "asap", placedAt: hhmm(m), ts: ts.getTime(),
@@ -223,7 +223,7 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     id: o.id, no: o.no, mode: o.mode, channel: o.channel, status: o.status, lunchOnly: o.lunchOnly, zone: o.zone, pay: o.pay, payLabel: o.payLabel,
     sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, slot: o.slot || (o.at && /^\d{2}:\d{2}$/.test(o.at) && o.mode === "pickup" ? o.at : "asap"), placedAt: o.placedAt, ts: o.ts,
     createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0, profileDisc: o.profileDisc || 0,
-    lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit })),
+    lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course })),
   };
   if (withKey && o.key) p.key = o.key;
   return p;

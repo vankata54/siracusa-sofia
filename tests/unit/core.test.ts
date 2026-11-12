@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCore, MemoryRepo, KVRepo, CoreError, type Hasher, type Customer } from "../../src/core/index.ts";
+import { createCore, MemoryRepo, KVRepo, CoreError, publicOrder, type Hasher, type Customer } from "../../src/core/index.ts";
 import { addLine, emptyCart } from "../../src/lib/cart.ts";
 import { lunch, items, isOut } from "../../src/lib/data.ts";
 
@@ -28,6 +28,9 @@ describe("orders", () => {
     expect(b.no).toBe("1043");
     expect(a).toMatchObject({ mode: "pickup", status: "accepted", phone: "0888123456", marketing: false, payLabel: "В брой", total: pizza.p * 2 });
     expect(a.lines[0]).toMatchObject({ id: pizza.id, q: 2 });
+    /* the tracking page draws "Пицата е в пещта" without the menu chunk: the category and course come with the line, also in the public view */
+    expect(a.lines[0]).toMatchObject({ cat: "pitsi", course: pizza.course });
+    expect(publicOrder(a).lines[0]).toMatchObject({ cat: "pitsi", course: pizza.course });
     expect(events[0][0]).toBe("order.created");
     expect((await core.orders.get("1042"))!.no).toBe("1042");
   });

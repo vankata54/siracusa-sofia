@@ -8,7 +8,8 @@ export type PayMethod = "cash" | "card" | "voucher";
 export const PAY_LABEL: Record<PayMethod, string> = { cash: "В брой", card: "Карта при получаване", voucher: "Ваучер" };
 export type Channel = "web" | "qr" | "waiter" | "phone" | "office";
 
-export interface OrderLine { id: string; q: number; mods: string[]; extra: number; name?: string; unit?: number }
+/** cat and course: from the menu at the time of the order (the tracking page draws the step texts without the menu chunk) */
+export interface OrderLine { id: string; q: number; mods: string[]; extra: number; name?: string; unit?: number; cat?: string; course?: string }
 export interface Order {
   id: string;            // = String(no)
   no: string;            // "1042"

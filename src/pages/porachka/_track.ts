@@ -66,11 +66,23 @@ export function startTracking(main: HTMLElement) {
   const trackId = () => S.no + (S.key ? "-" + S.key : "");
   const shareUrl = () => SC.url.tracking({ no: S.no, key: S.key || (S.o && S.o.key) || "" });
 
-  /* ---------- the menu: a lazy chunk (illustrations, grams, categories); everything works without it ---------- */
+  /* ---------- the menu: a lazy chunk (illustrations, grams), loaded AFTER the first paint; everything works without it.
+     Names, prices, the category and the course come with the order (core), so the texts never change when it arrives:
+     only the empty picture frames and the grams are filled in place (fillMenu), without a redraw (the focus stays). ---------- */
   let MN: SCMenu | null = null;
-  const menuReady = import("../../client/sc-menu.ts").then((m) => { MN = m.SC; }, () => { /* without the menu: names and prices from the order */ });
+  let menuP: Promise<void> | null = null;
+  const menuReady = (): Promise<void> => menuP || (menuP = import("../../client/sc-menu.ts").then((m) => { MN = m.SC; }, () => { /* without the menu: names and prices from the order */ }));
   const dish = (id: string): Dish | undefined => (MN ? MN.byId[id] : undefined);
-  const pic = (d: Dish | undefined, kind?: string) => (MN && d ? MN.pic(d, kind) : '<span class="pic"></span>');
+  const pic = (id: string, kind?: string) => {
+    const d = dish(id);
+    return MN && d ? MN.pic(d, kind) : '<span class="pic' + (kind ? " " + kind : "") + '" data-pic="' + esc(id) + '"' + (kind ? ' data-kind="' + kind + '"' : "") + "></span>";
+  };
+  const grams = (id: string) => { const d = dish(id); return '<span data-g="' + esc(id) + '">' + (d && d.g ? " · " + esc(d.g) : "") + "</span>"; };
+  function fillMenu() {
+    if (!MN) return;
+    main.querySelectorAll<HTMLElement>("[data-pic]").forEach((el) => { const d = dish(el.dataset.pic!); if (d) el.outerHTML = MN!.pic(d, el.dataset.kind); });
+    main.querySelectorAll<HTMLElement>("[data-g]").forEach((el) => { const d = dish(el.dataset.g!); if (d && d.g && !el.textContent) el.textContent = " · " + d.g; });
+  }
 
   /* ---------- per-order memory in this browser (rating answer and chosen notifications) ---------- */
   const memKey = () => "sc-track-" + S.no;
@@ -150,8 +162,11 @@ export function startTracking(main: HTMLElement) {
     if (left > -5) return { m: 1, late: 0 };
     return { m: 5, late: Math.max(5, Math.ceil(-left / 5) * 5) };
   }
-  const mainDish = () => {
-    const ls = o().lines.map((l) => dish(l.id)).filter((x): x is Dish => !!x);
+  /** the main dish of the order (the plate in the ring, "Пицата е в пещта"): the category and course from the order line */
+  const mainDish = (): { id: string; cat: string; course?: string } | undefined => {
+    type Main = { id: string; cat: string; course?: string };
+    const ls = o().lines.map((l): Main | undefined => { const d = dish(l.id); return d ? { id: d.id, cat: d.cat, course: d.course } : l.cat ? { id: l.id, cat: l.cat, course: l.course } : undefined; })
+      .filter((x): x is Main => !!x);
     return ls.find((x) => x.cat === "pitsi") || ls.find((x) => x.course === "main") || ls[0];
   };
   function cookSay() { const m = mainDish(); if (m && m.cat === "pitsi") return "Пицата е в пещта"; if (m && m.cat === "skara-bertha") return "Месото е във фурната Bertha"; return "Готвим поръчката ви"; }
@@ -217,7 +232,7 @@ export function startTracking(main: HTMLElement) {
     const modeChip = D ? '<span class="mode">' + ic("moped", 20) + "Доставка</span>" : '<span class="mode">' + ic("storefront", 20) + "Вземане от място</span>";
     return '<div class="' + cls + '" data-hero>' +
       '<div class="core"><div class="hrow">' + modeChip + '<button class="hb" type="button" data-share>' + ic("share-network", 20) + "Сподели</button></div>" +
-      '<div class="hgrid"><div class="viz">' + ringSVG() + (md ? pic(md, "plate") : "") + '<span class="vb" aria-hidden="true">' + ic(badgeIc, 26) + "</span></div>" +
+      '<div class="hgrid"><div class="viz">' + ringSVG() + (md ? pic(md.id, "plate") : "") + '<span class="vb" aria-hidden="true">' + ic(badgeIc, 26) + "</span></div>" +
       '<div class="etxt" aria-live="polite">' + (S.offline && !done ? '<span class="offchip">' + ic("warning-circle", 18) + "Последно известно, от " + clock(S.updated) + "</span>" : "") + (late && !done ? '<span class="latechip">' + ic("clock", 18) + "Закъснява с около " + late + " мин</span>" : "") +
       '<span class="elab">' + label + "</span>" + big + '<h2 class="say">' + say + '</h2><p class="sub">' + sub + "</p></div></div>" +
       "</div>" + timelineHTML() + note + "</div>";
@@ -284,7 +299,7 @@ export function startTracking(main: HTMLElement) {
     const x = o(), D = isD();
     const rows = x.lines.map((l) => {
       const d = dish(l.id);
-      return '<div class="oline">' + pic(d) + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + (d && d.g ? " · " + esc(d.g) : "") + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
+      return '<div class="oline">' + pic(l.id) + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + grams(l.id) + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
     }).join("");
     /* the label from the discount that won (core: discKind); only one of them applies */
     const kind = x.discKind || (x.codeDisc ? "code" : x.profileDisc ? "profile" : x.disc ? "lunch" : "");
@@ -417,7 +432,7 @@ export function startTracking(main: HTMLElement) {
   /* ---------- data ---------- */
   function sample(): Order {
     const st = SC.state(), D = st.delivery, m = SC.minutes();
-    const M = MN as SCMenu; /* sample() runs after menuReady */
+    const M = MN as SCMenu; /* sample() runs after menuReady() */
     const pz = M.inCat("pitsi").filter((x) => !M.isOut(x)), pick = pz.find((x) => x.t.includes("hit")) || pz[0];
     const sal = M.inCat("salati").filter((x) => !M.isOut(x))[0];
     const lines: OrderLine[] = [pick && { id: pick.id, q: 2, mods: [], extra: 0, name: pick.n, unit: pick.p }, sal && { id: sal.id, q: 1, mods: [], extra: 0, name: sal.n, unit: sal.p }].filter(Boolean) as OrderLine[];
@@ -440,7 +455,6 @@ export function startTracking(main: HTMLElement) {
     try {
       const x = (await api.orders.get(trackId())) as Order | null;
       if (!x) throw new ApiError("not_found", "Няма такава поръчка.", 404);
-      await menuReady;
       if (x.key && !S.key) S.key = x.key;
       S.o = Object.assign({}, S.o || fromSaved() || {}, x) as Order;
       if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x));
@@ -449,7 +463,6 @@ export function startTracking(main: HTMLElement) {
       if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished)) announce();
     } catch (e) {
       const err = e as ApiError;
-      await menuReady;
       if (err && err.code === "not_found") { S.o = null; S.view = "notfound"; }
       else if (S.o) S.offline = true;
       else { S.offline = err?.code === "offline" || navigator.onLine === false; S.view = "error"; }
@@ -485,7 +498,7 @@ export function startTracking(main: HTMLElement) {
       if (kk === "late") { S.sim.late = !S.sim.late; if (finished()) S.sim.k = 1; render(); return; }
       if (kk === "sched") { S.sim.sched = !S.sim.sched; S.sim.k = 0; lastFill = 0; render(); return; }
       if (kk === "offline") { S.offline = !S.offline; if (!S.offline) { S.updated = SC.minutes(); SC.toast("Връзката се върна"); } render(); return; }
-      if (kk === "sample") { await menuReady; S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.sim.k = null; S.view = "order"; S.first = true; lastFill = 0; loadMem(); render(); return; }
+      if (kk === "sample") { await menuReady(); S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.sim.k = null; S.view = "order"; S.first = true; lastFill = 0; loadMem(); render(); return; }
       if (kk === "loading") { const v = S.view; S.view = "loading"; render(); setTimeout(() => { S.view = v === "loading" ? "order" : v; S.first = true; render(); }, 1600); return; }
       if (kk === "notfound" || kk === "none") { S.view = kk; render(); window.scrollTo(0, 0); return; }
       if (kk === "reset") { S.sim = { k: null, late: false, sched: false, sample: false }; S.offline = false; S.first = true; lastFill = 0; S.view = "loading"; render(); window.scrollTo(0, 0); load(); return; }
@@ -554,6 +567,7 @@ export function startTracking(main: HTMLElement) {
     if (t.hasAttribute("data-copy")) { try { navigator.clipboard.writeText(S.rating ? S.rating.code : "").catch(() => {}); } catch { /* no clipboard */ } SC.flash(t, ic("check", 18) + "Копирано", 1400); return; }
     if (t.hasAttribute("data-google")) { e.preventDefault(); SC.toast("Линкът към профила в Google още липсва"); return; }
     if (t.hasAttribute("data-again") && S.o) {
+      await menuReady(); /* usually here long ago; the cart needs the dish (price, name, sold out) */
       o().lines.forEach((l, i) => {
         const d = dish(l.id); if (!d || (MN && MN.isOut(d))) return;
         SC.cart.add(l.id, l.q, { mods: l.mods, extra: l.extra, p: l.unit ?? d.p + (l.extra || 0), n: d.n });
@@ -603,7 +617,7 @@ export function startTracking(main: HTMLElement) {
   { const b = SC.load<{ on?: boolean; d?: string; m?: string }>("sc-bday", {}); S.bd = { d: b.d || "", m: b.m || "" }; /* the switch itself starts off */ }
   if (P.notfound) { S.view = "notfound"; render(); return; }
   if (P.none) { S.view = "none"; render(); return; }
-  if (P.sample) { await menuReady; S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.view = "order"; }
+  if (P.sample) { await menuReady(); S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.view = "order"; }
   else { const s = fromSaved(); if (s) { S.o = s; S.view = "order"; } }
   /* the API call and the menu chunk run in parallel; the order is drawn when both are here */
   const first = !S.sim.sample && !P.loading ? load({ quiet: !!S.o }) : null;
@@ -616,8 +630,9 @@ export function startTracking(main: HTMLElement) {
     if (P.delivered || P.done) { const n = stages().length; S.sim.k = isD() ? n - 1 : n; }
     if (P.way && isD()) S.sim.k = stages().length - 2;
   }
+  /* the menu chunk only after the first paint: the pictures and grams are filled in place */
+  requestAnimationFrame(() => setTimeout(() => { void menuReady().then(fillMenu); }, 0));
   if (P.loading) { render(); setTimeout(() => { S.view = S.o ? "order" : "none"; render(); }, 1600); return; }
-  await menuReady;
   if (S.o && !first) render();
   else if (S.o && loading) render(); /* the order from this browser's checkout, while the API answers */
   })();
