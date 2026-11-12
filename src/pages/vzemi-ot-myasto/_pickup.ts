@@ -39,7 +39,7 @@ export function tomorrowName(d: Date = new Date()): string {
 /* ---------- the live plan ("Кога ще е готово?") ---------- */
 export type Sim = "normal" | "loading" | "busy" | "offline" | "error";
 export interface Slot { t: number; full: boolean }
-export interface Plan { kind: Kind; day: "today" | "tomorrow"; asap: number; now: boolean; slots: Slot[]; closedToday: boolean; early: boolean; busy: boolean }
+export interface Plan { kind: Kind; day: "today" | "tomorrow"; asap: number; now: boolean; slots: Slot[]; closedToday: boolean; early: boolean; busy: boolean; /** a pre-order: an exact earliest time (10:30), not "около" */ pre: boolean }
 
 /** busy = the kitchen switch "Натоварено" (SC.eta().busy) or "Пълна кухня" in the preview panel. */
 export function plan(kind: Kind, s: State, busy: boolean): Plan {
@@ -49,9 +49,12 @@ export function plan(kind: Kind, s: State, busy: boolean): Plan {
   /* the one pickup rule (lib/pricing.ts pickupToday, decision 12.11.2026): orders until 22:30, ready at the latest at 23:00 */
   else if (pickupToday({ earliest: m + lead, mode: "pickup" }, m).ok) base = m;
   else { day = "tomorrow"; base = OPEN; }
-  const start = base + lead, asap = lead ? Math.ceil(start / 5) * 5 : start, b = busy && day === "today";
+  /* a pre-order (before 10:00, or for tomorrow) is ready at the earliest at ORDER_RULES.preorderFrom (10:30), the same
+     rule as the cart and the core (lib/slots.ts pickupSlots), not at the opening + the lead time */
+  const pre = m < OPEN || day === "tomorrow";
+  const start = base + lead, asap = pre ? Math.max(ORDER_RULES.preorderFrom, Math.ceil(start / 5) * 5) : lead ? Math.ceil(start / 5) * 5 : start, b = busy && day === "today";
   const slots = pickupSlots({ earliest: asap, mode: "pickup" }, base).map((t) => ({ t, full: slotBusy(t, m, b) }));
-  return { kind, day, asap, now: lead === 0 && day === "today" && m >= OPEN, slots, closedToday: day === "tomorrow", early: m < OPEN, busy: b };
+  return { kind, day, asap, now: lead === 0 && day === "today" && m >= OPEN, slots, closedToday: day === "tomorrow", early: m < OPEN, busy: b, pre };
 }
 
 /* ---------- CTA (one main action; the script sets SC.cart.mode("pickup") on click) ---------- */
@@ -94,11 +97,11 @@ function resultHTML(p: Plan, s: State, chosen: number | null, tomorrow: string):
   const dayWord = p.day === "tomorrow" ? "утре " : "";
   if (chosen != null) big = "<small>" + (p.day === "tomorrow" ? "утре в" : "в") + "</small>" + hm(chosen);
   else if (p.now) big = "веднага";
-  else if (p.kind === "lunch") big = "<small>" + (dayWord || "днес ") + "в</small>" + hm(p.asap);
+  else if (p.kind === "lunch" || p.pre) big = "<small>" + (dayWord || "днес ") + "в</small>" + hm(p.asap);
   else big = "<small>" + dayWord + "около</small>" + hm(p.asap);
   if (p.closedToday && s.m >= OPEN && s.kitchen && p.kind !== "lunch") sub = "За днес не стигаме: ястията от менюто са готови най-рано след " + LEAD + " минути, а кухнята приема до " + K + ". Изберете час за утре, " + tomorrow + ".";
   else if (p.closedToday) sub = "Кухнята приема поръчки до " + K + ". Изберете час за утре, " + tomorrow + ".";
-  else if (p.early) sub = "Отваряме в " + R.open + ". " + (p.kind === "lunch" ? "Обедното меню е готово от отварянето." : "Ястията от менюто са готови най-рано в " + hm(OPEN + LEAD) + ".");
+  else if (p.early) sub = "Отваряме в " + R.open + ". Поръчка отсега е готова най-рано в " + hm(p.asap) + ".";
   else if (p.kind === "lunch") sub = "Обедното меню е готово веднага. <b>Минете, когато ви е удобно</b>, до " + R.close + ".";
   else if (p.kind === "both") sub = "Поръчката е готова, когато е готово и последното ястие: <b>най-рано след " + LEAD + "&nbsp;минути</b>.";
   else sub = "Ястията от менюто се приготвят на момента: <b>най-рано след " + LEAD + "&nbsp;минути</b>.";
@@ -112,8 +115,8 @@ function errHTML(type: "wifi" | "err", text: string): string {
 }
 const skeletonHTML = () => '<div class="pk-pick">Или изберете час<span>Проверяваме кухнята</span></div><div class="pk-asap skel" style="box-shadow:none" aria-hidden="true"></div><div class="pk-slots" aria-busy="true">' + '<span class="skel"></span>'.repeat(8) + '</div><span class="vh" role="status">' + loadingText("свободните часове") + "</span>";
 function slotsHTML(p: Plan, chosen: number | null, tomorrow: string): string {
-  const asapLabel = p.now ? "Веднага" : p.kind === "lunch" ? (p.day === "tomorrow" ? "Утре в " : "В ") + hm(p.asap) : p.day === "tomorrow" ? "Утре, най-рано" : "Възможно най-скоро";
-  const asapRight = p.now || p.kind === "lunch" ? "" : "около " + hm(p.asap);
+  const asapLabel = p.now ? "Веднага" : p.kind === "lunch" ? (p.day === "tomorrow" ? "Утре в " : "В ") + hm(p.asap) : p.day === "tomorrow" ? "Утре, най-рано" : p.pre ? "Днес, най-рано" : "Възможно най-скоро";
+  const asapRight = p.now || p.kind === "lunch" ? "" : (p.pre ? "в " : "около ") + hm(p.asap);
   return '<div class="pk-pick">Или изберете час<span>' + (p.day === "tomorrow" ? "утре, " + tomorrow : "днес") + "</span></div>" +
     '<button class="pk-asap" type="button" data-slot="asap" aria-pressed="' + (chosen == null) + '"><span>' + asapLabel + '</span><span class="price">' + asapRight + "</span></button>" +
     (p.slots.length ? '<div class="pk-slots" role="group" aria-label="Часове за вземане">' + p.slots.map((x) => x.full

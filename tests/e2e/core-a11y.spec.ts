@@ -92,3 +92,24 @@ test("no jump: home cookie 'Настройки' -> Escape, and 'Запази и�
   await stays(page, async () => { await page.locator(".sheetwrap.on [type=submit]").click(); });
   expect(await page.evaluate(() => localStorage.getItem("sc-cookie"))).toBe('"set"');
 });
+
+test("keyboard: a focused chip in a horizontal row comes fully into the row (phone)", async ({ page }) => {
+  await noCookie(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/menu/");
+  const rowOf = (sel: string) => page.locator(sel).first();
+  for (const row of [".chips.fchips", ".catscroll"]) {
+    /* the chip cut by the right edge (Chrome does not scroll a part-visible element on focus) */
+    const k = await rowOf(row).evaluate((r) => {
+      const a = r.getBoundingClientRect();
+      return Array.from(r.querySelectorAll("button, a")).findIndex((x) => { const b = x.getBoundingClientRect(); return b.left < a.right - 8 && b.right > a.right + 8; });
+    });
+    expect(k, row).toBeGreaterThan(-1);
+    const last = rowOf(row).locator("button, a").nth(k);
+    await last.focus();
+    await expect.poll(async () => {
+      const [a, b] = await Promise.all([rowOf(row).boundingBox(), last.boundingBox()]);
+      return !!a && !!b && b.x >= a.x - 1 && b.x + b.width <= a.x + a.width + 1;
+    }, { message: row }).toBe(true);
+  }
+});

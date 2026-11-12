@@ -82,12 +82,15 @@ test("pickup 22:45 and 09:30: tomorrow, before opening", async ({ page }) => {
   await open(page, "22:45");
   await expect(page.locator("[data-alert]")).toContainText("Кухнята затвори за днес");
   await expect(page.locator("[data-hero-cta] [data-pickup-go]")).toContainText("Поръчай за утре");
-  await expect(big(page)).toContainText("утре около10:20");
+  /* a pre-order starts at 10:30, as in the cart and the core (ORDER_RULES.preorderFrom), not at 10:00 + 20 min */
+  await expect(big(page)).toContainText("утре в10:30");
+  await expect(page.locator(".pk-asap")).toContainText("в 10:30");
   await expect(page.locator(".pk-pick")).toContainText("утре, ");
   await page.goto("/vzemi-ot-myasto/?preview=1&t=09:30");
   await expect(page.locator("[data-alert]")).toContainText("Приемаме поръчки днес от 10:00");
   await page.locator('[data-kind="lunch"]').click();
-  await expect(big(page)).toContainText("днес в10:00");
+  await expect(big(page)).toContainText("днес в10:30");
+  await expect(page.locator(".pk-res p")).toContainText("Отваряме в 10:00. Поръчка отсега е готова най-рано в 10:30.");
 });
 
 test("pickup 22:45 with a full cart: the button says \"Поръчай за утре\" like the alert", async ({ page }) => {

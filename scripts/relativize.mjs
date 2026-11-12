@@ -8,6 +8,7 @@
 // Absolute URLs (https:, tel:, mailto:, //) and #anchors are left alone. Usage: node scripts/relativize.mjs dist
 import fs from "node:fs";
 import path from "node:path";
+import { runtimeSizes, uiSizes, RUNTIME_BUDGET, UI_BUDGET } from "./build-checks.mjs";
 
 const dist = path.resolve(process.argv[2] || "dist");
 const files = [];
@@ -43,3 +44,10 @@ for (const f of files) {
   if (s !== before) { fs.writeFileSync(f, s); n++; }
 }
 console.log(`relativize: ${n} files rewritten (+${js} JS preload helper) in ${path.relative(process.cwd(), dist) || "."}`);
+/* the budgets again, on the files that are uploaded: the preload helper above adds a few bytes after the build check (keen Д7) */
+for (const [list, max, what] of [[runtimeSizes(dist), RUNTIME_BUDGET, "shared runtime"], [uiSizes(dist), UI_BUDGET, "shared components"]]) {
+  for (const x of list) {
+    if (x.bytes > max) throw new Error(`relativize: the ${what} ${x.file} is ${x.bytes} B after relativize, over the budget of ${max} B (docs/DECISIONS.md 12.11.2026)`);
+    console.log(`relativize: ${what} ${x.file}: ${x.bytes} / ${max} B (as uploaded)`);
+  }
+}

@@ -284,6 +284,8 @@ if (sent && "IntersectionObserver" in window) new IntersectionObserver((es) => {
 document.addEventListener("focusin", (e) => {
   const el = e.target as HTMLElement;
   if (!el || !el.getBoundingClientRect || el.closest(".ov, .ov-ck, .top, .row2")) return;
+  /* in a horizontal row (chips, rails): the whole element comes into the row, not a part of it (keen Д5) */
+  if (el.closest(".chips, .catscroll, .rail, .rl, .week, .perks")) el.scrollIntoView({ inline: "nearest", block: "nearest" });
   const r = el.getBoundingClientRect();
   let top = window.innerHeight;
   ov.querySelectorAll<HTMLElement>(".nav, .abar, .aifab, .dish-abar").forEach((b) => {
