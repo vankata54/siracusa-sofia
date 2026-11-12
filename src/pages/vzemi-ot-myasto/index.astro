@@ -10,7 +10,8 @@ import Base from "../../layouts/Base.astro";
 import { RESTAURANT as R } from "../../lib/consts.ts";
 import { ic } from "../../lib/icons.ts";
 import { url } from "../../lib/routes.ts";
-import { ctaHTML, liveHTML, dealHTML, hoursHTML, faqHTML, pickupLd, DESCRIPTION, LEAD_TEXT, STEPS_TEXT } from "./_pickup.ts";
+import { ctaHTML, liveHTML, hoursHTML, faqHTML, pickupLd, DESCRIPTION, LEAD_TEXT, STEPS_TEXT } from "./_pickup.ts";
+import { dealHTML } from "./_pickup-deal.ts";
 
 const live = liveHTML({ kind: "menu", s: null, sim: "loading", busy: false, chosen: null, fromCart: false, tomorrow: "" });
 const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="muted">($1)</span>')];
@@ -301,11 +302,16 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
 </style>
 
 <script>
-  import { SC } from "../../client/sc-menu.ts";
+  /* the light runtime: the first paint (the plan, the hours) does not wait for the menu; the menu chunk comes after it
+     (the -30% card with three lunch dishes and their "+", the total in the button) */
+  import { SC } from "../../client/sc.ts";
   import { previewPanel, pvChip, PV } from "../../lib/ui.ts";
-  import { price } from "../../lib/pricing.ts";
+  import { isLunchId } from "../../lib/lunch-id.ts";
   import "sc-icons:arrow-clockwise,arrow-right,bowl-food,caret-right,check-circle,info,moon,seal-percent,shopping-bag,sliders-horizontal,truck,warning,warning-circle"; /* the page's icons in one module (scripts/icon-groups.mjs) */
-  import { ctaHTML, alertHTML, liveHTML, dealHTML, hoursHTML, plan, tomorrowName, KITCHEN_END, type Kind, type Sim, type CtaView } from "./_pickup.ts";
+  import { ctaHTML, alertHTML, liveHTML, hoursHTML, plan, tomorrowName, KITCHEN_END, type Kind, type Sim, type CtaView } from "./_pickup.ts";
+
+  type Later = Pick<typeof import("./_pickup-deal.ts"), "price" | "dealHTML">;
+  let M: Later | null = null;
 
   const main = SC.mount({ docTitle: "Вземи от място" });
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
@@ -318,7 +324,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   function cartKind(): Kind | null {
     const ls = SC.cart.lines();
     if (!ls.length) return null;
-    const l = ls.some((x) => SC.byId[x.id] && SC.byId[x.id].lunch), o = ls.some((x) => SC.byId[x.id] && !SC.byId[x.id].lunch);
+    const l = ls.some((x) => isLunchId(x.id)), o = ls.some((x) => !isLunchId(x.id));
     return l && o ? "both" : l ? "lunch" : "menu";
   }
   const saved = SC.load<{ kind?: Kind } | null>("sc-pickup", null);
@@ -329,14 +335,17 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   const orderable = () => isToday && SC.state().kitchen;
 
   /* ---------- CTA: the pickup total (with -30% on lunch after 15:00) is the cart's own price() in pickup mode ---------- */
-  function ctaView(): CtaView {
+  /** null: the cart has dishes but the menu is not here yet (the total needs price()); the button from the HTML stays */
+  function ctaView(): CtaView | null {
     const n = SC.cart.count();
-    return { n, total: n ? price({ ...SC.cart.get(), mode: "pickup" }).total : 0, kind, later: SC.state().m >= KITCHEN_END };
+    if (n && !M) return null;
+    return { n, total: n && M ? M.price({ ...SC.cart.get(), mode: "pickup" }).total : 0, kind, later: SC.state().m >= KITCHEN_END };
   }
   let io: IntersectionObserver | null = null;
   const heroGo = () => $("[data-hero-cta] .go");
   function refreshCTA() {
     const v = ctaView();
+    if (!v) return;
     heroGo().outerHTML = ctaHTML("go pill-lg", v);
     abar.innerHTML = ctaHTML("", v);
     if (io) { io.disconnect(); io.observe(heroGo()); }
@@ -358,7 +367,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   function renderHour() {
     const s = SC.state();
     $("[data-alert]").innerHTML = alertHTML(s);
-    $("[data-deal]").innerHTML = dealHTML({ s, isToday, orderable: orderable() });
+    if (M) $("[data-deal]").innerHTML = M.dealHTML({ s, isToday, orderable: orderable() });
     $("[data-hours]").innerHTML = hoursHTML(s);
   }
   const ll = $("[data-lunchlink] span");
@@ -413,4 +422,11 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   refreshCTA();
   live.dataset.ready = "1";
   SC.reveal();
+  /* after the first paint: the menu (the dishes of the -30% card, their "+", the total of the cart) */
+  requestAnimationFrame(() => setTimeout(() => {
+    Promise.all([import("../../client/sc-menu.ts"), import("./_pickup-deal.ts")]).then(([, dl]) => {
+      M = { price: dl.price, dealHTML: dl.dealHTML };
+      renderHour(); refreshCTA();
+    }).catch(() => { /* the card and the button from the HTML stay */ });
+  }, 0));
 </script>

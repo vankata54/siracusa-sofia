@@ -234,3 +234,23 @@ describe("routes and render", () => {
     expect(ic("nope")).toContain("<svg");
   });
 });
+
+describe("lunch ids without the menu (lib/lunch.ts isLunchId)", () => {
+  it("every lunch dish has the l- prefix and no other dish does", async () => {
+    const { isLunchId } = await import("../../src/lib/lunch-id.ts");
+    const { lunch, items } = await import("../../src/lib/data.ts");
+    expect(lunch.length).toBeGreaterThan(0);
+    expect(lunch.every((x) => isLunchId(x.id))).toBe(true);
+    expect(items.some((x) => isLunchId(x.id))).toBe(false);
+  });
+  it("slots.ts gives the same lead as price() (light pages paint without the menu)", async () => {
+    const { leadMin } = await import("../../src/lib/slots.ts");
+    const { price } = await import("../../src/lib/pricing.ts");
+    const { lunch, items, isOut } = await import("../../src/lib/data.ts");
+    const trad = items.find((x) => !isOut(x))!, l = lunch[0];
+    const at = (ids: string[]) => price({ mode: "pickup", lines: ids.map((id) => ({ key: id, id, q: 1, mods: [], extra: 0 })) }, { clock: "12:00" }).earliest - 720;
+    expect(at([l.id])).toBe(leadMin(false));
+    expect(at([trad.id])).toBe(leadMin(true));
+    expect(at([l.id, trad.id])).toBe(leadMin(true));
+  });
+});

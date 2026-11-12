@@ -1,31 +1,24 @@
 /* Pickup page (/vzemi-ot-myasto/): the HTML pieces shared by the server (Astro, SEO) and the browser (the hour,
    the cart, the kitchen switch). Port of design/pages/pickup.html. Every hour and rule comes from src/lib:
-   the hours from RESTAURANT (consts), the phases from state(), the 20 minutes from price().earliest, the slots
-   (every 15 min, up to 3 hours ahead, not after the kitchen closes) from pickupSlots(), the -30% from pricing. */
-import { RESTAURANT as R } from "../../lib/consts.ts";
-import { byId, items, lunch, isOut, type Dish } from "../../lib/data.ts";
+   the hours from RESTAURANT (consts), the phases from state(), the 20 minutes from leadMin() (the same as price().earliest),
+   the slots (every 15 min, up to 3 hours ahead, not after the kitchen closes) from pickupSlots(), the -30% from lunch.ts.
+   WITHOUT the menu (the first paint does not wait for it): the -30% card with the dishes is in _pickup-deal.ts. */
+import { RESTAURANT as R, ORDER_RULES } from "../../lib/consts.ts";
 import { fmt, esc, hhmm, DAYS } from "../../lib/format.ts";
 import { ic } from "../../lib/icons.ts";
 import { url } from "../../lib/routes.ts";
-import { pic, plusBtn } from "../../lib/render.ts";
-import { price, pickupSlots, pickupToday, slotBusy, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
+import { pickupSlots, pickupToday, slotBusy, leadMin } from "../../lib/slots.ts";
 import type { State } from "../../lib/status.ts";
 import { hourNote, stateBox, loadingText } from "../../lib/ui.ts";
 import "sc-icons:arrow-clockwise,clock,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
-import type { Cart } from "../../lib/cart.ts";
 
 /* ---------- hours and rules (from src/lib) ---------- */
 const toMin = (s: string) => +s.slice(0, 2) * 60 + +s.slice(3, 5);
 export const OPEN = toMin(R.open), CLOSE = toMin(R.close), KITCHEN_END = toMin(R.kitchen), DELIVERY_END = toMin(R.delivery), LUNCH_END = toMin(R.lunchUntil);
-export const PCT = Math.round(LUNCH_PICKUP_DISCOUNT * 100);
-/* a sample cart per kind, priced by the lib: the earliest time is "now + the kitchen lead" */
-const LUNCH_ID = (lunch[0] || ({} as Dish)).id, TRAD_ID = (items.find((x) => !isOut(x)) || ({} as Dish)).id;
+export const PCT = Math.round(ORDER_RULES.lunchPickupDiscount * 100);
 export type Kind = "lunch" | "menu" | "both";
-function sample(kind: Kind): Cart {
-  const ids = kind === "lunch" ? [LUNCH_ID] : kind === "menu" ? [TRAD_ID] : [LUNCH_ID, TRAD_ID];
-  return { mode: "pickup", lines: ids.filter(Boolean).map((id) => ({ key: id, id, q: 1, mods: [], extra: 0 })) };
-}
-const leadOf = (kind: Kind) => Math.max(0, price(sample(kind), { clock: OPEN }).earliest - OPEN);
+/* the earliest time is "now + the kitchen lead": dishes from the menu need it, the lunch menu alone does not */
+const leadOf = (kind: Kind) => leadMin(kind !== "lunch");
 export const LEAD = leadOf("menu");
 const probe = pickupSlots({ earliest: OPEN, mode: "pickup" }, OPEN);
 export const STEP = probe.length > 1 ? probe[1] - probe[0] : 15;
@@ -34,8 +27,6 @@ const K = R.kitchen, L = R.lunchUntil, D = R.delivery;
 
 export const hm = (t: number) => hhmm(((t % 1440) + 1440) % 1440);
 export function dur(min: number): string { const h = Math.floor(min / 60), m = min % 60; return (h ? h + " ч" : "") + (h && m ? " " : "") + (m ? m + " мин" : ""); }
-/** Lunch price after 15:00 for pickup (same rounding as price()). */
-export const off = (p: number) => round2(p - Math.round(p * PCT) / 100);
 const aheadText = () => (AHEAD % 60 ? dur(AHEAD) : AHEAD / 60 + " часа");
 /** Tomorrow's weekday in Sofia ("сряда"). */
 export function tomorrowName(d: Date = new Date()): string {
@@ -143,34 +134,6 @@ export function liveHTML(v: LiveView): string {
     '<p class="pk-q">Какво ще поръчате?</p>' + segHTML(v.kind) +
     (v.fromCart ? '<p class="pk-fromcart">' + ic("shopping-bag", 18) + "Избрахме според количката ви</p>" : "") +
     '<div class="pk-perf" aria-hidden="true"></div>' + res + body;
-}
-
-/* ---------- -30% card ---------- */
-export const DEAL_IDS = ["l-pile-chetiri-sirena-s-kartofeno-pyure", "l-lazanya-boloneze", "l-svezha-s-pile-i-parmezan"];
-export interface DealView { s: State | null; isToday: boolean; orderable: boolean }
-export function dealHTML(v: DealView): string {
-  const s = v.s, m = s ? s.m : -1;
-  let when: string;
-  if (!s) when = "Всеки ден от " + L + " до " + K;
-  else if (s.lunchDiscount) when = "Важи сега · до " + K;
-  else if (s.kitchen && m < LUNCH_END) when = "Започва в " + L + " · след " + dur(LUNCH_END - m);
-  else if (m < OPEN) when = "Днес от " + L + " до " + K;
-  else when = "Утре от " + L + " до " + K;
-  const active = !!s && s.lunchDiscount;
-  const ex = DEAL_IDS.map((id) => byId[id]).filter(Boolean);
-  const rows = ex.map((x) => {
-    const pr = active
-      ? '<span class="price">' + fmt(off(x.p)) + '</span><span class="old price">' + fmt(x.p) + "</span>"
-      : '<span class="price">' + fmt(x.p) + '</span><span class="after">след ' + L + ': <span class="price">' + fmt(off(x.p)) + "</span></span>";
-    return '<div class="pk-ex" role="listitem">' + pic(x) + '<span><span class="nm">' + esc(x.n) + '</span><span class="pr">' + pr + "</span></span>" + (v.orderable ? plusBtn(x) : "<span></span>") + "</div>";
-  }).join("");
-  const first = ex[0];
-  return '<div class="ember-card pk-deal"><span class="pk-when">' + ic("clock", 16) + when + "</span>" +
-    '<div><span class="pct" aria-hidden="true">-' + PCT + '%</span><h2 class="h2" id="pk-deal-h">на обедното меню след ' + L + '</h2><p style="margin-top:10px">Само при вземане от място. След ' + L + " обедното меню не се доставя.</p></div>" +
-    (v.isToday ? "" : '<p class="pk-sample">' + ic("info", 20) + "<span>Обедното меню се качва всяка сутрин. Пример за цените:</span></p>") +
-    '<div class="core" role="list" aria-label="' + (v.isToday ? "Примери от днешното обедно меню" : "Примери от обедното меню") + '">' + rows + "</div>" +
-    (first ? '<p class="foot-note">' + ic("info", 20) + "<span>Отстъпката се смята сама в количката, без код. Например: „Отстъпка след " + L + ": -" + fmt(round2(first.p - off(first.p))) + "“.</span></p>" : "") +
-    '<a class="pill pill-ink" href="' + url.lunch() + '">' + ic("bowl-food", 20) + "Виж цялото обедно меню</a></div>";
 }
 
 /* ---------- hours timeline (pickup / lunch / delivery) with the "now" marker ---------- */

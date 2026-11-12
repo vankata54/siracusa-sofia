@@ -11,6 +11,7 @@ import { zoneMin } from "./zones.ts";
 import type { Cart, Mode } from "./cart.ts";
 
 import { LUNCH_PICKUP_DISCOUNT } from "./lunch.ts";
+import { leadMin } from "./slots.ts";
 export { LUNCH_PICKUP_DISCOUNT };
 export const FEE_MISSING = "[ЛИПСВА: такса в €]";
 
@@ -122,42 +123,9 @@ export function price(cart: Cart, opts: PriceOpts = {}): Priced {
   return {
     mode, rows, n, outN, sub: round2(sub), disc: round2(disc), fee, feeUnknown: mode === "delivery" && fee === null,
     total: round2(sub - disc + (fee || 0)), hasLunch, hasTrad, deliveryOk, closed, conflict,
-    etaMin, busy: e.busy, earliest: m + (hasTrad ? ORDER_RULES.pickupLeadMin : 0), discKind, lunchDisc, codeDisc, profileDisc,
+    etaMin, busy: e.busy, earliest: m + leadMin(hasTrad), discKind, lunchDisc, codeDisc, profileDisc,
   };
 }
 
-/** Pickup slots every 15 min up to 3 hours ahead, not after 22:30 (pre-orders: the whole day). */
-export function pickupSlots(p: Pick<Priced, "earliest" | "mode">, o?: ClockInput, sched = false): number[] {
-  const m = minutes(o);
-  let a: number, b: number;
-  const R = ORDER_RULES, step = R.slotStep;
-  if (sched) { a = R.preorderFrom; b = p.mode === "delivery" ? R.preorderDeliveryUntil : R.pickupUntil; }
-  else { if (p.mode === "delivery") return []; a = Math.ceil((p.earliest + 1) / step) * step; b = Math.min(m + R.horizonMin, R.pickupReadyUntil); }
-  const out: number[] = [];
-  for (let i = a; i <= b; i += step) out.push(i);
-  return out;
-}
-
-/** Pickup TODAY, the one rule for the core and the screens (decision 12.11.2026): "Кухнята приема поръчки до 22:30" is the
-    last minute to PLACE an order (state().kitchen), not the time it is ready. Until then "Възможно най-скоро" and the slots
-    every 15 min, ready at the latest at closing (23:00) and never sooner than the lead time (20 min with dishes from the menu).
-    From 22:30: nothing today ("Поръчай за утре"). */
-export function pickupToday(p: Pick<Priced, "earliest" | "mode">, o?: ClockInput): { ok: boolean; asap: boolean; slots: number[] } {
-  const ok = state(o).kitchen && p.mode === "pickup";
-  return { ok, asap: ok && p.earliest <= ORDER_RULES.pickupReadyUntil, slots: ok ? pickupSlots(p, o, false) : [] };
-}
-
-/** While the kitchen has "Натоварено" on, today's pickup slots in the next hour are full ("заето"). The one rule for the
-    core, the cart and /vzemi-ot-myasto/ (t, m: minutes of the day; only for today, never for a pre-order). */
-export const BUSY_FULL_MIN = 60;
-export function slotBusy(t: number, m: number, busy: boolean): boolean {
-  return busy && t < m + BUSY_FULL_MIN;
-}
-
-/** Is this "HH:MM" one of the allowed slots (format, future, opening hours, 15 min step, earliest, 3 hours ahead)? */
-export function slotAllowed(p: Pick<Priced, "earliest" | "mode">, slot: string, o?: ClockInput, sched = false): boolean {
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(slot))) return false;
-  const t = +slot.slice(0, 2) * 60 + +slot.slice(3);
-  return pickupSlots(p, o, sched).indexOf(t) > -1;
-}
-export const slotLabel = (t: number): string => hhmm(t);
+/* the slot rules live in slots.ts (no menu there, for light pages); re-exported here for the core and the cart */
+export { pickupSlots, pickupToday, slotBusy, BUSY_FULL_MIN, slotAllowed, slotLabel, leadMin, type SlotInput } from "./slots.ts";
