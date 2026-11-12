@@ -5,7 +5,8 @@
    through api.celebrations.create. The markup of the steps is in ./_calc.ts (same functions on both sides). */
 import Base from "../../layouts/Base.astro";
 import { ic, url, RESTAURANT as R } from "../../lib/index.ts";
-import { fresh, flowHTML, asideHTML, barHTML, feastHTML, PRICE_DEFAULT, TEL, type View } from "./_calc.ts";
+import { fresh, flowHTML, asideHTML, barHTML, PRICE_DEFAULT, TEL, type View } from "./_calc.ts";
+import { feastHTML, pkgInfos, pkgCardsHTML } from "./_menu.ts";
 
 const abs = (p: string) => new URL(p, Astro.site).href;
 const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
@@ -13,12 +14,13 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
   { "@type": "ListItem", position: 2, name: "Събития и поводи", item: abs(url.page("events")) },
   { "@type": "ListItem", position: 3, name: "Празник при нас", item: abs(url.page("celebration")) },
 ] };
-const v: View = { S: fresh(), price: PRICE_DEFAULT, early: false, sent: false, sending: false, restored: false, minDate: "", open: true, beforeOpen: false };
+const pkgs = pkgInfos();
+const v: View = { S: fresh(), price: PRICE_DEFAULT, pk: Object.fromEntries(pkgs.map((p) => [p.id, p])), earlyDays: null, early: false, sent: false, sending: false, restored: false, minDate: "", maxDate: "", open: true, beforeOpen: false };
 const hero =
   '<div class="ch-text"><a class="crumb" href="' + url.page("events") + '">' + ic("arrow-left", 18) + "Събития и поводи</a>" +
   '<span class="eyebrow">Калкулатор на празник</span><h1 class="h1">Празник при нас</h1>' +
   '<p class="lead">Рожден ден, кръщене или фирмено парти. Изберете повод, гости и меню, а управителят ще ви изпрати оферта.</p>' +
-  '<div class="perks"><span class="perk ember">' + ic("seal-percent", 18) + '-5% при ранна резервация за празник</span><span class="perk">' + ic("fork-knife", 18) + 'Пакети от нашето меню</span><span class="perk">' + ic("map-pin", 18) + "Салон, градина или цялото място</span></div></div>" +
+  '<div class="perks" role="region" tabindex="0" aria-label="Предимства на празника при нас"><span class="perk ember">' + ic("seal-percent", 18) + '-5% при ранна резервация за празник</span><span class="perk">' + ic("fork-knife", 18) + 'Пакети от нашето меню</span><span class="perk">' + ic("map-pin", 18) + "Салон, градина или цялото място</span></div></div>" +
   feastHTML();
 ---
 <Base page="celebration" nav="events" title="Празник при нас" docTitle="Празник при нас"
@@ -42,6 +44,8 @@ const hero =
     <div class="talk"><p>Предпочитате да поговорим?<span>Всеки ден от {R.open} до {R.close}.</span></p><a class="pill pill-line" href={TEL} set:html={ic("phone", 20) + "Обади се · " + R.phone}></a></div>
   </section>
   <section class="wrap"><div class="proto" data-proto hidden></div></section>
+  <template data-pkgtpl set:html={pkgCardsHTML()}></template>
+  <script is:inline type="application/json" id="cel-pkgs" set:html={JSON.stringify(pkgs)}></script>
   <div class="abar nonav cbar" data-cbar slot="ov" set:html={barHTML(v)}></div>
 </Base>
 
@@ -55,6 +59,7 @@ const hero =
 .ch .lead{margin-top:12px; max-width:36ch}
 .perks{display:flex; gap:8px; margin:18px -16px 0; padding:2px 16px; overflow-x:auto; scrollbar-width:none}
 .perks::-webkit-scrollbar{display:none}
+.perks:focus-visible{outline:3px solid var(--red); outline-offset:2px; border-radius:var(--r-pill)}
 .perk{flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 14px 0 10px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:14px; font-weight:700}
 .perk.ember{background:var(--ember); color:var(--on-ember); box-shadow:none}
 .feast{position:relative; height:156px; border-radius:var(--r-shell); overflow:hidden; background:radial-gradient(120% 120% at 50% 20%, var(--plate-1), var(--plate-2)); display:flex; align-items:center; justify-content:center}

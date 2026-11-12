@@ -89,8 +89,9 @@ test("celebration: errors on step 1, then full flow with a package, Назад k
   const body = (await req).postDataJSON();
   expect(body).toMatchObject({ kind: "Кръщене", people: 30, date, zone: "garden", pack: "Класически", cake: true, decor: false, name: "Тест Празник", marketing: false, early: false });
   expect(body.items).toContain("shopska-salata");
-  expect(body.note).toContain("Начален час: 19:00");
-  expect(body.note).toContain("Шоколад");
+  /* own fields, not repeated in the note */
+  expect(body).toMatchObject({ time: "19:00", cakeNote: "Шоколад" });
+  expect(body.note).toBeUndefined();
   expect((await res).status()).toBe(201);
 
   await expect(page.locator(".done h2")).toHaveText("Запитването е изпратено");
@@ -133,5 +134,47 @@ test("celebration: #krashtene preselects, own menu from the real dishes, the dra
   await page.locator("[data-reset]").click();
   await stepIs(page, 1);
   await expect(page.locator(".tile.on")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("celebration: the admin's settings from /api/status: estimate price and -5% after earlyDays", async ({ page }) => {
+  const errors = watch(page);
+  await page.route("**/api/status", async (route) => {
+    const r = await route.fetch(); const j = await r.json();
+    await route.fulfill({ response: r, json: { ...j, celebrationPrice: "estimate", earlyDays: 30 } });
+  });
+  await open(page, "yubiley");
+  await expect(page.locator("[data-early]")).toContainText("поне 30 дни преди празника");
+  await expect(page.locator("[data-early]")).not.toContainText("[ЛИПСВА");
+  await page.locator("#cdate").fill(future(10));
+  await expect(page.locator("[data-early]")).not.toHaveClass(/on/);
+  await page.locator("#cdate").fill(future(45));
+  await expect(page.locator("[data-early]")).toHaveClass(/on/);
+  await page.locator('[data-gset="20"]').click();
+  await next(page).click();
+  await stepIs(page, 2);
+  const card = page.locator(".pkg", { hasText: "Класически" });
+  await expect(card).toContainText("на гост");
+  await expect(card).toContainText("преди -5%");
+  await card.click();
+  const sum = isPhone(page) ? page.locator(".cbar [data-sum]") : page.locator(".aside");
+  await expect(sum).toContainText("Ориентировъчно");
+  if (!isPhone(page)) { await expect(sum).toContainText("Ранна резервация -5%"); await expect(sum).not.toContainText("(пример)"); }
+  expect(errors).toEqual([]);
+});
+
+test("celebration: the menu is loaded only for the own menu", async ({ page }) => {
+  const errors = watch(page);
+  const js: string[] = [];
+  page.on("request", (r) => { if (r.resourceType() === "script") js.push(r.url()); });
+  await open(page);
+  await page.locator(".tile", { hasText: "Юбилей" }).click();
+  await page.locator("#cdate").fill(future(20));
+  await next(page).click();
+  await page.locator(".pkg", { hasText: "Пещ и скара" }).click();
+  expect(js.some((u) => /\/_astro\/(data|_menu)\./.test(u))).toBe(false);
+  await page.locator(".pkg.custom").click();
+  await expect(page.locator('[data-pick="tiramisu"], [data-pick="set-ot-balgarski-kolbasi"]').first()).toBeVisible();
+  expect(js.some((u) => /\/_astro\/_menu\./.test(u))).toBe(true);
   expect(errors).toEqual([]);
 });

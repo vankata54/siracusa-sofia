@@ -2,18 +2,23 @@
    The server drew the hero, step 1 (fresh state), the summary and "Как става"; here the draft is restored (localStorage
    "sc-celebration-draft", consent always unticked again), the steps are redrawn on every change, and the inquiry goes
    through api.celebrations.create (server or demo core). "Назад" keeps everything (one state for the 3 steps).
+   The admin's settings come from api.status(): celebrationPrice ("estimate" shows the price, "offer" only
+   "Ще ви изпратим оферта") and earlyDays (-5% when the date is that far; null = [ЛИПСВА], nothing computed).
+   The menu is not in this page's first JS: the package cards and their prices come from the server (<template>, JSON),
+   ./_menu.ts (the dish picker) is loaded only for "Собствено меню".
    #<type> (from /sabitia/) preselects the occasion. Only in preview (?preview=1): the panel "Само в прегледа"
    (price for the guest, -5% example, send error / offline) and the review states #demo-2, #demo-custom, #demo-3, #demo-sent. */
-import { SC } from "../../client/sc-menu.ts";
+import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
-import { byId } from "../../lib/data.ts";
+import "sc-icons:arrow-left,arrow-right,seal-percent,fork-knife,map-pin,phone,sliders-horizontal,cake,baby,heart,briefcase,star,balloon,confetti,minus,plus,caret-down,caret-up,info,chair,tree,house,check,receipt,list-checks,warning-circle,lock,clock,paper-plane-right,calendar-blank"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 import {
-  TYPES, PKG, G_MIN, G_MAX, PRICE_DEFAULT, fresh, flowHTML, asideHTML, barHTML, summaryHTML, nextLabel, earlyHTML,
-  pkgsHTML, pkgFoot, pkgItems, pickerHTML, mineHTML, picksIn, inquiryNote, typeName, TEL, type St, type View, type Group,
+  TYPES, G_MIN, G_MAX, PRICE_DEFAULT, fresh, flowHTML, asideHTML, barHTML, summaryHTML, nextLabel, earlyHTML,
+  step2, skeletons, pickerLoading, pkgFoot, inquiryNote, typeName, TEL, type St, type View, type Group, type PkgInfo,
 } from "./_calc.ts";
 
 interface Proto { price: "show" | "offer"; send: "ok" | "error" | "offline"; early: boolean }
+type MenuMod = typeof import("./_menu.ts");
 
 export function start(): void {
   const { ic, esc } = SC;
@@ -24,27 +29,42 @@ export function start(): void {
   const protoEl = main.querySelector<HTMLElement>("[data-proto]")!;
   const cbar = document.querySelector<HTMLElement>("[data-cbar]")!;
   const smooth = (): ScrollBehavior => (SC.reduce ? "auto" : "smooth");
+  /* from the server: the package cards and the package prices (no menu in this script) */
+  const PK: Record<string, PkgInfo> = {};
+  try { (JSON.parse(document.getElementById("cel-pkgs")?.textContent || "[]") as PkgInfo[]).forEach((p) => { PK[p.id] = p; }); } catch { /* no packages */ }
+  const pkgTpl = document.querySelector<HTMLTemplateElement>("template[data-pkgtpl]")?.innerHTML || "";
+  /* the dish picker (with the menu) is loaded only for "Собствено меню" */
+  let M: MenuMod | null = null, menuLoading: Promise<MenuMod> | null = null;
+  const loadMenu = () => (menuLoading ||= import("./_menu.ts").then((m) => { M = m; S.picks = S.picks.filter(m.known); return m; }));
 
   /* ---------- state ---------- */
   const DRAFT_KEY = "sc-celebration-draft", PROTO_KEY = "sc-celebration-proto";
   let S: St = fresh(), restored = false, sent = false, sending = false, firstMenu = !!SC.preview;
-  /* preview only: the admin's decisions and the send result; real visitors get the defaults */
-  const P: Proto = SC.preview ? { price: PRICE_DEFAULT, send: "ok", early: false, ...SC.load<Partial<Proto>>(PROTO_KEY, {}) } : { price: PRICE_DEFAULT, send: "ok", early: false };
+  /* the price comes from the admin's setting (api.status); preview only: the panel tries the other price, the send
+     result and the -5% example (only while earlyDays is not set) */
+  const P: Proto = { price: PRICE_DEFAULT, send: "ok", early: false };
+  if (SC.preview) { const o = SC.load<Partial<Proto>>(PROTO_KEY, {}); P.send = o.send || "ok"; P.early = !!o.early; }
+  let earlyDays: number | null = null, priceForced = false;
   const saved = SC.load<{ v: number; s: Partial<St> } | null>(DRAFT_KEY, null);
   if (saved && saved.v === 1 && saved.s) {
     S = { ...S, ...saved.s, consent: false };
-    S.picks = (S.picks || []).filter((id) => !!byId[id]);
-    if (S.menu && S.menu !== "custom" && !PKG[S.menu]) S.menu = null;
+    S.picks = Array.isArray(S.picks) ? S.picks.filter((id) => typeof id === "string") : [];
+    if (S.menu && S.menu !== "custom" && !PK[S.menu]) S.menu = null;
     S.step = Math.min(3, Math.max(1, S.step | 0));
     restored = S.step > 1 || !!S.type || !!S.date || !!S.menu;
   }
   const save = () => SC.store(DRAFT_KEY, { v: 1, s: S });
-  const saveProto = () => { if (SC.preview) SC.store(PROTO_KEY, P); };
+  const saveProto = () => { if (SC.preview) SC.store(PROTO_KEY, { send: P.send, early: P.early }); };
   const today = () => sofiaYmd();
   const view = (): View => {
     const st = SC.state(), m = SC.minutes();
-    return { S, price: P.price, early: P.early, sent, sending, restored, minDate: addDaysYmd(today(), 1), open: st.open, beforeOpen: m < 600 };
+    return { S, price: P.price, pk: PK, earlyDays, early: isEarly(), sent, sending, restored, minDate: addDaysYmd(today(), 1), maxDate: addDaysYmd(today(), 365), open: st.open, beforeOpen: m < 600 };
   };
+  /* -5%: the date is at least earlyDays ahead; without the setting only the preview example */
+  function isEarly(): boolean {
+    if (earlyDays == null) return !!SC.preview && P.early;
+    const n = daysTo(); return n != null && n >= earlyDays;
+  }
   const daysTo = (): number | null => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(S.date)) return null;
     const a = Date.UTC(+S.date.slice(0, 4), +S.date.slice(5, 7) - 1, +S.date.slice(8, 10)), t = today();
@@ -82,32 +102,45 @@ export function start(): void {
     const nb = cbar.querySelector("[data-next]")!;
     if (sending) nb.setAttribute("aria-busy", "true");
   }
-  function updEarly() { const el = flow.querySelector<HTMLElement>("[data-early]"); if (!el) return; el.className = "early" + (P.early ? " on" : ""); el.innerHTML = earlyHTML(view()); }
+  function updEarly() { const el = flow.querySelector<HTMLElement>("[data-early]"); if (!el) return; el.className = "early" + (isEarly() ? " on" : ""); el.innerHTML = earlyHTML(view()); }
   function updGuests() {
     const inp = flow.querySelector<HTMLInputElement>("#guests"); if (inp && document.activeElement !== inp) inp.value = String(S.guests);
     flow.querySelectorAll<HTMLElement>("[data-gset]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.gset! === S.guests)));
     const dn = flow.querySelector<HTMLButtonElement>('[data-g="-1"]'), up = flow.querySelector<HTMLButtonElement>('[data-g="1"]');
     if (dn) dn.disabled = S.guests <= G_MIN; if (up) up.disabled = S.guests >= G_MAX;
   }
-  function updPkgs() { const v = view(); flow.querySelectorAll<HTMLElement>("[data-pkgf]").forEach((f) => { f.innerHTML = pkgFoot(v, PKG[f.dataset.pkgf!]); }); }
-  function updPicker() { const box = flow.querySelector<HTMLElement>("[data-picker]"); if (box) box.innerHTML = pickerHTML(view()); }
+  function updPkgs() { const v = view(); flow.querySelectorAll<HTMLElement>("[data-pkgf]").forEach((f) => { const p = PK[f.dataset.pkgf!]; if (p) f.innerHTML = pkgFoot(v, p); }); }
+  /* the cards from the server's template: mark the chosen one */
+  function markPkgs() {
+    flow.querySelectorAll<HTMLInputElement>('input[name="cmenu"]').forEach((i) => { i.checked = i.value === S.menu; i.closest(".pkg")?.classList.toggle("on", i.checked); });
+    updPkgs();
+  }
+  function pickerPart(): string {
+    if (S.menu !== "custom") return "";
+    if (M) return M.pickerHTML(S);
+    loadMenu().then(() => updPicker()).catch(() => { const box = flow.querySelector<HTMLElement>("[data-picker]"); if (box) box.innerHTML = '<p class="note-auto">' + ic("warning-circle", 18) + '<span>Менюто не се зареди. Проверете връзката или ни се обадете на <a href="' + TEL + '">' + R.phone + "</a>.</span></p>"; menuLoading = null; });
+    return pickerLoading();
+  }
+  function updPicker() { const box = flow.querySelector<HTMLElement>("[data-picker]"); if (box) box.innerHTML = pickerPart(); }
   function updPickerLight() {
     const box = flow.querySelector<HTMLElement>("[data-picker]"); if (!box) return;
+    if (!M) return;
+    const m = M;
     box.querySelectorAll<HTMLElement>("[data-pick]").forEach((b) => b.setAttribute("aria-pressed", String(S.picks.includes(b.dataset.pick!))));
     box.querySelectorAll<HTMLElement>("[data-pg]").forEach((b) => {
-      const n = picksIn(S, b.dataset.pg as Group).length; let s = b.querySelector<HTMLElement>(".n");
+      const n = m.picksIn(S, b.dataset.pg as Group).length; let s = b.querySelector<HTMLElement>(".n");
       if (n) { if (!s) { b.insertAdjacentHTML("beforeend", '<span class="n"></span>'); s = b.querySelector<HTMLElement>(".n")!; } s.textContent = String(n); s.setAttribute("aria-label", n + " избрани"); }
       else if (s) s.remove();
     });
-    const m = box.querySelector<HTMLElement>("[data-mine] .core"); if (m) m.innerHTML = mineHTML(S);
+    const mine = box.querySelector<HTMLElement>("[data-mine] .core"); if (mine) mine.innerHTML = m.mineHTML(S);
   }
 
   /* ---------- render ---------- */
   function render(dir = "") {
     const loading = S.step === 2 && firstMenu && !sent;
-    flow.innerHTML = flowHTML(view(), dir, loading);
-    if (loading) setTimeout(() => { firstMenu = false; const box = flow.querySelector<HTMLElement>("[data-pkgs]"); if (box) box.innerHTML = pkgsHTML(view()); }, 350);
-    else if (S.step === 2) firstMenu = false;
+    flow.innerHTML = flowHTML(view(), dir, S.step === 2 && !sent ? step2(loading ? skeletons() : pkgTpl, pickerPart()) : "");
+    if (loading) setTimeout(() => { firstMenu = false; const box = flow.querySelector<HTMLElement>("[data-pkgs]"); if (box) { box.innerHTML = pkgTpl; markPkgs(); } }, 350);
+    else if (S.step === 2) { firstMenu = false; markPkgs(); }
     updSummary();
   }
   const top = (el: Element) => el.getBoundingClientRect().top + window.scrollY;
@@ -125,8 +158,8 @@ export function start(): void {
       if (!S.type) bad("e-type", "Изберете повод. Ако го няма в списъка, изберете „Друг повод“.", 'input[name="ctype"]');
       if (!(S.guests >= G_MIN && S.guests <= G_MAX)) bad("e-guests", "Напишете брой гости между 2 и 200. За повече гости се обадете.", "#guests");
       const n = daysTo();
-      if (!S.date || n == null) bad("e-date", "Изберете дата на празника.", "#cdate"); else if (n < 1) bad("e-date", "Изберете дата от утре нататък.", "#cdate");
-      flow.querySelector("#cdate")?.setAttribute("aria-invalid", String(!S.date || n == null || n < 1));
+      if (!S.date || n == null) bad("e-date", "Изберете дата на празника.", "#cdate"); else if (n < 1 || n > 365) bad("e-date", "Изберете дата от утре до една година напред.", "#cdate");
+      flow.querySelector("#cdate")?.setAttribute("aria-invalid", String(!S.date || n == null || n < 1 || n > 365));
     }
     if (S.step === 2) {
       setErr("e-menu"); setErr("e-picks");
@@ -177,10 +210,10 @@ export function start(): void {
       if (navigator.onLine === false) throw new ApiError("offline", "", 0);
       await api.celebrations.create({
         kind: typeName(S), people: S.guests, date: S.date, zone: S.zone as "salon" | "garden" | "all",
-        pack: S.menu && S.menu !== "custom" ? PKG[S.menu].n : undefined, custom: S.menu === "custom", items: S.menu === "custom" ? S.picks.slice() : S.menu && PKG[S.menu] ? pkgItems(PKG[S.menu]).map((it) => it.x.id) : undefined,
+        pack: S.menu && PK[S.menu] ? PK[S.menu].n : undefined, custom: S.menu === "custom", items: S.menu === "custom" ? S.picks.slice() : S.menu && PK[S.menu] ? PK[S.menu].items.slice() : undefined,
         cake: S.cake !== "none", decor: S.decor === "yes", time: S.time || undefined,
         cakeNote: S.cake === "ours" && S.cakeNote.trim() ? S.cakeNote.trim() : undefined, wishes: S.decor === "yes" && S.wishes.length ? S.wishes.join(", ") : undefined,
-        name: S.name.trim(), phone: S.phone.trim(), email: S.email.trim() || undefined, note: inquiryNote(S), marketing: S.consent === true, early: false,
+        name: S.name.trim(), phone: S.phone.trim(), email: S.email.trim() || undefined, note: inquiryNote(S), marketing: S.consent === true, early: isEarly() && earlyDays != null, /* the core decides again from earlyDays */
       });
       sending = false; sent = true;
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
@@ -206,7 +239,7 @@ export function start(): void {
     if (d.g) { S.guests = Math.max(G_MIN, Math.min(G_MAX, S.guests + +d.g)); setErr("e-guests"); changed(); return; }
     if (d.gset) { S.guests = +d.gset; setErr("e-guests"); changed(); return; }
     if (d.pe) { P.early = d.pe === "1"; saveProto(); renderProto(); updEarly(); updPkgs(); updSummary(); protoEl.querySelector<HTMLElement>('[data-pe="' + d.pe + '"]')?.focus(); return; }
-    if (d.pp) { P.price = d.pp as Proto["price"]; saveProto(); renderProto(); updPkgs(); updSummary(); protoEl.querySelector<HTMLElement>('[data-pp="' + P.price + '"]')?.focus(); return; }
+    if (d.pp) { P.price = d.pp as Proto["price"]; priceForced = true; saveProto(); renderProto(); updPkgs(); updSummary(); protoEl.querySelector<HTMLElement>('[data-pp="' + P.price + '"]')?.focus(); return; }
     if (d.pg) { S.pg = d.pg as Group; updPicker(); flow.querySelector<HTMLElement>('[data-pg="' + S.pg + '"]')?.focus(); save(); return; }
     if (d.pc) { S.pc[S.pg] = d.pc; updPicker(); flow.querySelector<HTMLElement>('[data-pc="' + d.pc + '"]')?.focus(); save(); return; }
     if (d.pick) { const id = d.pick, i = S.picks.indexOf(id); if (i > -1) S.picks.splice(i, 1); else S.picks.push(id); setErr("e-picks"); updPickerLight(); changed(); return; }
@@ -256,8 +289,7 @@ export function start(): void {
     toks.forEach((tk) => {
       if (TYPES.some((t) => t.id === tk)) { S.type = tk; if (S.step === 1) restored = false; }
       if (!SC.preview) return;
-      if (tk === "offer") P.price = "offer";
-      if (tk === "show") P.price = "show";
+      if (tk === "offer" || tk === "show") { P.price = tk; priceForced = true; }
       if (tk === "early") P.early = true;
       if (tk === "error" || tk === "offline") P.send = tk;
       if (/^demo-/.test(tk)) {
@@ -273,4 +305,10 @@ export function start(): void {
   window.addEventListener("hashchange", () => { fromHash(); render(); });
   renderProto();
   render();
+  /* the admin's settings: the price for the guest and the days of the -5% (server: /api/status, demo: the core in the browser) */
+  api.status().then((st) => {
+    if (!priceForced) P.price = st.celebrationPrice === "estimate" ? "show" : "offer";
+    earlyDays = typeof st.earlyDays === "number" ? st.earlyDays : null;
+    renderProto(); updEarly(); updPkgs(); updSummary();
+  }).catch(() => { /* keep "Ще ви изпратим оферта" and [ЛИПСВА] */ });
 }
