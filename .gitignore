@@ -14,3 +14,4 @@ playwright-report/
 /shots/
 dist-*/
 *.tmp.config.ts
+test-results-*/
