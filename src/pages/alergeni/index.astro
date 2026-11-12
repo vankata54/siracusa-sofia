@@ -1,0 +1,622 @@
+---
+/* Allergens (/alergeni/): port of design/pages/allergens.html (design/PAGES.md "allergens.html" + "Логика за менютата и
+   филтрите", master 13). The server draws everything: the hero with the ring, the notice with the coverage meter
+   (from the data), the controls, ALL dishes of the menu as one table (cards on the phone, 14 columns at 1100+), with the
+   allergens of each dish as data attributes, the reference of the 14 allergens, the FAQ and JSON-LD (BreadcrumbList,
+   FAQPage). The browser only filters and reorders the rows that are already there (no menu download): "Без ...",
+   "Скрий ястията без данни", the "cannot check" group, the category sheet and the address (#a=gluten.milk&q=..&nd=1).
+   The search loads the menu chunk lazily (same logic as the menu, src/lib/filters.ts). Also in the browser: the lunch
+   note (today or not), "Изчерпано днес" from the live menu and, only in preview (?preview=1), the states panel. */
+import Base from "../../layouts/Base.astro";
+import { url } from "../../lib/routes.ts";
+import { ic } from "../../lib/icons.ts";
+import { items, cats, isOut, menu } from "../../lib/data.ts";
+import { RESTAURANT as R } from "../../lib/consts.ts";
+import { AL, TEL, DESC, spriteHTML, maskURL, u, plural, faqData, faqText, ringHTML, chipsHTML, tableOpen, cathHTML, rowHTML, summaryText, lunchHTML } from "./_alergeni.ts";
+
+const N = items.length, WITH = items.filter((x) => x.comp).length, NODATA = N - WITH;
+const COUNT: Record<string, number> = {};
+for (const a of AL) COUNT[a[0]] = items.filter((x) => x.al.indexOf(a[0]) > -1).length;
+const UPD = (menu.updated || "").split("-").reverse().join(".");
+const pct = WITH / N;
+
+/* default order inside a category: dishes we can check first, then "no data", sold out always last (the browser uses the same rule) */
+const order = new Map(items.map((x, i) => [x.id, i]));
+const rank = (x: (typeof items)[number]) => (isOut(x) ? 2 : 0) + (x.comp ? 0 : 1);
+const groups = cats.map((c) => ({ c, items: items.filter((x) => x.cat === c.id).sort((a, b) => (rank(a) - rank(b)) || (order.get(a.id)! - order.get(b.id)!)) })).filter((g) => g.items.length);
+const tableHTML = tableOpen() + groups.map((g) => cathHTML("g", g.c.id, g.c.n, g.items.length) + '<tbody class="grp">' + g.items.map((x) => rowHTML(x, isOut(x))).join("") + "</tbody>").join("") + "</table>";
+
+/* column highlight for excluded allergens on the computer table (one rule per allergen; cells carry no class, so by column) */
+/* the row icons drawn by CSS: the arrow of the dish link and the "info" of the no-data notes */
+const maskCSS = ".nm a::after{content:\"\";flex:none;width:18px;height:18px;background:var(--muted);-webkit-mask:" + maskURL("caret-right") + " center/contain no-repeat;mask:" + maskURL("caret-right") + " center/contain no-repeat;transition:transform var(--t-fast) var(--ease)}" +
+  ".nd p::before,.none p::before,.ndn::before{content:\"\";flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:" + maskURL("info") + " center/contain no-repeat;mask:" + maskURL("info") + " center/contain no-repeat}.ndn::before{width:16px;height:16px}";
+const colCSS = maskCSS + "@container app (min-width:1100px){" + AL.map((a, i) => ".atbl.x-" + a[0] + " tr.dish > td:nth-child(" + (i + 2) + "):not(.nd){background:var(--surface-2)}.atbl.x-" + a[0] + " th.c-" + a[0] + " .ah i{background:var(--ink);color:var(--bg)}").join("") + "}";
+
+const FAQ = faqData(UPD);
+const abs = (p: string) => new URL(p, Astro.site || "https://siracusa-sofia.com").href;
+const jsonld = [
+  { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+    { "@type": "ListItem", position: 2, name: "Алергени", item: abs(url.page("allergens")) },
+  ] },
+  { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: faqText(q[1]) } })) },
+];
+const description = "Алергени във всички ястия на Siracusa Bar & Grill, Дружба 2: 14-те основни алергена по Регламент (ЕС) 1169/2011, търсене и филтър „Без глутен“, „Без мляко“ и други.";
+---
+<Base page="allergens" nav={null} title="Алергени" docTitle="Алергени в менюто" description={description} jsonld={jsonld}>
+  <Fragment set:html={spriteHTML()} />
+  <section class="sec hero"><div class="hh"><p class="eyebrow"><Fragment set:html={ic("shield-check", 18)} />Информация за храната</p><h1 class="h1">Алергени в менюто</h1></div>
+    <Fragment set:html={ringHTML()} />
+    <p class="lead">Всички {N} ястия и 14-те основни алергена по Регламент (ЕС) 1169/2011. Изберете какво не ядете и ще скрием ястията, които го съдържат.</p>
+    <div class="shell notice"><div class="core">
+      <div class="nt"><span class="wi" set:html={ic("warning-circle", 24)}></span><div><p class="ntt">Алергените са предварителни, от състава. Кухнята ги потвърждава.</p>
+        <p class="ntx">Извлечени са автоматично от състава в менюто ({UPD}). Ако имате алергия, кажете ни при поръчка или се обадете преди това.</p></div></div>
+      <div class="meter"><div class="mt"><b>Състав имаме за {WITH} от {N} ястия</b><span class="muted">За останалите {NODATA} попитайте ни</span></div>
+        <div class="bar" role="img" aria-label={WITH + " от " + N + " ястия имат състав"}><span style={"transform:scaleX(" + pct.toFixed(3) + ")"}></span></div>
+        <p class="chk">Проверка от кухнята: <span class="missing">[ЛИПСВА: дата на проверката от кухнята]</span></p></div>
+      <div class="acts"><a class="pill pill-ink" href={TEL}><Fragment set:html={ic("phone", 20)} />Обади се: {R.phone}</a><button class="link" type="button" data-goto="ref">Какво включва всеки алерген<Fragment set:html={ic("caret-down", 18)} /></button></div>
+    </div></div>
+  </section>
+
+  <section class="sec ctl" id="filters" aria-labelledby="ctl-h"><h2 class="vh" id="ctl-h">Търсене и филтри</h2>
+    <div class="search" role="search"><label for="q">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
+      <input id="q" type="search" placeholder="пица, моцарела, karbonara" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="clr" type="button" data-clrq aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div></div>
+    <div class="frow"><label class="check"><input type="checkbox" id="nd"><span><b>Скрий ястията без данни</b><small>{plural(NODATA)} още нямат състав</small></span></label>
+      <button class="link" type="button" data-clear hidden><Fragment set:html={ic("x", 18)} />Изчисти всичко</button></div>
+    <div class="fgrp" role="group" aria-labelledby="al-l"><p class="flbl" id="al-l">Изключете алерген</p><p class="help">Скриваме ястията, които го съдържат по състава. Може няколко наведнъж.</p><div class="achips" set:html={chipsHTML()}></div></div>
+  </section>
+
+  <section class="sec res" id="res" aria-labelledby="res-h"><h2 class="vh" id="res-h">Ястия и алергени</h2>
+    <div class="tblwrap"><div class="sum"><p class="st" data-sum aria-live="polite" set:html={summaryText({ a: [], q: "", nd: false }, N, 0)}></p><button class="pill pill-soft" type="button" data-cats aria-haspopup="dialog"><Fragment set:html={ic("list-bullets", 20)} />Към категория</button><button class="pill pill-soft" type="button" data-goto="filters"><Fragment set:html={ic("sliders-horizontal", 20)} />Филтри</button></div>
+      <p class="cnt2" data-sum2 aria-live="polite" set:html={summaryText({ a: [], q: "", nd: false }, N, 0)}></p>
+      <div data-list><div data-state></div><Fragment set:html={tableHTML} /></div></div>
+    <div class="shell lunchnote"><div class="core" data-lunch data-date={menu.lunch.date} data-day={menu.lunch.dayName} data-n={menu.lunch.items.length} set:html={lunchHTML(false, "", 0)}></div></div>
+  </section>
+
+  <section class="sec ref" id="ref" aria-labelledby="ref-h"><h2 class="h2" id="ref-h">Какво включва всеки алерген</h2>
+    <p class="lead">Регламент (ЕС) 1169/2011 задължава ресторантите да посочват тези 14 алергена. До всеки е колко ястия от менюто го съдържат по състава.</p>
+    <div class="rgrid">{AL.map((a) => (
+      <div class="rcard rv"><span class="ri" set:html={u(a[2], 24)}></span><div><h3>{a[1]}<small>{COUNT[a[0]] ? "в " + plural(COUNT[a[0]]) : "не е открит в състава"}</small></h3><p>{DESC[a[0]]}</p></div></div>
+    ))}</div>
+  </section>
+
+  <section class="sec" aria-labelledby="faq-h"><div class="faqwrap"><div><h2 class="h2" id="faq-h">Често задавани въпроси</h2></div>
+    <div class="shell faqbox"><div class="core faq">{FAQ.map((z, i) => (
+      <details open={i === 0}><summary>{z[0]}<span class="tg" aria-hidden="true" set:html={ic("plus", 18)}></span></summary><div class="a" set:html={z[1]}></div></details>
+    ))}</div></div></div>
+    <div data-proto></div>
+  </section>
+  <Fragment set:html={"<style>" + colCSS + "</style>"} />
+</Base>
+
+<style is:global>
+/* allergens page only (design/pages/allergens.html); tokens from tokens.css only */
+
+/* icons from the sprite (<use>): sizes as classes, color from the text; later rules of this file still win */
+.sprite{fill:currentColor}
+svg.ic{fill:currentColor}
+.i14{width:14px; height:14px} .i16{width:16px; height:16px} .i18{width:18px; height:18px} .i20{width:20px; height:20px} .i24{width:24px; height:24px}
+
+/* ---------- hero ---------- */
+.hero{padding-top:24px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; align-items:center}
+.hero .hh{grid-column:1; grid-row:1}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--muted)}
+.eyebrow .ic{color:var(--ink)}
+.hero .lead{grid-column:1 / -1; margin-top:14px; max-width:46ch}
+.hero .notice{grid-column:1 / -1; margin-top:22px}
+
+/* the ring: 14 allergen tokens around "14" (decorative; the page's one strong motion) */
+.ring{grid-column:2; grid-row:1; position:relative; width:136px; aspect-ratio:1; margin-right:-4px}
+.ring::before{content:""; position:absolute; inset:15px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--line); background:radial-gradient(closest-side, var(--surface), transparent)}
+.ring .ctr{position:absolute; inset:0; display:grid; place-content:center; text-align:center; line-height:1}
+.ring .ctr b{display:block; font-size:38px; font-weight:800; letter-spacing:-.06em}
+.ring .ctr span{display:block; margin-top:3px; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:.01em}
+.ring .t{position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line), var(--shadow); transform:translate(var(--x),var(--y)); transition:opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease)}
+.ring .t .ic{width:14px; height:14px}
+.ring .t::after{content:""; position:absolute; left:3px; right:3px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--ink); transform:rotate(-45deg) scaleX(0); transition:transform var(--t-slow) var(--ease)}
+.ring .t.off{opacity:.45; transform:translate(var(--x),var(--y)) scale(.86)}
+.ring .t.off::after{transform:rotate(-45deg) scaleX(1)}
+.ring.go .t{animation:ringout 900ms var(--ease) backwards; animation-delay:calc(var(--i) * 34ms + 120ms)}
+.ring.go .ctr{animation:ctrin 700ms var(--ease) backwards}
+@keyframes ringout{from{transform:translate(0,0) scale(.3) rotate(-90deg); opacity:0}}
+@keyframes ctrin{from{transform:scale(.7); opacity:0}}
+
+/* notice: preliminary data + coverage meter + call */
+.notice .core{padding:18px}
+.nt{display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:start}
+.nt .wi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--warn)}
+.nt .ntt{margin:0; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.nt .ntx{margin:4px 0 0; color:var(--muted)}
+.meter{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+.meter .mt{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 12px; align-items:baseline}
+.meter .mt b{font-variant-numeric:tabular-nums}
+.meter .mt .muted{font-size:14px}
+.meter .bar{margin-top:10px; height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden}
+.meter .bar span{display:block; height:100%; border-radius:4px; background:var(--ink); transform-origin:left}
+.meter .chk{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.notice .acts{display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; margin-top:16px}
+.notice .acts .pill{flex:1 1 auto}
+
+/* ---------- controls ---------- */
+.ctl{padding-top:40px; display:grid; gap:22px}
+.search{display:grid; gap:6px}
+.search label,.flbl{font-weight:700; font-size:15px; margin:0}
+.sbox{position:relative}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:56px; padding:0 58px 0 50px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong), var(--hi); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input::placeholder{color:var(--muted)}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button{display:none}
+.sbox .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.sbox .clr[hidden]{display:none}
+.fgrp{display:grid; gap:4px}
+.fgrp .help{margin:0 0 8px; font-size:14px; color:var(--muted)}
+.achips{display:flex; flex-wrap:wrap; gap:8px}
+.achips .chip{min-height:48px; padding:0 16px 0 8px; gap:8px; font-size:15px}
+.achips .chip .ai{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.achips .chip[aria-pressed="true"] .ai{background:var(--bg); color:var(--ink)}
+.achips .chip .ck{display:none}
+.achips .chip[aria-pressed="true"] .ck{display:block}
+.achips .chip[aria-pressed="true"] .ai .al{display:none}
+.frow{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 16px}
+.frow .check{padding:6px 0; align-items:center}
+.frow .check b{font-weight:700}
+.frow .check small{display:block; font-size:14px; color:var(--muted)}
+.frow .link[hidden]{display:none}
+
+/* ---------- results ---------- */
+.res{padding-top:28px}
+.sum{position:sticky; top:76px; z-index:18; margin:0 60px 0 0; width:fit-content; max-width:calc(100% - 60px); min-height:52px; display:flex; align-items:center; gap:10px; padding:4px 4px 4px 18px; border-radius:26px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.sum .st{margin:0; min-width:0; font-size:15px; line-height:1.3; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.sum .st b{color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+.sum .pill{min-height:48px; padding:0 16px 0 14px; font-size:15px; flex:none}
+.sum .st{display:none}
+.sum{padding:4px; gap:4px}
+.cnt2{margin:6px 4px 0; font-size:15px; color:var(--muted)}
+.cnt2 b{color:var(--ink); font-variant-numeric:tabular-nums}
+.ndbox{margin-top:36px}
+.ndbox > summary{list-style:none; display:grid; grid-template-columns:48px 1fr 36px; gap:14px; align-items:center; padding:16px 18px; border-radius:var(--r-core); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); cursor:pointer}
+.ndbox > summary::-webkit-details-marker{display:none}
+.ndbox .ni{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--warn)}
+.ndbox .nt2 b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.ndbox .nt2 span{display:block; margin-top:2px; font-size:15px; color:var(--muted); line-height:1.4}
+.ndbox .tg{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface); transition:transform var(--t-base) var(--ease)}
+.ndbox[open] .tg{transform:rotate(180deg)}
+.ndbox .atbl{margin-top:4px}
+.catlist{display:grid; gap:2px}
+.catlist button{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; padding:0 4px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink); font-weight:700; font-size:17px; text-align:left; cursor:pointer}
+.catlist button span{font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.catlist .sep{margin:14px 4px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+
+/* one markup: cards on the phone, a real table on the computer */
+.atbl{width:100%; margin-top:8px; border-collapse:separate; border-spacing:0}
+.atbl caption{text-align:left}
+.atbl,.atbl tbody,.atbl tr,.atbl th,.atbl td{display:block}
+.atbl thead,.atbl colgroup{display:none}
+.atbl .cath th{padding:32px 4px 12px; text-align:left; font-weight:400}
+.atbl .cath .ch{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.atbl .cath h3{margin:0; font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800}
+.atbl .cath .cn{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+.atbl .grp{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.atbl .dish{display:flex; flex-wrap:wrap; align-content:flex-start; gap:8px; padding:6px 16px 18px 18px}
+.atbl .dish + .dish{border-top:1px solid var(--line)}
+.atbl .dish > *{padding:0}
+.atbl .nm{flex:0 0 100%; min-width:0; text-align:left; font-weight:400}
+.nm a{display:flex; align-items:center; justify-content:space-between; gap:10px; color:inherit; text-decoration:none; min-height:48px; padding:4px 0}
+.nm a b{font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+
+.nm a:hover b{text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:3px}
+.nm a:hover::after{transform:translateX(3px)}
+.nm .comp{margin:-4px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
+.nm .badge{margin-top:8px}
+.nm .ndn{display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:14px; font-weight:600; color:var(--muted)}
+.atbl td:empty{display:none}
+.tk{display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 12px 0 5px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1; white-space:nowrap}
+.tk i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-style:normal}
+.tk i .ic{width:15px; height:15px}
+.none,.nd{flex:0 0 100%}
+.none p,.nd p{margin:0; display:flex; align-items:flex-start; gap:8px; font-size:15px; font-weight:600; line-height:1.35}
+.none p{color:var(--muted)}
+.nd p{color:var(--muted)}
+.nd p::before{margin-top:0}
+.nd p span b{color:var(--ink); font-weight:700}
+.atbl .out .nm a b{color:var(--muted)}
+
+/* lunch note */
+.lunchnote{margin-top:32px}
+.lunchnote .core{padding:18px; display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start}
+.lunchnote .li{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.lunchnote h3{margin:2px 0 4px; font-size:18px; letter-spacing:-.02em}
+.lunchnote p{margin:0; color:var(--muted)}
+.lunchnote .link{margin-top:2px}
+
+/* states */
+.state{margin-top:16px}
+.state .core{padding:28px 20px}
+.state .empty{padding:8px 0}
+.state .empty .ill{color:var(--ink)}
+.state .empty .ill.warn{color:var(--warn)}
+.state .acts{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:4px}
+.skrow{display:grid; gap:10px; padding:18px}
+.skrow + .skrow{border-top:1px solid var(--line)}
+.skrow .tks{display:flex; gap:8px}
+
+/* ---------- reference: the 14 allergens ---------- */
+.ref .lead{margin-top:10px; max-width:52ch}
+.rgrid{margin-top:22px; display:grid; gap:10px}
+.rcard{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.rcard .ri{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg)}
+.rcard h3{margin:0; display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; font-size:18px; letter-spacing:-.02em}
+.rcard h3 small{font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0; font-variant-numeric:tabular-nums}
+
+.rcard p{margin:4px 0 0; color:var(--muted); line-height:1.45}
+
+/* ---------- FAQ ---------- */
+.faqbox{margin-top:18px}
+.faq summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:12px 18px; cursor:pointer; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .tg{width:36px; height:36px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-base) var(--ease)}
+.faq details[open] summary .tg{transform:rotate(45deg)}
+.faq details + details{border-top:1px solid var(--line)}
+.faq .a{padding:0 18px 18px; color:var(--muted); line-height:1.55}
+.faq .a p{margin:0 0 8px} .faq .a p:last-child{margin:0}
+.faq .a a{color:var(--ink); font-weight:700}
+
+/* ---------- prototype-only states ---------- */
+.proto{margin-top:48px; padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.proto .lbl{display:flex; align-items:center; gap:8px; margin:0 0 4px; font-weight:800; font-size:15px}
+.proto p{margin:0 0 12px; font-size:14px; color:var(--muted)}
+.proto .chips{margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
+
+/* ---------- tablet: cards in two columns ---------- */
+@container app (min-width:700px){
+  .hero .lead{font-size:18px}
+  .atbl .grp{display:grid; grid-template-columns:1fr 1fr}
+  .atbl .dish + .dish{border-top:0}
+  .atbl .dish{box-shadow:inset 0 1px 0 var(--line)}
+  .atbl .dish:nth-child(-n+2){box-shadow:none}
+  .atbl .dish:nth-child(even){box-shadow:inset 1px 0 0 var(--line), inset 0 1px 0 var(--line)}
+  .atbl .dish:nth-child(2){box-shadow:inset 1px 0 0 var(--line)}
+  .rgrid{grid-template-columns:1fr 1fr}
+}
+
+/* ---------- computer ---------- */
+@container app (min-width:900px){
+  .hero{padding-top:40px; grid-template-columns:minmax(0,1fr) 380px; gap:0 64px; align-items:start}
+  .hero .hh{grid-row:1}
+  .hero .lead{grid-column:1; font-size:19px}
+  .hero .notice{grid-column:1; max-width:720px}
+  .ring{grid-column:2; grid-row:1 / span 3; width:380px; margin:0; align-self:center}
+  .ring::before{inset:44px}
+  .ring .t{width:52px; height:52px; margin:-26px 0 0 -26px}
+  .ring .t .ic{width:24px; height:24px}
+  .ring .t::after{left:8px; right:8px; height:2.5px}
+  .ring .ctr b{font-size:112px}
+  .ring .ctr span{font-size:16px; margin-top:6px}
+  .ctl{padding-top:56px; grid-template-columns:minmax(0,560px) auto; justify-content:start; gap:24px 32px; align-items:end}
+  .ctl .search{max-width:560px}
+  .ctl .fgrp{grid-column:1 / -1}
+  .ctl .frow{grid-column:2; grid-row:1; justify-content:flex-start; gap:4px 24px; padding-bottom:2px}
+  .sum{top:90px; margin-right:0; max-width:100%}
+  .rgrid{grid-template-columns:repeat(3,1fr); gap:14px}
+  .faqwrap{display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:56px; align-items:start}
+  .faqbox{margin-top:0}
+}
+@container app (min-width:1100px){
+  .res{padding-top:36px}
+  .atbl{display:table; table-layout:fixed; margin-top:0; border-radius:0 0 var(--r-core) var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+  .atbl colgroup{display:table-column-group}
+  .atbl col{display:table-column}
+  .atbl thead{display:table-header-group}
+  .atbl tbody{display:table-row-group}
+  .atbl tr{display:table-row}
+  .atbl th,.atbl td{display:table-cell}
+  .atbl .grp{display:table-row-group; border-radius:0; background:none; box-shadow:none; overflow:visible}
+  /* sticky header row, below the floating top bar and the results summary */
+  .atbl thead th{position:sticky; top:142px; z-index:6; background:var(--surface); vertical-align:bottom; padding:14px 2px 12px; border-bottom:1px solid var(--line-strong)}
+  .atbl thead th:first-child{padding:14px 16px 14px 22px; text-align:left}
+  .th-d{display:block; font-size:20px; letter-spacing:-.02em; font-weight:800}
+  .sum{width:100%; margin:0; padding:6px 84px 6px 22px; border-radius:var(--r-core) var(--r-core) 0 0; background:var(--surface); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:var(--hi); border-bottom:1px solid var(--line); z-index:7}
+  .sum .st{font-size:16px; margin-right:6px}
+  .legend{display:grid; gap:4px; margin-top:8px; font-size:14px; font-weight:600; color:var(--muted)}
+  .nm .ndn .pz{display:none}
+  .legend span{display:inline-flex; align-items:center; gap:7px}
+  .ah{display:grid; justify-items:center; gap:8px; font-size:14px; font-weight:700; line-height:1.15; text-align:center; -webkit-hyphens:manual; hyphens:manual}
+  .ah i{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); font-style:normal; transition:background-color var(--t-base) var(--ease), color var(--t-base) var(--ease)}
+  .ah i .ic{width:20px; height:20px}
+  .ah .hn{display:block; min-height:2.3em; display:flex; align-items:flex-end; justify-content:center}
+  .atbl .cath th{display:table-cell; padding:0}
+  .atbl .cath .ch{display:flex; align-items:baseline; gap:12px; padding:30px 22px 10px; border-bottom:1px solid var(--line-strong)}
+  .atbl .cath h3{font-size:20px}
+  .atbl .grp .dish{display:table-row; padding:0; box-shadow:none}
+  .atbl .dish > *{border-top:1px solid var(--line); vertical-align:middle; transition:background-color var(--t-fast) var(--ease)}
+  .atbl .grp .dish:first-child > *{border-top:0}
+  .atbl .dish:hover > *{background:var(--bg)}
+  .atbl .nm{padding:6px 16px 14px 22px}
+  .nm a{justify-content:flex-start}
+  .nm a b{font-size:16px}
+  .nm a::after{display:none}
+  .nm .comp{font-size:15px; margin-top:-10px}
+  .nm .badge{margin:6px 0 0}
+  .atbl td.y,.atbl td:empty{text-align:center; padding:10px 2px}
+  /* a cell without the allergen is empty in the HTML: the dot comes from here */
+  .atbl td:empty{display:table-cell}
+  .atbl td:empty::after{content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--line-strong); vertical-align:middle}
+  .tk{width:32px; height:32px; min-height:0; padding:0; justify-content:center; background:var(--ink); color:var(--bg); vertical-align:middle}
+  .tk i{width:auto; height:auto; background:none; color:inherit}
+  .tk i .ic{width:18px; height:18px}
+  .tk .w{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+  .no{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--line-strong); vertical-align:middle}
+  .atbl .none{display:none}
+  .atbl .nd{padding:8px 10px}
+  .nd p{justify-content:center; align-items:center; min-height:40px; border-radius:999px; font-size:14px; background:repeating-linear-gradient(135deg, var(--surface-2) 0 7px, transparent 7px 14px); box-shadow:inset 0 0 0 1px var(--line)}
+  .nd p span{padding:4px 12px; border-radius:999px; background:var(--surface)}
+  .nd p::before{display:none}
+  .lgnd{display:inline-block; width:22px; height:14px; border-radius:7px; background:repeating-linear-gradient(135deg, var(--surface-2) 0 4px, transparent 4px 8px); box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .lgtk{width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg)}
+  .lgtk .ic{width:13px; height:13px}
+  .atbl tbody.grp:last-child .dish:last-child > :first-child{border-bottom-left-radius:var(--r-core)}
+  .atbl tbody.grp:last-child .dish:last-child > :last-child{border-bottom-right-radius:var(--r-core)}
+}
+@container app (min-width:1100px){ .atbl col.ca{width:58px} }
+@container app (max-width:1099px){ .legend{display:none} }
+@container app (min-width:700px){ .sum{padding:4px 4px 4px 18px; gap:10px} .sum .st{display:-webkit-box} .cnt2{display:none} }
+@container app (max-width:370px){ .ring{width:116px} .ring .t{width:22px; height:22px; margin:-11px 0 0 -11px} .ring .t .ic{width:12px; height:12px} .ring .ctr b{font-size:32px} .ring .ctr span{display:none} }
+/* code only: filtered-out tables and groups stay hidden even where the table is display:table */
+.atbl[hidden],.ndbox[hidden]{display:none !important}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { api } from "../../client/api.ts";
+  import "../../lib/icons/eye.ts";
+  import { AL, summaryText, ndSummaryHTML, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE } from "./_alergeni.ts";
+  import type { Dish } from "../../lib/data.ts";
+
+  const main = SC.mount();
+  const ic = SC.ic;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
+  const listEl = $("[data-list]"), stateEl = $("[data-state]"), mainTbl = listEl.querySelector<HTMLTableElement>("table.atbl")!;
+  const sumA = $("[data-sum]"), sum2 = $("[data-sum2]"), qIn = $<HTMLInputElement>("#q"), ndIn = $<HTMLInputElement>("#nd"), ring = $(".ring");
+  const clrQ = $(".sbox [data-clrq]"), clearAll = $(".frow [data-clear]");
+  const AIDS = AL.map((a) => a[0] as string);
+
+  /* ---------- the rows the server drew (the browser never draws a dish itself) ---------- */
+  type Row = { el: HTMLTableRowElement; id: string; cat: string; al: string[]; c: boolean; o: boolean; i: number };
+  /* everything comes from the markup: id from the link, category from the group, allergens from the "y" cells (column = allergen),
+     composition from .comp, sold out from .out; i = the server order (inside a category it is the menu order per rank) */
+  const rows: Row[] = Array.from(mainTbl.querySelectorAll<HTMLTableRowElement>("tr.dish")).map((el, i) => {
+    const href = el.querySelector("a")!.getAttribute("href") || "";
+    const grp = el.parentElement!.previousElementSibling as HTMLElement;
+    const al: string[] = [];
+    for (let k = 1; k < el.cells.length; k++) if (el.cells[k].classList.contains("y")) al.push(AIDS[k - 1]);
+    return { el, id: href.replace(/index\.html$/, "").replace(/\/$/, "").split("/").pop() || "", cat: grp.dataset.cat!, al, c: !!el.querySelector(".comp"), o: el.classList.contains("out"), i };
+  });
+  const catName: Record<string, string> = {};
+  const catOrder = Array.from(mainTbl.querySelectorAll<HTMLElement>("tbody.cath")).map((t) => { catName[t.dataset.cat!] = t.querySelector("h3")!.textContent || ""; return t.dataset.cat!; });
+
+  /* the "cannot check" group (an allergen is excluded and "Скрий ястията без данни" is off): its own table, folded */
+  const ndBox = document.createElement("details");
+  ndBox.className = "ndbox"; ndBox.id = "nodata"; ndBox.hidden = true;
+  ndBox.innerHTML = "<summary></summary>" + tableOpen() + "</table>";
+  listEl.appendChild(ndBox);
+  const ndTbl = ndBox.querySelector<HTMLTableElement>("table")!;
+
+  /* ---------- state, kept in the address: #a=gluten.milk&q=пица&nd=1 (preview only: &state=loading|error|offline) ---------- */
+  type View = "ok" | "loading" | "error" | "offline";
+  let st = { a: [] as string[], q: "", nd: false, view: "ok" as View };
+  function readHash() {
+    st = { a: [], q: "", nd: false, view: "ok" };
+    let h = location.hash.slice(1);
+    try { h = decodeURIComponent(h); } catch { /* keep raw */ }
+    h.split("&").forEach((p) => {
+      const i = p.indexOf("="); if (i < 0) return;
+      const k = p.slice(0, i), v = p.slice(i + 1);
+      if (k === "a") st.a = v.split(".").filter((id) => AIDS.indexOf(id) > -1);
+      if (k === "q") st.q = v;
+      if (k === "nd") st.nd = v === "1";
+      if (k === "state" && SC.preview && /^(loading|error|offline)$/.test(v)) st.view = v as View;
+    });
+  }
+  function writeHash() {
+    const p: string[] = [];
+    if (st.a.length) p.push("a=" + st.a.join("."));
+    if (st.q) p.push("q=" + encodeURIComponent(st.q));
+    if (st.nd) p.push("nd=1");
+    if (st.view !== "ok") p.push("state=" + st.view);
+    try { history.replaceState(history.state, "", p.length ? "#" + p.join("&") : location.pathname + location.search); } catch { /* ignore */ }
+  }
+  const active = () => st.a.length > 0 || !!st.q.trim() || st.nd;
+
+  /* ---------- search: the menu's own logic (src/lib/filters.ts), loaded only when someone searches ---------- */
+  type Search = { searchScores: (l: Dish[], q: string) => Record<string, number>; byId: Record<string, Dish> };
+  let search: Search | null = null, searchP: Promise<void> | null = null, searchErr = false;
+  function loadSearch(): Promise<void> {
+    if (!searchP) {
+      searchErr = false;
+      searchP = Promise.all([import("../../lib/filters.ts"), import("../../lib/data.ts")])
+        .then(([f, d]) => { search = { searchScores: f.searchScores, byId: d.byId }; })
+        .catch(() => { searchP = null; searchErr = true; });
+    }
+    return searchP;
+  }
+
+  /* ---------- filtering (same rules as the prototype) ---------- */
+  type Group = { c: string; items: Row[]; top: number };
+  type Res = { list: Row[]; groups: Group[]; ndGroups: Group[]; n: number; nd: number };
+  function results(): Res {
+    const qv = st.q.trim();
+    let list = rows.filter((r) => (!st.nd || r.c) && !st.a.some((a) => r.al.indexOf(a) > -1));
+    let sc: Record<string, number> | undefined;
+    if (qv && search) {
+      const s = search;
+      sc = s.searchScores(list.map((r) => s.byId[r.id]).filter(Boolean), qv);
+      list = list.filter((r) => sc![r.id]);
+    }
+    /* inside a category: dishes we can check first, then "no data", sold out always last */
+    const rank = (r: Row) => (r.o ? 2 : 0) + (r.c ? 0 : 1);
+    let groups: Group[] = catOrder.map((c) => {
+      const it = list.filter((r) => r.cat === c).sort((a, b) => (rank(a) - rank(b)) || (sc ? sc[b.id] - sc[a.id] : 0) || (a.i - b.i));
+      return { c, items: it, top: sc ? Math.max(0, ...it.map((r) => sc![r.id])) : 0 };
+    }).filter((g) => g.items.length);
+    if (sc) groups.sort((a, b) => b.top - a.top);
+    /* with an allergen excluded, dishes we cannot check go to their own group at the end */
+    const ndGroups: Group[] = [];
+    let nd = 0;
+    if (st.a.length > 0 && !st.nd) {
+      groups.forEach((g) => { const x = g.items.filter((r) => !r.c); if (x.length) { ndGroups.push({ c: g.c, items: x, top: 0 }); nd += x.length; } });
+      groups = groups.map((g) => ({ ...g, items: g.items.filter((r) => r.c) })).filter((g) => g.items.length);
+    }
+    return { list, groups, ndGroups, n: list.length - nd, nd };
+  }
+
+  function fill(tbl: HTMLTableElement, groups: Group[], pre: string) {
+    tbl.querySelectorAll("tbody").forEach((t) => t.remove());
+    const frag = document.createDocumentFragment(), tmp = document.createElement("table");
+    for (const g of groups) {
+      tmp.innerHTML = cathHTML(pre, g.c, catName[g.c] || "", g.items.length);
+      frag.appendChild(tmp.firstElementChild!);
+      const tb = document.createElement("tbody");
+      tb.className = "grp";
+      for (const r of g.items) tb.appendChild(r.el);
+      frag.appendChild(tb);
+    }
+    tbl.appendChild(frag);
+    tbl.className = "atbl" + st.a.map((k) => " x-" + k).join("");
+  }
+
+  let last: Res | null = null, loadT: ReturnType<typeof setTimeout> | undefined;
+  function setSum(h: string) { sumA.innerHTML = h; sum2.innerHTML = h; }
+  function showState(h: string) { stateEl.innerHTML = h; mainTbl.hidden = true; ndBox.hidden = true; }
+  function render() {
+    main.querySelectorAll<HTMLElement>("button[data-al]").forEach((b) => b.setAttribute("aria-pressed", String(st.a.indexOf(b.dataset.al!) > -1)));
+    ring.querySelectorAll<HTMLElement>("[data-ring]").forEach((t) => t.classList.toggle("off", st.a.indexOf(t.dataset.ring!) > -1));
+    clearAll.hidden = !active();
+    clrQ.hidden = !st.q;
+    main.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === st.view)));
+    if (st.view === "loading") { setSum("<b>Зареждаме</b> · момент"); showState(loadingHTML()); return; }
+    if (st.view === "error") { setSum("<b>Грешка</b> · опитайте пак"); showState(errorHTML()); return; }
+    if (st.view === "offline") { setSum("<b>Няма връзка</b> · опитайте пак"); showState(offlineHTML()); return; }
+    if (st.q.trim() && !search) {
+      if (searchErr) { setSum("<b>Грешка</b> · опитайте пак"); showState(errorHTML(true)); return; }
+      setSum("<b>Търсим</b> · момент"); showState(loadingHTML());
+      loadSearch().then(render);
+      return;
+    }
+    const r = results(); last = r;
+    setSum(summaryText(st, r.n, r.nd));
+    if (!r.list.length) { showState(emptyHTML(st)); return; }
+    stateEl.innerHTML = r.n ? "" : emptyHTML(st);
+    mainTbl.hidden = !r.n;
+    fill(mainTbl, r.groups, "g");
+    ndBox.hidden = !r.nd;
+    if (r.nd) {
+      ndBox.querySelector("summary")!.outerHTML = ndSummaryHTML(r.nd, st.a);
+      ndBox.open = !r.n;
+      fill(ndTbl, r.ndGroups, "gn");
+    }
+  }
+  function update() { writeHash(); render(); }
+
+  /* ---------- scrolling (the document scrolls; offsets clear the top bar and the sticky summary) ---------- */
+  function goto(id: string) {
+    const el = document.getElementById(id); if (!el) return;
+    const wide = SC.device.clientWidth >= 1100;
+    const off = id === "res" ? 80 : id === "filters" || id === "ref" ? 140 : wide ? 262 : 140;
+    window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - off), behavior: SC.reduce ? "auto" : "smooth" });
+  }
+  function catSheet() {
+    if (!last) return;
+    let h = '<div class="catlist">' + last.groups.map((g) => '<button type="button" data-jump="g-' + g.c + '">' + SC.esc(catName[g.c]) + "<span>" + SC.plural(g.items.length, "ястие", "ястия") + "</span></button>").join("");
+    if (last.nd) h += '<p class="sep">Без данни за алергени</p><button type="button" data-jump="nodata">Не можем да проверим<span>' + SC.plural(last.nd, "ястие", "ястия") + "</span></button>";
+    const sh = SC.sheet({ title: "Към категория", html: h + "</div>" });
+    sh.el.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLElement>("[data-jump]"); if (!b) return;
+      const id = b.dataset.jump!;
+      sh.close();
+      if (id === "nodata") ndBox.open = true;
+      setTimeout(() => goto(id), 60);
+    });
+  }
+
+  /* ---------- events ---------- */
+  let qT: ReturnType<typeof setTimeout> | undefined;
+  qIn.addEventListener("focus", () => { loadSearch(); }, { once: true });
+  qIn.addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(() => { st.q = qIn.value; st.view = "ok"; update(); }, 120); });
+  qIn.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); qIn.blur(); goto("res"); } });
+  ndIn.addEventListener("change", () => { st.nd = ndIn.checked; update(); });
+  main.addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLElement>("button"); if (!b) return;
+    if (b.dataset.al) { const k = b.dataset.al; st.a = st.a.indexOf(k) > -1 ? st.a.filter((z) => z !== k) : st.a.concat([k]); SC.haptic(); update(); return; }
+    if (b.hasAttribute("data-clrq")) { st.q = ""; qIn.value = ""; update(); qIn.focus({ preventScroll: true }); return; }
+    if (b.hasAttribute("data-clear")) { st.a = []; st.q = ""; st.nd = false; qIn.value = ""; ndIn.checked = false; update(); return; }
+    if (b.hasAttribute("data-cats")) { catSheet(); return; }
+    if (b.dataset.goto) { goto(b.dataset.goto); if (b.dataset.goto === "filters") setTimeout(() => qIn.focus({ preventScroll: true }), SC.reduce ? 0 : 450); return; }
+    if (b.hasAttribute("data-retry")) {
+      clearTimeout(loadT);
+      if (searchErr) { searchErr = false; render(); return; }
+      st.view = "loading"; update();
+      loadT = setTimeout(() => { st.view = "ok"; update(); }, 900);
+      return;
+    }
+    if (b.dataset.view) {
+      clearTimeout(loadT);
+      const v = b.dataset.view;
+      if (v === "empty") { st.view = "ok"; st.q = "ястие-което-го-няма"; qIn.value = st.q; }
+      else { st.view = v as View; if (st.q === "ястие-което-го-няма") { st.q = ""; qIn.value = ""; } }
+      update(); goto("res"); return;
+    }
+  });
+  window.addEventListener("hashchange", () => { readHash(); qIn.value = st.q; ndIn.checked = st.nd; render(); });
+
+  /* ---------- the ring: radius follows its size; one entrance motion ---------- */
+  function ringR() { const w = ring.getBoundingClientRect().width; ring.style.setProperty("--r", (w / 2 - (w > 200 ? 30 : 14)).toFixed(1) + "px"); }
+  ringR();
+  if ("ResizeObserver" in window) new ResizeObserver(ringR).observe(ring);
+  if (!SC.reduce) ring.classList.add("go");
+
+  /* ---------- lunch note: "today" only when the lunch menu in the data is for today (BRIEF 8) ---------- */
+  (() => {
+    const el = $("[data-lunch]");
+    let today = "";
+    try { today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date()); } catch { today = new Date().toISOString().slice(0, 10); }
+    if (today === el.dataset.date) el.innerHTML = lunchHTML(true, el.dataset.day || "", +(el.dataset.n || 0));
+  })();
+
+  /* ---------- live menu: "Изчерпано днес" from the kitchen, after the first paint ---------- */
+  type Live = { id: string; t: string[] };
+  function syncMenu() {
+    api.menu().then((m) => {
+      const live: Record<string, Live> = {};
+      for (const x of ((m as { items?: Live[] }).items || [])) live[x.id] = x;
+      let changed = false;
+      for (const r of rows) {
+        const x = live[r.id]; if (!x || !Array.isArray(x.t)) continue;
+        const o = x.t.indexOf("out") > -1;
+        if (o === r.o) continue;
+        r.o = o; changed = true;
+        r.el.classList.toggle("out", o);
+        const nm = r.el.querySelector(".nm")!, badge = nm.querySelector(".badge.out");
+        if (o && !badge) nm.insertAdjacentHTML("beforeend", OUT_BADGE);
+        if (!o && badge) badge.remove();
+      }
+      if (changed) render();
+    }).catch(() => { /* the table in the HTML stays; nothing to tell */ });
+  }
+
+  /* ---------- preview only: the states panel ---------- */
+  if (SC.preview) {
+    $("[data-proto]").outerHTML = '<div class="proto"><p class="lbl">' + ic("eye", 18) + "Само в прототипа</p><p>Покажете как изглежда таблицата в другите състояния. Не влиза в сайта.</p>" +
+      '<div class="chips" role="group" aria-label="Състояние за прототипа">' + [["ok", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"], ["empty", "Без резултати"]].map((z) => '<button class="chip" type="button" data-view="' + z[0] + '" aria-pressed="false">' + z[1] + "</button>").join("") + "</div></div>";
+  }
+
+  /* ---------- first paint: the HTML already shows everything; only an address with filters changes it ---------- */
+  readHash();
+  qIn.value = st.q; ndIn.checked = st.nd;
+  if (active() || st.view !== "ok") render(); else last = results();
+  const later = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1200));
+  later(syncMenu);
+  SC.reveal();
+  $("#res").dataset.ready = "1";
+</script>
