@@ -24,7 +24,7 @@ export function goHTML(st: State): string {
 export function lunchTileText(st: State, lunchToday: boolean): string {
   let sub: string;
   if (st.lunch) sub = lunchToday ? "<small>До 15:00 · с доставка</small>" : "<small>Качва се всяка сутрин</small>";
-  else if (st.lunchDiscount) sub = '<small class="hot"><span>-30%</span>при вземане</small>';
+  else if (st.lunchDiscount && lunchToday) sub = '<small class="hot"><span>-30%</span>при вземане</small>';
   else sub = "<small>От 10:00 до 15:00</small>";
   return "<b>" + (lunchToday && st.open ? "Обедно меню днес" : "Обедно меню") + "</b>" + sub;
 }

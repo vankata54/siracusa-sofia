@@ -472,7 +472,7 @@ const jsonld = restaurantLd(Astro.site);
     const go = $("[data-go]");
     go.outerHTML = goHTML(st);
     $("[data-go]").addEventListener("click", (e) => { if ((e.currentTarget as HTMLElement).hasAttribute("data-pickup")) SC.cart.mode("pickup"); });
-    $("[data-lunchtile]").innerHTML = lunchTileText(st, lt);
+    $("[data-lunchtile]").innerHTML = lunchTileText(st, lt || SC.preview); /* like the offers banner: -30% only on a day with a lunch menu */
     $("[data-eta]").innerHTML = etaInner(st, eta);
     const dn = $("[data-dnote]"), note = deliveryNote(st);
     dn.innerHTML = note; dn.hidden = !note;
