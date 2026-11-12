@@ -12,6 +12,18 @@ import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES } fro
 import type { Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
+import { LUNCH_DATE } from "../../lib/lunch.ts";
+import { normPhone, prettyPhone } from "../../lib/format.ts";
+
+/** Same rule as hasStreet() in core/orders.ts (a web order needs a street or block after the quarter). Copied here because
+    the core is not bundled into pages; see "Искания към шефа" (move it to lib/zones.ts). */
+function hasStreet(addr: string): boolean {
+  const rest = String(addr).toLowerCase()
+    .replace(/ж\.?\s*к\.?|кв\.|гр\.|(^|\s)с\.|софия/g, " ")
+    .replace(/дружба\s*(1|2|i{1,2}|едно|две)?(?![0-9a-zа-я])|друба\s*(1|2)?|нпз\s*искър|гара\s*искър|искър|искар|бусманци|горубляне/g, " ")
+    .replace(/[^а-яa-z0-9]+/g, " ").trim();
+  return /\d/.test(rest) || /[а-яa-z]{3,}/.test(rest);
+}
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "../../lib/icons/arrow-left.ts";
 import "../../lib/icons/arrow-right.ts";
@@ -49,6 +61,8 @@ interface Draft { addr: string; zone: string; zk: Zk; addrMore: string; slot: st
 interface Flash { step: number; kind: "bad" | "warn" | "info"; title: string; text?: string; acts?: string }
 interface Slot { t: number; v: string; busy: boolean }
 interface Info extends Priced {
+  /** lunch lines from a day without a lunch menu: shown as "Не се брои", never priced, never sent */
+  stale: PricedRow[]; profilePct: number;
   s: State; m: number; sched: Sched; today: boolean; delivOK: boolean; dMin: number; slots: Slot[]; ok1: boolean; ok2: boolean;
 }
 interface AddrOpt { a: string; z: string; hint?: string }
@@ -88,7 +102,11 @@ export function start(): void {
     /* a message from the core shown on the step where it can be fixed (cleared on the next move) */
     flash: null as Flash | null,
     /* the code field: what is typed, and the check in progress */
-    codeTxt: "", codeBusy: false };
+    codeTxt: "", codeBusy: false,
+    /* the signed-in customer's -10% profile bonus (api.auth.me().profileBonus); it counts only with the profile's phone */
+    me: null as null | { bonus: boolean; phone: string },
+    /* an address with the quarter only: the zone it would be, while we ask for the street or block */
+    needStreet: "" };
 
   /* ---------- helpers ---------- */
   function t2(m: number) { m = ((Math.round(m) % 1440) + 1440) % 1440; return SC.hhmm(m); }
@@ -111,12 +129,26 @@ export function start(): void {
        shows it like step 2 does ("по избран час", delivery and pickup both possible), never a time tonight */
     const closed = !sched && !s.kitchen, today = !sched && !closed;
     const zone = D.zk === "free" || D.zk === "paid" ? zoneByName(D.zone) : null;
-    const p = price(SC.cart.get(), { zone, scheduled: !!sched || closed, codePct: D.code ? D.codePct : 0 });
-    const I = { ...p, closed, s, m: s.m, sched, today, delivOK: p.deliveryOk, dMin: p.etaMin, slots: [] as Slot[], ok1: false, ok2: false } as Info;
+    const cart = SC.cart.get(), staleLines = lunchStale() ? cart.lines.filter((l) => SC.byId[l.id] && SC.byId[l.id].lunch) : [];
+    const profilePct = profileOn() ? 10 : 0;
+    const p = price(staleLines.length ? { ...cart, lines: cart.lines.filter((l) => staleLines.indexOf(l) < 0) } : cart, { zone, scheduled: !!sched || closed, codePct: D.code ? D.codePct : 0, profilePct });
+    const stale = staleLines.length ? price({ ...cart, lines: staleLines }, { scheduled: true }).rows.map((r) => ({ ...r, out: true, disc: 0 })) : [];
+    const I = { ...p, stale, profilePct, closed, s, m: s.m, sched, today, delivOK: p.deliveryOk, dMin: p.etaMin, slots: [] as Slot[], ok1: false, ok2: false } as Info;
     I.slots = slotList(I);
     I.ok1 = I.n > 0 && !I.conflict && !I.closed;
     I.ok2 = I.ok1 && (I.mode === "delivery" ? (D.zk === "free" || D.zk === "paid") && !!D.addr && (today || validSlot(I)) : validSlot(I));
     return I;
+  }
+
+  /* the lunch menu in the data is for one date; on another day its dishes are not sold (the core says lunch_stale).
+     In preview and in the demo the core counts the menu as today's, so the page does the same. */
+  function lunchStale() { return !SC.preview && !api.demo && sofiaYmd() !== LUNCH_DATE; }
+  const lunchDay = () => SC.dateLong(ymdDate(LUNCH_DATE));
+  /* the profile bonus: only with the profile's phone (the core checks the same and gives it once per phone) */
+  function profileOn() {
+    if (!P.me || !P.me.bonus) return false;
+    const ph = normPhone(D.phone || "");
+    return !ph || ph === P.me.phone;
   }
 
   /* pickup slots: every 15 min, up to 3 hours ahead, not after 22:30. Pre-orders: the whole day.
@@ -131,6 +163,7 @@ export function start(): void {
   }
 
   function etaText(I: Info): { big: string; small: string } {
+    if (I.conflict === "delivery") return { big: "Само за вземане от място", small: "Обедното меню след 15:00 не се доставя" };
     if (I.closed) return { big: I.m < 600 ? "Днес, от 10:30" : "Утре, от 10:30", small: "Изберете час в следващата стъпка" };
     if (I.sched) {
       if (D.slot && D.slot !== "asap") return { big: (I.sched === "утре" ? "Утре" : "Днес") + " в " + D.slot, small: I.mode === "delivery" ? "Доставка в този час" : "Готова за вземане" };
@@ -163,6 +196,9 @@ export function start(): void {
     if (I.conflict === "delivery") h += note("warn", "warning-circle", "Обедното меню след 15:00 е само за вземане от място (-30%)", "Вземете я от ресторанта и отстъпката се смята сама. Или махнете обедните ястия и я доставяме.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
     if (I.conflict === "sched") h += note("warn", "warning-circle", "Обедното меню не се поръчва предварително", "Поръчва се в деня, от 10:00 до 15:00. Махнете обедните ястия, за да поръчате за " + (I.m < 600 ? "по-късно" : "утре") + ". Другото остава в количката.");
+    if (step === 1 && I.stale.length) h += note("warn", "warning-circle", "Обедното меню за днес още не е качено",
+      "Обедните ястия в количката са от менюто за " + lunchDay() + " и не се броят в поръчката. Махнете ги, а другото остава.",
+      '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
     if (step === 1 && I.n === 0 && I.outN) h += note("warn", "warning-circle", "Всичко в количката е изчерпано днес", "Сменете ястията с подобни или изберете нещо друго от менюто.");
     return h;
   }
@@ -171,20 +207,21 @@ export function start(): void {
     return SC.items.filter((y) => y.cat === x.cat && y.id !== x.id && !SC.isOut(y)).sort((a, b) => Math.abs(a.p - x.p) - Math.abs(b.p - x.p))[0] || null;
   }
 
-  function lineHTML(r: PricedRow) {
+  function lineHTML(r: PricedRow, stale = false) {
     const x = r.x, out = r.out, extra = Math.round((r.unit - x.p) * 100) / 100;
     const mods = (r.mods || []).map((md) => { const add = /^\+/.test(md); let txt = add ? md.replace(/^\+\s*/, "") : md; txt = txt.charAt(0).toUpperCase() + txt.slice(1); return '<span class="tag' + (add ? " add" : "") + '">' + (add ? ic("plus", 14) : "") + esc(txt) + "</span>"; }).join("");
-    const tags = (x.lunch ? '<span class="tag lunch">' + ic("bowl-food", 16) + "Обедно меню</span>" : "") + (r.disc ? '<span class="tag promo">-30% след 15:00</span>' : "") + mods;
+    const tags = (x.lunch && !stale ? '<span class="tag lunch">' + ic("bowl-food", 16) + "Обедно меню</span>" : "") + (r.disc ? '<span class="tag promo">-30% след 15:00</span>' : "") + mods;
     const sub = fmt(r.unit) + (r.q > 1 ? " за брой" : "") + (x.g ? " · " + esc(x.g) : "") + (extra ? " · с добавки" : "");
     const pr = out ? '<span class="muted small">Не се брои</span>' : r.disc ? '<span class="old">' + fmt(r.tot) + '</span><span class="price">' + fmt(r.tot - r.disc) + "</span>" : '<span class="price">' + fmt(r.tot) + "</span>";
     const k = esc(r.key);
     const counter = '<div class="counter" role="group" aria-label="Брой: ' + esc(x.n) + '"><button type="button" data-act="dec" data-key="' + k + '" data-fk="dec-' + k + '" aria-label="' + (r.q === 1 ? "Махни " : "Едно по-малко: ") + esc(x.n) + '">' + ic("minus", 20) + '</button><output aria-live="polite">' + r.q + '</output><button type="button" data-act="inc" data-key="' + k + '" data-fk="inc-' + k + '" aria-label="Още едно: ' + esc(x.n) + '"' + (out ? " disabled" : "") + ">" + ic("plus", 20) + "</button></div>";
-    const sim = out ? similar(x) : null;
+    const sim = out && !stale ? similar(x) : null;
     return '<li class="ln' + (out ? " out" : "") + '">' +
       '<a class="ln-pic" href="' + lineHref(x) + '" tabindex="-1" aria-hidden="true">' + SC.pic(x) + "</a>" +
       '<div class="ln-info"><a class="ln-name" href="' + lineHref(x) + '">' + esc(x.n) + '</a><span class="ln-sub">' + sub + "</span>" + (tags ? '<div class="ln-tags">' + tags + "</div>" : "") + "</div>" +
       '<div class="ln-act">' + (out ? "" : counter) + '<button class="ln-rm" type="button" data-act="rm" data-key="' + k + '" data-fk="rm-' + k + '">' + ic("trash", 18) + 'Махни<span class="vh"> ' + esc(x.n) + '</span></button><span class="ln-tot">' + pr + "</span></div>" +
-      (out ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Изчерпано днес.</b> Няма да го включим в поръчката." + (sim ? " Подобно: " + esc(sim.n) + ', <span class="price">' + fmt(sim.p) + "</span>." : "") + "</span>" + (sim ? '<button class="pill pill-ink" type="button" data-act="swap" data-key="' + k + '" data-id="' + sim.id + '">' + ic("arrow-right", 18) + "Смени с " + esc(sim.n) + "</button>" : "") + "</div>" : "") +
+      (stale ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Не се брои.</b> Менюто е от " + lunchDay() + ", днес не го предлагаме.</span></div>" : "") +
+      (out && !stale ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Изчерпано днес.</b> Няма да го включим в поръчката." + (sim ? " Подобно: " + esc(sim.n) + ', <span class="price">' + fmt(sim.p) + "</span>." : "") + "</span>" + (sim ? '<button class="pill pill-ink" type="button" data-act="swap" data-key="' + k + '" data-id="' + sim.id + '">' + ic("arrow-right", 18) + "Смени с " + esc(sim.n) + "</button>" : "") + "</div>" : "") +
       "</li>";
   }
 
@@ -231,6 +268,7 @@ export function start(): void {
     if (step === 3 && P.sending) return '<button class="pill pill-red pill-lg' + (block ? " pill-block" : "") + '" type="button" aria-busy="true" aria-disabled="true">' + esc(lbl) + '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
     if (step === 1 && I.conflict === "delivery") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Смени на вземане · " + fmt(pickupTotal(I)) + "</button>";
     if (step === 2 && I.mode === "delivery" && D.zk === "out") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
+    if (step === 1 && !I.n && I.stale.length) return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     if (step === 1 && I.conflict === "sched") return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     return '<button class="' + cls + '" type="button" data-act="next" data-n="' + step + '">' + esc(lbl) + "</button>";
   }
@@ -245,6 +283,7 @@ export function start(): void {
     return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Сметка</h2>' + list +
       '<div class="kv"><span>Ястия · ' + I.n + '</span><span class="price">' + fmt(I.sub) + "</span></div>" +
       (I.discKind === "lunch" ? '<div class="kv"><span><span class="disc-b">-30%</span>Отстъпка след 15:00<small>Обедното меню при вземане</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
+      (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Прилага се сам на следващата ви поръчка</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
       (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", върху ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + del[0] + del[1] + "</span><span>" + del[2] + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span><span class="price" data-total>' + fmt(I.total) + "</span>" + (I.feeUnknown ? "<small>+ таксата за доставка</small>" : "") + "</span></div>" +
@@ -290,15 +329,17 @@ export function start(): void {
     const sg = suggestions(I);
     const left = stepper(1, true) + '<h1 class="h1 ck-title" tabindex="-1">Количка</h1><p class="lead ck-lead">' + dishWord(I.n) + " · " + fmt(I.total) + "</p>" +
       '<div style="margin-top:22px">' + topNotes(I, 1) + "</div>" +
-      '<section class="blk" aria-label="Ястия в количката"><div class="shell"><div class="core"><ul class="lines">' + I.rows.map((r) => lineHTML(r)).join("") + "</ul></div></div>" + (I.n ? allergensHTML(I) : "") + "</section>" +
+      '<section class="blk" aria-label="Ястия в количката"><div class="shell"><div class="core"><ul class="lines">' + I.rows.map((r) => lineHTML(r)).join("") + I.stale.map((r) => lineHTML(r, true)).join("") + "</ul></div></div>" + (I.n ? allergensHTML(I) : "") + "</section>" +
       (sg.length ? '<section class="blk sugg" aria-labelledby="sgh"><div class="blk-h"><h2 class="h3" id="sgh">Да добавим ли?</h2><p class="muted small">Допълва менюто</p></div><div class="shell"><div class="core">' +
         sg.map((s) => { const x = SC.byId[s.id]; return '<div class="drow"><a class="open" href="' + SC.url.dish(x) + '">' + SC.pic(x) + "<span><small>" + (SC.COURSE_NAME as Record<string, string>)[s.c] + '</small><span class="nm">' + esc(x.n) + '</span><span class="meta"><span class="price">' + fmt(x.p) + '</span><span class="muted small">' + esc(x.per100 ? "за 100 гр." : x.g || "") + "</span></span></span></a>" + SC.plusBtn(x) + "</div>"; }).join("") + "</div></div></section>" : "") +
       '<section class="blk" aria-labelledby="ffh"><div class="blk-h"><h2 class="h3" id="ffh">Как да я получите?</h2></div>' + ffHTML(I, 1) + "</section>";
     return '<div class="ck"><div class="ck-grid"><div class="ck-main">' + left + '</div><div class="ck-side">' + summaryHTML(I, 1) + "</div></div>" + protoHTML("cart") + "</div>";
   }
 
+  const streetNote = () => note("info", "map-pin", "Добавете улица или блок", esc(P.needStreet) + " е в зоната ни. Допишете улица и номер или блок, например „Дружба 2, бл. 311“, за да ви намери шофьорът.");
   function addrResult(I: Info) {
     if (P.checking) return '<div class="skel" aria-label="Проверяваме адреса"></div>';
+    if (P.needStreet && !D.zk) return streetNote();
     if (!D.addr || !D.zk) return "";
     const z = zoneByName(D.zone);
     if (D.zk === "out" || !z) return note("bad", "warning-circle", "Извън зоната ни", "Не доставяме до този адрес. Можете да я вземете от ресторанта.", '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + 'Вземи от място</button><a class="pill pill-line" href="' + SC.url.page("delivery") + '">' + ic("map-trifold", 20) + "Виж зоните</a>");
@@ -326,7 +367,7 @@ export function start(): void {
         '<div class="combo">' + ic("map-pin", 22) + '<input id="addr" class="input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addr-list" autocomplete="street-address" placeholder="Квартал, улица, блок" value="' + esc(D.addr) + '" data-fk="addr" aria-describedby="addr-help">' +
         (D.addr ? '<button class="combo-x" type="button" data-act="addr-clear" aria-label="Изчисти адреса">' + ic("x", 20) + "</button>" : "") + "</div>" +
         '<ul class="combo-list" id="addr-list" role="listbox" aria-label="Предложени адреси" hidden></ul>' +
-        '<p class="help" id="addr-help">Например: Дружба 2, бл. 311. Пише се и на латиница.</p>' +
+        '<p class="help" id="addr-help">Квартал и улица или блок, например: Дружба 2, бл. 311. Пише се и на латиница.</p>' +
         (SC.preview ? '<div class="try" aria-label="Пробни адреси в прототипа"><span>Пробни адреси:</span>' + ([[0, "Дружба 2"], [6, "Горубляне"], [8, "Младост 1"]] as [number, string][]).map((a) => '<button class="chip" type="button" data-act="addr-sample" data-i="' + a[0] + '">' + a[1] + "</button>").join("") + "</div>" : "") +
         '</div><div class="res" id="addr-res" aria-live="polite">' + addrResult(I) + "</div></section>" +
         (D.zk === "free" || D.zk === "paid"
@@ -360,8 +401,8 @@ export function start(): void {
     let body: string;
     if (D.code) {
       const why = I.discKind === "code"
-        ? note("ok", "check-circle", "Кодът е приложен: -" + fmt(I.disc), esc(D.code) + " · -" + D.codePct + "% върху ястията, без таксата за доставка.")
-        : note("info", "info", "Обедната отстъпка -30% е по-изгодна", "Кодът " + esc(D.code) + " остава за следващата поръчка.");
+        ? note("ok", "check-circle", "Кодът е приложен: -" + fmt(I.disc), esc(D.code) + " · -" + D.codePct + "% върху ястията" + (I.mode === "delivery" ? ", без таксата за доставка." : "."))
+        : note("info", "info", I.discKind === "lunch" ? "Обедната отстъпка -30% е по-изгодна" : "Отстъпката с профил вече е сметната", "Отстъпките не се събират. Кодът " + esc(D.code) + " остава за следващата поръчка.");
       body = why + '<button class="link code-rm" type="button" data-act="code-rm">' + ic("x", 18) + "Махни кода</button>";
     } else {
       body = '<div class="field"><label for="f-code">Код за отстъпка <span class="opt-tag">по желание</span></label>' +
@@ -373,6 +414,9 @@ export function start(): void {
     return '<section class="blk code-blk" aria-label="Код за отстъпка">' + body + "</section>";
   }
 
+  function bonusNote() {
+    return P.me && P.me.bonus && !profileOn() ? '<div class="bonus-note">' + note("info", "info", "Бонусът -10% с профил важи с телефона на профила", "С " + prettyPhone(P.me.phone) + " се прилага сам. С друг телефон поръчката е без него.") + "</div>" : "";
+  }
   function viewStep3(I: Info) {
     const deliv = I.mode === "delivery", e = etaText(I);
     const where = deliv ? "<span><small>Доставка до</small><b>" + esc(D.addr) + (D.addrMore ? ", " + esc(D.addrMore) : "") + '</b><span class="muted small">' + esc(e.big) + "</span></span>"
@@ -390,7 +434,7 @@ export function start(): void {
       fieldHTML("phone", "Телефон", "tel", 'autocomplete="tel" inputmode="tel" placeholder="0888 12 34 56"', "Само за тази поръчка: ще ви пратим SMS, когато " + (deliv ? "тръгне към вас." : "е готова."), false) +
       fieldHTML("email", "Имейл", "email", 'autocomplete="email" inputmode="email" placeholder="ime@primer.bg"', "За касовата бележка.", true) +
       fieldHTML("note", "Бележка към кухнята или шофьора", "textarea", 'rows="3" placeholder="Например: без прибори, звънецът не работи"', "", true) +
-      "</div></section>" +
+      '</div><div id="bonus-slot">' + bonusNote() + "</div></section>" +
       codeHTML(I) +
       '<section class="blk" aria-labelledby="ph"><div class="blk-h"><h2 class="h3" id="ph">Как ще платите?</h2><p class="muted small">При получаване</p></div><div class="opts" role="radiogroup" aria-labelledby="ph">' +
       pays.map((p) => '<label class="opt"><input type="radio" name="pay" value="' + p[0] + '" data-f="pay" data-fk="pay-' + p[0] + '"' + (D.pay === p[0] ? " checked" : "") + ">" + ic(p[1], 24) + "<span><b>" + p[2] + "</b><small>" + p[3] + "</small></span></label>").join("") +
@@ -423,7 +467,7 @@ export function start(): void {
     let st = hashStep(), view: string, html: string;
     const I = info();
     if (P.loading) { view = "loading"; html = viewLoading(); }
-    else if (!I.rows.length) { view = "empty"; html = viewEmpty(); if (location.hash) replaceHash(""); st = 1; }
+    else if (!I.rows.length && !I.stale.length) { view = "empty"; html = viewEmpty(); if (location.hash) replaceHash(""); st = 1; }
     else {
       if (st >= 2 && !I.ok1) { st = 1; replaceHash(""); }
       if (st === 3 && !I.ok2) { st = 2; replaceHash("adres"); }
@@ -486,12 +530,12 @@ export function start(): void {
       const q = inp.value;
       if (q.trim().length < 2 || D.zk) { list.hidden = true; inp.setAttribute("aria-expanded", "false"); return; }
       const r = addrOptions(q); aOpts = r.opts;
-      list.innerHTML = aOpts.length ? aOpts.map((a, k) => '<li role="option" id="ao-' + k + '" data-i="' + k + '" aria-selected="' + (k === aIdx) + '">' + ic("map-pin", 20) + "<span>" + esc(a.a) + (a.hint && a.hint !== a.a ? " · " + esc(a.hint) : "") + "<small>" + zoneSmall(a.z) + "</small></span></li>").join("")
+      list.innerHTML = aOpts.length ? aOpts.map((a, k) => '<li role="option" id="ao-' + k + '" data-i="' + k + '" aria-selected="' + (k === aIdx) + '">' + ic("map-pin", 20) + "<span>" + esc(a.a) + (a.hint && a.hint !== a.a ? " · " + esc(a.hint) : "") + "<small>" + (a.z && !hasStreet(a.a) ? "Добавете улица или блок" : zoneSmall(a.z)) + "</small></span></li>").join("")
         : '<li class="none" role="option" aria-disabled="true">' + r.none + "</li>";
       list.hidden = false; inp.setAttribute("aria-expanded", "true");
       if (aIdx > -1 && aOpts.length) inp.setAttribute("aria-activedescendant", "ao-" + aIdx); else inp.removeAttribute("aria-activedescendant");
     };
-    inp.addEventListener("input", () => { D.addr = inp.value; D.zone = ""; D.zk = ""; aIdx = -1; save(); const res = main.querySelector("#addr-res"); if (res) res.innerHTML = ""; paint(); refreshSide(); });
+    inp.addEventListener("input", () => { D.addr = inp.value; D.zone = ""; D.zk = ""; aIdx = -1; save(); const res = main.querySelector("#addr-res"); if (res) res.innerHTML = P.needStreet ? streetNote() : ""; paint(); refreshSide(); });
     inp.addEventListener("keydown", (e) => {
       const n = list.querySelectorAll("li[data-i]").length;
       if (e.key === "ArrowDown" && n) { e.preventDefault(); aIdx = (aIdx + 1) % n; paint(); }
@@ -500,10 +544,20 @@ export function start(): void {
       else if (e.key === "Escape") { list.hidden = true; inp.setAttribute("aria-expanded", "false"); }
     });
     list.addEventListener("mousedown", (e) => { const li = (e.target as Element).closest<HTMLElement>("li[data-i]"); if (li) { e.preventDefault(); pickAddr(aOpts[+li.dataset.i!]); } });
-    if (D.addr && !D.zk) paint();
+    if (D.addr && !D.zk && !P.needStreet) paint(); /* right after "НПЗ Искър" was picked the list waits for the street */
   }
   function pickAddr(o: AddrOpt | undefined) {
     if (!o) return;
+    /* the quarter alone ("НПЗ Искър", "кв. Бусманци"): the core refuses it, so ask for the street or block right here */
+    if (o.z && !hasStreet(o.a)) {
+      D.addr = o.a.replace(/,?\s*София\s*$/i, "").replace(/[,\s]+$/, "") + ", "; D.zone = ""; D.zk = ""; P.needStreet = o.z; aIdx = -1; save();
+      render({ keepScroll: true });
+      const inp = main.querySelector<HTMLInputElement>("#addr");
+      if (inp) { inp.focus({ preventScroll: true }); inp.setSelectionRange(inp.value.length, inp.value.length); }
+      main.querySelector("#addr-res")?.scrollIntoView({ block: "nearest", behavior: smooth() });
+      return;
+    }
+    P.needStreet = "";
     D.addr = o.a; D.zone = o.z; const z = o.z ? zoneByName(o.z) : null; D.zk = z ? (z.free ? "free" : "paid") : "out"; aIdx = -1; save();
     (document.activeElement as HTMLElement | null)?.blur();
     P.checking = true; render({ keepScroll: true });
@@ -575,6 +629,7 @@ export function start(): void {
     if (I0.closed) { toLater(I0, I0.m < 600 ? "Кухнята отваря в 10:00" : "Кухнята вече не приема поръчки за днес"); return; }
     P.errs = { ...validate(), code: P.errs.code };
     const bad = ["name", "phone", "email"].filter((k) => P.errs[k]);
+    if (!bad.length && P.err === "form") P.err = ""; /* name and phone are fine now: the old "Попълнете…" note goes */
     if (bad.length) { P.err = "form"; render({ keepScroll: true }); const f = main.querySelector<HTMLElement>("#f-" + bad[0]); if (f) { f.focus({ preventScroll: true }); scrollToEl(f); } return; }
     if (P.offline || (!api.demo && navigator.onLine === false)) { P.err = "offline"; render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad")); SC.toast("Няма връзка. Опитайте пак."); return; }
     /* a code typed but not applied: check it first, show the new sum, and let the person press again */
@@ -589,7 +644,7 @@ export function start(): void {
     try {
       const o = await api.orders.create({
         /* sold-out lines are shown as "Не се брои" and are not sent (the core refuses them with sold_out) */
-        cart: { ...SC.cart.get(), lines: SC.cart.lines().filter((l) => { const x = SC.byId[l.id]; return !x || !SC.isOut(x); }), mode: I.mode },
+        cart: { ...SC.cart.get(), lines: SC.cart.lines().filter((l) => { const x = SC.byId[l.id]; return !x || !(SC.isOut(x) || (x.lunch && I.stale.length)); }), mode: I.mode },
         zone: deliv ? D.zone : undefined,
         addr: deliv ? D.addr + (D.addrMore ? ", " + D.addrMore : "") : undefined,
         pay: D.pay, name: String(D.name).trim(), phone: D.phone,
@@ -680,7 +735,7 @@ export function start(): void {
       if (n === 2) {
         if (!I.ok2 && autoResolve()) return;
         if (!I.ok2) {
-          SC.toast(I.mode === "delivery" ? (D.zk === "out" ? "Този адрес е извън зоната ни" : "Изберете адрес от списъка") : "Изберете час за вземане");
+          SC.toast(I.mode === "delivery" ? (D.zk === "out" ? "Този адрес е извън зоната ни" : P.needStreet ? "Добавете улица или блок" : "Изберете адрес от списъка") : "Изберете час за вземане");
           const t = main.querySelector<HTMLElement>(I.mode === "delivery" ? (D.zk && D.zk !== "out" ? ".slots" : "#addr") : ".opts input, .slots .slot:not([disabled])");
           if (t) { scrollToEl(t); t.focus({ preventScroll: true }); }
           return;
@@ -706,7 +761,7 @@ export function start(): void {
     if (a === "code-rm") { D.code = ""; D.codePct = 0; P.errs.code = undefined; save(); render({ keepScroll: true }); main.querySelector<HTMLElement>("#f-code")?.focus({ preventScroll: true }); return; }
     if (a === "allslots") { P.allSlots = true; render({ keepScroll: true }); return; }
     if (a === "addr-sample") { const s = SAMPLE_ADDRESSES[+b.dataset.i!]; if (s) pickAddr({ a: s[0] + ", София", z: s[1] }); return; }
-    if (a === "addr-clear") { D.addr = ""; D.zone = ""; D.zk = ""; save(); render({ keepScroll: true }); main.querySelector<HTMLElement>("#addr")?.focus(); return; }
+    if (a === "addr-clear") { P.needStreet = ""; D.addr = ""; D.zone = ""; D.zk = ""; save(); render({ keepScroll: true }); main.querySelector<HTMLElement>("#addr")?.focus(); return; }
     /* preview switches */
     if (a === "demo") { fillDemo(); if (location.hash) location.hash = "kolichka"; SC.toast("Готово: примерна количка"); return; }
     if (a === "clear") { SC.cart.clear(); return; }
@@ -728,6 +783,7 @@ export function start(): void {
     if (!f || f === "consent" || f === "pay") return;
     (D as unknown as Record<string, string>)[f] = t.value; save();
     if (P.errs[f]) { const v = validate(); P.errs[f] = v[f]; showErr(f); }
+    if (f === "phone" && P.me && P.me.bonus) { refreshSide(); const b = main.querySelector("#bonus-slot"); if (b) b.innerHTML = bonusNote(); }
   });
   main.addEventListener("keydown", (e) => {
     if ((e.target as HTMLElement).id === "f-code" && e.key === "Enter") { e.preventDefault(); applyCode(); }
@@ -755,5 +811,14 @@ export function start(): void {
     refreshSide();
   });
   if (navigator.onLine === false) P.offline = true;
+  /* the profile bonus: at once from what this browser knows, then from the API (the core is the judge) */
+  if (U) {
+    const u0 = U as { profileBonus?: boolean; phone?: string };
+    if (u0.profileBonus && u0.phone) P.me = { bonus: true, phone: normPhone(String(u0.phone)) || String(u0.phone) };
+    api.auth.me().then((me) => {
+      const nx = me && me.profileBonus ? { bonus: true, phone: normPhone(String(me.phone)) || String(me.phone) } : null;
+      if (JSON.stringify(nx) !== JSON.stringify(P.me)) { P.me = nx; if (hashStep() === 3) { refreshSide(); const b = main.querySelector("#bonus-slot"); if (b) b.innerHTML = bonusNote(); } else render({ keepScroll: true }); }
+    }).catch(() => { /* offline: keep what we know, the core decides at the order */ });
+  }
   render();
 }

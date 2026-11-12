@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { LUNCH_DATE } from "../../src/lib/lunch-date.ts";
 
 /* Cart and checkout (/kolichka/): 3 steps, delivery / pickup, -30% lunch after 15:00 for pickup, zones, slots,
    validation, api.orders.create -> tracking, server errors, empty, closed ("Поръчай за утре"), undo on remove. */
@@ -61,6 +62,65 @@ test("cart: lunch after 15:00 is pickup only with -30%", async ({ page }) => {
   await expect(page.locator(".sum [data-total]")).toHaveText(after + " €");
   await expect(page.locator(".tag.promo")).toHaveText("-30% след 15:00");
   await expect(cta(page)).toContainText("Избери час");
+});
+
+test("cart: 16:30 lunch in a delivery cart promises no delivery time", async ({ page }) => {
+  await open(page, "16:30");
+  await expect(page.locator(".sum .eta-row")).toContainText("Само за вземане от място");
+  await expect(page.locator(".sum")).not.toContainText("Пристига");
+});
+
+test("cart: lunch dishes from a day without a lunch menu are marked at once (real clock, no preview)", async ({ page }) => {
+  test.skip(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date()) === LUNCH_DATE, "the lunch menu in the data is today's");
+  const errors = watch(page);
+  await page.addInitScript(([c]) => {
+    if (sessionStorage.getItem("ck-init")) return;
+    sessionStorage.setItem("ck-init", "1");
+    localStorage.setItem("sc-cookie", '"min"'); localStorage.removeItem("sc-checkout"); localStorage.removeItem("sc-prefs");
+    localStorage.setItem("sc-cart", JSON.stringify(c));
+  }, [{ ...CART, mode: "pickup" }]);
+  await page.goto("/kolichka/");
+  await expect(page.locator(".note.warn").first()).toContainText("Обедното меню за днес още не е качено");
+  await expect(page.locator(".ln.out")).toContainText("Не се брои");
+  await expect(page.locator(".tag.promo")).toHaveCount(0);
+  await expect(page.locator(".sum")).not.toContainText("Отстъпка след 15:00");
+  await expect(page.locator(".sum .kv").first()).toContainText("Ястия · 1");
+  await page.locator('.note.warn [data-act="rmlunch"]').click();
+  await expect(page.locator(".ln")).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("cart: the -10% profile bonus is shown like the core counts it, only with the profile's phone", async ({ page }) => {
+  const me = { id: "c1", name: "Мария", phone: "0888123456", profileBonus: true, addrs: [], consent: { marketing: false } };
+  await page.route("**/api/me", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(me) }));
+  await page.addInitScript((u) => { localStorage.setItem("sc-user", JSON.stringify(u)); }, me);
+  await open(page, "12:30", { ...CART, mode: "pickup", lines: [CART.lines[0]] });
+  await expect(page.locator(".sum")).toContainText("Отстъпка с профил");
+  await expect(page.locator(".sum")).toContainText("Прилага се сам на следващата ви поръчка");
+  await expect(page.locator(".sum [data-total]")).toHaveText("7,36 €"); /* 8,18 € - 10% (0,82 €), as the core: № 1101 in the review */
+  await cta(page).click();
+  await cta(page).click();
+  await expect(page.locator("#f-phone")).toHaveValue("0888123456");
+  await page.fill("#f-phone", "0899 11 22 33");
+  await expect(page.locator(".bonus-note")).toContainText("важи с телефона на профила");
+  await expect(page.locator(".sum")).not.toContainText("Отстъпка с профил");
+  await page.fill("#f-phone", "0888 12 34 56");
+  await expect(page.locator(".bonus-note")).toHaveCount(0);
+  await expect(page.locator(".sum")).toContainText("Отстъпка с профил");
+});
+
+test("cart: an address with the quarter only asks for the street or block", async ({ page }) => {
+  await open(page, "12:30", { ...CART, lines: [CART.lines[0]] });
+  await cta(page).click();
+  await page.locator("#addr").fill("НПЗ Искър");
+  await expect(page.locator("#addr-list li[data-i]").first()).toContainText("Добавете улица или блок");
+  await page.locator("#addr-list li[data-i]").first().click();
+  await expect(page.locator("#addr-res")).toContainText("Добавете улица или блок");
+  await expect(page.locator("#addr")).toBeFocused();
+  await page.locator("#addr").pressSequentially("бл. 5");
+  await page.locator("#addr-list li[data-i]").first().click();
+  await expect(page.locator("#addr-res")).toContainText("Безплатна доставка");
+  await expect(page.locator("#addr")).toHaveValue("НПЗ Искър, бл. 5");
 });
 
 test("cart: 21:30 delivery is off, pickup slots until 22:30", async ({ page }) => {
@@ -157,6 +217,7 @@ test("cart: discount code - wrong code from the core under the field, a good one
   await page.fill("#f-code", "sc10 1234567890");
   await page.locator("#f-code").press("Enter");
   await expect(page.locator(".code-blk .note.ok")).toContainText("Кодът е приложен");
+  await expect(page.locator(".code-blk .note.ok")).not.toContainText("таксата за доставка"); /* pickup: no fee to speak of */
   await expect(page.locator(".sum")).toContainText("Отстъпка с код");
   await expect(page.locator(".sum [data-total]")).not.toHaveText(before);
   await cta(page).click();
