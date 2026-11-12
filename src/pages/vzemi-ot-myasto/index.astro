@@ -1,0 +1,431 @@
+---
+/* Pickup (/vzemi-ot-myasto/): port of design/pages/pickup.html (design/PAGES.md "pickup.html", pack 6.10, 10.2).
+   The server draws everything that does not depend on the hour, the cart or the kitchen: hero, 3 steps, the -30% card
+   (neutral "every day from 15:00"), the hours timeline, where, payment, FAQ and JSON-LD (BreadcrumbList, FAQPage).
+   The browser adds the hour (alert, live plan "Кога ще е готово?", -30% now, the "now" marker), the cart (CTA with the
+   pickup total, the kind preselected from the cart), the kitchen switch "Натоварено" and, only in preview, the states
+   panel. Hours and rules come only from src/lib (RESTAURANT, state(), price(), pickupSlots()). */
+import Base from "../../layouts/Base.astro";
+import { RESTAURANT as R } from "../../lib/consts.ts";
+import { ic } from "../../lib/icons.ts";
+import { url } from "../../lib/routes.ts";
+import { ctaHTML, liveHTML, dealHTML, hoursHTML, faqHTML, pickupLd, DESCRIPTION, LEAD_TEXT, STEPS_TEXT } from "./_pickup.ts";
+
+const live = liveHTML({ kind: "menu", s: null, sim: "loading", busy: false, chosen: null, fromCart: false, tomorrow: "" });
+const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="muted">($1)</span>')];
+---
+<Base page="pickup" nav={null} title="Вземи от място" description={DESCRIPTION} actionBar jsonld={pickupLd(Astro.site)}>
+  <section class="sec pk-hero" aria-labelledby="pk-h1"><div class="pk-grid">
+    <div class="pk-copy">
+      <span class="pk-eyebrow"><Fragment set:html={ic("storefront", 18)} />Дружба 2, срещу бл. 311</span>
+      <h1 class="h1 pk-h1" id="pk-h1">Вземи от място</h1>
+      <p class="lead pk-lead">{LEAD_TEXT}</p>
+      <div data-alert></div>
+      <div class="pk-cta" data-hero-cta><Fragment set:html={ctaHTML("go pill-lg", null)} /><a class="link" href={url.lunch()} data-lunchlink><span>Обедното меню</span><Fragment set:html={ic("caret-right", 18)} /></a></div>
+      <ul class="pk-trust"><li><Fragment set:html={ic("user", 20)} />Без регистрация</li><li><Fragment set:html={ic("wallet", 20)} />Плащате на място</li><li><Fragment set:html={ic("bell", 20)} />Пишем ви, щом е готова</li></ul>
+    </div>
+    <div class="pk-live" id="when"><div class="shell"><div class="core" data-live aria-labelledby="pk-live-h" set:html={live}></div></div></div>
+  </div></section>
+
+  <section class="sec rv" aria-labelledby="pk-how"><div class="pk-sh"><span class="pk-kicker"><Fragment set:html={ic("list-checks", 18)} />3 стъпки</span><h2 class="h2" id="pk-how">Как работи</h2></div>
+    <ol class="pk-steps">
+      <li class="pk-step"><span class="pk-num">1<Fragment set:html={ic("fork-knife", 20)} /></span><div><h3 class="h3">Изберете ястията</h3><p>От <a href={url.menu()}>менюто</a> или от <a href={url.lunch()}>обедното меню</a>. В количката изберете „Вземи от място“.</p></div></li>
+      <li class="pk-step"><span class="pk-num">2<Fragment set:html={ic("clock", 20)} /></span><div><h3 class="h3">Изберете час</h3><p>{STEPS_TEXT.step2}</p></div></li>
+      <li class="pk-step"><span class="pk-num">3<Fragment set:html={ic("shopping-bag", 20)} /></span><div><h3 class="h3">Вземете и платете тук</h3><p>Ще ви пишем по Viber или SMS, щом поръчката е готова. Плащате на място.</p></div></li>
+    </ol></section>
+
+  <section class="sec" aria-label="Отстъпка и часове"><div class="pk-deal-grid">
+    <div class="rv" id="deal" data-deal set:html={dealHTML({ s: null, isToday: false, orderable: false })}></div>
+    <div class="rv pk-hours" data-hours set:html={hoursHTML(null)}></div>
+  </div></section>
+
+  <section class="sec pk-where rv" aria-labelledby="pk-where"><div class="pk-where-grid">
+    <div class="shell"><div class="pk-map" role="img" aria-label={"Схема: Siracusa, " + R.address + ". Точната карта предстои."}>
+      <span class="blk" style="left:8%;top:12%;width:22%;height:20%"></span><span class="blk" style="left:64%;top:10%;width:26%;height:16%"></span><span class="blk" style="left:10%;top:60%;width:18%;height:14%"></span><span class="blk" style="left:70%;top:52%;width:20%;height:18%"></span>
+      <div class="pk-pin"><span class="bub"><Fragment set:html={ic("map-pin", 20)} />Siracusa</span><span class="tip"></span><span class="spot"></span></div>
+      <div class="cap"><span class="missing">[ЛИПСВА: статична карта]</span></div>
+    </div></div>
+    <div><div class="pk-sh" style="margin-bottom:8px"><span class="pk-kicker"><Fragment set:html={ic("map-pin-line", 18)} />Къде</span><h2 class="h2" id="pk-where">Къде да ни намерите</h2></div>
+      <div class="pk-info">
+        <div class="pk-irow"><span class="ib"><Fragment set:html={ic("map-pin", 22)} /></span><div><b>Адрес</b><span class="v">{R.address}</span></div></div>
+        <div class="pk-irow"><span class="ib"><Fragment set:html={ic("storefront", 22)} /></span><div><b>Къде вземате поръчката</b><span class="v missing">[ЛИПСВА: мястото за вземане в ресторанта]</span><div class="muted small" style="margin-top:4px">Кажете името си или номера на поръчката.</div></div></div>
+        <div class="pk-irow"><span class="ib"><Fragment set:html={ic("car", 22)} /></span><div><b>Паркиране</b><span class="v missing">[ЛИПСВА: паркиране]</span></div></div>
+        <div class="pk-irow"><span class="ib"><Fragment set:html={ic("phone", 22)} /></span><div><b>Телефон</b><span class="v"><a href={"tel:" + R.phoneIntl}>{R.phone}</a></span></div></div>
+      </div>
+      <div class="row"><a class="pill pill-ink" href={R.maps} target="_blank" rel="noopener"><Fragment set:html={ic("path", 20)} />Маршрут в Google Maps</a></div>
+    </div>
+  </div></section>
+
+  <section class="sec rv" aria-labelledby="pk-pay"><div class="pk-sh"><span class="pk-kicker"><Fragment set:html={ic("receipt", 18)} />На място</span><h2 class="h2" id="pk-pay">Плащане и известие</h2></div>
+    <div class="pk-two">
+      <div class="card"><h3 class="h3"><span class="ib"><Fragment set:html={ic("wallet", 22)} /></span>Плащате при вземане</h3>
+        <ul class="pk-list">
+          {pay.map((t) => <li><Fragment set:html={ic("check", 20)} /><span set:html={t}></span></li>)}
+          <li><Fragment set:html={ic("check", 20)} /><span>Ваучер <span class="missing">[ЛИПСВА: кои ваучери, актуалното име]</span></span></li>
+        </ul>
+        <p class="small" style="margin-top:14px">Без онлайн плащане и без въвеждане на карта в сайта.</p></div>
+      <div class="card"><h3 class="h3"><span class="ib"><Fragment set:html={ic("bell-ringing", 22)} /></span>Пишем ви, щом е готова</h3>
+        <p>По Viber или SMS, по ваш избор. Не е нужно да чакате в ресторанта.</p>
+        <div class="pk-msg" aria-label="Пример за съобщение"><small>Siracusa · Viber</small>Поръчката ви е готова. Очакваме ви!</div></div>
+    </div></section>
+
+  <section class="sec rv" aria-labelledby="pk-faq"><div class="pk-faq-grid"><div class="pk-sh"><span class="pk-kicker"><Fragment set:html={ic("question", 18)} />Въпроси</span><h2 class="h2" id="pk-faq">Често задавани въпроси</h2><p class="lead">Не намирате отговор? Обадете ни се, ще помогнем с поръчката.</p><a class="pill pill-line" style="margin-top:16px" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{R.phone}</a></div><div class="pk-faq" set:html={faqHTML()}></div></div></section>
+
+  <div data-proto></div>
+  <div class="abar pk-abar hide" slot="ov" data-abar set:html={ctaHTML("", null)}></div>
+</Base>
+
+<style is:global>
+/* pickup page only (design/pages/pickup.html), tokens from tokens.css. Prefix: pk- */
+/* ---------- hero ---------- */
+.pk-hero{padding-top:28px; position:relative}
+.pk-grid{display:grid; gap:28px}
+.pk-eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:14px}
+.pk-eyebrow .ic{color:var(--ink)}
+.pk-h1{font-size:44px}
+.pk-lead{margin-top:14px; max-width:34ch}
+.pk-alert{width:fit-content; max-width:100%; display:flex; gap:12px; align-items:flex-start; margin-top:20px; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:16px; line-height:1.4}
+.pk-alert .ic{margin-top:1px}
+.pk-alert.warn .ic{color:var(--warn)}
+.pk-alert.off .ic{color:var(--muted)}
+.pk-alert.ember{background:var(--ember); color:var(--on-ember); box-shadow:none}
+.pk-alert a{font-weight:800; color:inherit; text-underline-offset:3px}
+.pk-cta{margin-top:24px; display:grid; gap:6px; max-width:440px}
+.pk-cta .go{font-weight:800}
+.pk-cta .link{justify-self:start}
+.pk-trust{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:8px; font-size:15px; font-weight:600; color:var(--muted)}
+.pk-trust li{display:inline-flex; align-items:center; gap:8px}
+.pk-trust .ic{color:var(--ink)}
+
+/* ---------- live card (TimeSlotGrid preview) ---------- */
+.pk-live{position:relative; isolation:isolate; scroll-margin-top:150px}
+.pk-live::before{content:""; position:absolute; z-index:-1; inset:-40px 0; background:radial-gradient(60% 55% at 70% 30%, var(--ember-soft), transparent 70%); pointer-events:none}
+.pk-live .core{padding:20px 18px 20px}
+.pk-lh{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px}
+.pk-now{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+.pk-now .dot{width:8px; height:8px; border-radius:50%; background:var(--ok)}
+.pk-now .dot.warn{background:var(--warn)} .pk-now .dot.off{background:var(--off)}
+.pk-q{font-weight:700; font-size:15px; margin:0 0 8px}
+.pk-seg{grid-auto-flow:row; grid-template-columns:1.5fr 1fr 1fr}
+.pk-seg button{white-space:nowrap}
+.pk-seg button{flex-direction:column; gap:0; min-height:60px; line-height:1.2; padding:6px 4px; color:var(--ink)}
+.pk-seg button small{font-size:14px; font-weight:600; color:var(--muted)}
+.pk-seg button[aria-pressed="true"] small{color:var(--ink)}
+.pk-fromcart{display:flex; align-items:center; gap:6px; margin:10px 0 0; font-size:14px; color:var(--muted); font-weight:600}
+.pk-perf{position:relative; height:28px; margin:16px -18px 12px}
+.pk-perf::before{content:""; position:absolute; left:22px; right:22px; top:50%; border-top:2px dashed var(--line-strong)}
+.pk-perf::after{content:""; position:absolute; inset:0; background:radial-gradient(circle at 0 50%, var(--surface-2) 12px, transparent 12.5px), radial-gradient(circle at 100% 50%, var(--surface-2) 12px, transparent 12.5px)}
+.pk-res{display:grid; gap:2px}
+.pk-res .lbl{font-size:15px; font-weight:700; color:var(--muted)}
+.pk-big{font-size:46px; line-height:1.05; font-weight:800; letter-spacing:-.045em; font-variant-numeric:tabular-nums; display:block}
+.pk-big small{font-size:24px; letter-spacing:-.03em; font-weight:800; color:var(--muted); margin-right:6px}
+.pk-res p{margin:6px 0 0; color:var(--muted); font-size:16px; line-height:1.45}
+.pk-res p b{color:var(--ink)}
+.pk-tag{display:inline-flex; align-items:center; gap:6px; margin-top:10px; justify-self:start; padding:6px 12px 6px 10px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.pk-busy{display:flex; gap:8px; align-items:flex-start; margin-top:12px; font-size:15px; font-weight:600; color:var(--warn)}
+.pk-pick{margin:20px 0 10px; font-weight:700; font-size:15px; display:flex; justify-content:space-between; gap:8px}
+.pk-pick span{color:var(--muted); font-weight:600}
+.pk-asap{width:100%; white-space:nowrap; display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:56px; padding:0 20px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-weight:800; font-size:16px; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.pk-asap .price{font-weight:700; color:var(--muted)}
+.pk-asap:active{transform:scale(.98)}
+.pk-slots{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px}
+.pk-slot{min-height:52px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-content:center; line-height:1.1; padding:4px 2px; transition:transform var(--t-fast) var(--ease)}
+.pk-slot:active{transform:scale(.95)}
+.pk-slot small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.pk-slot[disabled]{background:transparent; color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line); cursor:not-allowed; text-decoration:line-through; text-decoration-thickness:1.5px}
+.pk-slot[disabled] small{text-decoration:none}
+.pk-asap[aria-pressed="true"],.pk-slot[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.pk-asap[aria-pressed="true"] .price{color:var(--bg); opacity:.75}
+.pk-slots .skel{height:52px; border-radius:999px}
+.pk-legend{display:flex; flex-wrap:wrap; gap:6px 16px; margin:12px 0 0; font-size:14px; color:var(--muted)}
+.pk-legend span{display:inline-flex; align-items:center; gap:6px}
+.pk-legend i{width:22px; height:14px; border-radius:7px; background:var(--surface-2); display:inline-block}
+.pk-legend i.full{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.pk-chosen{display:flex; gap:8px; align-items:center; margin:14px 0 0; font-size:15px; font-weight:700; color:var(--ok)}
+.pk-err{display:grid; gap:10px; justify-items:start; padding:6px 0 2px}
+.pk-err .ttl{display:flex; gap:10px; align-items:flex-start; font-weight:800; font-size:17px; line-height:1.3}
+.pk-err .ttl .ic{color:var(--warn)}
+.pk-err p{margin:0; color:var(--muted)}
+.pk-err .row{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%}
+.pk-err .row .pill{padding:0 12px}
+@container app (max-width:420px){ .pk-err .row{grid-template-columns:1fr} }
+
+/* ---------- section heads ---------- */
+.pk-kicker{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--muted); margin-bottom:10px}
+.pk-sh{margin-bottom:24px; max-width:620px}
+.pk-sh .lead{margin-top:10px}
+
+/* ---------- 3 steps ---------- */
+.pk-steps{list-style:none; margin:0; padding:0; display:grid; gap:0; counter-reset:st}
+.pk-step{position:relative; display:grid; grid-template-columns:56px 1fr; gap:16px; padding-bottom:28px}
+.pk-step:last-child{padding-bottom:0}
+.pk-step::before{content:""; position:absolute; left:27px; top:60px; bottom:6px; width:2px; background:var(--line-strong); border-radius:1px}
+.pk-step:last-child::before{display:none}
+.pk-num{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-weight:800; font-size:22px; position:relative}
+.pk-num .ic{position:absolute; right:-6px; bottom:-6px; width:30px; height:30px; padding:5px; border-radius:50%; background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.pk-step h3{margin:6px 0 6px}
+.pk-step p{margin:0; color:var(--muted)}
+.pk-step p a{color:var(--ink); font-weight:700}
+
+/* ---------- -30% ---------- */
+.pk-deal{border-radius:var(--r-shell); padding:24px 18px 18px; display:grid; gap:18px}
+.pk-deal .h2{color:var(--on-ember)}
+.pk-deal .pct{font-size:76px; line-height:.9; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums; display:block; margin-bottom:6px}
+.pk-deal p{margin:0}
+.pk-when{display:inline-flex; align-items:center; gap:8px; justify-self:start; min-height:36px; padding:0 14px 0 10px; border-radius:999px; background:var(--chip-dark); color:var(--on-chip-dark); font-size:14px; font-weight:800}
+.pk-when .ic{color:var(--ember)}
+.pk-deal .core{padding:4px 16px; color:var(--ink)}
+.pk-ex{display:grid; grid-template-columns:60px minmax(0,1fr) 48px; gap:12px; align-items:center; padding:12px 0}
+.pk-ex + .pk-ex{border-top:1px solid var(--line)}
+.pk-ex .pic{width:60px; height:60px; border-radius:18px}
+.pk-ex .nm{font-weight:700; line-height:1.25; display:block}
+.pk-ex .pr{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; margin-top:4px; font-size:15px}
+.pk-ex .pr .price{font-size:17px}
+.pk-ex .pr .after{font-size:14px; color:var(--muted); font-weight:600}
+.pk-ex .badge.out{margin-top:6px}
+.pk-ex .plus{width:48px; height:48px}
+.pk-sample{display:flex; gap:8px; align-items:flex-start; font-size:15px; font-weight:700; margin:0 0 -8px!important}
+.pk-deal .foot-note{font-size:15px; display:flex; gap:8px; align-items:flex-start}
+.pk-deal .pill{justify-self:start}
+.pk-deal .pill-ink{background:var(--chip-dark); color:var(--on-chip-dark)}
+
+/* ---------- hours timeline ---------- */
+.pk-hours .core{padding:20px 18px}
+.pk-tl{position:relative; display:grid; gap:18px; padding-top:36px}
+.pk-lane .t{font-size:16px; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+.pk-lane .t span{color:var(--muted); font-weight:700; font-size:15px; font-variant-numeric:tabular-nums; white-space:nowrap}
+.pk-track{position:relative; height:16px; border-radius:999px; background:var(--surface-2)}
+.pk-fill{position:absolute; top:0; bottom:0; left:0; border-radius:999px}
+.pk-fill.ink{background:var(--ink)}
+.pk-fill.soft{background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong); border-radius:999px 0 0 999px}
+.pk-fill.emb{background:var(--ember); border-radius:0 999px 999px 0}
+.pk-fill.dim{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.pk-key{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; font-size:14px; color:var(--muted); font-weight:600}
+.pk-key span{display:inline-flex; align-items:center; gap:6px}
+.pk-key i{width:18px; height:10px; border-radius:5px; display:inline-block}
+.pk-key i.soft{background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-strong)} .pk-key i.emb{background:var(--ember)}
+.pk-mark{position:absolute; top:-5px; bottom:-5px; width:4px; margin-left:-2px; border-radius:2px; background:var(--ink); box-shadow:0 0 0 2px var(--surface); z-index:2}
+.pk-axis{display:flex; justify-content:space-between; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:-6px}
+.pk-flag{position:absolute; top:0; transform:translateX(-50%); white-space:nowrap; min-height:28px; display:inline-flex; align-items:center; padding:0 12px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+.pk-flag.l{transform:translateX(-14px)} .pk-flag.r{transform:translateX(calc(-100% + 14px))}
+.pk-facts{margin-top:18px}
+.pk-facts .kv{padding:12px 0; align-items:baseline}
+.pk-facts .kv span:first-child{color:var(--muted); flex:none}
+.pk-facts .kv b{text-align:right; font-variant-numeric:tabular-nums}
+
+/* ---------- where ---------- */
+.pk-map{position:relative; aspect-ratio:4/3; border-radius:var(--r-core); overflow:hidden; background:
+  repeating-linear-gradient(0deg, transparent 0 46px, var(--line) 46px 48px),
+  repeating-linear-gradient(90deg, transparent 0 58px, var(--line) 58px 60px),
+  var(--surface-2)}
+.pk-map .blk{position:absolute; border-radius:10px; background:var(--surface-3)}
+.pk-pin{position:absolute; left:50%; top:44%; transform:translate(-50%,-100%); display:grid; justify-items:center; gap:0}
+.pk-pin .bub{display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px 0 12px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:800; font-size:16px; box-shadow:var(--shadow-lg); white-space:nowrap}
+.pk-pin .bub .ic{color:var(--bg)}
+.pk-pin .tip{width:14px; height:14px; background:var(--ink); transform:translateY(-8px) rotate(45deg); border-radius:0 0 3px 0}
+.pk-pin .spot{width:18px; height:18px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 6px var(--line-strong); margin-top:-4px}
+.pk-map .cap{position:absolute; left:12px; right:12px; bottom:12px; display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap}
+.pk-map .cap .missing{font-size:14px; background:var(--glass); padding:6px 12px; border-radius:999px; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
+.pk-info{display:grid; gap:0}
+.pk-irow{display:grid; grid-template-columns:44px 1fr; gap:14px; padding:14px 0; align-items:start}
+.pk-irow + .pk-irow{border-top:1px solid var(--line)}
+.pk-irow .ib{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.pk-irow b{display:block; font-size:15px; color:var(--muted); font-weight:700; margin-bottom:2px}
+.pk-irow .v{font-size:17px; font-weight:700; line-height:1.4}
+.pk-irow .v.missing{font-weight:600; font-size:16px}
+.pk-irow .v a{color:var(--red); text-decoration:none; min-height:48px; display:inline-flex; align-items:center; margin:-12px 0}
+.pk-where .row{flex-wrap:wrap; gap:8px; margin-top:12px}
+
+/* ---------- pay + notify ---------- */
+.pk-two{display:grid; gap:12px}
+.pk-two .card{padding:20px 18px}
+.pk-two h3{display:flex; align-items:center; gap:10px; margin-bottom:12px}
+.pk-two h3 .ib{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.pk-list{list-style:none; margin:0; padding:0; display:grid; gap:10px}
+.pk-list li{display:flex; gap:10px; align-items:flex-start; line-height:1.4}
+.pk-list li .ic{margin-top:2px; color:var(--ok)}
+.pk-two p{margin:0; color:var(--muted)}
+.pk-msg{margin-top:14px; padding:14px 16px; border-radius:20px 20px 20px 6px; background:var(--surface-2); font-weight:600; max-width:320px}
+.pk-msg small{display:block; font-size:14px; color:var(--muted); font-weight:700; margin-bottom:4px}
+
+/* ---------- FAQ ---------- */
+.pk-faq{max-width:760px; display:grid; gap:10px}
+.pk-faq details{border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.pk-faq summary{list-style:none; display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:60px; padding:14px 16px 14px 20px; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; cursor:pointer; border-radius:22px}
+.pk-faq summary::-webkit-details-marker{display:none}
+.pk-faq summary .cv{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none; transition:transform var(--t-slow) var(--ease)}
+.pk-faq details[open] summary .cv{transform:rotate(180deg)}
+.pk-faq details p{margin:0; padding:0 20px 18px; color:var(--muted); max-width:62ch}
+
+/* ---------- prototype-only panel ---------- */
+.pk-proto{border-radius:var(--r-shell); padding:18px; box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent}
+.pk-proto h2{font-size:17px; margin:0 0 4px; display:flex; gap:8px; align-items:center}
+.pk-proto p{margin:0 0 12px; font-size:15px; color:var(--muted)}
+.pk-proto .chips{flex-wrap:wrap; margin:0; padding:0; overflow:visible}
+
+/* ---------- floating action bar ---------- */
+.pk-abar{transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.pk-abar.hide{transform:translateY(24px); opacity:0; pointer-events:none}
+.pk-abar .pill .ic{flex:none}
+
+/* ---------- desktop ---------- */
+@container app (min-width:700px){
+  .pk-two{grid-template-columns:1fr 1fr}
+  .pk-steps{grid-template-columns:repeat(3,1fr); gap:20px}
+  .pk-step{grid-template-columns:1fr; gap:14px; padding-bottom:0}
+  .pk-step::before{left:72px; right:-12px; top:27px; bottom:auto; width:auto; height:2px}
+  .pk-step:last-child::before{display:none}
+}
+@container app (min-width:900px){
+  .pk-hero{padding-top:56px}
+  .pk-grid{grid-template-columns:1.05fr 1fr; gap:64px; align-items:center}
+  .pk-h1{font-size:72px}
+  .pk-trust{display:flex; flex-wrap:wrap; gap:8px 18px}
+  .pk-abar{display:none}
+  .pk-lead{font-size:19px; margin-top:20px}
+  .pk-live .core{padding:26px 26px 24px}
+  .pk-perf{margin-left:-26px; margin-right:-26px}
+  .pk-big{font-size:56px}
+  .pk-slots{grid-template-columns:repeat(4,1fr)}
+  .pk-deal-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start}
+  .pk-deal{padding:32px 28px 28px}
+  .pk-deal .pct{font-size:104px}
+  .pk-hours .core{padding:28px 26px}
+  .pk-where-grid{display:grid; grid-template-columns:1.25fr 1fr; gap:40px; align-items:center}
+  .pk-faq-grid{display:grid; grid-template-columns:.8fr 1.2fr; gap:48px; align-items:start}
+  .pk-proto{display:flex; justify-content:space-between; align-items:center; gap:24px}
+  .pk-proto p{margin:0}
+}
+@container app (max-width:899px){ .pk-deal-grid > * + *{margin-top:56px} .pk-where-grid > * + *{margin-top:20px} .pk-faq-grid .pk-sh{margin-bottom:12px} }
+@container app (max-width:370px){ .pk-h1{font-size:38px} .pk-big{font-size:40px} .pk-slot{font-size:15px} .pk-asap{padding:0 16px; font-size:15px} }
+@container app (min-width:1100px){ .pk-slots{grid-template-columns:repeat(6,1fr)} }
+.pk-cta .link .ic{flex:none}
+.pk-ex .plus{justify-self:end}
+</style>
+
+<script>
+  import { SC } from "../../client/sc-menu.ts";
+  import { price } from "../../lib/pricing.ts";
+  import "../../lib/icons/moon.ts";
+  import "../../lib/icons/truck.ts";
+  import "../../lib/icons/seal-percent.ts";
+  import "../../lib/icons/arrow-right.ts";
+  import "../../lib/icons/warning.ts";
+  import "../../lib/icons/warning-circle.ts";
+  import "../../lib/icons/arrow-clockwise.ts";
+  import "../../lib/icons/check-circle.ts";
+  import "../../lib/icons/shopping-bag.ts";
+  import "../../lib/icons/info.ts";
+  import "../../lib/icons/bowl-food.ts";
+  import "../../lib/icons/caret-right.ts";
+  import "../../lib/icons/sliders-horizontal.ts";
+  import { ctaHTML, alertHTML, liveHTML, dealHTML, hoursHTML, plan, tomorrowName, KITCHEN_END, type Kind, type Sim, type CtaView } from "./_pickup.ts";
+
+  const main = SC.mount({ docTitle: "Вземи от място" });
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
+  const live = $("[data-live]");
+  const abar = SC.ov.querySelector<HTMLElement>("[data-abar]")!;
+
+  /* ---------- state ---------- */
+  let sim: Sim = navigator.onLine === false ? "offline" : "normal";
+  const isBusy = () => sim === "busy" || (sim === "normal" && SC.eta().busy);
+  function cartKind(): Kind | null {
+    const ls = SC.cart.lines();
+    if (!ls.length) return null;
+    const l = ls.some((x) => SC.byId[x.id] && SC.byId[x.id].lunch), o = ls.some((x) => SC.byId[x.id] && !SC.byId[x.id].lunch);
+    return l && o ? "both" : l ? "lunch" : "menu";
+  }
+  const saved = SC.load<{ kind?: Kind } | null>("sc-pickup", null);
+  let kind: Kind = cartKind() || (saved && (saved.kind === "lunch" || saved.kind === "menu" || saved.kind === "both") ? saved.kind : "menu");
+  let chosen: number | null = null; /* null = "възможно най-скоро" */
+  const isToday = SC.lunchIsToday();
+  /* a lunch menu for another date is not ordered on the real site (same rule as /obedno-menu/); preview keeps it */
+  const orderable = () => (isToday || SC.preview) && SC.state().kitchen;
+
+  /* ---------- CTA: the pickup total (with -30% on lunch after 15:00) is the cart's own price() in pickup mode ---------- */
+  function ctaView(): CtaView {
+    const n = SC.cart.count();
+    return { n, total: n ? price({ ...SC.cart.get(), mode: "pickup" }).total : 0, kind, later: SC.state().m >= KITCHEN_END };
+  }
+  let io: IntersectionObserver | null = null;
+  const heroGo = () => $("[data-hero-cta] .go");
+  function refreshCTA() {
+    const v = ctaView();
+    heroGo().outerHTML = ctaHTML("go pill-lg", v);
+    abar.innerHTML = ctaHTML("", v);
+    if (io) { io.disconnect(); io.observe(heroGo()); }
+  }
+  if ("IntersectionObserver" in window) {
+    io = new IntersectionObserver((es) => { abar.classList.toggle("hide", es[0].isIntersecting || es[0].boundingClientRect.top > 0); }, { root: null, threshold: 0 });
+  } else abar.classList.remove("hide");
+  function onGo(e: Event) { const a = (e.target as Element).closest("[data-pickup-go]"); if (a) SC.cart.mode("pickup"); }
+  main.addEventListener("click", onGo);
+  SC.ov.addEventListener("click", onGo);
+
+  /* ---------- render ---------- */
+  function renderLive(animate: boolean) {
+    const s = SC.state(), busy = isBusy(), p = plan(kind, s, busy);
+    if (chosen != null && !p.slots.some((x) => x.t === chosen && !x.full)) chosen = null;
+    live.innerHTML = liveHTML({ kind, s, sim, busy, chosen, fromCart: !!cartKind(), tomorrow: tomorrowName() });
+    if (animate && !SC.reduce) { const b = live.querySelector("[data-big]"); if (b) b.animate([{ transform: "translateY(40%)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 420, easing: "cubic-bezier(.32,.72,0,1)" }); }
+  }
+  function renderHour() {
+    const s = SC.state();
+    $("[data-alert]").innerHTML = alertHTML(s);
+    $("[data-deal]").innerHTML = dealHTML({ s, isToday, orderable: orderable() });
+    $("[data-hours]").innerHTML = hoursHTML(s);
+  }
+  const ll = $("[data-lunchlink] span");
+  ll.textContent = isToday ? "Обедно меню днес" : "Обедното меню";
+
+  /* ---------- preview only: the states panel (bottom of the page) ---------- */
+  const SIMS: [Sim, string][] = [["normal", "Нормално"], ["loading", "Зареждане"], ["busy", "Пълна кухня"], ["offline", "Няма връзка"], ["error", "Грешка"]];
+  if (SC.preview) {
+    $("[data-proto]").outerHTML = '<section class="sec" aria-labelledby="pk-proto"><div class="pk-proto"><div><h2 id="pk-proto">' + SC.ic("sliders-horizontal", 20) + "Само в прототипа</h2><p>Покажи състоянията на часовете. Часът се сменя с ?t=21:30 в адреса.</p></div>" +
+      '<div class="chips" role="group" aria-label="Състояние">' + SIMS.map((x) => '<button class="chip" type="button" data-sim="' + x[0] + '" aria-pressed="' + (x[0] === sim) + '">' + x[1] + "</button>").join("") + "</div></div></section>";
+  }
+  function setSim(v: Sim) {
+    sim = v;
+    main.querySelectorAll<HTMLElement>("[data-sim]").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.sim === v)));
+    renderLive(false);
+  }
+
+  /* ---------- interactions ---------- */
+  main.addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLElement>("button, a");
+    if (!b) return;
+    if (b.dataset.kind) { if (kind !== b.dataset.kind) { kind = b.dataset.kind as Kind; chosen = null; renderLive(true); refreshCTA(); } return; }
+    if (b.dataset.slot) {
+      chosen = b.dataset.slot === "asap" ? null : +b.dataset.slot;
+      const p = plan(kind, SC.state(), isBusy());
+      SC.store("sc-pickup", { kind, day: p.day, t: chosen }); /* the cart reads it to preselect the time */
+      renderLive(true);
+      const f = live.querySelector<HTMLElement>('[data-slot="' + (chosen == null ? "asap" : chosen) + '"]');
+      if (f) f.focus({ preventScroll: true });
+      return;
+    }
+    if (b.hasAttribute("data-retry")) { setSim("loading"); setTimeout(() => setSim(navigator.onLine === false ? "offline" : "normal"), 900); return; }
+    if (b.dataset.sim && SC.preview) {
+      setSim(b.dataset.sim as Sim);
+      if (b.dataset.sim !== "normal") $(".pk-live").scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "start" });
+    }
+  });
+  window.addEventListener("offline", () => setSim("offline"));
+  window.addEventListener("online", () => setSim("normal"));
+  SC.cart.on(() => { const k = cartKind(); if (k && k !== kind) { kind = k; chosen = null; } renderLive(false); refreshCTA(); });
+  /* the minute changes (and the kitchen switch "Натоварено" arrives): redraw what depends on them */
+  let lastM = SC.state().m, lastBusy = SC.eta().busy;
+  document.addEventListener("sc:tick", () => {
+    const m = SC.state().m, bz = SC.eta().busy;
+    if (m === lastM && bz === lastBusy) return;
+    lastM = m; lastBusy = bz;
+    renderLive(false); renderHour(); refreshCTA();
+  });
+
+  /* ---------- first paint: the server drew the skeleton; now the live plan ---------- */
+  renderLive(false);
+  renderHour();
+  refreshCTA();
+  live.dataset.ready = "1";
+  SC.reveal();
+</script>
