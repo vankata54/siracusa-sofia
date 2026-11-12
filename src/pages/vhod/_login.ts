@@ -325,7 +325,7 @@ function finish(c: User | null, isNew: boolean) {
   if (isNew) {
     show('<div class="view center">' + okRing +
       '<div class="head"><h2 class="h3 done-big">Профилът е готов</h2><p class="sub">Ето подаръка ви за добре дошли:</p></div>' +
-      '<div class="ticket ember-card' + (SC.reduce ? "" : " in") + '"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам в количката.</span></span></div>' +
+      '<div class="ticket ember-card' + (SC.reduce ? "" : " in") + '"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>' +
       (stamps ? '<p class="sub" style="display:flex;gap:8px;align-items:center;justify-content:center">' + ic("fire", 20) + "И " + stamps + " от 10 печата на картата ви.</p>" : "") +
       '<a class="pill pill-red pill-lg pill-block" href="' + esc(t.href) + '" data-go>' + ic(t.icon, 20) + t.label + "</a>" +
       '<a class="link" href="' + SC.url.menu() + '">Към менюто' + ic("caret-right", 18) + "</a></div>");

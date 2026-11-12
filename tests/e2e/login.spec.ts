@@ -168,7 +168,7 @@ test("login: blocked number gets a polite way by phone", async ({ page }) => {
   await page.getByRole("button", { name: "Изпрати код по SMS" }).click();
   await expect(page.getByRole("heading", { name: "Нека го направим по телефона" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Нека го направим по телефона" })).toBeFocused();
-  await expect(page.locator(".lg-f").getByRole("link", { name: /Обади се на 0894 36 55 77/ })).toHaveAttribute("href", "tel:+359894365577");
+  await expect(page.locator(".lg-f").getByRole("link", { name: /Обади се · 0894 36 55 77/ })).toHaveAttribute("href", "tel:+359894365577");
   await page.getByRole("button", { name: "Въведи друг номер" }).click();
   await expect(page.locator("#ph")).toBeFocused();
 });

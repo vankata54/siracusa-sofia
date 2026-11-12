@@ -21,7 +21,7 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
       <p class="eyebrow" data-eyebrow>{HERO.eyebrow}</p>
       <h1 class="h1" data-h1>{HERO.h1}</h1>
       <p class="lead" data-lead>{HERO.lead}</p>
-      <div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span><span class="art" aria-hidden="true" set:html={art("pitsa-s-burata-i-proshuto-krudo")}></span></div>
+      <div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам на следващата ви поръчка.</span></span><span class="art" aria-hidden="true" set:html={art("pitsa-s-burata-i-proshuto-krudo")}></span></div>
     </div>
     <div class="lg-f"><div class="shell"><div class="core box" data-box aria-live="polite"><div class="view" set:html={phoneHTML()}></div></div></div></div>
     <div class="lg-p">
@@ -36,7 +36,7 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
 
 <style is:global>
 /* login: phone -> SMS code -> name (new profiles only) -> done. Tokens only. */
-.lg{display:grid; gap:20px; padding:24px 16px 0}
+.lg{display:grid; grid-template-columns:minmax(0,1fr); gap:20px; padding:24px 16px 0}
 .lg .eyebrow{margin:0 0 10px; font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
 .lg-a .lead{margin-top:10px}
 
