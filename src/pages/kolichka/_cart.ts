@@ -8,22 +8,13 @@
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { price, pickupSlots, type Priced, type PricedRow } from "../../lib/pricing.ts";
-import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES } from "../../lib/zones.ts";
+import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
 import type { Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 
-/** Same rule as hasStreet() in core/orders.ts (a web order needs a street or block after the quarter). Copied here because
-    the core is not bundled into pages; see "Искания към шефа" (move it to lib/zones.ts). */
-function hasStreet(addr: string): boolean {
-  const rest = String(addr).toLowerCase()
-    .replace(/ж\.?\s*к\.?|кв\.|гр\.|(^|\s)с\.|софия/g, " ")
-    .replace(/дружба\s*(1|2|i{1,2}|едно|две)?(?![0-9a-zа-я])|друба\s*(1|2)?|нпз\s*искър|гара\s*искър|искър|искар|бусманци|горубляне/g, " ")
-    .replace(/[^а-яa-z0-9]+/g, " ").trim();
-  return /\d/.test(rest) || /[а-яa-z]{3,}/.test(rest);
-}
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "../../lib/icons/arrow-left.ts";
 import "../../lib/icons/arrow-right.ts";

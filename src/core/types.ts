@@ -27,6 +27,8 @@ export interface Order {
   eta: number | null;    // minutes until delivery / ready (null for pre-orders)
   at: string;            // "HH:MM" or "веднага"
   sched: string;         // "" | "утре" | "днес"
+  /** the time the customer chose: "asap" or "HH:MM" (delivery today is always "asap") */
+  slot?: string;
   placedAt: string;      // "HH:MM" on the shop clock
   ts: number;            // epoch ms
   status: OrderStatus;

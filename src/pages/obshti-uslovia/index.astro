@@ -5,6 +5,7 @@
    (decision 12.11.2026), "Изчерпано днес", preliminary allergens. Legal wording: "[ЛИПСВА: текст от юрист]". */
 import Legal from "../poveritelnost/_Legal.astro";
 import { url, esc, ZONES, RESTAURANT as R } from "../../lib/index.ts";
+import { payAnswer } from "../../lib/pay.ts";
 import { MP, contactsHTML, type LegalSection } from "../poveritelnost/_legal.ts";
 
 const join = (a: string[]) => (a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " и " + a[a.length - 1]);
@@ -28,7 +29,7 @@ const sections: LegalSection[] = [
   },
   {
     id: "tseni", h: "Цени и плащане",
-    html: "<p>Цените в менюто са в евро с ДДС.</p><p>Начини на плащане: " + esc(R.payment.join(", ")) + ".</p>" +
+    html: "<p>Цените в менюто са в евро с ДДС.</p><p>Начини на плащане: " + payAnswer() + "</p>" +
       MP("текст от юрист: касов документ, промяна на цените, кога се дължи плащането"),
   },
   {

@@ -39,20 +39,24 @@ describe("runtime size: on-demand parts stay out of the shared chunk", () => {
   });
 });
 
-describe("loadModule: a failed dynamic import is tried again", () => {
-  it("reads the chunk address from the error, keeps success, forgets failure", async () => {
-    const { loadModule, failedUrl } = await import("../../src/lib/load.ts");
-    expect(failedUrl(new TypeError("Failed to fetch dynamically imported module: https://x.bg/_astro/sc-ui.AB12.js"))).toBe("https://x.bg/_astro/sc-ui.AB12.js");
-    expect(failedUrl(new Error("Importing a module script failed."))).toBeNull();
+describe("loadModule: after a failed chunk the next try reloads the page", () => {
+  it("keeps success; after a failure, offline rejects at once and online reloads", async () => {
+    const { loadModule, loadFailed } = await import("../../src/lib/load.ts");
     let calls = 0;
     const ok = () => { calls++; return Promise.resolve({ v: 1 }); };
     expect(await loadModule(ok)).toEqual({ v: 1 });
     await loadModule(ok);
     expect(calls).toBe(1);
-    let fails = 0;
-    const bad = () => { fails++; return Promise.reject(new Error("offline")); };
+    expect(loadFailed()).toBe(false);
+    const bad = () => Promise.reject(new Error("Failed to fetch dynamically imported module"));
+    await expect(loadModule(bad)).rejects.toThrow("Failed to fetch");
+    expect(loadFailed()).toBe(true);
+    let reloaded = 0;
+    Object.defineProperty(globalThis, "navigator", { value: { onLine: false }, configurable: true, writable: true });
+    Object.defineProperty(globalThis, "location", { value: { reload: () => { reloaded++; } }, configurable: true, writable: true });
     await expect(loadModule(bad)).rejects.toThrow("offline");
-    await expect(loadModule(bad)).rejects.toThrow("offline");
-    expect(fails).toBe(2);
+    Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true, writable: true });
+    void loadModule(bad);
+    expect(reloaded).toBe(1);
   });
 });

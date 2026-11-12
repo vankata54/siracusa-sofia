@@ -104,4 +104,23 @@ describe("server API (in-memory SQLite)", async () => {
     const o = await (await app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456", sched: "утре", slot: "12:00", table: "7" }))).json();
     expect(o.table).toBeNull();
   });
+  it("rate limits: reservations per IP and per phone, subscribe and celebrations per IP (429 throttled)", async () => {
+    const post = (path: string, b: unknown, ipAddr: string) => app.request(path, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ipAddr }, body: JSON.stringify(b) });
+    const res = (phone: string) => ({ date: "2026-12-20", time: "19:00", people: 2, name: "И", phone });
+    let last = 0;
+    for (let i = 0; i < 6; i++) last = (await post("/api/reservations", res("0888555444"), "1.1.1." + i)).status;
+    expect(last).toBe(429);
+    const r = await post("/api/reservations", res("0888555444"), "1.1.2.1");
+    expect(await r.json()).toMatchObject({ error: "throttled" });
+    for (let i = 0; i < 11; i++) last = (await post("/api/reservations", res("08887770" + String(i).padStart(2, "0")), "2.2.2.2")).status;
+    expect(last).toBe(429);
+    for (let i = 0; i < 11; i++) last = (await post("/api/subscribe", { email: "a" + i + "@b.bg", consent: true }, "3.3.3.3")).status;
+    expect(last).toBe(429);
+    for (let i = 0; i < 6; i++) last = (await post("/api/celebrations", { kind: "Рожден ден", people: 10, date: "2026-12-20", name: "И", phone: "0888123456" }, "4.4.4.4")).status;
+    expect(last).toBe(429);
+    /* the test mode has no limits */
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, previewApi: true });
+    for (let i = 0; i < 12; i++) last = (await t.app.request("/api/subscribe", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "5.5.5.5" }, body: JSON.stringify({ email: "x" + i + "@b.bg", consent: true }) })).status;
+    expect(last).toBe(201);
+  });
 });

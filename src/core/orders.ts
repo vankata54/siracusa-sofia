@@ -19,7 +19,8 @@ import { findCode, markCodeUsed } from "./codes.ts";
 import { bonusTaken, markBonusTaken } from "./customers.ts";
 import { price, parseMods, slotAllowed } from "../lib/pricing.ts";
 import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
-import { zoneByName, zoneOfAddress } from "../lib/zones.ts";
+import { hasStreet, zoneByName, zoneOfAddress } from "../lib/zones.ts";
+export { hasStreet };
 import { minutes, sofiaYmd } from "../lib/time.ts";
 import { state } from "../lib/status.ts";
 import { byId, isOut, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
@@ -105,15 +106,6 @@ export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, opts: { lunchOnly
 }
 
 /** The delivery zone from the address (the server never trusts a zone sent by the client). */
-/** Is there more than the quarter: after taking away "ж.к.", "кв.", "София" and the quarter names (Дружба 1/2, НПЗ Искър,
-    Гара Искър, Бусманци, Горубляне), something must remain: a number (block, street number) or a word (street, landmark). */
-export function hasStreet(addr: string): boolean {
-  const rest = String(addr).toLowerCase()
-    .replace(/ж\.?\s*к\.?|кв\.|гр\.|(^|\s)с\.|софия/g, " ")
-    .replace(/дружба\s*(1|2|i{1,2}|едно|две)?(?![0-9a-zа-я])|друба\s*(1|2)?|нпз\s*искър|гара\s*искър|искър|искар|бусманци|горубляне/g, " ")
-    .replace(/[^а-яa-z0-9]+/g, " ").trim();
-  return /\d/.test(rest) || /[а-яa-z]{3,}/.test(rest);
-}
 export function resolveZone(addr: string, clientZone?: string, requireStreet = false): { zone: Zone; addr: string } | { error: string } {
   const a = String(addr || "").trim().slice(0, 300);
   if (!a) return { error: MSG.addr };
@@ -191,7 +183,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       lines: P.rows.map((r) => ({ id: r.x.id, q: r.q, mods: r.mods || [], extra: Math.round((r.unit - r.x.p) * 100) / 100, name: r.x.n, unit: r.unit })),
       lunchOnly: P.rows.every((r) => !!r.x.lunch), zone: zone ? zone.n : "", addr,
       pay, payLabel: PAY_LABEL[pay], sub: P.sub, disc: P.disc, fee: P.fee, total: P.total,
-      eta: atMin == null ? null : atMin - m, at, sched, placedAt: hhmm(m), ts: ts.getTime(),
+      eta: atMin == null ? null : atMin - m, at, sched, slot: sched || mode === "pickup" ? slot : "asap", placedAt: hhmm(m), ts: ts.getTime(),
       status: "accepted", name: String(input.name).trim().slice(0, 80), phone: phone!, email: input.email ? String(input.email).trim() : undefined,
       note: input.note ? String(input.note).trim().slice(0, 2000) : undefined,
       marketing: input.marketing === true, userId: input.userId || null,
@@ -214,13 +206,13 @@ export async function getOrder(ctx: Ctx, no: string): Promise<Order | null> {
 
 /* ---------- public tracking (/porachka/<no>-<key>/) ---------- */
 export type PublicOrder = Pick<Order, "id" | "no" | "mode" | "channel" | "status" | "lunchOnly" | "zone" | "pay" | "payLabel" | "sub" | "disc" | "fee" | "total" |
-  "eta" | "at" | "sched" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> & { lines: Order["lines"]; key?: string };
+  "eta" | "at" | "sched" | "slot" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> & { lines: Order["lines"]; key?: string };
 
 /** What the tracking page needs, nothing personal: no name, phone, e-mail, address, note, profile, code. */
 export function publicOrder(o: Order, withKey = false): PublicOrder {
   const p: PublicOrder = {
     id: o.id, no: o.no, mode: o.mode, channel: o.channel, status: o.status, lunchOnly: o.lunchOnly, zone: o.zone, pay: o.pay, payLabel: o.payLabel,
-    sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, placedAt: o.placedAt, ts: o.ts,
+    sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, slot: o.slot || (o.at && /^\d{2}:\d{2}$/.test(o.at) && o.mode === "pickup" ? o.at : "asap"), placedAt: o.placedAt, ts: o.ts,
     createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0, profileDisc: o.profileDisc || 0,
     lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit })),
   };

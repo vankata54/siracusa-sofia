@@ -1,16 +1,29 @@
 /* The one answer to „Как мога да платя?“ on every page (decision 12.11.2026), built from RESTAURANT.payment.
-   The voucher's brand is not known: [ЛИПСВА] (OPEN-QUESTIONS). payAnswerText() is the same without [ЛИПСВА], for JSON-LD. */
+   Two facts are not known yet and are never promised: whether the delivery car has a card terminal
+   (RESTAURANT.cardOnDelivery, OPEN-QUESTIONS шофьор 24) and the brand of the vouchers. payAnswer() marks them [ЛИПСВА];
+   payAnswerText() (JSON-LD, plain text) says only what is true: the card at the restaurant, ask us about the card at delivery. */
 import { RESTAURANT } from "./consts.ts";
 
-const MISSING_VOUCHER = '<span class="missing">[ЛИПСВА: името на ваучерите]</span>';
+const miss = (t: string) => '<span class="missing">[ЛИПСВА: ' + t + "]</span>";
+const low = (x: string, i: number) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x);
+const isCard = (x: string) => /^карта при получаване/i.test(x);
+const isVoucher = (x: string) => /^ваучер$/i.test(x);
+const join = (p: string[]) => p.slice(0, -1).join(", ") + " или " + p[p.length - 1];
+/** "Карта при получаване (Visa, Mastercard)" + note -> "(Visa, Mastercard; note)" */
+const addNote = (x: string, note: string) => (/\)$/.test(x) ? x.slice(0, -1) + "; " + note + ")" : x + " (" + note + ")");
+const ONLINE = "Онлайн плащане засега няма: плащате, когато получите поръчката.";
 
-/** HTML (with the [ЛИПСВА] mark), e.g. "В брой, карта при получаване (Visa, Mastercard), ваучер [ЛИПСВА] или подаръчна карта. ..." */
+/** HTML with the [ЛИПСВА] marks */
 export function payAnswer(): string {
-  const p = RESTAURANT.payment.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x))
-    .map((x) => (/^ваучер$/i.test(x) ? x + " " + MISSING_VOUCHER : x));
-  return p.slice(0, -1).join(", ") + " или " + p[p.length - 1] + ". Онлайн плащане засега няма: плащате, когато получите поръчката.";
+  const d = RESTAURANT.cardOnDelivery;
+  const p = RESTAURANT.payment.map(low).map((x) =>
+    isCard(x) ? (d === true ? x : addNote(x, d === false ? "в ресторанта; при доставка в брой" : "при доставка " + miss("терминал за карти в колата")))
+      : isVoucher(x) ? x + " " + miss("името на ваучерите") : x);
+  return join(p) + ". " + ONLINE;
 }
-/** plain text without [ЛИПСВА] (FAQPage JSON-LD) */
+/** plain text without [ЛИПСВА] and without a promise that is not known (FAQPage JSON-LD) */
 export function payAnswerText(): string {
-  return payAnswer().replace(/\s*<span class="missing">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  const d = RESTAURANT.cardOnDelivery;
+  const p = RESTAURANT.payment.map(low).map((x) => (isCard(x) && d !== true ? x + " в ресторанта" : x));
+  return join(p) + "." + (d === null ? " За карта при доставка ни попитайте по телефона." : d === false ? " При доставка се плаща в брой." : "") + " " + ONLINE;
 }

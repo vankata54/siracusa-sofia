@@ -1,29 +1,24 @@
-/* A dynamic import() that failed once (no network for a moment) is remembered by the browser: the same import() keeps
-   failing until a reload. loadModule(() => import("./x.ts")) remembers success, and after a failure tries again with the
-   chunk's address + "?retry=N" (a new module request), up to 2 times. Use it for every on-demand chunk.
-   Note: the retried copy is a second instance of that module (fine for stateless UI / API modules). */
+/* On-demand chunks with a reliable second try.
+   A dynamic import() that failed once (no network for a moment) is remembered by the browser for the page's life: the
+   same import(), and every chunk it imports, keeps failing; a second import with "?retry" gives an untransformed copy
+   and still hits the remembered shared chunks. So: the first failure is reported (the page shows "Опитай пак"), and the
+   next loadModule() call while online reloads the page. Pages keep their state in the address or in localStorage
+   (filters, search, drafts), so the reload continues where the person was. While offline, it fails at once. */
 const done = new WeakMap<() => Promise<unknown>, Promise<unknown>>();
-let n = 0;
+let failed = false;
 
-/** the chunk address from the browser's error ("Failed to fetch dynamically imported module: https://.../x.js") */
-export function failedUrl(err: unknown): string | null {
-  const m = /(https?:\/\/[^\s'"]+?\.js)\b/.exec(String((err as Error)?.message || err));
-  return m ? m[1] : null;
-}
+/** Did an on-demand chunk fail on this page (the next try reloads)? */
+export function loadFailed(): boolean { return failed; }
 
-export function loadModule<T>(factory: () => Promise<T>, tries = 2): Promise<T> {
+export function loadModule<T>(factory: () => Promise<T>): Promise<T> {
   const have = done.get(factory) as Promise<T> | undefined;
   if (have) return have;
-  const p = factory().catch(async (err: unknown): Promise<T> => {
-    const url = failedUrl(err);
-    for (let i = 0; url && i < tries; i++) {
-      await new Promise((r) => setTimeout(r, 300 * (i + 1)));
-      try { return (await import(/* @vite-ignore */ url + "?retry=" + ++n)) as T; } catch { /* next try */ }
-    }
-    throw err;
-  });
+  if (failed) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return Promise.reject(new Error("offline"));
+    if (typeof location !== "undefined") { location.reload(); return new Promise<T>(() => { /* the page reloads */ }); }
+  }
+  const p = factory();
   done.set(factory, p);
-  /* a failure is not remembered: the next call tries again */
-  p.catch(() => { if (done.get(factory) === p) done.delete(factory); });
+  p.catch(() => { failed = true; if (done.get(factory) === p) done.delete(factory); });
   return p;
 }

@@ -50,3 +50,45 @@ test("assistant: not a Tab stop while invisible on the phone; floating bars are 
   const n = await bars.count();
   for (let i = 0; i < n; i++) await expect(bars.nth(i)).toHaveAttribute("role", "region");
 });
+
+/* closing a sheet never jumps: the view stays (±100 px) and the focus is on the screen (round 7, urgent) */
+async function stays(page: Page, act: () => Promise<void>) {
+  const y0 = await page.evaluate(() => window.scrollY);
+  await act();
+  await page.waitForTimeout(500);
+  const y1 = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(y1 - y0)).toBeLessThanOrEqual(100);
+  const inView = await page.evaluate(() => { const a = document.activeElement as HTMLElement; if (!a || a === document.body) return false; if (a.tagName === "MAIN") return true; const r = a.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; });
+  expect(inView).toBe(true);
+  expect(await page.evaluate(() => !!document.activeElement?.closest("footer"))).toBe(false);
+}
+
+test("no jump: category 'Подреждане' -> a choice", async ({ page }) => {
+  await noCookie(page);
+  await page.goto("/menu/pitsi/");
+  await page.locator("[data-sort]").first().scrollIntoViewIfNeeded();
+  await page.locator("[data-sort]").first().click();
+  await expect(page.locator(".sheetwrap.on input[name=sort]").first()).toBeVisible();
+  await stays(page, async () => { await page.locator(".sheetwrap.on input[name=sort]:not(:checked)").first().check(); await page.waitForTimeout(300); if (await page.locator(".sheetwrap.on").count()) await page.keyboard.press("Escape"); });
+});
+
+test("no jump: menu 'Алергени' -> a box -> Escape", async ({ page }) => {
+  await noCookie(page);
+  await page.goto("/menu/");
+  await page.locator('[data-sheet="al"]').first().scrollIntoViewIfNeeded();
+  await page.locator('[data-sheet="al"]').first().click();
+  await expect(page.locator(".sheetwrap.on input[data-al]").first()).toBeVisible();
+  await stays(page, async () => { await page.locator(".sheetwrap.on input[data-al]").first().check(); await page.keyboard.press("Escape"); });
+});
+
+test("no jump: home cookie 'Настройки' -> Escape, and 'Запази избора'", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('.cookie [data-cookie="set"]').click();
+  await expect(page.locator(".sheetwrap.on [data-close]")).toBeFocused();
+  await stays(page, async () => { await page.keyboard.press("Escape"); });
+  await expect(page.locator(".cookie")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("sc-cookie"))).toBeNull();
+  await page.locator('.cookie [data-cookie="set"]').click();
+  await stays(page, async () => { await page.locator(".sheetwrap.on [type=submit]").click(); });
+  expect(await page.evaluate(() => localStorage.getItem("sc-cookie"))).toBe('"set"');
+});

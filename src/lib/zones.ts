@@ -71,3 +71,13 @@ export function zoneOfAddress(text: string): AddressResult {
   if (/(^|\s)(ул|улица|бул|булевард|бл|блок|вх|ет|ап)(\s|$)/.test(t) || /\d/.test(t)) return { type: "street" };
   return { type: "unknown" };
 }
+
+/** A web order needs a street or block (the core and the cart use this one function). Is there more than the quarter: after taking away "ж.к.", "кв.", "София" and the quarter names (Дружба 1/2, НПЗ Искър,
+    Гара Искър, Бусманци, Горубляне), something must remain: a number (block, street number) or a word (street, landmark). */
+export function hasStreet(addr: string): boolean {
+  const rest = String(addr).toLowerCase()
+    .replace(/ж\.?\s*к\.?|кв\.|гр\.|(^|\s)с\.|софия/g, " ")
+    .replace(/дружба\s*(1|2|i{1,2}|едно|две)?(?![0-9a-zа-я])|друба\s*(1|2)?|нпз\s*искър|гара\s*искър|искър|искар|бусманци|горубляне/g, " ")
+    .replace(/[^а-яa-z0-9]+/g, " ").trim();
+  return /\d/.test(rest) || /[а-яa-z]{3,}/.test(rest);
+}

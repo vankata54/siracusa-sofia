@@ -15,6 +15,7 @@ import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
 import { publicSettings } from "../src/core/settings.ts";
+import { normPhone } from "../src/lib/format.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
 import { ZONES } from "../src/lib/data.ts";
 
@@ -172,14 +173,30 @@ export function createApp(opts: AppOpts) {
     return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays }, s.user.username));
   });
 
+  /* ---------- rate limits (off in the test mode SC_PREVIEW_API=1) ---------- */
+  const hits = new Map<string, number[]>();
+  /** at most `max` requests per `key` in `minutes`; 429 "throttled" with a text for people */
+  const limit = (key: string, max: number, minutes: number, msg: string) => {
+    if (opts.previewApi) return;
+    const now = Date.now(), list = (hits.get(key) || []).filter((t) => t > now - minutes * 60_000);
+    if (list.length >= max) { hits.set(key, list); throw new CoreError("throttled", msg, 429); }
+    list.push(now); hits.set(key, list);
+  };
+  const TRY_LATER = (m: number) => "Твърде много заявки за кратко време. Опитайте след " + m + " минути или ни се обадете на 0894 36 55 77.";
+
   /* ---------- reservations, celebrations, office, subscriptions ---------- */
-  app.post("/api/reservations", async (c) => c.json(await coreFor(c).reservations.create(await body(c)), 201));
+  app.post("/api/reservations", async (c) => {
+    const b = await body(c), ph = normPhone(b && b.phone);
+    limit("res-ip:" + ip(c), 10, 10, TRY_LATER(10));
+    if (ph) limit("res-phone:" + ph, 5, 60, "За този телефон вече има няколко заявки за резервация. Обадете ни се на 0894 36 55 77 и ще помогнем.");
+    return c.json(await coreFor(c).reservations.create(b), 201);
+  });
   app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "")));
   app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
   app.post("/api/reservations/:id/cancel", async (c) => c.json(await core.reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
   app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(await core.reservations.list()); });
   app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
-  app.post("/api/celebrations", async (c) => c.json(await core.celebrations.create(await body(c)), 201));
+  app.post("/api/celebrations", async (c) => { limit("celeb-ip:" + ip(c), 5, 10, TRY_LATER(10)); return c.json(await core.celebrations.create(await body(c)), 201); });
   app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
   /* invite codes are 6 digits: at most 20 unknown codes per IP in 10 min (guessing a code must stay slow) */
   const officeMiss = new Map<string, number[]>();
@@ -202,7 +219,7 @@ export function createApp(opts: AppOpts) {
   });
   app.post("/api/office/:code/update", async (c) => { const b = await body(c); return c.json(await core.office.update(c.req.param("code"), String(b.orgKey || ""), { name: b.name, phone: b.phone, pay: b.pay })); });
   app.post("/api/office/:code/submit", async (c) => c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))));
-  app.post("/api/subscribe", async (c) => { const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
+  app.post("/api/subscribe", async (c) => { limit("sub-ip:" + ip(c), 10, 10, TRY_LATER(10)); const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
   app.post("/api/ratings", async (c) => c.json(await core.ratings.submit(await body(c)), 201));
   /* contact messages: at most 5 per IP in 10 min */
   const fbTries = new Map<string, number[]>();

@@ -13,12 +13,12 @@ const assistant = () => loadModule(assistantChunk);
 
 export function openMore(): void { sc().sheet({ title: "Още", html: morePanel() }); }
 
-export function cookieSettingsSheet(prefs: CookiePrefs): void {
-  const S = sc(), s = S.sheet({ title: "Бисквитки", html: cookieSettings(prefs), returnTo: () => document.querySelector("[data-ck-change], [data-cookie-settings]") });
+export function cookieSettingsSheet(prefs: CookiePrefs, save: (p: CookiePrefs) => void): void {
+  const S = sc(), s = S.sheet({ title: "Бисквитки", html: cookieSettings(prefs), returnTo: () => document.querySelector('.cookie [data-cookie="set"]') });
   s.el.querySelector("[data-cookie-form]")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const f = e.target as HTMLFormElement, on = (n: string) => !!(f.elements.namedItem(n) as HTMLInputElement | null)?.checked;
-    S.store("sc-cookie-prefs", { analytics: on("analytics"), marketing: on("marketing") });
+    save({ analytics: on("analytics"), marketing: on("marketing") });
     s.close(); S.toast("Изборът е запазен");
   });
 }

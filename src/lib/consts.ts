@@ -5,6 +5,8 @@ export { MON, MONTHS, DAYS } from "./format.ts";
 export const RESTAURANT = {
   est: 2013 /* from the menu logo, to confirm */,
   payment: ["В брой", "Карта при получаване (Visa, Mastercard)", "Ваучер", "Подаръчна карта"],
+  /** a card terminal in the delivery car: null = not known (OPEN-QUESTIONS, шофьор 24: [ЛИПСВА: терминал]) */
+  cardOnDelivery: null as boolean | null,
   social: { facebook: "https://www.facebook.com/BarGrillSiracusa", instagram: null as string | null, google: null as string | null },
   googleReview: null as string | null,
   name: "Siracusa Bar & Grill",

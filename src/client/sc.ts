@@ -26,6 +26,7 @@ const de = document.documentElement;
 const DEMO = de.dataset.demo === "1";
 configureRoutes({ demo: DEMO, root: de.dataset.root || "/" });
 
+
 const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- storage (per-viewer convenience) ---------- */
@@ -38,6 +39,11 @@ const prefs = load<Prefs>("sc-prefs", { theme: "system", time: "now" });
 /* ---------- clock override: ONLY in the demo build or a preview frame (?preview=1 or sc-prefs.preview) ----------
    Sources: ?t=21:30 in the address, else sc-prefs.time. Real pages always use the Sofia clock. */
 const qs = new URLSearchParams(location.search);
+/* a server preview (?preview=1&t=16:30) carries over to the page opened from it by a link (same site, the referrer has
+   ?preview=1): the lunch bar -> the cart stays in the same preview and hour, without changing any address.
+   Opening a page directly (typed, bookmarked, a test's goto) is never a preview. The demo remembers the hour in sc-prefs. */
+const refQs = (() => { try { const r = document.referrer ? new URL(document.referrer) : null; return r && r.origin === location.origin && r.searchParams.has("preview") ? r.searchParams : null; } catch { return null; } })();
+if (!DEMO && !qs.has("preview") && refQs) { qs.set("preview", "1"); if (!qs.has("t") && refQs.get("t")) qs.set("t", refQs.get("t")!); }
 const previewMode = DEMO || prefs.preview === true || qs.has("preview");
 if (previewMode) {
   setPreview(true);
@@ -54,19 +60,8 @@ const scroller = document.querySelector<HTMLElement>("[data-scroller]")!;
 const ov = document.querySelector<HTMLElement>("[data-ov]")!;
 const main = document.querySelector<HTMLElement>("[data-main]")!;
 
-/* SC.scroller shim: the prototype scrolled an inner div; the code scrolls the document. */
-(function shim(el: HTMLElement) {
-  const se = () => document.scrollingElement || de;
-  Object.defineProperty(el, "scrollTop", { configurable: true, get: () => window.scrollY, set: (v: number) => window.scrollTo(0, v) });
-  Object.defineProperty(el, "clientHeight", { configurable: true, get: () => window.innerHeight });
-  Object.defineProperty(el, "scrollHeight", { configurable: true, get: () => se().scrollHeight });
-  el.scrollTo = ((a: ScrollToOptions | number, b?: number) => (typeof a === "number" ? window.scrollTo(a, b || 0) : window.scrollTo(a))) as typeof el.scrollTo;
-  el.scrollBy = ((a: ScrollToOptions | number, b?: number) => (typeof a === "number" ? window.scrollBy(a, b || 0) : window.scrollBy(a))) as typeof el.scrollBy;
-  el.getBoundingClientRect = () => new DOMRect(0, 0, window.innerWidth, window.innerHeight);
-  const add = el.addEventListener.bind(el), rem = el.removeEventListener.bind(el);
-  el.addEventListener = ((type: string, fn: EventListenerOrEventListenerObject, o?: boolean | AddEventListenerOptions) => (type === "scroll" ? window.addEventListener(type, fn, o) : add(type, fn, o))) as typeof el.addEventListener;
-  el.removeEventListener = ((type: string, fn: EventListenerOrEventListenerObject, o?: boolean | EventListenerOptions) => (type === "scroll" ? window.removeEventListener(type, fn, o) : rem(type, fn, o))) as typeof el.removeEventListener;
-})(scroller);
+/* SC.scroller is the element itself: the document scrolls (window.scrollY / scrollTo, IntersectionObserver root:null).
+   The prototype's shim (scrollTop/scrollTo on the inner div) was removed in round 7: no page uses SC.scroller. */
 
 /* ---------- cart store (localStorage "sc-cart", same format as the prototype) ---------- */
 let cart: Cart = cartLib.sanitize(load("sc-cart", null));
@@ -157,18 +152,39 @@ function tabStops(root: Element): HTMLElement[] {
     seen.add(el.name); return true;
   });
 }
-function focusBack(...cands: (Element | null | undefined)[]) {
-  const h1 = main.querySelector<HTMLElement>("h1");
-  for (const c of [...cands, document.querySelector("[data-ck-change]"), document.querySelector("[data-cookie-settings]"), h1, main]) {
-    if (!visible(c) && c !== main) continue;
-    const el = c as HTMLElement;
-    if (el.tabIndex < 0 && !el.matches(FOCUSABLE)) el.setAttribute("tabindex", "-1");
-    el.focus({ preventScroll: el !== h1 && el !== main });
-    return;
+/** A way to find the opener again when the page redraws it while the sheet is open (a new element, same attributes):
+    its id, or its tag + data-* attributes, + its place among the matches. */
+function locatorOf(el: HTMLElement | null): { sel: string; i: number } | null {
+  if (!el || el === document.body || el === de) return null;
+  const esc = (v: string) => (window.CSS && CSS.escape ? CSS.escape(v) : v.replace(/["\\]/g, "\\$&"));
+  let sel = "";
+  if (el.id) sel = "#" + esc(el.id);
+  else {
+    const data = Array.from(el.attributes).filter((a) => a.name.startsWith("data-")).map((a) => "[" + a.name + (a.value ? '="' + a.value.replace(/["\\]/g, "\\$&") + '"' : "") + "]").join("");
+    if (!data) return null;
+    sel = el.tagName.toLowerCase() + data;
   }
+  try { return { sel, i: Array.from(document.querySelectorAll(sel)).indexOf(el) }; } catch { return null; }
+}
+const inView = (el: Element) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; };
+/* never a jump: every focus here is without scrolling; an opener that is gone is found again by its locator (the one
+   nearest to the screen); then opts.returnTo; then the page's <main> (focus only, the view stays where it is) */
+function focusBack(back: HTMLElement | null, loc: { sel: string; i: number } | null, returnTo?: Element | null) {
+  const focus = (el: HTMLElement) => { if (el.tabIndex < 0 && !el.matches(FOCUSABLE)) el.setAttribute("tabindex", "-1"); el.focus({ preventScroll: true }); };
+  /* the page said where the focus belongs (e.g. the new item): that first */
+  if (visible(returnTo)) return focus(returnTo);
+  if (visible(back)) return focus(back);
+  if (loc) {
+    let all: HTMLElement[] = [];
+    try { all = Array.from(document.querySelectorAll<HTMLElement>(loc.sel)).filter((x) => visible(x)); } catch { /* bad selector */ }
+    const best = all.find((x) => inView(x)) || all[Math.min(loc.i, all.length - 1)];
+    if (best) return focus(best);
+  }
+  focus(main);
 }
 function sheet(opts: { title?: string; html?: string; onClose?: () => void; returnTo?: () => Element | null }) {
   const w = document.createElement("div"), id = "sh" + Math.random().toString(36).slice(2, 7), back = document.activeElement as HTMLElement | null;
+  const loc = locatorOf(back);
   w.className = "sheetwrap";
   w.innerHTML = sheetHTML(id, opts.title || "", opts.html || "");
   ov.appendChild(w); de.classList.add("sheet-open");
@@ -183,7 +199,10 @@ function sheet(opts: { title?: string; html?: string; onClose?: () => void; retu
     if (open.length) setInert(open[open.length - 1]);
     setTimeout(() => { w.remove(); if (!ov.querySelector(".sheetwrap")) de.classList.remove("sheet-open"); }, 340);
     opts.onClose && opts.onClose();
-    if (!open.length) focusBack(back && back !== document.body ? back : null, opts.returnTo && opts.returnTo());
+    /* the page may have put the focus somewhere itself (onClose, e.g. on a new item): keep it */
+    const now = document.activeElement as HTMLElement | null;
+    const pageMoved = !!now && now !== document.body && now !== main && !w.contains(now) && visible(now);
+    if (!open.length && !pageMoved) focusBack(back && back !== document.body ? back : null, loc, opts.returnTo && opts.returnTo());
   };
   (w.querySelector(".scrim") as HTMLElement).onclick = close;
   (w.querySelector("[data-close]") as HTMLElement).onclick = close;
@@ -271,7 +290,8 @@ document.addEventListener("focusin", (e) => {
   });
   const ck = document.querySelector<HTMLElement>(".ov-ck .cookie");
   if (visible(ck)) { const q = ck.getBoundingClientRect(); if (q.left < r.right && q.right > r.left && q.top < r.bottom) top = Math.min(top, q.top); }
-  if (r.bottom > top - 8) window.scrollBy({ top: r.bottom - top + 16, behavior: "instant" as ScrollBehavior });
+  /* only an element that is on the screen and covered; never a jump to something far away */
+  if (r.top < window.innerHeight && r.bottom > 0 && r.bottom > top - 8 && r.height < window.innerHeight / 2) window.scrollBy({ top: r.bottom - top + 16, behavior: "instant" as ScrollBehavior });
 });
 
 /* ---------- on-demand UI: "Още", cookie settings, assistant, share (src/client/sc-ui.ts) ---------- */
@@ -289,10 +309,15 @@ document.addEventListener("focusin", warm, true);
 /* "sc-cookie": the answer to the banner (all | min | set); "sc-cookie-prefs": {analytics, marketing}. The site has no
    analytics or marketing tools today; these flags are what such tools must read (SC.cookies()). */
 const cookiePrefs = (): CookiePrefs => { const p = load<Partial<CookiePrefs>>("sc-cookie-prefs", {}); return { analytics: p.analytics === true, marketing: p.marketing === true }; };
+/* "Настройки" opens the sheet; the choice is stored only by "Запази избора" (Escape / "Затвори" change nothing and the
+   banner stays while there is no choice). Pages hear "sc:cookie" after every stored choice. */
+function cookieSaved(v: string, prefs: CookiePrefs) {
+  store("sc-cookie", v); store("sc-cookie-prefs", prefs); de.dataset.ck = "1";
+  document.dispatchEvent(new CustomEvent("sc:cookie", { detail: { choice: v, ...prefs } }));
+}
 function cookieChoice(v: string) {
-  store("sc-cookie", v); de.dataset.ck = "1";
-  if (v !== "set") store("sc-cookie-prefs", { analytics: v === "all", marketing: v === "all" });
-  else ui().then((m) => m.cookieSettingsSheet(cookiePrefs()));
+  if (v !== "set") cookieSaved(v, { analytics: v === "all", marketing: v === "all" });
+  else ui().then((m) => m.cookieSettingsSheet(cookiePrefs(), (p) => cookieSaved("set", p)));
 }
 
 /* ---------- global delegation (same attributes as the prototype) ---------- */
