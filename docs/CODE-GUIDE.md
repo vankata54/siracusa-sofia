@@ -44,7 +44,7 @@ tests/unit, tests/e2e   Vitest и Playwright
 | `home.html` | `url.home()` → `/` |
 | `menu.html` | `url.menu()` → `/menu/` |
 | `category.html#pitsi` | `url.cat("pitsi")` → `/menu/pitsi/` |
-| `dish.html#<id>` | `url.dish(id)` → `/menu/<кат>/<id>/` (обедните ястия → `/obedno-menu/`) |
+| `dish.html#<id>` | `url.dish(id)` → `/menu/<кат>/<slug или id>/` (`slug` има само при 11-те срязани `id`, решение 12.11; старият адрес дава 301; обедните ястия → `/obedno-menu/`) |
 | `tracking.html#1042` | `url.tracking(1042)` → `/porachka/1042/` |
 | `event.html#<id>` | `url.event(id)` → `/sabitia/<id>/` |
 | `offers.html#birthday` | `url.offers("birthday")` → `/oferti/#birthday` |

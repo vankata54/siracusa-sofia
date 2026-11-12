@@ -65,6 +65,26 @@ export function seoFiles(dir, site, demo) {
   return { urls: uniq.length };
 }
 
+/** Old dish addresses (cut ids) -> new ones (slug), decision 12.11.2026. Server build: writes redirects.json for the 301s
+    of server/app.ts and checks that every new address was built and no old one was. Demo build (no server): checks
+    that every old address is a copy with canonical to the new one. */
+export function dishRedirects(dir, site, demo) {
+  const menu = JSON.parse(fs.readFileSync(fileURLToPath(new URL("../src/data/menu.json", import.meta.url)), "utf8"));
+  const map = {};
+  for (const x of menu.items) if (x.slug) map["/menu/" + x.cat + "/" + x.id + "/"] = "/menu/" + x.cat + "/" + x.slug + "/";
+  const html = (p) => path.join(dir, p, "index.html");
+  for (const [from, to] of Object.entries(map)) {
+    if (!fs.existsSync(html(to))) throw new Error("build-checks: the dish page " + to + " was not built");
+    if (!demo && fs.existsSync(html(from))) throw new Error("build-checks: the old address " + from + " was built; the server answers it with 301");
+    if (demo) {
+      const h = fs.existsSync(html(from)) ? fs.readFileSync(html(from), "utf8") : "";
+      if (!h.includes('<link rel="canonical" href="' + site.replace(/\/$/, "") + to + '"')) throw new Error("build-checks: the demo copy " + from + " has no canonical to " + to);
+    }
+  }
+  if (!demo) fs.writeFileSync(path.join(dir, "redirects.json"), JSON.stringify(map, null, 1) + "\n");
+  return Object.keys(map).length;
+}
+
 export function buildChecks({ site, demo }) {
   return {
     name: "siracusa-build-checks",
@@ -85,6 +105,8 @@ export function buildChecks({ site, demo }) {
           const long = longDescriptions(d);
           if (long.length) throw new Error("build-checks: meta description over " + DESCRIPTION_MAX + " characters: " + long.map((x) => x.page + " (" + x.length + ")").join(", "));
         }
+        const moved = dishRedirects(d, site, demo);
+        logger.info(demo ? "old dish addresses: " + moved + " copies with canonical (demo)" : "redirects.json: " + moved + " old dish addresses -> 301");
         const r = seoFiles(d, site, demo);
         logger.info(demo ? "robots.txt: Disallow: / (demo)" : "sitemap.xml: " + r.urls + " pages, robots.txt");
       },

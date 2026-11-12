@@ -12,6 +12,8 @@ export interface Category { id: string; n: string; course: Course }
 
 export interface Dish {
   id: string;
+  /** the page address when it differs from the id (cut ids, decision 12.11.2026); otherwise the address is the id */
+  slug?: string;
   n: string;          // name
   cat: string;        // category id ("obedno" for lunch items)
   course: Course;

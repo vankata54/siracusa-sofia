@@ -50,19 +50,20 @@ export const PAGES = {
 } as const;
 export type PageKey = keyof typeof PAGES;
 
-type DishLike = { id: string; cat: string; lunch?: boolean };
+type DishLike = { id: string; slug?: string; cat: string; lunch?: boolean };
 
 export const url = {
   page: (k: PageKey, hash?: string) => p(PAGES[k], hash),
   home: (hash?: string) => p("", hash),
   menu: (hash?: string) => p(PAGES.menu, hash),
   cat: (id: string, hash?: string) => p("menu/" + id + "/", hash),
-  /** Dish page. Lunch items have no own page: they link to the lunch menu. */
+  /** Dish page: /menu/<кат>/<slug or id>/ (the slug exists only where the id was cut, decision 12.11.2026).
+      Lunch items have no own page: they link to the lunch menu. */
   dish: (x: DishLike | string, hash?: string) => {
     const d = typeof x === "string" ? resolveDish(x) : x;
     if (!d) return p(PAGES.menu, hash);
     if (d.lunch || d.cat === "obedno") return p(PAGES.lunch, hash);
-    return p("menu/" + d.cat + "/" + d.id + "/", hash);
+    return p("menu/" + d.cat + "/" + (d.slug || d.id) + "/", hash);
   },
   lunch: (hash?: string) => p(PAGES.lunch, hash),
   cart: (hash?: string) => p(PAGES.cart, hash),

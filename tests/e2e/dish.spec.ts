@@ -98,11 +98,33 @@ test("dish: per 100 g and kitchen closed", async ({ page }) => {
 });
 
 test("dish: long names keep the title within about 70 signs", async ({ page }) => {
-  await open(page, "/menu/studeni-predyastia/grilovani-tikvichki-s-mus-ot-sirena-semena-i-pus/");
+  await open(page, "/menu/studeni-predyastia/grilovani-tikvichki-s-mus-ot-sirena-semena-i-pushena-syomga/");
   const t = await page.title();
   expect(t.length).toBeLessThanOrEqual(72);
   expect(t).toMatch(/^Гриловани тиквички .* пушена сьомга \| Siracusa Bar & Grill$/);
   await expect(page.locator("h1")).toHaveText("Гриловани тиквички с мус от сирена, семена и пушена сьомга");
+});
+
+test("dish: a cut id has a new address of whole words; the old one answers 301; canonical, JSON-LD, links and sitemap use the new one", async ({ page, request }) => {
+  const OLD = "/menu/osnovni-yastia/pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vi/";
+  const NEW = "/menu/osnovni-yastia/pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vishni/";
+  const r = await request.get(OLD + "?utm_source=x", { maxRedirects: 0 });
+  expect(r.status()).toBe(301);
+  expect(r.headers()["location"]).toBe(NEW + "?utm_source=x");
+  await open(page, OLD);
+  expect(new URL(page.url()).pathname).toBe(NEW);
+  await expect(page.locator("h1")).toHaveText("Патешко магре с пюре от целина и сладко от вишни");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://siracusa-sofia.com" + NEW);
+  const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join(" ");
+  expect(ld).toContain(NEW);
+  expect(ld).not.toContain(OLD);
+  /* the category links to the new address */
+  await page.goto("/menu/osnovni-yastia/");
+  await expect(page.locator('a[href="' + NEW + '"]').first()).toBeAttached();
+  await expect(page.locator('a[href="' + OLD + '"]')).toHaveCount(0);
+  const map = await (await request.get("/sitemap.xml")).text();
+  expect(map).toContain(NEW);
+  expect(map).not.toContain(OLD);
 });
 
 test("dish: keyboard - the focused element is never under the bar, the sheet keeps the focus", async ({ page }) => {

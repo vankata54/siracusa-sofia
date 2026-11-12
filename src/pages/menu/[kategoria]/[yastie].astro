@@ -11,7 +11,13 @@ import { DISHES, ADDONS, catOf, canAdd, hasMods, modBtnInner, buyHTML, soldBarHT
 import { catById } from "../../../lib/data.ts";
 import { crumbs } from "../../../lib/ui.ts";
 
-export const getStaticPaths = (() => DISHES.map((x) => ({ params: { kategoria: x.cat, yastie: x.id }, props: { id: x.id } }))) satisfies GetStaticPaths;
+/* the address is the slug where the id was cut (decision 12.11.2026), else the id. The server answers the old address
+   /menu/<кат>/<id>/ with 301 (redirects.json from scripts/build-checks.mjs); the demo has no server, so there the old
+   address stays as a copy of the page with canonical to the new one. */
+export const getStaticPaths = (() => [
+  ...DISHES.map((x) => ({ params: { kategoria: x.cat, yastie: x.slug || x.id }, props: { id: x.id, alias: false } })),
+  ...(typeof __DEMO__ !== "undefined" && __DEMO__ ? DISHES.filter((x) => x.slug).map((x) => ({ params: { kategoria: x.cat, yastie: x.id }, props: { id: x.id, alias: true } })) : []),
+]) satisfies GetStaticPaths;
 
 const x: Dish = DISHES.find((d) => d.id === Astro.props.id)!;
 const cat = catOf(x);
@@ -27,7 +33,7 @@ const jsonld = dishLd(x, Astro.site);
 const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] }).replace(/</g, "\\u003c");
 ---
 <Base page="dish" nav="menu" back={{ href: cat.href, label: cat.n }} title={x.n} docTitle={docTitle(x)} actionBar
-  description={metaDescription(x)} jsonld={jsonld}>
+  description={metaDescription(x)} jsonld={jsonld} alias={Astro.props.alias ? url.dish(x) : undefined}>
   <article class="dish" data-dish={x.id} data-cat={cat.id} data-catn={cat.n}>
     <script is:inline type="application/json" data-dishjson set:html={lite}></script>
     <div class="dgrid">

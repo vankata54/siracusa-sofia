@@ -445,6 +445,7 @@
   },
   {
    "id": "brusketi-sas-semena-proshuto-krudo-filadelfiya-m",
+   "slug": "brusketi-sas-semena-proshuto-krudo-filadelfiya-mus-sushen-domat",
    "n": "Брускети със семена, прошуто Крудо, филаделфия мус, сушен домат, трюфел",
    "cat": "studeni-predyastia",
    "course": "starter",
@@ -539,6 +540,7 @@
   },
   {
    "id": "grilovani-tikvichki-s-mus-ot-sirena-semena-i-pus",
+   "slug": "grilovani-tikvichki-s-mus-ot-sirena-semena-i-pushena-syomga",
    "n": "Гриловани тиквички с мус от сирена, семена и пушена сьомга",
    "cat": "studeni-predyastia",
    "course": "starter",
@@ -557,6 +559,7 @@
   },
   {
    "id": "grilovani-tikvichki-s-mus-ot-sirena-semena-i-pro",
+   "slug": "grilovani-tikvichki-s-mus-ot-sirena-semena-i-proshuto-krudo",
    "n": "Гриловани тиквички с мус от сирена, семена и прошуто Крудо",
    "cat": "studeni-predyastia",
    "course": "starter",
@@ -574,6 +577,7 @@
   },
   {
    "id": "topeni-sirentsa-s-kornfleyks-i-domashno-sladko-o",
+   "slug": "topeni-sirentsa-s-kornfleyks-i-domashno-sladko-ot-borovinki",
    "n": "Топени сиренца с корнфлейкс и домашно сладко от боровинки",
    "cat": "topli-predyastia",
    "course": "starter",
@@ -592,6 +596,7 @@
   },
   {
    "id": "teleshki-ezik-v-maslo-sas-sladko-ot-smokini-i-kr",
+   "slug": "teleshki-ezik-v-maslo-sas-sladko-ot-smokini-i-krem-fresh",
    "n": "Телешки език в масло със сладко от смокини и крем фреш",
    "cat": "topli-predyastia",
    "course": "starter",
@@ -666,6 +671,7 @@
   },
   {
    "id": "pileshki-prachki-s-domashna-panirovka-i-chesnov",
+   "slug": "pileshki-prachki-s-domashna-panirovka-i-chesnov-sos",
    "n": "Пилешки пръчки с домашна панировка и чеснов сос",
    "cat": "topli-predyastia",
    "course": "starter",
@@ -771,6 +777,7 @@
   },
   {
    "id": "teleshka-glavichka-v-shkembe-s-kashkaval-i-pasta",
+   "slug": "teleshka-glavichka-v-shkembe-s-kashkaval-i-pastarma",
    "n": "Телешка главичка в шкембе с кашкавал и пастърма",
    "cat": "topli-predyastia",
    "course": "starter",
@@ -870,6 +877,7 @@
   },
   {
    "id": "svinski-medalyoni-s-gorski-gabi-i-kartofeno-pyur",
+   "slug": "svinski-medalyoni-s-gorski-gabi-i-kartofeno-pyure",
    "n": "Свински медальони с горски гъби и картофено пюре",
    "cat": "osnovni-yastia",
    "course": "main",
@@ -917,6 +925,7 @@
   },
   {
    "id": "pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vi",
+   "slug": "pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vishni",
    "n": "Патешко магре с пюре от целина и сладко от вишни",
    "cat": "osnovni-yastia",
    "course": "main",
@@ -934,6 +943,7 @@
   },
   {
    "id": "agneshko-pecheno-sas-zelena-salata-i-sotiran-kar",
+   "slug": "agneshko-pecheno-sas-zelena-salata-i-sotiran-kartof",
    "n": "Агнешко печено със зелена салата и сотиран картоф",
    "cat": "osnovni-yastia",
    "course": "main",
@@ -1881,6 +1891,7 @@
   },
   {
    "id": "chiyzburger-s-teleshko-kyufte-blek-angas-s-parzh",
+   "slug": "chiyzburger-s-teleshko-kyufte-blek-angas-s-parzheni-kartofi",
    "n": "Чийзбургер с телешко кюфте Блек Ангъс с пържени картофи",
    "cat": "burgeri",
    "course": "main",

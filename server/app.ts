@@ -390,8 +390,14 @@ export function createApp(opts: AppOpts) {
     c.header("Content-Encoding", enc);
     return c.body(new Uint8Array(buf), code as 200);
   };
+  /* old dish addresses (cut ids) -> the new ones: the table comes from the build (scripts/build-checks.mjs, decision 12.11.2026) */
+  let moved: Record<string, string> = {};
+  try { moved = JSON.parse(fs.readFileSync(path.join(dist, "redirects.json"), "utf8")); } catch { /* no table: nothing moved */ }
   app.get("*", (c) => {
-    let rel = decodeURIComponent(new URL(c.req.url).pathname);
+    const u = new URL(c.req.url);
+    let rel = decodeURIComponent(u.pathname);
+    const to = moved[rel.endsWith("/") ? rel : rel + "/"];
+    if (to) return c.redirect(to + u.search, 301);
     /* /porachka/1042/ -> the one static tracking page (it reads the number from the address) */
     const tr = /^\/porachka\/[^/]+\/?$/.exec(rel);
     if (tr) { const p = file("/porachka/"); if (p) return send(c, p); }

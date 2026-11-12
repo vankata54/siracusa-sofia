@@ -26,6 +26,8 @@ export interface Props {
   jsonld?: object | object[] | null; // structured data
   noindex?: boolean;
   canonical?: string;                // path, default = current path
+  alias?: string;                    // this page is a copy of another address (an old dish address in the demo, which has
+                                     // no 301): canonical to that address, also in the demo (decision 12.11.2026)
   ogImage?: string;
 }
 const p = Astro.props;
@@ -59,7 +61,8 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <title>{fullTitle}</title>
 <meta name="description" content={description}>
 {noindex && <meta name="robots" content="noindex,nofollow">}
-{!noindex && <link rel="canonical" href={canonical}>}
+{!noindex && !p.alias && <link rel="canonical" href={canonical}>}
+{p.alias && <link rel="canonical" href={new URL(p.alias, Astro.site).href}>}
 <meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
