@@ -79,10 +79,12 @@ export function createApp(opts: AppOpts) {
   /* ---------- helpers ---------- */
   const cookieOpts = { httpOnly: true, sameSite: "Lax" as const, secure: !!opts.secure, path: "/" };
   const body = async (c: Context) => { try { return await c.req.json(); } catch { return {}; } };
-  async function staff(c: Context, section?: string) {
+  /** section: one section, or a list (any of them is enough) */
+  async function staff(c: Context, section?: string | string[]) {
     const s = await core.staff.bySession(getCookie(c, STAFF_COOKIE));
     if (!s) throw new CoreError("auth", "Влезте отново.", 401);
-    if (section && !(s.user.role === "admin" || s.sections.includes(section))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+    const need = section ? (Array.isArray(section) ? section : [section]) : [];
+    if (need.length && !(s.user.role === "admin" || need.some((x) => s.sections.includes(x)))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
     return s;
   }
   async function customer(c: Context) {
@@ -130,7 +132,7 @@ export function createApp(opts: AppOpts) {
 
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
-  app.get("/api/menu", (c) => c.json(readMenu(db)));
+  app.get("/api/menu", async (c) => c.json(readMenu(db, await core.menu.soldOutToday())));
   app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), ...publicSettings(st) }); });
   app.get("/api/offers", (c) => c.json(offers()));
   app.get("/api/events", (c) => c.json(eventsJson()));
@@ -180,6 +182,11 @@ export function createApp(opts: AppOpts) {
 
   /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */
   app.get("/api/admin/settings", async (c) => { await staff(c); return c.json(await core.settings.get()); });
+  /* "Изчерпано днес" (kitchen, menu, lunch menu): {out: true|false}; one source in the core, read by /api/menu and the order check */
+  app.put("/api/admin/menu/:id/sold-out", async (c) => {
+    const s = await staff(c, ["menu", "kitchen", "lunch"]);
+    return c.json(await core.menu.setSoldOut(c.req.param("id"), (await body(c)).out as boolean, s.user.username));
+  });
   app.patch("/api/admin/settings", async (c) => {
     const b = await body(c);
     const s = await staff(c, b.resMinutes != null ? "reservations" : "kitchen");

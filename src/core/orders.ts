@@ -22,8 +22,9 @@ import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
 import { hasStreet, zoneByName, zoneOfAddress } from "../lib/zones.ts";
 export { hasStreet };
 import { minutes, sofiaYmd } from "../lib/time.ts";
+import { outNow, soldOutToday, type SoldOutToday } from "./menu.ts";
 import { state } from "../lib/status.ts";
-import { byId, isOut, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
+import { byId, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
 import { hhmm, normPhone } from "../lib/format.ts";
 
 export const FIRST_ORDER_NO = 1042;
@@ -83,7 +84,8 @@ export function lunchOk(ctx: Ctx): boolean {
 }
 
 /** Checks the raw lines from the client and returns a clean cart (prices from the menu only). */
-export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, opts: { lunchOnly?: boolean } = {}): Cart {
+/** today: the "Изчерпано днес" switches (core/menu.ts) for the day the food is made; {} = the menu data only (an order for tomorrow) */
+export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, today: SoldOutToday, opts: { lunchOnly?: boolean } = {}): Cart {
   const lines = raw && typeof raw === "object" && Array.isArray((raw as { lines?: unknown }).lines) ? (raw as { lines: unknown[] }).lines : [];
   if (!lines.length) throw new CoreError("empty", MSG.empty);
   if (lines.length > ORDER_RULES.maxLines) throw new CoreError("too_many", MSG.lines, 422);
@@ -98,7 +100,7 @@ export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, opts: { lunchOnly
     const mods = ((l.mods as string[] | undefined) || []).map((m) => m.trim()).filter(Boolean);
     const pm = parseMods(x, mods);
     if (pm.bad) throw new CoreError("bad_mod", "Промяната „" + pm.bad + "“ не е възможна за „" + x.n + "“.", 422);
-    if (isOut(x)) throw new CoreError("sold_out", "„" + x.n + "“ е изчерпано днес. Махнете го от количката.", 409);
+    if (outNow(x, today)) throw new CoreError("sold_out", "„" + x.n + "“ е изчерпано днес. Махнете го от количката.", 409);
     if (opts.lunchOnly && !x.lunch) throw new CoreError("not_lunch", "В общата поръчка са само ястия от обедното меню.", 422);
     if (x.lunch && !lunchOk(ctx)) throw new CoreError("lunch_stale", MSG.lunchStale, 409);
     out.push({ key: lineKey(x.id, pm.mods), id: x.id, q, mods: pm.mods, extra: 0 });
@@ -124,8 +126,9 @@ export function resolveZone(addr: string, clientZone?: string, requireStreet = f
 export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   const raw = (input && input.cart) || ({} as Cart);
   const mode: Mode = raw.mode === "pickup" ? "pickup" : "delivery";
-  const cart = checkLines(ctx, raw, mode);
   const sched = input.sched === "утре" || input.sched === "днес" ? input.sched : "";
+  /* today's "Изчерпано днес" does not touch an order for tomorrow */
+  const cart = checkLines(ctx, raw, mode, sched === "утре" ? {} : await soldOutToday(ctx));
   const m = minutes(ctx.clock), s = state(ctx.clock);
   if (sched === "днес" && m >= 600) throw new CoreError("bad_sched", MSG.sched, 409);
   if (!sched && !s.kitchen) throw new CoreError("closed", m < 600 ? MSG.closedEarly : MSG.closed, 409);

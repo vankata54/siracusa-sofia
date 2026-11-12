@@ -42,18 +42,20 @@ export function seedMenu(db: Db) {
   return db.select({ n: sql<number>`count(*)` }).from(schema.menuItems).get()!.n;
 }
 
-/** The menu in the same shape as menu.json (for /api/menu), with "out" from sold_out. */
-export function readMenu(db: Db) {
+/** The menu in the same shape as menu.json (for /api/menu). "out": today's "Изчерпано днес" switch from the core
+    (core/menu.ts) when there is one, else sold_out (the menu data). */
+export function readMenu(db: Db, today: Record<string, boolean> = {}) {
   const cats = db.select().from(schema.categories).orderBy(schema.categories.sort).all().map((c) => ({ id: c.id, n: c.name, course: c.course }));
   const rows = db.select().from(schema.menuItems).orderBy(schema.menuItems.sort).all();
+  const out = (r: typeof rows[number]) => (Object.prototype.hasOwnProperty.call(today, r.id) ? !!today[r.id] : r.soldOut);
   const toDish = (r: typeof rows[number]) => ({
     id: r.id, n: r.name, cat: r.cat, course: r.course, comp: r.comp, g: r.weight, p: r.price,
-    t: [...JSON.parse(r.tags), ...(r.soldOut ? ["out"] : [])], al: JSON.parse(r.allergens), noOnion: r.noOnion, share: r.share, ...(r.per100 ? { per100: true } : {}),
+    t: [...JSON.parse(r.tags), ...(out(r) ? ["out"] : [])], al: JSON.parse(r.allergens), noOnion: r.noOnion, share: r.share, ...(r.per100 ? { per100: true } : {}),
   });
   const lunchRows = rows.filter((r) => r.cat === "obedno");
   return {
     updated: MENU.updated, source: MENU.source, cats,
     items: rows.filter((r) => r.cat !== "obedno").map(toDish),
-    lunch: { date: lunchRows[0]?.lunchDate || MENU.lunch.date, dayName: MENU.lunch.dayName, items: lunchRows.map((r) => ({ id: r.id, group: r.lunchGroup, n: r.name, p: r.price, out: r.soldOut })) },
+    lunch: { date: lunchRows[0]?.lunchDate || MENU.lunch.date, dayName: MENU.lunch.dayName, items: lunchRows.map((r) => ({ id: r.id, group: r.lunchGroup, n: r.name, p: r.price, out: out(r) })) },
   };
 }

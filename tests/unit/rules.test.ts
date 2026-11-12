@@ -257,6 +257,36 @@ describe("office group order", () => {
   });
 });
 
+describe("„Изчерпано днес“ (core/menu.ts)", () => {
+  it("switch for today: order refused, tomorrow and the office of another day not; next day off by itself; back on for a dish of the data", async () => {
+    let now = NOW;
+    const repo = new MemoryRepo(), events: [string, unknown, unknown][] = [];
+    const core = createCore({ repo, clock: "12:30", now: () => now, emit: (t, d, to) => events.push([t, d, to]) });
+    const line = { ...base, cart: pickup([L(pizza.id)]) };
+    expect(await core.menu.soldOutToday()).toEqual({});
+    await core.menu.setSoldOut(pizza.id, true, "kitchen");
+    expect(await core.menu.soldOutToday()).toEqual({ [pizza.id]: true });
+    await expect(core.orders.create(line)).rejects.toMatchObject({ code: "sold_out", status: 409 });
+    expect((await core.orders.create({ ...line, sched: "утре", slot: "12:00" } as never)).lines[0].id).toBe(pizza.id);
+    expect(events.find((e) => e[0] === "menu.soldout")).toEqual(["menu.soldout", { id: pizza.id, out: true }, { public: true }]);
+    expect((await core.audit.list()).some((a) => a.action === "menu.sold_out" && a.target === pizza.id && a.actor === "kitchen")).toBe(true);
+    /* the next day: the switch is gone, the menu data decides again */
+    now = new Date(NOW.getTime() + 24 * 3600_000);
+    expect(await core.menu.soldOutToday()).toEqual({});
+    expect((await core.orders.create(line)).lines[0].id).toBe(pizza.id);
+    now = NOW;
+    /* a dish sold out in the data can be brought back for today; turning it out again leaves no switch */
+    await core.menu.setSoldOut(soldOut.id, false);
+    expect((await core.orders.create({ ...base, cart: pickup([L(soldOut.id)]) })).lines[0].id).toBe(soldOut.id);
+    await core.menu.setSoldOut(soldOut.id, true);
+    expect(await core.menu.soldOutToday()).toEqual({ [pizza.id]: true });
+    await expect(core.orders.create({ ...base, cart: pickup([L(soldOut.id)]) })).rejects.toMatchObject({ code: "sold_out" });
+    await expect(core.menu.setSoldOut("no-such-dish", true)).rejects.toMatchObject({ code: "not_found" });
+    await expect(core.menu.setSoldOut("__proto__", true)).rejects.toMatchObject({ code: "not_found" });
+    await expect(core.menu.setSoldOut(pizza.id, "yes" as never)).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
 describe("reservations", () => {
   const r0 = { name: "Иван", phone: "0888123456", people: 2 };
   it("date, time, seats validated", async () => {

@@ -10,6 +10,7 @@ import * as office from "./office.ts";
 import * as codes from "./codes.ts";
 import * as settings from "./settings.ts";
 import * as feedback from "./feedback.ts";
+import * as menu from "./menu.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -18,6 +19,7 @@ export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, FINISHED, MSG, nextStatus, publicOr
 export { publicOffice, officeDue, officeDueAt, OFFICE_MSG, type PublicOffice } from "./office.ts";
 export { normCode, CODE_MSG } from "./codes.ts";
 export { DEFAULT_SETTINGS } from "./settings.ts";
+export { outNow, type SoldOutToday, type SoldOutDoc } from "./menu.ts";
 export { FEEDBACK_MSG, type Feedback, type FeedbackInput } from "./feedback.ts";
 export { SECTIONS, DEFAULT_ROLES } from "./staff.ts";
 export { BLOCKED_DEMO_PHONE } from "./reservations.ts";
@@ -40,6 +42,7 @@ export function createCore(ctx: Ctx) {
     office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, update: office.updateOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),
     codes: bind(ctx, { check: codes.checkCode }),
     settings: bind(ctx, { get: settings.getSettings, update: settings.updateSettings }),
+    menu: bind(ctx, { soldOutToday: menu.soldOutToday, setSoldOut: menu.setSoldOut }),
     feedback: bind(ctx, { create: feedback.createFeedback, list: feedback.listFeedback }),
     subscriptions: bind(ctx, { subscribe: res.subscribe }),
     customers: bind(ctx, {

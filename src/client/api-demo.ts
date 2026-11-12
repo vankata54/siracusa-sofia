@@ -2,7 +2,7 @@
    behind the build flag, so the server build never ships it. Real-time events: this tab + BroadcastChannel to the others,
    with the same audience rules as the server stream. */
 import { createCore, KVRepo, CoreError, type Core, type Hasher, type StaffUser, type RoleId } from "../core/index.ts";
-import { MENU } from "../data/menu.ts";
+import { MENU, type Menu } from "../data/menu.ts";
 import { state, status, eta, getKitchen } from "../lib/status.ts";
 import { offers } from "../lib/offers.ts";
 import { eventsJson } from "../lib/events-json.ts";
@@ -51,6 +51,21 @@ export async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
     if (e instanceof CoreError) { const x = e as CoreError & { fields?: Record<string, string>; retryIn?: number }; throw new ApiError(e.code, e.message, e.status, x.fields, x.retryIn); }
     throw e;
   }
+}
+
+/** The menu with today's "Изчерпано днес" switches from the core (the same shape as the server's /api/menu). */
+export async function menuLive(): Promise<Menu> {
+  const today = await (await core()).menu.soldOutToday();
+  if (!Object.keys(today).length) return MENU;
+  const flag = (id: string, base: boolean) => (Object.prototype.hasOwnProperty.call(today, id) ? !!today[id] : base);
+  return {
+    ...MENU,
+    items: MENU.items.map((x) => {
+      const was = x.t.includes("out"), now = flag(x.id, was);
+      return now === was ? x : { ...x, t: now ? [...x.t, "out"] : x.t.filter((t) => t !== "out") };
+    }),
+    lunch: { ...MENU.lunch, items: MENU.lunch.items.map((x) => ({ ...x, out: flag(x.id, !!x.out) })) },
+  };
 }
 
 export async function statusInfo() {

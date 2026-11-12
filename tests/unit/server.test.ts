@@ -168,4 +168,24 @@ describe("server API (in-memory SQLite)", async () => {
     /* the 11th valid one from the same connection is refused, whatever the forged header says */
     expect((await post({ date: "2026-12-21", time: "13:30", people: 2, name: "И", phone: "0888399999" }, "10.2.0.1")).status).toBe(429);
   });
+  it("„Изчерпано днес“: kitchen / menu roles switch it; /api/menu and the order check follow; tomorrow is not touched", async () => {
+    await core.staff.upsert({ username: "k1", name: "Кухня", role: "kitchen", password: "test-password-123" });
+    await core.staff.upsert({ username: "w1", name: "Сервитьор", role: "waiter", password: "test-password-123" });
+    const login = async (u: string) => (await app.request("/api/auth/login", json("POST", { username: u, password: "test-password-123" }))).headers.get("set-cookie")!.split(";")[0];
+    const k = await login("k1"), w = await login("w1");
+    const put = (id: string, out: unknown, cookie?: string) => app.request("/api/admin/menu/" + id + "/sold-out", json("PUT", { out }, cookie));
+    expect((await put("pitsa-dyavolo", true)).status).toBe(401);
+    expect((await put("pitsa-dyavolo", true, w)).status).toBe(403);
+    expect((await put("no-such-dish", true, k)).status).toBe(404);
+    expect((await put("pitsa-dyavolo", "yes", k)).status).toBe(422);
+    expect(await (await put("pitsa-dyavolo", true, k)).json()).toEqual({ id: "pitsa-dyavolo", out: true });
+    const menu = await (await app.request("/api/menu")).json();
+    expect(menu.items.find((x: { id: string }) => x.id === "pitsa-dyavolo").t).toContain("out");
+    const order = (sched?: string) => app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "Иван Петров", phone: "0888123499", ...(sched ? { sched, slot: "12:00" } : {}) }));
+    /* the order for today is refused in the core (tests/unit/rules.test.ts, fixed clock); here: tomorrow is not touched */
+    expect((await order("утре")).status).toBe(201);
+    expect((await core.ctx.repo.list("audit_log", { actor: "k1" } as never)).length).toBeGreaterThan(0);
+    expect(await (await put("pitsa-dyavolo", false, k)).json()).toEqual({ id: "pitsa-dyavolo", out: false });
+    expect((await (await app.request("/api/menu")).json()).items.find((x: { id: string }) => x.id === "pitsa-dyavolo").t).not.toContain("out");
+  });
 });

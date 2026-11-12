@@ -13,6 +13,7 @@ import { audit } from "./audit.ts";
 import { createOrder, checkLines, type OrderInput } from "./orders.ts";
 import { zoneOfAddress } from "../lib/zones.ts";
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
+import { soldOutToday } from "./menu.ts";
 import { normPhone } from "../lib/format.ts";
 import { ORDER_RULES, byId } from "../lib/data.ts";
 import type { Mode } from "../lib/cart.ts";
@@ -110,7 +111,7 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   const portions = Array.isArray(p.lines) ? p.lines.reduce((a, l) => a + (Number.isFinite(+(l && l.q)) ? Math.max(0, +l.q) : 0), 0) : 0;
   if ((Array.isArray(p.lines) && p.lines.length > OFFICE_MAX_LINES) || portions > OFFICE_MAX_LINES) throw new CoreError("too_many", "До " + OFFICE_MAX_LINES + " порции на човек.", 422);
   const lines = Array.isArray(p.lines) && p.lines.length
-    ? checkLines(ctx, { lines: p.lines }, o.mode, { lunchOnly: true }).lines.map((l) => {
+    ? checkLines(ctx, { lines: p.lines }, o.mode, dateOf(o) === sofiaYmd(nowDate(ctx)) ? await soldOutToday(ctx) : {}, { lunchOnly: true }).lines.map((l) => {
       if (l.mods.length) throw new CoreError("bad_mod", "В общата поръчка ястията са без промени.", 422);
       return { id: l.id, q: l.q, mods: [], extra: 0 };
     })

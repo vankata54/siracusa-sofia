@@ -129,7 +129,7 @@ export const api = {
   demo: DEMO,
   /* public data (in the demo straight from the bundled data) */
   /** the live menu: the same shape as src/data/menu.json, "out" in t (and lunch.items[].out) from the kitchen / admin */
-  menu: async (): Promise<Menu> => (DEMO ? (await loadModule(demoChunk)).MENU : http<Menu>("GET", "menu")),
+  menu: async (): Promise<Menu> => (DEMO ? (await loadModule(demoChunk)).menuLive() : http<Menu>("GET", "menu")),
   status: async (): Promise<StatusInfo> => (DEMO ? (await loadModule(demoChunk)).statusInfo() : http<StatusInfo>("GET", "status")),
   offers: async () => (DEMO ? (await loadModule(demoChunk)).offers() : http<unknown>("GET", "offers")),
   /** events with the date as "YYYY-MM-DD" */
@@ -288,6 +288,8 @@ export const api = {
     /** kitchen "Натоварено" + minutes, reservation length */
     settings: pick((c) => c.settings.get(), () => http<Settings>("GET", "admin/settings")),
     setSettings: pick((c, p: SettingsPatch) => c.settings.update(p, "demo"), (p) => http<Settings>("PATCH", "admin/settings", p)),
+    /** "Изчерпано днес" for one dish (kitchen, menu, lunch menu); only for today */
+    setSoldOut: pick((c, id: string, out: boolean) => c.menu.setSoldOut(id, out, "demo"), (id, out) => http<{ id: string; out: boolean }>("PUT", "admin/menu/" + encodeURIComponent(id) + "/sold-out", { out })),
     staff: pick((c) => c.staff.list(), () => http<unknown[]>("GET", "admin/staff")),
     roles: pick((c) => c.staff.roles(), () => http<unknown[]>("GET", "admin/roles")),
     setRole: pick((c, id: Parameters<Core["staff"]["setRole"]>[0], sections: string[]) => c.staff.setRole(id, sections, "demo"), (id, sections) => http<unknown>("PUT", "admin/roles/" + id, { sections })),
