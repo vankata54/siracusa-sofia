@@ -1,0 +1,502 @@
+---
+/* Offers (/oferti/): port of design/pages/offers.html (design/PAGES.md "offers.html", design/reviews/offers.review.md,
+   design/BRIEF.md 8, docs/DECISIONS.md 27-30 + 12.11.2026 "Код за отстъпка").
+   The server draws everything that does not depend on the hour or the customer: the hero with the -30% rule (neutral,
+   true at any hour), all coupons in a neutral state, the loyalty card, the gift voucher, the FAQ and the JSON-LD
+   (BreadcrumbList, OfferCatalog > Offer from decided rules only, FAQPage). The browser redraws the hero and the coupons
+   by the hour (SC.state(): active in ember, the rest grey with when they apply), by the lunch date (-30% only with today's
+   lunch menu) and by the signed-in customer (birthday consent), and sends the two forms through `api` (server or demo).
+   The "Само в прототипа" panel only in preview (?preview=1). */
+import Base from "../../layouts/Base.astro";
+import { heroHTML, gridHTML, sumHTML } from "./_offers.ts";
+import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } from "./_static.ts";
+---
+<Base page="offers" nav="offers" title="Оферти" docTitle="Оферти и отстъпки" description={DESCRIPTION} jsonld={offersLd(Astro.site)}>
+  <div class="of" data-of={JSON.stringify(DATA)}>
+    <section class="sec of-hero" aria-labelledby="h-offers"><div data-net></div><div class="of-hgrid">
+      <div class="of-head"><h1 class="h1" id="h-offers">Оферти и отстъпки</h1>
+        <p class="lead">Всички промоции на едно място, с ясни условия и без дребен шрифт.</p></div>
+      <div class="of-feat" data-feat set:html={heroHTML(null, DATA)}></div>
+      <div class="of-nav"><p class="of-now" data-now></p>
+        <nav class="of-jump" aria-label="Към офертата"><span class="label">Бързо към</span><div class="chips">
+          {JUMP.map((j) => <a class="chip" href={"#" + j[0]}>{j[1]}</a>)}
+        </div></nav></div>
+    </div></section>
+    <section class="sec of-all" aria-labelledby="h-all"><div class="sec-h"><h2 class="h2" id="h-all">Всички оферти</h2><span class="of-sum" data-sum set:html={sumHTML(null)}></span></div>
+      <div class="of-grid" data-grid aria-live="polite" set:html={gridHTML(null, DATA)}></div></section>
+    <Fragment set:html={loyaltyHTML()} />
+    <Fragment set:html={voucherHTML()} />
+    <Fragment set:html={faqHTML()} />
+    <div data-proto></div>
+  </div>
+</Base>
+
+<style is:global>
+/* offers.html - page-only styles, tokens from sc.css only */
+
+/* ---------- hero ---------- */
+.of-hero{padding-top:28px}
+.of-hgrid{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
+.of-hgrid > *{min-width:0}
+.of-hero .lead{margin-top:10px; max-width:36ch}
+.of-hgrid{grid-template-areas:"head" "feat" "nav"}
+.of-head{grid-area:head} .of-feat{grid-area:feat} .of-nav{grid-area:nav; margin-top:4px}
+.of-now{display:flex; align-items:center; gap:10px; margin:0; font-size:16px; font-weight:600; color:var(--muted)}
+.of-now b{color:var(--ink); font-weight:800}
+.of-now .dot{width:10px; height:10px; border-radius:50%; background:var(--ember); box-shadow:0 0 0 4px var(--ember-soft); flex:none}
+.of-jump{margin-top:18px}
+.of-jump .label{display:block; font-size:14px; color:var(--muted); margin-bottom:8px}
+.of-jump .chip{text-decoration:none}
+.of-net{display:flex; gap:12px; align-items:flex-start; margin:0 0 18px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.of-net .ic{color:var(--warn); margin-top:2px}
+.of-net p{margin:0}
+
+/* featured offer (ember) */
+.feat{position:relative; overflow:hidden; isolation:isolate; display:grid; gap:14px; padding:20px 20px 20px}
+.feat .bgic{position:absolute; right:-54px; bottom:-60px; z-index:-1; opacity:.09; transform:rotate(-16deg); color:var(--on-ember)}
+.feat-live{justify-self:start; display:inline-flex; align-items:center; gap:8px; min-height:34px; padding:0 14px 0 12px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:14px; font-weight:800; white-space:nowrap}
+.feat-live .d{width:8px; height:8px; border-radius:50%; background:currentColor}
+.feat-kick{margin:0; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; opacity:.78}
+.feat-num{display:block; font-size:104px; line-height:.84; font-weight:800; letter-spacing:-.065em; margin:6px 0 0 -4px; font-variant-numeric:tabular-nums}
+.feat-t{margin:0; font-size:26px; line-height:1.1; letter-spacing:-.035em; font-weight:800; text-wrap:balance}
+.feat-t.big{font-size:40px; line-height:1.02; letter-spacing:-.045em}
+.feat-p{margin:0; font-size:16px; opacity:.86; max-width:40ch}
+.feat-ex{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; padding:12px 16px; border-radius:18px; background:color-mix(in srgb, var(--on-ember) 9%, transparent)}
+.feat-ex .nm{flex:1 1 100%; font-size:14px; font-weight:700; opacity:.78}
+.feat-ex .was{font-variant-numeric:tabular-nums; text-decoration:line-through; font-weight:600; opacity:.7}
+.feat-ex .now{font-size:22px}
+.feat-list{list-style:none; margin:0; padding:4px 16px; border-radius:18px; background:color-mix(in srgb, var(--on-ember) 9%, transparent)}
+.feat-list li{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:9px 0}
+.feat-list li + li{border-top:1px solid color-mix(in srgb, var(--on-ember) 14%, transparent)}
+.feat-list .nm{font-weight:600; min-width:0}
+.feat-soon{display:flex; align-items:flex-start; gap:8px; margin:0; font-size:16px; font-weight:700}
+.feat-soon .ic{margin-top:2px}
+.go.dark{background:var(--on-ember); color:var(--on-chip-dark); margin-top:4px}
+.go.dark .knob{background:var(--ember); color:var(--on-ember)}
+
+/* ---------- coupons ---------- */
+.of-sum{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:14px; font-weight:700; color:var(--muted)}
+.of-sum span{display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
+.of-sum i{width:12px; height:12px; border-radius:4px; background:var(--ember)}
+.of-sum i.g{background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line-strong)}
+.of-all .sec-h{flex-wrap:wrap; align-items:flex-end}
+.of-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:14px}
+.cp{position:relative; display:flex; scroll-margin-top:150px}
+.cp > .core{position:relative; display:flex; flex-direction:column; flex:1; min-width:0}
+.cp-top{display:flex; flex-direction:column; align-items:flex-start; gap:16px; padding:16px 18px 22px; background:var(--ember); color:var(--on-ember)}
+.cp-when{display:inline-flex; align-items:center; gap:7px; min-height:32px; padding:0 13px 0 10px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:14px; font-weight:800; line-height:1.2}
+.cp-big{display:flex; align-items:flex-end; gap:14px}
+.cp-num{font-size:60px; line-height:.84; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums; margin-left:-2px}
+.cp-sub{font-size:14px; font-weight:700; line-height:1.25; max-width:15ch; padding-bottom:2px; opacity:.86}
+.cp.off .cp-top{background:var(--surface-3); color:var(--muted)}
+.cp.off .cp-when{background:var(--surface); color:var(--ink)}
+.cp-cut{position:relative; height:0}
+.cp-cut::before,.cp-cut::after{content:""; position:absolute; top:-11px; width:11px; height:22px; background:var(--surface-2)}
+.cp-cut::before{left:0; border-radius:0 11px 11px 0}
+.cp-cut::after{right:0; border-radius:11px 0 0 11px}
+.cp-cut i{position:absolute; left:20px; right:20px; top:-3px; height:6px; background:radial-gradient(circle at 3px 3px, var(--surface-2) 2.2px, transparent 2.6px) 0 0/11px 6px repeat-x}
+.cp-body{display:flex; flex-direction:column; gap:12px; flex:1; padding:20px 18px 18px}
+.cp-body p{margin:0}
+.terms{list-style:none; margin:2px 0 0; padding:0; display:grid; gap:9px}
+.terms li{display:grid; grid-template-columns:20px 1fr; gap:10px; line-height:1.4}
+.terms .ic{color:var(--muted); margin-top:2px}
+.cp-ex{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; padding:12px 14px; border-radius:16px; background:var(--surface-2)}
+.cp-ex .was{font-variant-numeric:tabular-nums; text-decoration:line-through; color:var(--muted); font-weight:600}
+.cp-ex .now{font-size:18px}
+.cp-ex .nm{flex:1 1 100%; font-size:14px; font-weight:700; color:var(--muted)}
+.cp-act{margin-top:auto; padding-top:6px}
+.cp-act .pill{width:100%; justify-content:space-between; padding:10px 14px 10px 20px; white-space:normal; text-align:left; line-height:1.25}
+.cp.hl::after{content:""; position:absolute; inset:-5px; border-radius:33px; box-shadow:0 0 0 3px var(--ember); opacity:0; pointer-events:none; animation:hl 2.2s var(--ease-std) forwards}
+@keyframes hl{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
+@container app (min-width:700px){ .of-grid{grid-template-columns:1fr 1fr} }
+@container app (min-width:1100px){ .of-grid{grid-template-columns:repeat(3,1fr); gap:20px} }
+
+/* skeleton + error */
+.sk-top{height:132px; border-radius:0}
+.sk-line{height:16px; border-radius:8px}
+.of-err{grid-column:1/-1}
+.of-err .ill{color:var(--warn)}
+.of-err p{margin:0; max-width:34ch}
+
+/* ---------- loyalty + voucher ---------- */
+.of-split{display:grid; grid-template-columns:minmax(0,1fr); gap:28px}
+.of-split > *{min-width:0}
+.of-stage{position:relative; display:grid; place-items:center; padding:30px 18px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); overflow:hidden; scroll-margin-top:150px}
+.of-copy .lead{margin-top:10px}
+.steps{list-style:none; margin:22px 0 0; padding:0; display:grid; gap:16px; counter-reset:st}
+.steps li{display:grid; grid-template-columns:40px 1fr; gap:14px; align-items:start; counter-increment:st}
+.steps li::before{content:counter(st); width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--ember-soft); color:var(--ink); font-weight:800; font-size:17px; box-shadow:inset 0 0 0 1.5px var(--ember)}
+.steps b{display:block; font-size:17px; letter-spacing:-.01em}
+.steps .d{display:block; color:var(--muted)}
+.of-copy .of-cta{margin-top:24px; width:100%; justify-content:space-between; padding:10px 14px 10px 20px; white-space:normal; text-align:left; line-height:1.25}
+.of-fine{margin:14px 0 0; font-size:14px; color:var(--muted)}
+
+/* loyalty card */
+.lc{position:relative; width:100%; max-width:400px; padding:20px 20px 18px; border-radius:24px; background:radial-gradient(130% 90% at 100% 0%, color-mix(in srgb, var(--ember) 26%, transparent), transparent 58%), var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow-lg), inset 0 0 0 1px color-mix(in srgb, var(--on-chip-dark) 10%, transparent); transform:rotate(-2.5deg)}
+.lc-h{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.lc-h .word{font-size:22px}
+.lc-k{font-size:14px; font-weight:700; opacity:.72}
+.lc-st{list-style:none; margin:20px 0 18px; padding:0; display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
+.st{aspect-ratio:1; border-radius:50%; display:grid; place-items:center; font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; color:color-mix(in srgb, var(--on-chip-dark) 50%, transparent); box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--on-chip-dark) 22%, transparent)}
+.st.on{position:relative; background:var(--ember); color:var(--on-ember); box-shadow:none; transform:rotate(-10deg)}
+.st.on::after{content:""; position:absolute; inset:4px; border-radius:50%; border:1.5px dashed color-mix(in srgb, var(--on-ember) 45%, transparent)}
+.st.gift{color:var(--ember); box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--ember) 65%, transparent)}
+.lc-f{display:flex; justify-content:space-between; align-items:center; gap:10px; padding-top:14px; border-top:1px dashed color-mix(in srgb, var(--on-chip-dark) 24%, transparent)}
+.lc-f .cnt2{font-size:16px; font-weight:600; opacity:.85}
+.lc-f .cnt2 b{font-size:26px; font-weight:800; letter-spacing:-.03em; opacity:1}
+.lc-tag{display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 12px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+/* the one strong motion of the page: the two gift stamps are pressed onto the card when it comes into view */
+.rv-on .of-stage.rv:not(.in) .st.on{opacity:0}
+.rv-on .of-stage.rv.in .st.on{animation:stamp 620ms var(--ease) both}
+.rv-on .of-stage.rv.in .st.on:nth-child(1){animation-delay:420ms}
+.rv-on .of-stage.rv.in .st.on:nth-child(2){animation-delay:640ms}
+@keyframes stamp{0%{opacity:0; transform:scale(1.9) rotate(-34deg)}55%{opacity:1; transform:scale(.92) rotate(-6deg)}100%{opacity:1; transform:scale(1) rotate(-10deg)}}
+
+/* voucher card */
+.vc{position:relative; width:100%; max-width:400px; aspect-ratio:1.62; padding:20px 22px; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; background:radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--surface) 30%, transparent), transparent 55%), var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transform:rotate(2deg)}
+.vc-rib{position:absolute; top:0; bottom:0; right:23%; width:16px; background:var(--on-ember)}
+.vc-rib2{position:absolute; left:0; right:0; top:34%; height:16px; background:var(--on-ember)}
+.vc-bow{position:absolute; right:calc(23% - 20px); top:calc(34% - 20px); width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--on-ember); color:var(--ember); box-shadow:0 0 0 5px var(--ember)}
+.vc .word{position:relative; font-size:22px}
+.vc-k{position:relative; display:block; font-size:24px; font-weight:800; letter-spacing:-.035em; line-height:1.05; max-width:9ch}
+.vc-t{position:relative; display:block; margin-top:6px; font-size:14px; font-weight:700; opacity:.8; max-width:24ch}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:760px}
+.qa{border-top:1px solid var(--line)}
+.qa:last-child{border-bottom:1px solid var(--line)}
+.qa summary{display:flex; justify-content:space-between; align-items:center; gap:16px; min-height:60px; padding:10px 0; font-weight:800; font-size:17px; letter-spacing:-.01em; cursor:pointer; list-style:none}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary .ic{transition:transform var(--t-base) var(--ease)}
+.qa[open] summary .ic{transform:rotate(180deg)}
+.qa p{margin:0 0 18px; color:var(--muted); max-width:62ch}
+
+/* ---------- prototype panel ---------- */
+.proto{display:grid; gap:12px; padding:18px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 1.5px var(--line-strong); background:transparent; border:0}
+.proto h2{margin:0; font-size:16px; display:flex; align-items:center; gap:8px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+.proto .btns{display:flex; flex-wrap:wrap; gap:8px}
+.proto .pill{min-height:48px; font-size:16px}
+.proto .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+
+/* ---------- forms in sheets ---------- */
+.of-form{display:grid; gap:18px; padding:4px 2px 6px}
+.of-form .intro{margin:0; color:var(--muted)}
+.bdf{border:0; margin:0; padding:0; display:grid; gap:6px; min-width:0}
+.bdf legend{padding:0; margin-bottom:6px}
+.bdf .help{font-size:14px; color:var(--muted)}
+.bdf .err{font-size:14px; color:var(--danger); font-weight:600}
+.of-who{display:flex; gap:10px; align-items:flex-start; margin:0; padding:12px 14px; border-radius:var(--r-field); background:var(--surface-2)}
+.of-who .ic{color:var(--muted); margin-top:2px}
+.two{display:grid; grid-template-columns:1fr 1.5fr; gap:10px}
+.selw{position:relative}
+.selw select{appearance:none; -webkit-appearance:none; padding-right:44px; cursor:pointer}
+.selw .ic{position:absolute; right:14px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--muted)}
+.sumw{position:relative}
+.sumw .input{padding-right:48px; font-variant-numeric:tabular-nums; font-weight:700}
+.sumw .unit{position:absolute; right:18px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--muted); pointer-events:none}
+.of-form .check{padding:12px 14px; border-radius:var(--r-field); background:var(--surface-2); min-height:56px}
+.of-form .check[data-bad]{box-shadow:inset 0 0 0 2px var(--danger)}
+.of-form .check b{display:block}
+.of-form .check .muted{display:block; font-size:14px; margin-top:2px}
+.of-form .submit{display:grid; gap:10px}
+.of-form .submit .pill{white-space:normal; text-align:center}
+.of-form .fine{margin:0; font-size:14px; color:var(--muted); text-align:center}
+.of-alert{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.of-alert .ic{color:var(--warn); margin-top:2px}
+.of-alert p{margin:0}
+.spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:spin .8s linear infinite; flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.of-done{display:grid; justify-items:center; text-align:center; gap:12px; padding:18px 4px 8px}
+.of-done .okc{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.of-done h3{outline:none}
+.of-done p{margin:0; max-width:34ch}
+.of-done .pill{margin-top:8px}
+
+/* ---------- desktop ---------- */
+@container app (min-width:900px){
+  .of-hero{padding-top:48px}
+  .of-hgrid{grid-template-columns:minmax(0,1fr) minmax(0,520px); grid-template-rows:1fr auto auto 1fr; grid-template-areas:"pad feat" "head feat" "nav feat" "pad2 feat"; column-gap:56px; row-gap:0; align-items:end}
+  .of-nav{margin-top:28px}
+  .of-feat{align-self:center}
+  .of-hero .lead{font-size:19px}
+  .of-jump .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+  .feat{padding:28px 28px 26px; gap:16px}
+  .feat-num{font-size:128px}
+  .feat-t{font-size:30px}
+  .feat-t.big{font-size:48px}
+  .go.dark{width:auto; justify-self:start; min-width:300px}
+  .cp-act .pill{width:auto; min-width:220px}
+  .cp > .core{transition:transform var(--t-base) var(--ease)}
+  .cp:hover > .core{transform:translateY(-3px)}
+  .of-split{grid-template-columns:1fr 1fr; gap:64px; align-items:center}
+  .of-split.rev .of-stage{order:2}
+  .of-stage{min-height:420px; padding:48px}
+  .of-copy .of-cta{width:auto; min-width:300px}
+}
+.of-now{min-height:24px}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { sofiaYmd } from "../../lib/time.ts";
+  import "../../lib/icons/seal-percent.ts";
+  import "../../lib/icons/arrow-right.ts";
+  import "../../lib/icons/arrow-clockwise.ts";
+  import "../../lib/icons/clock.ts";
+  import "../../lib/icons/calendar-blank.ts";
+  import "../../lib/icons/chat-circle-dots.ts";
+  import "../../lib/icons/cake.ts";
+  import "../../lib/icons/confetti.ts";
+  import "../../lib/icons/check-circle.ts";
+  import "../../lib/icons/caret-down.ts";
+  import "../../lib/icons/warning.ts";
+  import "../../lib/icons/warning-circle.ts";
+  import "../../lib/icons/user.ts";
+  import "../../lib/icons/sliders-horizontal.ts";
+  import { heroHTML, heroSkel, couponSkel, gridHTML, nowHTML, sumHTML, errorHTML, netHTML, type OfData, type OfLive, type OfUser } from "./_offers.ts";
+
+  const main = SC.mount({ docTitle: "Оферти и отстъпки" });
+  const root = main.querySelector<HTMLElement>("[data-of]")!;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const DATA: OfData = JSON.parse(root.dataset.of || "{}");
+  const esc = SC.esc, ic = SC.ic;
+  type View = "ok" | "loading" | "error";
+  let view: View = "ok";
+  const net = { offline: typeof navigator !== "undefined" && navigator.onLine === false, sim: false };
+
+  /* ---------- the live view: hour (Sofia; ?preview=1&t=.. in preview), lunch date, signed-in customer ---------- */
+  function me(): OfUser | null {
+    const u = SC.user() as { name?: string; consent?: { birthday?: boolean; bday?: string } } | null;
+    return u ? { name: String(u.name || ""), birthday: !!(u.consent && u.consent.birthday), bday: String((u.consent && u.consent.bday) || "") } : null;
+  }
+  function live(): OfLive {
+    const isToday = sofiaYmd() === DATA.lunchDate;
+    const ev = SC.events()[0];
+    /* preview / demo: the lunch menu in the data counts as today's, so the -30% state can be seen (same as /vzemi-ot-myasto/) */
+    return { s: SC.state(), isToday, lunchLive: isToday || SC.preview, ls: SC.lastSaturday(), ev: { id: ev.id, n: ev.n, time: ev.time, text: ev.text }, user: me() };
+  }
+
+  let lastKey = "";
+  function fill(force: boolean) {
+    const L = live(), key = view + "|" + L.s.m + "|" + L.isToday + "|" + JSON.stringify(L.user) + "|" + L.ls.days;
+    if (!force && key === lastKey) return;
+    lastKey = key;
+    const feat = $("[data-feat]"), grid = $("[data-grid]"), now = $("[data-now]"), sum = $("[data-sum]");
+    if (view === "loading") {
+      feat.innerHTML = heroSkel();
+      grid.innerHTML = '<span class="vh">Зареждаме офертите</span>' + couponSkel() + couponSkel() + couponSkel();
+      now.innerHTML = '<span class="skel" style="display:block;height:20px;width:200px"></span>'; sum.textContent = "";
+      grid.setAttribute("aria-busy", "true"); return;
+    }
+    grid.removeAttribute("aria-busy");
+    if (view === "error") { feat.innerHTML = ""; now.innerHTML = ""; sum.textContent = ""; grid.innerHTML = errorHTML(SC.RESTAURANT.phone, SC.RESTAURANT.phoneIntl); return; }
+    feat.innerHTML = heroHTML(L, DATA);
+    now.innerHTML = nowHTML(L);
+    sum.innerHTML = sumHTML(L);
+    grid.innerHTML = gridHTML(L, DATA);
+  }
+  function showNet() { $("[data-net]").innerHTML = net.offline || net.sim ? netHTML() : ""; }
+
+  /* ---------- anchors: #lunch, #birthday ... (+ the ids of src/lib/offers.ts and the prototype aliases) ---------- */
+  const ALIAS: Record<string, string> = { lunch30: "lunch", tomorrow: "lunch", "gratska-vecher": "greek", profile: "signup", stamps: "loyalty", gift: "voucher" };
+  function goTo(id: string, smooth: boolean): boolean {
+    id = ALIAS[id] || id;
+    const el = root.querySelector<HTMLElement>("#" + CSS.escape(id));
+    if (!el) return false;
+    el.scrollIntoView({ behavior: smooth && !SC.reduce ? "smooth" : "auto", block: "start" });
+    if (el.classList.contains("cp")) { el.classList.remove("hl"); void el.offsetWidth; el.classList.add("hl"); }
+    else if (el.classList.contains("rv")) el.classList.add("in");
+    return true;
+  }
+  function fromHash(smooth: boolean) { const h = decodeURIComponent(location.hash.slice(1)); if (h) setTimeout(() => goTo(h, smooth), 60); }
+
+  /* ---------- forms in sheets: sent through api (server or demo) ---------- */
+  function normTel(v: string): string | null {
+    let d = (v || "").replace(/[\s\-().\/]/g, "");
+    if (/^00359/.test(d)) d = "+" + d.slice(2);
+    if (/^\+359\d{9}$/.test(d)) return "0" + d.slice(4);
+    return /^0\d{9}$/.test(d) ? d : null;
+  }
+  const niceTel = (v: string) => { const d = normTel(v); return d ? d.slice(0, 4) + " " + d.slice(4, 6) + " " + d.slice(6, 8) + " " + d.slice(8) : v; };
+  type F = HTMLFormElement & Record<string, HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement>;
+  function setErr(form: HTMLFormElement, name: string, msg: string): boolean {
+    const inp = form.querySelector<HTMLElement>("[name=" + name + "]")!, e = form.querySelector<HTMLElement>("#e-" + name)!, wrap = inp.closest(".check");
+    if (wrap) { if (msg) wrap.setAttribute("data-bad", ""); else wrap.removeAttribute("data-bad"); }
+    inp.setAttribute("aria-invalid", msg ? "true" : "false"); e.hidden = !msg; e.textContent = msg || ""; return !msg;
+  }
+  function busy(btn: HTMLButtonElement, on: boolean, label: string) {
+    btn.disabled = on; btn.setAttribute("aria-busy", on ? "true" : "false");
+    btn.innerHTML = (on ? '<span class="spin" aria-hidden="true"></span>' : "") + esc(label);
+  }
+  const alertBox = (b: string, text: string, extra = "") => '<div class="of-alert" role="alert">' + ic("warning", 22) + "<p><b>" + esc(b) + "</b> " + esc(text) + extra + "</p></div>";
+  /** call the API; offline / errors stay in the form (nothing typed is lost), field errors go under the fields */
+  async function send(form: HTMLFormElement, btn: HTMLButtonElement, label: string, call: () => Promise<unknown>, fieldMap: Record<string, string>, done: () => void) {
+    const box = form.querySelector<HTMLElement>("[data-alert]")!;
+    box.innerHTML = "";
+    busy(btn, true, label);
+    const fail = (html: string) => { busy(btn, false, "Опитай пак · " + label); box.innerHTML = html; box.scrollIntoView({ block: "nearest", behavior: SC.reduce ? "auto" : "smooth" }); };
+    if (net.sim || navigator.onLine === false) { setTimeout(() => fail(alertBox("Няма връзка.", "Въведеното е запазено. Опитайте пак, когато връзката се върне.")), SC.reduce ? 150 : 600); return; }
+    const { ApiError } = await import("../../client/api.ts");
+    try { await call(); }
+    catch (e) {
+      if (e instanceof ApiError && e.code === "offline") return fail(alertBox("Няма връзка.", "Въведеното е запазено. Опитайте пак, когато връзката се върне."));
+      if (e instanceof ApiError && e.code === "auth") return fail(alertBox("Влезте отново.", "Профилът ви не е отворен на това устройство. ", '<a class="link" href="' + SC.url.login() + '" style="min-height:0;display:inline">Вход с телефон</a>'));
+      if (e instanceof ApiError && e.fields) {
+        let first: string | null = null, rest = "";
+        for (const k of Object.keys(e.fields)) { const f = fieldMap[k]; if (f && form.querySelector("[name=" + f + "]")) { setErr(form, f, e.fields[k]); first = first || f; } else rest += " " + e.fields[k]; }
+        busy(btn, false, label);
+        if (rest) box.innerHTML = alertBox("Проверете запитването.", rest.trim());
+        if (first) form.querySelector<HTMLElement>("[name=" + first + "]")!.focus();
+        return;
+      }
+      return fail(alertBox("Не успяхме да изпратим.", e instanceof Error ? e.message : "Опитайте пак след малко."));
+    }
+    done();
+  }
+  function doneView(sheet: { el: HTMLElement; close: () => void }, title: string, html: string) {
+    const body = sheet.el.querySelector<HTMLElement>(".body")!;
+    body.innerHTML = '<div class="of-done" role="status"><span class="okc">' + ic("check", 36) + '</span><h3 class="h3" tabindex="-1">' + esc(title) + "</h3>" + html + '<button class="pill pill-line pill-block" type="button" data-done>Затвори</button></div>';
+    body.querySelector<HTMLElement>("[data-done]")!.onclick = sheet.close;
+    body.querySelector<HTMLElement>("h3")!.focus({ preventScroll: true });
+  }
+
+  function voucherSheet() {
+    const s = SC.sheet({ title: "Ваучер за подарък", html:
+      '<form class="of-form" novalidate>' +
+      '<p class="intro">Изпратете запитване, а платете на място. Ще ви се обадим, за да уговорим кога да минете.</p>' +
+      '<div class="field"><label for="v-sum">Сума на ваучера</label><div class="sumw"><input class="input" id="v-sum" name="sum" inputmode="decimal" autocomplete="off" placeholder="Сума в евро" aria-describedby="h-sum e-sum"><span class="unit" aria-hidden="true">€</span></div><span class="help" id="h-sum">Ще я потвърдим по телефона.</span><span class="err" id="e-sum" hidden></span></div>' +
+      '<div class="field"><label for="v-name">Вашето име</label><input class="input" id="v-name" name="name" autocomplete="name" aria-describedby="e-name"><span class="err" id="e-name" hidden></span></div>' +
+      '<div class="field"><label for="v-tel">Телефон</label><input class="input" id="v-tel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" aria-describedby="e-tel"><span class="err" id="e-tel" hidden></span></div>' +
+      '<div class="field"><label for="v-note">За кого е или по какъв повод <span class="muted" style="font-weight:600">(по желание)</span></label><textarea class="input" id="v-note" name="note" rows="2" maxlength="500"></textarea></div>' +
+      "<div data-alert></div>" +
+      '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Поискай ваучер</button><p class="fine">Плащате на място, в брой или с карта.</p></div>' +
+      "</form>" });
+    const f = s.el.querySelector("form") as F, btn = f.querySelector<HTMLButtonElement>("[data-go]")!;
+    const amount = () => { const v = f.sum.value.replace(/\s/g, "").replace(",", "."); return /^\d+(\.\d{1,2})?$/.test(v) ? +v : NaN; };
+    const label = () => { const a = amount(); return a > 0 ? "Поискай ваучер за " + SC.fmt(a) : "Поискай ваучер"; };
+    function check(n: string): boolean {
+      if (n === "sum") { const raw = f.sum.value.trim(), a = amount(); return setErr(f, "sum", !raw ? "Напишете сумата в евро." : !(a > 0) ? "Напишете сумата само с цифри, без букви." : ""); }
+      if (n === "name") return setErr(f, "name", f.name.value.trim().length < 2 ? "Напишете името си, за да знаем кого търсим." : "");
+      return setErr(f, "tel", !f.tel.value.trim() ? "Напишете телефон, на който да ви се обадим." : !normTel(f.tel.value) ? "Проверете номера: 10 цифри, започва с 0. Например 0888 12 34 56." : "");
+    }
+    f.sum.addEventListener("input", () => { if (!btn.disabled) btn.textContent = label(); if (f.sum.getAttribute("aria-invalid") === "true") check("sum"); });
+    ["name", "tel"].forEach((n) => {
+      f[n].addEventListener("blur", () => { if (f[n].value.trim()) check(n); });
+      f[n].addEventListener("input", () => { if (f[n].getAttribute("aria-invalid") === "true") check(n); });
+    });
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const names = ["sum", "name", "tel"], ok = names.map(check), bad = names.filter((_, i) => !ok[i]);
+      if (bad.length) { f[bad[0]].focus(); return; }
+      const a = amount(), tel = niceTel(f.tel.value), note = f.note.value.trim();
+      send(f, btn, label(), async () => {
+        const { api } = await import("../../client/api.ts");
+        return api.feedback.create({ name: f.name.value.trim(), contact: normTel(f.tel.value) || f.tel.value, mode: "phone", topic: "voucher",
+          message: "Запитване за ваучер за подарък: " + SC.fmt(a) + "." + (note ? " За кого / повод: " + note : "") });
+      }, { name: "name", contact: "tel" }, () => doneView(s, "Запитването е изпратено",
+        '<p>Ще ви се обадим на <b class="price">' + esc(tel) + '</b>, за да уговорим кога да минете за ваучера за <b class="price">' + SC.fmt(a) + '</b>.</p><p class="muted small">Плащате на място, в брой или с карта.</p>'));
+    });
+    setTimeout(() => f.sum.focus({ preventScroll: true }), 380);
+  }
+
+  function birthdaySheet() {
+    /* same fields as the profile ("Съгласия"): a separate, unchecked consent + day and month, the year is never stored.
+       Signed in: saved into the profile (api.auth.update). Guest: an e-mail to write to is needed as well. */
+    const u = me();
+    let days = '<option value="">Ден</option>';
+    for (let i = 1; i <= 31; i++) days += '<option value="' + i + '">' + i + "</option>";
+    const mons = '<option value="">Месец</option>' + SC.MONTHS.map((m, i) => '<option value="' + (i + 1) + '">' + m + "</option>").join("");
+    const s = SC.sheet({ title: "Рожден ден", html:
+      '<form class="of-form" novalidate>' +
+      '<p class="intro">-10% от сметката или малка торта за рожденика, когато празнувате при нас. Пишем ви седмица преди празника.</p>' +
+      '<div class="field"><label class="check" for="b-ok"><input type="checkbox" id="b-ok" name="ok" aria-describedby="e-ok"><span><b>Искам подарък за рождения си ден</b><span class="muted">-10% или малка торта. Пишем ви седмица преди празника.</span></span></label><span class="err" id="e-ok" hidden></span></div>' +
+      '<fieldset class="bdf"><legend class="label">Рожден ден</legend>' +
+        '<div class="two"><div class="selw"><label class="vh" for="b-day">Ден</label><select class="input" id="b-day" name="day" aria-describedby="e-day">' + days + "</select>" + ic("caret-down", 18) + "</div>" +
+        '<div class="selw"><label class="vh" for="b-mon">Месец</label><select class="input" id="b-mon" name="mon" aria-describedby="e-day">' + mons + "</select>" + ic("caret-down", 18) + "</div></div>" +
+        '<span class="help">Пазим само деня и месеца, без годината.</span><span class="err" id="e-day" hidden></span></fieldset>' +
+      (u ? '<p class="of-who">' + ic("user", 20) + "<span>Записваме го в профила" + (u.name ? " на <b>" + esc(u.name) + "</b>" : "") + ". Промяна по всяко време в „Съгласия“.</span></p>"
+         : '<div class="field"><label for="b-mail">Имейл, на който да ви пишем</label><input class="input" id="b-mail" name="mail" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" aria-describedby="e-mail"><span class="err" id="e-mail" hidden></span></div>') +
+      "<div data-alert></div>" +
+      '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Включи подаръка за рождения ден</button>' +
+      (u ? "" : '<p class="fine">С профил датата се пази заедно с картата с печати. <a class="link" href="' + SC.url.login() + '" style="min-height:0;display:inline">Направи профил</a></p>') + "</div>" +
+      "</form>" });
+    const f = s.el.querySelector("form") as F, btn = f.querySelector<HTMLButtonElement>("[data-go]")!, label = btn.textContent || "";
+    const DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    function dayErr(): boolean {
+      const d = +f.day.value, m = +f.mon.value;
+      const msg = !d || !m ? "Изберете ден и месец, за да знаем кога да ви пишем." : d > DIM[m - 1] ? "В " + SC.MONTHS[m - 1] + " има " + DIM[m - 1] + " дни. Изберете друг ден." : "";
+      f.day.setAttribute("aria-invalid", msg ? "true" : "false"); f.mon.setAttribute("aria-invalid", msg ? "true" : "false");
+      const e = f.querySelector<HTMLElement>("#e-day")!; e.hidden = !msg; e.textContent = msg; return !msg;
+    }
+    function check(n: string): boolean {
+      if (n === "ok") return setErr(f, "ok", f.ok.checked ? "" : "Отметнете полето, ако искате да ви пишем за подаръка.");
+      if (n === "day") return dayErr();
+      const v = f.mail.value.trim();
+      return setErr(f, "mail", !v ? "Напишете имейл, на който да ви пишем." : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "Проверете имейла, например ime@primer.bg." : "");
+    }
+    const names = u ? ["ok", "day"] : ["ok", "day", "mail"];
+    f.day.addEventListener("change", () => { if (f.mon.value) check("day"); });
+    f.mon.addEventListener("change", () => { if (f.day.value) check("day"); });
+    f.ok.addEventListener("change", () => { if (f.ok.getAttribute("aria-invalid") === "true") check("ok"); });
+    if (!u) {
+      f.mail.addEventListener("blur", () => { if (f.mail.value.trim()) check("mail"); });
+      f.mail.addEventListener("input", () => { if (f.mail.getAttribute("aria-invalid") === "true") check("mail"); });
+    }
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ok = names.map(check), bad = names.filter((_, i) => !ok[i]);
+      if (bad.length) { f[bad[0]].focus(); return; }
+      const d = +f.day.value, m = +f.mon.value, pre = new Date(2027, m - 1, d - 7), mail = u ? "" : f.mail.value.trim();
+      send(f, btn, label, async () => {
+        const { api } = await import("../../client/api.ts");
+        if (u) return api.auth.update({ consent: { birthday: true, bday: m + "-" + d } });
+        /* guest: no profile to keep the consent in; the request goes to the restaurant with the e-mail (see the agent report) */
+        return api.feedback.create({ name: "Гост (рожден ден)", contact: mail, mode: "email", topic: "birthday",
+          message: "Искам подарък за рождения си ден: " + d + " " + SC.MONTHS[m - 1] + ". Съгласието е отметнато от клиента на страницата с офертите." });
+      }, { contact: "mail" }, () => {
+        if (u) fill(true);
+        doneView(s, "Готово, записахме " + d + " " + SC.MONTHS[m - 1],
+          "<p>Около <b>" + pre.getDate() + " " + SC.MONTHS[pre.getMonth()] + "</b> ще ви пишем" + (u ? "" : " на <b>" + esc(mail) + "</b>") + ' с подаръка.</p><p class="muted small">Подаръкът важи, когато празнувате при нас.' + (u ? " Промяна по всяко време в профила, в „Съгласия“." : "") + "</p>");
+      });
+    });
+  }
+
+  /* ---------- preview only: the states panel (bottom of the page) ---------- */
+  if (SC.preview) {
+    $("[data-proto]").outerHTML = '<section class="sec"><div class="proto" role="group" aria-labelledby="h-proto"><h2 id="h-proto">' + ic("sliders-horizontal", 18) + "Само в прототипа</h2>" +
+      "<p>Покажете състоянията на страницата. Часът се сменя с ?t=21:30 в адреса.</p>" +
+      '<div class="btns"><button class="pill pill-soft" type="button" data-proto="loading">Зареждане</button>' +
+      '<button class="pill pill-soft" type="button" data-proto="error">Грешка при зареждане</button>' +
+      '<button class="pill pill-soft" type="button" data-proto="offline" aria-pressed="false">Без интернет</button></div></div></section>';
+  }
+
+  /* ---------- page events ---------- */
+  main.addEventListener("click", (e) => {
+    const t = (e.target as Element).closest<HTMLElement>("a, button");
+    if (!t || !root.contains(t)) return;
+    const href = t.getAttribute("href");
+    if (href && href.charAt(0) === "#" && href.length > 1) { e.preventDefault(); if (goTo(href.slice(1), true)) history.replaceState(null, "", href); return; }
+    if (t.hasAttribute("data-pickup")) { SC.cart.mode("pickup"); return; }
+    if (t.dataset.sheet === "voucher") { voucherSheet(); return; }
+    if (t.dataset.sheet === "birthday") { birthdaySheet(); return; }
+    if (t.hasAttribute("data-retry")) { view = "loading"; fill(true); setTimeout(() => { view = "ok"; fill(true); }, SC.reduce ? 200 : 1100); return; }
+    const p = SC.preview ? t.dataset.proto : undefined;
+    if (p === "loading") { view = "loading"; fill(true); $("[data-grid]").scrollIntoView({ block: "center" }); setTimeout(() => { view = "ok"; fill(true); }, 1800); return; }
+    if (p === "error") { view = "error"; fill(true); $("[data-grid]").scrollIntoView({ block: "center" }); return; }
+    if (p === "offline") { net.sim = !net.sim; t.setAttribute("aria-pressed", String(net.sim)); showNet(); SC.toast(net.sim ? "Симулираме: няма интернет" : "Връзката е възстановена"); }
+  });
+  window.addEventListener("hashchange", () => fromHash(true));
+  window.addEventListener("offline", () => { net.offline = true; showNet(); });
+  window.addEventListener("online", () => { net.offline = false; showNet(); });
+  /* the minute changes: redraw only when something on the page changes */
+  document.addEventListener("sc:tick", () => { if (view === "ok") fill(false); });
+  window.addEventListener("storage", (e) => { if (e.key === "sc-user" && view === "ok") fill(false); });
+
+  /* ---------- first paint: the server drew the neutral view; now the live one ---------- */
+  fill(true);
+  showNet();
+  fromHash(false);
+  root.dataset.ready = "1";
+  SC.reveal();
+</script>
