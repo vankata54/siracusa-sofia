@@ -1,0 +1,335 @@
+---
+/* Celebration calculator (/praznik/): port of design/pages/celebration.html (design/PAGES.md "celebration.html").
+   Drawn here (SEO, first paint): the hero, step 1 of the calculator in its fresh state, the summary, "Как става".
+   ./_praznik.ts restores the draft, redraws the steps, the summary and the phone bar, and sends the inquiry
+   through api.celebrations.create. The markup of the steps is in ./_calc.ts (same functions on both sides). */
+import Base from "../../layouts/Base.astro";
+import { ic, url, RESTAURANT as R } from "../../lib/index.ts";
+import { fresh, flowHTML, asideHTML, barHTML, feastHTML, PRICE_DEFAULT, TEL, type View } from "./_calc.ts";
+
+const abs = (p: string) => new URL(p, Astro.site).href;
+const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+  { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+  { "@type": "ListItem", position: 2, name: "Събития и поводи", item: abs(url.page("events")) },
+  { "@type": "ListItem", position: 3, name: "Празник при нас", item: abs(url.page("celebration")) },
+] };
+const v: View = { S: fresh(), price: PRICE_DEFAULT, early: false, sent: false, sending: false, restored: false, minDate: "", open: true, beforeOpen: false };
+const hero =
+  '<div class="ch-text"><a class="crumb" href="' + url.page("events") + '">' + ic("arrow-left", 18) + "Събития и поводи</a>" +
+  '<span class="eyebrow">Калкулатор на празник</span><h1 class="h1">Празник при нас</h1>' +
+  '<p class="lead">Рожден ден, кръщене или фирмено парти. Изберете повод, гости и меню, а управителят ще ви изпрати оферта.</p>' +
+  '<div class="perks"><span class="perk ember">' + ic("seal-percent", 18) + '-5% при ранна резервация за празник</span><span class="perk">' + ic("fork-knife", 18) + 'Пакети от нашето меню</span><span class="perk">' + ic("map-pin", 18) + "Салон, градина или цялото място</span></div></div>" +
+  feastHTML();
+---
+<Base page="celebration" nav="events" title="Празник при нас" docTitle="Празник при нас"
+  description="Рожден ден, кръщене, юбилей или фирмено парти в Siracusa, Дружба 2. Изберете повод, гости и меню от нашата кухня и получете оферта. -5% при ранна резервация."
+  bottomNav={false} ai={false} actionBar jsonld={jsonld}>
+  <section class="wrap ch" set:html={hero}></section>
+  <section class="wrap calc" id="calc" aria-label="Калкулатор на празник">
+    <div class="calc-grid">
+      <div class="flow" data-flow set:html={flowHTML(v)}></div>
+      <aside class="aside" aria-label="Вашият празник"><div class="shell sumcard"><div class="core" data-aside set:html={asideHTML(v)}></div></div></aside>
+    </div>
+  </section>
+  <noscript><p class="wrap lead">Калкулаторът работи с JavaScript. Обадете ни се на <a href={TEL}>{R.phone}</a> и ще планираме празника заедно.</p></noscript>
+  <section class="sec" aria-labelledby="how-h">
+    <div class="sec-h"><h2 class="h2" id="how-h">Как става</h2></div>
+    <ol class="how">
+      <li><span class="num">1</span><span><b>Изпращате запитване</b><p>Повод, гости и меню. Без плащане и без ангажимент.</p></span></li>
+      <li><span class="num">2</span><span><b>Управителят ви се обажда</b><p>Уточнявате менюто, тортата, украсата и подредбата.</p></span></li>
+      <li><span class="num">3</span><span><b>Потвърждавате</b><p>Получавате окончателната оферта и пазим мястото за вас. Плащате на място.</p></span></li>
+    </ol>
+    <div class="talk"><p>Предпочитате да поговорим?<span>Всеки ден от {R.open} до {R.close}.</span></p><a class="pill pill-line" href={TEL} set:html={ic("phone", 20) + "Обади се · " + R.phone}></a></div>
+  </section>
+  <section class="wrap"><div class="proto" data-proto hidden></div></section>
+  <div class="abar nonav cbar" data-cbar slot="ov" set:html={barHTML(v)}></div>
+</Base>
+
+<style is:global>
+
+/* ---------- hero ---------- */
+.ch{display:grid; grid-template-columns:minmax(0,1fr); gap:22px; padding-top:12px}
+.ch-text{min-width:0}
+.crumb{display:inline-flex; align-items:center; gap:6px; min-height:48px; margin-left:-2px; color:var(--muted); font-weight:700; font-size:16px; text-decoration:none}
+.eyebrow{display:block; font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--muted); margin:2px 0 8px}
+.ch .lead{margin-top:12px; max-width:36ch}
+.perks{display:flex; gap:8px; margin:18px -16px 0; padding:2px 16px; overflow-x:auto; scrollbar-width:none}
+.perks::-webkit-scrollbar{display:none}
+.perk{flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 14px 0 10px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:14px; font-weight:700}
+.perk.ember{background:var(--ember); color:var(--on-ember); box-shadow:none}
+.feast{position:relative; height:156px; border-radius:var(--r-shell); overflow:hidden; background:radial-gradient(120% 120% at 50% 20%, var(--plate-1), var(--plate-2)); display:flex; align-items:center; justify-content:center}
+.feast .pl{flex:none; position:relative; border-radius:50%; box-shadow:var(--shadow)}
+.feast .pl svg{display:block; width:100%; height:100%}
+.feast .pl + .pl{margin-left:-20px}
+.feast .p1{width:112px; height:112px; transform:translateY(-10px)}
+.feast .p2{width:98px; height:98px; transform:translateY(20px); z-index:2}
+.feast .p3{width:92px; height:92px; transform:translateY(-12px)}
+.feast .p4{width:84px; height:84px; transform:translateY(18px); z-index:2}
+.cf{position:absolute; width:9px; height:14px; border-radius:2px; opacity:.9}
+.cf.e{background:var(--ember)} .cf.r{background:var(--red)} .cf.o{background:var(--ok)} .cf.i{background:var(--ink); opacity:.55}
+.cf.c{width:10px; height:10px; border-radius:50%}
+
+/* ---------- prototype switch ---------- */
+.proto{margin-top:40px; padding:14px; border-radius:var(--r-core); border:1.5px dashed var(--line-strong); display:grid; gap:12px}
+.proto-h{display:flex; align-items:flex-start; gap:10px; font-size:14px; color:var(--muted); line-height:1.4}
+.proto-h b{color:var(--ink)}
+.proto .seg button{min-height:48px; font-size:15px; font-weight:700; line-height:1.15; padding:0 8px}
+.proto-row{display:grid; gap:6px}
+.proto-row .label{font-size:14px}
+
+/* ---------- calculator layout ---------- */
+.calc{padding-top:40px}
+.calc-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:24px; align-items:start}
+.flow{min-width:0}
+.draft{display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-bottom:12px; color:var(--muted)}
+
+/* stepper: shared .stepper from sc.css */
+.flow > .stepper{margin-bottom:4px}
+/* step panel */
+.panel{padding-top:8px; outline:none}
+.panel.fwd{animation:stepIn var(--t-spring) var(--ease)}
+.panel.bwd{animation:stepBack var(--t-spring) var(--ease)}
+@keyframes stepIn{from{opacity:0; transform:translateX(32px)}to{opacity:1; transform:none}}
+@keyframes stepBack{from{opacity:0; transform:translateX(-32px)}to{opacity:1; transform:none}}
+.panel > .h2{margin-top:14px}
+.panel > .lead{margin-top:8px}
+.blk{margin-top:36px}
+.blk-h{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:14px}
+.blk-h .h3 label{cursor:pointer}
+.blk-h .opt{font-size:14px; color:var(--muted); font-weight:600}
+.err{display:flex; gap:6px; align-items:flex-start; margin:8px 0 0; font-size:14px; font-weight:700; color:var(--danger)}
+.err .ic{margin-top:1px}
+.err[hidden]{display:none}
+.help{margin:8px 0 0; font-size:14px; color:var(--muted)}
+
+/* choice tiles (radio inside label) */
+.tiles{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+.tile{position:relative; display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:12px; min-height:108px; padding:12px 14px 14px 12px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); cursor:pointer; font-weight:800; font-size:16px; line-height:1.2; letter-spacing:-.01em; transition:transform var(--t-fast) var(--ease)}
+.tile:active{transform:scale(.97)}
+.tile .bub{width:46px; height:46px; flex:none; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.tile.on{background:var(--ink); color:var(--bg); box-shadow:var(--shadow)}
+.tile.on .bub{background:var(--bg); color:var(--ink)}
+.tile.wide{grid-column:1/-1; flex-direction:row; align-items:center; justify-content:flex-start; min-height:72px}
+.tile:has(input:focus-visible),.zone:has(input:focus-visible),.pkg:has(input:focus-visible){outline:3px solid var(--red); outline-offset:2px}
+
+/* guests */
+.guests{display:flex; flex-wrap:wrap; align-items:center; gap:12px 14px}
+.gcount{display:inline-flex; align-items:center; gap:2px; padding:6px; border-radius:var(--r-pill); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.gcount button{width:52px; height:52px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.gcount button:active{transform:scale(.92)}
+.gcount button[disabled]{opacity:.4; cursor:not-allowed}
+.gnum{display:grid; justify-items:center; width:86px; line-height:1}
+.gnum input{width:100%; border:0; background:transparent; text-align:center; font-size:32px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; color:var(--ink); padding:2px 0; -moz-appearance:textfield; appearance:textfield; border-radius:12px}
+.gnum input::-webkit-outer-spin-button,.gnum input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.gnum input:focus{outline:none; box-shadow:inset 0 0 0 2px var(--red)}
+.gnum small{font-size:14px; font-weight:700; color:var(--muted); margin-top:2px}
+.gquick{display:flex; flex-wrap:wrap; gap:8px}
+.gquick .chip{min-width:56px; justify-content:center; min-height:48px}
+
+/* when */
+.when{display:grid; grid-template-columns:minmax(0,1fr) 128px; gap:10px}
+.selw{position:relative}
+.selw select{appearance:none; -webkit-appearance:none; padding-right:40px; cursor:pointer}
+.selw .ic{position:absolute; right:14px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--muted)}
+input[type="date"].input{padding-right:12px; min-width:0}
+.early{display:flex; gap:12px; align-items:flex-start; margin-top:14px; padding:14px 16px; border-radius:20px; background:var(--surface-2); line-height:1.45}
+.early .ic{margin-top:1px; color:var(--muted)}
+.early b{font-weight:800}
+.early.on{background:var(--ember); color:var(--on-ember)}
+.early.on .ic{color:var(--on-ember)}
+.early .missing{display:inline-block}
+
+/* zones */
+.zones{display:grid; gap:10px}
+.zone{display:grid; grid-template-columns:46px 1fr 26px; gap:12px; align-items:center; min-height:76px; padding:12px 16px 12px 12px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.zone:active{transform:scale(.98)}
+.zone .bub{width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.zone b{display:block; font-size:17px; font-weight:800; letter-spacing:-.01em; line-height:1.2}
+.zone small{display:block; font-size:14px; color:var(--muted); font-weight:600; margin-top:3px}
+.radio{width:26px; height:26px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--line-strong); display:grid; place-items:center; color:transparent; transition:transform var(--t-fast) var(--ease)}
+.zone.on{box-shadow:inset 0 0 0 2.5px var(--ink), var(--shadow)}
+.zone.on .radio,.pkg.on .radio{background:var(--ink); color:var(--bg); box-shadow:none}
+
+/* packages */
+.pkgs{display:grid; gap:12px; margin-top:22px}
+.pkg{position:relative; display:flex; flex-direction:column; gap:14px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); cursor:pointer}
+.pkg.on{box-shadow:inset 0 0 0 2.5px var(--ink), var(--shadow)}
+.pkg-h{display:grid; grid-template-columns:1fr 26px; gap:12px; align-items:start}
+.pkg-h .h3{font-size:22px}
+.pkg-h p{margin:4px 0 0; color:var(--muted); line-height:1.4}
+.minis{display:flex; align-items:center; height:60px}
+.minis .pl{width:58px; height:58px; flex:none}
+.minis .pl + .pl{margin-left:-12px}
+.minis svg{display:block; width:100%; height:100%}
+.pkg dl{margin:0; display:grid; gap:10px}
+.pkg dl div{display:grid; gap:1px}
+.pkg dt{font-size:14px; font-weight:700; color:var(--muted)}
+.pkg dt i{font-style:normal; font-weight:600}
+.pkg dd{margin:0; font-size:16px; font-weight:600; line-height:1.35}
+.pkg-f{margin-top:auto; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:2px 12px; padding-top:14px; border-top:1px solid var(--line)}
+.pkg-f .price{font-size:22px}
+.pkg-f .per{font-size:15px; font-weight:700; color:var(--muted)}
+.pkg-f .tot{font-size:14px; color:var(--muted); font-weight:600}
+.pkg-f .offer{font-size:16px; font-weight:800}
+.pkg.custom .bigbub{width:58px; height:58px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.pkg.custom.on .bigbub{background:var(--ink); color:var(--bg)}
+
+/* custom menu picker */
+.picker{margin-top:28px}
+.gtabs{display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px; border-radius:24px; background:var(--surface-2)}
+.gtabs button{min-height:52px; border:0; border-radius:18px; background:transparent; color:var(--ink); font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; padding:0 8px}
+.gtabs button[aria-selected="true"]{background:var(--surface); box-shadow:var(--shadow)}
+.gtabs .n{min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; display:grid; place-items:center; font-variant-numeric:tabular-nums}
+.picker .chips{margin-top:14px; margin-bottom:6px}
+.plist{display:grid; gap:2px}
+.pk{display:grid; grid-template-columns:64px minmax(0,1fr) 30px; gap:12px; align-items:center; width:100%; padding:10px; border:0; border-radius:20px; background:transparent; color:inherit; text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.pk:active{transform:scale(.98)}
+.pk .pic{width:64px; height:64px; border-radius:18px}
+.pk .pic > svg{inset:6%; width:88%; height:88%}
+.pk b{display:block; font-weight:700; line-height:1.28; letter-spacing:-.005em}
+.pk .m{display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px; margin-top:3px; font-size:15px; color:var(--muted)}
+.pk .m .price{color:var(--ink); font-size:15px}
+.pk .m .yes{display:none; color:var(--ok); font-weight:800}
+.pk .tk{width:30px; height:30px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--line-strong); display:grid; place-items:center; color:transparent}
+.pk[aria-pressed="true"]{background:var(--surface); box-shadow:inset 0 0 0 2px var(--ink)}
+.pk[aria-pressed="true"] .tk{background:var(--ink); color:var(--bg); box-shadow:none}
+.pk[aria-pressed="true"] .m .yes{display:inline}
+.pk .badge{font-size:14px; padding:4px 8px 4px 6px}
+.mine{margin-top:20px}
+.mine .core{padding:16px 18px}
+.mine h4{margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em}
+.mine .grp{margin-top:12px}
+.mine .grp > small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.mine .it{display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid var(--line)}
+.mine .grp > small + .it{border-top:0}
+.mine .it span{font-weight:600; line-height:1.3; padding:6px 0}
+.mine .it .link{flex:none}
+.mine .empty{padding:16px 4px 6px}
+.mine .empty .ill{width:72px; height:72px}
+.callbox{display:grid; gap:12px; margin-top:16px; padding:18px; border-radius:var(--r-core); background:var(--surface-2)}
+.callbox h4{margin:0; font-size:18px; font-weight:800; letter-spacing:-.01em}
+.callbox p{margin:0; color:var(--muted)}
+.callbox .pill{justify-self:start}
+
+/* details step */
+.wishes{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+.reveal-box{margin-top:14px; display:grid; gap:10px}
+.reveal-box[hidden]{display:none}
+.fields{display:grid; gap:18px}
+.field label .opt{font-weight:600; color:var(--muted)}
+.fine{margin:14px 0 0; display:flex; gap:10px; align-items:flex-start; font-size:14px; color:var(--muted)}
+.alert{display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; margin-top:24px; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
+.alert .ic{color:var(--danger); margin-top:1px}
+.alert b{display:block; font-size:17px}
+.alert p{margin:4px 0 0}
+.alert .row{margin-top:10px; flex-wrap:wrap}
+.alert[hidden]{display:none}
+.spin{width:20px; height:20px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:spin 800ms linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* summary */
+.sumcard .core{padding:18px 20px 20px}
+.sum-h{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px}
+.sum .kv{padding:9px 0; align-items:baseline}
+.sum .kv > span:first-child{color:var(--muted); font-weight:600; flex:none}
+.sum .kv > b{text-align:right; font-weight:700}
+.sum .kv .none{color:var(--muted); font-weight:600}
+.sum-price{margin-top:8px; padding-top:12px; border-top:1.5px solid var(--line-strong)}
+.sum-price .kv{border-top:0; padding:5px 0}
+.sum-price .disc b{color:var(--ok)}
+.sum-total{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:6px}
+.sum-total span{font-weight:800}
+.sum-total .price{font-size:28px; letter-spacing:-.03em}
+.sum-offer{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-weight:700; line-height:1.4}
+.sum-note{margin:10px 0 0; font-size:14px; color:var(--muted); line-height:1.45}
+.sum-call{display:flex; justify-content:center; margin-top:4px}
+.aside{display:none}
+
+/* floating action bar (phone) */
+.cbar{flex-direction:column; align-items:stretch; gap:2px; padding:4px 6px 6px; border-radius:var(--r-shell)}
+.sumbtn{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:0 12px 0 14px; border:0; border-radius:22px; background:transparent; color:var(--ink); text-align:left; cursor:pointer; line-height:1.2}
+.sumbtn small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.sumbtn b{display:flex; align-items:center; gap:6px; font-size:18px; font-weight:800; letter-spacing:-.02em; white-space:nowrap}
+.sumbtn b .ic{color:var(--muted)}
+.cbtns{display:flex; gap:8px}
+.cbtns .pill{min-width:0; min-height:52px; font-size:17px; padding:0 16px; gap:8px; overflow:hidden}
+.cbtns .pill-red{flex:1}
+.cbtns .pill-line{flex:none; background:var(--surface)}
+.cbtns .pill[hidden],.sum-btns .pill[hidden]{display:none}
+.sum-btns{display:flex; gap:8px; margin-top:16px}
+.sum-btns .pill-red{flex:1}
+.cbar[hidden]{display:none}
+
+/* success */
+.done{text-align:center}
+.done .core{padding:34px 20px 24px; display:grid; justify-items:center; gap:10px}
+.burst{position:relative; width:96px; height:96px; margin-bottom:10px}
+.burst .ok{position:absolute; inset:0; border-radius:50%; background:var(--ok); color:var(--on-ok); display:grid; place-items:center; animation:pop 520ms var(--ease) both}
+@keyframes pop{from{transform:scale(.4); opacity:0}to{transform:none; opacity:1}}
+.burst i{position:absolute; left:44px; top:42px; width:8px; height:12px; border-radius:2px; opacity:0; animation:conf 900ms var(--ease) 160ms forwards}
+.burst i.e{background:var(--ember)} .burst i.r{background:var(--red)} .burst i.o{background:var(--ok)} .burst i.k{background:var(--ink)}
+@keyframes conf{from{opacity:0; transform:translate(0,0) rotate(0)}to{opacity:.9; transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+.done .lead{max-width:34ch; color:var(--ink)}
+.calc-grid.sent{grid-template-columns:minmax(0,1fr)}
+.calc-grid.sent .flow{width:100%; max-width:760px; justify-self:center}
+.done .night{margin:0; max-width:36ch; color:var(--muted)}
+.done .sum{width:100%; max-width:440px; margin-top:12px; text-align:left}
+.done .btns{display:grid; gap:8px; width:100%; max-width:440px; margin-top:12px}
+
+/* how it works */
+.how{display:grid; gap:12px; margin:0; padding:0; list-style:none}
+.how li{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.how .num{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-weight:800; font-size:18px}
+.how b{display:block; font-size:18px; letter-spacing:-.01em; line-height:1.25}
+.how p{margin:4px 0 0; color:var(--muted)}
+.talk{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; margin-top:16px; padding:18px 18px 18px 20px; border-radius:var(--r-core); background:var(--surface-2)}
+.talk p{margin:0; font-weight:700}
+.talk p span{display:block; font-weight:600; color:var(--muted); font-size:15px}
+
+/* ---------- small phones (360) ---------- */
+@container app (max-width:380px){
+  .cbtns .pill{font-size:16px; padding:0 14px}
+  .panel .seg button{font-size:15px; padding:0 6px; line-height:1.15}
+}
+/* ---------- wider screens ---------- */
+@container app (min-width:700px){
+  .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .when{max-width:520px}
+  .tiles .tile.wide{grid-column:span 2}
+  .zones{grid-template-columns:repeat(3,1fr)}
+  .zone{grid-template-columns:1fr 26px; grid-template-rows:auto auto; align-items:start; padding:16px}
+  .zone .bub{grid-column:1; grid-row:1}
+  .zone .radio{grid-column:2; grid-row:1}
+  .zone > span:nth-of-type(2){grid-column:1/-1}
+  .pkgs{grid-template-columns:1fr 1fr}
+  .gtabs{grid-template-columns:repeat(4,1fr)}
+  .plist{grid-template-columns:1fr 1fr; gap:4px 10px}
+  .how{grid-template-columns:repeat(3,1fr)}
+  .how li{grid-template-columns:1fr; gap:12px}
+}
+@container app (min-width:900px){
+  .done .lead{max-width:46ch}
+  .ch{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); align-items:center; gap:56px; padding-top:28px}
+  .ch .lead{font-size:19px}
+  .feast{height:340px}
+  .feast .p1{width:196px; height:196px; transform:translateY(-24px)}
+  .feast .p2{width:166px; height:166px; transform:translateY(44px)}
+  .feast .p3{width:154px; height:154px; transform:translateY(-28px)}
+  .feast .p4{width:134px; height:134px; transform:translateY(38px)}
+  .feast .pl + .pl{margin-left:-28px}
+  .perks{flex-wrap:wrap; overflow:visible; margin:22px 0 0; padding:0}
+  .cf{transform:scale(1.4)}
+  .proto{grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; gap:16px 20px}
+  .proto-h{grid-column:1/-1}
+  .calc-grid{grid-template-columns:minmax(0,1fr) 380px; gap:48px}
+  .aside{display:block; position:sticky; top:156px}
+  .cbar{display:none}
+  .done .core{padding:56px 40px 40px}
+}
+.proto[hidden]{display:none}
+</style>
+
+<script>
+  import { start } from "./_praznik.ts";
+  start();
+</script>
