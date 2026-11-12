@@ -148,7 +148,9 @@ const jsonld = menuLd(Astro.site);
 .mcat{padding-top:48px}
 .mcat:first-child{padding-top:28px}
 .mcat .sec-h{margin-bottom:6px; align-items:center}
-.mcat .sec-h .link{flex:none}
+/* a long "Всички студени предястия" goes under the heading on a narrow screen, never out of it */
+.mcat .sec-h{flex-wrap:wrap; column-gap:12px}
+.mcat .sec-h .link{flex:none; max-width:100%}
 .cdesc{margin:0; font-size:15px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums}
 .cseo{margin:4px 0 18px; font-size:14px}
 .qhead{padding-top:28px}

@@ -169,7 +169,7 @@ export function timelineHTML(v: View): string {
   let say: [string, string, string];
   if (S.delivery && S.lunch) say = ["ok", "check-circle", "Сега доставяме, включително обедното меню до 15:00."];
   else if (S.delivery) say = ["ok", "check-circle", "Сега доставяме до 21:00. Обедното меню след 15:00 е само за вземане от място (-30%)."];
-  else if (S.kitchen) say = ["warn", "clock", "Доставката приключи за днес · Вземане до 22:30."];
+  else if (S.kitchen) say = ["warn", "clock", "Доставката приключи за днес · Поръчки за вземане до 22:30."];
   else say = ["", "moon", hourTitle(S) + " · " + hourLine(S) + "."]; /* the one hour note's words (lib/ui.ts) */
   return '<div class="tl-body' + (inDay ? "" : " closed") + '">' + (inDay ? '<div class="now' + side + '" style="left:' + pos.toFixed(2) + '%" aria-hidden="true"><b>Сега ' + hh + "</b></div>" : "") +
     rows.map((r) => '<div class="tl-row"><div class="lab">' + r[0] + "<span>" + r[1] + '</span></div><div class="track" aria-hidden="true"><i class="' + r[2] + '" style="width:' + pc(r[3]).toFixed(2) + '%"></i>' + (inDay ? '<b class="tick" style="left:' + pos.toFixed(2) + '%"></b>' : "") + "</div></div>").join("") +
@@ -200,7 +200,7 @@ export const FAQ: Faq[] = [
     /* the cart can show the fee only once it is in the data; until then no promise about it */
     ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа." + (FEES_KNOWN ? " Таксата се вижда в количката, преди да поръчате." : "") },
   { q: "Има ли минимална поръчка?", a: '<span class="missing">' + MISS_MIN + "</span>", ld: null },
-  { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00 можете да вземете поръчката от ресторанта до 22:30.", ld: "" },
+  { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00: поръчки за вземане до 22:30, готови най-късно в 23:00.", ld: "" },
   { q: "Доставяте ли обедното меню?", a: 'Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class="link" href="' + url.page("pickup") + '">Вземи от място</a>.', ld: "" },
   { q: "Колко бързо пристига поръчката?", a: "Обикновено " + eta(undefined, false).text + ", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате.", ld: "" },
   { q: "Как ще разбера кога идва шофьорът?", a: "Следите поръчката на живо: приета, готви се, готова, на път. 10 минути преди пристигане ви пращаме известие по SMS, Viber или в браузъра, както изберете.", ld: "" },
@@ -218,7 +218,7 @@ export function endHTML(v: View): string {
   /* headings without a full stop (as every heading of the site); the line under it in the words of the hour note */
   const title = S.delivery ? "Доставяме днес до 21:00" : hourTitle(S);
   const lead = S.delivery ? "Изберете от менюто. Адресът, зоната и времето се виждат в количката, преди да поръчате."
-    : S.kitchen ? "Утре доставяме от 10:00. Днес можете да вземете поръчката си от ресторанта до 22:30."
+    : S.kitchen ? "Утре доставяме от 10:00. Днес: поръчки за вземане до 22:30, готови най-късно в 23:00."
       : hourLine(S) + ". Изберете сега и поръчайте за " + (S.m < 600 ? "днес." : "утре.");
   return '<div><h2 class="h2">' + title + '</h2><p class="lead" style="margin-top:10px">' + lead + "</p></div>" +
     '<div class="btns"><a class="pill pill-red go" href="' + a.href + '" data-mode="' + a.mode + '">' + esc(a.label) + '<span class="knob">' + ic("arrow-right", 22) + "</span></a>" +

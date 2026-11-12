@@ -227,7 +227,7 @@ export function start(): void {
       '<button type="button" data-act="mode" data-v="delivery" aria-pressed="' + (I.mode === "delivery") + '"' + (I.delivOK ? "" : " disabled") + ">" + ic("moped", 26) + "<b>Доставка</b><small>" + dSmall + "</small></button>" +
       '<button type="button" data-act="mode" data-v="pickup" aria-pressed="' + (I.mode === "pickup") + '">' + ic("storefront", 26) + "<b>Вземи от място</b><small>" + pSmall + "</small></button></div>";
     if (P.flash && P.flash.step === step) { /* the message from the core above already says it */ }
-    else if (!I.delivOK) h += '<div class="ff-note">' + note("info", "info", "Доставката е до 21:00", "Можете да я вземете от ресторанта до 22:30.") + "</div>";
+    else if (!I.delivOK) h += '<div class="ff-note">' + note("info", "info", "Доставката е до 21:00", "Поръчки за вземане до 22:30, готови най-късно в 23:00.") + "</div>";
     else if (step === 1 && I.mode === "delivery" && I.today && e.busy) h += '<div class="ff-note">' + note("info", "clock", esc(e.text), "Кухнята е натоварена. Ако бързате, вземете я от място.") + "</div>";
     else if (I.mode === "pickup" && I.today && s.lunchDiscount && I.hasLunch) h += '<div class="ff-note">' + note("promo", "seal-percent", "-30% на обедното меню", "След 15:00 при вземане от място. Отстъпката вече е сметната.") + "</div>";
     return h;
@@ -607,7 +607,7 @@ export function start(): void {
   }
   /* delivery was chosen, but it is after 21:00 now: never switch to pickup silently */
   function deliveryClosed() {
-    P.flash = { step: 1, kind: "bad", title: "Доставката приключи за днес в 21:00", text: "Можете да я вземете от ресторанта до 22:30. Нищо не е изпратено.",
+    P.flash = { step: 1, kind: "bad", title: "Доставката приключи за днес в 21:00", text: "Поръчки за вземане до 22:30, готови най-късно в 23:00. Нищо не е изпратено.",
       acts: '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Вземи от място</button>" };
     go(1);
   }

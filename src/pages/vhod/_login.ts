@@ -10,7 +10,7 @@ import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Customer } from "../../client/api-types.ts";
-import { HERO, phoneHTML, blockedHTML, alertHTML, stepper } from "./_views.ts";
+import { HERO, phoneHTML, blockedHTML, alertHTML, stepper, focusAlert } from "./_views.ts";
 import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
 import "sc-icons:arrow-left,arrow-right,fire,gift,info,paper-plane-right,shopping-bag,sign-out,sliders-horizontal,timer,user,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
@@ -107,7 +107,7 @@ function viewSignedIn(u: User) {
 
 /* ---------- step 1: phone ---------- */
 function offlineAlert(slot: Element | null) {
-  if (slot) slot.innerHTML = alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак.");
+  if (slot) { slot.innerHTML = alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак."); focusAlert(slot); }
 }
 function viewPhone(err = "", focus = false, reuse = false) {
   S.bonus = true;
@@ -145,6 +145,7 @@ function viewPhone(err = "", focus = false, reuse = false) {
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.code === "invalid") return fieldErr(ex.fields?.phone || ex.message);
       alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.", ex.code === "throttled" ? "call" : true);
+      focusAlert(alert);
     }
   });
 }
@@ -306,6 +307,7 @@ function viewName() {
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.fields?.name) { inp.setAttribute("aria-invalid", "true"); er.textContent = ex.fields.name; er.hidden = false; inp.focus(); return; }
       alert.innerHTML = alertHTML("Профилът не се запази", ex.code === "auth" ? "Входът изтече. Въведете номера си отново." : ex.message || "Нещо се обърка. Опитайте пак.", ex.code !== "auth");
+      focusAlert(alert);
       if (ex.code === "auth") setTimeout(() => viewPhone("", true), 2500);
     }
   });

@@ -247,7 +247,8 @@ export function metaDescription(c: Category): string {
   const it = inCat(c.id), pr = priceRange(it);
   /* at most 160 characters (build check): the first variant that fits, the same facts in fewer words */
   const head = c.n + " в Siracusa, Дружба 2: " + count(c.id, it.length) + " от " + fmt(pr.min) + " до " + fmt(pr.max) + ".";
-  const v = [head + " Безплатна доставка в " + listJoin(FREE) + " до 21:00, вземане до 22:30.", head + " Безплатна доставка до 21:00, вземане до 22:30.", head + " Доставка до 21:00, вземане до 22:30."];
+  /* the same ending on every category (the free quarters do not fit in 160 on all of them; never "Безплатна доставка" without them) */
+  const v = [head + " Доставка до 21:00, поръчки за вземане до 22:30.", head + " Доставка до 21:00."];
   return v.find((s) => s.length <= 160) || head;
 }
 /** JSON-LD: Menu > MenuSection > MenuItem (prices in EUR), BreadcrumbList, FAQPage (only answers without [ЛИПСВА]). */

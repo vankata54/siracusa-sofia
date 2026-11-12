@@ -9,7 +9,7 @@ import Base from "../../layouts/Base.astro";
 import { MENU_LUNCH_DATE } from "../../lib/data.ts";
 import { heroHTML, valuesHTML, storyHTML, spacesHTML, teamHTML, visitHTML, endHTML, aboutLd, mainItems, mainCats } from "./_about.ts";
 
-const description = "Квартален ресторант в Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка, салон и отоплявана градина. " + mainItems.length + " ястия.";
+const description = "Квартален ресторант в Дружба 2, София: пица на пещ, скара на дървени въглища Bertha, обедно меню с доставка, салон и отоплявана градина. " + mainItems.length + " ястия в менюто.";
 ---
 <Base page="about" nav="about" title="За нас" docTitle="За нас: ресторант с градина в Дружба 2" description={description} jsonld={aboutLd(Astro.site)}>
   <div class="ab" data-about data-lunch-date={MENU_LUNCH_DATE}>

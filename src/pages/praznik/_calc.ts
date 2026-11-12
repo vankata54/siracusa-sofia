@@ -35,9 +35,8 @@ export const CAKES: [string, string][] = [["none", "Без торта"], ["ours"
 export const WISHES = ["Балони", "Цветя", "Надпис с име", "В цветовете на повода"];
 export const TIMES: string[] = [];
 for (let h = 11; h <= 20; h++) { TIMES.push((h < 10 ? "0" : "") + h + ":00"); if (h < 20) TIMES.push(h + ":30"); }
-export const STEPS = ["Повод и гости", "Меню", "Торта, украса и данни"];
-/** the short names in "Следва: …" and "Напред: …" (the whole name of step 3 does not fit in the button on a phone) */
-export const NEXT = ["Повод и гости", "Меню", "Детайли"];
+/** one name per step: the step indicator, "Напред: …" and the heading of the step say the same (decision 12.11.2026) */
+export const STEPS = ["Повод и гости", "Меню", "Детайли"];
 export const G_MIN = 2, G_MAX = 200;
 /** The admin decides whether guests see a price (OPEN-QUESTIONS 3, setting celebrationPrice in /api/status).
     Until the status arrives (and on the server) the page shows "offer". */
@@ -88,7 +87,7 @@ const icInline = (n: string, s: number, va: number) => ic(n, s).replace('class="
 
 /* ---------- stepper (shared .stepper) ---------- */
 export function stepper(S: St): string {
-  return stepperHTML(S.step, 3, NEXT[S.step]); /* the same words in every flow (lib/ui.ts) */
+  return stepperHTML(S.step, 3, STEPS[S.step]); /* the same words in every flow (lib/ui.ts) */
 }
 
 /* ---------- step 1: occasion, guests, date, place ---------- */
@@ -150,7 +149,7 @@ function seg(name: string, opts: [string, string][], val: string): string {
 }
 export function step3(v: View): string {
   const S = v.S;
-  return '<h2 class="h2" tabindex="-1" data-focus>Торта, украса и данни</h2>' +
+  return '<h2 class="h2" tabindex="-1" data-focus>Детайли</h2><p class="lead">Торта, украса и вашите данни.</p>' +
     '<div class="blk"><div class="blk-h"><h3 class="h3" id="l-cake">Торта</h3></div>' + seg("cake", CAKES, S.cake) +
     '<div class="reveal-box" data-cakebox="ours"' + (S.cake === "ours" ? "" : " hidden") + '><div class="field"><label for="cakenote">Вкус и надпис <span class="opt">(по желание)</span></label><input class="input" id="cakenote" type="text" maxlength="200" value="' + esc(S.cakeNote) + '" placeholder="Например шоколад, „Честит рожден ден, Мария“"></div><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: видове торти и цени]</span></p></div>' +
     '<div class="reveal-box" data-cakebox="bring"' + (S.cake === "bring" ? "" : " hidden") + '><p class="help" style="margin:0">Ще я съхраним и сервираме. <span class="missing">[ЛИПСВА: условия за собствена торта]</span></p></div></div>' +
@@ -199,7 +198,7 @@ export function nextLabel(v: View, compact: boolean): string {
   if (v.sending) return '<span class="spin" aria-hidden="true"></span>Изпращаме...';
   const arr = compact ? "" : ic("arrow-right", 20), s = v.S.step;
   /* "Напред: <next step>": "Към менюто" leads to /menu/ everywhere else (site.review-consistency В5) */
-  return s < 3 ? "Напред: " + NEXT[s] + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
+  return s < 3 ? "Напред: " + STEPS[s] + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
 }
 export function asideHTML(v: View): string {
   const S = v.S;

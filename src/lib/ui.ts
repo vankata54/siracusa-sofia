@@ -73,18 +73,18 @@ export function stateBox(o: StateOpts): string {
 
 /* ---------- the hour notes (one component): after 21:00 and after 22:30 ---------- */
 export interface HourState { open: boolean; kitchen: boolean; delivery: boolean; m: number }
-/** "" while delivery runs; 21:00-22:30 "Доставката приключи за днес" + "Вземане до 22:30"; closed: "Кухнята затвори за днес"
+/** "" while delivery runs; 21:00-22:30 "Доставката приключи за днес" + "Поръчки за вземане до 22:30"; closed: "Кухнята затвори за днес"
     + "Приемаме поръчки утре от 10:00" (+ action buttons, e.g. "Поръчай за утре"). Before 10:00: "Приемаме поръчки днес от 10:00". */
 export function hourNote(st: HourState, o: { pickup?: string; tomorrow?: string; cls?: string; more?: string } = {}): string {
   if (st.delivery) return "";
   const early = !st.kitchen && st.m < 600;
   const t = st.kitchen ? "Доставката приключи за днес" : early ? "Кухнята още не е отворила" : "Кухнята затвори за днес";
-  const s = st.kitchen ? "Вземане до " + R.kitchen : "Приемаме поръчки " + (early ? "днес" : "утре") + " от " + R.open;
+  const s = st.kitchen ? "Поръчки за вземане до " + R.kitchen : "Приемаме поръчки " + (early ? "днес" : "утре") + " от " + R.open;
   const act = st.kitchen ? (o.pickup || "") : (o.tomorrow || "");
   return '<div class="sc-note' + (o.cls ? " " + o.cls : "") + '" role="status">' + ic("clock", 22) + "<div><b>" + t + "</b><span>" + s + (o.more ? ". " + o.more : "") + "</span>" + (act ? '<div class="acts">' + act + "</div>" : "") + "</div></div>";
 }
 export const hourTitle = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Доставката приключи за днес" : st.m < 600 ? "Кухнята още не е отворила" : "Кухнята затвори за днес");
-export const hourLine = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Вземане до " + R.kitchen : "Приемаме поръчки " + (st.m < 600 ? "днес" : "утре") + " от " + R.open);
+export const hourLine = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Поръчки за вземане до " + R.kitchen : "Приемаме поръчки " + (st.m < 600 ? "днес" : "утре") + " от " + R.open);
 
 /* ---------- photo and map slots (one look everywhere) ---------- */
 export interface SlotOpts {

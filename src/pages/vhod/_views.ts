@@ -58,7 +58,10 @@ export function blockedHTML(phone: string): string {
 }
 
 /** retry: "Опитай пак"; "call": too many tries (429), trying again is refused, so the action is the call (as in the reservation) */
+/** after alertHTML is drawn: the focus on its title (not left on the button, not on <body>) */
+export function focusAlert(box: Element | null): void { const h = box && box.querySelector<HTMLElement>("[data-alerth]"); if (h) h.focus(); }
 export function alertHTML(title: string, text: string, retry: boolean | "call" = true): string {
-  return '<div class="alert" role="alert">' + ic("warning-circle", 24) + "<b>" + esc(title) + "</b><span>" + esc(text) + "</span>" +
+  /* the title takes the focus after an error (tabindex=-1, focusAlert), as in the cart and the reservation */
+  return '<div class="alert" role="alert">' + ic("warning-circle", 24) + '<b tabindex="-1" data-alerth>' + esc(title) + "</b><span>" + esc(text) + "</span>" +
     (retry === "call" ? callBtn("pill pill-line") : retry ? '<button class="pill pill-line" type="submit">' + ic("arrow-right", 18) + "Опитай пак</button>" : "") + "</div>";
 }

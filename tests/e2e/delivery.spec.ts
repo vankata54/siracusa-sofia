@@ -100,12 +100,12 @@ test("delivery 12:30: address check, map and table select the zone", async ({ pa
 test("delivery 21:30 and 23:30: pickup until 22:30, then tomorrow", async ({ page }) => {
   const errors = watch(page);
   await open(page, "21:30", "#npz-iskar");
-  await expect(page.locator("[data-live]")).toContainText("Доставката приключи за днес · Вземане до 22:30");
+  await expect(page.locator("[data-live]")).toContainText("Доставката приключи за днес · Поръчки за вземане до 22:30");
   await expect(zcard(page)).toContainText("НПЗ Искър");
   const go = zcard(page).getByRole("link", { name: /Поръчай за вземане/ });
   await expect(go).toHaveAttribute("href", /\/vzemi-ot-myasto\/$/);
   await expect(page.locator("[data-end]")).toContainText("Доставката приключи за днес"); /* headings without a full stop */
-  await expect(page.locator("[data-tl]")).toContainText("Доставката приключи за днес · Вземане до 22:30.");
+  await expect(page.locator("[data-tl]")).toContainText("Доставката приключи за днес · Поръчки за вземане до 22:30.");
   await go.evaluate((a) => a.addEventListener("click", (e) => e.preventDefault()));
   await go.click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).toBe("pickup");

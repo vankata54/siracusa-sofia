@@ -21,7 +21,7 @@ const sections: LegalSection[] = [
   },
   {
     id: "chasove", h: "Работно време, доставка и вземане",
-    html: "<ul><li>Всеки ден от " + R.open + " до " + R.close + ".</li><li>Кухнята приема поръчки до " + R.kitchen + ".</li><li>Доставка до " + R.delivery + ". Вземане от ресторанта до " + R.kitchen + ".</li>" +
+    html: "<ul><li>Всеки ден от " + R.open + " до " + R.close + ".</li><li>Кухнята приема поръчки до " + R.kitchen + ".</li><li>Доставка до " + R.delivery + ". Поръчки за вземане до " + R.kitchen + ", готови най-късно в " + R.close + ".</li>" +
       "<li>Безплатна доставка: " + esc(join(free)) + ". Платена доставка: " + esc(join(paid)) + ', такса <span class="missing">[ЛИПСВА: такса в €]</span>.</li>' +
       "<li>Адрес за вземане: " + esc(R.address) + ".</li></ul>" +
       '<p>Подробно: <a href="' + url.page("delivery") + '">Доставка</a> и <a href="' + url.page("pickup") + '">Вземи от място</a>.</p>' +

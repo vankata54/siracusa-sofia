@@ -20,7 +20,7 @@ export function status(o?: ClockInput): Status {
   if (m < 600) return { cls: "", html: '<b>Затворено</b> <span class="nw">· отваряме в 10:00</span>' };
   if (m >= 1380) return { cls: "", html: '<b>Затворено</b> <span class="nw">· отваряме утре в 10:00</span>' };
   if (m < 1260) return { cls: "ok", html: '<b>Отворено до 23:00</b> <span class="nw">· Доставка до 21:00</span>' };
-  if (m < 1350) return { cls: "warn", html: '<b>Доставката приключи за днес</b> <span class="nw">· Вземане до 22:30</span>' };
+  if (m < 1350) return { cls: "warn", html: '<b>Доставката приключи за днес</b> <span class="nw">· Поръчки за вземане до 22:30</span>' };
   return { cls: "warn", html: '<b>Кухнята затвори</b> <span class="nw">· Отворено до 23:00</span>' };
 }
 

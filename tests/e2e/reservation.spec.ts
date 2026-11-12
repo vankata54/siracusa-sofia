@@ -303,3 +303,13 @@ test("reservation: 429 throttled shows the server's text", async ({ page }, info
   await next(page).click();
   await expect(page.locator(".alert.bad")).toContainText(msg);
 });
+
+test("reservation preview: 'Голяма група' then 'Блокиран номер' goes to step 3 with joined tables, no error", async ({ page }) => {
+  const errors = watch(page);
+  await open(page);
+  await page.locator('[data-proto="group"]').click();
+  await page.locator('[data-proto="blocked"]').click();
+  await expect(page.locator(".toast")).toContainText("Натиснете „Резервирай“");
+  await expect(page.locator("#f-phone, [data-f=\"phone\"]").first()).toHaveValue("0888 00 00 00");
+  expect(errors).toEqual([]);
+});

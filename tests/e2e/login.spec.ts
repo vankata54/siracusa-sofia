@@ -212,3 +212,17 @@ test("login: too many SMS (429): the action is the call, not 'Опитай па�
   await expect(al.locator('a[href="tel:+359894365577"]')).toContainText("Обади се · 0894 36 55 77");
   await expect(al.getByRole("button", { name: "Опитай пак" })).toHaveCount(0);
 });
+
+test("login: an error while sending the code puts the focus on the title of the message (500 and offline)", async ({ page, context }) => {
+  await page.route("**/api/auth/sms/request", (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "server", message: "Нещо се обърка при нас." }) }));
+  await open(page);
+  await page.locator("#ph").fill(rnd());
+  await page.getByRole("button", { name: "Изпрати код по SMS" }).click();
+  await expect(page.locator(".alert [data-alerth]")).toBeFocused();
+  await page.unroute("**/api/auth/sms/request");
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Изпрати код по SMS" }).first().click();
+  await expect(page.locator(".alert [data-alerth]")).toHaveText("Няма връзка с интернет");
+  await expect(page.locator(".alert [data-alerth]")).toBeFocused();
+  await context.setOffline(false);
+});
