@@ -100,7 +100,12 @@ export function start(): void {
   const pic = (x: Dish) => '<div class="pic' + (isOut(x) ? " out" : "") + '" role="img" aria-label="' + esc(x.n) + ' (илюстрация до новата фотосесия)">' + artSvg(x) + "</div>";
   /** BRIEF 8: the lunch menu in the data is for one date; dishes are ordered only on that day (in the preview always, as an example) */
   const lunchIsToday = () => sofiaYmd(new Date()) === DATA.date;
-  const canOrder = () => lunchIsToday() || SC.preview;
+  /** the day of the order on the visible picker ("today" | "tomorrow" ...), set by pickerHTML */
+  let pickDay = "today";
+  /** dishes can be chosen only from the lunch menu of the order's day (in the preview always, as an example) */
+  const canOrder = () => SC.preview || (pickDay === "today" ? lunchIsToday() : pickDay === "tomorrow" && DATA.date === addDays(today(), 1));
+  /** at most 10 different dishes per person (the core: too_many) */
+  const MAX_DISHES = 10;
   const GROUPS: { n: string; id: string; items: Dish[] }[] = [];
   DATA.items.forEach((x) => {
     let g = GROUPS.find((z) => z.n === x.group);
@@ -181,8 +186,8 @@ export function start(): void {
     };
   }
   type Ctx = ReturnType<typeof ctx>;
-  const left = (sec: number) => { sec = Math.max(0, sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h >= 1 ? h + "<small> ч </small>" + pad(m) + "<small> мин</small>" : pad(m) + ":" + pad(s); };
-  const leftWords = (sec: number) => { const m = Math.max(0, Math.ceil(sec / 60)); if (m >= 90) { const h = Math.floor(m / 60), r = m % 60; return h + " ч" + (r ? " и " + r + " мин" : ""); } return m + " мин"; };
+  const left = (sec: number) => { sec = Math.max(0, sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h >= 1 ? h + "<small> ч </small>" + m + "<small> мин</small>" : pad(m) + ":" + pad(s); };
+  const leftWords = (sec: number) => { const m = Math.max(0, Math.ceil(sec / 60)); if (m >= 90) { const h = Math.floor(m / 60), r = m % 60; return h + " ч" + (r ? " " + r + " мин" : ""); } return m + " мин"; };
   const whereText = (o: { mode: string; zone: string; addr: string }) => (o.mode === "pickup" ? "Вземане от ресторанта" : o.zone || o.addr || "ж.к. Дружба 2");
   const feeText = (c: Ctx) => (c.mode === "pickup" ? "Без доставка" : !c.z || c.z.free ? "Безплатна" : '<span class="missing">[ЛИПСВА: такса в €]</span>');
   const orgOf = (o: OfficeOrder) => (o.participants[0] && o.participants[0].name) || "Колегата";
@@ -300,7 +305,7 @@ export function start(): void {
       '<div class="kv"><span>' + (d.mode === "pickup" ? "Вземане" : "Доставка до") + "</span><b>" + esc(where) + "</b></div>" +
       '<div class="kv"><span>Избор до</span><b>' + c.dayWord + ", " + clock(c.dl) + "</b></div>" +
       '<div class="kv"><span>' + (d.mode === "pickup" ? "Готово" : "Пристига около") + "</span><b>" + clock(c.eta) + "</b></div>" +
-      '<div class="kv"><span>Плаща</span><b>' + (d.pays === "one" ? (d.name.trim() ? esc(nm) + " за всички" : "вие, за всички") : "всеки своето") + "</b></div></div>";
+      '<div class="kv"><span>Плащане</span><b>' + (d.pays === "one" ? (d.name.trim() ? esc(nm) + ", за всички" : "вие, за всички") : "всеки своето") + "</b></div></div>";
   }
 
   /* ======================= view: link for colleagues ======================= */
@@ -338,7 +343,7 @@ export function start(): void {
         '<div class="kv"><span>' + (o.mode === "pickup" ? "Вземане" : "Доставка до") + "</span><b>" + esc(whereText(o)) + "</b></div>" +
         '<div class="kv"><span>Избор до</span><b>' + c.dayWord + ", " + clock(c.dl) + "</b></div>" +
         '<div class="kv"><span>' + (o.mode === "pickup" ? "Готово" : "Пристига около") + "</span><b>" + clock(c.eta) + "</b></div>" +
-        '<div class="kv"><span>Плаща</span><b>' + (o.payer === "one" ? "вие, за всички" : "всеки своето") + "</b></div></div></div></div>" +
+        '<div class="kv"><span>Плащане</span><b>' + (o.payer === "one" ? "вие, за всички" : "всеки своето") + "</b></div></div></div></div>" +
       '<div class="o-actions"><a class="pill pill-ink pill-lg pill-block" href="#list">Към общия списък' + ic("arrow-right", 20) + "</a>" +
       '<a class="pill pill-line pill-block" href="#mine">' + ic("plus", 20) + "Добавете и своето ястие</a>" +
       '<a class="link" href="#join-' + esc(o.code) + '" style="justify-self:center;min-height:48px">' + ic("eye", 18) + "Вижте какво виждат колегите</a></div>" +
@@ -357,7 +362,7 @@ export function start(): void {
     if (o.status !== "open") return "Поръчката е изпратена" + (o.orderNo ? " (№ " + esc(o.orderNo) + ")." : ".");
     if (!eaters(o).length) return "Никой не избра ястие.";
     if (o.autoFailed) return "Списъкът е затворен.";
-    return "Списъкът е затворен. " + (L.auto[o.code] ? "Поръчката тръгва към ресторанта до минута." : "Напишете телефона си и изпратете поръчката.");
+    return "Списъкът е затворен. " + ((o.hasContact ?? L.auto[o.code]) ? "Поръчката тръгва към ресторанта до минута." : "Напишете телефона си и изпратете поръчката.");
   }
   /** o.autoFailed: why the core did not send it at the deadline; the organizer sends it with the button */
   function autoFailedHTML(o: OfficeOrder) {
@@ -413,7 +418,7 @@ export function start(): void {
   function sendNote(o: OfficeOrder, c: Ctx) {
     if (c.closed || c.late) return "";
     const when = (c.day === "tomorrow" ? "Утре в " : c.day === "later" ? "На " + esc(c.dayWord) + " в " : "В ") + clock(c.dl);
-    const auto = L.auto[o.code];
+    const auto = o.hasContact != null ? o.hasContact : L.auto[o.code];
     const first = auto === true ? when + " поръчката тръгва към ресторанта сама."
       : auto === false ? when + " списъкът се затваря. Поръчката не тръгва сама (при създаването нямаше телефон): изпратете я с бутона."
       : when + " списъкът се затваря. Ако при създаването сте дали телефон, поръчката тръгва сама; иначе я изпратете с бутона.";
@@ -423,7 +428,7 @@ export function start(): void {
   function viewList(o: OfficeOrder) {
     const c = ctx(o), list = eaters(o), N = totalCount(o);
     const payFields = '<div class="shell"><div class="core o-card" style="display:grid;gap:18px"><h2 class="o-h3">За шофьора</h2>' +
-      '<div class="field"><label for="o-phone">Вашият телефон</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h">Обаждаме се само ако има въпрос по поръчката.</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>' +
+      '<div class="field"><label for="o-phone">Вашият телефон' + (o.hasContact ? ' <span class="muted" style="font-weight:600">(по желание)</span>' : "") + '</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h">' + (o.hasContact ? "Телефонът от създаването е при нас. Напишете друг само ако искате да ви търсим на него." : "Обаждаме се само ако има въпрос по поръчката.") + '</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>' +
       (o.payer === "one" ? '<div class="field"><span class="label" id="o-pay-l">Как плащате</span><div class="seg" role="group" aria-labelledby="o-pay-l"><button type="button" data-pay="cash" aria-pressed="' + (L.pay === "cash") + '">' + ic("money", 20) + 'В брой</button><button type="button" data-pay="card" aria-pressed="' + (L.pay === "card") + '">' + ic("credit-card", 20) + 'С карта</button></div><span class="help">При получаване. Без онлайн плащане.</span></div>' : "") +
       "<div data-senderr></div>" +
       '<div class="o-onlydesk o-sendinline" data-sendinline>' + sendBtn(o, c, "pill-lg pill-block") + "</div>" +
@@ -460,7 +465,10 @@ export function start(): void {
   /* ======================= picker (organizer and colleague) ======================= */
   function pickerHTML(picks: Picks, day: string) {
     const lunchDay = lunchIsToday() ? esc(DATA.dayName) + ", " + dateLong(dateOf(DATA.date)).split(", ")[1] : "Меню за " + esc(dateLong(dateOf(DATA.date)));
-    const stale = !canOrder() ? note("warn", "calendar-dots", "<p><b>Обедното меню за днес още не е качено.</b> Отдолу е последното меню, за справка. Поръчки приемаме, щом качим менюто за деня.</p>") : "";
+    pickDay = day;
+    const stale = canOrder() ? "" : day === "tomorrow"
+      ? note("warn", "calendar-dots", '<p><b>Обедното меню за утре още не е качено.</b> <span class="missing">[ЛИПСВА: обедното меню за утре]</span> Отдолу е последното меню, за справка. Отворете връзката утре сутрин.</p>')
+      : note("warn", "calendar-dots", "<p><b>Обедното меню за днес още не е качено.</b> Отдолу е последното меню, за справка. Поръчки приемаме, щом качим менюто за деня.</p>");
     return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2><p class="muted" style="margin:-6px 0 0;font-weight:600">' + lunchDay + "</p>" + stale +
       (day === "tomorrow" && canOrder() ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] Показваме последното качено.</p>' : "") +
       '<div class="chips" role="list">' + GROUPS.map((g) => '<button class="chip" type="button" role="listitem" data-jump="' + g.id + '">' + esc(g.n) + '<span class="n">' + g.items.length + "</span></button>").join("") + "</div></div>" +
@@ -475,10 +483,10 @@ export function start(): void {
   }
   function minePicks(picks: Picks) {
     const ks = Object.keys(picks);
-    if (!ks.length) return '<p class="muted" style="margin:6px 0 0">Още нищо. Натиснете „+“ до ястие.</p>';
+    if (!ks.length) return '<p class="muted" style="margin:6px 0 0">' + (canOrder() ? "Още нищо. Натиснете „+“ до ястие." : "Ще изберете, щом качим менюто за деня.") + "</p>";
     return '<div class="o-mine">' + ks.map((k) => '<div class="kv"><span>' + picks[k] + " × " + esc(byId[k].n) + '</span><span class="price">' + fmt(byId[k].p * picks[k]) + "</span></div>").join("") + "</div>";
   }
-  const saveLbl = (p: Picks, verb: string) => (!canOrder() ? "Менюто за днес още не е качено" : sum(p) ? verb + " · " + fmt(sum(p)) : "Изберете ястие от менюто");
+  const saveLbl = (p: Picks, verb: string) => (!canOrder() ? (pickDay === "tomorrow" ? "Менюто за утре още не е качено" : "Менюто за днес още не е качено") : sum(p) ? verb + " · " + fmt(sum(p)) : "Изберете ястие от менюто");
   const saveDis = (p: Picks) => (sum(p) && canOrder() ? "" : ' aria-disabled="true"');
 
   /* ======================= view: the organizer's own lunch ======================= */
@@ -504,7 +512,7 @@ export function start(): void {
     const c = ctx(o), org = orgOf(o), g = guestOf(o.code), gp = g.picks, s = sum(gp);
     if (c.closed || c.late) {
       return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill">' + ic("clock", 40) + '</div><h1 class="h2">' + (c.sent ? "Поръчката е изпратена" : "Изборът приключи в " + clock(c.dl)) + "</h1>" +
-        '<p class="muted">' + (c.sent ? esc(org) + " я изпрати на ресторанта." : esc(org) + " вече изпраща поръчката на ресторанта.") + (g.done && cnt(gp) ? " Вашият избор е вътре." : " Ако не сте успели, обадете се на " + esc(org) + " или поръчайте сами.") + "</p>" +
+        '<p class="muted">' + (c.sent ? esc(org) + " я изпрати на ресторанта." + (o.orderAt ? " " + (o.mode === "pickup" ? "Готова в " : "Пристига около ") + esc(o.orderAt) + "." : "") : esc(org) + " вече изпраща поръчката на ресторанта.") + (g.done && cnt(gp) ? " Вашият избор е вътре." : " Ако не сте успели, обадете се на " + esc(org) + " или поръчайте сами.") + "</p>" +
         '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.lunch() + '">Поръчай си сам</a><a class="pill pill-line pill-block" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се на ресторанта</a></div></div></div></section>";
     }
     if (g.done) {
@@ -537,9 +545,13 @@ export function start(): void {
   /* ======================= view: sent ======================= */
   /** sent by the core at the deadline (or from another device): the screen is built from the order itself */
   function ensureSent(o: OfficeOrder) {
-    if (L.sent && L.sent.code === o.code) return;
+    if (L.sent && L.sent.code === o.code) {
+      /* one time and one total on every device: the order's own (the core keeps them in the office order) */
+      if ((o.orderAt && L.sent.at !== o.orderAt) || (o.orderTotal != null && L.sent.total !== o.orderTotal)) { L.sent.at = o.orderAt || L.sent.at; L.sent.total = o.orderTotal ?? L.sent.total; save(); }
+      return;
+    }
     const list = eaters(o);
-    L.sent = { code: o.code, no: o.orderNo || "", at: clock(ctx(o).eta), total: total(o), count: totalCount(o), people: list.length,
+    L.sent = { code: o.code, no: o.orderNo || "", at: o.orderAt || clock(ctx(o).eta), total: o.orderTotal ?? total(o), count: totalCount(o), people: list.length,
       owe: list.filter((p) => !p.me).map((p) => [p.n, sum(p.picks)] as [string, number]), pays: o.payer, mode: o.mode as Mode, office: o.office };
     save();
   }
@@ -566,7 +578,7 @@ export function start(): void {
     return '<section class="sec o-top" aria-busy="true">' + stepper(v === "share" ? 2 : 3) + '<div class="o-lay"><div class="o-col">' + skel(150, "border-radius:28px") + skel(72) + skel(72) + skel(72) + '</div><div class="o-col">' + skel(220, "border-radius:28px") + '</div></div><span class="vh" role="status">Зареждаме поръчката</span></section>';
   }
   function viewError() {
-    return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("warning-circle", 40) + '</div><h1 class="h2">Няма връзка</h1><p class="muted">' + esc(loadErr ? loadErr.message : "Нещо се обърка. Опитайте пак.") + "</p>" +
+    return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("warning-circle", 40) + '</div><h1 class="h2">' + (loadErr && loadErr.code === "throttled" ? "Твърде много опити" : loadErr && loadErr.code !== "offline" && loadErr.code !== "server" && (loadErr.status || 0) < 500 ? "Не успяхме да отворим поръчката" : "Няма връзка") + '</h1><p class="muted">' + esc(loadErr ? loadErr.message : "Нещо се обърка. Опитайте пак.") + "</p>" +
       '<div class="o-actions"><button class="pill pill-red pill-lg pill-block" type="button" data-act="retry">Опитай пак</button><a class="pill pill-line pill-block" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се на ресторанта</a></div></div></div></section>";
   }
 
@@ -741,6 +753,8 @@ export function start(): void {
       case "forbidden": return "Само организаторът може да изпрати поръчката. Отворете я от неговата връзка.";
       case "too_early": return "Поръчката е за друг ден. Изпраща се в деня на обяда.";
       case "offline": return "Няма връзка. Проверете интернета и опитайте пак.";
+      case "too_many": return "До " + MAX_DISHES + " различни ястия на човек. Махнете някое и опитайте пак.";
+      case "throttled": return err.message || "Твърде много опити. Опитайте след 10 минути.";
       default: return err.message || "Не успяхме. Опитайте пак.";
     }
   }
@@ -815,6 +829,7 @@ export function start(): void {
     if (t.dataset.jump) { scrollToEl(document.getElementById(t.dataset.jump)); return; }
     if (t.dataset.q && t.dataset.id) {
       const id = t.dataset.id, picks = pickTarget(), q = (picks[id] || 0) + +t.dataset.q;
+      if (!picks[id] && q > 0 && Object.keys(picks).length >= MAX_DISHES) { SC.toast("До " + MAX_DISHES + " различни ястия на човек."); return; }
       if (q <= 0) delete picks[id]; else picks[id] = Math.min(q, 9);
       save(); SC.haptic();
       const nr = updPicker(id), f = nr && (nr.querySelector<HTMLElement>('[data-q="' + t.dataset.q + '"]') || nr.querySelector<HTMLElement>(".plus") || nr.querySelector<HTMLElement>('[data-q="1"]'));
@@ -849,7 +864,7 @@ export function start(): void {
       }
       case "savemine": {
         if (!O) return;
-        if (!canOrder()) { SC.toast("Обедното меню за днес още не е качено."); return; }
+        if (!canOrder()) { SC.toast(pickDay === "tomorrow" ? "Обедното меню за утре още не е качено." : "Обедното меню за днес още не е качено."); return; }
         if (!sum(L.mine)) { SC.toast("Изберете поне едно ястие"); return; }
         if (t.hasAttribute("data-busy")) return;
         busyBtns("[data-savebtn]", true);
@@ -866,7 +881,7 @@ export function start(): void {
         if (!name) { setErr("gname", "Напишете името си, за да знае " + org + " чие е ястието."); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
         const taken = O.participants.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.name !== g.as);
         if (taken) { setErr("gname", "„" + name + "“ вече е в поръчката. Добавете първата буква от фамилията, например „" + name + " П.“"); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
-        if (!canOrder()) { SC.toast("Обедното меню за днес още не е качено."); return; }
+        if (!canOrder()) { SC.toast(pickDay === "tomorrow" ? "Обедното меню за утре още не е качено." : "Обедното меню за днес още не е качено."); return; }
         if (!sum(g.picks)) { SC.toast("Изберете поне едно ястие"); return; }
         if (t.hasAttribute("data-busy")) return;
         const box = main.querySelector("[data-joinerr]"); if (box) box.innerHTML = "";
@@ -911,7 +926,8 @@ export function start(): void {
     if (!O) return;
     const phone = normPhone(L.phone), errBox = main.querySelector("[data-senderr]");
     if (errBox) errBox.innerHTML = "";
-    if (!phone) {
+    const hasContact = !!O.hasContact;
+    if (!phone && !(hasContact && !L.phone.trim())) {
       setErr("phone", L.phone.trim() ? "Проверете номера: 10 цифри, например 0888 12 34 56." : "Напишете телефон, за да ви се обадим, ако има въпрос.");
       const p = document.getElementById("o-phone"); scrollToEl(p); focusLater(p); return;
     }
@@ -922,12 +938,12 @@ export function start(): void {
     try {
       if (sim.offline) throw offlineErr();
       /* the core sends once: a second call (two tabs, the deadline) is refused with "closed" */
-      const r = (await api.office.submit(o.code, { name: me, phone, pay: o.payer === "one" ? L.pay : "cash", note: noteText })) as unknown as { office: OfficeOrder; order: Order };
+      /* without a phone here the core takes the one given at create (hasContact) */
+      const r = (await api.office.submit(o.code, { name: me, ...(phone ? { phone } : {}), pay: o.payer === "one" ? L.pay : "cash", note: noteText } as Parameters<typeof api.office.submit>[1])) as unknown as { office: OfficeOrder; order: Order };
       O = r.office;
       const owe = list.filter((p) => !p.me).map((p) => [p.n, sum(p.picks)] as [string, number]);
-      /* "Пристига около": the core's time; in the preview (?t=) the page's clock, the same rule as the list (now + zone + busy) */
-      const at = clockOverride() && o.mode !== "pickup" ? clock(SC.minutes() + etaMin(o.zone ? zoneByName(o.zone) : null, o.mode as Mode, "today")) : r.order.at;
-      L.sent = { code: o.code, no: r.order.no, key: r.order.key, at, total: r.order.total, count: totalCount(o), people: list.length, owe, pays: o.payer, mode: o.mode as Mode, office: o.office };
+      /* "Пристига около" and "Общо": the order's own (the same on every device) */
+      L.sent = { code: o.code, no: r.order.no, key: r.order.key, at: r.office.orderAt || r.order.at, total: r.office.orderTotal ?? r.order.total, count: totalCount(o), people: list.length, owe, pays: o.payer, mode: o.mode as Mode, office: o.office };
       save();
       SC.store("sc-order", r.order); /* the tracking page can show it at once */
       location.hash = "sent";

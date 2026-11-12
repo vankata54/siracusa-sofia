@@ -160,16 +160,20 @@ test("office: separate browsers: same day, name taken, organizer link on another
   await o2.goto(PATH + "?preview=1&t=10:45#list-" + code + "-" + key);
   await expect(o2).toHaveURL(/#list$/);
   await expect(o2.locator(".o-person")).toHaveCount(2);
-  await o2.fill("#o-phone", "0888 12 34 56");
+  /* the phone given at create is with the core: optional here */
+  await expect(o2.locator('label[for="o-phone"]')).toContainText("по желание");
   const send = isPhone(o2) ? o2.locator(".o-bar [data-act=send]") : o2.locator("[data-sendinline] [data-act=send]");
   await send.click();
   await expect(o2.locator("h1:visible")).toHaveText("Поръчката е изпратена");
   const no = ((await o2.locator(".o-sentmeta b").first().textContent()) || "").replace(/\D/g, "");
+  const meta = (await o2.locator(".o-sentmeta").textContent()) || "";
 
   /* the first device: a second send is refused, the sent screen shows the same number */
   await page.goto(PATH + "?preview=1&t=10:46#list");
   await expect(page.locator("h1:visible")).toHaveText("Поръчката е изпратена");
   await expect(page.locator(".o-sentmeta")).toContainText("№ " + no);
+  /* one arrival time and one total on every device (the order's own) */
+  await expect(page.locator(".o-sentmeta")).toHaveText(meta);
   /* the colleague sees it too */
   await g.goto(PATH + "?preview=1&t=10:46#join-" + code);
   await expect(g.locator("h1:visible")).toHaveText("Поръчката е изпратена");
@@ -188,7 +192,7 @@ test("office: without preview the old lunch menu is only for reference", async (
   const code = /#join-(\d{6})/.exec((await page.locator("[data-link]").textContent()) || "")![1];
   const { c: c1, p: g } = await other(browser, page);
   await g.goto(PATH + "#join-" + code);
-  await expect(g.locator(".o-menu .o-note.warn")).toContainText("Обедното меню за днес още не е качено");
+  await expect(g.locator(".o-menu .o-note.warn")).toContainText(/Обедното меню за (днес|утре) още не е качено/);
   await expect(g.locator(".o-item .plus")).toHaveCount(0);
   /* the invitation shows the office name the colleagues get */
   await expect(g.locator(".o-invite")).toContainText("Офисът на Мария");
