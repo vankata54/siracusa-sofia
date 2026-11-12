@@ -12,7 +12,7 @@ export function inviteHTML(): string {
     '<div><h1 class="h1">Вашият профил</h1><p class="lead" style="margin-top:8px">Влезте с телефона си. Без парола, с код по SMS.</p></div>' +
     '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>' +
     '<a class="pill pill-red pill-lg pill-block" href="' + url.page("login") + '" data-login>' + ic("sign-in", 22) + "Влез с телефон</a>" +
-    '<ul class="perks">' + PERKS.map((p) => '<li><span class="i">' + ic(p[0], 22) + "</span><span><b>" + p[1] + '</b><span class="s">' + p[2] + "</span></span></li>").join("") + "</ul>" +
+    '<h2 class="h3 vh">Какво получавате</h2><ul class="perks">' + PERKS.map((p) => '<li><span class="i">' + ic(p[0], 22) + "</span><span><b>" + p[1] + '</b><span class="s">' + p[2] + "</span></span></li>").join("") + "</ul>" +
     '<p class="noacc">Поръчка без профил също става. <a class="link" href="' + url.menu() + '">Към менюто' + ic("caret-right", 18) + "</a></p>" +
     "</div></div></section>";
 }

@@ -13,38 +13,8 @@ import type { Customer, Order } from "../../client/api-types.ts";
 import type { CustomerView } from "../../client/api.ts";
 import type { Dish } from "../../lib/data.ts";
 import { inviteHTML, orderSkel } from "./_views.ts";
-/* icons this script draws (sc.ts: x, check, caret-right, phone, question; render.ts: plus, fire, sparkle, leaf, pepper, clock) */
-import "../../lib/icons/user.ts";
-import "../../lib/icons/sign-in.ts";
-import "../../lib/icons/sign-out.ts";
-import "../../lib/icons/receipt.ts";
-import "../../lib/icons/heart.ts";
-import "../../lib/icons/map-pin.ts";
-import "../../lib/icons/ticket.ts";
-import "../../lib/icons/bell.ts";
-import "../../lib/icons/shield-check.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/lock.ts";
-import "../../lib/icons/house.ts";
-import "../../lib/icons/briefcase.ts";
-import "../../lib/icons/truck.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/warning.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/arrow-clockwise.ts";
-import "../../lib/icons/pencil-simple.ts";
-import "../../lib/icons/fork-knife.ts";
-import "../../lib/icons/gift.ts";
-import "../../lib/icons/cake.ts";
-import "../../lib/icons/caret-down.ts";
-import "../../lib/icons/export.ts";
-import "../../lib/icons/trash.ts";
-import "../../lib/icons/flag.ts";
-import "../../lib/icons/timer.ts";
-import "../../lib/icons/copy.ts";
-import "../../lib/icons/plus.ts";
+/* the icons this script draws, in one module (scripts/icon-groups.mjs) */
+import "sc-icons:user,sign-in,sign-out,receipt,heart,map-pin,ticket,bell,shield-check,sliders-horizontal,lock,house,briefcase,truck,warning-circle,warning,check-circle,info,arrow-right,arrow-clockwise,pencil-simple,fork-knife,gift,cake,caret-down,export,trash,flag,timer,copy,plus";
 
 type Notify = { order: boolean; reservation: boolean };
 type Code = { code: string; pct: number; orderNo: string; used: boolean; usedBy: string | null; createdAt: string };
@@ -126,7 +96,7 @@ export function start(): void {
       (st.kitchen ? "" : '<p class="pf-closed">' + ic("clock", 20) + "<span><b>Кухнята приема поръчки до 22:30.</b> Добавете в количката и поръчайте за утре.</span></p>") +
       '<div class="olist" data-orders aria-busy="true">' + orderSkel() + orderSkel() + "</div></section>";
     const favs = '<section class="ps" id="lyubimi" aria-labelledby="h-fav"><div class="sec-h"><h2 class="h2" id="h-fav">Любими</h2><button class="link" type="button" data-favedit' + (u.favs.length ? "" : " hidden") + ">" + ic("pencil-simple", 18) + 'Промени</button></div><div data-favs>' + favsHTML() + "</div></section>";
-    const adrs = '<section class="ps" id="adresi" aria-labelledby="h-adr"><div class="sec-h"><h2 class="h2" id="h-adr">Адреси</h2></div><div data-adrs>' + adrsHTML() + "</div></section>";
+    const adrs = '<section class="ps" id="adresi" aria-labelledby="h-adr"><div class="sec-h"><h2 class="h2" id="h-adr" tabindex="-1">Адреси</h2></div><div data-adrs>' + adrsHTML() + "</div></section>";
     const rew = '<section class="ps" id="nagradi" aria-labelledby="h-rew"><div class="sec-h"><h2 class="h2" id="h-rew">Печати и купони</h2></div><div class="rew">' + loyalHTML() + '<div class="cps" data-cps>' + couponsHTML() + "</div></div></section>";
     const n = notify();
     const notifs = '<section class="ps" id="izvestia" aria-labelledby="h-not"><div class="sec-h"><h2 class="h2" id="h-not">Известия</h2></div><div class="card pbox">' +
@@ -259,11 +229,13 @@ export function start(): void {
       : '<div class="card empty"><span class="ill">' + ic("map-pin", 44) + '</span><h3 class="h3">Няма запазени адреси</h3><p class="muted" style="margin:0;max-width:30em">Добавете адрес веднъж и при поръчка само го изберете.</p></div>';
     return list + '<button class="pill pill-line pill-block addbtn" type="button" data-adradd>' + ic("plus", 20) + "Добави адрес</button>";
   }
+  const adrHead = () => main.querySelector<HTMLElement>("#h-adr");
+  const focusAdrs = () => adrHead()?.focus({ preventScroll: true });
   const redrawAdrs = () => { const b = main.querySelector("[data-adrs]"); if (b) b.innerHTML = adrsHTML(); };
   function adrSheet() {
     const zones = SC.ZONES.map((z) => z.n).concat(["Друг квартал"]);
     let kind = U!.addrs.some((x) => x.label === "Вкъщи") ? "Работа" : "Вкъщи";
-    const s = SC.sheet({ title: "Нов адрес", html:
+    const s = SC.sheet({ title: "Нов адрес", returnTo: () => main.querySelector(".adr:last-child [data-adrdel]") || adrHead(), html:
       '<form class="sform" novalidate>' +
       '<div class="field" role="group" aria-labelledby="ak-l"><span class="label" id="ak-l">Какъв е адресът</span><div class="seg" data-kind>' + KINDS.map((k) => '<button type="button" data-k="' + k[0] + '" aria-pressed="' + (k[0] === kind) + '">' + ic(k[1], 20) + k[0] + "</button>").join("") + "</div></div>" +
       '<div class="field"><label for="a-z">Квартал</label><div class="selw"><select class="input" id="a-z">' + zones.map((z) => "<option>" + esc(z) + "</option>").join("") + "</select>" + ic("caret-down", 20) + '</div><div class="zres" data-zres aria-live="polite"></div></div>' +
@@ -282,16 +254,16 @@ export function start(): void {
       const btn = f.querySelector<HTMLButtonElement>('button[type="submit"]')!; btn.disabled = true;
       try { U = await api.auth.addAddress({ label: kind, addr: (zone && !l.value.includes(zone) ? zone + ", " : "") + l.value.trim(), zone }); }
       catch (err) { btn.disabled = false; SC.toast(errText(err)); return; }
-      s.close(); redrawAdrs(); SC.toast("Адресът е добавен");
+      redrawAdrs(); s.close(); SC.toast("Адресът е добавен");
     });
   }
   async function removeAdr(id: string) {
     if (offline()) return;
     const a = U!.addrs.find((x) => x.id === id); if (!a) return;
     try { U = await api.auth.removeAddress(id); } catch (e) { SC.toast(errText(e)); return; }
-    redrawAdrs();
+    redrawAdrs(); focusAdrs();
     SC.toast("Махнахме адреса", async () => {
-      try { U = await api.auth.addAddress({ label: a.label, addr: a.addr, zone: a.zone }); redrawAdrs(); } catch (e) { SC.toast(errText(e)); }
+      try { U = await api.auth.addAddress({ label: a.label, addr: a.addr, zone: a.zone }); redrawAdrs(); focusAdrs(); } catch (e) { SC.toast(errText(e)); }
     });
   }
 

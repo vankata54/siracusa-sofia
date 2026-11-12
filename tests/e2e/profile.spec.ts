@@ -134,10 +134,13 @@ test("profile: notifications in the profile (off by default), addresses add / re
   await page.locator(".sform button[type=submit]").click();
   await expect(page.locator(".adr")).toHaveCount(1);
   await expect(page.locator(".adr")).toContainText("Горубляне, ул. Самоковско шосе 1");
+  /* the focus does not fall to <body>: it goes to the new address */
+  await expect.poll(() => page.evaluate(() => document.activeElement?.matches(".adr [data-adrdel]") || false)).toBe(true);
   await page.reload();
   await expect(page.locator(".adr")).toHaveCount(1);
   await page.locator("[data-adrdel]").click();
   await expect(page.locator(".adr")).toHaveCount(0);
+  await expect(page.locator("#h-adr")).toBeFocused();
   await page.locator(".toast button").click();
   await expect(page.locator(".adr")).toHaveCount(1);
   expect(errors).toEqual([]);
