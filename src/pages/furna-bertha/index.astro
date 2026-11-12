@@ -1,0 +1,413 @@
+---
+/* Bertha (/furna-bertha/): port of design/pages/bertha.html (design/PAGES.md "bertha.html", hand-off 6.10, master 11.3).
+   The server draws everything that does not depend on the hour or the visitor: crumbs, hero with the gauge, the oven
+   diagram with its steps, the video and photo slots ([ЛИПСВА]), the dishes of "Скара Bertha" (hits first, sold out last,
+   "+" with data-p, so the page needs no menu in the browser), the sides rail, "Фурната накратко" (model [ЛИПСВА]), the FAQ
+   and JSON-LD (BreadcrumbList, FAQPage). The browser adds the hour (service note: delivery, pickup only, kitchen closed,
+   closed), offline, the diagram motion (auto steps while visible, "Пауза", tap a step), the live menu ("Изчерпано днес",
+   prices from the admin) and, only in preview (?preview=1), the states panel. The text never says that the pizzas are
+   baked in Bertha (OPEN-QUESTIONS 22). */
+import Base from "../../layouts/Base.astro";
+import { url } from "../../lib/routes.ts";
+import { ic } from "../../lib/icons.ts";
+import { inCat, isOut } from "../../lib/data.ts";
+import { dishCard } from "../../lib/render.ts";
+import { RESTAURANT as R } from "../../lib/consts.ts";
+import { sortDishes, faq, faqHTML, gauge, diagram, stepsHTML, playHTML, serviceHTML, countHTML } from "./_bertha.ts";
+
+const dishes = sortDishes(inCat("skara-bertha"), isOut);
+const sides = inCat("garnituri");
+const FAQ = faq(dishes.map((x) => x.n));
+const nOut = dishes.filter(isOut).length;
+/* signature of what the HTML shows (id, price, sold out), compared in the browser with api.menu() */
+const sig = (xs: typeof dishes) => xs.map((x) => x.id + ":" + x.p + ":" + (isOut(x) ? 1 : 0)).join(",");
+
+const abs = (p: string) => new URL(p, Astro.site || "https://siracusa-sofia.com").href;
+const jsonld = [
+  { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+    { "@type": "ListItem", position: 2, name: "Нашата фурна Bertha", item: abs(url.page("bertha")) },
+  ] },
+  { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: q[1] } })) },
+];
+const description = "Скара на дървени въглища във фурна Bertha в Дружба 2, София. Затворена фурна, равномерна топлина около 250 - 350 °C и опушен вкус. Кебапчета, ребра, стекове Black Angus с доставка или на място.";
+const cta = "Виж ястията от скарата";
+---
+<Base page="bertha" nav={null} title="Нашата фурна Bertha" docTitle="Фурната Bertha: скара на дървени въглища" description={description} jsonld={jsonld}>
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Къде сте"><a href={url.home()}>Начало</a><Fragment set:html={ic("caret-right", 14)} /><span aria-current="page">Нашата фурна Bertha</span></nav>
+    <section class="fire hero" aria-labelledby="h1"><div class="glow"></div>
+      <div class="txt"><span class="eyebrow"><Fragment set:html={ic("fire", 18)} />Нашата фурна Bertha</span>
+        <h1 class="h1" id="h1" style="margin-top:16px">Скара на дървени въглища във фурна Bertha</h1>
+        <p class="lead">Bertha е британска затворена фурна. Огънят нагрява стените и тавана, затова месото се пече равномерно и поема опушения вкус на въглищата.</p></div>
+      <div class="vis" set:html={gauge()}></div>
+      <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button>
+        <a class="pill pill-line pill-lg" href={url.page("reservation")}><Fragment set:html={ic("calendar-blank", 20)} />Резервирай маса</a></div>
+    </section>
+  </div>
+
+  <section class="sec rv" aria-labelledby="h-how"><div class="sec-h" style="display:block"><h2 class="h2" id="h-how">Как минава топлината</h2><p class="lead" style="margin-top:8px">Четири стъпки от въглищата до чинията.</p></div>
+    <div class="fire dia"><div class="glow"></div>
+      <div class="dtools"><button class="pill" type="button" data-play aria-label="Пауза на анимацията" set:html={playHTML(true)}></button></div>
+      <div class="stage" data-step="1" set:html={diagram()}></div>
+      <ol class="steps" aria-label="Стъпките на диаграмата" set:html={stepsHTML()}></ol>
+    </div>
+  </section>
+
+  <section class="sec rv" aria-labelledby="h-vid"><div class="sec-h" style="display:block"><h2 class="h2" id="h-vid">Фурната в действие</h2><p class="lead" style="margin-top:8px">Въглищата, скарата и готовите ястия отблизо.</p></div>
+    <div class="shell"><div class="slot v pic"><span class="ring red" set:html={ic("play", 30)}></span><span class="missing">[ЛИПСВА: видео от фурната Bertha от новата фотосесия]</span><span class="tag"><Fragment set:html={ic("video-camera", 16)} />Видео</span></div></div>
+    {/* for the developer (hand-off 13): the video plays without sound, with a poster and "Пауза", loaded lazily on scroll */}
+  </section>
+
+  <section class="sec rv anchor" id="yastia" aria-labelledby="h-dish"><div class="sec-h" style="display:block"><h2 class="h2" id="h-dish">Ястията от фурната</h2></div>
+    <div data-count set:html={countHTML(dishes.length, nOut)}></div>
+    <div data-svc set:html={serviceHTML({ m: 720, kitchen: true, delivery: true, etaMin: 35, offline: false })}></div>
+    <div data-dishes aria-live="polite" data-sig={sig(dishes)}><div class="grid-dishes" set:html={dishes.map((x) => dishCard(x)).join("")}></div></div>
+    <a class="pill pill-line catlink" href={url.cat("skara-bertha")}>Отвори категорията Скара Bertha<Fragment set:html={ic("caret-right", 18)} /></a>
+  </section>
+
+  <section class="sec rv side" aria-labelledby="h-side"><div class="sec-h"><h2 class="h2" id="h-side">Към скарата</h2><a class="link" href={url.cat("garnituri")}>Гарнитури<Fragment set:html={ic("caret-right", 18)} /></a></div>
+    <p class="lead">Гарнитура към месото, за да е пълна чинията.</p>
+    <div class="rail" data-sides data-sig={sig(sides)} set:html={sides.map((x) => dishCard(x)).join("")}></div>
+    <a class="pill pill-line catlink" href={url.cat("sosove")}>Виж сосовете<Fragment set:html={ic("caret-right", 18)} /></a>
+  </section>
+
+  <section class="sec rv" aria-labelledby="h-pp"><div class="sec-h" style="display:block"><h2 class="h2" id="h-pp">Фурната накратко</h2></div>
+    <div class="pp"><div class="shell"><div class="slot p pic"><span class="ring" set:html={ic("image", 30)}></span><span class="missing">[ЛИПСВА: снимка на нашата Bertha от новата фотосесия]</span><span class="tag"><Fragment set:html={ic("images", 16)} />Снимка</span></div></div>
+      <div class="shell"><div class="core"><dl>
+        <div class="kv"><dt>Вид</dt><dd>Затворена фурна на дървени въглища</dd></div>
+        <div class="kv"><dt>Марка</dt><dd>Bertha, Великобритания</dd></div>
+        <div class="kv"><dt>Модел</dt><dd><span class="missing">[ЛИПСВА: модел на фурната]</span></dd></div>
+        <div class="kv"><dt>Гориво</dt><dd>Дървени въглища</dd></div>
+        <div class="kv"><dt>Температура</dt><dd class="price">около 250 - 350 °C</dd></div>
+        <div class="kv"><dt>Топлина</dt><dd>Равномерна, от стените и тавана</dd></div>
+        <div class="kv"><dt>Вкус</dt><dd>Опушен, от въглищата</dd></div>
+      </dl></div></div></div>
+  </section>
+
+  <section class="sec rv" aria-labelledby="h-faq"><div class="faq-grid">
+    <div class="faq-side"><h2 class="h2" id="h-faq">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{R.phone}</a></div>
+    <div class="faq" set:html={faqHTML(FAQ)}></div>
+  </div></section>
+
+  <section class="sec rv" aria-labelledby="h-close"><div class="fire close"><div class="glow"></div>
+    <div><h2 class="h2" id="h-close">Опитайте скарата Bertha</h2><p class="lead" style="margin-top:10px">Поръчайте за вкъщи или елате на маса в Дружба 2. Имаме салон и отоплявана градина, която работи целогодишно.</p></div>
+    <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button><a class="pill pill-line pill-lg" href={url.page("reservation")}><Fragment set:html={ic("calendar-blank", 20)} />Резервирай маса</a></div>
+  </div></section>
+  <div data-proto></div>
+</Base>
+
+<style is:global>
+/* bertha page only (design/pages/bertha.html), tokens from tokens.css. Dark panels derive every shade from --chip-dark / --on-chip-dark / --ember / --red. */
+
+/* ---------- forced-dark "fire" scope: same look in light and dark theme ---------- */
+.fire{
+  --ink:var(--on-chip-dark);
+  --muted:color-mix(in srgb, var(--on-chip-dark) 74%, var(--chip-dark));
+  --line:color-mix(in srgb, var(--on-chip-dark) 12%, transparent);
+  --line-strong:color-mix(in srgb, var(--on-chip-dark) 34%, transparent);
+  --surface-2:color-mix(in srgb, var(--on-chip-dark) 9%, var(--chip-dark));
+  --steel:color-mix(in srgb, var(--on-chip-dark) 13%, var(--chip-dark));
+  position:relative; isolation:isolate; overflow:hidden; border-radius:var(--r-shell);
+  background:var(--chip-dark); color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--line), var(--shadow);
+}
+.fire .muted{color:var(--muted)}
+.fire .lead{color:var(--muted)}
+.glow{position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--ember) 42%, transparent), color-mix(in srgb, var(--red) 16%, transparent) 58%, transparent);
+  animation:breathe 5.5s ease-in-out 3 alternate}
+@keyframes breathe{from{opacity:.75; transform:scale(.94)} to{opacity:1; transform:scale(1.04)}}
+
+/* ---------- breadcrumbs ---------- */
+.crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:14px 0 8px; font-size:14px; font-weight:600; color:var(--muted)}
+.crumbs a{min-height:48px; display:inline-flex; align-items:center; text-decoration:none; color:var(--muted)}
+.crumbs a:hover{color:var(--ink)}
+.crumbs [aria-current]{color:var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{padding:26px 22px 22px; display:grid; gap:24px; grid-template-areas:"txt" "cta" "vis"}
+.hero .txt{grid-area:txt} .hero .cta{grid-area:cta} .hero .vis{grid-area:vis}
+.hero .glow{width:150%; aspect-ratio:1; left:-25%; top:34%}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; justify-self:start; min-height:36px; padding:0 14px 0 10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:700; font-size:14px}
+.eyebrow .ic{color:var(--ember)}
+.hero .h1{font-size:36px}
+.hero .lead{margin-top:12px; max-width:34em}
+.gauge{position:relative; width:100%; max-width:360px; justify-self:center; aspect-ratio:240/138}
+.gauge svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.g-track{fill:none; stroke:var(--line); stroke-width:12; stroke-linecap:round}
+.g-band{fill:none; stroke:url(#gband); stroke-width:12; stroke-linecap:round}
+.g-tick{stroke:var(--line-strong); stroke-width:1.6; stroke-linecap:round}
+.g-tick.mj{stroke:var(--muted); stroke-width:2.2}
+.g-dot{transform-box:view-box; transform-origin:120px 126px; transform:rotate(157.5deg); animation:sweep 1.7s var(--ease) .35s both}
+@keyframes sweep{from{transform:rotate(0deg)}}
+.g-dot .halo{fill:var(--ember); opacity:.28}
+.g-dot .pin{fill:var(--ember); stroke:var(--chip-dark); stroke-width:3}
+.read{position:absolute; left:0; right:0; bottom:0; display:grid; justify-items:center; line-height:1}
+.read .k{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:6px}
+.read .v{font-size:64px; font-weight:800; letter-spacing:-.05em; font-variant-numeric:tabular-nums; display:flex; align-items:flex-start}
+.read .v small{font-size:26px; letter-spacing:-.02em; margin:6px 0 0 4px; color:var(--ember)}
+.gcap{margin:6px auto 0; max-width:21em; text-wrap:balance; text-align:center; font-size:15px; color:var(--muted)}
+.gcap b{color:var(--ink); font-weight:800; white-space:nowrap}
+.cta{display:grid; gap:10px}
+.cta .pill-line{width:100%}
+
+/* ---------- diagram ---------- */
+.dia{padding:8px; display:grid; gap:6px; position:relative}
+.dia .glow{width:110%; aspect-ratio:1; left:-5%; top:-30%; animation:none; opacity:.55}
+.stage{position:relative; border-radius:var(--r-core); padding:52px 4px 4px}
+.stage > svg{display:block; width:100%; height:auto}
+.d-body{fill:var(--steel)}
+.d-edge{fill:none; stroke:var(--line-strong); stroke-width:1.2}
+.d-cav{fill:var(--chip-dark)}
+.d-rack{stroke:var(--muted); stroke-width:3; stroke-linecap:round}
+.d-rack-s{stroke:var(--line-strong); stroke-width:2}
+.d-meat{fill:color-mix(in srgb, var(--red) 46%, var(--chip-dark))}
+.d-sear{stroke:var(--chip-dark); stroke-width:3; stroke-linecap:round; opacity:.8}
+.d-coal-a{fill:var(--red)} .d-coal-b{fill:var(--ember)} .d-coal-c{fill:color-mix(in srgb, var(--red) 55%, var(--chip-dark))}
+.d-flame{fill:var(--ember); transform-box:fill-box; transform-origin:50% 100%; animation:flick 1.6s ease-in-out infinite alternate}
+.d-flame.r{fill:color-mix(in srgb, var(--ember) 45%, var(--red))}
+@keyframes flick{from{transform:scaleY(.82) scaleX(1.04); opacity:.75} to{transform:scaleY(1.08); opacity:1}}
+.d-wall{fill:none; stroke:var(--ember); stroke-width:4}
+.d-wallglow{fill:none; stroke:var(--ember); stroke-width:14; opacity:.35; filter:url(#soft)}
+.d-chev{fill:none; stroke:var(--ember); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; opacity:.18; animation:chev 2.4s linear infinite}
+@keyframes chev{0%,100%{opacity:.18} 18%{opacity:1} 40%{opacity:.18}}
+.d-ray{fill:none; stroke:color-mix(in srgb, var(--ember) 65%, var(--red)); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; animation:ray 2s ease-in-out infinite}
+@keyframes ray{0%,100%{opacity:.3} 50%{opacity:1}}
+.d-temp{fill:var(--ink); font-weight:800; font-size:15px; letter-spacing:.01em; transition:fill var(--t-slow) var(--ease)}
+.stage[data-step="3"] .d-temp{fill:var(--ember)}
+.d-smoke{fill:none; stroke:color-mix(in srgb, var(--on-chip-dark) 70%, transparent); stroke-width:2.8; stroke-linecap:round; opacity:0; animation:smoke 3.2s ease-out infinite}
+@keyframes smoke{0%{opacity:0; transform:translateY(6px)} 30%{opacity:.85} 100%{opacity:0; transform:translateY(-14px)}}
+.d-num circle{fill:var(--ember)} .d-num text{fill:var(--on-ember); font-weight:800; font-size:15px}
+.d-num{transition:transform var(--t-slow) var(--ease); transform-box:fill-box; transform-origin:center}
+.layer{transition:opacity var(--t-slow) var(--ease)}
+.stage:not([data-step="0"]) .layer{opacity:.16}
+.stage[data-step="1"] .layer.l1,.stage[data-step="2"] .layer.l2,.stage[data-step="3"] .layer.l3,.stage[data-step="4"] .layer.l4{opacity:1}
+.stage[data-step="1"] .n1,.stage[data-step="2"] .n2,.stage[data-step="3"] .n3,.stage[data-step="4"] .n4{transform:scale(1.22)}
+.stage:not(.live) *,.stage.paused *{animation-play-state:paused!important}
+.dtools{position:absolute; top:10px; right:10px; z-index:2}
+.dtools .pill{min-height:48px; padding:0 14px; font-size:15px; background:var(--surface-2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line)}
+.dtools .pill:focus-visible{outline-color:var(--ember)}
+.steps{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.step{width:100%; display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:start; padding:14px 14px 14px 12px; border:0; border-radius:var(--r-core); background:transparent; color:var(--ink); font:inherit; text-align:left; cursor:pointer; transition:background-color var(--t-base) var(--ease)}
+.step .no{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px; background:var(--surface-2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line-strong); transition:transform var(--t-base) var(--ease)}
+.step b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em}
+.step span.t{display:block; margin-top:2px; color:var(--muted); font-size:16px; line-height:1.45}
+.step[aria-pressed="true"]{background:var(--surface-2)}
+.step[aria-pressed="true"] .no{background:var(--ember); color:var(--on-ember); box-shadow:none; transform:scale(1.06)}
+.step:focus-visible{outline-color:var(--ember); outline-offset:-3px}
+
+/* ---------- photo / video slots ---------- */
+.slot{position:relative; display:grid; place-items:center; align-content:center; gap:12px; padding:24px; text-align:center; border-radius:var(--r-img); overflow:hidden}
+.slot.v{aspect-ratio:16/10}
+.slot.p{aspect-ratio:4/3}
+.slot .ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--glass); color:var(--ink); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+.slot .ring.red{color:var(--red)}
+.slot .missing{max-width:24em; font-size:15px; color:var(--ink); opacity:.8}
+.slot .tag{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--glass); font-size:14px; font-weight:700; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+
+/* ---------- dishes ---------- */
+.anchor{scroll-margin-top:150px}
+@container app (min-width:900px){ .anchor{scroll-margin-top:130px} }
+.svc{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); margin-bottom:20px}
+.svc .ic{margin-top:2px; flex:none}
+.svc b{display:block; font-size:16px; line-height:1.35}
+.svc p{margin:2px 0 0; color:var(--muted); font-size:15px}
+.svc .pill{margin-top:10px; min-height:48px}
+.svc.ok .ic{color:var(--ok)} .svc.warn .ic{color:var(--warn)} .svc.off .ic{color:var(--off)} .svc.err .ic{color:var(--danger)}
+.svc.ok{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line); padding:12px 16px}
+.svc .lines{display:grid; gap:4px}
+.svc .lines span{display:block; font-size:15px; font-weight:600; color:var(--muted)}
+.svc .lines b{display:inline; color:var(--ink); font-size:15px}
+.catlink{margin-top:24px}
+@container app (min-width:700px){ .catlink{margin-top:32px} }
+.count{font-size:15px; color:var(--muted); font-weight:600; margin:6px 0 18px}
+.skcard{display:grid; gap:10px}
+.skcard .a{aspect-ratio:1; border-radius:24px}
+.skcard .b{height:18px; width:80%}
+.skcard .c{height:18px; width:45%}
+.err-box .ill{color:var(--danger)}
+.err-box .row{flex-wrap:wrap; justify-content:center}
+.side .rail .dcard{flex-basis:180px}
+.side .lead{margin:-6px 0 14px}
+
+/* ---------- passport + faq ---------- */
+.pp{display:grid; gap:12px}
+.pp .core{padding:6px 18px}
+.pp .kv{display:grid; grid-template-columns:112px 1fr; gap:12px; padding:14px 0; align-items:baseline}
+.pp .kv dt{color:var(--muted); font-size:15px; font-weight:600}
+.pp .kv dd{margin:0; font-weight:700; font-size:16px; line-height:1.4}
+.pp dl{margin:0}
+/* FAQ: same pattern as delivery.html (side with title + phone, separate cards) */
+.faq-grid{display:grid; gap:20px}
+.faq-side{display:grid; gap:12px; justify-items:start}
+.faq-side .pill{margin-top:4px}
+.faq{display:grid; gap:10px}
+.faq details{border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.faq summary{list-style:none; cursor:pointer; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 14px 20px; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; border-radius:22px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .cv{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none; transition:transform var(--t-slow) var(--ease)}
+.faq details[open] summary .cv{transform:rotate(180deg)}
+.faq .ans{margin:0; padding:0 20px 18px; color:var(--muted)}
+
+/* ---------- preview-only panel (bottom, off by default) ---------- */
+.proto{padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:10px}
+.proto h2{margin:0; font-size:16px; letter-spacing:0; display:flex; align-items:center; gap:8px}
+.proto p{margin:0; font-size:14px; color:var(--muted)}
+.proto .chips{flex-wrap:wrap; margin:0; padding:0; overflow:visible}
+.proto .chip{min-height:48px}
+
+/* ---------- closing ---------- */
+.close{padding:30px 22px 22px; display:grid; gap:14px}
+.close .glow{width:140%; aspect-ratio:1; left:-20%; top:20%; animation:none}
+.close .lead{max-width:30em}
+
+@media (prefers-reduced-motion: reduce){
+  .glow,.g-dot,.d-flame,.d-chev,.d-ray,.d-smoke{animation:none}
+  .d-smoke{opacity:.5}
+}
+
+/* ---------- desktop (container queries) ---------- */
+@container app (min-width:700px){
+  .hero{padding:40px}
+  .cta{grid-template-columns:1fr 1fr}
+  .pp{grid-template-columns:1fr 1fr; align-items:stretch}
+  .pp > .shell{display:grid}
+  .pp .slot.p{aspect-ratio:auto; min-height:300px}
+}
+@container app (min-width:900px){
+  .crumbs{margin:20px 0 12px}
+  .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); column-gap:56px; row-gap:0; padding:64px 64px 56px; align-items:center}
+  .hero .glow{width:90%; left:auto; right:-14%; top:-10%}
+  .hero .h1{font-size:60px}
+  .hero .lead{font-size:19px; margin-top:18px}
+  .hero{grid-template-areas:"txt vis" "cta vis"}
+  .hero .gauge{max-width:440px}
+  .hero .cta{margin-top:32px; grid-template-columns:auto auto; justify-content:start}
+  .hero .cta .go{width:auto; min-width:320px}
+  .hero .cta .pill-line{width:auto; min-height:60px; padding:0 26px}
+  .read .v{font-size:88px} .read .v small{font-size:34px; margin-top:10px}
+  .dia{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); padding:10px; gap:10px; align-items:center}
+  .stage{padding:40px 18px 24px}
+  .dtools{top:18px; right:18px}
+  .steps{padding:12px 12px 12px 0}
+  .slot.v{aspect-ratio:21/9}
+  .side .rail{display:grid; grid-template-columns:repeat(4,1fr); overflow:visible; margin:0; padding:0; gap:28px 20px}
+  .side .rail .dcard{flex:auto}
+  .faq-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:56px; align-items:start}
+  .faq-side{position:sticky; top:160px}
+  .close{grid-template-columns:1fr auto; align-items:center; padding:56px 64px; column-gap:40px}
+  .close .cta{grid-template-columns:auto auto}
+  .close .cta .go{min-width:300px}
+  .close .cta .pill-line{min-height:60px; padding:0 26px}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { api } from "../../client/api.ts";
+  import "../../lib/icons/sliders-horizontal.ts";
+  import { serviceHTML, countHTML, skeletonHTML, errorHTML, playHTML, sortDishes } from "./_bertha.ts";
+
+  const main = SC.mount();
+  const ic = SC.ic;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
+  const svcEl = $("[data-svc]"), countEl = $("[data-count]"), dishEl = $("[data-dishes]"), sidesEl = $("[data-sides]");
+
+  /* ---------- preview-only states ("Само в прототипа"): #loading, #error, #offline ---------- */
+  type Demo = "" | "loading" | "error" | "offline";
+  const DEMOS: [Demo, string][] = [["", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]];
+  let demo: Demo = "";
+  if (SC.preview) { const h = location.hash.slice(1) as Demo; if (DEMOS.some((d) => d[0] === h)) demo = h; }
+
+  let dishesHTML = dishEl.innerHTML;
+  let counts = { n: dishEl.querySelectorAll(".dcard").length, out: dishEl.querySelectorAll(".pic.out").length };
+
+  /* ---------- the hour: service note ---------- */
+  function renderSvc() {
+    const s = SC.state();
+    svcEl.innerHTML = serviceHTML({ m: s.m, kitchen: s.kitchen, delivery: s.delivery, etaMin: SC.eta().min, offline: demo === "offline" || navigator.onLine === false });
+  }
+  function renderDishes() {
+    countEl.innerHTML = demo === "loading" || demo === "error" ? "" : countHTML(counts.n, counts.out);
+    dishEl.innerHTML = demo === "loading" ? skeletonHTML(4) : demo === "error" ? errorHTML() : dishesHTML;
+  }
+  function refreshAll() { renderSvc(); renderDishes(); }
+  document.addEventListener("sc:tick", renderSvc);
+  window.addEventListener("offline", renderSvc);
+  window.addEventListener("online", renderSvc);
+
+  /* ---------- scrolling to the dishes ---------- */
+  function goTo(id: string) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "start" }); }
+  function setDemo(d: Demo) {
+    demo = d;
+    main.querySelectorAll<HTMLElement>("[data-demo]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.demo === d)));
+    try { history.replaceState(null, "", location.pathname + location.search + (d ? "#" + d : "")); } catch { /* ignore */ }
+  }
+  main.addEventListener("click", (e) => {
+    const t = (e.target as Element).closest<HTMLElement>("[data-to],[data-retry],[data-demo]");
+    if (!t) return;
+    if (t.hasAttribute("data-demo")) { setDemo((t.dataset.demo || "") as Demo); refreshAll(); goTo("yastia"); return; }
+    if (t.dataset.to) goTo(t.dataset.to);
+    if (t.hasAttribute("data-retry")) {
+      setDemo("");
+      dishEl.innerHTML = skeletonHTML(4);
+      setTimeout(() => refreshAll(), 500);
+    }
+  });
+
+  /* ---------- diagram: auto steps while visible; tap a step to stop on it; "Пауза" stops the motion (WCAG 2.2.2) ---------- */
+  const stage = $(".stage"), stepBtns = main.querySelectorAll<HTMLElement>(".step"), playBtn = $("[data-play]");
+  let cur = 1, playing = !SC.reduce, timer: ReturnType<typeof setTimeout> | undefined, visible = false;
+  function setStep(n: number) { cur = n; stage.dataset.step = String(n); stepBtns.forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.step! === n))); }
+  function renderPlay() { playBtn.innerHTML = playHTML(playing); playBtn.setAttribute("aria-label", playing ? "Пауза на анимацията" : "Пусни анимацията"); stage.classList.toggle("paused", !playing); }
+  function tick() { clearTimeout(timer); if (playing && visible) timer = setTimeout(() => { setStep(cur % 4 + 1); tick(); }, 3800); }
+  stepBtns.forEach((b) => b.addEventListener("click", () => { playing = false; renderPlay(); clearTimeout(timer); setStep(+b.dataset.step!); }));
+  playBtn.addEventListener("click", () => { playing = !playing; renderPlay(); tick(); });
+  renderPlay();
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((es) => { visible = es[0].isIntersecting; stage.classList.toggle("live", visible); tick(); }, { root: null, threshold: 0.35 }).observe(stage);
+  } else { visible = true; stage.classList.add("live"); tick(); }
+
+  /* ---------- live menu: "Изчерпано днес" and prices from the kitchen / admin, after the first paint.
+     The HTML carries a signature (id:price:out); only if the api says something else, the cards are drawn again
+     with the menu renderers (a lazy chunk, loaded only then). ---------- */
+  type Live = { id: string; p?: number; t: string[] };
+  function syncMenu() {
+    api.menu().then(async (m) => {
+      const live: Record<string, Live> = {};
+      for (const x of ((m as { items?: Live[] }).items || [])) live[x.id] = x;
+      const sigOf = (el: HTMLElement) => (el.dataset.sig || "").split(",").map((s) => s.split(":"));
+      const differs = (el: HTMLElement) => sigOf(el).some(([id, p, o]) => { const x = live[id]; return !!x && ((typeof x.p === "number" && String(x.p) !== p) || (x.t.indexOf("out") > -1 ? "1" : "0") !== o); });
+      if (!differs(dishEl) && !differs(sidesEl)) return;
+      const [{ byId, inCat, isOut }, { dishCard }] = await Promise.all([import("../../lib/data.ts"), import("../../lib/render.ts")]);
+      for (const id in live) {
+        const d = byId[id], x = live[id];
+        if (!d) continue;
+        const out = x.t.indexOf("out") > -1;
+        d.t = out ? (d.t.indexOf("out") > -1 ? d.t : [...d.t, "out"]) : d.t.filter((k) => k !== "out");
+        if (typeof x.p === "number") d.p = x.p;
+      }
+      const dishes = sortDishes(inCat("skara-bertha"), isOut);
+      dishesHTML = '<div class="grid-dishes">' + dishes.map((x) => dishCard(x)).join("") + "</div>";
+      counts = { n: dishes.length, out: dishes.filter(isOut).length };
+      sidesEl.innerHTML = inCat("garnituri").map((x) => dishCard(x)).join("");
+      renderDishes();
+    }).catch(() => { /* the menu in the HTML stays; nothing to tell */ });
+  }
+
+  /* ---------- preview only: the states panel at the bottom ---------- */
+  if (SC.preview) {
+    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Само в прототипа"><aside class="proto"><h2>' + ic("sliders-horizontal", 18) + "Само в прототипа: състояния</h2><p>Не влиза в сайта. Показва как изглеждат ястията в другите случаи. Часът се сменя с ?t=21:30 в адреса.</p><div class=\"chips\">" +
+      DEMOS.map((z) => '<button class="chip" type="button" data-demo="' + z[0] + '" aria-pressed="' + (demo === z[0]) + '">' + z[1] + "</button>").join("") + "</div></aside></section>";
+  }
+
+  /* ---------- first paint ---------- */
+  renderSvc();
+  if (demo === "loading" || demo === "error") renderDishes();
+  const later = (f: () => void) => ("requestIdleCallback" in window ? window.requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1200));
+  later(syncMenu);
+  SC.reveal();
+  $("#yastia").dataset.ready = "1";
+  if (demo) setTimeout(() => goTo("yastia"), 60);
+</script>
