@@ -3,6 +3,7 @@
 import { COL, iso, nowDate, phoneHash, rid, randomDigits, type Ctx } from "./ctx.ts";
 import { CoreError, type Customer, type Order, type Rating, type Session, type SmsCode } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
+import { byId } from "../lib/data.ts";
 import { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
 export const SMS_TTL_MS = 5 * 60_000;
@@ -110,7 +111,13 @@ export async function updateCustomer(ctx: Ctx, id: string, patch: ProfilePatch):
 export async function toggleFavourite(ctx: Ctx, id: string, dishId: string): Promise<Customer> {
   const c = await ctx.repo.get<Customer>(COL.customers, id);
   if (!c) throw new CoreError("not_found", "Няма такъв профил.", 404);
-  c.favs = c.favs.includes(dishId) ? c.favs.filter((x) => x !== dishId) : [...c.favs, dishId];
+  /* removing always works (also a dish that left the menu); adding only a dish of the main menu (not the daily lunch) */
+  if (c.favs.includes(dishId)) c.favs = c.favs.filter((x) => x !== dishId);
+  else {
+    const d = typeof dishId === "string" && Object.prototype.hasOwnProperty.call(byId, dishId) ? byId[dishId] : undefined;
+    if (!d || d.lunch) throw new CoreError("not_found", "Това ястие вече го няма в менюто.", 404);
+    c.favs = [...c.favs, dishId];
+  }
   await ctx.repo.put(COL.customers, c);
   return c;
 }

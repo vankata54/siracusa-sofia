@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCore, MemoryRepo, KVRepo, CoreError, type Hasher } from "../../src/core/index.ts";
+import { createCore, MemoryRepo, KVRepo, CoreError, type Hasher, type Customer } from "../../src/core/index.ts";
 import { addLine, emptyCart } from "../../src/lib/cart.ts";
 import { lunch, items, isOut } from "../../src/lib/data.ts";
 
@@ -72,7 +72,8 @@ describe("reservations, SMS login, profile, rating", () => {
     expect(await core.reservations.taken("2026-11-28", "19:00")).toEqual(["S3"]);
   });
   it("SMS code (demo: returned), new profile with marketing off and -10% coupon", async () => {
-    const { core } = mk();
+    const repo = new MemoryRepo();
+    const core = createCore({ repo, clock: "12:30", hasher, now: () => NOW, smsDemo: true });
     const s = await core.customers.requestCode("0888123456");
     expect(s.demoCode).toMatch(/^\d{6}$/);
     await expect(core.customers.verifyCode("0888123456", "000000x")).rejects.toMatchObject({ code: "wrong_code" });
@@ -83,6 +84,13 @@ describe("reservations, SMS login, profile, rating", () => {
     expect((await core.customers.bySession(v.token))!.name).toBe("Мария");
     const u = await core.customers.toggleFav(v.customer.id, pizza.id);
     expect(u.favs).toEqual([pizza.id]);
+    /* a dish that is not on the menu (or only on the daily lunch) is refused; removing an old one still works */
+    for (const bad of ["no-such-dish", "__proto__", "toString", lunch[0].id]) await expect(core.customers.toggleFav(v.customer.id, bad)).rejects.toMatchObject({ code: "not_found" });
+    const saved = (await repo.get<Customer>("users", v.customer.id))!;
+    expect(saved.favs).toEqual([pizza.id]);
+    await repo.put("users", { ...saved, favs: [pizza.id, "gone-dish"] }); /* a dish that later left the menu */
+    expect((await core.customers.toggleFav(v.customer.id, "gone-dish")).favs).toEqual([pizza.id]);
+    expect((await core.customers.toggleFav(v.customer.id, pizza.id)).favs).toEqual([]);
     await core.customers.remove(v.customer.id);
     expect(await core.customers.bySession(v.token)).toBeNull();
   });
