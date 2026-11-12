@@ -80,6 +80,8 @@ export const url = {
   offers: (hash?: string) => p(PAGES.offers, hash),
   login: (hash?: string) => p(PAGES.login, hash),
   profile: (hash?: string) => p(PAGES.profile, hash),
+  /** The "not found" page: /404.html on the server (a static file, there is no /404/ address) and 404.html in the demo. */
+  notFound: () => p("404.html"),
   /** API base: "/api" (never used in demo, where api.ts calls the core in the browser). */
   api: (path: string) => "/api/" + path.replace(/^\//, ""),
   /** A static asset under public/ ("favicon.svg"). */
@@ -109,7 +111,7 @@ export function fromProto(href: string): string {
   }
   if (file === "event.html") return hash ? url.event(hash) : url.events();
   if (file === "tracking.html") return url.tracking(hash || undefined);
-  if (file === "404.html") return p("404/");
+  if (file === "404.html") return url.notFound();
   const k = PROTO[file];
   return k ? url.page(k, hash) : href;
 }

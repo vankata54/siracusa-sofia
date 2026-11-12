@@ -32,7 +32,26 @@ async function isBlocked(ctx: Ctx, phone: string): Promise<boolean> {
   return !!(c && c.blocked);
 }
 
-export interface ReservationInput { date: string; time: string; people: number; table?: string | null; name: string; phone: string; email?: string; occasion?: string; note?: string; marketing?: boolean; waitlist?: boolean }
+export interface ReservationInput { date: string; time: string; people: number; table?: string | null; name: string; phone: string; email?: string; occasion?: string; note?: string; marketing?: boolean; waitlist?: boolean;
+  /** change of a booking: the old one (id + key from create / the SMS link) is cancelled in the same transaction and its table is free for the new one */
+  replaces?: { id: string; key: string } | null }
+
+/* Online change / cancel: until 2 hours before a booking from 17:00, until 1 hour before during the day
+   (design/pages/reservation.html: "До 2 часа преди резервация след 17:00 и до 1 час преди през деня"). */
+export const RES_LATE_MSG = "Онлайн промяна и отказ има до 2 часа преди резервация след 17:00 и до 1 час преди през деня. Обадете ни се на 0894 36 55 77.";
+export function changeLimit(time: string): number { return toMin(time) >= 1020 ? 120 : 60; }
+/** minutes from now (Sofia, ctx clock) to the start of the booking */
+export function minutesUntil(ctx: Ctx, date: string, time: string): number {
+  const today = sofiaYmd(nowDate(ctx));
+  let days = 0;
+  for (let d = today; d < date && days < 400; d = addDaysYmd(d, 1)) days++;
+  if (date < today) days = -1;
+  return days * 1440 + toMin(time) - minutes(ctx.clock);
+}
+function checkLate(ctx: Ctx, r: Reservation) {
+  if (r.status === "seated" || r.status === "no_show") throw new CoreError("too_late", "Тази резервация вече не може да се промени онлайн. Обадете ни се на 0894 36 55 77.", 409);
+  if (minutesUntil(ctx, r.date, r.time) < changeLimit(r.time)) throw new CoreError("too_late", RES_LATE_MSG, 409);
+}
 
 export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<Reservation> {
   const f: Record<string, string> = {};
@@ -55,8 +74,12 @@ export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<
   invalid(f);
   if (await isBlocked(ctx, phone!)) throw new CoreError("blocked", BLOCKED_MSG, 403);
   const dur = (await getSettings(ctx)).resMinutes;
+  /* a change: the old booking must be the caller's (key) and still changeable */
+  const old = r.replaces && r.replaces.id ? await getReservation(ctx, String(r.replaces.id), String(r.replaces.key || "")) : null;
+  if (old && old.status !== "cancelled") checkLate(ctx, old);
   const make = async (): Promise<Reservation> => {
-    if (t && !r.waitlist && (await takenTables(ctx, date, time)).includes(t.id)) throw new CoreError("taken", "Тази маса току-що беше заета. Изберете друга.", 409);
+    if (t && !r.waitlist && (await takenTables(ctx, date, time, old ? old.id : undefined)).includes(t.id)) throw new CoreError("taken", "Тази маса току-що беше заета. Изберете друга.", 409);
+    if (old && old.status !== "cancelled") { old.status = "cancelled"; old.updatedAt = iso(ctx); await ctx.repo.put(COL.reservations, old); }
     const now = iso(ctx);
     const res: Reservation = {
       id: rid(8), date, time, people, table: t ? t.id : null, zone: t ? t.zone : null,
@@ -69,6 +92,7 @@ export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<
   };
   const res = ctx.repo.transaction ? await ctx.repo.transaction(make) : await make();
   emit(ctx, "reservation.created", { date: res.date, time: res.time, until: hhmm(toMin(res.time) + dur), table: res.table, people: res.people }, { public: true });
+  if (old && old.status === "cancelled") emit(ctx, "reservation.status", { date: old.date, time: old.time, table: old.table, status: "cancelled" }, { public: true });
   return res;
 }
 
@@ -77,12 +101,12 @@ export async function listReservations(ctx: Ctx, where: Partial<Reservation> = {
 }
 
 /** Tables taken at a date/time: every booking whose interval [time, time + its length) overlaps [time, time + length). */
-export async function takenTables(ctx: Ctx, date: string, time: string): Promise<string[]> {
+export async function takenTables(ctx: Ctx, date: string, time: string, exceptId?: string): Promise<string[]> {
   if (!validYmd(date) || !/^\d{2}:\d{2}$/.test(time)) return [];
   const dur = (await getSettings(ctx)).resMinutes, t = toMin(time);
   const out = new Set<string>();
   for (const r of await ctx.repo.list<Reservation>(COL.reservations, { date })) {
-    if (!holds(r)) continue;
+    if (!holds(r) || r.id === exceptId) continue;
     const a = toMin(r.time), d = r.dur || dur;
     if (a < t + dur && t < a + d) out.add(r.table!);
   }
@@ -99,7 +123,7 @@ export async function getReservation(ctx: Ctx, id: string, key: string): Promise
 export async function cancelReservation(ctx: Ctx, id: string, key: string): Promise<Reservation> {
   const r = await getReservation(ctx, id, key);
   if (r.status === "cancelled") return r;
-  if (r.status === "seated" || r.status === "no_show") throw new CoreError("too_late", "Тази резервация вече не може да се откаже онлайн. Обадете ни се на 0894 36 55 77.", 409);
+  checkLate(ctx, r);
   r.status = "cancelled"; r.updatedAt = iso(ctx);
   await ctx.repo.put(COL.reservations, r);
   await audit(ctx, "guest", "reservation.cancel", r.id);

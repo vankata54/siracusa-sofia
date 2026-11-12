@@ -38,10 +38,12 @@ export function officeDue(ctx: Ctx, o: OfficeOrder): boolean {
   return d < today || (d === today && minutes(ctx.clock) >= toMin(o.deadline));
 }
 
-export type PublicOffice = Omit<OfficeOrder, "orgKey" | "contact" | "participants"> & { participants: { name: string; lines: OfficeParticipant["lines"]; paid?: boolean }[]; due: boolean };
+export type PublicOffice = Omit<OfficeOrder, "orgKey" | "contact" | "participants"> & { participants: { name: string; lines: OfficeParticipant["lines"]; paid?: boolean }[]; due: boolean;
+  /** the organizer gave a phone (so the order leaves at the deadline by itself); never the data itself */
+  hasContact: boolean };
 export function publicOffice(ctx: Ctx, o: OfficeOrder, orgKey?: string | null): PublicOffice {
   const { orgKey: k, contact: _c, participants, ...rest } = o;
-  return { ...rest, participants: participants.map((p) => ({ name: p.name, lines: p.lines, ...(p.paid != null ? { paid: p.paid } : {}) })), isOrg: !!orgKey && orgKey === k, due: officeDue(ctx, o) };
+  return { ...rest, participants: participants.map((p) => ({ name: p.name, lines: p.lines, ...(p.paid != null ? { paid: p.paid } : {}) })), isOrg: !!orgKey && orgKey === k, due: officeDue(ctx, o), hasContact: !!(o.contact && o.contact.phone) };
 }
 
 export interface OfficeInput {
@@ -53,7 +55,7 @@ export interface OfficeInput {
 export async function createOffice(ctx: Ctx, o: OfficeInput): Promise<OfficeOrder> {
   const f: Record<string, string> = {};
   const mode: Mode = o.mode === "pickup" ? "pickup" : "delivery";
-  if (!String(o.office || "").trim()) f.office = "Напишете името на офиса.";
+  /* the office name is optional (PAGES.md, BRIEF) */
   const z = zoneOfAddress(o.addr || "");
   if (mode === "delivery" && z.type !== "zone") f.addr = "Напишете квартала, например Дружба 2.";
   const deadline = o.deadline == null || o.deadline === "" ? "11:30" : String(o.deadline);
@@ -72,7 +74,7 @@ export async function createOffice(ctx: Ctx, o: OfficeInput): Promise<OfficeOrde
   let code = randomDigits(6);
   for (let i = 0; i < 5 && (await getOffice(ctx, code)); i++) code = randomDigits(6);
   const doc: OfficeOrder = {
-    id: rid(8), code, office: o.office.trim().slice(0, 80), addr: mode === "delivery" ? String(o.addr || "").trim().slice(0, 300) : "", zone: mode === "delivery" && z.type === "zone" ? z.zone.n : "",
+    id: rid(8), code, office: String(o.office || "").trim().slice(0, 80), addr: mode === "delivery" ? String(o.addr || "").trim().slice(0, 300) : "", zone: mode === "delivery" && z.type === "zone" ? z.zone.n : "",
     deadline, payer: o.payer === "each" ? "each" : "one", mode, participants: [], status: "open", createdAt: iso(ctx),
     date, orgKey: rid(12), contact,
   };
@@ -121,6 +123,28 @@ export async function joinOffice(ctx: Ctx, code: string, p: JoinInput): Promise<
   await ctx.repo.put(COL.office, o);
   emit(ctx, "office.updated", { code: o.code, participants: o.participants.length }, { office: o.code });
   return { ...publicOffice(ctx, o, p.orgKey), pid };
+}
+
+/** The organizer adds or changes the contact (name, phone, how they pay) after creating: needed for the automatic send. */
+export async function updateOffice(ctx: Ctx, code: string, orgKey: string, patch: { name?: string; phone?: string; pay?: PayMethod }): Promise<PublicOffice> {
+  const o = await getOffice(ctx, code);
+  if (!o) throw new CoreError("not_found", OFFICE_MSG.notFound, 404);
+  if (!orgKey || orgKey !== o.orgKey) throw new CoreError("forbidden", "Само организаторът може да променя поръчката.", 403);
+  if (o.status !== "open") throw new CoreError("closed", "Поръчката вече е изпратена" + (o.orderNo ? " (№ " + o.orderNo + ")." : "."), 409);
+  const cur = o.contact || { name: "", phone: "", pay: "cash" as PayMethod };
+  let phone = cur.phone;
+  if (patch.phone != null) {
+    const raw = String(patch.phone).trim();
+    if (!raw) phone = "";
+    else { const p = normPhone(raw); if (!p) invalid({ phone: "Телефонът трябва да е 10 цифри, например 0888 12 34 56." }); phone = p!; }
+  }
+  const name = patch.name != null ? String(patch.name).trim().slice(0, 80) : cur.name;
+  const pay = patch.pay && PAY_LABEL[patch.pay] ? patch.pay : cur.pay || "cash";
+  o.contact = phone ? { ...cur, name, phone, pay } : null;
+  if (o.autoFailed === "no_contact" && phone) delete o.autoFailed; /* the server tries again at the next sweep */
+  await ctx.repo.put(COL.office, o);
+  emit(ctx, "office.updated", { code: o.code, participants: o.participants.length }, { office: o.code });
+  return publicOffice(ctx, o, orgKey);
 }
 
 export type SubmitInput = Pick<OrderInput, "name" | "phone" | "pay" | "email" | "note"> & { orgKey?: string };

@@ -9,7 +9,7 @@
    - the office organizer token (orgKey) from office.create / office.get(code, orgKey), and the colleague's pid from office.join;
    - the reservation key from reservations.create (get / cancel). */
 import type { Core, OrderInput, ReservationInput, CelebrationInput, NoteInput, ProfilePatch, NoteStatus, OrderStatus, ReservationStatus, OfficeParticipant, Customer,
-  Order, PublicOrder, OfficeOrder, PublicOffice, Reservation, Subscription, Settings, Audience } from "./api-types.ts";
+  Order, PublicOrder, OfficeOrder, PublicOffice, Reservation, Subscription, Settings, Audience, Feedback, FeedbackInput } from "./api-types.ts";
 import type { SettingsPatch } from "../core/settings.ts";
 import type { SiteEventJson } from "../lib/events.ts";
 import { clockOverride, isPreview } from "../lib/time.ts";
@@ -135,19 +135,27 @@ export const api = {
     /** public view for tracking; `no` may be "1042" (the key this browser knows is added) or "1042-k7f3m2pq" */
     get: async (no: string | number): Promise<PublicOrder> => {
       const id = trackId(no);
-      const r = DEMO ? await local((c) => c.orders.track(id)) : await http<PublicOrder>("GET", "orders/" + encodeURIComponent(id));
-      if (r.key) remember("orders", r.no, r.key);
-      watchOrder(trackId(r.no));
-      return r;
+      const r = DEMO ? await local((c) => c.orders.track(id)) : await http<PublicOrder | { found: false }>("GET", "orders/" + encodeURIComponent(id));
+      if ("found" in r && r.found === false) throw new ApiError("not_found", "Няма такава поръчка.", 404);
+      const o = r as PublicOrder;
+      if (o.key) remember("orders", o.no, o.key);
+      watchOrder(trackId(o.no));
+      return o;
     },
   },
   /** discount code from the rating, before the order: { code, pct, valid } or ApiError with fields.code */
   codes: {
-    check: pick((c, code: string) => c.codes.check(code), (code) => http<{ code: string; pct: number; valid: true }>("POST", "codes/check", { code })),
+    check: pick((c, code: string) => c.codes.check(code), async (code) => {
+      const r = await http<{ code: string; pct: number; valid: true } | { valid: false; error: { code: string; message: string; fields?: Record<string, string> } }>("POST", "codes/check", { code });
+      if (!r.valid) throw new ApiError(r.error.code, r.error.message, 422, r.error.fields);
+      return r;
+    }),
   },
   reservations: {
     /** returns the reservation with `key` (kept in this browser for get / cancel) */
+    /** r.replaces: {id, key?} of the booking being changed (the key this browser kept is added) */
     create: async (r: ReservationInput): Promise<Reservation> => {
+      if (r.replaces && r.replaces.id) r = { ...r, replaces: { id: r.replaces.id, key: keys().res[r.replaces.id] || r.replaces.key || "" } };
       const x = DEMO ? await local((c) => c.reservations.create(r)) : await http<Reservation>("POST", "reservations", r);
       remember("res", x.id, x.key);
       return x;
@@ -155,8 +163,10 @@ export const api = {
     taken: pick((c, date: string, time: string) => c.reservations.taken(date, time), (date, time) => http<string[]>("GET", `reservations/taken?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`)),
     /** key: from the SMS link; without it, the key this browser kept */
     get: async (id: string, key?: string): Promise<Reservation> => {
-      const k = keys().res[id] || key || "";
-      return DEMO ? local((c) => c.reservations.get(id, k)) : http<Reservation>("GET", "reservations/" + encodeURIComponent(id) + "?k=" + encodeURIComponent(k));
+      const k = key || keys().res[id] || "";
+      const r = DEMO ? await local((c) => c.reservations.get(id, k)) : await http<Reservation>("GET", "reservations/" + encodeURIComponent(id) + "?k=" + encodeURIComponent(k));
+      remember("res", id, k); /* the key from the SMS link works after a reload too */
+      return r;
     },
     cancel: async (id: string, key?: string): Promise<Reservation> => {
       const k = keys().res[id] || key || "";
@@ -194,11 +204,21 @@ export const api = {
       remember("orders", r.order.no, r.order.key);
       return r;
     },
+    /** the organizer adds / changes name, phone, how they pay (for the automatic send at the deadline); orgKey: this browser's by default */
+    update: async (code: string, orgKey: string | null | undefined, patch: { name?: string; phone?: string; pay?: "cash" | "card" | "voucher" }): Promise<PublicOffice> => {
+      const k = orgKey || keys().org[code] || "";
+      return DEMO ? local((c) => c.office.update(code, k, patch)) : http<PublicOffice>("POST", `office/${encodeURIComponent(code)}/update`, { ...patch, orgKey: k });
+    },
     /** the organizer token this browser holds (for the organizer's link), or "" */
     orgKey: (code: string): string => keys().org[code] || "",
   },
   /** topics: the chosen event categories (none = all) */
   subscribe: pick((c, email: string, consent: boolean, topics?: string[]) => c.subscriptions.subscribe(email, consent, topics), (email, consent, topics) => http<Subscription>("POST", "subscribe", { email, consent, topics })),
+  /** contact message (/kontakti/): { ok, id } or ApiError "invalid" with fields name / contact / message (429 "throttled" on the server) */
+  feedback: {
+    create: pick(async (c, f: FeedbackInput) => { const r = await c.feedback.create(f); return { ok: true as const, id: r.id }; },
+      (f) => http<{ ok: true; id: string }>("POST", "feedback", f)),
+  },
   ratings: {
     submit: pick((c, r: { orderNo: string; happy: boolean; text?: string }) => c.ratings.submit({ ...r, orderNo: trackId(r.orderNo) }),
       (r) => http<{ code: string; pct: number; google: string | null; googleMissing: boolean }>("POST", "ratings", { ...r, orderNo: trackId(r.orderNo) })),
@@ -247,6 +267,7 @@ export const api = {
     setNoteStatus: pick((c, id: string, s: NoteStatus) => c.notes.setStatus(id, s, "demo"), (id, s) => http<unknown>("PATCH", "admin/notes/" + id, { status: s })),
     deleteNote: pick(async (c, id: string) => { await c.notes.remove(id, "demo"); return { ok: true }; }, (id) => http<{ ok: boolean }>("DELETE", "admin/notes/" + id)),
     audit: pick((c) => c.audit.list(), () => http<unknown[]>("GET", "admin/audit")),
+    feedback: pick((c) => c.feedback.list(), () => http<Feedback[]>("GET", "admin/feedback")),
   },
 
   /** Follow an order / office order in real time without reading it first (api.orders.get / api.office.* do it themselves). */

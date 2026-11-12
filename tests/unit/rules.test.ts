@@ -333,3 +333,90 @@ describe("shared pickup constants and lunchPrice", () => {
     expect(RESTAURANT.postalCode).toBe("1582");
   });
 });
+
+describe("feedback, cookies, 404, non-breaking spaces", () => {
+  it("feedback: validated with fields name / contact / message, kept in the core", async () => {
+    const { core } = mk();
+    await expect(core.feedback.create({ name: "", contact: "", message: "" })).rejects.toMatchObject({ code: "invalid", status: 422, fields: {
+      name: "Напишете името си.", contact: "Напишете телефон (10 цифри, например 0888 12 34 56) или имейл (например ime@primer.bg).", message: "Напишете съобщението си (поне няколко думи)." } });
+    await expect(core.feedback.create({ name: "И", contact: "123", message: "Здравейте" })).rejects.toMatchObject({ fields: { contact: "Телефонът трябва да е 10 цифри, например 0888 12 34 56." } });
+    await expect(core.feedback.create({ name: "И", contact: "a@b", mode: "email", message: "Здравейте" })).rejects.toMatchObject({ fields: { contact: "Проверете имейла, например ime@primer.bg." } });
+    const a = await core.feedback.create({ name: "Иван", contact: "0888 12 34 56", message: "Имате ли паркинг?", topic: "Въпрос" });
+    const b = await core.feedback.create({ name: "Мария", contact: "Ime@Primer.bg", message: "Здравейте!" });
+    expect(a).toMatchObject({ contact: "0888123456", mode: "phone", status: "new", topic: "Въпрос" });
+    expect(b).toMatchObject({ contact: "ime@primer.bg", mode: "email" });
+    expect(await core.feedback.list()).toHaveLength(2);
+  });
+  it("cookie settings keep the stored choice; url.notFound; fromProto 404", async () => {
+    const { cookieSettings, cookieBanner, footer } = await import("../../src/lib/chrome.ts");
+    const { fromProto } = await import("../../src/lib/routes.ts");
+    expect(cookieSettings({ analytics: true, marketing: false })).toMatch(/name="analytics" checked/);
+    expect(cookieSettings({ analytics: true, marketing: false })).not.toMatch(/name="marketing" checked/);
+    expect(cookieBanner()).toContain('href="/biskvitki/"');
+    expect(cookieBanner()).toContain('href="/poveritelnost/"');
+    expect(footer()).toContain('<a href="/biskvitki/">Бисквитки</a>');
+    expect(footer()).toContain("data-cookie-settings>Настройки на бисквитките</button>");
+    configureRoutes({ demo: false, root: "/" });
+    expect(url.notFound()).toBe("/404.html");
+    expect(fromProto("404.html")).toBe("/404.html");
+    configureRoutes({ demo: true, root: "../../" });
+    expect(url.notFound()).toBe("../../404.html");
+    configureRoutes({ demo: false, root: "/" });
+  });
+  it("non-breaking space helpers", async () => {
+    const { fmt, fmtNb, mins } = await import("../../src/lib/format.ts");
+    expect(fmt(10.22)).toBe("10,22 €");
+    expect(fmtNb(10.22)).toBe("10,22 €");
+    expect(mins(35)).toBe("35 мин");
+  });
+});
+
+describe("office: optional name, hasContact, update by the organizer", () => {
+  it("the organizer adds a phone later and the order then leaves at the deadline", async () => {
+    const repo = new MemoryRepo();
+    const at = (clock: string, iso: string) => mk(clock, { preview: true, repo, now: () => new Date(iso) }).core;
+    const c0 = at("09:30", "2026-11-12T07:30:00Z");
+    const o = await c0.office.create({ office: "", addr: "Дружба 2, бл. 311", deadline: "11:30" });
+    expect(o.office).toBe("");
+    expect((await c0.office.get(o.code))!.hasContact).toBe(false);
+    await c0.office.join(o.code, { name: "Иван", lines: [{ id: lunch[0].id, q: 1, mods: [], extra: 0 }] });
+    const late = at("11:31", "2026-11-12T09:31:00Z");
+    expect((await late.office.sendDue()).failed).toEqual([[o.code, "no_contact"]]);
+    await expect(late.office.update(o.code, "wrong", { phone: "0888112233" })).rejects.toMatchObject({ code: "forbidden", status: 403 });
+    await expect(late.office.update(o.code, o.orgKey!, { phone: "123" })).rejects.toMatchObject({ fields: { phone: "Телефонът трябва да е 10 цифри, например 0888 12 34 56." } });
+    const u = await late.office.update(o.code, o.orgKey!, { name: "Мария", phone: "0888 11 22 33", pay: "card" });
+    expect(u.hasContact).toBe(true);
+    expect(u).not.toHaveProperty("contact");
+    expect((await late.office.sendDue()).sent).toEqual([o.code]);
+    const sent = (await late.office.get(o.code))!;
+    expect(sent.status).toBe("sent");
+    expect((await late.orders.get(sent.orderNo!))!.pay).toBe("card");
+  });
+});
+
+describe("reservations: change and cancel deadline, change in one step", () => {
+  const r0 = { name: "Иван", phone: "0888123456", people: 2 };
+  it("cancel until 2 h before an evening booking (from 17:00), 1 h before a day booking", async () => {
+    const { core } = mk("12:30");
+    const day = await core.reservations.create({ ...r0, table: "S1", date: "2026-11-12", time: "13:00" });
+    await expect(core.reservations.cancel(day.id, day.key!)).rejects.toMatchObject({ code: "too_late", status: 409, message: expect.stringContaining("до 2 часа преди резервация след 17:00 и до 1 час преди през деня") });
+    const day2 = await core.reservations.create({ ...r0, table: "S2", date: "2026-11-12", time: "14:00" });
+    expect((await core.reservations.cancel(day2.id, day2.key!)).status).toBe("cancelled");
+    const eve = await core.reservations.create({ ...r0, table: "S3", date: "2026-11-12", time: "17:00" });
+    const at1500 = createCore({ ...core.ctx, clock: "15:01" });
+    await expect(at1500.reservations.cancel(eve.id, eve.key!)).rejects.toMatchObject({ code: "too_late" });
+    expect((await createCore({ ...core.ctx, clock: "14:59" }).reservations.cancel(eve.id, eve.key!)).status).toBe("cancelled");
+    const tomorrow = await core.reservations.create({ ...r0, table: "S1", date: "2026-11-13", time: "11:00" });
+    expect((await createCore({ ...core.ctx, clock: "22:00" }).reservations.cancel(tomorrow.id, tomorrow.key!)).status).toBe("cancelled");
+  });
+  it("replaces: the old booking is cancelled in the same step and its table counts as free", async () => {
+    const { core } = mk("12:30");
+    const a = await core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "19:00" });
+    await expect(core.reservations.create({ ...r0, people: 3, table: "S3", date: "2026-11-22", time: "19:30" })).rejects.toMatchObject({ code: "taken" });
+    await expect(core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "19:30", replaces: { id: a.id, key: "wrong" } })).rejects.toMatchObject({ code: "not_found" });
+    const b = await core.reservations.create({ ...r0, people: 3, table: "S3", date: "2026-11-22", time: "19:30", replaces: { id: a.id, key: a.key! } });
+    expect(b.table).toBe("S3");
+    expect((await core.reservations.get(a.id, a.key!)).status).toBe("cancelled");
+    expect(await core.reservations.taken("2026-11-22", "19:00")).toEqual(["S3"]);
+  });
+});

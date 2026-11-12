@@ -2,7 +2,7 @@
 import { items, menu, isOut } from "./data.ts";
 import { art, ic } from "./render.ts";
 import "./icons/paper-plane-right.ts";
-import { esc, fmt } from "./format.ts";
+import { esc, fmt, fmtNb } from "./format.ts";
 import { url } from "./routes.ts";
 
 export type AiKind = "group" | "lunch" | "allergen" | "other";
@@ -37,7 +37,7 @@ export function aiReply(kind: AiKind): string {
   if (kind === "lunch") {
     const L = menu.lunch.items.filter((x) => x.p);
     const pick = [L[0], L[7], L[12], L[16]].filter(Boolean);
-    return '<p>Обедното меню за днес, до 15:00:</p><ul class="ailist">' + pick.map((x) => "<li>" + esc(x.n) + " · " + fmt(x.p as number) + "</li>").join("") + '</ul><p><a class="link" href="' + url.lunch() + '">Цялото обедно меню' + ic("caret-right", 16) + "</a></p>";
+    return '<p>Обедното меню за днес, до 15:00:</p><ul class="ailist">' + pick.map((x) => "<li>" + esc(x.n) + " · " + fmtNb(x.p as number) + "</li>").join("") + '</ul><p><a class="link" href="' + url.lunch() + '">Цялото обедно меню' + ic("caret-right", 16) + "</a></p>";
   }
   if (kind === "allergen") {
     const g = items.filter((x) => x.comp && x.al.indexOf("gluten") < 0 && x.course === "main").slice(0, 4);

@@ -26,7 +26,7 @@ async function core(): Promise<Core> {
   if (demoCore) return demoCore;
   demoCore = createCore({
     /* preview: the demo shows the lunch menu as today's (the clock comes from ?t= / sc-prefs.time) */
-    repo: new KVRepo(localStorage), hasher: webHasher, demo: true, preview: true,
+    repo: new KVRepo(localStorage), hasher: webHasher, demo: true, preview: true, requireTrackKey: true,
     emit: (type, data, to) => { busFire(type, data, to); demoChannel()?.postMessage({ type, data, to }); },
   });
   await demoCore.settings.get();

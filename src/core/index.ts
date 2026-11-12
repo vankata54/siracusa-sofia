@@ -9,6 +9,7 @@ import * as auditMod from "./audit.ts";
 import * as office from "./office.ts";
 import * as codes from "./codes.ts";
 import * as settings from "./settings.ts";
+import * as feedback from "./feedback.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -17,6 +18,7 @@ export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, FINISHED, MSG, nextStatus, publicOr
 export { publicOffice, officeDue, officeDueAt, OFFICE_MSG, type PublicOffice } from "./office.ts";
 export { normCode, CODE_MSG } from "./codes.ts";
 export { DEFAULT_SETTINGS } from "./settings.ts";
+export { FEEDBACK_MSG, type Feedback, type FeedbackInput } from "./feedback.ts";
 export { SECTIONS, DEFAULT_ROLES } from "./staff.ts";
 export { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
@@ -35,9 +37,10 @@ export function createCore(ctx: Ctx) {
     orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, track: orders.trackOrder, find: orders.findTracked, list: orders.listOrders, setStatus: orders.setOrderStatus }),
     reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenTables, setStatus: res.setReservationStatus, get: res.getReservation, cancel: res.cancelReservation }),
     celebrations: bind(ctx, { create: res.createCelebration }),
-    office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),
+    office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, update: office.updateOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),
     codes: bind(ctx, { check: codes.checkCode }),
     settings: bind(ctx, { get: settings.getSettings, update: settings.updateSettings }),
+    feedback: bind(ctx, { create: feedback.createFeedback, list: feedback.listFeedback }),
     subscriptions: bind(ctx, { subscribe: res.subscribe }),
     customers: bind(ctx, {
       requestCode: cust.requestSmsCode, verifyCode: cust.verifySmsCode, bySession: cust.customerBySession, logout: cust.logout,

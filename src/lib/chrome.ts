@@ -57,16 +57,20 @@ export function footer(year: number = new Date().getFullYear()): string {
   return '<footer class="foot"><div class="cols"><div><span class="word">Siracusa</span><p class="muted" style="margin:10px 0 0">Пица на пещ и скара на дървени въглища в Дружба 2.</p><p style="margin:12px 0 0">' + R.address + "<br>" + R.phone + " · " + R.email + '</p><p class="muted small" style="margin:8px 0 0">Всеки ден 10:00 - 23:00. Кухнята приема до 22:30, доставка до 21:00.</p></div>' +
     "<div><h3>Поръчай</h3>" + a("menu", "Меню") + a("lunch", "Обедно меню") + a("delivery", "Доставка") + a("pickup", "Вземи от място") + a("office", "За офиса") + "</div>" +
     "<div><h3>Елате при нас</h3>" + a("reservation", "Резервирай маса") + a("events", "Събития и поводи") + a("celebration", "Празник при нас") + a("bertha", "Фурната Bertha") + a("gallery", "Галерия") + "</div>" +
-    "<div><h3>Информация</h3>" + a("about", "За нас") + a("contacts", "Контакти") + a("allergens", "Алергени") + a("terms", "Общи условия") + a("privacy", "Поверителност") + '<a href="' + url.page("cookies") + '" data-cookie-settings>Бисквитки</a></div></div>' +
+    "<div><h3>Информация</h3>" + a("about", "За нас") + a("contacts", "Контакти") + a("allergens", "Алергени") + a("terms", "Общи условия") + a("privacy", "Поверителност") + a("cookies", "Бисквитки") + '<button class="flink" type="button" data-cookie-settings>Настройки на бисквитките</button></div></div>' +
     '<p class="legal">© ' + year + " Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p></footer>";
 }
 
 export function cookieBanner(): string {
-  return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите.</p><div class="btns"><button class="pill pill-line" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>';
+  return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите. <a href="' + url.page("cookies") + '">За бисквитките</a> · <a href="' + url.page("privacy") + '">Поверителност</a></p><div class="btns"><button class="pill pill-line" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>';
 }
 
-export function cookieSettings(): string {
-  return '<label class="check"><input type="checkbox" checked disabled id="ck1"><span><b>Необходими</b><br><span class="muted small">Количка, вход, език. Винаги включени.</span></span></label><label class="check"><input type="checkbox" id="ck2"><span><b>Аналитични</b><br><span class="muted small">Помагат ни да виждаме кое се поръчва. Изключени по подразбиране.</span></span></label><label class="check"><input type="checkbox" id="ck3"><span><b>Маркетингови</b><br><span class="muted small">Изключени по подразбиране.</span></span></label>';
+/** Stored cookie choices ("sc-cookie-prefs"): the necessary ones are always on. */
+export interface CookiePrefs { analytics: boolean; marketing: boolean }
+export function cookieSettings(prefs: CookiePrefs = { analytics: false, marketing: false }): string {
+  const ck = (b: boolean) => (b ? " checked" : "");
+  return '<form data-cookie-form class="stack" style="gap:6px"><label class="check"><input type="checkbox" checked disabled id="ck1"><span><b>Необходими</b><br><span class="muted small">Количка, вход, език. Винаги включени.</span></span></label><label class="check"><input type="checkbox" id="ck2" name="analytics"' + ck(prefs.analytics) + '><span><b>Аналитични</b><br><span class="muted small">Помагат ни да виждаме кое се поръчва. Изключени по подразбиране.</span></span></label><label class="check"><input type="checkbox" id="ck3" name="marketing"' + ck(prefs.marketing) + '><span><b>Маркетингови</b><br><span class="muted small">Изключени по подразбиране.</span></span></label>' +
+    '<p class="small muted" style="margin:6px 0 0"><a href="' + url.page("cookies") + '">Какво ползваме и защо</a></p><button class="pill pill-red pill-block" type="submit" style="margin-top:8px">Запази избора</button></form>';
 }
 
 export function morePanel(): string {

@@ -5,6 +5,12 @@ export function fmt(p: number): string {
   return (Math.round(p * 100) / 100).toFixed(2).replace(".", ",") + " €";
 }
 
+/** The same with a non-breaking space ("10,20\u00a0€"): for prices in running text, outside a .price span
+    (fmt() keeps the normal space: HTML, JSON-LD and tests compare it; .price is already white-space:nowrap). */
+export function fmtNb(p: number): string { return fmt(p).replace(" €", "\u00a0€"); }
+/** "35 мин" with a non-breaking space */
+export const mins = (n: number): string => n + "\u00a0мин";
+
 /** HTML-escape for text and attribute values. */
 export function esc(s: unknown): string {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

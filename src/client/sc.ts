@@ -12,7 +12,7 @@ import * as T from "../lib/status.ts";
 import * as C from "../lib/consts.ts";
 import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
-import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, footer, MORE_PAGES } from "../lib/chrome.ts";
+import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, footer, MORE_PAGES, type CookiePrefs } from "../lib/chrome.ts";
 import { configureRoutes, url, fromProto } from "../lib/routes.ts";
 import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
@@ -239,9 +239,22 @@ async function openAI() {
 }
 
 /* ---------- cookie banner ---------- */
+/* "sc-cookie": the answer to the banner (all | min | set); "sc-cookie-prefs": {analytics, marketing}. The site has no
+   analytics or marketing tools today; these flags are what such tools must read (SC.cookies()). */
+const cookiePrefs = (): CookiePrefs => { const p = load<Partial<CookiePrefs>>("sc-cookie-prefs", {}); return { analytics: p.analytics === true, marketing: p.marketing === true }; };
 function cookieChoice(v: string) {
   store("sc-cookie", v); de.dataset.ck = "1";
-  if (v === "set") sheet({ title: "Бисквитки", html: cookieSettings() });
+  if (v === "all") store("sc-cookie-prefs", { analytics: true, marketing: true });
+  if (v === "min") store("sc-cookie-prefs", { analytics: false, marketing: false });
+  if (v === "set") {
+    const s = sheet({ title: "Бисквитки", html: cookieSettings(cookiePrefs()) });
+    s.el.querySelector("[data-cookie-form]")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const f = e.target as HTMLFormElement, on = (n: string) => !!(f.elements.namedItem(n) as HTMLInputElement | null)?.checked;
+      store("sc-cookie-prefs", { analytics: on("analytics"), marketing: on("marketing") });
+      s.close(); toast("Изборът е запазен");
+    });
+  }
 }
 
 /* ---------- share ---------- */
@@ -265,7 +278,11 @@ document.addEventListener("click", (e) => {
   if (t.hasAttribute("data-lang")) { toast("Английската версия идва след българската."); return; }
   if (t.hasAttribute("data-share")) { share(); return; }
   if (t.dataset.cookie) { cookieChoice(t.dataset.cookie); return; }
-  if (t.hasAttribute("data-cookie-settings")) { e.preventDefault(); try { localStorage.removeItem("sc-cookie"); } catch { /* ignore */ } delete de.dataset.ck; return; }
+  if (t.hasAttribute("data-cookie-settings")) {
+    e.preventDefault(); try { localStorage.removeItem("sc-cookie"); } catch { /* ignore */ } delete de.dataset.ck;
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(".cookie button")?.focus({ preventScroll: true }));
+    return;
+  }
 });
 document.addEventListener("submit", (e) => {
   const af = (e.target as Element).closest("[data-aiform]");
@@ -303,6 +320,8 @@ export const SC = {
   url, fromProto, PAGES: MORE_PAGES, footer: () => footer(),
   /* cart & user */
   cart: cartApi, updateCartUI, user: () => load<Record<string, unknown> | null>("sc-user", null),
+  /** the cookie choice: necessary always; analytics / marketing only when the visitor allowed them */
+  cookies: () => ({ answered: !!load<string | null>("sc-cookie", null), necessary: true, ...cookiePrefs() }),
   /* ui */
   fly, haptic, toast, flash, sheet, reveal, aiAsk, openAI,
   device, scroller, ov, main,

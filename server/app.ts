@@ -21,7 +21,7 @@ export interface AppOpts {
   dbFile: string; distDir: string; secure?: boolean;
   /** tests only (SC_PREVIEW_API=1): the API follows the preview clock sent by the page (x-sc-clock) and the lunch menu counts as today's */
   previewApi?: boolean;
-  /** the tracking address must carry the order key (TRACK_KEY_REQUIRED=1), once the pages pass it */
+  /** the tracking address must carry the order key (default on; TRACK_KEY_REQUIRED=0 turns it off) */
   requireTrackKey?: boolean;
   /** run the timers for the automatic office send (default true; off in unit tests) */
   timers?: boolean;
@@ -55,7 +55,7 @@ export function createApp(opts: AppOpts) {
   seedMenu(db);
   const clients = new Set<Sub>();
   const ctx: Ctx = {
-    repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: !!opts.requireTrackKey,
+    repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false,
     emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
   };
   const core = createCore(ctx);
@@ -129,7 +129,12 @@ export function createApp(opts: AppOpts) {
     return c.json(await coreFor(c).orders.create({ ...b, channel: "web", userId: u ? u.id : null }), 201);
   });
   /* public tracking: /api/orders/1042-k7f3m2pq (or the number alone for orders without a key, until TRACK_KEY_REQUIRED) */
-  app.get("/api/orders/:id", async (c) => c.json(await core.orders.track(c.req.param("id"))));
+  /* unknown number or wrong key: 200 {found:false} (an expected answer, no console error; it does not tell whether the
+     number exists); api.orders.get() turns it into the usual ApiError 404 "not_found" */
+  app.get("/api/orders/:id", async (c) => {
+    const o = await core.orders.find(c.req.param("id"));
+    return c.json(o ? await core.orders.track(c.req.param("id")) : { found: false });
+  });
   /* code checks: at most 30 per IP in 15 min (the codes are 10 digits, guessing must stay slow); the order itself also counts */
   const codeTries = new Map<string, { n: number; until: number }>();
   const codeGate = (c: Context) => {
@@ -138,7 +143,16 @@ export function createApp(opts: AppOpts) {
     codeTries.set(k, { n, until: t && t.until > now ? t.until : now + 15 * 60_000 });
     if (n > 30) throw new CoreError("throttled", "Твърде много опити с код. Опитайте след 15 минути.", 429);
   };
-  app.post("/api/codes/check", async (c) => { codeGate(c); return c.json(await core.codes.check(String((await body(c)).code || ""))); });
+  /* an invalid code is an expected answer, not an HTTP error (no red line in the browser console):
+     200 { valid: false, error: { code, message, fields } }; api.codes.check() turns it back into the same ApiError */
+  app.post("/api/codes/check", async (c) => {
+    codeGate(c);
+    try { return c.json(await core.codes.check(String((await body(c)).code || ""))); }
+    catch (e) {
+      if (e instanceof CoreError && e.status === 422) return c.json({ valid: false, error: { code: e.code, message: e.message, fields: (e as CoreError & { fields?: unknown }).fields } });
+      throw e;
+    }
+  });
   app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {})); });
   app.patch("/api/admin/orders/:no", async (c) => {
     const s = await staff(c); const b = await body(c);
@@ -165,9 +179,20 @@ export function createApp(opts: AppOpts) {
   app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
   app.get("/api/office/:code", async (c) => { const o = await coreFor(c).office.get(c.req.param("code"), c.req.query("k") || null); if (!o) throw new CoreError("not_found", "Тази обща поръчка не съществува.", 404); return c.json(o); });
   app.post("/api/office/:code/join", async (c) => c.json(await coreFor(c).office.join(c.req.param("code"), await body(c))));
+  app.post("/api/office/:code/update", async (c) => { const b = await body(c); return c.json(await core.office.update(c.req.param("code"), String(b.orgKey || ""), { name: b.name, phone: b.phone, pay: b.pay })); });
   app.post("/api/office/:code/submit", async (c) => c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))));
   app.post("/api/subscribe", async (c) => { const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
   app.post("/api/ratings", async (c) => c.json(await core.ratings.submit(await body(c)), 201));
+  /* contact messages: at most 5 per IP in 10 min */
+  const fbTries = new Map<string, number[]>();
+  app.post("/api/feedback", async (c) => {
+    const k = ip(c), now = Date.now(), list = (fbTries.get(k) || []).filter((t) => t > now - 10 * 60_000);
+    if (list.length >= 5) throw new CoreError("throttled", "Изпратихте няколко съобщения току-що. Опитайте след 10 минути или ни се обадете на 0894 36 55 77.", 429);
+    const r = await core.feedback.create(await body(c));
+    list.push(now); fbTries.set(k, list);
+    return c.json({ ok: true, id: r.id }, 201);
+  });
+  app.get("/api/admin/feedback", async (c) => { await staff(c, "customers"); return c.json(await core.feedback.list()); });
 
   /* ---------- customers: SMS sign-in (v1: the code is returned and shown on screen) ---------- */
   app.post("/api/auth/sms/request", async (c) => c.json(await core.customers.requestCode((await body(c)).phone)));

@@ -71,7 +71,7 @@ html.sheet-open{overflow:hidden}
 .pill[disabled],.pill[aria-disabled="true"]{background:var(--surface-2); color:var(--muted); cursor:not-allowed; box-shadow:none}
 .pill.done{background:var(--ok); color:var(--on-ok)}
 .go{width:100%; min-height:60px; justify-content:space-between; padding:0 8px 0 24px; font-size:18px}
-.go .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.2); transition:transform var(--t-slow) var(--ease)}
+.go .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb, var(--on-red) 20%, transparent); transition:transform var(--t-slow) var(--ease)}
 .go:hover .knob{transform:translate(2px,-2px) scale(1.05)}
 .link{color:var(--red); font-weight:700; text-decoration:none; min-height:48px; display:inline-flex; align-items:center; gap:4px; border:0; background:transparent; cursor:pointer; padding:0}
 .iconbtn{width:48px; height:48px; border:0; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); cursor:pointer; flex:none}
@@ -240,7 +240,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .toast.on{transform:translate(-50%,0); opacity:1}
 .toast:not(.on){pointer-events:none}
 .toast:empty{padding:0; min-height:0}
-.toast button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:rgba(255,255,255,.16); color:inherit; font-weight:800; cursor:pointer}
+.toast button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:color-mix(in srgb, var(--bg) 16%, transparent); color:inherit; font-weight:800; cursor:pointer}
 .empty{display:grid; justify-items:center; gap:12px; text-align:center; padding:32px 16px}
 .empty .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
 .skel{border-radius:16px; background:linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%); background-size:200% 100%; animation:skel 1.4s ease-in-out infinite}
@@ -258,6 +258,8 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .foot h3{margin:0 0 8px; font-size:16px}
 .foot a{text-decoration:none; display:block; min-height:48px; display:flex; align-items:center; color:var(--muted); font-weight:600}
 .foot .legal{font-size:14px; color:var(--muted)}
+.foot .flink{display:flex; align-items:center; min-height:48px; padding:0; border:0; background:none; font:inherit; color:var(--muted); font-weight:600; cursor:pointer; text-align:left}
+.cookie p a{color:inherit; font-weight:700}
 @container app (min-width:900px){ .foot{padding:56px max(40px, calc((100% - 1200px)/2)) 48px} .foot .cols{grid-template-columns:2fr 1fr 1fr 1fr} }
 
 /* ---------- cookie banner ---------- */

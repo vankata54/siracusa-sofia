@@ -30,13 +30,19 @@ describe("server API (in-memory SQLite)", async () => {
   it("orders: numbers from 1042, public view without personal data", async () => {
     const o = await (await app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] }, name: "Иван Петров", phone: "0888123456", sched: "утре", slot: "12:00" }))).json();
     expect(o.no).toBe("1042");
-    const pub = await (await app.request("/api/orders/1042")).json();
+    const pub = await (await app.request("/api/orders/1042-" + o.key)).json();
     expect(pub.phone).toBeUndefined();
     expect(pub.name).toBeUndefined();
-    expect(pub.key).toBeUndefined();
-    const withKey = await (await app.request("/api/orders/1042-" + o.key)).json();
-    expect(withKey.key).toBe(o.key);
-    expect((await app.request("/api/orders/1042-wrongkey")).status).toBe(404);
+    expect(pub.key).toBe(o.key);
+    /* without the key (the default) or with a wrong one: like an unknown number, 200 {found:false} */
+    for (const id of ["1042", "1042-wrongkey", "999999", "abc"]) {
+      const r = await app.request("/api/orders/" + id);
+      expect(r.status).toBe(200);
+      expect(await r.json()).toEqual({ found: false });
+    }
+    const open = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, requireTrackKey: false });
+    const o2 = await (await open.app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456", sched: "утре", slot: "12:00" }))).json();
+    expect((await (await open.app.request("/api/orders/" + o2.no)).json()).no).toBe(o2.no);
   });
   it("cross-origin POST is refused", async () => {
     const r = await app.request("http://localhost/api/subscribe", { method: "POST", headers: { origin: "https://evil.example", host: "localhost", "content-type": "application/json" }, body: "{}" });
@@ -70,9 +76,23 @@ describe("server API (in-memory SQLite)", async () => {
     const late = await t.app.request("/api/orders", { method: "POST", headers: { "content-type": "application/json", "x-sc-clock": "23:30" }, body: JSON.stringify({ cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456" }) });
     expect(late.status).toBe(409);
   });
+  it("an invalid code is 200 with valid:false (no console error), same message and fields", async () => {
+    const r = await app.request("/api/codes/check", json("POST", { code: "SC10-0000000000" }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ valid: false, error: { code: "invalid", message: "Няма такъв код. Проверете цифрите, например SC10-4829163057.", fields: { code: "Няма такъв код. Проверете цифрите, например SC10-4829163057." } } });
+  });
   it("code checks are limited per IP", async () => {
     let last = 0;
     for (let i = 0; i < 31; i++) last = (await app.request("/api/codes/check", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "9.9.9.9" }, body: JSON.stringify({ code: "SC10-0000000000" }) })).status;
     expect(last).toBe(429);
+  });
+  it("feedback: 201, same fields as the core, at most 5 per IP in 10 min", async () => {
+    const send = (b: unknown) => app.request("/api/feedback", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" }, body: JSON.stringify(b) });
+    const bad = await send({ name: "", contact: "x", message: "" });
+    expect(bad.status).toBe(422);
+    expect(Object.keys((await bad.json()).fields).sort()).toEqual(["contact", "message", "name"]);
+    for (let i = 0; i < 5; i++) expect((await send({ name: "Иван", contact: "0888123456", message: "Здравейте " + i })).status).toBe(201);
+    expect((await send({ name: "Иван", contact: "0888123456", message: "Още едно" })).status).toBe(429);
+    expect((await app.request("/api/admin/feedback")).status).toBe(401);
   });
 });
