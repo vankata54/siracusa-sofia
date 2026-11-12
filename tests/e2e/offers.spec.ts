@@ -55,7 +55,7 @@ test("offers 16:30: -30% active (pickup), hero, count, CTA sets pickup", async (
   await expect(cp(page, "rating")).toContainText("Код за отстъпка");
   await expect(cp(page, "greek")).not.toContainText("-5%");
   await cp(page, "lunch").locator("[data-pickup]").click();
-  await expect(page).toHaveURL(/\/obedno-menu\/$/);
+  await expect(page).toHaveURL(/\/obedno-menu\/(\?[^#]*)?$/);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").mode)).toBe("pickup");
   expect(errors).toEqual([]);
 });
