@@ -81,7 +81,9 @@ const skeleton =
 .ln + .ln{border-top:1px solid var(--line)}
 .ln-pic{grid-area:pic; display:block; text-decoration:none}
 .ln-pic .pic{width:72px; height:72px; border-radius:18px}
-.ln-info{grid-area:info; min-width:0; align-self:center}
+.ln-info{grid-area:info; min-width:0; align-self:center; position:relative}
+/* the dish name is a small link: its target covers the whole name + price block (at least 48px high), not the buttons */
+.ln-name::after{content:""; position:absolute; inset:-12px 0; min-height:48px}
 .ln-name{display:block; font-weight:800; font-size:17px; line-height:1.25; letter-spacing:-.015em; text-decoration:none; color:inherit}
 .ln-sub{display:block; font-size:15px; color:var(--muted); margin-top:3px; font-variant-numeric:tabular-nums}
 .ln-tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
@@ -225,6 +227,12 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .field .err{display:flex; gap:6px; align-items:flex-start; margin:0}
 .field .err[hidden]{display:none}
 .field .err .ic{margin-top:1px}
+/* discount code (step 3) */
+.code-row{display:flex; gap:8px; align-items:stretch}
+.code-row .input{flex:1; min-width:0; text-transform:uppercase; font-variant-numeric:tabular-nums; letter-spacing:.02em}
+.code-row .input::placeholder{text-transform:none}
+.code-row .pill{flex:none; min-height:52px}
+.code-rm{margin-top:10px; min-height:48px; display:inline-flex; align-items:center; gap:6px}
 .opt-tag{font-weight:600; color:var(--muted); font-size:14px; margin-left:4px}
 .recap{padding:6px 18px}
 .recap .kv{align-items:center; min-height:64px}
