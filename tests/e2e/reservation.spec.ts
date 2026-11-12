@@ -230,6 +230,37 @@ test("reservation: change keeps the guest's own table free (30 min later, same t
   expect(errors).toEqual([]);
 });
 
+test("reservation: change: the own booking is left out only with its key; a table another guest holds stays taken", async ({ page, request }, info) => {
+  const errors = watch(page);
+  const tbl = info.project.name === "phone" ? "S5" : "G3";
+  /* a day where the table is free from 17:30 to 23:30 (an earlier run may have kept one) */
+  let b: { id: string; key: string } | null = null, date = "";
+  for (let k = 30; k < 84 && !b; k += 2) {
+    date = future(k + (info.project.name === "phone" ? 0 : 1));
+    const busy = await Promise.all(["18:00", "19:00", "20:30"].map(async (t) => (await (await request.get("/api/reservations/taken?date=" + date + "&time=" + t)).json()).includes(tbl)));
+    if (busy.some(Boolean)) continue;
+    const r = await request.post("/api/reservations", { data: { date, time: "18:00", people: 4, table: tbl, name: "Сменящ", phone: "0888 55 66 78" } });
+    if (r.status() === 201) b = await r.json();
+  }
+  if (!b) throw new Error("no free day");
+  /* another guest holds the same table at 20:30: at 19:00 it overlaps both the own booking and theirs */
+  expect((await request.post("/api/reservations", { data: { date, time: "20:30", people: 4, table: tbl, name: "Друг", phone: "0888 55 66 79" } })).status()).toBe(201);
+  const taken = async (q: string) => (await (await request.get("/api/reservations/taken?date=" + date + "&time=19:00" + q)).json()) as string[];
+  expect(await taken("")).toContain(tbl);
+  expect(await taken("&except=" + b.id + "&k=wrong")).toContain(tbl);
+  expect(await taken("&except=" + b.id + "&k=" + b.key)).toContain(tbl); /* the 20:30 booking still holds it */
+  expect(await (await request.get("/api/reservations/taken?date=" + date + "&time=18:00&except=" + b.id + "&k=" + b.key)).json()).not.toContain(tbl);
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  await page.goto("/rezervatsia/?preview=1&t=12:30#r-" + b.id + "-" + b.key);
+  await page.locator("[data-change]").click();
+  await page.locator(".slot", { hasText: "19:00" }).click();
+  await next(page).click();
+  await expect(page.locator(".fp")).toBeVisible();
+  if (tbl.startsWith("G")) await page.locator("[data-zone=garden]").first().click();
+  await expect(page.locator('.tbl[data-t="' + tbl + '"]')).toHaveClass(/taken/);
+  expect(errors).toEqual([]);
+});
+
 test("reservation: a link without its key says it is incomplete", async ({ page }) => {
   await open(page, "r-deadbeef");
   await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Връзката е непълна");

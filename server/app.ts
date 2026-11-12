@@ -213,7 +213,7 @@ export function createApp(opts: AppOpts) {
     if (ph) u.push(limit("res-phone:" + ph, 5, 60, "За този телефон вече има няколко заявки за резервация. Обадете ни се на 0894 36 55 77 и ще помогнем."));
     return c.json(await counted(u, () => coreFor(c).reservations.create(b)), 201);
   });
-  app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "")));
+  app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "", c.req.query("except") || undefined, c.req.query("k") || undefined)));
   app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
   app.post("/api/reservations/:id/cancel", async (c) => c.json(await core.reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
   app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(await core.reservations.list()); });

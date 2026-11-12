@@ -287,6 +287,22 @@ describe("reservations", () => {
     await core.reservations.create({ ...r0, table: "S4", date: "2026-11-22", time: "19:00" });
     expect(await core.reservations.taken("2026-11-22", "20:30")).toEqual([]);
   });
+  it("a change: the own booking (id + key) is left out of taken, another booking on the same table is not", async () => {
+    const { core } = mk();
+    const own = await core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "19:00" });
+    expect(await core.reservations.taken("2026-11-22", "20:00", own.id, own.key)).toEqual([]);
+    /* a wrong key or an unknown id changes nothing (and says nothing) */
+    expect(await core.reservations.taken("2026-11-22", "20:00", own.id, "wrong")).toEqual(["S3"]);
+    expect(await core.reservations.taken("2026-11-22", "20:00", own.id)).toEqual(["S3"]);
+    expect(await core.reservations.taken("2026-11-22", "20:00", "nope", own.key)).toEqual(["S3"]);
+    /* another guest holds S3 later: the own booking is left out, the other one still takes the table */
+    await core.reservations.create({ ...r0, phone: "0888654321", table: "S3", date: "2026-11-22", time: "21:00" });
+    expect(await core.reservations.taken("2026-11-22", "20:00", own.id, own.key)).toEqual(["S3"]);
+    expect(await core.reservations.taken("2026-11-22", "18:00", own.id, own.key)).toEqual([]);
+    /* the change itself: moving to 18:00 on S3 works, to 20:00 it is refused */
+    await expect(core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "20:00", replaces: { id: own.id, key: own.key! } })).rejects.toMatchObject({ code: "taken" });
+    expect((await core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "18:00", replaces: { id: own.id, key: own.key! } })).table).toBe("S3");
+  });
 });
 
 describe("settings, subscriptions, events, time", () => {

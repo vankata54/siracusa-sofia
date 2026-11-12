@@ -170,7 +170,12 @@ export const api = {
       remember("res", x.id, x.key);
       return x;
     },
-    taken: pick((c, date: string, time: string) => c.reservations.taken(date, time), (date, time) => http<string[]>("GET", `reservations/taken?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`)),
+    /** except: the id of the guest's own booking during a change (its key from this browser is added); its table is not counted */
+    taken: async (date: string, time: string, except?: string): Promise<string[]> => {
+      const k = except ? keys().res[except] || "" : "";
+      if (DEMO) return local((c) => c.reservations.taken(date, time, except, k));
+      return http<string[]>("GET", `reservations/taken?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}` + (except ? `&except=${encodeURIComponent(except)}&k=${encodeURIComponent(k)}` : ""));
+    },
     /** key: from the SMS link; without it, the key this browser kept */
     get: async (id: string, key?: string): Promise<Reservation> => {
       const k = key || keys().res[id] || "";

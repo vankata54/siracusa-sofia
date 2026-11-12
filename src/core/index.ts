@@ -35,7 +35,7 @@ export function createCore(ctx: Ctx) {
   return {
     ctx,
     orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, track: orders.trackOrder, find: orders.findTracked, list: orders.listOrders, setStatus: orders.setOrderStatus }),
-    reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenTables, setStatus: res.setReservationStatus, get: res.getReservation, cancel: res.cancelReservation }),
+    reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenForGuest, setStatus: res.setReservationStatus, get: res.getReservation, cancel: res.cancelReservation }),
     celebrations: bind(ctx, { create: res.createCelebration }),
     office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, update: office.updateOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),
     codes: bind(ctx, { check: codes.checkCode }),

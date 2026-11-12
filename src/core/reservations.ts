@@ -121,6 +121,18 @@ export async function takenTables(ctx: Ctx, date: string, time: string, exceptId
   return [...out];
 }
 
+/** The public "taken" view. During a change the guest passes their own booking (id + key from create or the SMS link):
+    it is left out, so its own table does not look taken, while a table another booking holds still does.
+    A wrong key or an unknown id is simply ignored (the answer says nothing about other bookings). */
+export async function takenForGuest(ctx: Ctx, date: string, time: string, exceptId?: string, key?: string): Promise<string[]> {
+  let own: string | undefined;
+  if (exceptId && key) {
+    const r = await ctx.repo.get<Reservation>(COL.reservations, String(exceptId));
+    if (r && r.key && r.key === String(key)) own = r.id;
+  }
+  return takenTables(ctx, date, time, own);
+}
+
 /** The guest's own view (link from the SMS): needs the key from create. */
 export async function getReservation(ctx: Ctx, id: string, key: string): Promise<Reservation> {
   const r = await ctx.repo.get<Reservation>(COL.reservations, String(id || ""));

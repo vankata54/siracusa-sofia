@@ -78,12 +78,14 @@ export function start(): void {
   const taken = new Map<string, Set<string>>();
   const loading = new Set<string>();
   let takenErr = false;
-  const key = (d: Date, m: number) => ymd(d) + "|" + hm(m);
+  /** a change: the guest's own booking, left out by the core (except + key), so its own table does not look taken */
+  const exc = (): string => { const o = st.changing; return o && o.id && o.status !== "cancelled" ? o.id : ""; };
+  const key = (d: Date, m: number) => ymd(d) + "|" + hm(m) + "|" + exc();
   function loadTaken(d: Date, list: number[], fresh = false): Promise<void> {
     const need = list.filter((m) => (fresh || !taken.has(key(d, m))) && !loading.has(key(d, m)));
     if (!need.length) return Promise.resolve();
     need.forEach((m) => loading.add(key(d, m)));
-    return Promise.all(need.map((m) => api.reservations.taken(ymd(d), hm(m))
+    return Promise.all(need.map((m) => api.reservations.taken(ymd(d), hm(m), exc() || undefined)
       .then((ids) => { taken.set(key(d, m), new Set(ids)); takenErr = false; })
       .catch(() => { takenErr = true; })
       .finally(() => loading.delete(key(d, m))))).then(() => undefined);
@@ -102,21 +104,7 @@ export function start(): void {
   const known = (d: Date, m: number) => taken.has(key(d, m));
   function isTaken(t: Table, d: Date, m: number): boolean {
     if (SC.preview && st.proto.eventFull && isEvent(d) && m >= 1140 && m <= 1230) return true; /* preview panel only: the event night fully booked 19:00 - 20:30 */
-    if (ownOld(t, d, m)) return false;
     return !!taken.get(key(d, m))?.has(t.id);
-  }
-  /** a change: the guest's own old booking does not take its table (the core frees it in the same step, `replaces`).
-     If another booking also holds that table, the core answers 409 "taken" and the page shows it. */
-  const heldByOther = new Set<string>();
-  function ownOld(t: Table, d: Date, m: number): boolean {
-    const o = st.changing;
-    if (heldByOther.has(key(d, m) + "|" + t.id)) return false;
-    if (!o || !o.id || o.status === "cancelled" || !same(o.date, d)) return false;
-    const no = /^Маса (\d+)/.exec(o.selLabel || ""); /* a booking stored before `table` was kept */
-    const tid = o.table !== undefined ? o.table : no ? TABLES.filter((x) => String(x.n) === no[1])[0]?.id : null;
-    if (tid !== t.id) return false;
-    const dur = o.dur || 120; /* resMinutes, the core's default */
-    return o.slot < m + dur && m < o.slot + dur;
   }
   const suits = (t: Table, n: number) => n <= 6 && t.seats >= n && t.seats <= n + 2;
   const zoneTables = (z: Zone) => TABLES.filter((t) => t.zone === z);
@@ -679,7 +667,6 @@ export function start(): void {
       if (e instanceof ApiError) {
         if (e.code === "blocked") { st.blocked = true; render(); const bc = main.querySelector("[data-blocked]"); scrollToEl(bc); bc?.querySelector<HTMLElement>("[data-h]")?.focus({ preventScroll: true }); return; }
         if (e.code === "taken") { /* someone else was faster: back to the plan with fresh data */
-          if (s.t) heldByOther.add(key(d, m) + "|" + s.t.id); /* also the guest's own table during a change: another booking holds it then */
           st.released = (s.label) + " току-що беше заета от друг гост. Изберете друга маса."; st.sel = null; st.hold = 0; st.step = 2; st.anim = true;
           taken.delete(key(d, m)); takenErr = false; loadTaken(d, [m], true).then(() => render()); render(); toTop(true); return;
         }
