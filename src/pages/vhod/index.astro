@@ -1,0 +1,166 @@
+---
+/* Login (/vhod/): port of design/pages/login.html (design/PAGES.md "login.html + profile.html", design/reviews/login.review.md).
+   Phone -> SMS code (6 boxes) -> name (new profiles only) -> done, without a password, through api.auth.smsRequest /
+   smsVerify (+ api.auth.update for the name and the unticked marketing consent). The server draws the hero, the -10% card,
+   "Какво получавате" and step 1; ./_login.ts draws the later steps, "already signed in", blocked number, errors and success.
+   noindex: a personal page, nothing to find in search. */
+import Base from "../../layouts/Base.astro";
+import "../../lib/icons-all.ts";
+import { ic, url, art } from "../../lib/index.ts";
+import { HERO, DESCRIPTION, perksHTML, phoneHTML } from "./_views.ts";
+
+const abs = (p: string) => new URL(p, Astro.site).href;
+const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+  { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+  { "@type": "ListItem", position: 2, name: "Вход", item: abs(url.page("login")) },
+] };
+---
+<Base page="login" nav="profile" title="Вход" docTitle="Вход и регистрация" description={DESCRIPTION} status={false} ai={false} footer={false} noindex jsonld={jsonld}>
+  <div class="lg" data-lg>
+    <div class="lg-a">
+      <p class="eyebrow" data-eyebrow>{HERO.eyebrow}</p>
+      <h1 class="h1" data-h1>{HERO.h1}</h1>
+      <p class="lead" data-lead>{HERO.lead}</p>
+      <div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам в количката.</span></span><span class="art" aria-hidden="true" set:html={art("pitsa-s-burata-i-proshuto-krudo")}></span></div>
+    </div>
+    <div class="lg-f"><div class="shell"><div class="core box" data-box aria-live="polite"><div class="view" set:html={phoneHTML()}></div></div></div></div>
+    <div class="lg-p">
+      <h2 class="h3">Какво получавате</h2>
+      <Fragment set:html={perksHTML()} />
+      <p class="noacc">Поръчка без профил също става. <a class="link" href={url.menu()} set:html={"Към менюто" + ic("caret-right", 18)}></a></p>
+    </div>
+  </div>
+  <noscript><p class="sec lead">За вход през сайта е нужен JavaScript. Поръчка без профил също става: обадете ни се на 0894 36 55 77.</p></noscript>
+  <div data-lproto></div>
+</Base>
+
+<style is:global>
+/* login: phone -> SMS code -> name (new profiles only) -> done. Tokens only. */
+.lg{display:grid; gap:20px; padding:24px 16px 0}
+.lg .eyebrow{margin:0 0 10px; font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.lg-a .lead{margin-top:10px}
+
+/* -10% bonus, the one ember element on the page */
+.bonus{position:relative; overflow:hidden; display:flex; align-items:center; gap:16px; margin-top:20px; padding:16px 18px; border-radius:var(--r-shell)}
+.bonus .big{flex:none; font-size:44px; line-height:1; font-weight:800; letter-spacing:-.05em; font-variant-numeric:tabular-nums}
+.bonus .tx{min-width:0}
+.bonus b{display:block; font-size:17px; line-height:1.25}
+.bonus .s{display:block; font-size:16px; line-height:1.35; opacity:.85; margin-top:2px}
+.bonus .art{display:none}
+
+/* form card */
+.lg .core.box{padding:20px 16px 22px}
+.lg .view{display:grid; gap:18px}
+.lg .view.in{animation:lg-vin var(--t-slow) var(--ease)}
+@keyframes lg-vin{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+.lg form.view{gap:16px}
+.lg .view .h3{font-size:22px}
+.lg .view p{margin:0}
+.lg .sub{color:var(--muted)}
+.lg .center .sub{text-wrap:balance}
+.lg .err{font-size:14px; color:var(--danger); font-weight:600; margin:0}
+.lg .sub b{color:var(--ink); white-space:nowrap}
+.lg .fine{font-size:14px; color:var(--muted); margin:0}
+.lg .fine a{color:var(--ink); font-weight:700}
+.lg .head{display:grid; gap:6px}
+.lg .pill .spin{width:18px; height:18px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:lg-spin 700ms linear infinite}
+@keyframes lg-spin{to{transform:rotate(360deg)}}
+.lg .pill.busy{pointer-events:none}
+.lg .acts2{display:grid; grid-template-columns:auto 1fr; gap:8px}
+.lg .acts2 .pill{padding:0 18px}
+.lg.done .lg-a .bonus,.lg.done .lg-p{display:none}
+
+/* 6-box code */
+.otp{border:0; margin:0; padding:0; min-width:0}
+.otp .boxes{display:grid; grid-template-columns:repeat(6,1fr); gap:6px}
+.otp input{width:100%; min-width:0; height:64px; padding:0; border:0; border-radius:var(--r-field); text-align:center; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); outline:none; caret-color:var(--red); transition:transform var(--t-fast) var(--ease)}
+.otp input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.otp input.full{box-shadow:inset 0 0 0 2px var(--ink)}
+.otp input.full:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.otp input.pop{animation:lg-pop var(--t-base) var(--ease)}
+.otp[aria-invalid="true"] input{box-shadow:inset 0 0 0 2px var(--danger)}
+.otp input:disabled{opacity:.5}
+.otp.shake .boxes{animation:lg-shake 420ms var(--ease)}
+@keyframes lg-pop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes lg-shake{0%,100%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.resend{display:flex; align-items:center; justify-content:center; gap:8px; min-height:48px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.resend .link{min-height:48px}
+.lg .hint{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:14px; color:var(--muted)}
+.lg .hint .ic{margin-top:1px; flex:none}
+
+/* demo: no SMS provider yet, the code is shown on the screen (docs/DECISIONS.md) */
+.democode{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; align-items:center; padding:12px 14px; border-radius:18px; box-shadow:inset 0 0 0 2px var(--line-strong); background:repeating-linear-gradient(135deg, transparent 0 14px, var(--line) 14px 15px)}
+.democode > .ic{grid-row:span 2; color:var(--muted)}
+.democode .t{font-size:14px; font-weight:800; color:var(--muted)}
+.democode .c{font-size:16px}
+.democode .c b{font-size:22px; letter-spacing:.08em; font-variant-numeric:tabular-nums; white-space:nowrap}
+.democode .link{grid-column:2; justify-self:start}
+
+/* error / blocked / offline */
+[data-alert]:empty{display:none}
+.lg .alert{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; padding:14px 16px; border-radius:20px; background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--danger)}
+.lg .alert > .ic{color:var(--danger); grid-row:span 2; margin-top:1px}
+.lg .alert b{line-height:1.3}
+.lg .alert span{font-size:16px; color:var(--muted)}
+.lg .alert .pill{grid-column:2; justify-self:start; margin-top:8px; min-height:48px}
+.lg .ring{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.lg .center{display:grid; gap:14px; text-align:center; justify-items:center}
+
+/* success */
+.ok-ring{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok)}
+.ok-ring.in{animation:lg-okin 520ms var(--ease) both}
+@keyframes lg-okin{0%{transform:scale(.4); opacity:0}60%{transform:scale(1.08); opacity:1}100%{transform:scale(1)}}
+.ticket{position:relative; display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:16px; width:100%; padding:18px 20px; border-radius:22px; text-align:left}
+.ticket::before,.ticket::after{content:""; position:absolute; top:50%; width:22px; height:22px; margin-top:-11px; border-radius:50%; background:var(--surface)}
+.ticket::before{left:-11px} .ticket::after{right:-11px}
+.ticket .big{font-size:40px; line-height:1; font-weight:800; letter-spacing:-.05em}
+.ticket .cut{width:0; align-self:stretch; border-left:2px dashed currentColor; opacity:.35}
+.ticket b{display:block; font-size:17px; line-height:1.25}
+.ticket .s{display:block; font-size:16px; opacity:.85; line-height:1.35}
+.ticket.in{animation:lg-tin 640ms var(--ease) 180ms both}
+@keyframes lg-tin{0%{transform:translateY(16px) rotate(-3deg) scale(.94); opacity:0}100%{transform:none; opacity:1}}
+.lg .done-big{font-size:26px}
+
+/* perks */
+.perks{display:grid; gap:4px; margin:0; padding:0; list-style:none}
+.perks li{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:center; padding:10px 0}
+.perks li + li{border-top:1px solid var(--line)}
+.perks .i{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.perks b{display:block; line-height:1.3}
+.perks .s{display:block; font-size:16px; color:var(--muted); line-height:1.35}
+.lg-p h2{margin:8px 0 6px}
+.noacc{margin:14px 0 0; color:var(--muted)}
+
+/* prototype-only panel (only with ?preview=1 / the demo) */
+.lproto{margin:40px 16px 0; padding:16px; border-radius:var(--r-shell); box-shadow:inset 0 0 0 2px var(--line-strong); background:repeating-linear-gradient(135deg, transparent 0 14px, var(--line) 14px 15px); display:grid; gap:10px}
+.lproto h2{display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; margin:0}
+.lproto p{margin:0; font-size:14px; color:var(--muted)}
+.lproto .btns{display:flex; flex-wrap:wrap; gap:8px}
+.lproto .pill{min-height:48px; padding:0 16px; font-size:15px; background:var(--surface)}
+.lproto .pill[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+
+@media (prefers-reduced-motion: reduce){ .lg .view.in, .otp input.pop, .otp.shake .boxes, .ok-ring.in, .ticket.in{animation:none} }
+
+@container app (max-width:370px){ .otp .boxes{gap:4px} .otp input{height:58px; font-size:23px} .bonus .big{font-size:38px} .ticket{gap:12px; padding:16px} .ticket .big{font-size:32px} .ticket .s{font-size:14px} }
+@container app (min-width:900px){
+  .lg{grid-template-columns:minmax(0,1fr) 460px; grid-template-rows:auto 1fr; column-gap:72px; row-gap:40px; padding:64px max(40px, calc((100% - 1120px)/2)) 0; align-items:start}
+  .lg-a{grid-column:1; grid-row:1}
+  .lg-p{grid-column:1; grid-row:2}
+  .lg-f{grid-column:2; grid-row:1 / span 2; position:sticky; top:110px}
+  .lg-a .lead{font-size:19px; max-width:30em}
+  .bonus{margin-top:32px; padding:24px 28px; min-height:132px; padding-right:180px}
+  .bonus .big{font-size:64px}
+  .bonus b{font-size:20px}
+  .bonus .art{display:block; position:absolute; right:-36px; top:50%; width:200px; height:200px; margin-top:-100px; transform:rotate(-12deg)}
+  .bonus .art svg{width:100%; height:100%; display:block; filter:drop-shadow(0 14px 18px var(--line-strong))}
+  .perks{grid-template-columns:1fr 1fr; column-gap:28px}
+  .perks li:nth-child(2){border-top:0}
+  .lg .core.box{padding:28px 28px 30px}
+  .lproto{margin:56px max(40px, calc((100% - 1120px)/2)) 0}
+}
+</style>
+
+<script>
+  import { start } from "./_login.ts";
+  start();
+</script>
