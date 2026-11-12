@@ -69,6 +69,9 @@ test("profile: orders and 'Поръчай отново' with menu prices, undo",
   await page.locator(".toast button").click();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").lines.length)).toBe(0);
   await expect(ord.locator('a[href^="/porachka/"]')).toBeVisible();
+  /* the order used the -10% with a profile: no promise any more, it says where it went */
+  await expect(page.locator("[data-bonus]")).toContainText("Използван в поръчка");
+  await expect(page.locator("[data-bonus]")).not.toContainText("следващата");
   expect(errors).toEqual([]);
 });
 
@@ -114,10 +117,12 @@ test("profile: notifications in the profile (off by default), addresses add / re
   const errors = watch(page);
   await signIn(page);
   await open(page);
-  for (const k of ["order", "events", "offers"]) await expect(page.locator('[data-sw="notify.' + k + '"]')).toHaveAttribute("aria-checked", "false");
-  await page.locator('[data-sw="notify.order"]').click();
-  await expect(page.locator('[data-sw="notify.order"]')).toHaveAttribute("aria-checked", "true");
-  await expect.poll(async () => (await page.evaluate(async () => (await fetch("/api/me")).json())).notify?.order).toBe(true);
+  await expect(page.locator("[data-sw^=\"notify.\"]")).toHaveCount(2);
+  for (const k of ["order", "reservation"]) await expect(page.locator('[data-sw="notify.' + k + '"]')).toHaveAttribute("aria-checked", "false");
+  await page.locator('[data-sw="notify.reservation"]').click();
+  await expect(page.locator('[data-sw="notify.reservation"]')).toHaveAttribute("aria-checked", "true");
+  await expect.poll(async () => (await page.evaluate(async () => (await fetch("/api/me")).json())).notify?.reservation).toBe(true);
+  await expect(page.locator("[data-sets]")).not.toContainText("SMS код");
 
   await expect(page.locator("[data-adrs]")).toContainText("Няма запазени адреси");
   await page.locator("[data-adradd]").click();
@@ -147,7 +152,9 @@ test("profile: 'Моите кодове' from the ratings and the profile bonus"
   await open(page);
   await expect(page.locator('[data-code="SC10-1234567890"]')).toContainText("Код за отстъпка");
   await expect(page.locator('[data-code="SC10-0987654321"]')).toContainText("Използван в поръчка № 1150");
-  await expect(page.locator("[data-cps]")).toContainText("Прилага се сам на първата поръчка");
+  await expect(page.locator("[data-bonus]")).toContainText("от следващата поръчка");
+  await expect(page.locator("[data-bonus]")).toContainText("Прилага се сам на следващата ви поръчка.");
+  await expect(page.locator("[data-cps]")).toContainText("в полето „Код за отстъпка“");
   await expect(page.locator(".tiles a").nth(2).locator("b")).toHaveText("2");
 });
 

@@ -10,6 +10,7 @@
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import type { Customer, Order } from "../../client/api-types.ts";
+import type { CustomerView } from "../../client/api.ts";
 import type { Dish } from "../../lib/data.ts";
 import { inviteHTML, orderSkel } from "./_views.ts";
 /* icons this script draws (sc.ts: x, check, caret-right, phone, question; render.ts: plus, fire, sparkle, leaf, pepper, clock) */
@@ -45,7 +46,7 @@ import "../../lib/icons/timer.ts";
 import "../../lib/icons/copy.ts";
 import "../../lib/icons/plus.ts";
 
-type Notify = { order: boolean; events: boolean; offers: boolean };
+type Notify = { order: boolean; reservation: boolean };
 type Code = { code: string; pct: number; orderNo: string; used: boolean; usedBy: string | null; createdAt: string };
 const SECTIONS: [string, string, string][] = [
   ["porachki", "Поръчки", "receipt"], ["lyubimi", "Любими", "heart"], ["adresi", "Адреси", "map-pin"], ["nagradi", "Печати и купони", "ticket"],
@@ -61,13 +62,16 @@ export function start(): void {
   const pretty = (p: string) => { const d = String(p || ""); return /^0\d{9}$/.test(d) ? d.slice(0, 4) + " " + d.slice(4, 6) + " " + d.slice(6, 8) + " " + d.slice(8) : d; };
 
   let U: Customer | null = null;
+  /* the unused -10% with a profile, as the core says (me().profileBonus; update() returns it too); never promised otherwise */
+  let BONUS = false;
+  const take = (c: Customer | CustomerView) => { if ("profileBonus" in c) BONUS = c.profileBonus === true; return c; };
   let ORD: Order[] | null = null;
   let OFF = false; /* preview: simulate no connection */
   const offline = () => { if (OFF || navigator.onLine === false) { SC.toast("Няма връзка. Опитайте пак."); return true; } return false; };
   const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Нещо се обърка. Опитайте пак.");
 
   /* notifications live in the profile (core: all off by default) */
-  const notify = (): Notify => ({ order: false, events: false, offers: false, ...(U && U.notify ? U.notify : {}) });
+  const notify = (): Notify => ({ order: U?.notify?.order === true, reservation: (U?.notify as Partial<Notify> | undefined)?.reservation === true });
   let CODES: Code[] | null = null; /* "Моите кодове" from api.auth.codes() */
 
   /* ---------- small builders ---------- */
@@ -81,8 +85,7 @@ export function start(): void {
   }
   const sw = (key: string, title: string, sub: string, on: boolean) =>
     '<button class="psw" type="button" role="switch" aria-checked="' + on + '" data-sw="' + key + '"><span class="tx"><b>' + title + '</b><span class="s">' + sub + '</span></span><span class="tg" aria-hidden="true"><span class="tr"><span class="kn"></span></span><span class="st2">' + (on ? "Включено" : "Изключено") + "</span></span></button>";
-  const unused = () => (U ? U.coupons.filter((c) => !c.used) : []);
-  const cpsCount = () => unused().length + (CODES ? CODES.filter((c) => !c.used).length : 0) + (U && U.consent.birthday && U.email ? 1 : 0);
+  const cpsCount = () => (BONUS ? 1 : 0) + (CODES ? CODES.filter((c) => !c.used).length : 0) + (U && U.consent.birthday && U.email ? 1 : 0);
 
   /* an order's lines against TODAY's menu: what can go into the cart again, at today's prices */
   type Part = { l: Order["lines"][number]; x: Dish | undefined; why: "" | "out" | "gone" | "lunch" };
@@ -128,8 +131,7 @@ export function start(): void {
     const n = notify();
     const notifs = '<section class="ps" id="izvestia" aria-labelledby="h-not"><div class="sec-h"><h2 class="h2" id="h-not">Известия</h2></div><div class="card pbox">' +
       sw("notify.order", "Статус на поръчката", "Кога е приета, готова и на път.", n.order) +
-      sw("notify.events", "Нови събития", "Когато обявим нова вечер или събитие при нас.", n.events) +
-      sw("notify.offers", "Нови оферти", "Когато пуснем нова отстъпка или оферта.", n.offers) + "</div>" +
+      sw("notify.reservation", "Напомняне за резервация", "Ден преди и 3 часа преди резервацията.", n.reservation) + "</div>" +
       '<p class="pf-help">Изборът се пази в профила ви. <span class="missing">[ЛИПСВА: как се изпращат (SMS или имейл)]</span></p></section>';
     const cons = '<section class="ps" id="saglasia" aria-labelledby="h-con"><div class="sec-h"><h2 class="h2" id="h-con">Съгласия</h2></div><div class="card pbox" data-cons>' + consHTML() + "</div>" +
       '<p class="legal">Можете да оттеглите съгласие по всяко време, със същото докосване. <a href="' + SC.url.page("privacy") + '">Политика за поверителност</a></p></section>';
@@ -303,24 +305,27 @@ export function start(): void {
   }
   function couponsHTML() {
     const u = U!, c = u.consent;
-    const mine = u.coupons.map((k) => k.used
-      ? '<div class="ticket off"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b>' + esc(k.note.replace(/^-\d+%\s*/, "")) + '</b><span class="state">' + ic("check-circle", 18) + "Използван" + (k.orderNo ? " в поръчка №&nbsp;" + esc(k.orderNo) : "") + "</span></span></div>"
-      : '<div class="ticket ember-card"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b>' + esc(k.note.replace(/^-\d+%\s*/, "")) + '</b><span class="s">Подарък за нов профил. Прилага се сам на първата поръчка, когато сте влезли с този телефон. Само на ястията, не се събира с други отстъпки.</span></span></div>').join("");
-    return mine + codesHTML() +
+    /* the -10% with a profile: shown as ready only when the core says it is unused (profileBonus); used -> where */
+    const used = u.coupons.find((k) => k.code === "PROFIL10" && k.used);
+    const bonus = BONUS
+      ? '<div class="ticket ember-card" data-bonus><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>'
+      : used ? '<div class="ticket off" data-bonus><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>с профил</b><span class="state">' + ic("check-circle", 18) + "Използван" + (used.orderNo ? " в поръчка №&nbsp;" + esc(used.orderNo) : "") + "</span></span></div>" : "";
+    return bonus + codesHTML() +
       (c.birthday && u.email
-        ? '<div class="ticket ember-card"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта. Имейл седмица преди празника.</span><span class="state">' + ic("check-circle", 18) + "Включено</span></span></div>"
-        : '<div class="ticket off"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта за рожденика.</span>' +
-          (c.birthday ? '<button class="link" type="button" data-edit="email">' + ic("plus", 16) + "Добавете имейл, за да го получите</button>" : '<a class="link" href="#saglasia">Включете в „Съгласия“' + ic("caret-right", 16) + "</a>") + "</span></div>");
+        ? '<div class="ticket ember-card"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта.</span><span class="state">' + ic("check-circle", 18) + "Включено</span></span></div>"
+        : '<div class="ticket off"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта.</span>' +
+          (c.birthday ? '<button class="link" type="button" data-edit="email">' + ic("plus", 16) + "Добавете имейл за подаръка</button>" : '<a class="link" href="#saglasia">Включете в „Съгласия“' + ic("caret-right", 16) + "</a>") + "</span></div>");
   }
+
 
   /* "Моите кодове": the -10% codes from the internal ratings (api.auth.codes) */
   function codesHTML() {
-    const how = "Въвеждате го в количката, в поле „Код за отстъпка“. Само на ястията, не се събира с други отстъпки.";
+    const how = "Въведете го в количката, в полето „Код за отстъпка“.";
     if (CODES == null) return '<div class="ticket off" data-codes aria-busy="true"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>Моите кодове</b><span class="s">Зареждаме...</span></span></div>';
     const list = CODES.map((k) => k.used
       ? '<div class="ticket off" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">За оценката на поръчка №&nbsp;' + esc(k.orderNo) + '.</span><span class="state">' + ic("check-circle", 18) + "Използван" + (k.usedBy ? " в поръчка №&nbsp;" + esc(k.usedBy) : "") + "</span></span></div>"
-      : '<div class="ticket ember-card" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">За оценката на поръчка №&nbsp;' + esc(k.orderNo) + ". " + how + '</span><button class="link" type="button" data-copy="' + esc(k.code) + '">' + ic("copy", 18) + "Копирай кода</button></span></div>").join("");
-    return list || '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">След поръчка ни кажете как е било, с „Да“ или с „Не“. Кодът идва веднага и ще е тук. ' + how + "</span></span></div>";
+      : '<div class="ticket ember-card" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">' + how + '</span><button class="link" type="button" data-copy="' + esc(k.code) + '">' + ic("copy", 18) + "Копирай кода</button></span></div>").join("");
+    return list || '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">Оценете поръчката с „Да“ или „Не“ и кодът идва тук. ' + how + "</span></span></div>";
   }
   async function loadCodes() {
     try { CODES = await api.auth.codes(); } catch { CODES = []; }
@@ -354,8 +359,7 @@ export function start(): void {
 
   const MSG: Record<string, [string, string]> = {
     "notify.order": ["Ще ви известяваме за поръчката.", "Спряхме известията за поръчката. Следете я от сайта."],
-    "notify.events": ["Ще научавате първи за събитията.", "Спряхме известията за събития."],
-    "notify.offers": ["Ще ви казваме за новите оферти.", "Спряхме известията за оферти."],
+    "notify.reservation": ["Ще ви напомняме за резервацията.", "Спряхме напомнянията за резервации."],
     "consent.marketing": ["Благодарим! Ще научавате първи за офертите.", "Спряхме офертите. Няма да ви пишем за тях."],
     "consent.birthday": ["", "Спряхме подаръка за рождения ден."],
   };
@@ -366,7 +370,7 @@ export function start(): void {
     if (offline()) return;
     setSw(btn, on); btn.setAttribute("aria-busy", "true");
     const consent = k === "birthday" ? (on ? { birthday: true } : { birthday: false, bday: "" }) : { marketing: on };
-    try { U = await api.auth.update(grp === "notify" ? { notify: { [k]: on } } : { consent }); }
+    try { U = take(await api.auth.update(grp === "notify" ? { notify: { [k]: on } } : { consent })); }
     catch (e) { setSw(btn, !on); btn.removeAttribute("aria-busy"); SC.toast(errText(e)); return; }
     btn.removeAttribute("aria-busy");
     if (k === "birthday") refreshConsents(key);
@@ -378,7 +382,7 @@ export function start(): void {
     const d = main.querySelector<HTMLSelectElement>("#bd-d")!.value, m = main.querySelector<HTMLSelectElement>("#bd-m")!.value;
     if (!(m && d) && U!.consent.bday === "") return;
     if (offline()) return;
-    try { U = await api.auth.update({ consent: { bday: m && d ? m + "-" + d : "" } }); }
+    try { U = take(await api.auth.update({ consent: { bday: m && d ? m + "-" + d : "" } })); }
     catch (e) { SC.toast(errText(e)); return; }
     if (m && d) SC.toast("Записахме: " + d + " " + SC.MONTHS[+m - 1]);
   }
@@ -387,7 +391,7 @@ export function start(): void {
   function setsHTML() {
     const th = SC.prefs.theme || "system";
     return '<div class="kvr"><span><span class="k">Име</span><span class="v' + (U!.name ? "" : " none") + '">' + (U!.name ? esc(U!.name) : "Не е добавено") + '</span></span><button class="pill pill-soft sm" type="button" data-edit aria-label="Промени името">Промени</button></div>' +
-      '<div class="kvr"><span><span class="k">Телефон</span><span class="v" style="font-variant-numeric:tabular-nums">' + esc(pretty(U!.phone)) + '</span><span class="h">С него влизате. Смяна с нов SMS код.</span></span></div>' +
+      '<div class="kvr"><span><span class="k">Телефон</span><span class="v" style="font-variant-numeric:tabular-nums">' + esc(pretty(U!.phone)) + '</span><span class="h">С него влизате.</span></span></div>' +
       '<div class="kvr"><span><span class="k">Имейл</span><span class="v' + (U!.email ? "" : " none") + '">' + (U!.email ? esc(U!.email) : "Не е добавен") + '</span><span class="h">По желание. За касовата бележка и за подаръка за рождения ден.</span></span><button class="pill pill-soft sm" type="button" data-edit="email" aria-label="' + (U!.email ? "Промени имейла" : "Добави имейл") + '">' + (U!.email ? "Промени" : "Добави") + "</button></div>" +
       '<div class="setg" role="group" aria-labelledby="lang-l"><span class="label" id="lang-l">Език</span><div class="seg"><button type="button" aria-pressed="true">Български</button><button type="button" data-en aria-pressed="false">English</button></div><span class="muted small"><span class="missing">[ЛИПСВА: превод]</span></span></div>' +
       '<div class="setg" role="group" aria-labelledby="th-l"><span class="label" id="th-l">Тъмен режим</span><div class="seg" data-theme-seg>' + [["system", "Авто"], ["light", "Светъл"], ["dark", "Тъмен"]].map((t) => '<button type="button" data-th="' + t[0] + '" aria-pressed="' + (th === t[0]) + '">' + t[1] + "</button>").join("") + '</div><span class="muted small">„Авто“ следва настройката на телефона.</span></div>';
@@ -417,7 +421,7 @@ export function start(): void {
       });
       if (!ok) { f.querySelector<HTMLElement>('[aria-invalid="true"]')!.focus(); return; }
       const btn = f.querySelector<HTMLButtonElement>('button[type="submit"]')!; btn.disabled = true;
-      try { U = await api.auth.update({ name: n.value.trim(), email: m.value.trim() }); }
+      try { U = take(await api.auth.update({ name: n.value.trim(), email: m.value.trim() })); }
       catch (err) {
         btn.disabled = false;
         if (err instanceof ApiError && err.fields) {
@@ -522,7 +526,7 @@ export function start(): void {
       renderLoadError(errText(e)); return;
     }
     if (!me) { try { localStorage.removeItem("sc-user"); } catch { /* private mode */ } renderInvite(); return; }
-    U = me; document.documentElement.dataset.pfSigned = "1";
+    U = take(me); document.documentElement.dataset.pfSigned = "1";
     renderProfile();
     if (location.hash && location.hash.length > 1) { const el = main.querySelector(location.hash.replace(/[^#\w-]/g, "")); el?.scrollIntoView({ block: "start" }); }
   }

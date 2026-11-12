@@ -3,20 +3,14 @@
 import { ic } from "../../lib/icons.ts";
 import { url } from "../../lib/routes.ts";
 
-/* "Какво получавате": the stamp rule and reward are [ЛИПСВА] (design/BRIEF.md 8, decision 29), so no "2 от 10" promise;
-   the -10% from the rating is entered in the cart ("Код за отстъпка", decision 12.11.2026). */
-export const PERKS: [string, string, string][] = [
-  ["receipt", "Поръчай отново", "Любимата поръчка с едно докосване."],
-  ["heart", "Любимите ястия", "Отбелязани със сърце, на едно място."],
-  ["fire", "Карта с печати", 'Събирате печати за подарък. <span class="missing">[ЛИПСВА: правило и награда]</span>'],
-  ["ticket", "Купоните на едно място", "-10% с профил и кодът от вашата оценка."],
-];
+/* "Какво получавате": the same lines as on /vhod/ (one source, design review "login" minor 1-2) */
+import { PERKS } from "../vhod/_views.ts";
 
 export function inviteHTML(): string {
   return '<section class="inv"><div class="shell"><div class="core">' +
     '<span class="ring">' + ic("user", 32) + "</span>" +
     '<div><h1 class="h1">Вашият профил</h1><p class="lead" style="margin-top:8px">Влезте с телефона си. Без парола, с код по SMS.</p></div>' +
-    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил.</span></span></div>' +
+    '<div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Прилага се сам на следващата ви поръчка.</span></span></div>' +
     '<a class="pill pill-red pill-lg pill-block" href="' + url.page("login") + '" data-login>' + ic("sign-in", 22) + "Влез с телефон</a>" +
     '<ul class="perks">' + PERKS.map((p) => '<li><span class="i">' + ic(p[0], 22) + "</span><span><b>" + p[1] + '</b><span class="s">' + p[2] + "</span></span></li>").join("") + "</ul>" +
     '<p class="noacc">Поръчка без профил също става. <a class="link" href="' + url.menu() + '">Към менюто' + ic("caret-right", 18) + "</a></p>" +
