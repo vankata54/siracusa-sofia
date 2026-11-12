@@ -5,7 +5,7 @@
    (SEO), plus JSON-LD Menu > MenuSection > MenuItem. The browser adds the hour (segment sub-lines, delivery line, notices),
    the filters, allergens, search and scrollspy, kept in the address: #pitsi&f=veg.hot&a=gluten.milk&q=пица. */
 import Base from "../../layouts/Base.astro";
-import { ic, art, byId, inCat, catById, state, eta, url } from "../../lib/index.ts";
+import { ic, art, byId, inCat, catById, state, eta, url, lunchIsToday } from "../../lib/index.ts";
 import {
   MAIN_ITEMS, BF_ITEMS, HERO_ID, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, LAZY_AFTER,
   type MenuState,
@@ -32,7 +32,7 @@ const jsonld = menuLd(Astro.site);
     <div class="mctl">
       <div class="seg mseg" role="group" aria-label="Кое меню">
         <button type="button" data-menu="main" aria-pressed="true"><b>Основно</b><small data-sub="main" set:html={segSub("main", S)}></small></button>
-        <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" set:html={segSub("lunch", S)}></small></a>
+        <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" set:html={segSub("lunch", S, lunchIsToday())}></small></a>
         <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" set:html={segSub("bf", S)}></small></button>
       </div>
       <div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
@@ -318,7 +318,7 @@ const jsonld = menuLd(Astro.site);
   }
   /* the hour-dependent frame: segment sub-lines, delivery line, notices */
   function timeParts() {
-    (["main", "lunch", "bf"] as const).forEach((k) => { const el = $("[data-sub=" + k + "]"); const h = segSub(k, S); if (el.innerHTML !== h) el.innerHTML = h; });
+    (["main", "lunch", "bf"] as const).forEach((k) => { const el = $("[data-sub=" + k + "]"); const h = segSub(k, S, SC.lunchIsToday() || SC.preview); if (el.innerHTML !== h) el.innerHTML = h; });
     const eta = $("[data-eta]"), h = etaLine(S, SC.eta());
     if (eta.outerHTML !== h) eta.outerHTML = h;
     elNot.innerHTML = noticesHTML(S, st, view === "offline");

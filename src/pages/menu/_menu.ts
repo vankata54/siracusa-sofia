@@ -108,11 +108,12 @@ export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: bool
 }
 
 /** Sub-line under each menu in the segment (depends on the hour). */
-export function segSub(kind: "main" | "lunch" | "bf", S: State): string {
+/** lunchToday: the lunch menu in the data is for today (or preview/demo); otherwise no "-30%" promise, like the home page. */
+export function segSub(kind: "main" | "lunch" | "bf", S: State, lunchToday = true): string {
   if (kind === "main") return plural(MAIN_ITEMS.length);
   if (kind === "lunch") {
     if (S.lunch) return "до 15:00";
-    if (S.lunchDiscount) return '<span class="tg"><i>-30%</i>вземане</span>';
+    if (S.lunchDiscount && lunchToday) return '<span class="tg"><i>-30%</i>вземане</span>';
     return S.m < 600 ? "от 10:00" : "утре от 10:00";
   }
   if (S.breakfast) return "до 11:30";
