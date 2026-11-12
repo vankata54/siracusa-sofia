@@ -6,7 +6,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, plural } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ZONES } from "../../lib/consts.ts";
-import { stateBox, loadingText, hourNote, OFFLINE } from "../../lib/ui.ts";
+import { stateBox, loadingText, hourNote, offlineKeep } from "../../lib/ui.ts";
 import "sc-icons:arrow-clockwise,caret-down,check-circle,clock,globe,moon,pause,phone,play,shopping-bag,storefront,warning-circle"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const STEPS: [string, string][] = [
@@ -124,7 +124,7 @@ export function playHTML(playing: boolean): string {
 /* ---------- service note (depends on the hour: drawn again in the browser) ---------- */
 export type Svc = { m: number; kitchen: boolean; delivery: boolean; etaMin: number; offline: boolean };
 export function serviceHTML(v: Svc): string {
-  if (v.offline) return '<div class="svc err" role="status">' + ic("warning-circle", 24) + "<div><b>" + OFFLINE + "</b><p>Може да добавяте ястия в количката. Поръчката ви е запазена, изпратете я, щом връзката се върне.</p></div></div>";
+  if (v.offline) return offlineKeep(); /* the one note (lib/ui.ts) */
   /* after 21:00 / 22:30 / before 10:00: the one hour note of the site (lib/ui.ts) */
   const st = { open: true, kitchen: v.kitchen, delivery: v.delivery, m: v.m };
   if (v.m < 600) return hourNote(st, { more: "Добавете ястията сега и поръчайте по-късно." });

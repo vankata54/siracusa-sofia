@@ -9,7 +9,7 @@ import { esc, fmt, plural, MONTHS, MON, DAYS } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT, ORDER_RULES } from "../../lib/consts.ts";
 import type { Eta } from "../../lib/status.ts";
-import { stateBox, loadingText, callBtn, hourNote, hourTitle, hourLine, OFFLINE } from "../../lib/ui.ts";
+import { stateBox, loadingText, callBtn, hourNote, hourTitle, hourLine, offlineKeep } from "../../lib/ui.ts";
 import "sc-icons:arrow-clockwise,clock,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 /** before 10:00 | 10:00-15:00 delivery or pickup | 15:00-22:30 pickup only -30% | after 22:30 */
@@ -144,7 +144,7 @@ export function lockedNote(v: View): string {
   return hourNote(hs(v), { cls: "lnote-h", more: p === "before" ? "Разгледайте менюто сега. Бутоните за поръчка се появяват в 10:00" : "Оставяме менюто за справка" });
 }
 export function offlineNote(): string {
-  return '<div class="lnote warn" role="status" style="margin:0 0 20px">' + ic("warning", 22) + "<span><b>" + OFFLINE + "</b>Показваме менюто, което заредихме последно. Количката ви е запазена, поръчайте, щом връзката се върне.</span></div>";
+  return offlineKeep({ cls: "lnote-off" }); /* the one note (lib/ui.ts) */
 }
 
 /* preview-only states (?preview=1#loading | #empty | #error) */

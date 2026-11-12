@@ -12,7 +12,7 @@ import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
 import { TABLES } from "../../lib/tables.ts";
 import type { Reservation } from "../../client/api-types.ts";
-import { callBtn, stepperHTML, pvChip, pvToggle, previewPanel, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { callBtn, stepperHTML, pvChip, pvToggle, previewPanel, PV, BACK, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* the icons this script draws in one module (sc.ts has x, check, caret-right, phone, question; scripts/icon-groups.mjs) */
 import "sc-icons:arrow-left,arrow-right,arrow-up-right,baby,bell,briefcase,cake,calendar-blank,calendar-check,caret-down,caret-left,chair,chat-circle-dots,clock,confetti,fork-knife,gift,heart,image,info,list-bullets,lock,map-pin,map-trifold,mask-happy,minus,pencil-simple,plus,sliders-horizontal,sun,thermometer,timer,tree,users,users-three,wallet,warning,warning-circle,wheelchair";
 
@@ -435,14 +435,14 @@ export function start(): void {
   function renderBar(): void {
     if (st.view !== "flow") { bar.hidden = true; SC.ov.classList.remove("rfocus"); return; }
     bar.hidden = false; const focus = st.step > 1; bar.classList.toggle("nonav", focus); SC.ov.classList.toggle("rfocus", focus);
-    bar.innerHTML = (st.step > 1 ? '<button class="pill pill-soft back" type="button" data-act="back">' + ic("arrow-left", 20) + "Назад</button>" : "") + ctaBtn();
+    bar.innerHTML = (st.step > 1 ? '<button class="pill pill-soft back" type="button" data-act="back" aria-label="' + BACK + ": " + STEP_N[st.step - 2] + '">' + ic("arrow-left", 20) + BACK + "</button>" : "") + ctaBtn();
   }
   function summary(): string {
     const s = selInfo();
     const kv = (k: string, v: string | null | false | undefined) => '<div class="kv"><span>' + k + "</span>" + (v ? "<b>" + v + "</b>" : '<b class="no">избирате</b>') + "</div>";
     return '<aside class="aside" aria-label="Вашата резервация"><div class="shell sum"><div class="core"><h2>Вашата резервация</h2>' +
       kv("Ден", st.date && fShort(st.date)) + kv("Час", st.slot != null && hm(st.slot)) + kv("Хора", ppl(st.n)) + kv("Маса", s && (s.label + " · " + zoneName(s.zone))) +
-      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад</button>" : "") +
+      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back" aria-label="' + BACK + ": " + STEP_N[st.step - 2] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") +
       '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + '<a class="link" href="tel:' + R.phoneIntl + '">Обади се · <span class="nw">' + R.phone + "</span></a></li></ul></aside>";
   }
 

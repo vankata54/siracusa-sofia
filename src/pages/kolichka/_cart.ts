@@ -16,7 +16,7 @@ import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
 import { PAY_METHODS } from "../../lib/pay.ts";
-import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, offlineKeep, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "sc-icons:arrow-left,arrow-right,bowl-food,calendar-blank,caret-down,check-circle,credit-card,fork-knife,hourglass,info,map-pin,map-trifold,minus,money,moped,path,receipt,seal-percent,shopping-bag,sliders-horizontal,storefront,ticket,timer,trash,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
@@ -163,7 +163,7 @@ export function start(): void {
   function topNotes(I: Info, step: number) {
     let h = "";
     if (P.flash && P.flash.step === step) h += note(P.flash.kind, "warning-circle", P.flash.title, P.flash.text, P.flash.acts);
-    if (P.offline && !(step === 3 && P.err === "offline")) h += note("warn", "warning-circle", OFFLINE, "Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
+    if (P.offline && !(step === 3 && P.err === "offline")) h += offlineKeep({ text: "Количката е запазена. Изпратете поръчката, когато връзката се върне.", cls: "ck-off" }); /* the one note (lib/ui.ts) */
     if (I.closed) h += I.m < 600
       ? note("info", "clock", "Кухнята отваря в 10:00", "Можете да поръчате още сега за днес. Изберете час и ще я приготвим точно тогава.")
       : note("info", "clock", "Кухнята приема поръчки до 22:30", "Поръчайте за утре: изберете час и ще я приготвим точно тогава.");
@@ -477,7 +477,7 @@ export function start(): void {
   function renderBar(view: string, st: number, I: Info) {
     if (view !== "cart") { bar.hidden = true; bar.innerHTML = ""; return; }
     bar.hidden = false;
-    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back" type="button" data-act="go" data-n="' + (st - 1) + '">' + ic("arrow-left", 20) + "Назад</button>" : "") + ctaBtn(I, st, false);
+    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back" type="button" data-act="go" data-n="' + (st - 1) + '" aria-label="' + BACK + ": " + STEPS[st - 2][1] + '">' + ic("arrow-left", 20) + BACK + "</button>" : "") + ctaBtn(I, st, false);
   }
   /* refresh only the summary and the bar (keeps the caret in text fields) */
   function refreshSide() {

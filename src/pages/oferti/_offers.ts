@@ -10,7 +10,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural, MON, MONTHS, DAYS, DAYS_SHORT } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import type { State } from "../../lib/status.ts";
-import { stateBox, missText, OFFLINE } from "../../lib/ui.ts";
+import { stateBox, missText, offlineKeep } from "../../lib/ui.ts";
 import "sc-icons:arrow-clockwise,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 /* ---------- data from the server (real lunch dishes, prices from pricing.ts) ---------- */
@@ -178,4 +178,4 @@ export const couponSkel = () => '<div class="shell" aria-hidden="true"><div clas
 export function errorHTML(_phone?: string, _phoneIntl?: string): string {
   return stateBox({ kind: "error", what: "офертите", h: "h3" });
 }
-export const netHTML = () => '<div class="of-net" role="status">' + ic("warning", 22) + "<p><b>" + OFFLINE + "</b><br>Показваме последно заредените оферти. Запитванията можете да изпратите, когато връзката се върне.</p></div>";
+export const netHTML = () => offlineKeep({ cls: "of-net" }); /* the one note (lib/ui.ts) */

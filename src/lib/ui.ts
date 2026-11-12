@@ -4,6 +4,7 @@
      miss          the [ЛИПСВА] marks from MISS (consts.ts)
      faqHead       "Често задавани въпроси" + "Не намерихте отговор? Обадете ни се, ще ви кажем." + callBtn
      stateBox      error / offline (title, one sentence, "Опитай пак" + callBtn); loadingText "Зареждаме …"; skeleton
+     offlineKeep   "Няма връзка с интернет" when the content stays (one sentence, "Опитай пак" only where it reloads)
      hourNote      after 21:00 "Доставката приключи за днес" / after 22:30 "Кухнята затвори за днес"
      photoSlot     the one photo / video placeholder; mapSlot the one map placeholder
      stepperHTML   "Стъпка 2 от 3" + "Следва: …" / "Последна стъпка"
@@ -50,6 +51,13 @@ export function skeleton(inner: string, what = "", attrs = ""): string {
   return "<div" + (attrs ? " " + attrs : "") + ' aria-hidden="true">' + inner + "</div>" + (what ? '<span class="vh" role="status">' + loadingText(what) + "</span>" : "");
 }
 export const RETRY = "Опитай пак";
+/** No connection, but the page stays (menu, category, lunch, Bertha, offers, cart): ONE note, in the look of the hour note.
+    retry: only where "Опитай пак" really loads again (data-retry); text: only where the page needs its own words. */
+export const OFFLINE_KEEP = "Показваме последно зареденото. Количката е запазена.";
+export function offlineKeep(o: { retry?: boolean; text?: string; cls?: string } = {}): string {
+  return '<div class="sc-note' + (o.cls ? " " + o.cls : "") + '" role="status">' + ic("warning-circle", 22) + "<div><b>" + OFFLINE + "</b><span>" + (o.text || OFFLINE_KEEP) + "</span>" +
+    (o.retry ? '<div class="acts"><button class="pill pill-line" type="button" data-retry>' + ic("arrow-clockwise", 20) + RETRY + "</button></div>" : "") + "</div></div>";
+}
 export interface StateOpts {
   kind: "error" | "offline";
   /** what did not load ("менюто", "ястията", ...): the title of the error */
