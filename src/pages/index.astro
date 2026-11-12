@@ -294,7 +294,7 @@ const jsonld = restaurantLd(Astro.site);
 .evs{display:grid; gap:12px}
 .ev{padding:16px; display:grid; grid-template-columns:76px 1fr; gap:16px; align-items:start}
 .cal{display:grid; justify-items:center; align-content:start; padding:10px 0 12px; border-radius:20px; background:var(--surface-2); text-align:center}
-.cal .m{font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--red)}
+.cal .m{font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--danger)} /* --red on --surface-2 is 4.36:1; --danger is 5.37 (light) / 5.36 (dark) */
 .cal b{font-size:34px; line-height:1; letter-spacing:-.04em; margin-top:2px; font-variant-numeric:tabular-nums}
 .cal .wd{font-size:14px; font-weight:700; color:var(--muted); margin-top:4px}
 .ev .h3{margin:8px 0 4px}
@@ -466,7 +466,7 @@ const jsonld = restaurantLd(Astro.site);
   let lastKey = "";
   function timeParts() {
     const st = SC.state(), eta = SC.eta(), lt = lunchToday();
-    const key = JSON.stringify([st, eta.busy, lt, new Date().toDateString()]);
+    const key = JSON.stringify([st, eta.text, lt, new Date().toDateString()]);
     if (key === lastKey) return;
     lastKey = key;
     const go = $("[data-go]");

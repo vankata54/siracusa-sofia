@@ -98,3 +98,33 @@ test("home: preview-only states stay behind ?preview=1", async ({ page }) => {
   await expect(page.locator(".proto")).toBeVisible();
   await expect(page.locator(".skcard").first()).toBeVisible();
 });
+
+test("home: \"Натоварено\" follows the kitchen setting from /api/status", async ({ page }) => {
+  const errors = watch(page);
+  await page.route("**/api/status", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ kitchen: { busy: true, etaMin: 35, etaBusyMin: 55 } }) }));
+  await page.addInitScript(() => { try { sessionStorage.removeItem("sc-kitchen"); } catch { /* ignore */ } });
+  await open(page, "12:30");
+  const row = page.locator("[data-eta]");
+  await expect(row).toContainText("Възможни са закъснения");
+  await expect(row).toContainText("около 55 мин");
+  const f = page.locator("[data-chk]");
+  await f.locator("#addr").fill("Дружба 2, бл. 311");
+  await f.locator("button[type=submit]").click();
+  await expect(f.locator("[data-res]")).toContainText("Възможни са закъснения · около 55 мин");
+  expect(errors).toEqual([]);
+});
+
+test("home: \"35 мин\" stays on one line at 360 and the slides are not articles with a role", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await open(page, "12:30");
+  await expect(page.locator("[data-eta]")).toContainText("около 35 мин");
+  expect(await page.locator("article[role]").count()).toBe(0);
+  expect(await page.locator("[data-slides] .slide[role=group]").count()).toBeGreaterThan(0);
+  /* "35" and "мин" on the same line box */
+  const lines = await page.locator("[data-eta] .tx b").evaluate((b) => {
+    const t = b.firstChild as Text, i = (t.textContent || "").indexOf("35"), r = document.createRange();
+    r.setStart(t, i); r.setEnd(t, i + 6);
+    return new Set(Array.from(r.getClientRects()).map((x) => Math.round(x.top))).size;
+  });
+  expect(lines).toBe(1);
+});

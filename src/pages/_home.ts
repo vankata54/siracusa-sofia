@@ -6,6 +6,8 @@ import { esc, plural, MON, MONTHS, DAYS } from "../lib/format.ts";
 import { url } from "../lib/routes.ts";
 import { ZONES, RESTAURANT, type Zone } from "../lib/consts.ts";
 import type { State, Eta } from "../lib/status.ts";
+/* the same non-breaking space as status.ts (a type-only import keeps status.ts out of this file) */
+const NBSP = "\u00a0";
 import type { SiteEvent } from "../lib/events.ts";
 
 /* ---------- hero: "Поръчай" ---------- */
@@ -31,7 +33,7 @@ export function lunchTileText(st: State, lunchToday: boolean): string {
 export function etaInner(st: State, eta: Eta): string {
   let dot: string, html: string;
   if (st.delivery && !eta.busy) { dot = "ok"; html = "<b>Доставка сега: " + eta.text + "</b>"; }
-  else if (st.delivery) { dot = "warn"; html = "<b>Възможни са закъснения</b><span>Доставка сега: около " + eta.min + " мин</span>"; }
+  else if (st.delivery) { dot = "warn"; html = "<b>Възможни са закъснения</b><span>Доставка сега: около " + eta.min + NBSP + "мин</span>"; }
   else if (st.kitchen) { dot = "warn"; html = "<b>Доставката приключи</b><span>Вземане от място до 22:30</span>"; }
   else if (st.open) { dot = ""; html = "<b>Кухнята затвори</b><span>Доставка утре от 10:00</span>"; }
   else { dot = ""; html = "<b>Затворено</b><span>Доставка " + (st.m < 600 ? "днес" : "утре") + " от 10:00</span>"; }
@@ -47,9 +49,9 @@ const OFF_META: Record<string, [string, string]> = {
 /** One slide. `key` picks the eyebrow ("lunchToday" for the lunch slide when the lunch menu is for today). */
 export function slideHTML(o: OfferLike, key: string = o.id): string {
   const m = OFF_META[key] || OFF_META[o.id] || ["Оферта", "seal-percent"];
-  return '<article class="slide" data-oid="' + o.id + '" role="group" aria-roledescription="слайд">' +
+  return '<div class="slide" data-oid="' + o.id + '" role="group" aria-roledescription="слайд">' +
     '<span class="sl-ic">' + ic(m[1], 180) + '</span><span class="sl-ey">' + m[0] + "</span><h2>" + esc(o.t) + '</h2><p data-op>' + esc(o.p) + "</p>" +
-    '<a class="pill" href="' + o.href + '">' + esc(o.go) + ic("arrow-right", 20) + "</a></article>";
+    '<a class="pill" href="' + o.href + '">' + esc(o.go) + ic("arrow-right", 20) + "</a></div>";
 }
 export function dotHTML(title: string, i: number): string {
   return '<button type="button" data-dot="' + i + '" aria-label="Оферта ' + (i + 1) + ": " + esc(title) + '"><span class="d"><i></i></span></button>';
@@ -107,7 +109,7 @@ export interface CheckResult { c: "ok" | "paid" | "no" | "q"; html: string }
 export function checkAddress(v: string, st: State, eta: Eta): CheckResult {
   const z = zoneOf(v);
   const when = st.delivery
-    ? (eta.busy ? "Възможни са закъснения · около " + eta.min + " мин" : z && z !== "out" && z.eta ? z.eta[0].toUpperCase() + z.eta.slice(1) : "")
+    ? (eta.busy ? eta.text : z && z !== "out" && z.eta ? z.eta[0].toUpperCase() + z.eta.slice(1) : "")
     : (st.kitchen ? "Днес доставката приключи. Утре доставяме от 10:00." : "Доставяме от 10:00 до 21:00.");
   const order = '<a class="pill pill-red" href="' + url.menu() + '">Поръчай' + ic("arrow-right", 20) + "</a>";
   const pickup = '<a class="pill pill-line" href="' + url.page("pickup") + '">' + ic("storefront", 20) + "Вземи от място</a>";
