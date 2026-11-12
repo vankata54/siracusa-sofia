@@ -224,5 +224,9 @@ test("login: an error while sending the code puts the focus on the title of the 
   await page.getByRole("button", { name: "Изпрати код по SMS" }).first().click();
   await expect(page.locator(".alert [data-alerth]")).toHaveText("Няма връзка с интернет");
   await expect(page.locator(".alert [data-alerth]")).toBeFocused();
+  /* the same actions as the cart and the reservation (decision 12.11.2026, кръг 4) */
+  await expect(page.locator(".alert")).toContainText("Проверете връзката и опитайте пак");
+  await expect(page.locator(".alert a[href=\"tel:+359894365577\"]")).toContainText("Обади се · 0894 36 55 77");
+  await expect(page.locator(".alert").getByRole("button", { name: "Опитай пак" })).toBeVisible();
   await context.setOffline(false);
 });

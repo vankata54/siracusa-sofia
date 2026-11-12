@@ -40,11 +40,11 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
         <p class="note3d muted" data-note3d hidden>Прототип: истинският 3D модел идва след фотосесията. <span class="missing">[ЛИПСВА: 3D модел]</span></p>
       </div>
       <div class="info">
-        <div class="crow"><Fragment set:html={crumbs([["Меню", url.menu()], [cat.n, cat.href]])} /><button class="pill pill-soft sharebtn" type="button" data-share><Fragment set:html={ic("share-network", 20)} />Сподели</button></div>
+        <div class="crow"><Fragment set:html={crumbs([["Меню", url.menu()], [cat.n, cat.href]])} /></div>
         <h1 class="h1" data-h1>{x.n}</h1>
         <div class="prow2">
           <span class="pg"><span class="price">{fmt(x.p)}</span>{x.per100 ? <span class="g">за 100 гр.</span> : x.g ? <span class="g">{x.g}</span> : null}</span>
-          <Fragment set:html={favHTML(false)} />
+          <span class="dacts"><Fragment set:html={favHTML(false)} /><button class="pill pill-soft sharebtn" type="button" data-share><Fragment set:html={ic("share-network", 20)} />Сподели</button></span>
         </div>
         {x.per100 && <p class="per100note">Продава се на тегло: сумата се смята по теглото на парчето. <span class="missing">[ЛИПСВА: среден грамаж на порция]</span></p>}
         {facts.length > 0 && <div class="badges facts" set:html={facts.join("")}></div>}
@@ -103,10 +103,17 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
 .note3d{margin:10px 6px 2px; font-size:14px}
 
 /* info column */
-.dish .crow{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 2px}
-.sharebtn{flex:none}
+/* the crumbs: their own row, the whole width, ONE line; the category is cut with "…" if needed (decision 12.11.2026, кръг 4) */
+.dish .crow{margin:0 0 2px; min-width:0}
+.dish .crow .sc-crumbs ol{flex-wrap:nowrap; min-width:0}
+.dish .crow .sc-crumbs li{flex:none; min-width:0}
+.dish .crow .sc-crumbs li:last-child{flex:0 1 auto}
+.dish .crow .sc-crumbs li:last-child a{display:block; min-width:0; line-height:48px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* "Любимо" and "Сподели" in the price row; on a narrow screen they go under the price */
+.dacts{display:flex; gap:8px; flex:none; margin-left:auto}
+.sharebtn{flex:none; min-height:48px}
 .dish .h1{font-size:36px}
-.prow2{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px}
+.prow2{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 12px; margin-top:14px}
 .prow2 .pg{display:flex; align-items:baseline; gap:12px; min-width:0}
 .prow2 .price{font-size:30px; letter-spacing:-.03em}
 .prow2 .g{font-size:17px; color:var(--muted); font-weight:600; white-space:nowrap}

@@ -8,12 +8,13 @@ import { hhmm } from "./format.ts";
 /** what the slot rules need from a priced cart: the earliest minute it can be ready, and the mode */
 export interface SlotInput { earliest: number; mode: "delivery" | "pickup" }
 
-/** Pickup slots every 15 min up to 3 hours ahead, not after 22:30 (pre-orders: the whole day). */
+/** Pickup slots every 15 min: today up to 3 hours ahead, pre-orders (tomorrow / today before 10:00) from 10:30; ready at the
+    latest at 23:00 (ORDER_RULES.pickupReadyUntil) in both cases (decision 12.11.2026). Delivery pre-orders until 20:45. */
 export function pickupSlots(p: SlotInput, o?: ClockInput, sched = false): number[] {
   const m = minutes(o);
   let a: number, b: number;
   const R = ORDER_RULES, step = R.slotStep;
-  if (sched) { a = R.preorderFrom; b = p.mode === "delivery" ? R.preorderDeliveryUntil : R.pickupUntil; }
+  if (sched) { a = R.preorderFrom; b = p.mode === "delivery" ? R.preorderDeliveryUntil : R.pickupReadyUntil; }
   else { if (p.mode === "delivery") return []; a = Math.ceil((p.earliest + 1) / step) * step; b = Math.min(m + R.horizonMin, R.pickupReadyUntil); }
   const out: number[] = [];
   for (let i = a; i <= b; i += step) out.push(i);

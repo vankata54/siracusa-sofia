@@ -161,3 +161,19 @@ test("dish: loads only the light script at start; the pairs follow the cart", as
   await expect(page.locator("[data-pairs] .pcard").first()).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+/* decision 12.11.2026, кръг 4: the crumbs are one line on their own row; "Сподели" is in the price row */
+for (const w of [360, 390]) {
+  test("dish " + w + ": the crumbs stay on one line for the long categories", async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    for (const path of ["/menu/studeni-predyastia/", "/menu/topli-predyastia/", "/menu/osnovni-yastia/", "/menu/pasta-i-rizoto/"]) {
+      await page.goto(path);
+      const href = await page.locator(".dcard a[href*='" + path + "']").first().getAttribute("href");
+      await page.goto(href!);
+      const h = await page.locator(".crow .sc-crumbs").evaluate((el) => el.getBoundingClientRect().height);
+      expect(h, path).toBeLessThanOrEqual(50);
+      await expect(page.locator(".prow2 [data-share]")).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+  });
+}

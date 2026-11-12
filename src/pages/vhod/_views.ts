@@ -4,7 +4,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, prettyPhone } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";
-import { stepperHTML, callBtn, miss } from "../../lib/ui.ts";
+import { stepperHTML, callBtn, miss, RETRY } from "../../lib/ui.ts";
 
 export const DESCRIPTION = "Вход и регистрация в Siracusa Bar & Grill с телефон и код по SMS, без парола. Поръчайте отново с едно докосване и вземете -10% от следващата поръчка с нов профил.";
 
@@ -63,5 +63,6 @@ export function focusAlert(box: Element | null): void { const h = box && box.que
 export function alertHTML(title: string, text: string, retry: boolean | "call" = true): string {
   /* the title takes the focus after an error (tabindex=-1, focusAlert), as in the cart and the reservation */
   return '<div class="alert" role="alert">' + ic("warning-circle", 24) + '<b tabindex="-1" data-alerth>' + esc(title) + "</b><span>" + esc(text) + "</span>" +
-    (retry === "call" ? callBtn("pill pill-line") : retry ? '<button class="pill pill-line" type="submit">' + ic("arrow-right", 18) + "Опитай пак</button>" : "") + "</div>";
+    /* the same actions as the cart and the reservation: "Опитай пак" with the round arrow + "Обади се · 0894 36 55 77" */
+    (retry === "call" ? '<div class="acts">' + callBtn("pill pill-line") + "</div>" : retry ? '<div class="acts"><button class="pill pill-red" type="submit">' + ic("arrow-clockwise", 20) + RETRY + "</button>" + callBtn("pill pill-line") + "</div>" : "") + "</div>";
 }

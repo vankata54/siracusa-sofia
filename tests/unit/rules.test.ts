@@ -698,3 +698,19 @@ describe("pickup today: one rule for the core and the cart (decision 12.11.2026,
     }
   });
 });
+
+describe("pickup tomorrow: the same rule as today, ready at the latest at 23:00 (decision 12.11.2026, кръг 4)", () => {
+  it("pre-order slots for pickup run from 10:30 to 23:00, for delivery to 20:45", () => {
+    const P = { mode: "pickup" as const, earliest: 0 };
+    expect(slotAllowed(P, "10:30", "22:35", true)).toBe(true);
+    expect(slotAllowed(P, "22:45", "22:35", true)).toBe(true);
+    expect(slotAllowed(P, "23:00", "22:35", true)).toBe(true);
+    expect(slotAllowed(P, "23:15", "22:35", true)).toBe(false);
+    expect(slotAllowed({ mode: "delivery", earliest: 0 }, "21:00", "22:35", true)).toBe(false);
+  });
+  it("the core takes a pickup for tomorrow at 23:00 and refuses 23:15", async () => {
+    const { core } = mk("22:35");
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id)]), sched: "утре", slot: "23:00" })).at).toBe("23:00");
+    await expect(core.orders.create({ ...base, phone: "0888 12 34 57", cart: pickup([L(pizza.id)]), sched: "утре", slot: "23:15" })).rejects.toMatchObject({ fields: { slot: "Изберете час от списъка." } });
+  });
+});

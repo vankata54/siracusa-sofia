@@ -11,9 +11,9 @@ import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Customer } from "../../client/api-types.ts";
 import { HERO, phoneHTML, blockedHTML, alertHTML, stepper, focusAlert } from "./_views.ts";
-import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB, OFFLINE } from "../../lib/ui.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
-import "sc-icons:arrow-left,arrow-right,fire,gift,info,paper-plane-right,shopping-bag,sign-out,sliders-horizontal,timer,user,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
+import "sc-icons:arrow-clockwise,arrow-left,arrow-right,fire,gift,info,paper-plane-right,shopping-bag,sign-out,sliders-horizontal,timer,user,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 const ic = SC.ic, esc = SC.esc;
 /* prototype only: the core's blocked demo number (src/core/reservations.ts BLOCKED_DEMO_PHONE) and a sample number */
@@ -107,7 +107,7 @@ function viewSignedIn(u: User) {
 
 /* ---------- step 1: phone ---------- */
 function offlineAlert(slot: Element | null) {
-  if (slot) { slot.innerHTML = alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак."); focusAlert(slot); }
+  if (slot) { slot.innerHTML = alertHTML(OFFLINE, "Номерът ви е запазен. Проверете връзката и опитайте пак."); focusAlert(slot); }
 }
 function viewPhone(err = "", focus = false, reuse = false) {
   S.bonus = true;
