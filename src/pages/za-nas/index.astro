@@ -1,0 +1,222 @@
+---
+/* About (/za-nas/): port of design/pages/about.html (design/PAGES.md "about.html", design/reviews/about.review.md).
+   The server draws every section: hero, values, story + numbers (counted from the menu and the zones, never by hand),
+   hall and heated garden, team, FAQ, "Елате при нас" and the closing call to action, plus JSON-LD (BreadcrumbList,
+   AboutPage > Restaurant with facts from RESTAURANT only, FAQPage without [ЛИПСВА]). History, team, photos, seats and
+   parking are [ЛИПСВА]. The browser sets what depends on the hour (live status row, closing action) and "днес" on the
+   lunch link only when the lunch menu in the data is for today. */
+import Base from "../../layouts/Base.astro";
+import { MENU_LUNCH_DATE } from "../../lib/data.ts";
+import { heroHTML, valuesHTML, storyHTML, spacesHTML, teamHTML, visitHTML, endHTML, aboutLd, mainItems, mainCats } from "./_about.ts";
+
+const description = "Siracusa Bar & Grill е квартален ресторант в ж.к. Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка, салон и отоплявана градина. " + mainItems.length + " ястия в " + mainCats.length + " категории.";
+---
+<Base page="about" nav="about" title="За нас" docTitle="За нас: ресторант с градина в Дружба 2" description={description} jsonld={aboutLd(Astro.site)}>
+  <div class="ab" data-about data-lunch-date={MENU_LUNCH_DATE}>
+    <Fragment set:html={heroHTML()} />
+    <Fragment set:html={valuesHTML()} />
+    <Fragment set:html={storyHTML()} />
+    <Fragment set:html={spacesHTML()} />
+    <Fragment set:html={teamHTML()} />
+    <Fragment set:html={visitHTML()} />
+    <Fragment set:html={endHTML()} />
+  </div>
+</Base>
+
+<style is:global>
+/* about page only (design/pages/about.html), tokens from tokens.css */
+.ab-eyebrow{display:inline-flex; align-items:center; gap:8px; margin:0 0 14px; font-size:14px; font-weight:800; letter-spacing:.02em; color:var(--muted)}
+.ab-eyebrow .ic{color:var(--muted)}
+
+/* hero */
+.ab-hero{padding-top:28px}
+.ab-hero .lead{margin-top:14px; max-width:34em}
+.ab-cta{display:flex; flex-wrap:wrap; gap:8px; margin-top:22px}
+.ab-cta .pill{flex:1 1 auto}
+.ab-facts{display:flex; flex-wrap:wrap; gap:6px 16px; margin:20px 0 0; padding:0; list-style:none}
+.ab-facts li{display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:700}
+.ab-facts .ic{color:var(--muted)}
+.ab-vis{position:relative; margin:32px 0 0}
+.ab-plate{position:absolute; right:4%; bottom:5%; width:42%; aspect-ratio:1; z-index:2; pointer-events:none;
+  animation:abRoll 1100ms var(--ease) 180ms both}
+.ab-plate svg{width:100%; height:100%; display:block; filter:drop-shadow(0 22px 26px rgba(0,0,0,.30))}
+@keyframes abRoll{from{transform:translate(38%,6%) rotate(-150deg) scale(.86); opacity:0} to{transform:none; opacity:1}}
+
+/* photo slot: designed placeholder until the new photo shoot */
+.ab-slot{position:relative; overflow:hidden; border-radius:var(--r-img); aspect-ratio:4/3; background:radial-gradient(120% 95% at 28% 18%, var(--plate-1), var(--plate-2)); color:var(--muted)}
+.ab-slot::before{content:""; position:absolute; inset:14px; border:2px solid var(--line-strong); border-radius:12px;
+  -webkit-mask:linear-gradient(#000 0 0) top left/26px 26px no-repeat, linear-gradient(#000 0 0) top right/26px 26px no-repeat, linear-gradient(#000 0 0) bottom left/26px 26px no-repeat, linear-gradient(#000 0 0) bottom right/26px 26px no-repeat;
+          mask:linear-gradient(#000 0 0) top left/26px 26px no-repeat, linear-gradient(#000 0 0) top right/26px 26px no-repeat, linear-gradient(#000 0 0) bottom left/26px 26px no-repeat, linear-gradient(#000 0 0) bottom right/26px 26px no-repeat}
+.ab-slot .big{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:.38}
+.ab-slot .tag{position:absolute; left:22px; top:22px; right:22px; display:flex; align-items:flex-start; gap:8px; font-size:14px; line-height:1.35}
+.ab-slot .tag span{padding:7px 12px; border-radius:16px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line)}
+.ab-slot.ab-hero-slot{aspect-ratio:5/4}
+.ab-slot.ab-hero-slot .big{left:42%}
+.ab-slot.tall{aspect-ratio:3/4}
+
+/* values */
+.ab-vals{display:grid; gap:14px}
+.ab-val{display:grid}
+.ab-val > .core{display:grid; grid-template-rows:auto 1fr}
+.ab-val .art{position:relative; height:172px; border-radius:var(--r-core) var(--r-core) 0 0; overflow:hidden; background:radial-gradient(120% 100% at 50% 0%, var(--plate-1), var(--plate-2))}
+.ab-val .art svg{position:absolute; width:150px; height:150px; left:50%; top:50%; margin:-75px 0 0 -75px; filter:drop-shadow(0 14px 18px rgba(0,0,0,.24))}
+.ab-val .num{position:absolute; left:16px; top:14px; z-index:1; font-size:14px; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums}
+.ab-val .txt{padding:18px 18px 6px; display:grid; gap:8px; align-content:start}
+.ab-val .txt p{margin:0; color:var(--muted)}
+.ab-val .link{margin-top:2px}
+
+/* story + numbers */
+.ab-story{display:grid; gap:18px}
+.ab-year{display:flex; align-items:flex-end; gap:14px}
+.ab-year b{font-size:104px; line-height:.82; font-weight:800; letter-spacing:-.07em; font-variant-numeric:tabular-nums}
+.ab-year > span{padding-bottom:4px; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35}
+.ab-conf{margin:14px 0 0; font-size:15px}
+.ab-year > span em{display:block; font-style:normal; font-weight:800; color:var(--ink)}
+.ab-note{display:grid; grid-template-columns:44px 1fr; gap:14px; align-items:start; padding:18px}
+.ab-note .ico{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.ab-note p{margin:0}
+.ab-nums{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:28px}
+.ab-n{position:relative; display:grid; align-content:space-between; gap:18px; min-height:150px; padding:18px 16px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.ab-n:active{transform:scale(.98)}
+.ab-n b{display:block; font-size:52px; line-height:.9; font-weight:800; letter-spacing:-.06em; font-variant-numeric:tabular-nums}
+.ab-n .l{font-size:16px; font-weight:700; line-height:1.3}
+.ab-n .go-ic{position:absolute; right:12px; top:12px; width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.ab-n.ink{background:var(--ink); color:var(--bg); box-shadow:var(--shadow)}
+.ab-n.ink .go-ic{background:var(--red); color:var(--on-red)}
+.ab-src{margin:14px 0 0; font-size:14px; color:var(--muted)}
+
+/* spaces */
+.ab-spaces{display:grid; gap:14px}
+.ab-space{display:grid}
+.ab-space .core{display:grid; grid-template-rows:auto 1fr}
+.ab-space .ab-slot{border-radius:var(--r-core) var(--r-core) 0 0}
+.ab-space .txt{padding:18px; display:grid; gap:8px; align-content:start}
+.ab-space .txt p{margin:0; color:var(--muted)}
+.ab-space .feat{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
+.ab-space .feat .badge{font-size:14px}
+.ab-space .feat .badge .ic{color:var(--ok)}
+.ab-go{margin-top:18px}
+.ab-go span:first-child{white-space:normal; text-align:left}
+.ab-go .knob{background:var(--red); color:var(--on-red)}
+
+/* team */
+.ab-teamw{display:grid}
+.ab-team{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.ab-team figure{margin:0; display:grid; gap:10px}
+.ab-team-miss{margin:0 0 18px}
+.ab-team .ab-slot .big{opacity:.32}
+.ab-team figcaption{font-weight:800; font-size:16px; letter-spacing:-.01em}
+.ab-team figcaption span{display:block; font-weight:600; font-size:14px; color:var(--muted)}
+
+/* visit + faq */
+.ab-visit{display:grid; gap:56px}
+.ab-live{display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line); font-size:15px; color:var(--muted); font-weight:600}
+.ab-live b{color:var(--ink)}
+.ab-live .dot{width:10px; height:10px; border-radius:50%; flex:none; background:var(--off)}
+.ab-live .dot.ok{background:var(--ok)} .ab-live .dot.warn{background:var(--warn)}
+.ab-info{list-style:none; margin:0; padding:6px 18px}
+.ab-info li{display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:start; padding:12px 0}
+.ab-info li + li{border-top:1px solid var(--line)}
+.ab-info .ico{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.ab-info small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.ab-info b{display:block; font-size:17px; line-height:1.35; letter-spacing:-.01em}
+.ab-info a{text-decoration:none}
+.ab-info .sub{display:block; font-size:15px; color:var(--muted); margin-top:2px}
+.ab-acts{display:grid; gap:8px; padding:6px 18px 18px}
+
+.ab-faq{display:grid; gap:8px}
+.ab-faq details{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.ab-faq summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:12px 14px 12px 18px; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; cursor:pointer; border-radius:var(--r-core)}
+.ab-faq summary::-webkit-details-marker{display:none}
+.ab-faq summary .tw{width:36px; height:36px; flex:none; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-base) var(--ease)}
+.ab-faq details[open] summary .tw{transform:rotate(180deg)}
+.ab-faq .a{padding:0 18px 18px; color:var(--muted)}
+.ab-faq .a p{margin:0}
+.ab-faq .a .link{margin-top:4px}
+
+/* closing call to action */
+.ab-end{position:relative; overflow:hidden; padding:32px 22px 22px; border-radius:var(--r-core); background:var(--ink); color:var(--bg); display:grid; gap:12px}
+.ab-end p{margin:0; opacity:.78; font-size:17px}
+.ab-end .ab-end-t{position:relative; display:grid; gap:12px}
+.ab-end .btns{position:relative; display:grid; gap:8px; margin-top:10px}
+.ab-end .pill-ghost{background:transparent; color:var(--bg); box-shadow:inset 0 0 0 1.5px currentColor}
+.ab-end .ab-end-art{position:absolute; right:-50px; top:-68px; width:164px; height:164px; opacity:.95; pointer-events:none}
+.ab-end .ab-end-art svg{width:100%; height:100%; display:block}
+.ab-end h2{position:relative; max-width:9.5em}
+
+@container app (max-width:380px){
+  .ab-year b{font-size:88px}
+  .ab-n b{font-size:46px}
+}
+@container app (min-width:700px){
+  .ab-nums{grid-template-columns:repeat(3,1fr)}
+  .ab-vals{grid-template-columns:1fr 1fr}
+  .ab-spaces{grid-template-columns:1fr 1fr}
+  .ab-end .btns{grid-template-columns:auto auto; justify-content:start}
+}
+@container app (min-width:900px){
+  .ab-hero{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:64px; align-items:center; padding-top:56px}
+  .ab-hero .lead{font-size:19px}
+  .ab-cta{margin-top:30px} .ab-cta .pill{flex:0 0 auto}
+  .ab-vis{margin:0}
+  .ab-plate{right:5%; bottom:6%; width:40%}
+  .ab-vals{grid-template-columns:repeat(4,1fr); gap:16px}
+  .ab-val .art{height:180px}
+  .ab-story{grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:56px; align-items:end}
+  .ab-year b{font-size:168px}
+  .ab-nums{gap:16px; margin-top:44px}
+  .ab-n{min-height:190px; padding:24px 22px 22px}
+  .ab-n b{font-size:72px}
+  .ab-n .l{font-size:17px}
+  .ab-spaces{gap:20px}
+  .ab-space .ab-slot{aspect-ratio:16/10}
+  .ab-go{width:auto; min-width:380px; margin-top:24px; gap:28px}
+  .ab-teamw{grid-template-columns:minmax(0,4fr) minmax(0,8fr); gap:56px; align-items:center}
+  .ab-teamw .lead{margin:0 0 18px!important}
+  .ab-team{gap:20px}
+  .ab-visit{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:40px; align-items:start}
+  .ab-end{padding:64px 420px 60px 64px; gap:14px}
+  .ab-end .btns{margin-top:16px}
+  .ab-end .ab-end-art{right:-30px; top:50%; width:380px; height:380px; transform:translateY(-50%)}
+  .ab-end h2{max-width:none}
+}
+@container app (min-width:1100px){
+  .ab-nums{grid-template-columns:repeat(6,1fr)}
+  .ab-n b{font-size:64px}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { sofiaYmd } from "../../lib/time.ts";
+  import { endCta, lunchLinkText } from "./_cta.ts";
+
+  const main = SC.mount();
+  const root = main.querySelector<HTMLElement>("[data-about]")!;
+  const live = root.querySelector<HTMLElement>("[data-ab-live]");
+  const endText = root.querySelector<HTMLElement>("[data-end-text]");
+  const endBtn = root.querySelector<HTMLAnchorElement>("[data-end-btn]");
+  const lunchLink = root.querySelector<HTMLElement>("[data-lunchlink] span");
+
+  /* everything that depends on the hour (Sofia time; ?preview=1&t=21:30 in preview / demo) */
+  function hour() {
+    const s = SC.status();
+    if (live) {
+      const html = '<span class="dot ' + s.cls + '"></span><span>' + s.html + "</span>";
+      if (live.innerHTML !== html) live.innerHTML = html;
+    }
+    const c = endCta(SC.state());
+    if (endText && endText.textContent !== c.text) endText.textContent = c.text;
+    if (endBtn) {
+      if (endBtn.getAttribute("href") !== c.href) endBtn.setAttribute("href", c.href);
+      const lbl = endBtn.querySelector("span");
+      if (lbl && lbl.textContent !== c.label) lbl.textContent = c.label;
+    }
+    /* "днес" only when the lunch menu in the data is for today's date (BRIEF 8) */
+    if (lunchLink) lunchLink.textContent = lunchLinkText(sofiaYmd() === root.dataset.lunchDate);
+  }
+  hour();
+  document.addEventListener("sc:tick", hour);
+  root.dataset.ready = "1";
+  SC.reveal();
+</script>
