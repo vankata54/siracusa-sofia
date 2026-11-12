@@ -13,19 +13,7 @@ import type { Customer } from "../../client/api-types.ts";
 import { HERO, phoneHTML, blockedHTML, alertHTML, stepper } from "./_views.ts";
 import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
-import "../../lib/icons/paper-plane-right.ts";
-import "../../lib/icons/arrow-left.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/warning.ts";
-import "../../lib/icons/timer.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/user.ts";
-import "../../lib/icons/sign-out.ts";
-import "../../lib/icons/gift.ts";
-import "../../lib/icons/fire.ts";
-import "../../lib/icons/shopping-bag.ts";
-import "../../lib/icons/sliders-horizontal.ts";
+import "sc-icons:arrow-left,arrow-right,fire,gift,info,paper-plane-right,shopping-bag,sign-out,sliders-horizontal,timer,user,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 const ic = SC.ic, esc = SC.esc;
 /* prototype only: the core's blocked demo number (src/core/reservations.ts BLOCKED_DEMO_PHONE) and a sample number */
@@ -156,7 +144,7 @@ function viewPhone(err = "", focus = false, reuse = false) {
       if (ex.code === "too_soon" && S.last && S.last.phone === d) return viewCode(S.last.demo, ex.retryIn ?? 30, S.last.known);
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.code === "invalid") return fieldErr(ex.fields?.phone || ex.message);
-      alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.");
+      alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.", ex.code === "throttled" ? "call" : true);
     }
   });
 }

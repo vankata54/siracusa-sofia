@@ -4,6 +4,7 @@
 import { ic } from "../lib/icons.ts";
 import { esc, plural, MON, dateLong, DAYS_SHORT } from "../lib/format.ts";
 import { hourTitle, hourLine, stateBox, miss } from "../lib/ui.ts";
+import "sc-icons:arrow-clockwise,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 import { url } from "../lib/routes.ts";
 import { ZONES, RESTAURANT, type Zone } from "../lib/consts.ts";
 import type { State, Eta } from "../lib/status.ts";
@@ -16,8 +17,7 @@ export function goHTML(st: State): string {
   let o: { t: string; s: string; pickup?: boolean };
   if (st.delivery) o = { t: "Поръчай", s: "Доставка или вземане от място" };
   else if (st.kitchen) o = { t: "Поръчай за вземане", s: hourLine(st), pickup: true };
-  else if (st.m < 600) o = { t: "Поръчай за днес", s: "Отваряме в 10:00" };
-  else o = { t: "Поръчай за утре", s: "Кухнята приема поръчки от 10:00" };
+  else o = { t: st.m < 600 ? "Поръчай за днес" : "Поръчай за утре", s: hourLine(st) }; /* "Приемаме поръчки утре от 10:00", as the note under it */
   return '<a class="pill pill-red go" data-go href="' + url.menu() + '"' + (o.pickup ? " data-pickup" : "") + '><span class="gol"><span>' + o.t + "</span><small>" + o.s + '</small></span><span class="knob">' + ic("arrow-right", 22) + "</span></a>";
 }
 
@@ -137,4 +137,4 @@ export function restaurantLd(site: URL | undefined): Record<string, unknown> {
 }
 
 /** "Популярни": the dishes did not load (the shared box, lib/ui.ts) */
-export const popErrHTML = () => stateBox({ kind: "error", what: "ястията", text: "Проверете връзката и опитайте пак. Можете да поръчате и по телефона." });
+export const popErrHTML = () => stateBox({ kind: "error", what: "ястията" });

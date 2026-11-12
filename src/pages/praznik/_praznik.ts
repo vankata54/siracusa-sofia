@@ -12,7 +12,7 @@ import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { previewPanel, callBtn, OFFLINE } from "../../lib/ui.ts";
-import "sc-icons:arrow-left,arrow-right,seal-percent,fork-knife,map-pin,phone,sliders-horizontal,cake,baby,heart,briefcase,star,balloon,confetti,minus,plus,caret-down,caret-up,info,chair,tree,house,check,receipt,list-checks,warning-circle,lock,clock,paper-plane-right,calendar-blank"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+import "sc-icons:arrow-left,arrow-right,baby,balloon,briefcase,cake,calendar-blank,caret-down,caret-up,chair,check,clock,confetti,fork-knife,heart,house,info,list-checks,lock,map-pin,minus,paper-plane-right,phone,plus,receipt,seal-percent,sliders-horizontal,star,tree,warning-circle"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 import {
   TYPES, G_MIN, G_MAX, PRICE_DEFAULT, fresh, flowHTML, asideHTML, barHTML, summaryHTML, nextLabel, earlyHTML,
   step2, skeletons, pickerLoading, pkgFoot, inquiryNote, typeName, TEL, type St, type View, type Group, type PkgInfo,

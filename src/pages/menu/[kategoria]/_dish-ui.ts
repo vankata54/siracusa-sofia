@@ -5,12 +5,7 @@ import { ic } from "../../../lib/icons.ts";
 import { esc, fmt } from "../../../lib/format.ts";
 import { ORDER_RULES } from "../../../lib/consts.ts";
 import { hourNote, type HourState } from "../../../lib/ui.ts";
-import "../../../lib/icons/caret-right.ts";
-import "../../../lib/icons/sliders-horizontal.ts";
-import "../../../lib/icons/minus.ts";
-import "../../../lib/icons/plus.ts";
-import "../../../lib/icons/heart.ts";
-import "../../../lib/icons/clock.ts";
+import "sc-icons:caret-right,clock,heart,minus,plus,sliders-horizontal"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 /** What the browser needs about the dish (embedded in the page as JSON). */
 export interface DishLite { id: string; n: string; p: number; cat: string; comp: string; g: string; per100?: boolean; out?: boolean }

@@ -7,7 +7,7 @@
    on the server and in the demo; each code is shown here as text for a person, on the step where it can be fixed. */
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
-import { price, pickupSlots, type Priced, type PricedRow } from "../../lib/pricing.ts";
+import { price, pickupSlots, pickupToday, type Priced, type PricedRow } from "../../lib/pricing.ts";
 import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
 import type { Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
@@ -19,32 +19,7 @@ import { PAY_METHODS } from "../../lib/pay.ts";
 import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
-import "../../lib/icons/arrow-left.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/calendar-blank.ts";
-import "../../lib/icons/trash.ts";
-import "../../lib/icons/minus.ts";
-import "../../lib/icons/bowl-food.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/caret-down.ts";
-import "../../lib/icons/moped.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/seal-percent.ts";
-import "../../lib/icons/receipt.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/shopping-bag.ts";
-import "../../lib/icons/hourglass.ts";
-import "../../lib/icons/fork-knife.ts";
-import "../../lib/icons/map-pin.ts";
-import "../../lib/icons/map-trifold.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/timer.ts";
-import "../../lib/icons/path.ts";
-import "../../lib/icons/money.ts";
-import "../../lib/icons/credit-card.ts";
-import "../../lib/icons/ticket.ts";
-import "../../lib/icons/user.ts";
+import "sc-icons:arrow-left,arrow-right,bowl-food,calendar-blank,caret-down,check-circle,credit-card,fork-knife,hourglass,info,map-pin,map-trifold,minus,money,moped,path,receipt,seal-percent,shopping-bag,sliders-horizontal,storefront,ticket,timer,trash,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 type Zk = "" | "free" | "paid" | "out";
 type Sched = "" | "днес" | "утре";
@@ -92,7 +67,7 @@ export function start(): void {
   function save() { const c: Partial<Draft> = { ...D }; delete c.consent; SC.store(DKEY, c); }
 
   /* page-only UI state */
-  const P = { offline: false, loading: false, sending: false, err: "" as "" | "form" | "offline" | "server", errMsg: "", placing: false, allSlots: false, checking: false, errs: {} as Record<string, string | undefined>,
+  const P = { offline: false, loading: false, sending: false, err: "" as "" | "form" | "offline" | "server" | "throttled", errMsg: "", placing: false, allSlots: false, checking: false, errs: {} as Record<string, string | undefined>,
     /* a message from the core shown on the step where it can be fixed (cleared on the next move) */
     flash: null as Flash | null,
     /* the code field: what is typed, and the check in progress */
@@ -154,7 +129,7 @@ export function start(): void {
   }
   function validSlot(I: Info) {
     if (!D.slot) return false;
-    if (D.slot === "asap") return I.today && I.mode === "pickup" && I.earliest <= 1350;
+    if (D.slot === "asap") return I.today && pickupToday(I).asap; /* the one pickup rule with the core */
     return I.slots.some((s) => s.v === D.slot && !s.busy);
   }
 
@@ -178,6 +153,9 @@ export function start(): void {
       '<div class="bar" style="--n:3">' + [1, 2, 3].map((k) => '<span class="' + (k <= n ? "on" : "") + (k === n && grow ? " grow" : "") + '"></span>').join("") + "</div>" +
       "<ol>" + STEPS.map((s, i) => { const k = i + 1; return '<li class="' + (k === n ? "cur" : "") + '"' + (k === n ? ' aria-current="step"' : "") + ">" + (k < n ? '<button class="sl" type="button" data-act="go" data-n="' + k + '">' + ic("check", 16) + s[1] + '<span class="vh"> (готово, върнете се)</span></button>' : '<span class="sl">' + s[1] + "</span>") + "</li>"; }).join("") + "</ol></nav>";
   }
+  /** the title of a send error: focusable, so the focus lands on it (not on <body>) after the step is drawn again */
+  const errH = (t: string) => '<span tabindex="-1" data-errh>' + t + "</span>";
+  function focusErr() { const h = main.querySelector<HTMLElement>("#topnotes [data-errh]"); if (h) { scrollToEl(h); h.focus({ preventScroll: true }); } }
   function note(kind: string, icon: string, title: string, text?: string, acts?: string) {
     return '<div class="note ' + kind + '" role="' + (kind === "bad" ? "alert" : "status") + '">' + ic(icon, 24) + "<div><b>" + title + "</b>" + (text ? "<p>" + text + "</p>" : "") + "</div>" + (acts ? '<div class="acts">' + acts + "</div>" : "") + "</div>";
   }
@@ -269,6 +247,8 @@ export function start(): void {
     if (step === 1 && I.conflict === "delivery") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Смени на вземане · " + fmt(pickupTotal(I)) + "</button>";
     if (step === 2 && I.mode === "delivery" && D.zk === "out") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
     if (step === 1 && tooBig(I)) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>";
+    /* too many orders from this phone / place: trying again is refused too, so the main action is the call (as in the reservation) */
+    if (step === 3 && P.err === "throttled") return callBtn(cls.replace(" js-next", "") + " js-next");
     if (step === 1 && !I.n && I.stale.length) return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     if (step === 1 && I.conflict === "sched") return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     return '<button class="' + cls + '" type="button" data-act="next" data-n="' + step + '">' + esc(lbl) + "</button>";
@@ -291,7 +271,7 @@ export function start(): void {
       /* over the online limits the order cannot go through the site: no promise of a time */
       (e.big && !tooBig(I) ? '<div class="eta-row">' + ic(I.conflict === "delivery" ? "storefront" : I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" : "") +
       '<p class="fine">Плащане при получаване: ' + PAY_METHODS.join(" · ") + ". Минимална поръчка: " + miss("minOrder") + ". Опаковка: " + miss("packaging") + "</p>" +
-      '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link" type="button" data-act="go" data-n="' + (step - 1) + '" aria-label="' + BACK + ": " + STEPS[step - 2][1] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") + "</div>" +
+      '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link flow-back" type="button" data-act="go" data-n="' + (step - 1) + '" aria-label="' + BACK + ": " + STEPS[step - 2][1] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") + "</div>" +
       "</div></section>";
   }
 
@@ -380,7 +360,7 @@ export function start(): void {
       h = '<h1 class="h1 ck-title" tabindex="-1">Кога ще я вземете?</h1><p class="lead ck-lead">' + (I.today ? (I.hasTrad ? "Приготвяме я за около 20 минути." : "Обедното меню е готово веднага.") : "Изберете час за " + (I.sched === "утре" ? "утре" : "днес") + ".") + "</p>" +
         '<div style="margin-top:22px">' + topNotes(I, 2) + "</div>" +
         '<section class="blk">' + ffHTML(I, 2) + "</section>" +
-        '<section class="blk">' + (I.today && I.earliest <= 1350 ? '<div class="opts"><label class="opt"><input type="radio" name="asap" data-act-r="asap"' + (D.slot === "asap" ? " checked" : "") + ' data-fk="asap">' + ic("timer", 24) + "<span><b>Възможно най-скоро</b><small>" + (I.hasTrad ? "Готова около " + t2(round5(I.earliest)) : "Готова веднага, елате когато ви е удобно") + "</small></span></label></div>" : "") +
+        '<section class="blk">' + (I.today && pickupToday({ ...I, mode: "pickup" }).asap ? '<div class="opts"><label class="opt"><input type="radio" name="asap" data-act-r="asap"' + (D.slot === "asap" ? " checked" : "") + ' data-fk="asap">' + ic("timer", 24) + "<span><b>Възможно най-скоро</b><small>" + (I.hasTrad ? "Готова около " + t2(round5(I.earliest)) : "Готова веднага, елате когато ви е удобно") + "</small></span></label></div>" : "") +
         slotsHTML(I, I.today ? "Или изберете час" : "Изберете час") + "</section>" +
         '<section class="blk"><div class="card place">' + ic("map-pin", 24) + "<div><b>Siracusa Bar &amp; Grill</b><p>" + esc(SC.RESTAURANT.address) + '</p><p class="small" style="margin-top:4px">Паркиране: <span class="missing">[ЛИПСВА: къде]</span></p></div><a class="link" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("path", 18) + "Маршрут в Google Maps</a></div></section>";
     }
@@ -425,8 +405,10 @@ export function start(): void {
     const pays: [Pay, string, string, string][] = [["cash", "money", "В брой", deliv ? "На шофьора" : "В ресторанта"], ["card", "credit-card", "Карта при получаване", "Visa или Mastercard"], ["voucher", "ticket", "Ваучер", "Или подаръчна карта"]]; /* no brand names: which vouchers is [ЛИПСВА] */
     const h = stepper(3, true) + '<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">' + (U ? "Попълнихме ги от профила ви. Проверете ги." : "Без регистрация. Обаждаме се само ако нещо не е ясно.") + "</p>" +
       '<div style="margin-top:22px" id="topnotes">' + topNotes(I, 3) +
-      (P.err === "offline" ? note("bad", "warning-circle", OFFLINE, "Поръчката ви е запазена: нищо не е изпратено и нищо не е изгубено. Опитайте пак или ни се обадете.", callBtn("pill pill-line")) : "") +
-      (P.err === "server" ? note("bad", "warning-circle", "Поръчката не е изпратена", esc(P.errMsg) + " Опитайте пак или ни се обадете.", callBtn("pill pill-line")) : "") +
+      /* the title gets the focus after a failed send (tabindex=-1, as in the reservation); one text, no toast on top */
+      (P.err === "offline" ? note("bad", "warning-circle", errH(OFFLINE), "Поръчката ви е запазена: нищо не е изпратено и нищо не е изгубено. Опитайте пак или ни се обадете.", callBtn("pill pill-line")) : "") +
+      (P.err === "server" ? note("bad", "warning-circle", errH("Поръчката не е изпратена"), esc(P.errMsg) + (/обадете/i.test(P.errMsg) ? "" : " Опитайте пак или ни се обадете."), callBtn("pill pill-line")) : "") +
+      (P.err === "throttled" ? note("bad", "warning-circle", errH("Поръчката не е изпратена"), esc(P.errMsg)) : "") +
       (P.err === "form" ? '<div id="form-note">' + note("bad", "warning-circle", "Попълнете отбелязаните полета", "Името и телефонът са задължителни.") + "</div>" : "") + "</div>" +
       '<section class="blk"><div class="card recap"><div class="kv">' + where + '<button class="link" type="button" data-act="go" data-n="2">Промени</button></div>' +
       '<div class="kv"><span><small>Поръчка</small><b>' + dishWord(I.n) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "") + '</b></span><button class="link" type="button" data-act="go" data-n="1">Промени</button></div></div></section>' +
@@ -454,10 +436,13 @@ export function start(): void {
   function replaceHash(h: string) { try { history.replaceState(history.state, "", location.href.split("#")[0] + (h ? "#" + h : "")); } catch { /* ignore */ } }
   function setHeader(view: string, step: number) {
     if (!hdrBack) return;
-    const toStep = view === "cart" && step > 1 ? step - 1 : 0;
-    hdrBack.innerHTML = ic("arrow-left", 20) + (toStep ? "Назад" : "Меню");
-    hdrBack.setAttribute("href", toStep ? "#" + STEPS[toStep - 1][0] : SC.url.menu());
-    hdrBack.dataset.back = toStep ? String(toStep) : "";
+    /* steps 2 and 3: "Назад" is ONE button, in the bar next to the main one (as in every flow); the top bar keeps only the title.
+       Step 1: "Меню" back to the menu. */
+    const inFlow = view === "cart" && step > 1;
+    hdrBack.style.display = inFlow ? "none" : "";
+    hdrBack.innerHTML = ic("arrow-left", 20) + "Меню";
+    hdrBack.setAttribute("href", SC.url.menu());
+    hdrBack.dataset.back = "";
     if (hdrTitle) hdrTitle.textContent = "Количка"; /* one title on every step (site.review-consistency Д10) */
   }
 
@@ -472,7 +457,7 @@ export function start(): void {
     else {
       if (st >= 2 && !I.ok1) { st = 1; replaceHash(""); }
       if (st === 3 && !I.ok2) { st = 2; replaceHash("adres"); }
-      if (st === 2 && I.mode === "pickup" && !D.slot && I.today && I.earliest <= 1350) D.slot = "asap";
+      if (st === 2 && I.mode === "pickup" && !D.slot && I.today && pickupToday(I).asap) D.slot = "asap";
       if (P.flash && P.flash.step !== st) P.flash = null;
       view = "cart"; html = st === 1 ? viewStep1(I) : st === 2 ? viewStep2(I) : viewStep3(I);
     }
@@ -637,7 +622,7 @@ export function start(): void {
     const bad = ["name", "phone", "email"].filter((k) => P.errs[k]);
     if (!bad.length && P.err === "form") P.err = ""; /* name and phone are fine now: the old "Попълнете…" note goes */
     if (bad.length) { P.err = "form"; render({ keepScroll: true }); const f = main.querySelector<HTMLElement>("#f-" + bad[0]); if (f) { f.focus({ preventScroll: true }); scrollToEl(f); } return; }
-    if (P.offline || (!api.demo && navigator.onLine === false)) { P.err = "offline"; render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad")); SC.toast(OFFLINE + ". Опитайте пак."); return; }
+    if (P.offline || (!api.demo && navigator.onLine === false)) { P.err = "offline"; render({ keepScroll: true }); focusErr(); return; }
     /* a code typed but not applied: check it first, show the new sum, and let the person press again */
     if (!D.code && P.codeTxt.trim()) {
       const ok = await applyCode();
@@ -667,7 +652,7 @@ export function start(): void {
       P.sending = false;
       if (e instanceof ApiError) { if (onApiError(e)) return; P.err = "server"; P.errMsg = e.message; }
       else { P.err = "server"; P.errMsg = "Нещо се обърка. Опитайте пак."; }
-      render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad"));
+      render({ keepScroll: true }); focusErr();
     }
   }
 
@@ -675,7 +660,7 @@ export function start(): void {
   function onApiError(e: ApiError): boolean {
     const I = info();
     switch (e.code) {
-      case "offline": P.err = "offline"; render({ keepScroll: true }); scrollToEl(main.querySelector("#topnotes .note.bad")); return true;
+      case "offline": P.err = "offline"; render({ keepScroll: true }); focusErr(); return true;
       case "invalid": {
         const f = e.fields || {};
         if (f.code) { D.code = ""; D.codePct = 0; save(); }
@@ -698,7 +683,7 @@ export function start(): void {
       case "too_big":
         P.err = ""; go(1); return true; /* step 1 shows the limit with the phone (the cart itself is over it) */
       case "throttled":
-        P.err = "server"; P.errMsg = e.message; return false;
+        P.err = "throttled"; P.errMsg = e.message; render({ keepScroll: true }); focusErr(); return true;
       case "sold_out": case "unknown_item": case "bad_qty": case "bad_mod": case "too_many": case "empty":
         P.err = ""; P.flash = { step: 1, kind: "warn", title: "Проверете количката", text: esc(e.message) }; SC.toast(e.message); go(1); return true;
     }

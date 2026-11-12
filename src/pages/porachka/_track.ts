@@ -11,36 +11,7 @@ import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes } from "../../lib/t
 import { ORDER_RULES } from "../../lib/consts.ts";
 import { callBtn, stateBox, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
-import "../../lib/icons/receipt.ts";
-import "../../lib/icons/chef-hat.ts";
-import "../../lib/icons/shopping-bag.ts";
-import "../../lib/icons/moped.ts";
-import "../../lib/icons/house.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/share-network.ts";
-import "../../lib/icons/map-pin.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/bell-ringing.ts";
-import "../../lib/icons/bell.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/copy.ts";
-import "../../lib/icons/google-logo.ts";
-import "../../lib/icons/arrow-up-right.ts";
-import "../../lib/icons/thumbs-up.ts";
-import "../../lib/icons/thumbs-down.ts";
-import "../../lib/icons/paper-plane-right.ts";
-import "../../lib/icons/seal-percent.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/fork-knife.ts";
-import "../../lib/icons/hourglass.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/arrow-left.ts";
-import "../../lib/icons/calendar-check.ts";
-import "../../lib/icons/pencil-simple.ts";
-import "../../lib/icons/arrow-clockwise.ts";
-import "../../lib/icons/user.ts";
+import "sc-icons:arrow-clockwise,arrow-left,arrow-right,arrow-up-right,bell,bell-ringing,calendar-check,check-circle,chef-hat,clock,copy,fork-knife,globe,google-logo,hourglass,house,info,map-pin,moped,paper-plane-right,pencil-simple,receipt,seal-percent,share-network,shopping-bag,sliders-horizontal,storefront,thumbs-down,thumbs-up,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 type Dish = SCMenu["items"][number];
 /* preview tokens after the number (#1042-sample-delivered); anything else right after the number is the order key */

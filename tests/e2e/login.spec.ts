@@ -201,3 +201,14 @@ test("login: prototype panel and offline state only in preview", async ({ page }
   await expect(page.locator(".alert")).toContainText("Няма връзка с интернет");
   await expect(page.locator(".alert")).toContainText("Номерът ви е запазен");
 });
+
+test("login: too many SMS (429): the action is the call, not 'Опитай пак'", async ({ page }) => {
+  await page.route("**/api/auth/sms/request", (r) => r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "throttled", message: "Твърде много опити. Опитайте след 10 минути." }) }));
+  await open(page);
+  await page.locator("#ph").fill(rnd());
+  await page.getByRole("button", { name: "Изпрати код по SMS" }).click();
+  const al = page.locator(".alert");
+  await expect(al).toContainText("Твърде много опити");
+  await expect(al.locator('a[href="tel:+359894365577"]')).toContainText("Обади се · 0894 36 55 77");
+  await expect(al.getByRole("button", { name: "Опитай пак" })).toHaveCount(0);
+});

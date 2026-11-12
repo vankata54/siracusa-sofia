@@ -132,10 +132,19 @@ export function pickupSlots(p: Pick<Priced, "earliest" | "mode">, o?: ClockInput
   let a: number, b: number;
   const R = ORDER_RULES, step = R.slotStep;
   if (sched) { a = R.preorderFrom; b = p.mode === "delivery" ? R.preorderDeliveryUntil : R.pickupUntil; }
-  else { if (p.mode === "delivery") return []; a = Math.ceil((p.earliest + 1) / step) * step; b = Math.min(m + R.horizonMin, R.pickupUntil); }
+  else { if (p.mode === "delivery") return []; a = Math.ceil((p.earliest + 1) / step) * step; b = Math.min(m + R.horizonMin, R.pickupReadyUntil); }
   const out: number[] = [];
   for (let i = a; i <= b; i += step) out.push(i);
   return out;
+}
+
+/** Pickup TODAY, the one rule for the core and the screens (decision 12.11.2026): "Кухнята приема поръчки до 22:30" is the
+    last minute to PLACE an order (state().kitchen), not the time it is ready. Until then "Възможно най-скоро" and the slots
+    every 15 min, ready at the latest at closing (23:00) and never sooner than the lead time (20 min with dishes from the menu).
+    From 22:30: nothing today ("Поръчай за утре"). */
+export function pickupToday(p: Pick<Priced, "earliest" | "mode">, o?: ClockInput): { ok: boolean; asap: boolean; slots: number[] } {
+  const ok = state(o).kitchen && p.mode === "pickup";
+  return { ok, asap: ok && p.earliest <= ORDER_RULES.pickupReadyUntil, slots: ok ? pickupSlots(p, o, false) : [] };
 }
 
 /** Is this "HH:MM" one of the allowed slots (format, future, opening hours, 15 min step, earliest, 3 hours ahead)? */

@@ -2,6 +2,7 @@
    Address, phones, e-mail, hours and socials come only from RESTAURANT (src/lib/consts.ts); parking, transport, access,
    holidays, Instagram, Google and the static map are [ЛИПСВА]. What depends on the hour or the day is in _live.ts. */
 import { mapSlot, callBtn, miss, faqHead } from "../../lib/ui.ts";
+import "sc-icons:map-pin,map-trifold"; /* the icons of the shared components it draws (lib/ui.ts) */
 import { payAnswer } from "../../lib/pay.ts";
 import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT as R } from "../../lib/consts.ts";

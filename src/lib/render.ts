@@ -1,12 +1,7 @@
 /* Dish renderers (need the menu) + everything from chrome.ts. String HTML renderers, identical on the server (Astro pages, set:html) and in the browser (client scripts).
    Same DOM and classes as design/ds/sc.js, with the new addresses from routes.ts. */
 import { ic } from "./icons.ts";
-import "./icons/plus.ts";
-import "./icons/fire.ts";
-import "./icons/sparkle.ts";
-import "./icons/leaf.ts";
-import "./icons/pepper.ts";
-import "./icons/clock.ts";
+import "sc-icons:clock,fire,leaf,pepper,plus,sparkle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 import { byId, isOut, TAGS, type Dish } from "./data.ts";
 import { artSvg } from "./art.ts";
 import { esc, fmt } from "./format.ts";

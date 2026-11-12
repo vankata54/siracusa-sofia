@@ -13,6 +13,7 @@ export const MISS = {
   stampReward: "наградата",
   vouchers: "името на ваучерите",
   photo: "снимка",
+  price: "цена или вход свободен",
 } as const;
 export type MissKey = keyof typeof MISS;
 

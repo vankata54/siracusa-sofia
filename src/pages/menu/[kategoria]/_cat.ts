@@ -13,7 +13,7 @@ import { url } from "../../../lib/routes.ts";
 import { noun, NOUN, passes, searchScores, filterById } from "../../../lib/filters.ts";
 import { card, cap, fic, FICON } from "../_menu.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
-import "sc-icons:pizza,bowl-food,cooking-pot,knife,flame,fork-knife,bread,carrot,jar,hamburger,cake,coffee,tag,scales,moped,storefront,list-bullets,funnel,sliders-horizontal,info,warning-circle,arrow-up-right,caret-down,caret-right,star,list-checks,x,phone"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+import "sc-icons:arrow-up-right,bowl-food,bread,cake,caret-down,caret-right,carrot,clock,coffee,cooking-pot,flame,fork-knife,funnel,hamburger,info,jar,knife,list-bullets,list-checks,moped,phone,pizza,scales,sliders-horizontal,star,storefront,tag,warning-circle,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 /** Categories that have dishes (one static page each). */
 export const CATS: Category[] = cats.filter((c) => inCat(c.id).length);
@@ -245,7 +245,10 @@ export function faqHTML(c: Category): string {
 /* ---------- SEO ---------- */
 export function metaDescription(c: Category): string {
   const it = inCat(c.id), pr = priceRange(it);
-  return c.n + " в Siracusa Bar & Grill, Дружба 2: " + count(c.id, it.length) + " от " + fmt(pr.min) + " до " + fmt(pr.max) + ". Безплатна доставка в " + listJoin(FREE) + " до 21:00, вземане до 22:30.";
+  /* at most 160 characters (build check): the first variant that fits, the same facts in fewer words */
+  const head = c.n + " в Siracusa, Дружба 2: " + count(c.id, it.length) + " от " + fmt(pr.min) + " до " + fmt(pr.max) + ".";
+  const v = [head + " Безплатна доставка в " + listJoin(FREE) + " до 21:00, вземане до 22:30.", head + " Безплатна доставка до 21:00, вземане до 22:30.", head + " Доставка до 21:00, вземане до 22:30."];
+  return v.find((s) => s.length <= 160) || head;
 }
 /** JSON-LD: Menu > MenuSection > MenuItem (prices in EUR), BreadcrumbList, FAQPage (only answers without [ЛИПСВА]). */
 export function catLd(c: Category, site: URL | undefined): object[] {

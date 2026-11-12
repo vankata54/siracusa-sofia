@@ -2,10 +2,7 @@
    The "Още" panel and the cookie settings are in chrome-sheets.ts (loaded on demand in the browser).
    Same DOM and classes as design/ds/sc.js, with the addresses from routes.ts. */
 import { ic } from "./icons.ts";
-import "./icons/x.ts";
-import "./icons/check.ts";
-import "./icons/caret-right.ts";
-import "./icons/phone.ts";
+import "sc-icons:caret-right,check,phone,x"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 import { RESTAURANT } from "./consts.ts";
 import { esc } from "./format.ts";
 import { statusHTML } from "./chrome-core.ts";
@@ -40,7 +37,7 @@ export function header(o: HeaderOpts = {}): string {
   /* pages with "Назад" (dish, event, cart): the back bar on the phone; the computer keeps the full bar (the way back is the
      breadcrumb in <main>, or the flow's own "Назад"); "Сподели" stays in the back bar on the phone and goes to the full bar */
   const row1 = o.back
-    ? '<header class="top back"><a class="hb" href="' + o.back.href + '">' + ic("arrow-left", 20) + esc(o.back.label || "Назад") + '</a><span class="ttl">' + esc(o.title || "") + '</span><div class="hact">' + (o.share ? '<button class="hb" type="button" data-share>' + ic("export", 20) + "Сподели</button>" : "") + "</div></header>" + full(" desk")
+    ? '<header class="top back"><a class="hb" href="' + o.back.href + '">' + ic("arrow-left", 20) + esc(o.back.label || "Назад") + '</a><span class="ttl">' + esc(o.title || "") + '</span><div class="hact">' + (o.share ? '<button class="hb" type="button" data-share>' + ic("share-network", 20) + "Сподели</button>" : "") + "</div></header>" + full(" desk")
     : full("");
   const row2 = o.status === false && o.cart === false ? "" : '<div class="row2" role="region" aria-label="Работно време и количка">' + (o.status === false ? "" : '<div class="status" data-status>' + statusHTML(o.clock) + "</div>") + (o.cart === false ? "" : cartBtn) + "</div>";
   return '<div class="sentinel" data-sent></div>' + row1 + row2;
@@ -56,7 +53,8 @@ export function aiFab(o: { actionBar?: boolean; bottomNav?: boolean } = {}): str
 
 export function footer(year: number = new Date().getFullYear()): string {
   const R = RESTAURANT, a = (k: PageKey, t: string) => '<a href="' + url.page(k) + '">' + t + "</a>";
-  return '<footer class="foot"><div class="cols"><div><span class="word">Siracusa</span><p class="muted" style="margin:10px 0 0">Пица на пещ и скара на дървени въглища в Дружба 2.</p><p style="margin:12px 0 0">' + R.address + "<br>" + R.phone + " · " + R.email + '</p><p class="muted small" style="margin:8px 0 0">Всеки ден 10:00 - 23:00. Кухнята приема до 22:30, доставка до 21:00.</p></div>' +
+  /* a hidden h2 before the column titles (h3): the heading order stays right on pages with only an h1 (axe heading-order) */
+  return '<footer class="foot"><h2 class="vh">Карта на сайта</h2><div class="cols"><div><span class="word">Siracusa</span><p class="muted" style="margin:10px 0 0">Пица на пещ и скара на дървени въглища в Дружба 2.</p><p style="margin:12px 0 0">' + R.address + "<br>" + R.phone + " · " + R.email + '</p><p class="muted small" style="margin:8px 0 0">Всеки ден 10:00 - 23:00. Кухнята приема до 22:30, доставка до 21:00.</p></div>' +
     "<div><h3>Поръчай</h3>" + a("menu", "Меню") + a("lunch", "Обедно меню") + a("delivery", "Доставка") + a("pickup", "Вземи от място") + a("office", "Обща поръчка за офиса") + "</div>" +
     "<div><h3>Елате при нас</h3>" + a("reservation", "Резервирай маса") + a("events", "Събития и поводи") + a("celebration", "Празник при нас") + a("bertha", "Фурната Bertha") + a("gallery", "Галерия") + "</div>" +
     "<div><h3>Информация</h3>" + a("about", "За нас") + a("contacts", "Контакти") + a("allergens", "Алергени") + a("terms", "Общи условия") + a("privacy", "Поверителност") + a("cookies", "Бисквитки") + '<button class="flink" type="button" data-cookie-settings>Настройки на бисквитките</button></div></div>' +

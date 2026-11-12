@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { RUNTIME_BUDGET, runtimeSizes, seoFiles } from "../../scripts/build-checks.mjs";
+import { RUNTIME_BUDGET, UI_BUDGET, runtimeSizes, uiSizes, longDescriptions, seoFiles } from "../../scripts/build-checks.mjs";
 
 const root = path.resolve(__dirname, "../..");
 
@@ -23,6 +23,11 @@ describe("runtime budget and SEO files", () => {
     /* a fresh checkout has no build yet: then the build hook (first test) and the e2e smoke test are the check */
     for (const d of dirs) for (const s of runtimeSizes(path.join(root, d)) as { file: string; bytes: number }[]) {
       expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(RUNTIME_BUDGET);
+    }
+    /* the shared components (lib/ui.ts) have their own budget; indexable pages keep the description within 160 characters */
+    for (const d of dirs) {
+      for (const s of uiSizes(path.join(root, d)) as { file: string; bytes: number }[]) expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(UI_BUDGET);
+      expect(longDescriptions(path.join(root, d)), d).toEqual([]);
     }
   });
   it("sitemap.xml lists only the pages without noindex; the demo robots.txt disallows everything", () => {

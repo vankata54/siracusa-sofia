@@ -41,10 +41,13 @@ const prefs = load<Prefs>("sc-prefs", { theme: "system", time: "now" });
 const qs = new URLSearchParams(location.search);
 /* a server preview (?preview=1&t=16:30) carries over to the page opened from it by a link (same site, the referrer has
    ?preview=1): the lunch bar -> the cart stays in the same preview and hour, without changing any address.
-   Opening a page directly (typed, bookmarked, a test's goto) is never a preview. The demo remembers the hour in sc-prefs. */
-const refQs = (() => { try { const r = document.referrer ? new URL(document.referrer) : null; return r && r.origin === location.origin && r.searchParams.has("preview") ? r.searchParams : null; } catch { return null; } })();
-if (!DEMO && !qs.has("preview") && refQs) { qs.set("preview", "1"); if (!qs.has("t") && refQs.get("t")) qs.set("t", refQs.get("t")!); }
+   Opening a page directly (typed, bookmarked, a test's goto) is never a preview. The demo remembers the hour in sc-prefs.
+   The tab remembers the preview (sessionStorage "sc-pv"), so a second link (dish -> cart) keeps it too; still only when the
+   page is opened by a link of this site (a same-site referrer). */
+const refQs = (() => { try { const r = new URL(document.referrer); return r.origin === location.origin ? r.searchParams.has("preview") ? r.searchParams : new URLSearchParams(sessionStorage.getItem("sc-pv") || "") : null; } catch { return null; } })();
+if (!DEMO && !qs.has("preview") && refQs && refQs.has("preview")) { qs.set("preview", "1"); if (!qs.has("t") && refQs.get("t")) qs.set("t", refQs.get("t")!); }
 const previewMode = DEMO || prefs.preview === true || qs.has("preview");
+if (qs.has("preview")) try { sessionStorage.setItem("sc-pv", "preview&t=" + (qs.get("t") || "")); } catch { /* ignore */ }
 if (previewMode) {
   setPreview(true);
   const t = qs.get("t");
@@ -372,7 +375,7 @@ export const SC = {
   icons: loadAllIcons,
   /* constants (no menu) */
   RESTAURANT: C.RESTAURANT, ZONES: C.ZONES, TAGS: C.TAGS, ALLERGENS: C.ALLERGENS, allergenName: C.allergenName, FILTERS: C.FILTERS,
-  TABLES: C.TABLES, EVENT_CATS: C.EVENT_CATS, COURSE_NAME: C.COURSE_NAME, EVENT_SLUGS,
+  EVENT_CATS: C.EVENT_CATS, COURSE_NAME: C.COURSE_NAME, EVENT_SLUGS,
   /* time */
   /** the lunch menu is for today (without the menu: the date is generated at build) */
   lunchIsToday: () => lunchIsToday(),

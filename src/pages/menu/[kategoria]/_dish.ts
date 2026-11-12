@@ -10,10 +10,7 @@ import { url } from "../../../lib/routes.ts";
 import { suggest, type ManualPairs } from "../../../lib/suggest.ts";
 import { ORDER_RULES } from "../../../lib/consts.ts";
 import { compList, cap, canAdd, endDot, type Addon, type DishLite } from "./_dish-ui.ts";
-import "../../../lib/icons/caret-right.ts";
-import "../../../lib/icons/caret-down.ts";
-import "../../../lib/icons/info.ts";
-import "../../../lib/icons/phone.ts";
+import "sc-icons:caret-down,caret-right,info,phone"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 export * from "./_dish-ui.ts";
 
@@ -86,9 +83,19 @@ export function factsCard(d: Dish): string {
 }
 
 /* ---------- SEO ---------- */
+/** at most 160 characters (build check): the composition is cut at a comma ("…"), never in a word, nothing added */
+export const DESC_MAX = 160;
 export function metaDescription(d: Dish): string {
   /* no "." after a text that already ends with one ("за 100 гр.", "400 гр.") */
-  return d.n + " от Siracusa Bar & Grill, Дружба 2: " + (d.comp ? endDot(d.comp) + " " : "") + endDot((d.per100 ? "" : d.g ? d.g + ", " : "") + fmt(d.p) + (d.per100 ? " за 100 гр." : "")) + " Поръчайте с доставка или вземете от място.";
+  const head = d.n + " от Siracusa, Дружба 2", tail = " " + endDot((d.per100 ? "" : d.g ? d.g + ", " : "") + fmt(d.p) + (d.per100 ? " за 100 гр." : "")) + " Поръчайте с доставка или вземете от място.";
+  if (!d.comp) return head + "." + tail;
+  const parts = d.comp.replace(/\.\s*$/, "").split(/,\s*/);
+  for (let k = parts.length; k > 0; k--) {
+    const s = head + ": " + parts.slice(0, k).join(", ") + (k < parts.length ? "…" : ".") + tail;
+    if (s.length <= DESC_MAX) return s;
+  }
+  const s = head + "." + tail;
+  return s.length <= DESC_MAX ? s : head + "." + tail.replace(/ Поръчайте .*$/, "");
 }
 
 /** <title> without " | Siracusa Bar & Grill" (Base adds it, 23 signs): the whole title stays within about 70 signs.

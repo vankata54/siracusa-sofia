@@ -5,6 +5,7 @@ import { RESTAURANT as R } from "../../lib/consts.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
 import { callBtn, hourNote } from "../../lib/ui.ts";
+import "sc-icons:clock"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 export const OPEN = toMin(R.open), CLOSE = toMin(R.close), KITCHEN = toMin(R.kitchen), DELIVERY = toMin(R.delivery), LUNCH = toMin(R.lunchUntil);
@@ -40,7 +41,8 @@ const routeB = () => '<a class="pill pill-line" href="' + R.maps + '" target="_b
 /** m = null: the server's first paint (the open-hours version). */
 export function ctaHTML(m: number | null): string {
   return m != null && closedAt(m)
-    ? writeB(true) + '<div class="duo">' + callB(false) + routeB() + "</div>"
+    /* closed: "Пиши ни" leads; the call button keeps its whole words on its own row, "Маршрут" under it */
+    ? writeB(true) + callBtn("pill pill-line pill-block") + '<a class="pill pill-line pill-block" href="' + R.maps + '" target="_blank" rel="noopener">' + ic("map-trifold", 20) + "Маршрут</a>"
     : callB(true) + '<div class="duo">' + routeB() + writeB(false) + "</div>";
 }
 export function heroNoteHTML(m: number | null): string {

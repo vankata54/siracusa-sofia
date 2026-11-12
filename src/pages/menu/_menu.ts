@@ -9,7 +9,7 @@ import { esc, fmt, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { hourNote } from "../../lib/ui.ts";
 import { NOUN, noun, passes, filterById, searchScores, sortInCat } from "../../lib/filters.ts";
-import "sc-icons:funnel,sliders-horizontal,plant,users-three,grains,drop,barbell,info,moped,storefront,caret-right,warning-circle,warning,sun,moon,magnifying-glass,x,phone"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+import "sc-icons:barbell,caret-right,clock,drop,funnel,grains,info,magnifying-glass,moon,moped,phone,plant,sliders-horizontal,storefront,sun,users-three,warning,warning-circle,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const MAIN_CATS: Category[] = cats.filter((c) => c.id !== "zakuski");
 export const MAIN_ITEMS: Dish[] = items.filter((x) => x.cat !== "zakuski");

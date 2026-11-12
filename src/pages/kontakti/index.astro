@@ -55,7 +55,9 @@ import { formHTML, EMPTY } from "./_form.ts";
 .ct-row .val.tel{font-size:26px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
 .ct-row .val.mail{font-size:20px}
 .ct-row .val.addr{font-size:19px; letter-spacing:-.015em}
-.ct-row .acts{display:grid; grid-template-columns:1fr auto; gap:8px}
+/* the call button keeps its whole words ("Обади се · 0894 36 55 77"): "Копирай" goes under it when the row is too narrow */
+.ct-row .acts{display:flex; flex-wrap:wrap; gap:8px}
+.ct-row .acts > *{flex:1 1 auto}
 .ct-row .acts .pill{padding:0 16px; gap:8px}
 .ct-row .acts .cp{min-width:126px}
 .ct-row .ct-tile{display:none}
@@ -246,7 +248,8 @@ a.ct-scard:active{transform:scale(.98)}
   .ct-row .ct-tile{display:grid}
   .ct-row .lbl .ic{display:none}
   .ct-row .val.tel{font-size:24px}
-  .ct-row .acts{grid-template-columns:auto auto}
+  .ct-row .acts{justify-content:flex-end}
+  .ct-row .acts > *{flex:0 0 auto}
 
   .ct-hours{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:16px; align-items:stretch}
   .ct-today{padding:28px 30px 26px}
@@ -273,15 +276,7 @@ a.ct-scard:active{transform:scale(.98)}
 
 <script>
   import { SC } from "../../client/sc.ts";
-  import "../../lib/icons/chat-circle-dots.ts";
-  import "../../lib/icons/map-trifold.ts";
-  import "../../lib/icons/clock.ts";
-  import "../../lib/icons/check.ts";
-  import "../../lib/icons/pencil-simple.ts";
-  import "../../lib/icons/paper-plane-right.ts";
-  import "../../lib/icons/info.ts";
-  import "../../lib/icons/warning.ts";
-  import "../../lib/icons/warning-circle.ts";
+  import "sc-icons:chat-circle-dots,check,clock,info,map-trifold,paper-plane-right,pencil-simple,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
   import { ctaHTML, heroNoteHTML, todayHTML, weekHTML, okHTML, dayIdx, type Sent } from "./_live.ts";
   import { formHTML, fieldError, cleanDraft, MODES, MAX, COMPLAINT, type Draft } from "./_form.ts";
   import { sendFeedback, OfflineError } from "./_send.ts";

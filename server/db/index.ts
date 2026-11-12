@@ -7,7 +7,8 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { sql } from "drizzle-orm";
 import * as schema from "./schema.ts";
 import { MENU } from "../../src/data/menu.ts";
-import { ALLERGENS, TABLES } from "../../src/lib/data.ts";
+import { ALLERGENS } from "../../src/lib/data.ts";
+import { TABLES } from "../../src/lib/tables.ts";
 
 export function openDb(file: string) {
   if (file !== ":memory:") fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true });

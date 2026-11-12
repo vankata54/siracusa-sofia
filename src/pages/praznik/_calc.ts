@@ -36,6 +36,8 @@ export const WISHES = ["Балони", "Цветя", "Надпис с име", "
 export const TIMES: string[] = [];
 for (let h = 11; h <= 20; h++) { TIMES.push((h < 10 ? "0" : "") + h + ":00"); if (h < 20) TIMES.push(h + ":30"); }
 export const STEPS = ["Повод и гости", "Меню", "Торта, украса и данни"];
+/** the short names in "Следва: …" and "Напред: …" (the whole name of step 3 does not fit in the button on a phone) */
+export const NEXT = ["Повод и гости", "Меню", "Детайли"];
 export const G_MIN = 2, G_MAX = 200;
 /** The admin decides whether guests see a price (OPEN-QUESTIONS 3, setting celebrationPrice in /api/status).
     Until the status arrives (and on the server) the page shows "offer". */
@@ -86,7 +88,7 @@ const icInline = (n: string, s: number, va: number) => ic(n, s).replace('class="
 
 /* ---------- stepper (shared .stepper) ---------- */
 export function stepper(S: St): string {
-  return stepperHTML(S.step, 3, STEPS[S.step]); /* the same words in every flow (lib/ui.ts) */
+  return stepperHTML(S.step, 3, NEXT[S.step]); /* the same words in every flow (lib/ui.ts) */
 }
 
 /* ---------- step 1: occasion, guests, date, place ---------- */
@@ -197,12 +199,13 @@ export function nextLabel(v: View, compact: boolean): string {
   if (v.sending) return '<span class="spin" aria-hidden="true"></span>Изпращаме...';
   const arr = compact ? "" : ic("arrow-right", 20), s = v.S.step;
   /* "Напред: <next step>": "Към менюто" leads to /menu/ everywhere else (site.review-consistency В5) */
-  return s < 3 ? "Напред: " + STEPS[s] + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
+  return s < 3 ? "Напред: " + NEXT[s] + arr : "Изпрати запитване" + (compact ? "" : ic("paper-plane-right", 20));
 }
 export function asideHTML(v: View): string {
   const S = v.S;
-  return summaryHTML(v, false) + '<div class="sum-btns"><button class="pill pill-line pill-lg" type="button" data-back' + (S.step > 1 ? "" : " hidden") + ">" + ic("arrow-left", 20) + 'Назад</button><button class="pill pill-red pill-lg" type="button" data-next' + (v.sending ? ' aria-busy="true"' : "") + ">" + nextLabel(v, S.step > 1) + "</button></div>" +
-    '<div class="sum-call"><a class="link" href="' + TEL + '">' + ic("phone", 18) + "Или се обадете · " + R.phone + "</a></div>";
+  /* the main button, "Назад" under it as a text link (the same on every flow at 1440), then the call link with the common words */
+  return summaryHTML(v, false) + '<div class="sum-btns"><button class="pill pill-red pill-lg" type="button" data-next' + (v.sending ? ' aria-busy="true"' : "") + ">" + nextLabel(v, S.step > 1) + '</button><button class="link flow-back" type="button" data-back' + (S.step > 1 ? "" : " hidden") + ">" + ic("arrow-left", 18) + "Назад</button></div>" +
+    '<div class="sum-call"><a class="link" href="' + TEL + '">' + ic("phone", 18) + 'Обади се · <span class="nw">' + R.phone + "</span></a></div>";
 }
 export function barSummary(v: View): string {
   const c = calc(v), up = ic("caret-up", 18);

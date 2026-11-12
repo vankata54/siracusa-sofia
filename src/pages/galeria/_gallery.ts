@@ -8,6 +8,7 @@ import { pic, art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt } from "../../lib/format.ts";
 import { photoSlot } from "../../lib/ui.ts";
+import "sc-icons:image,video-camera"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 export type CatId = "all" | "yastia" | "salon" | "gradina" | "sabitia";
 export const CATS: { id: CatId; n: string; icon: string }[] = [
@@ -41,7 +42,7 @@ const SLOTS: SlotIt[] = ([
   /* [cat, title, what the photo shows ("[ЛИПСВА: снимка на <of>]"), aspect ratio, the action in the viewer] */
   ["salon", "Салонът, общ план", "салона, общ план", 1.25, RES],
   ["gradina", "Градината през деня", "градината през деня", 0.8, RES],
-  ["sabitia", "Гръцка вечер", "гръцката вечер", 1, { href: url.event("gratska-vecher"), label: "Виж Гръцка вечер", icon: "arrow-right" }],
+  ["sabitia", "Гръцка вечер", "Гръцка вечер", 1, { href: url.event("gratska-vecher"), label: "Виж Гръцка вечер", icon: "arrow-right" }],
   ["salon", "Маса до прозореца", "маса до прозореца", 0.8, RES],
   ["gradina", "Градината вечер", "градината вечер", 1.25, RES],
   ["sabitia", "Рожден ден при нас", "рожден ден при нас", 0.8, PARTY],

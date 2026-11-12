@@ -15,7 +15,7 @@ import type { Dish } from "../../lib/data.ts";
 import { inviteHTML, orderSkel } from "./_views.ts";
 import { MKT_TITLE, MKT_SUB, callBtn, missText, loadingText, previewPanel, pvToggle, PV, OFFLINE } from "../../lib/ui.ts";
 /* the icons this script draws, in one module (scripts/icon-groups.mjs) */
-import "sc-icons:user,sign-in,sign-out,receipt,heart,map-pin,ticket,bell,shield-check,sliders-horizontal,lock,house,briefcase,truck,warning-circle,warning,check-circle,info,arrow-right,arrow-clockwise,pencil-simple,fork-knife,gift,cake,caret-down,export,trash,flag,timer,copy,plus";
+import "sc-icons:arrow-clockwise,arrow-right,bell,briefcase,cake,caret-down,check-circle,copy,export,flag,fork-knife,gift,heart,house,info,lock,map-pin,pencil-simple,plus,receipt,shield-check,sign-in,sign-out,sliders-horizontal,ticket,timer,trash,truck,user,warning,warning-circle";
 
 type Notify = { order: boolean; reservation: boolean };
 type Code = { code: string; pct: number; orderNo: string; used: boolean; usedBy: string | null; createdAt: string };

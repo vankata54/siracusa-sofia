@@ -57,7 +57,8 @@ export function blockedHTML(phone: string): string {
     '<p class="fine">Всеки ден от ' + R.open + " до " + R.close + ".</p></div>";
 }
 
-export function alertHTML(title: string, text: string, retry = true): string {
+/** retry: "Опитай пак"; "call": too many tries (429), trying again is refused, so the action is the call (as in the reservation) */
+export function alertHTML(title: string, text: string, retry: boolean | "call" = true): string {
   return '<div class="alert" role="alert">' + ic("warning-circle", 24) + "<b>" + esc(title) + "</b><span>" + esc(text) + "</span>" +
-    (retry ? '<button class="pill pill-line" type="submit">' + ic("arrow-right", 18) + "Опитай пак</button>" : "") + "</div>";
+    (retry === "call" ? callBtn("pill pill-line") : retry ? '<button class="pill pill-line" type="submit">' + ic("arrow-right", 18) + "Опитай пак</button>" : "") + "</div>";
 }

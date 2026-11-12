@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PREFIX = "sc-icons:";
+/* the icons the shared runtime registers itself (src/lib/chrome-core.ts, src/lib/icons.ts): in the browser a group leaves them
+   out, so no page ships them twice. On the server (SSR, Astro frontmatter, vitest) the group keeps them. */
+export const RUNTIME_ICONS = ["x", "check", "caret-right", "phone", "question"];
 
 export function iconSvgs(names) {
   const out = {};
@@ -24,10 +27,14 @@ export function iconGroups() {
   return {
     name: "sc-icon-groups",
     enforce: "pre",
-    resolveId(id) { return id.startsWith(PREFIX) ? "\0" + id : null; },
-    load(id) {
+    /* one module per importer (the same list in two files would otherwise become a tiny shared chunk of its own) */
+    resolveId(id, importer) { return id.startsWith(PREFIX) ? "\0" + id + "|" + String(importer || "").replace(/[^a-zA-Z0-9]+/g, "_").slice(-60) : null; },
+    load(id, opts) {
       if (!id.startsWith("\0" + PREFIX)) return null;
-      const names = [...new Set(id.slice(PREFIX.length + 1).split(",").map((s) => s.trim()).filter(Boolean))].sort();
+      const all = [...new Set(id.slice(PREFIX.length + 1).split("|")[0].split(",").map((s) => s.trim()).filter(Boolean))].sort();
+      iconSvgs(all); /* an unknown name fails the build also when it is left out below */
+      const names = opts && opts.ssr ? all : all.filter((n) => !RUNTIME_ICONS.includes(n));
+      if (!names.length) return "export {};\n";
       const icons = path.join(root, "src/lib/icons.ts").split(path.sep).join("/");
       return `import { registerIcons } from ${JSON.stringify(icons)};\nregisterIcons(${JSON.stringify(iconSvgs(names))});\n`;
     },

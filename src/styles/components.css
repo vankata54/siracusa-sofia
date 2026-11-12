@@ -356,3 +356,5 @@ button.map-slot:focus-visible{outline:3px solid var(--red); outline-offset:-3px}
 .sc-crumbs [aria-current]{color:var(--ink)}
 /* a "+" that cannot add more (a per-person limit): still focusable, the click says why */
 .plus[aria-disabled="true"],.counter button[aria-disabled="true"]{opacity:.45; cursor:not-allowed}
+/* "Назад" in the summary of a flow at 1440 (cart, reservation, celebration): the same text link under the main button */
+.link.flow-back{width:100%; justify-content:center; margin-top:4px; color:var(--ink)}

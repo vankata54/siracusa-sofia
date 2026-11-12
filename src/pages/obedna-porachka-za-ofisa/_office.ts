@@ -25,33 +25,7 @@ import type { Dish } from "../../data/menu.ts";
 import type { OrderLine, Order } from "../../core/types.ts";
 import type { PublicOffice } from "../../core/office.ts";
 /* icons this script draws (sc.ts: x, check, caret-right, phone, question) */
-import "../../lib/icons/plus.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/calendar-dots.ts";
-import "../../lib/icons/arrow-left.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/arrow-up-right.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/truck.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/wallet.ts";
-import "../../lib/icons/users-three.ts";
-import "../../lib/icons/eye.ts";
-import "../../lib/icons/copy.ts";
-import "../../lib/icons/chat-circle-dots.ts";
-import "../../lib/icons/share-network.ts";
-import "../../lib/icons/pencil-simple.ts";
-import "../../lib/icons/minus.ts";
-import "../../lib/icons/lock.ts";
-import "../../lib/icons/timer.ts";
-import "../../lib/icons/hand-waving.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/money.ts";
-import "../../lib/icons/credit-card.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/trash.ts";
-import "../../lib/icons/users.ts";
+import "sc-icons:arrow-left,arrow-right,arrow-up-right,calendar-dots,chat-circle-dots,check-circle,clock,copy,credit-card,eye,hand-waving,info,lock,minus,money,pencil-simple,plus,share-network,sliders-horizontal,storefront,timer,trash,truck,users,users-three,wallet,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 /** What index.astro puts in #o-data: the lunch menu of the data (its date) and the prototype's sample colleagues. */
 export interface OfficeData { date: string; dayName: string; items: Dish[]; team: { n: string; picks: Record<string, number> }[] }
@@ -265,7 +239,7 @@ export function start(): void {
         "</fieldset>" +
         '<div data-formerr></div>' +
         '<div class="o-actions"><button class="pill pill-red pill-lg pill-block" type="submit" data-create-btn>Създай връзка за колегите' + ic("arrow-right", 20) + "</button>" +
-        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане в брой или с карта при получаване. Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано.</span></p></div>" +
+        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане при получаване: В брой · Карта при получаване · Ваучер. Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано.</span></p></div>" +
       "</form></div>" +
       '<aside class="o-aside o-onlydesk" aria-label="Преглед на поканата"><div class="o-preview shell"><div class="core"><span class="label">' + ic("eye", 18) + 'Така ще я видят колегите</span><div data-preview></div></div></div></aside>' +
     "</div>";

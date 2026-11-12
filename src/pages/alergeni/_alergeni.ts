@@ -9,18 +9,7 @@ import { ic } from "../../lib/icons.ts";
 import { esc, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ALLERGENS as AL, allergenName } from "../../lib/consts.ts";
-import "../../lib/icons/magnifying-glass.ts";
-import "../../lib/icons/funnel.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/globe.ts";
-import "../../lib/icons/phone.ts";
-import "../../lib/icons/arrow-clockwise.ts";
-import "../../lib/icons/caret-down.ts";
-import "../../lib/icons/caret-right.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/x.ts";
-import "../../lib/icons/bowl-food.ts";
+import "sc-icons:arrow-clockwise,bowl-food,caret-down,caret-right,clock,funnel,globe,info,magnifying-glass,phone,warning-circle,x"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 export { AL };
 export const TEL = "tel:" + R.phoneIntl;
@@ -155,10 +144,10 @@ export function emptyHTML(st: { a: string[]; q: string; nd: boolean }): string {
 }
 /* error / no connection: the shared box (lib/ui.ts), same words and buttons as on every page */
 export function errorHTML(search = false): string {
-  return ui.stateBox({ kind: "error", what: search ? "търсенето" : "алергените", text: "Опитайте пак след малко. Ако бързате, обадете ни се и ще ви кажем по телефона." });
+  return ui.stateBox({ kind: "error", what: search ? "търсенето" : "алергените" });
 }
 export function offlineHTML(): string {
-  return ui.stateBox({ kind: "offline", what: "алергените", text: "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите." });
+  return ui.stateBox({ kind: "offline", what: "алергените" });
 }
 export function loadingHTML(): string {
   let rows = "";

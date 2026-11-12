@@ -6,28 +6,11 @@
 import { RESTAURANT as R } from "../../../lib/consts.ts";
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt, plural, MON, MONTHS, DAYS_SHORT, dateLong } from "../../../lib/format.ts";
-import { callBtn, stateBox, loadingText, previewPanel, PV } from "../../../lib/ui.ts";
+import { callBtn, stateBox, loadingText, previewPanel, PV, missText } from "../../../lib/ui.ts";
 import { url } from "../../../lib/routes.ts";
 import type { SiteEvent } from "../../../lib/events.ts";
 import { sofiaOffset } from "../_ld.ts";
-import "../../../lib/icons/users-three.ts";
-import "../../../lib/icons/arrow-right.ts";
-import "../../../lib/icons/arrow-up-right.ts";
-import "../../../lib/icons/arrow-clockwise.ts";
-import "../../../lib/icons/phone.ts";
-import "../../../lib/icons/list-checks.ts";
-import "../../../lib/icons/calendar-check.ts";
-import "../../../lib/icons/calendar-dots.ts";
-import "../../../lib/icons/calendar-blank.ts";
-import "../../../lib/icons/warning-circle.ts";
-import "../../../lib/icons/info.ts";
-import "../../../lib/icons/chat-circle-dots.ts";
-import "../../../lib/icons/facebook-logo.ts";
-import "../../../lib/icons/copy.ts";
-import "../../../lib/icons/eye.ts";
-import "../../../lib/icons/clock.ts";
-import "../../../lib/icons/ticket.ts";
-import "../../../lib/icons/map-pin.ts";
+import "sc-icons:arrow-clockwise,arrow-right,arrow-up-right,calendar-blank,calendar-check,calendar-dots,chat-circle-dots,clock,copy,eye,facebook-logo,globe,info,list-checks,map-pin,phone,sliders-horizontal,ticket,users-three,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 export const TEL = "tel:" + R.phoneIntl;
 
@@ -82,7 +65,7 @@ export function meander(id: string, h: number): string {
 /** Calendar leaf. Without a date (server): "Последна / сб / на месеца". */
 export function cal(d: Date | null, small?: boolean): string {
   if (!d) return '<span class="cal nodate" aria-hidden="true"><span class="m">Последна</span><span class="d">сб</span><span class="w">от месеца</span></span>';
-  return '<span class="cal" aria-hidden="true"><span class="m">' + (small ? MON[d.getMonth()] : MONTHS[d.getMonth()]) + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>";
+  return '<span class="cal" aria-hidden="true"><span class="m">' + MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + DAYS_SHORT[d.getDay()] + "</span></span>";
 }
 export function whenHTML(ev: SiteEvent, e: EvModel | null): string {
   let k: string, v: string, s: string, extra = "";
@@ -100,7 +83,7 @@ export function whenHTML(ev: SiteEvent, e: EvModel | null): string {
 export function priceHTML(ev: SiteEvent): string {
   if (ev.free) return "Вход свободен";
   if (ev.price) return '<span class="price">' + fmt(ev.price) + "</span>";
-  return '<span class="missing">[ЛИПСВА: цена, куверт или „Вход свободен“]</span>';
+  return '<span class="missing">' + missText("price") + "</span>";
 }
 
 /** The ticket. e = null on the server (no date yet). */
@@ -151,7 +134,7 @@ export function nextInner(e: EvModel | null): string {
 
 /* ---------- page states (preview: loading / error) ---------- */
 export function errorHTML(): string {
-  return '<section class="sec ev-state">' + stateBox({ kind: "error", what: "събитието", text: "Проверете връзката с интернет и опитайте пак. Ако не стане, обадете ни се.", h: "h1" }) + "</section>";
+  return '<section class="sec ev-state">' + stateBox({ kind: "error", what: "събитието", h: "h1" }) + "</section>";
 }
 export function loadingHTML(): string {
   return '<section class="sec ev-hero" aria-busy="true"><span class="vh" role="status">' + loadingText("събитието") + "</span>" +

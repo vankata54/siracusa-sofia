@@ -155,13 +155,13 @@ test("cart: the top form note goes when the fields are fixed", async ({ page }) 
   await expect(page.locator("#form-note")).toHaveCount(0);
 });
 
-test("cart: 21:30 delivery is off, pickup slots until 22:30", async ({ page }) => {
+test("cart: 21:30 delivery is off, pickup slots until 23:00 (orders accepted until 22:30, decision 12.11.2026)", async ({ page }) => {
   await open(page, "21:30", { ...CART, lines: [CART.lines[0]] });
   await expect(page.locator('.seg.ff [data-v="delivery"]')).toBeDisabled();
   await cta(page).click();
   await expect(page.locator("h1")).toHaveText("Кога ще я вземете?");
   const last = await page.locator(".slot").last().getAttribute("data-v");
-  expect(last).toBe("22:30");
+  expect(last).toBe("23:00");
 });
 
 test("cart: closed kitchen offers an order for tomorrow, without a time tonight", async ({ page }) => {
@@ -313,4 +313,42 @@ test("cart: server refusal is shown and nothing is lost", async ({ page }) => {
   await expect(cta(page)).toContainText("Опитай пак");
   await expect(page.locator("#f-name")).toHaveValue("Мария");
   await expect(page.locator(".ln, .recap")).toHaveCount(1);
+});
+
+/* decision 12.11.2026: the kitchen ACCEPTS orders until 22:30; pickup is ready at the latest at 23:00 (one rule with the core) */
+test("cart 22:15: pickup with a dish from the menu offers 'Възможно най-скоро' and slots, and the order goes through", async ({ page }) => {
+  await open(page, "22:15", { ...CART, mode: "pickup", lines: [CART.lines[0]] });
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Кога ще я вземете?");
+  await expect(page.locator('[data-act-r="asap"]')).toBeVisible();
+  await expect(page.locator(".slot").last()).toHaveAttribute("data-v", "23:00");
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Вашите данни");
+});
+
+for (const [name, status, body] of [
+  ["429", 429, { error: "throttled", message: "Твърде много поръчки от този телефон. Опитайте по-късно или ни се обадете на 0894 36 55 77." }],
+  ["500", 500, { error: "server", message: "Нещо се обърка при нас." }],
+] as const) {
+  test("cart: after " + name + " the focus is on the title of the message" + (status === 429 ? ", the main action is the call" : ""), async ({ page }) => {
+    await page.route("**/api/orders", (r) => r.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }));
+    await toStep3(page);
+    await cta(page).click();
+    await expect(page.locator("#topnotes [data-errh]")).toBeFocused();
+    if (status === 429) {
+      await expect(cta(page)).toHaveAttribute("href", "tel:+359894365577");
+      await expect(cta(page)).toContainText("Обади се · 0894 36 55 77");
+      await expect(page.locator("#topnotes .note.bad")).not.toContainText("Опитайте пак или ни се обадете");
+    } else await expect(cta(page)).toContainText("Опитай пак");
+  });
+}
+
+test("cart: offline send: the focus on the title, no toast on top of the message", async ({ page, context }) => {
+  await toStep3(page);
+  await context.setOffline(true);
+  await cta(page).click();
+  await expect(page.locator("#topnotes [data-errh]")).toBeFocused();
+  await expect(page.locator("#topnotes [data-errh]")).toHaveText("Няма връзка с интернет");
+  await expect(page.locator(".toast.on")).toHaveCount(0);
+  await context.setOffline(false);
 });

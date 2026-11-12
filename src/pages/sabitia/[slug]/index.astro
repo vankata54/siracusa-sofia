@@ -24,7 +24,7 @@ const gs = byId["gratska-salata"];
 const description = ev.n + " от " + ev.time + " в Siracusa, Дружба 2. " + ev.text + " Запазете място: " + R.phone + ".";
 const evLd = JSON.stringify(eventLd(ev, site));
 ---
-<Base page="event" nav={null} back={{ href: url.events(), label: "Събития" }} title={ev.n} docTitle={ev.n + " | Събития"} actionBar
+<Base page="event" nav="events" back={{ href: url.events(), label: "Събития и поводи" }} title={ev.n} docTitle={ev.n + " | Събития"} actionBar
   description={description} jsonld={crumbsLd(site, ev)}>
   <script type="application/ld+json" id="ev-ld" slot="head" set:html={evLd} />
   <div data-ev={ev.id} data-url={pageUrl}>
@@ -64,7 +64,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
     </section>
     <section class="sec rv">
       <div class="sec-h"><h2 class="h2">Снимки от вечерта</h2></div>
-      <div class="ev-mosaic" set:html={photoSlot({ of: "гръцката вечер", ratio: "", tag: "div" }) + photoSlot({ of: "ястие от вечерта", ratio: "", tag: "div" }) + photoSlot({ of: "салона вечерта", ratio: "", tag: "div" })}></div>
+      <div class="ev-mosaic" set:html={photoSlot({ of: ev.n, ratio: "", tag: "div" }) + photoSlot({ of: "ястие от вечерта", ratio: "", tag: "div" }) + photoSlot({ of: "салона вечерта", ratio: "", tag: "div" })}></div>
     </section>
     <Fragment set:html={rulesHTML(ev)} />
     <section class="sec rv">
@@ -76,6 +76,10 @@ const evLd = JSON.stringify(eventLd(ev, site));
 </Base>
 
 <style is:global>
+/* the back bar (phone): the title only after the h1 scrolls away, as on the dish page (no title three times in the first screen) */
+.top.back .ttl{opacity:0; transform:translateY(6px); transition:opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease)}
+.top.back .ttl.on{opacity:1; transform:none}
+
 /* ---------- event page (page-only styles, tokens only); 1:1 from design/pages/event.html ---------- */
 /* ---------- hero ---------- */
 .ev-hero{padding-top:18px; display:grid; gap:22px; grid-template-areas:"head" "ticket" "facts"}
@@ -229,10 +233,14 @@ const evLd = JSON.stringify(eventLd(ev, site));
 
 <script>
   import { SC } from "../../../client/sc.ts";
+  {
+    const t = document.querySelector<HTMLElement>(".top.back .ttl"), h = document.querySelector("h1.ev-title");
+    if (t && h && "IntersectionObserver" in window) new IntersectionObserver((es) => { const en = es[0]; t.classList.toggle("on", !en.isIntersecting && en.boundingClientRect.top < 200); }, { root: null, rootMargin: "-150px 0px 0px 0px" }).observe(h);
+  }
   import { model, cta, barHTML, ticketHTML, factsHTML, nextInner, loadingHTML, errorHTML, protoHTML, googleCalUrl, icsText, type EvModel } from "./_event.ts";
   import { eventLd, sofiaToday } from "../_ld.ts";
   import { events } from "../../../lib/events.ts";
-  import "../../../lib/icons/share-network.ts";
+  import "sc-icons:share-network"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
   const { esc, ic, url, dateLong, RESTAURANT: R } = SC;
   const main = SC.mount();

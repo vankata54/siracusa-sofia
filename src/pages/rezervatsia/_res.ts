@@ -10,10 +10,11 @@ import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
+import { TABLES } from "../../lib/tables.ts";
 import type { Reservation } from "../../client/api-types.ts";
 import { callBtn, stepperHTML, pvChip, pvToggle, previewPanel, PV, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 /* the icons this script draws in one module (sc.ts has x, check, caret-right, phone, question; scripts/icon-groups.mjs) */
-import "sc-icons:caret-left,caret-down,info,mask-happy,clock,minus,plus,timer,wallet,chat-circle-dots,bell,chair,tree,sun,baby,wheelchair,users-three,thermometer,map-trifold,list-bullets,calendar-blank,calendar-check,users,pencil-simple,cake,heart,briefcase,gift,confetti,warning-circle,warning,arrow-right,arrow-left,arrow-up-right,map-pin,fork-knife,lock,sliders-horizontal,image";
+import "sc-icons:arrow-left,arrow-right,arrow-up-right,baby,bell,briefcase,cake,calendar-blank,calendar-check,caret-down,caret-left,chair,chat-circle-dots,clock,confetti,fork-knife,gift,heart,image,info,list-bullets,lock,map-pin,map-trifold,mask-happy,minus,pencil-simple,plus,sliders-horizontal,sun,thermometer,timer,tree,users,users-three,wallet,warning,warning-circle,wheelchair";
 
 type Zone = "salon" | "garden";
 type View = "flow" | "done" | "manage";
@@ -112,13 +113,13 @@ export function start(): void {
     if (heldByOther.has(key(d, m) + "|" + t.id)) return false;
     if (!o || !o.id || o.status === "cancelled" || !same(o.date, d)) return false;
     const no = /^Маса (\d+)/.exec(o.selLabel || ""); /* a booking stored before `table` was kept */
-    const tid = o.table !== undefined ? o.table : no ? SC.TABLES.filter((x) => String(x.n) === no[1])[0]?.id : null;
+    const tid = o.table !== undefined ? o.table : no ? TABLES.filter((x) => String(x.n) === no[1])[0]?.id : null;
     if (tid !== t.id) return false;
     const dur = o.dur || 120; /* resMinutes, the core's default */
     return o.slot < m + dur && m < o.slot + dur;
   }
   const suits = (t: Table, n: number) => n <= 6 && t.seats >= n && t.seats <= n + 2;
-  const zoneTables = (z: Zone) => SC.TABLES.filter((t) => t.zone === z);
+  const zoneTables = (z: Zone) => TABLES.filter((t) => t.zone === z);
   const freeSeats = (z: Zone, d: Date, m: number) => zoneTables(z).filter((t) => !isTaken(t, d, m)).reduce((a, t) => a + t.seats, 0);
   const freeTables = (z: Zone, d: Date, m: number, n: number) => zoneTables(z).filter((t) => !isTaken(t, d, m) && suits(t, n));
   function slotFull(d: Date, m: number, n: number): boolean {
@@ -178,7 +179,7 @@ export function start(): void {
   }
 
   /* ---------- selection & hold (10 min, on this page) ---------- */
-  const tById = (id: string) => SC.TABLES.filter((t) => t.id === id)[0];
+  const tById = (id: string) => TABLES.filter((t) => t.id === id)[0];
   function selInfo(): SelInfo | null {
     if (!st.sel) return null;
     if (st.sel.indexOf("J-") === 0) { const z = st.sel.slice(2) as Zone; return { joined: true, zone: z, label: "Съединени маси", short: "Съединени маси", seats: st.n }; }
@@ -452,8 +453,8 @@ export function start(): void {
     const kv = (k: string, v: string | null | false | undefined) => '<div class="kv"><span>' + k + "</span>" + (v ? "<b>" + v + "</b>" : '<b class="no">избирате</b>') + "</div>";
     return '<aside class="aside" aria-label="Вашата резервация"><div class="shell sum"><div class="core"><h2>Вашата резервация</h2>' +
       kv("Ден", st.date && fShort(st.date)) + kv("Час", st.slot != null && hm(st.slot)) + kv("Хора", ppl(st.n)) + kv("Маса", s && (s.label + " · " + zoneName(s.zone))) +
-      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад</button>" : "") +
-      '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + "Въпроси: " + R.phone + "</li></ul></aside>";
+      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад</button>" : "") +
+      '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + '<a class="link" href="tel:' + R.phoneIntl + '">Обади се · <span class="nw">' + R.phone + "</span></a></li></ul></aside>";
   }
 
   /* ---------- success, manage ---------- */

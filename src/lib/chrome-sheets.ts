@@ -2,8 +2,7 @@
    the runtime chunk on every page does not carry them: src/client/sc-ui.ts imports this file at the first opening.
    The server and pages can import them from here or from lib/index.ts. */
 import { ic } from "./icons.ts";
-import "./icons/caret-right.ts";
-import "./icons/phone.ts";
+import "sc-icons:caret-right,phone"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 import { RESTAURANT } from "./consts.ts";
 import { url, type PageKey } from "./routes.ts";
 

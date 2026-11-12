@@ -6,7 +6,8 @@ import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Celebration, type Reservation, type ReservationStatus, type Subscription } from "./types.ts";
 import { audit } from "./audit.ts";
 import { normPhone, hhmm } from "../lib/format.ts";
-import { TABLES, EVENT_CATS } from "../lib/consts.ts";
+import { EVENT_CATS } from "../lib/consts.ts";
+import { TABLES } from "../lib/tables.ts";
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 
 /** Is "YYYY-MM-DD" a real calendar date? (here, not in lib/time.ts: that module is in the shared runtime) */

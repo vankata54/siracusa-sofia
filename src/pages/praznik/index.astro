@@ -19,7 +19,7 @@ const pkgs = pkgInfos();
 const v: View = { S: fresh(), price: PRICE_DEFAULT, pk: Object.fromEntries(pkgs.map((p) => [p.id, p])), earlyDays: null, early: false, sent: false, sending: false, restored: false, minDate: "", maxDate: "", open: true, beforeOpen: false };
 const hero =
   '<div class="ch-text">' + crumbs([["Събития и поводи", url.page("events")], ["Празник при нас"]]) +
-  '<span class="eyebrow">Калкулатор на празник</span><h1 class="h1">Празник при нас</h1>' +
+  '<h1 class="h1">Празник при нас</h1>' + /* one name (the crumbs above say it too): no third name over the h1 */
   '<p class="lead">Рожден ден, кръщене или фирмено парти. Изберете повод, гости и меню, а управителят ще ви изпрати оферта.</p>' +
   '<div class="perks" role="region" tabindex="0" aria-label="Предимства на празника при нас"><span class="perk ember">' + ic("seal-percent", 18) + '-5% при ранна резервация за празник</span><span class="perk">' + ic("fork-knife", 18) + 'Пакети от нашето меню</span><span class="perk">' + ic("map-pin", 18) + "Салон, градина или цялото място</span></div></div>" +
   feastHTML();
@@ -28,7 +28,7 @@ const hero =
   description="Рожден ден, кръщене, юбилей или фирмено парти в Siracusa, Дружба 2. Изберете повод, гости и меню от нашата кухня и получете оферта. -5% при ранна резервация."
   bottomNav={false} ai={false} actionBar jsonld={jsonld}>
   <section class="wrap ch" set:html={hero}></section>
-  <section class="wrap calc" id="calc" aria-label="Калкулатор на празник">
+  <section class="wrap calc" id="calc" aria-label="Изчисли празника">
     <div class="calc-grid">
       <div class="flow" data-flow set:html={flowHTML(v)}></div>
       <aside class="aside" aria-label="Вашият празник"><div class="shell sumcard"><div class="core" data-aside set:html={asideHTML(v)}></div></div></aside>
@@ -260,8 +260,8 @@ input[type="date"].input{padding-right:12px; min-width:0}
 .cbtns .pill-red{flex:1}
 .cbtns .pill-line{flex:none; background:var(--surface)}
 .cbtns .pill[hidden],.sum-btns .pill[hidden]{display:none}
-.sum-btns{display:flex; gap:8px; margin-top:16px}
-.sum-btns .pill-red{flex:1}
+.sum-btns{display:grid; gap:4px; margin-top:16px}
+.sum-btns [hidden]{display:none}
 .cbar[hidden]{display:none}
 
 /* success */

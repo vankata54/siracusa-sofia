@@ -21,7 +21,7 @@ export function payAnswer(): string {
   const d = RESTAURANT.cardOnDelivery;
   const p = RESTAURANT.payment.map(low).map((x) =>
     isCard(x) ? (d === true ? x : addNote(x, d === false ? "в ресторанта; при доставка в брой" : "при доставка " + miss(MISS.cardTerminal)))
-      : isVoucher(x) ? x + " " + miss(MISS.vouchers) + " " + RESTAURANT.voucherNote : x);
+      : isVoucher(x) ? x + " " + RESTAURANT.voucherNote + " " + miss(MISS.vouchers) : x);
   return join(p) + ". " + ONLINE;
 }
 /** plain text without [ЛИПСВА] and without a promise that is not known (FAQPage JSON-LD) */

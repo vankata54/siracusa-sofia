@@ -47,7 +47,7 @@ const mapEmbed = "https://www.google.com/maps?output=embed&hl=bg&q=" + encodeURI
 const jsonld = restaurantLd(Astro.site);
 ---
 <Base page="home" nav={null} title="Начало" docTitle="Пица на пещ и скара в Дружба 2"
-  description="Siracusa Bar & Grill в ж.к. Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка. Всеки ден 10:00 - 23:00, доставка до 21:00."
+  description="Siracusa в ж.к. Дружба 2, София: пица на пещ, скара на дървени въглища във фурна Bertha, обедно меню с доставка. Всеки ден 10:00 - 23:00, доставка до 21:00."
   jsonld={jsonld}>
   <div class="homepg" data-home data-lunch-date={MENU_LUNCH_DATE}>
   <!-- ---------- hero: simulated 8 - 15 s clip ([ЛИПСВА: видео]) under the floating header ---------- -->
@@ -428,7 +428,7 @@ const jsonld = restaurantLd(Astro.site);
   import { lunchTileText, goHTML, etaInner, eventsHTML, deliveryNote, dotHTML, firstOfferKey, greekLead, checkAddress, popErrHTML } from "./_home.ts";
   import { previewPanel, PV } from "../lib/ui.ts";
   /* the icons this script draws itself (the server ones are already in the HTML) */
-  import "sc-icons:pause,play,arrow-right,moped,warning-circle,check-circle,map-pin,storefront,calendar-check,calendar-blank,hourglass,confetti,seal-percent"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+  import "sc-icons:arrow-right,calendar-blank,calendar-check,check-circle,confetti,hourglass,map-pin,moped,pause,play,seal-percent,sliders-horizontal,storefront,warning-circle"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
   const main = SC.mount();
   const home = main.querySelector<HTMLElement>("[data-home]")!;

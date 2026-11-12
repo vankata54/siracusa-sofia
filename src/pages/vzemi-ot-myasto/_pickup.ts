@@ -8,9 +8,10 @@ import { fmt, esc, hhmm, DAYS } from "../../lib/format.ts";
 import { ic } from "../../lib/icons.ts";
 import { url } from "../../lib/routes.ts";
 import { pic, plusBtn } from "../../lib/render.ts";
-import { price, pickupSlots, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
+import { price, pickupSlots, pickupToday, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
 import type { State } from "../../lib/status.ts";
 import { hourNote, stateBox, loadingText } from "../../lib/ui.ts";
+import "sc-icons:arrow-clockwise,clock,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 import type { Cart } from "../../lib/cart.ts";
 
 /* ---------- hours and rules (from src/lib) ---------- */
@@ -54,7 +55,8 @@ export function plan(kind: Kind, s: State, busy: boolean): Plan {
   const m = s.m, lead = leadOf(kind);
   let day: Plan["day"] = "today", base: number;
   if (m < OPEN) base = OPEN;
-  else if (s.kitchen && m + lead <= KITCHEN_END) base = m;
+  /* the one pickup rule (lib/pricing.ts pickupToday, decision 12.11.2026): orders until 22:30, ready at the latest at 23:00 */
+  else if (pickupToday({ earliest: m + lead, mode: "pickup" }, m).ok) base = m;
   else { day = "tomorrow"; base = OPEN; }
   const start = base + lead, asap = lead ? Math.ceil(start / 5) * 5 : start, b = busy && day === "today";
   const slots = pickupSlots({ earliest: asap, mode: "pickup" }, base).map((t) => ({ t, full: b && t < m + 60 }));
@@ -134,8 +136,8 @@ export function liveHTML(v: LiveView): string {
   const s = v.s, sim = s ? v.sim : "loading", p = s ? plan(v.kind, s, v.busy) : null;
   const res = p && s && sim !== "offline" && sim !== "error" ? resultHTML(p, s, v.chosen, v.tomorrow) : "";
   const body = sim === "loading" || !p ? skeletonHTML()
-    : sim === "offline" ? errHTML("wifi", "Свободните часове ще се покажат, щом се свържете. Можете и да ни се обадите.")
-    : sim === "error" ? errHTML("err", "Опитайте пак след малко или поръчайте по телефона.")
+    : sim === "offline" ? errHTML("wifi", "")
+    : sim === "error" ? errHTML("err", "")
     : slotsHTML(p, v.chosen, v.tomorrow);
   return '<div class="pk-lh"><h2 class="h3" id="pk-live-h">Кога ще е готово?</h2>' + nowLine(s) + "</div>" +
     '<p class="pk-q">Какво ще поръчате?</p>' + segHTML(v.kind) +

@@ -7,7 +7,7 @@ import { esc, plural } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ZONES } from "../../lib/consts.ts";
 import { stateBox, loadingText, hourNote, OFFLINE } from "../../lib/ui.ts";
-import "sc-icons:warning-circle,moon,storefront,shopping-bag,check-circle,phone,pause,play,caret-down"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+import "sc-icons:arrow-clockwise,caret-down,check-circle,clock,globe,moon,pause,phone,play,shopping-bag,storefront,warning-circle"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const STEPS: [string, string][] = [
   ["Огънят е затворен", "Дървените въглища горят в затворена камера, а не на открито."],
@@ -144,5 +144,5 @@ export function skeletonHTML(n: number): string {
   return '<p class="vh" role="status">' + loadingText("ястията") + '</p><div class="grid-dishes">' + s + "</div>";
 }
 export function errorHTML(): string {
-  return stateBox({ kind: "error", what: "ястията", text: "Опитайте пак след малко. Можете да поръчате и по телефона.", h: "h3" });
+  return stateBox({ kind: "error", what: "ястията", h: "h3" });
 }

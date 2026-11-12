@@ -9,12 +9,35 @@ import { fileURLToPath } from "node:url";
 
 /** bytes, uncompressed (not KiB): docs/DECISIONS.md 12.11.2026 */
 export const RUNTIME_BUDGET = 30000;
+/** the shared components chunk (_astro/ui.*.js, lib/ui.ts, without icons): its own budget, uncompressed (DECISIONS 12.11.2026) */
+export const UI_BUDGET = 6000;
+/** meta description of an indexable page: at most this many characters (search results cut the rest) */
+export const DESCRIPTION_MAX = 160;
 
 /** the runtime chunk(s) in a build folder: [{file, bytes}] */
 export function runtimeSizes(dir) {
   const a = path.join(dir, "_astro");
   if (!fs.existsSync(a)) return [];
   return fs.readdirSync(a).filter((f) => /^sc\.[\w-]+\.js$/.test(f)).map((f) => ({ file: f, bytes: fs.statSync(path.join(a, f)).size }));
+}
+
+/** the shared components chunk(s): [{file, bytes}] */
+export function uiSizes(dir) {
+  const a = path.join(dir, "_astro");
+  if (!fs.existsSync(a)) return [];
+  return fs.readdirSync(a).filter((f) => /^ui\.[\w-]+\.js$/.test(f)).map((f) => ({ file: f, bytes: fs.statSync(path.join(a, f)).size }));
+}
+
+const decode = (s) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+/** indexable pages (no noindex) whose meta description is longer than DESCRIPTION_MAX: [{page, length}] */
+export function longDescriptions(dir) {
+  return htmlFiles(dir).map((f) => {
+    const h = fs.readFileSync(f, "utf8");
+    if (/<meta name="robots" content="[^"]*noindex/.test(h)) return null;
+    const m = /<meta name="description" content="([^"]*)"/.exec(h);
+    const n = m ? decode(m[1]).length : 0;
+    return n > DESCRIPTION_MAX ? { page: path.relative(dir, f), length: n } : null;
+  }).filter(Boolean);
 }
 
 function htmlFiles(dir) {
@@ -53,6 +76,14 @@ export function buildChecks({ site, demo }) {
         for (const s of sizes) {
           if (s.bytes > RUNTIME_BUDGET) throw new Error("build-checks: the shared runtime " + s.file + " is " + s.bytes + " B, over the budget of " + RUNTIME_BUDGET + " B (docs/DECISIONS.md 12.11.2026)");
           logger.info("runtime " + s.file + ": " + s.bytes + " / " + RUNTIME_BUDGET + " B");
+        }
+        for (const s of uiSizes(d)) {
+          if (s.bytes > UI_BUDGET) throw new Error("build-checks: the shared components chunk " + s.file + " is " + s.bytes + " B, over the budget of " + UI_BUDGET + " B (docs/DECISIONS.md 12.11.2026)");
+          logger.info("components " + s.file + ": " + s.bytes + " / " + UI_BUDGET + " B");
+        }
+        if (!demo) {
+          const long = longDescriptions(d);
+          if (long.length) throw new Error("build-checks: meta description over " + DESCRIPTION_MAX + " characters: " + long.map((x) => x.page + " (" + x.length + ")").join(", "));
         }
         const r = seoFiles(d, site, demo);
         logger.info(demo ? "robots.txt: Disallow: / (demo)" : "sitemap.xml: " + r.urls + " pages, robots.txt");

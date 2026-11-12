@@ -10,8 +10,10 @@
      previewPanel  "Само в прегледа" + pvChip / pvToggle with the same labels (PV)
    Pure strings: works on the server (Astro) and in the page scripts. NOT part of the shared runtime (sc.ts). */
 import { ic } from "./icons.ts";
-/* the icons of these components in ONE module inside this chunk (scripts/icon-groups.mjs): no tiny shared icon chunks */
-import "sc-icons:phone,warning-circle,globe,arrow-clockwise,clock,image,video-camera,map-pin,map-trifold,sliders-horizontal";
+/* NO icons here (the module would carry them to every page, and twice): the module that calls a function in the browser
+   registers its icons in its own group ("sc-icons:…"): stateBox warning-circle, globe, arrow-clockwise; hourNote clock;
+   previewPanel sliders-horizontal; photoSlot image, video-camera; mapSlot map-pin, map-trifold (phone is in the runtime).
+   On the server every icon is there. */
 import { RESTAURANT as R } from "./consts.ts";
 import { MISS, type MissKey } from "./miss.ts";
 import { esc } from "./format.ts";
@@ -62,7 +64,8 @@ export interface StateOpts {
 export function stateBox(o: StateOpts): string {
   const off = o.kind === "offline";
   const title = off ? OFFLINE : errTitle(o.what);
-  const text = o.text || (off ? "Проверете връзката и опитайте пак. Можете и да поръчате по телефона." : "Опитайте пак след малко или ни се обадете.");
+  /* one short sentence everywhere (site.review-consistency, кръг 2 Д3) */
+  const text = o.text || (off ? "Проверете връзката и опитайте пак." : "Опитайте пак след малко или ни се обадете.");
   const retry = o.retry === "" ? "" : '<button class="pill pill-red" type="button" ' + (o.retry || "data-retry") + ">" + ic("arrow-clockwise", 20) + RETRY + "</button>";
   const h = o.h || "h2";
   return '<div class="empty sc-state' + (o.cls ? " " + o.cls : "") + '" role="' + (o.role || "alert") + '"><span class="ill">' + ic(off ? "globe" : "warning-circle", 44) + "</span><" + h + ' class="h3">' + esc(title) + "</" + h + '><p class="muted">' + text + '</p><div class="acts">' + retry + callBtn("pill pill-line") + "</div></div>";

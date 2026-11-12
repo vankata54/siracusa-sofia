@@ -2,6 +2,7 @@
    Numbers come only from the data (menu, zones); history, team, photos, seats and parking stay [ЛИПСВА]. */
 import { payAnswer } from "../../lib/pay.ts";
 import { photoSlot, miss, faqHead } from "../../lib/ui.ts";
+import "sc-icons:image,video-camera"; /* the icons of the shared components it draws (lib/ui.ts) */
 import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT, ZONES } from "../../lib/consts.ts";
 import { items, cats, inCat, lunch } from "../../lib/data.ts";

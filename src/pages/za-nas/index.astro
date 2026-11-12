@@ -45,6 +45,9 @@ const description = "Квартален ресторант в Дружба 2, С
 /* photo slot: designed placeholder until the new photo shoot */
 .ab-slot{aspect-ratio:4/3}
 .ab-slot.ab-hero-slot{aspect-ratio:5/4}
+/* the hero: the mark top left (as in the prototype), the plate bottom right never covers it */
+.ab-slot.ab-hero-slot{place-items:start; align-content:start; justify-items:start; text-align:left; padding:20px 20px 52px}
+.ab-slot.ab-hero-slot .missing{max-width:55%}
 .ab-slot.tall{aspect-ratio:3/4}
 
 /* values */

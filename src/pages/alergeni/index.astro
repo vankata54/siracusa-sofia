@@ -44,7 +44,7 @@ const jsonld = [
   ] },
   { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: faqText(q[1]) } })) },
 ];
-const description = "Алергени във всички ястия на Siracusa Bar & Grill, Дружба 2: 14-те основни алергена по Регламент (ЕС) 1169/2011, търсене и филтър „Без глутен“, „Без мляко“ и други.";
+const description = "Алергени във всички ястия на Siracusa, Дружба 2: 14-те основни алергена по Регламент (ЕС) 1169/2011, търсене и филтър „Без глутен“, „Без мляко“ и други.";
 /* the phone icon of the shared call buttons from the page sprite (the HTML of this page has a size budget) */
 const sp = (h: string) => h.replace(ic("phone", 20), u("phone", 20));
 ---
@@ -82,7 +82,7 @@ const sp = (h: string) => h.replace(ic("phone", 20), u("phone", 20));
   <section class="sec ref" id="ref" aria-labelledby="ref-h"><h2 class="h2" id="ref-h">Какво включва всеки алерген</h2>
     <p class="lead">Регламент (ЕС) 1169/2011 задължава ресторантите да посочват тези 14 алергена. До всеки е колко ястия от менюто го съдържат по състава.</p>
     <div class="rgrid">{AL.map((a) => (
-      <div class="rcard rv"><span class="ri" set:html={u(a[2], 24)}></span><div><h3>{a[1]}<small>{COUNT[a[0]] ? "в " + plural(COUNT[a[0]]) : "не е открит в състава"}</small></h3><p>{DESC[a[0]]}</p></div></div>
+      <div class="rcard rv"><span class="ri" set:html={u(a[2], 24)}></span><div><h3>{a[1]}<small>{COUNT[a[0]] ? "в " + plural(COUNT[a[0]]) : "няма в състава"}</small></h3><p>{DESC[a[0]]}</p></div></div>
     ))}</div>
   </section>
 
@@ -375,7 +375,7 @@ svg.ic{fill:currentColor}
 <script>
   import { SC } from "../../client/sc.ts";
   import { api } from "../../client/api.ts";
-  import "../../lib/icons/eye.ts";
+  import "sc-icons:eye,sliders-horizontal"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
   import { AL, summaryText, ndSummaryHTML, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE, noun } from "./_alergeni.ts";
   import { previewPanel, pvChip, PV, loadingText } from "../../lib/ui.ts";
   import type { Dish } from "../../lib/data.ts";

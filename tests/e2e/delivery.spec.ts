@@ -104,7 +104,7 @@ test("delivery 21:30 and 23:30: pickup until 22:30, then tomorrow", async ({ pag
   await expect(zcard(page)).toContainText("НПЗ Искър");
   const go = zcard(page).getByRole("link", { name: /Поръчай за вземане/ });
   await expect(go).toHaveAttribute("href", /\/vzemi-ot-myasto\/$/);
-  await expect(page.locator("[data-end]")).toContainText("Доставката приключи за днес.");
+  await expect(page.locator("[data-end]")).toContainText("Доставката приключи за днес"); /* headings without a full stop */
   await expect(page.locator("[data-tl]")).toContainText("Доставката приключи за днес · Вземане до 22:30.");
   await go.evaluate((a) => a.addEventListener("click", (e) => e.preventDefault()));
   await go.click();
@@ -113,7 +113,7 @@ test("delivery 21:30 and 23:30: pickup until 22:30, then tomorrow", async ({ pag
   await page.goto("/dostavka/?preview=1&t=23:30");
   await expect(page.locator("[data-dl][data-ready]")).toHaveCount(1);
   await expect(page.locator("[data-live]")).toContainText("Кухнята затвори за днес · Приемаме поръчки утре от 10:00");
-  await expect(page.locator("[data-end]")).toContainText("Кухнята затвори за днес.");
+  await expect(page.locator("[data-end]")).toContainText("Кухнята затвори за днес");
   await expect(zcard(page)).toContainText("утре от 10:00");
   expect(errors).toEqual([]);
 });

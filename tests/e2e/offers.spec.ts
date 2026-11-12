@@ -100,6 +100,8 @@ test("offers: voucher inquiry through api.feedback, amount in the button", async
   await open(page, "12:30", "#voucher");
   await page.locator('[data-sheet="voucher"]').click();
   const sh = page.locator(".sheetwrap.on");
+  /* the sheet moves the focus to the sum after its animation (380 ms): type only after that (site.review-tech, кръг 2 Д7) */
+  await expect(sh.locator("#v-sum")).toBeFocused();
   await sh.locator("#v-sum").fill("25");
   await expect(sh.locator("[data-go]")).toHaveText("Поискай ваучер за 25,00 €");
   await sh.locator("#v-name").fill("Мария");

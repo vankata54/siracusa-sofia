@@ -10,7 +10,8 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural, MON, MONTHS, DAYS, DAYS_SHORT } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import type { State } from "../../lib/status.ts";
-import { stateBox, missText } from "../../lib/ui.ts";
+import { stateBox, missText, OFFLINE } from "../../lib/ui.ts";
+import "sc-icons:arrow-clockwise,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 /* ---------- data from the server (real lunch dishes, prices from pricing.ts) ---------- */
 export interface OfEx { n: string; p: number; now: number; disc: number }
@@ -157,7 +158,7 @@ export function heroHTML(live: OfLive | null, d: OfData): string {
     } else {
       const g = live.ls.d, ev = live.ev;
       const note = s.lunchDiscount ? "Обедното меню се качва всяка сутрин. -30% при вземане от " + L + " до " + K + "."
-        : "Кухнята приема поръчки от 10:00. -30% на обедното меню: " + (m < 600 ? "днес" : "утре") + " от " + L + ".";
+        : "Приемаме поръчки " + (m < 600 ? "днес" : "утре") + " от 10:00. -30% на обедното меню: " + (m < 600 ? "днес" : "утре") + " от " + L + ".";
       o = { live: live.ls.days === 0 ? "Днес от " + ev.time : DAYS_SHORT[g.getDay()] + ", " + g.getDate() + " " + MONTHS[g.getMonth()] + " · " + ev.time,
         kick: "Последната събота от месеца", big: true, title: ev.n, text: ev.text, go: "Запази място", href: url.event(ev.id), extra: soon(note) };
     }
@@ -175,6 +176,6 @@ export const heroSkel = () => '<div class="shell" aria-hidden="true"><div class=
 export const couponSkel = () => '<div class="shell" aria-hidden="true"><div class="core"><div class="skel sk-top"></div><div class="pad" style="display:grid;gap:12px"><span class="skel" style="height:24px;width:62%"></span><span class="skel sk-line"></span><span class="skel sk-line" style="width:84%"></span><span class="skel sk-line" style="width:70%"></span><span class="skel" style="height:48px;border-radius:999px;margin-top:8px"></span></div></div></div>';
 /* the shared box (lib/ui.ts): same title words and buttons as on every page */
 export function errorHTML(_phone?: string, _phoneIntl?: string): string {
-  return stateBox({ kind: "error", what: "офертите", h: "h3", text: "Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите." });
+  return stateBox({ kind: "error", what: "офертите", h: "h3" });
 }
-export const netHTML = () => '<div class="of-net" role="status">' + ic("warning", 22) + "<p><b>Няма връзка с интернет.</b> Показваме последно заредените оферти. Запитванията можете да изпратите, когато връзката се върне.</p></div>";
+export const netHTML = () => '<div class="of-net" role="status">' + ic("warning", 22) + "<p><b>" + OFFLINE + "</b><br>Показваме последно заредените оферти. Запитванията можете да изпратите, когато връзката се върне.</p></div>";

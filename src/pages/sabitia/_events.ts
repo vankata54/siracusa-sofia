@@ -8,38 +8,9 @@ import type { SiteEvent } from "../../lib/events.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, plural, MON, MONTHS, DAYS_SHORT } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
-import { photoSlot, stateBox, loadingText, missText, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { photoSlot, stateBox, loadingText, missText, MKT_TITLE, MKT_SUB, OFFLINE } from "../../lib/ui.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
-import "../../lib/icons/music-notes.ts";
-import "../../lib/icons/globe.ts";
-import "../../lib/icons/confetti.ts";
-import "../../lib/icons/cake.ts";
-import "../../lib/icons/baby.ts";
-import "../../lib/icons/heart.ts";
-import "../../lib/icons/briefcase.ts";
-import "../../lib/icons/star.ts";
-import "../../lib/icons/balloon.ts";
-import "../../lib/icons/users-three.ts";
-import "../../lib/icons/calendar-blank.ts";
-import "../../lib/icons/calendar-check.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/ticket.ts";
-import "../../lib/icons/users.ts";
-import "../../lib/icons/caret-right.ts";
-import "../../lib/icons/image.ts";
-import "../../lib/icons/images.ts";
-import "../../lib/icons/hourglass.ts";
-import "../../lib/icons/bell.ts";
-import "../../lib/icons/seal-percent.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/warning.ts";
-import "../../lib/icons/phone.ts";
-import "../../lib/icons/chat-circle-dots.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/check.ts";
-import "../../lib/icons/pencil-simple.ts";
-import "../../lib/icons/eye.ts";
+import "sc-icons:arrow-clockwise,arrow-right,baby,balloon,bell,briefcase,cake,calendar-blank,calendar-check,caret-right,chat-circle-dots,check,clock,confetti,eye,globe,heart,hourglass,image,images,info,music-notes,pencil-simple,phone,seal-percent,star,ticket,users,users-three,video-camera,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 /* ---------- categories ---------- */
 export const PUBLIC = ["Жива музика", "Тематични вечери", "Празници"];
@@ -99,7 +70,7 @@ function ctile(d: Date) { return '<span class="ctile" aria-hidden="true"><span c
 
 export function realCard(x: Item, today: Date, feat?: boolean): string {
   const e = x.e!, d = x.date!, n = daysTo(d, today);
-  const price = e.price != null ? '<span class="price">' + e.price.toFixed(2).replace(".", ",") + " €</span>" : e.free ? "Вход свободен" : '<span class="missing">[ЛИПСВА: цена или вход свободен]</span>';
+  const price = e.price != null ? '<span class="price">' + e.price.toFixed(2).replace(".", ",") + " €</span>" : e.free ? "Вход свободен" : '<span class="missing">' + missText("price") + "</span>";
   /* the one photo slot of the site (lib/ui.ts) with the date tile and "След N дни" over it */
   const media = '<div class="ev-media">' + photoSlot({ of: e.n, ratio: "", tag: "div" }) + ctile(d) + '<span class="flag">' + ic("clock", 16) + inDays(n) + "</span></div>";
   return '<article class="ev shell' + (feat ? " feat" : "") + '" id="ev-' + x.key + '" aria-labelledby="t-' + x.key + '"><div class="core">' + media +
@@ -150,7 +121,7 @@ export interface ListState { tab: "up" | "past"; cat: string | null; mode: Mode 
 export function listHTML(st: ListState, all: Item[], today: Date): { html: string; count: string } {
   let html = "", count = "";
   if (st.mode === "loading") { html = skeletonHTML(); count = loadingText("събитията"); }
-  else if (st.mode === "error") html = stateBox({ kind: "error", what: "събитията", text: "Проверете връзката с интернет и опитайте пак. Можете и да ни се обадите.", h: "h3", cls: "ev-empty" }); else if (st.tab === "up") {
+  else if (st.mode === "error") html = stateBox({ kind: "error", what: "събитията", h: "h3", cls: "ev-empty" }); else if (st.tab === "up") {
     if (st.cat && OCC[st.cat]) { html = occPanel(st.cat); count = "Празник по ваш избор: вие избирате датата"; }
     else {
       const L = (st.mode === "ok" ? upcoming(all, today) : []).filter((x) => !st.cat || x.cat === st.cat);
@@ -229,7 +200,7 @@ export function subFormHTML(want: string[], draft: string): string {
     '<fieldset><legend class="label">Какво ви интересува?</legend><div class="wrapchips">' + WANT.map((c) => '<button class="chip" type="button" data-want="' + esc(c) + '" aria-pressed="' + want.includes(c) + '">' + ic(CATI[c], 18) + esc(c) + "</button>").join("") + '</div><p class="help small muted" style="margin:0">Ако не изберете нищо, ще ви пишем за всички събития.</p></fieldset>' +
     '<div class="field"><label for="sub-email">Имейл</label><input class="input" id="sub-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="ime@primer.bg" aria-describedby="sub-email-err" value="' + esc(draft) + '"><p class="err" id="sub-email-err" hidden></p></div>' +
     '<div><label class="check"><input type="checkbox" id="sub-ok" name="consent" aria-describedby="sub-ok-err"><span><b>' + MKT_TITLE + '</b><br><span class="muted small">' + MKT_SUB + '</span></span></label><p class="err small" id="sub-ok-err" style="margin:0" hidden></p></div>' +
-    '<div class="neterr" role="alert" data-neterr hidden>' + ic("warning", 22) + "<p><b>Няма връзка с интернет.</b> Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>" +
+    '<div class="neterr" role="alert" data-neterr hidden>' + ic("warning", 22) + "<p><b>" + OFFLINE + "</b><br>Имейлът ви е запазен тук. Проверете връзката и натиснете бутона пак.</p></div>" +
     '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("bell", 20) + "Абонирай ме за събитията</button>" +
     "</form>";
 }

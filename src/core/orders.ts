@@ -17,7 +17,7 @@ import { audit } from "./audit.ts";
 import { getSettings } from "./settings.ts";
 import { findCode, markCodeUsed } from "./codes.ts";
 import { bonusTaken, markBonusTaken } from "./customers.ts";
-import { price, parseMods, slotAllowed } from "../lib/pricing.ts";
+import { price, parseMods, slotAllowed, pickupToday } from "../lib/pricing.ts";
 import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
 import { hasStreet, zoneByName, zoneOfAddress } from "../lib/zones.ts";
 export { hasStreet };
@@ -153,7 +153,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
 
   const slot = String(input.slot || "asap");
   if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
-  else if (mode === "pickup" && slot !== "asap" && !slotAllowed(P, slot, ctx.clock, false)) errs.slot = MSG.slot;
+  else if (mode === "pickup" && (slot === "asap" ? !pickupToday(P, ctx.clock).asap : !slotAllowed(P, slot, ctx.clock, false))) errs.slot = MSG.slot; /* the one pickup rule (lib/pricing.ts) */
   if (Object.keys(errs).length) invalid(errs);
   /* a big order goes by phone (the office has its own limits per person, the sum limit is the same) */
   if ((input.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);

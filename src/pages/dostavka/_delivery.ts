@@ -182,7 +182,7 @@ export function payHTML(): string {
   return '<div class="pay rv">' +
     '<div class="card"><span class="pi">' + ic("money", 26) + "</span><div><h3>В брой</h3><p>Плащате на шофьора, когато получите поръчката.</p></div></div>" +
     '<div class="card"><span class="pi">' + ic("credit-card", 26) + '</span><div><h3>Карта при получаване</h3><p>Visa или Mastercard. <span class="missing">' + missText("cardTerminal") + "</span></p></div></div>" +
-    '<div class="card"><span class="pi">' + ic("ticket", 26) + '</span><div><h3>Ваучер</h3><p>Ваучери за храна ' + RESTAURANT.voucherNote + '. <span class="missing">' + missText("vouchers") + "</span></p></div></div>" +
+    '<div class="card"><span class="pi">' + ic("ticket", 26) + '</span><div><h3>Ваучер</h3><p>Ваучер ' + RESTAURANT.voucherNote + '. <span class="missing">' + missText("vouchers") + "</span></p></div></div>" +
     "</div>" +
     '<p class="paynote">' + ic("info", 20) + "<span>Онлайн плащане засега няма. Никой няма да ви поиска данни за карта предварително.</span></p>";
 }
@@ -215,10 +215,11 @@ export function faqHTML(): string {
 /* ---------- closing CTA ---------- */
 export function endHTML(v: View): string {
   const S = v.S, a = action(null, v);
-  const title = S.delivery ? "Доставяме днес до 21:00." : hourTitle(S) + ".";
+  /* headings without a full stop (as every heading of the site); the line under it in the words of the hour note */
+  const title = S.delivery ? "Доставяме днес до 21:00" : hourTitle(S);
   const lead = S.delivery ? "Изберете от менюто. Адресът, зоната и времето се виждат в количката, преди да поръчате."
     : S.kitchen ? "Утре доставяме от 10:00. Днес можете да вземете поръчката си от ресторанта до 22:30."
-      : S.m < 600 ? "Разгледайте менюто отсега. Кухнята приема поръчки до 22:30." : "Кухнята приема поръчки до 22:30. Можете да изберете отсега.";
+      : hourLine(S) + ". Изберете сега и поръчайте за " + (S.m < 600 ? "днес." : "утре.");
   return '<div><h2 class="h2">' + title + '</h2><p class="lead" style="margin-top:10px">' + lead + "</p></div>" +
     '<div class="btns"><a class="pill pill-red go" href="' + a.href + '" data-mode="' + a.mode + '">' + esc(a.label) + '<span class="knob">' + ic("arrow-right", 22) + "</span></a>" +
     (a.mode === "pickup" ? '<a class="pill pill-line pill-lg" href="' + url.menu() + '">' + ic("fork-knife", 20) + "Разгледай менюто</a>"

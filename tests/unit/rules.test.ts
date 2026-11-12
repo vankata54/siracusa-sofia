@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { createCore, MemoryRepo, publicOrder, type Ctx, type Order } from "../../src/core/index.ts";
 import { lunch, items, isOut, byId } from "../../src/lib/data.ts";
-import { price, parseMods, slotAllowed } from "../../src/lib/pricing.ts";
+import { price, parseMods, slotAllowed, pickupToday } from "../../src/lib/pricing.ts";
 import { eta, setKitchen, KITCHEN_DEFAULT } from "../../src/lib/status.ts";
 import { eventsJson } from "../../src/lib/events-json.ts";
 import { sofiaEpoch, addDaysYmd } from "../../src/lib/time.ts";
@@ -75,12 +75,13 @@ describe("hours: delivery until 21:00, kitchen until 22:30, lunch only today", (
 
 describe("pickup time", () => {
   const P = { mode: "pickup" as const, earliest: 770 }; /* 12:30 + 20 min */
-  it("format, future, 15 min step, 20 min for the kitchen, 3 hours ahead, until 22:30", () => {
+  it("format, future, 15 min step, 20 min for the kitchen, 3 hours ahead, ready until 23:00 (decision 12.11.2026)", () => {
     expect(slotAllowed(P, "13:00", "12:30")).toBe(true);
     for (const s of ["xx", "3:00", "12:45", "13:10", "15:45", "23:45", "03:00", "", "asap"]) expect(slotAllowed(P, s, "12:30")).toBe(false);
     expect(slotAllowed(P, "15:30", "12:30")).toBe(true);
     expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "22:30", "21:30")).toBe(true);
-    expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "22:45", "21:30")).toBe(false);
+    expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "23:00", "21:30")).toBe(true); /* accepted until 22:30, ready until closing */
+    expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "23:15", "21:30")).toBe(false);
     expect(slotAllowed(P, "10:30", "12:30", true)).toBe(true);
     expect(slotAllowed({ mode: "delivery", earliest: 750 }, "21:00", "12:30", true)).toBe(false);
   });
@@ -495,7 +496,7 @@ describe("payAnswer: one answer about payment from RESTAURANT.payment", () => {
   it("HTML with [ЛИПСВА] for the voucher name, plain text without it", async () => {
     const { payAnswer, payAnswerText } = await import("../../src/lib/pay.ts");
     /* three ways (site.review-consistency Б2): the gift card is part of "Ваучер", never a fourth way */
-    expect(payAnswer()).toBe('В брой, карта при получаване (Visa, Mastercard; при доставка <span class="missing">[ЛИПСВА: терминал за карти в колата]</span>) или ваучер <span class="missing">[ЛИПСВА: името на ваучерите]</span> (и подаръчна карта). Онлайн плащане засега няма: плащате, когато получите поръчката.');
+    expect(payAnswer()).toBe('В брой, карта при получаване (Visa, Mastercard; при доставка <span class="missing">[ЛИПСВА: терминал за карти в колата]</span>) или ваучер (и подаръчна карта) <span class="missing">[ЛИПСВА: името на ваучерите]</span>. Онлайн плащане засега няма: плащате, когато получите поръчката.');
     expect(payAnswerText()).toBe("В брой, карта при получаване (Visa, Mastercard) в ресторанта или ваучер (и подаръчна карта). За карта при доставка ни попитайте по телефона. Онлайн плащане засега няма: плащате, когато получите поръчката.");
     expect(payAnswer()).not.toMatch(/Sodexo/);
   });
@@ -603,5 +604,34 @@ describe("round 8: order size limits, office per person / people / sum", () => {
     let n = 0;
     await expect((async () => { for (; n < 60; n++) await core.office.join(o2.code, { name: "К" + n, lines: [{ id: priciest.id, q: 10, mods: [], extra: 0 }] }); })()).rejects.toMatchObject({ code: "too_big" });
     expect(n * 10 * priciest.p).toBeLessThanOrEqual(500);
+  });
+});
+
+describe("pickup today: one rule for the core and the cart (decision 12.11.2026, kitchen accepts until 22:30)", () => {
+  const pk = (clock: string) => price(pickup([L(pizza.id, 1)]), { clock });
+  it("22:09 and 22:17: 'Възможно най-скоро' and slots every 15 min up to 23:00, never sooner than 20 min", () => {
+    const a = pickupToday(pk("22:09"), "22:09");
+    expect(a).toEqual({ ok: true, asap: true, slots: [22 * 60 + 30, 22 * 60 + 45, 23 * 60] });
+    const b = pickupToday(pk("22:17"), "22:17");
+    expect(b).toEqual({ ok: true, asap: true, slots: [22 * 60 + 45, 23 * 60] });
+    expect(slotAllowed(pk("22:17"), "22:45", "22:17")).toBe(true);
+    expect(slotAllowed(pk("22:17"), "22:30", "22:17")).toBe(false); /* sooner than 20 min */
+    expect(slotAllowed(pk("22:17"), "23:15", "22:17")).toBe(false); /* after closing */
+  });
+  it("22:30 and 22:31: nothing today", () => {
+    for (const t of ["22:30", "22:31"]) expect(pickupToday(pk(t), t)).toEqual({ ok: false, asap: false, slots: [] });
+  });
+  it("the core: 22:09 and 22:17 accept 'asap' and a slot, 22:30 and 22:31 refuse with 'closed'", async () => {
+    for (const t of ["22:09", "22:17"]) {
+      const { core } = mk(t);
+      const o = await core.orders.create({ ...base, cart: pickup([L(pizza.id, 1)]), slot: "asap" });
+      expect(o.at).toMatch(/^22:[2-5]\d$/);
+      const o2 = await core.orders.create({ ...base, phone: "0888 12 34 57", cart: pickup([L(pizza.id, 1)]), slot: "23:00" });
+      expect(o2.at).toBe("23:00");
+    }
+    for (const t of ["22:30", "22:31"]) {
+      const { core } = mk(t);
+      await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1)]), slot: "asap" })).rejects.toMatchObject({ code: "closed" });
+    }
   });
 });

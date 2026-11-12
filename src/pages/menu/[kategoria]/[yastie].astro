@@ -40,7 +40,7 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
         <p class="note3d muted" data-note3d hidden>Прототип: истинският 3D модел идва след фотосесията. <span class="missing">[ЛИПСВА: 3D модел]</span></p>
       </div>
       <div class="info">
-        <div class="crow"><Fragment set:html={crumbs([["Меню", url.menu()], [cat.n, cat.href]])} /><button class="pill pill-soft sharebtn" type="button" data-share><Fragment set:html={ic("export", 20)} />Сподели</button></div>
+        <div class="crow"><Fragment set:html={crumbs([["Меню", url.menu()], [cat.n, cat.href], [x.n]])} /><button class="pill pill-soft sharebtn" type="button" data-share><Fragment set:html={ic("share-network", 20)} />Сподели</button></div>
         <h1 class="h1" data-h1>{x.n}</h1>
         <div class="prow2">
           <span class="pg"><span class="price">{fmt(x.p)}</span>{x.per100 ? <span class="g">за 100 гр.</span> : x.g ? <span class="g">{x.g}</span> : null}</span>
@@ -234,10 +234,7 @@ details.nutr .kv span:first-child{font-weight:600}
     compList, canAdd, extra, modsList, modBtnInner, buyHTML, buyLabel, closedNote, favHTML, type Rem, type Add, type DishLite, type Addon,
   } from "./_dish-ui.ts";
   /* icons this script draws itself (the rest come from _dish-ui.ts) */
-  import "../../../lib/icons/arrow-left.ts";
-  import "../../../lib/icons/check.ts";
-  import "../../../lib/icons/cube.ts";
-  import "../../../lib/icons/image.ts";
+  import "sc-icons:arrow-left,check,cube,image"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
   const { esc, ic, fmt } = SC;
   const main = SC.mount();

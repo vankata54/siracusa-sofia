@@ -264,7 +264,7 @@ const jsonld = menuLd(Astro.site);
   } from "./_menu.ts";
   import type { Dish } from "../../lib/data.ts";
   /* icons this script draws itself (the server ones are already in the HTML; the rest come from _menu.ts) */
-  import "sc-icons:arrow-right,eye,shrimp,egg,fish,circles-three,acorn,carrot,jar,dots-nine,wine,flower,fish-simple"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+  import "sc-icons:acorn,arrow-clockwise,arrow-right,carrot,circles-three,dots-nine,egg,eye,fish,fish-simple,flower,globe,jar,shrimp,sliders-horizontal,warning-circle,wine"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
   type View = "ok" | "loading" | "error" | "offline";
   const main = SC.mount();
@@ -315,7 +315,7 @@ const jsonld = menuLd(Astro.site);
   }
   function errorHTML(): string {
     /* the shared box (lib/ui.ts): same title words and buttons on every page */
-    return stateBox({ kind: "error", what: "менюто", text: "Връзката прекъсна, докато зареждахме. Опитайте пак след малко или поръчайте по телефона." });
+    return stateBox({ kind: "error", what: "менюто" });
   }
   /* the hour-dependent frame: segment sub-lines, delivery line, notices */
   function timeParts() {
@@ -422,7 +422,7 @@ const jsonld = menuLd(Astro.site);
     const list = scopeItems(st);
     const rows = SC.ALLERGENS.map((a) => {
       const n = list.filter((x) => x.al.indexOf(a[0]) > -1).length, on = st.a.indexOf(a[0]) > -1;
-      return '<label class="check"><input type="checkbox" data-al="' + a[0] + '"' + (on ? " checked" : "") + '><span class="fi">' + SC.ic(a[2], 22) + '</span><span class="ft"><b>' + a[1] + "</b><small>" + (n ? "в " + plural(n) : "не е открит в състава") + "</small></span></label>";
+      return '<label class="check"><input type="checkbox" data-al="' + a[0] + '"' + (on ? " checked" : "") + '><span class="fi">' + SC.ic(a[2], 22) + '</span><span class="ft"><b>' + a[1] + "</b><small>" + (n ? "в " + plural(n) : "няма в състава") + "</small></span></label>";
     }).join("");
     const nd = list.filter((x) => !x.comp).length;
     const s = SC.sheet({ title: "Алергени", html:

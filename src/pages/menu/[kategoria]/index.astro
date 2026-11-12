@@ -203,7 +203,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
     type CatState, type Sort,
   } from "./_cat.ts";
   /* icons this script draws itself (the server ones are already in the HTML; the rest come from _cat.ts / _menu.ts) */
-  import "sc-icons:arrow-right,eye,shrimp,egg,fish,circles-three,acorn,carrot,jar,dots-nine,wine,flower,fish-simple,grains,drop,plant"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+  import "sc-icons:acorn,arrow-clockwise,arrow-right,carrot,circles-three,dots-nine,drop,egg,eye,fish,fish-simple,flower,globe,grains,jar,plant,shrimp,sliders-horizontal,warning-circle,wine"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
   type View = "ok" | "loading" | "error" | "offline";
   const main = SC.mount();
@@ -251,7 +251,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   }
   function errorHTML(): string {
     return '<div style="padding:20px 16px 0">' + crumbsHTML(cat) + "</div>" +
-      '<div class="state">' + stateBox({ kind: "error", what: "ястията", text: "Нещо прекъсна връзката с менюто. Проверете интернета и опитайте пак или ни се обадете, ще приемем поръчката по телефона." }) + "</div>";
+      '<div class="state">' + stateBox({ kind: "error", what: "ястията" }) + "</div>";
   }
   function setView(v: View) {
     view = v;
@@ -277,7 +277,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
       '<p class="note-auto" style="margin:0 0 14px">' + ic("info", 18) + "<span>Предварително, от състава. Кухнята ги потвърждава. При силна алергия ни се обадете.</span></p>" +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + SC.ALLERGENS.map((a) => {
         const n = items().filter((x) => x.al.indexOf(a[0]) > -1).length;
-        return '<button class="chip" type="button" data-al="' + a[0] + '" aria-pressed="' + (pick.indexOf(a[0]) > -1) + '" style="justify-content:flex-start;min-height:52px;padding:0 14px">' + ic(a[2], 18) + '<span style="flex:1;text-align:left">' + a[1] + "</span>" + (n ? '<span class="n">в ' + many(n) + "</span>" : "") + "</button>";
+        return '<button class="chip" type="button" data-al="' + a[0] + '" aria-pressed="' + (pick.indexOf(a[0]) > -1) + '" style="justify-content:flex-start;min-height:52px;padding:0 14px">' + ic(a[2], 18) + '<span style="flex:1;text-align:left">' + a[1] + "</span>" + '<span class="n">' + (n ? "в " + many(n) : "няма в състава") + "</span>" + "</button>";
       }).join("") + "</div>" +
       '<div style="height:14px"></div>' +
       '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;position:sticky;bottom:0;padding-top:6px;background:var(--surface)"><button class="pill pill-line" type="button" data-alclear>Изчисти</button><button class="pill pill-red" type="button" data-alok></button></div>';
@@ -297,7 +297,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
     const total = items().length;
     const rows = SC.FILTERS.map((F) => {
       const n = items().filter(F.test).length;
-      if (F.needs) return [F, "Скоро. Ще се появи, когато кухнята въведе " + F.needs + "."] as const;
+      if (F.needs) return [F, "Скоро. Чакаме " + F.needs + " от кухнята."] as const;
       if (!n) return [F, "Няма " + many() + " с това в категорията."] as const;
       if (n === total) return [F, "Всички " + many() + " тук са такива."] as const;
       return null;

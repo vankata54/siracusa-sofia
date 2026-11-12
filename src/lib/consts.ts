@@ -43,6 +43,8 @@ export const ORDER_RULES = {
   horizonMin: 180,
   /** pre-orders ("за утре" / "за днес" before 10:00): from 10:30; pickup until 22:30, delivery until 20:45 */
   preorderFrom: 630, pickupUntil: 1350, preorderDeliveryUntil: 1245,
+  /** pickup TODAY (decision 12.11.2026): the kitchen accepts orders until 22:30; the order is ready at the latest at closing */
+  pickupReadyUntil: 1380,
   /** -30% on lunch dishes after 15:00, pickup only */
   lunchPickupDiscount: 0.3,
   /** a web order: at most this many portions (sum of q) and this sum in € (dishes); bigger: "За голяма поръчка се обадете" */
@@ -100,13 +102,5 @@ export const COURSE_NAME: Record<string, string> = {
 };
 
 export interface Table { id: string; n: number; zone: "salon" | "garden"; seats: number; shape: "round" | "square" | "rect"; x: number; y: number; window: boolean; stroller: boolean; access: boolean }
-/* Mock floor plan for the mockups: 12 in the hall, 8 in the garden. Not a real capacity. */
-export const TABLES: Table[] = (() => {
-  const t: Table[] = [];
-  const hall: [number, Table["shape"]][] = [[2, "round"], [2, "round"], [4, "square"], [4, "square"], [4, "square"], [6, "rect"], [2, "round"], [4, "square"], [4, "square"], [6, "rect"], [2, "round"], [4, "square"]];
-  hall.forEach((h, i) => t.push({ id: "S" + (i + 1), n: i + 1, zone: "salon", seats: h[0], shape: h[1], x: i % 4, y: Math.floor(i / 4), window: i < 4, stroller: [5, 9].indexOf(i) > -1, access: [2, 6].indexOf(i) > -1 }));
-  const gar: [number, Table["shape"]][] = [[4, "square"], [4, "square"], [6, "rect"], [2, "round"], [4, "square"], [2, "round"], [6, "rect"], [4, "square"]];
-  gar.forEach((g, i) => t.push({ id: "G" + (i + 1), n: i + 13, zone: "garden", seats: g[0], shape: g[1], x: i % 4, y: Math.floor(i / 4), window: false, stroller: true, access: [0, 4].indexOf(i) > -1 }));
-  return t;
-})();
+/* TABLES (the mock floor plan) is in lib/tables.ts: only the reservation and the core need it (runtime size budget) */
 

@@ -10,6 +10,7 @@ import { url } from "../../lib/routes.ts";
 import { RESTAURANT, ORDER_RULES } from "../../lib/consts.ts";
 import type { Eta } from "../../lib/status.ts";
 import { stateBox, loadingText, callBtn, hourNote, hourTitle, hourLine, OFFLINE } from "../../lib/ui.ts";
+import "sc-icons:arrow-clockwise,clock,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 
 /** before 10:00 | 10:00-15:00 delivery or pickup | 15:00-22:30 pickup only -30% | after 22:30 */
 export type Phase = "before" | "lunch" | "discount" | "after";
@@ -157,7 +158,7 @@ export function emptyHTML(): string {
     '<a class="pill pill-red pill-lg" href="' + url.menu() + '">Към основното меню' + ic("arrow-right", 20) + '</a>' + callBtn("pill pill-line") + "</div></div>";
 }
 export function errorHTML(): string {
-  return stateBox({ kind: "error", what: "обедното меню", text: "Проверете връзката и опитайте пак. Или ни се обадете и ще ви кажем какво има в менюто.", retry: 'data-demo=""' });
+  return stateBox({ kind: "error", what: "обедното меню", retry: 'data-demo=""' });
 }
 
 /* ---------- week (the menu's day is filled, the other days are [ЛИПСВА]); short dates "2 ное" as on the site ---------- */
