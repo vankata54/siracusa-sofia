@@ -6,7 +6,7 @@ import { test, expect, type Page } from "@playwright/test";
 function watch(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", (m) => { if (m.type() === "error" && !/status of (401|409|422)/.test(m.text())) errors.push(m.text()); });
+  page.on("console", (m) => { if (m.type() === "error" && !/status of (401|409|422)/.test(m.text())) errors.push(m.text() + " @ " + m.location().url); });
   return errors;
 }
 const phoneNo = () => "0887" + String(Math.floor(Math.random() * 1e6)).padStart(6, "0");
@@ -108,6 +108,47 @@ test("profile: empty orders, favourites with undo, consents off by default and s
   await expect(page.locator('[data-sw="consent.marketing"]')).toHaveAttribute("aria-checked", "true");
   await expect(page.locator('[data-sw="consent.birthday"]')).toHaveAttribute("aria-checked", "true");
   expect(errors).toEqual([]);
+});
+
+test("profile: notifications in the profile (off by default), addresses add / remove with undo", async ({ page }) => {
+  const errors = watch(page);
+  await signIn(page);
+  await open(page);
+  for (const k of ["order", "events", "offers"]) await expect(page.locator('[data-sw="notify.' + k + '"]')).toHaveAttribute("aria-checked", "false");
+  await page.locator('[data-sw="notify.order"]').click();
+  await expect(page.locator('[data-sw="notify.order"]')).toHaveAttribute("aria-checked", "true");
+  await expect.poll(async () => (await page.evaluate(async () => (await fetch("/api/me")).json())).notify?.order).toBe(true);
+
+  await expect(page.locator("[data-adrs]")).toContainText("Няма запазени адреси");
+  await page.locator("[data-adradd]").click();
+  await page.locator(".sform button[type=submit]").click();
+  await expect(page.locator("#a-l-err")).toBeVisible();
+  await page.locator("#a-z").selectOption("Горубляне");
+  await expect(page.locator("[data-zres]")).toContainText("по тарифа");
+  await page.locator("#a-l").fill("ул. Самоковско шосе 1");
+  await page.locator(".sform button[type=submit]").click();
+  await expect(page.locator(".adr")).toHaveCount(1);
+  await expect(page.locator(".adr")).toContainText("Горубляне, ул. Самоковско шосе 1");
+  await page.reload();
+  await expect(page.locator(".adr")).toHaveCount(1);
+  await page.locator("[data-adrdel]").click();
+  await expect(page.locator(".adr")).toHaveCount(0);
+  await page.locator(".toast button").click();
+  await expect(page.locator(".adr")).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("profile: 'Моите кодове' from the ratings and the profile bonus", async ({ page }) => {
+  await signIn(page);
+  await page.route("**/api/me/codes", (r) => r.fulfill({ json: [
+    { code: "SC10-1234567890", pct: 10, orderNo: "1201", used: false, usedBy: null, createdAt: "2026-11-12T10:00:00Z" },
+    { code: "SC10-0987654321", pct: 10, orderNo: "1100", used: true, usedBy: "1150", createdAt: "2026-11-01T10:00:00Z" },
+  ] }));
+  await open(page);
+  await expect(page.locator('[data-code="SC10-1234567890"]')).toContainText("Код за отстъпка");
+  await expect(page.locator('[data-code="SC10-0987654321"]')).toContainText("Използван в поръчка № 1150");
+  await expect(page.locator("[data-cps]")).toContainText("Прилага се сам на първата поръчка");
+  await expect(page.locator(".tiles a").nth(2).locator("b")).toHaveText("2");
 });
 
 test("profile: name and email, theme, export", async ({ page }) => {

@@ -5,8 +5,8 @@
      export -> "Изтегли данните ми" (JSON), remove -> "Изтрий профила" (confirmed in the page), logout -> "Изход".
    "Поръчай отново" puts the dishes into the cart through SC.cart with the CURRENT menu prices; a dish that is sold out
    today, gone from the menu or from another day's lunch menu is not added (and is shown as such).
-   Not in the core yet ([ЛИПСВА], see reviews-code/profile.agent.md "Искания към шефа"): saving addresses through
-   api.auth, notification settings, the stamp rule and reward, the coupon's end date, English. */
+     addresses / addAddress / removeAddress -> "Адреси", codes -> "Моите кодове" (from the ratings), update({notify}) -> "Известия".
+   Still [ЛИПСВА]: the stamp rule and reward, how notifications are sent (no SMS provider yet), English. */
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import type { Customer, Order } from "../../client/api-types.ts";
@@ -42,8 +42,11 @@ import "../../lib/icons/export.ts";
 import "../../lib/icons/trash.ts";
 import "../../lib/icons/flag.ts";
 import "../../lib/icons/timer.ts";
+import "../../lib/icons/copy.ts";
+import "../../lib/icons/plus.ts";
 
-type Notif = { sms: boolean; push: boolean; remind: boolean };
+type Notify = { order: boolean; events: boolean; offers: boolean };
+type Code = { code: string; pct: number; orderNo: string; used: boolean; usedBy: string | null; createdAt: string };
 const SECTIONS: [string, string, string][] = [
   ["porachki", "Поръчки", "receipt"], ["lyubimi", "Любими", "heart"], ["adresi", "Адреси", "map-pin"], ["nagradi", "Печати и купони", "ticket"],
   ["izvestia", "Известия", "bell"], ["saglasia", "Съгласия", "shield-check"], ["nastroyki", "Настройки", "sliders-horizontal"], ["danni", "Вашите данни", "lock"],
@@ -63,9 +66,9 @@ export function start(): void {
   const offline = () => { if (OFF || navigator.onLine === false) { SC.toast("Няма връзка. Опитайте пак."); return true; } return false; };
   const errText = (e: unknown) => (e instanceof ApiError ? e.message : "Нещо се обърка. Опитайте пак.");
 
-  /* notification choices: the core has no field for them yet, so they stay in this browser ([ЛИПСВА], request to the chief) */
-  const NOTIF_KEY = "sc-notif";
-  const notif = (): Notif => ({ sms: true, push: false, remind: true, ...SC.load<Partial<Notif>>(NOTIF_KEY, {}) });
+  /* notifications live in the profile (core: all off by default) */
+  const notify = (): Notify => ({ order: false, events: false, offers: false, ...(U && U.notify ? U.notify : {}) });
+  let CODES: Code[] | null = null; /* "Моите кодове" from api.auth.codes() */
 
   /* ---------- small builders ---------- */
   const kindOf = (label: string): [string, string] => (/вкъщи|дом/i.test(label) ? [label, "house"] : /работа|офис/i.test(label) ? [label, "briefcase"] : [label || "Адрес", "map-pin"]);
@@ -79,7 +82,7 @@ export function start(): void {
   const sw = (key: string, title: string, sub: string, on: boolean) =>
     '<button class="psw" type="button" role="switch" aria-checked="' + on + '" data-sw="' + key + '"><span class="tx"><b>' + title + '</b><span class="s">' + sub + '</span></span><span class="tg" aria-hidden="true"><span class="tr"><span class="kn"></span></span><span class="st2">' + (on ? "Включено" : "Изключено") + "</span></span></button>";
   const unused = () => (U ? U.coupons.filter((c) => !c.used) : []);
-  const cpsCount = () => unused().length + (U && U.consent.birthday && U.email ? 1 : 0);
+  const cpsCount = () => unused().length + (CODES ? CODES.filter((c) => !c.used).length : 0) + (U && U.consent.birthday && U.email ? 1 : 0);
 
   /* an order's lines against TODAY's menu: what can go into the cart again, at today's prices */
   type Part = { l: Order["lines"][number]; x: Dish | undefined; why: "" | "out" | "gone" | "lunch" };
@@ -122,12 +125,12 @@ export function start(): void {
     const favs = '<section class="ps" id="lyubimi" aria-labelledby="h-fav"><div class="sec-h"><h2 class="h2" id="h-fav">Любими</h2><button class="link" type="button" data-favedit' + (u.favs.length ? "" : " hidden") + ">" + ic("pencil-simple", 18) + 'Промени</button></div><div data-favs>' + favsHTML() + "</div></section>";
     const adrs = '<section class="ps" id="adresi" aria-labelledby="h-adr"><div class="sec-h"><h2 class="h2" id="h-adr">Адреси</h2></div><div data-adrs>' + adrsHTML() + "</div></section>";
     const rew = '<section class="ps" id="nagradi" aria-labelledby="h-rew"><div class="sec-h"><h2 class="h2" id="h-rew">Печати и купони</h2></div><div class="rew">' + loyalHTML() + '<div class="cps" data-cps>' + couponsHTML() + "</div></div></section>";
-    const n = notif();
+    const n = notify();
     const notifs = '<section class="ps" id="izvestia" aria-labelledby="h-not"><div class="sec-h"><h2 class="h2" id="h-not">Известия</h2></div><div class="card pbox">' +
-      sw("notif.sms", "Статус на поръчката по SMS", "Кога е приета, готова и на път.", n.sms) +
-      sw("notif.push", "Известия на този телефон", "Същото, но направо на екрана, без SMS.", n.push) +
-      sw("notif.remind", "Напомняне за резервация", "Ден преди и 3 часа преди резервацията.", n.remind) + "</div>" +
-      '<p class="pf-help">Изборът се пази на това устройство. <span class="missing">[ЛИПСВА: запис в профила и изпращане на SMS и известия]</span></p></section>';
+      sw("notify.order", "Статус на поръчката", "Кога е приета, готова и на път.", n.order) +
+      sw("notify.events", "Нови събития", "Когато обявим нова вечер или събитие при нас.", n.events) +
+      sw("notify.offers", "Нови оферти", "Когато пуснем нова отстъпка или оферта.", n.offers) + "</div>" +
+      '<p class="pf-help">Изборът се пази в профила ви. <span class="missing">[ЛИПСВА: как се изпращат (SMS или имейл)]</span></p></section>';
     const cons = '<section class="ps" id="saglasia" aria-labelledby="h-con"><div class="sec-h"><h2 class="h2" id="h-con">Съгласия</h2></div><div class="card pbox" data-cons>' + consHTML() + "</div>" +
       '<p class="legal">Можете да оттеглите съгласие по всяко време, със същото докосване. <a href="' + SC.url.page("privacy") + '">Политика за поверителност</a></p></section>';
     const sets = '<section class="ps" id="nastroyki" aria-labelledby="h-set"><div class="sec-h"><h2 class="h2" id="h-set">Настройки</h2></div><div class="card pbox" data-sets>' + setsHTML() + "</div></section>";
@@ -137,7 +140,7 @@ export function start(): void {
       '<div data-del><button class="pill pill-dline pill-block" type="button" data-delask>' + ic("trash", 20) + "Изтрий профила</button></div></div>" +
       '<button class="pill pill-soft pill-lg pill-block out-btn" type="button" data-logout>' + ic("sign-out", 20) + "Изход от профила</button></section>";
     main.innerHTML = '<div class="pf">' + aside + '<div class="pm">' + head + orders + favs + adrs + rew + '<div class="duo">' + notifs + cons + '</div><div class="duo">' + sets + data + "</div></div></div>" + protoHTML();
-    loadOrders();
+    loadOrders(); loadCodes();
     SC.reveal(); spy();
   }
 
@@ -241,16 +244,53 @@ export function start(): void {
     });
   }
 
-  /* ---------- addresses (read from the profile; saving them through api.auth is missing) ---------- */
+  /* ---------- addresses (api.auth.addAddress / removeAddress) ---------- */
+  const KINDS: [string, string][] = [["Вкъщи", "house"], ["Работа", "briefcase"], ["Друго", "map-pin"]];
   function adrsHTML() {
     const a = U!.addrs;
     const list = a.length
       ? '<div class="card alist">' + a.map((x) => {
           const k = kindOf(x.label), z = zoneLine(x.zone);
-          return '<div class="adr"><span class="i">' + ic(k[1], 22) + "</span><span><b>" + esc(k[0]) + '</b><span class="l">' + esc(x.addr || x.zone || "") + '</span><span class="z ' + z.cls + '">' + ic(z.icon, 18) + "<span>" + z.html + "</span></span></span></div>";
+          return '<div class="adr"><span class="i">' + ic(k[1], 22) + '</span><span><span class="top2"><b>' + esc(k[0]) + '</b><button class="link" type="button" data-adrdel="' + esc(x.id) + '" aria-label="Махни адрес ' + esc(k[0]) + '">' + ic("trash", 18) + "Махни</button></span>" +
+            '<span class="l">' + esc(x.addr || x.zone || "") + '</span><span class="z ' + z.cls + '">' + ic(z.icon, 18) + "<span>" + z.html + "</span></span></span></div>";
         }).join("") + "</div>"
-      : '<div class="card empty"><span class="ill">' + ic("map-pin", 44) + '</span><h3 class="h3">Няма запазени адреси</h3><p class="muted" style="margin:0;max-width:30em">Адресът за доставка се пише в количката при поръчка.</p></div>';
-    return list + '<p class="pf-help"><span class="missing">[ЛИПСВА: добавяне и промяна на адрес от профила]</span></p>';
+      : '<div class="card empty"><span class="ill">' + ic("map-pin", 44) + '</span><h3 class="h3">Няма запазени адреси</h3><p class="muted" style="margin:0;max-width:30em">Добавете адрес веднъж и при поръчка само го изберете.</p></div>';
+    return list + '<button class="pill pill-line pill-block addbtn" type="button" data-adradd>' + ic("plus", 20) + "Добави адрес</button>";
+  }
+  const redrawAdrs = () => { const b = main.querySelector("[data-adrs]"); if (b) b.innerHTML = adrsHTML(); };
+  function adrSheet() {
+    const zones = SC.ZONES.map((z) => z.n).concat(["Друг квартал"]);
+    let kind = U!.addrs.some((x) => x.label === "Вкъщи") ? "Работа" : "Вкъщи";
+    const s = SC.sheet({ title: "Нов адрес", html:
+      '<form class="sform" novalidate>' +
+      '<div class="field" role="group" aria-labelledby="ak-l"><span class="label" id="ak-l">Какъв е адресът</span><div class="seg" data-kind>' + KINDS.map((k) => '<button type="button" data-k="' + k[0] + '" aria-pressed="' + (k[0] === kind) + '">' + ic(k[1], 20) + k[0] + "</button>").join("") + "</div></div>" +
+      '<div class="field"><label for="a-z">Квартал</label><div class="selw"><select class="input" id="a-z">' + zones.map((z) => "<option>" + esc(z) + "</option>").join("") + "</select>" + ic("caret-down", 20) + '</div><div class="zres" data-zres aria-live="polite"></div></div>' +
+      '<div class="field"><label for="a-l">Улица и номер или блок, вход, етаж</label><input class="input" id="a-l" autocomplete="street-address" placeholder="например бл. 311, вх. Б, ет. 4" aria-describedby="a-l-err"><p class="pf-err" id="a-l-err" hidden></p></div>' +
+      '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("check", 20) + "Запази адреса</button></form>" });
+    const f = s.el.querySelector("form")!, zs = f.querySelector<HTMLSelectElement>("#a-z")!, zr = f.querySelector<HTMLElement>("[data-zres]")!;
+    const zupd = () => { const z = zoneLine(zs.value); zr.className = "zres " + z.cls; zr.innerHTML = ic(z.icon, 20) + "<span>" + z.html + "</span>"; };
+    zs.addEventListener("change", zupd); zupd();
+    f.querySelector("[data-kind]")!.addEventListener("click", (e) => { const b = (e.target as Element).closest<HTMLElement>("[data-k]"); if (!b) return; kind = b.dataset.k!; f.querySelectorAll("[data-k]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); });
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (offline()) return;
+      const l = f.querySelector<HTMLInputElement>("#a-l")!, er = f.querySelector<HTMLElement>("#a-l-err")!;
+      if (!l.value.trim()) { l.setAttribute("aria-invalid", "true"); er.textContent = "Напишете улица или блок, за да ви намери шофьорът."; er.hidden = false; l.focus(); return; }
+      const zone = zs.value === "Друг квартал" ? "" : zs.value;
+      const btn = f.querySelector<HTMLButtonElement>('button[type="submit"]')!; btn.disabled = true;
+      try { U = await api.auth.addAddress({ label: kind, addr: (zone && !l.value.includes(zone) ? zone + ", " : "") + l.value.trim(), zone }); }
+      catch (err) { btn.disabled = false; SC.toast(errText(err)); return; }
+      s.close(); redrawAdrs(); SC.toast("Адресът е добавен");
+    });
+  }
+  async function removeAdr(id: string) {
+    if (offline()) return;
+    const a = U!.addrs.find((x) => x.id === id); if (!a) return;
+    try { U = await api.auth.removeAddress(id); } catch (e) { SC.toast(errText(e)); return; }
+    redrawAdrs();
+    SC.toast("Махнахме адреса", async () => {
+      try { U = await api.auth.addAddress({ label: a.label, addr: a.addr, zone: a.zone }); redrawAdrs(); } catch (e) { SC.toast(errText(e)); }
+    });
   }
 
   /* ---------- stamps + coupons (only what the core gives) ---------- */
@@ -265,13 +305,31 @@ export function start(): void {
     const u = U!, c = u.consent;
     const mine = u.coupons.map((k) => k.used
       ? '<div class="ticket off"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b>' + esc(k.note.replace(/^-\d+%\s*/, "")) + '</b><span class="state">' + ic("check-circle", 18) + "Използван" + (k.orderNo ? " в поръчка №&nbsp;" + esc(k.orderNo) : "") + "</span></span></div>"
-      : '<div class="ticket ember-card"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b>' + esc(k.note.replace(/^-\d+%\s*/, "")) + '</b><span class="s">Подарък за нов профил. Прилага се сам в количката, когато сте влезли. Не се събира с други отстъпки. Валиден до <span class="missing">[ЛИПСВА: срок]</span>.</span></span></div>').join("");
-    return mine +
-      '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">След поръчка ни кажете как е било, с „Да“ или с „Не“. Кодът идва веднага. Въвеждате го в количката, в поле „Код за отстъпка“.</span></span></div>' +
+      : '<div class="ticket ember-card"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b>' + esc(k.note.replace(/^-\d+%\s*/, "")) + '</b><span class="s">Подарък за нов профил. Прилага се сам на първата поръчка, когато сте влезли с този телефон. Само на ястията, не се събира с други отстъпки.</span></span></div>').join("");
+    return mine + codesHTML() +
       (c.birthday && u.email
         ? '<div class="ticket ember-card"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта. Имейл седмица преди празника.</span><span class="state">' + ic("check-circle", 18) + "Включено</span></span></div>"
         : '<div class="ticket off"><span class="big">' + ic("cake", 34) + '</span><span class="cut" aria-hidden="true"></span><span><b>Рожден ден</b><span class="s">-10% от сметката или малка торта за рожденика.</span>' +
           (c.birthday ? '<button class="link" type="button" data-edit="email">' + ic("plus", 16) + "Добавете имейл, за да го получите</button>" : '<a class="link" href="#saglasia">Включете в „Съгласия“' + ic("caret-right", 16) + "</a>") + "</span></div>");
+  }
+
+  /* "Моите кодове": the -10% codes from the internal ratings (api.auth.codes) */
+  function codesHTML() {
+    const how = "Въвеждате го в количката, в поле „Код за отстъпка“. Само на ястията, не се събира с други отстъпки.";
+    if (CODES == null) return '<div class="ticket off" data-codes aria-busy="true"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>Моите кодове</b><span class="s">Зареждаме...</span></span></div>';
+    const list = CODES.map((k) => k.used
+      ? '<div class="ticket off" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">За оценката на поръчка №&nbsp;' + esc(k.orderNo) + '.</span><span class="state">' + ic("check-circle", 18) + "Използван" + (k.usedBy ? " в поръчка №&nbsp;" + esc(k.usedBy) : "") + "</span></span></div>"
+      : '<div class="ticket ember-card" data-code="' + esc(k.code) + '"><span class="big">-' + k.pct + '%</span><span class="cut" aria-hidden="true"></span><span><b><code>' + esc(k.code) + '</code></b><span class="s">За оценката на поръчка №&nbsp;' + esc(k.orderNo) + ". " + how + '</span><button class="link" type="button" data-copy="' + esc(k.code) + '">' + ic("copy", 18) + "Копирай кода</button></span></div>").join("");
+    return list || '<div class="ticket off"><span class="big">-10%</span><span class="cut" aria-hidden="true"></span><span><b>за вашата оценка</b><span class="s">След поръчка ни кажете как е било, с „Да“ или с „Не“. Кодът идва веднага и ще е тук. ' + how + "</span></span></div>";
+  }
+  async function loadCodes() {
+    try { CODES = await api.auth.codes(); } catch { CODES = []; }
+    const cp = main.querySelector("[data-cps]"); if (cp) cp.innerHTML = couponsHTML();
+    refreshTiles();
+  }
+  async function copyCode(code: string, btn: HTMLElement) {
+    try { await navigator.clipboard.writeText(code); SC.flash(btn, ic("check", 18) + "Копирано", 1600); }
+    catch { SC.toast("Кодът е " + code); }
   }
 
   /* ---------- consents ---------- */
@@ -295,9 +353,9 @@ export function start(): void {
   }
 
   const MSG: Record<string, [string, string]> = {
-    "notif.sms": ["Ще ви пишем по SMS за поръчката.", "Спряхме SMS-ите за поръчката. Следете я от сайта."],
-    "notif.push": ["Известията на този телефон са включени.", "Известията на този телефон са спрени."],
-    "notif.remind": ["Ще ви напомняме за резервацията.", "Спряхме напомнянията за резервации."],
+    "notify.order": ["Ще ви известяваме за поръчката.", "Спряхме известията за поръчката. Следете я от сайта."],
+    "notify.events": ["Ще научавате първи за събитията.", "Спряхме известията за събития."],
+    "notify.offers": ["Ще ви казваме за новите оферти.", "Спряхме известията за оферти."],
     "consent.marketing": ["Благодарим! Ще научавате първи за офертите.", "Спряхме офертите. Няма да ви пишем за тях."],
     "consent.birthday": ["", "Спряхме подаръка за рождения ден."],
   };
@@ -305,14 +363,10 @@ export function start(): void {
 
   async function toggle(btn: HTMLElement) {
     const key = btn.dataset.sw!, [grp, k] = key.split("."), on = btn.getAttribute("aria-checked") !== "true";
-    if (grp === "notif") {
-      const n = notif(); n[k as keyof Notif] = on; SC.store(NOTIF_KEY, n); setSw(btn, on);
-      SC.toast(on ? MSG[key][0] : MSG[key][1]); return;
-    }
     if (offline()) return;
     setSw(btn, on); btn.setAttribute("aria-busy", "true");
     const consent = k === "birthday" ? (on ? { birthday: true } : { birthday: false, bday: "" }) : { marketing: on };
-    try { U = await api.auth.update({ consent }); }
+    try { U = await api.auth.update(grp === "notify" ? { notify: { [k]: on } } : { consent }); }
     catch (e) { setSw(btn, !on); btn.removeAttribute("aria-busy"); SC.toast(errText(e)); return; }
     btn.removeAttribute("aria-busy");
     if (k === "birthday") refreshConsents(key);
@@ -446,6 +500,9 @@ export function start(): void {
     if (t.hasAttribute("data-edit")) { editSheet(t.dataset.edit === "email"); return; }
     if (t.hasAttribute("data-favedit")) { const fv = main.querySelector(".favs"); if (!fv) return; const on = fv.classList.toggle("editing"); t.innerHTML = on ? ic("check", 18) + "Готово" : ic("pencil-simple", 18) + "Промени"; return; }
     if (t.dataset.unfav) { unfav(t.dataset.unfav); return; }
+    if (t.hasAttribute("data-adradd")) { adrSheet(); return; }
+    if (t.dataset.adrdel) { removeAdr(t.dataset.adrdel); return; }
+    if (t.dataset.copy) { copyCode(t.dataset.copy, t); return; }
     if (t.hasAttribute("data-export")) { exportData(t as HTMLButtonElement); return; }
     if (t.hasAttribute("data-delask")) { askDelete(); return; }
     if (t.hasAttribute("data-delno")) { const b = main.querySelector<HTMLElement>("[data-del]")!; b.innerHTML = delBtn(); b.querySelector<HTMLElement>("[data-delask]")!.focus({ preventScroll: true }); return; }
