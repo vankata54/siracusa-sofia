@@ -33,7 +33,7 @@ export interface Dish {
   lunch?: boolean;
 }
 
-export interface LunchRaw { id: string; group: string; n: string; p: number | null }
+export interface LunchRaw { id: string; group: string; n: string; p: number | null; /** live menu only (api.menu): sold out today */ out?: boolean }
 
 export interface Menu {
   updated: string;

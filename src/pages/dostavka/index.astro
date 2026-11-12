@@ -430,7 +430,9 @@ const description = "Доставка на пица и скара от Siracusa:
   } else if (h.indexOf("adres=") === 0) {
     inp.value = h.slice(6); clr.hidden = !inp.value;
     check(true);
-    if (!current && !(last && last.type === "out")) select("druzhba-2", { quiet: true });
+    /* check(true) sets `last` synchronously; TS cannot see that through the call */
+    const lr = last as CheckResult | null;
+    if (!current && !(lr && lr.type === "out")) select("druzhba-2", { quiet: true });
   } else if (h === "izvan-zonite") select(null, { quiet: true });
   else if (BY_SLUG[h]) select(h, { quiet: true });
   else {

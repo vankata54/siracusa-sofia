@@ -32,6 +32,7 @@
     "hono": "^4.13.16"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.12",
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^9.6.0",

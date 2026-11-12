@@ -356,11 +356,13 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
       '<div class="submit"><button class="pill pill-red pill-lg pill-block" type="submit" data-go>Поискай ваучер</button><p class="fine">Плащате на място, в брой или с карта.</p></div>' +
       "</form>" });
     const f = s.el.querySelector("form") as F, btn = f.querySelector<HTMLButtonElement>("[data-go]")!;
+    /* f.name is the form's own "name" property for TypeScript; the field is read through elements */
+    const nameIn = () => f.elements.namedItem("name") as HTMLInputElement;
     const amount = () => { const v = f.sum.value.replace(/\s/g, "").replace(",", "."); return /^\d+(\.\d{1,2})?$/.test(v) ? +v : NaN; };
     const label = () => { const a = amount(); return a > 0 ? "Поискай ваучер за " + SC.fmt(a) : "Поискай ваучер"; };
     function check(n: string): boolean {
       if (n === "sum") { const raw = f.sum.value.trim(), a = amount(); return setErr(f, "sum", !raw ? "Напишете сумата в евро." : !(a > 0) ? "Напишете сумата само с цифри, без букви." : ""); }
-      if (n === "name") return setErr(f, "name", f.name.value.trim().length < 2 ? "Напишете името си, за да знаем кого търсим." : "");
+      if (n === "name") return setErr(f, "name", nameIn().value.trim().length < 2 ? "Напишете името си, за да знаем кого търсим." : "");
       return setErr(f, "tel", !f.tel.value.trim() ? "Напишете телефон, на който да ви се обадим." : !normTel(f.tel.value) ? "Проверете номера: 10 цифри, започва с 0. Например 0888 12 34 56." : "");
     }
     f.sum.addEventListener("input", () => { if (!btn.disabled) btn.textContent = label(); if (f.sum.getAttribute("aria-invalid") === "true") check("sum"); });
@@ -375,7 +377,7 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
       const a = amount(), tel = niceTel(f.tel.value), note = f.note.value.trim();
       send(f, btn, label(), async () => {
         const { api } = await import("../../client/api.ts");
-        return api.feedback.create({ name: f.name.value.trim(), contact: normTel(f.tel.value) || f.tel.value, mode: "phone", topic: "voucher",
+        return api.feedback.create({ name: nameIn().value.trim(), contact: normTel(f.tel.value) || f.tel.value, mode: "phone", topic: "voucher",
           message: "Запитване за ваучер за подарък: " + SC.fmt(a) + "." + (note ? " За кого / повод: " + note : "") });
       }, { name: "name", contact: "tel" }, () => doneView(s, "Запитването е изпратено",
         '<p>Ще ви се обадим на <b class="price">' + esc(tel) + '</b>, за да уговорим кога да минете за ваучера за <b class="price">' + SC.fmt(a) + '</b>.</p><p class="muted small">Плащате на място, в брой или с карта.</p>'));

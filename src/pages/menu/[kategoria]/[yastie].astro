@@ -336,8 +336,8 @@ details.nutr .kv span:first-child{font-weight:600}
       upd();
     });
     $("[data-sreset]").onclick = () => { rem = {}; add = {}; sheet.querySelectorAll<HTMLInputElement>("input[type=checkbox]").forEach((i) => { i.checked = false; }); upd(); };
-    $("[data-sbuy]").onclick = function (this: HTMLElement) {
-      const b = this; s.close();
+    $("[data-sbuy]").onclick = (ev) => {
+      const b = ev.currentTarget as HTMLElement; s.close();
       setTimeout(() => {
         let t = document.querySelector<HTMLElement>(".dish-abar [data-buy]");
         if (!t || !t.offsetParent) t = main.querySelector<HTMLElement>("[data-buybox] [data-buy]");

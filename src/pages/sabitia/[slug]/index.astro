@@ -323,7 +323,7 @@ const evLd = JSON.stringify(eventLd(ev, site));
   function openShare(e: EvModel) {
     const u = location.href.split("#")[0].split("?")[0];
     const text = e.n + " в Siracusa, " + dateLong(e.date) + " · " + e.time;
-    const coarse = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
     if (navigator.share && coarse) { navigator.share({ title: e.n, text, url: u }).catch(() => { /* cancelled */ }); return; }
     const s = SC.sheet({ title: "Сподели", html: '<p class="sh-p">Поканете приятели за ' + esc(text) + '.</p><div class="sh-list">' +
       '<a class="pill pill-line pill-lg pill-block" href="viber://forward?text=' + encodeURIComponent(text + " " + u) + '">' + ic("chat-circle-dots", 22) + "Изпрати във Viber</a>" +

@@ -12,6 +12,7 @@ import type { Core, OrderInput, ReservationInput, CelebrationInput, NoteInput, P
   Order, PublicOrder, OfficeOrder, PublicOffice, Reservation, Subscription, Settings, Audience, Feedback, FeedbackInput } from "./api-types.ts";
 import type { SettingsPatch } from "../core/settings.ts";
 import type { SiteEventJson } from "../lib/events.ts";
+import type { Menu } from "../data/menu.ts";
 import { clockOverride, isPreview } from "../lib/time.ts";
 import { loadModule } from "../lib/load.ts";
 
@@ -127,7 +128,8 @@ type OfficeCreate = { office: string; addr: string; deadline?: string; payer?: "
 export const api = {
   demo: DEMO,
   /* public data (in the demo straight from the bundled data) */
-  menu: async () => (DEMO ? (await loadModule(demoChunk)).MENU : http<unknown>("GET", "menu")),
+  /** the live menu: the same shape as src/data/menu.json, "out" in t (and lunch.items[].out) from the kitchen / admin */
+  menu: async (): Promise<Menu> => (DEMO ? (await loadModule(demoChunk)).MENU : http<Menu>("GET", "menu")),
   status: async (): Promise<StatusInfo> => (DEMO ? (await loadModule(demoChunk)).statusInfo() : http<StatusInfo>("GET", "status")),
   offers: async () => (DEMO ? (await loadModule(demoChunk)).offers() : http<unknown>("GET", "offers")),
   /** events with the date as "YYYY-MM-DD" */
