@@ -1,28 +1,22 @@
-/* Dish page (/menu/<кат>/<ястие>/): HTML pieces shared by the server ([yastie].astro frontmatter) and the browser (its script).
-   Port of design/pages/dish.html (design/PAGES.md "dish.html"). Pure string renderers: no DOM.
-   The icons drawn here are imported below, so SC.ic() knows them in the browser too. */
+/* Dish page (/menu/<кат>/<ястие>/): HTML pieces that need the menu. The server ([yastie].astro frontmatter) uses all of it;
+   the browser loads this module only later, for "Върви добре с" when the cart is not empty (the light part is _dish-ui.ts).
+   Port of design/pages/dish.html (design/PAGES.md "dish.html"). Pure string renderers: no DOM. */
 import { items, byId, catById, inCat, isOut, ALLERGENS, allergenName, COURSE_NAME, RESTAURANT, type Dish } from "../../../lib/data.ts";
 import { pic, plusBtn } from "../../../lib/render.ts";
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt } from "../../../lib/format.ts";
 import { url } from "../../../lib/routes.ts";
 import { suggest, type ManualPairs } from "../../../lib/suggest.ts";
+import { ORDER_RULES } from "../../../lib/consts.ts";
+import { compList, cap, canAdd, endDot, type Addon, type DishLite } from "./_dish-ui.ts";
 import "../../../lib/icons/caret-right.ts";
 import "../../../lib/icons/caret-down.ts";
-import "../../../lib/icons/sliders-horizontal.ts";
-import "../../../lib/icons/minus.ts";
-import "../../../lib/icons/plus.ts";
-import "../../../lib/icons/check.ts";
-import "../../../lib/icons/heart.ts";
-import "../../../lib/icons/clock.ts";
-import "../../../lib/icons/cube.ts";
-import "../../../lib/icons/image.ts";
 import "../../../lib/icons/info.ts";
 import "../../../lib/icons/phone.ts";
 
-/* Categories where "Добави" makes sense (pizza toppings, cheese, prosciutto...). Owner to confirm (docs/OPEN-QUESTIONS.md). */
-export const ADDON_CATS = ["pitsi", "burgeri", "pasta-i-rizoto", "salati", "zakuski"];
-export const ADDONS: Dish[] = inCat("dobavki").slice().sort((a, b) => b.p - a.p);
+export * from "./_dish-ui.ts";
+
+export const ADDONS: Addon[] = inCat(ORDER_RULES.addonCat).slice().sort((a, b) => b.p - a.p).map((a) => ({ id: a.id, n: a.n, p: a.p }));
 const ICON_OF: Record<string, string> = {};
 ALLERGENS.forEach((a) => { ICON_OF[a[0]] = a[2]; });
 
@@ -34,56 +28,10 @@ export function catOf(d: Dish): CatRef {
   const c = catById[d.cat] || { id: d.cat, n: "Меню" };
   return { id: c.id, n: c.n, href: url.cat(c.id), back: url.menu(c.id) };
 }
-export const compList = (d: Dish): string[] => (d.comp ? d.comp.split(",").map((s) => s.trim()).filter(Boolean) : []);
-export const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-export const canAdd = (d: Dish): boolean => ADDON_CATS.indexOf(d.cat) > -1;
 export const hasMods = (d: Dish): boolean => !isOut(d) && (compList(d).length > 0 || canAdd(d));
-
-/* ---------- modifiers: rem = {index of the ingredient: true}, add = {addon id: true} ---------- */
-export type Rem = Record<string, boolean>;
-export type Add = Record<string, boolean>;
-export const extra = (add: Add): number => ADDONS.filter((a) => add[a.id]).reduce((s, a) => s + a.p, 0);
-export function modsList(d: Dish, rem: Rem, add: Add): string[] {
-  const m: string[] = [];
-  compList(d).forEach((c, i) => { if (rem[i]) m.push("без " + c); });
-  ADDONS.forEach((a) => { if (add[a.id]) m.push("+ " + a.n); });
-  return m;
-}
-export function modSummary(d: Dish, rem: Rem, add: Add): { has: boolean; sub: string; xp: string } {
-  const m = modsList(d, rem, add), e = extra(add);
-  if (!m.length) return {
-    has: false, xp: "",
-    sub: compList(d).length && canAdd(d) ? "Махнете съставка или добавете още сирене, прошуто, гъби" : compList(d).length ? "Махнете съставка, която не искате. Безплатно." : "Добавете сирене, прошуто, гъби и още",
-  };
-  return { has: true, sub: cap(m.join(" · ")), xp: e ? "+" + fmt(e) : "" };
-}
-export function modBtnInner(d: Dish, rem: Rem = {}, add: Add = {}): string {
-  const s = modSummary(d, rem, add);
-  return '<span class="ico">' + ic("sliders-horizontal", 24) + '</span><span><b>Добавки и промени</b><span class="sub">' + esc(s.sub) + "</span>" + (s.xp ? '<span class="xp">' + s.xp + " на брой</span>" : "") + '</span><span class="end">' + ic("caret-right", 20) + "</span>";
-}
-
-/* ---------- buy box (desktop inline) and the floating .abar (phone): the same HTML ---------- */
-export function buyLabel(d: Dish, qty: number, unit: number): string {
-  return d.per100
-    ? '<span>Добави · <span class="price">' + fmt(unit) + '</span><span class="u100">/100 гр.</span></span>'
-    : "<span>Добави" + (qty > 1 ? ' <span class="q">' + qty + " бр.</span>" : "") + ' · <span class="price">' + fmt(unit * qty) + "</span></span>";
-}
-export function buyHTML(d: Dish, qty = 1, unit = d.p): string {
-  return '<div class="counter" role="group" aria-label="Брой"><button type="button" data-q="-1" aria-label="Едно по-малко"' + (qty <= 1 ? ' disabled style="opacity:.4;cursor:not-allowed"' : "") + ">" + ic("minus", 20) + '</button><output aria-live="polite">' + qty + '</output><button type="button" data-q="1" aria-label="Едно повече">' + ic("plus", 20) + "</button></div>" +
-    '<button class="pill pill-red pill-lg" type="button" data-buy>' + buyLabel(d, qty, unit) + "</button>";
-}
-export function soldBarHTML(): string {
-  return '<span class="soldlbl">' + ic("clock", 20) + 'Изчерпано днес</span><a class="pill pill-red" href="#similar" data-tosim>Вижте подобни</a>';
-}
-
-export function favHTML(on = false): string {
-  return '<button class="pill pill-line fav" type="button" data-fav aria-pressed="' + on + '">' + ic("heart", 20) + "Любимо</button>";
-}
-
-/** Kitchen closed (depends on the hour: drawn in the browser). m = minutes since midnight. */
-export function closedNote(kitchen: boolean, m: number, out: boolean): string {
-  if (kitchen || out) return "";
-  return '<div class="closednote">' + ic("clock", 20) + "<span>" + (m < 600 ? "Кухнята отваря в 10:00. Добавете сега и поръчайте, когато отворим." : "Кухнята приема поръчки до 22:30. Добавете сега и поръчайте за утре.") + "</span></div>";
+/** What the page script needs (JSON in the page), so the browser does not load the whole menu at start. */
+export function dishLite(d: Dish): DishLite {
+  return { id: d.id, n: d.n, p: d.p, cat: d.cat, comp: d.comp, g: d.g, ...(d.per100 ? { per100: true } : {}), ...(isOut(d) ? { out: true } : {}) };
 }
 
 /* ---------- pairing / similar cards ---------- */
@@ -132,13 +80,35 @@ export function factsCard(d: Dish): string {
     allergenBlock(d) +
     '<div class="fblk"><details class="nutr"><summary>Хранителна информация' + ic("caret-down", 22) + '</summary><div class="nbody">' +
       [["Енергия", "ккал"], ["Белтъчини", "г"], ["Въглехидрати", "г"], ["от тях захари", "г"], ["Мазнини", "г"], ["Сол", "г"]].map((r) => '<div class="kv"><span>' + r[0] + '</span><span class="missing">[ЛИПСВА]</span></div>').join("") +
-      '<p class="note-auto" style="margin-top:8px">' + ic("info", 18) + "<span>" + (d.per100 ? "На 100 гр." : "На порция " + esc(d.g || "")) + ". Стойностите идват, когато кухнята ги въведе.</span></p></div></details></div>" +
+      '<p class="note-auto" style="margin-top:8px">' + ic("info", 18) + "<span>" + esc(endDot(d.per100 ? "На 100 гр." : d.g ? "На порция " + d.g : "На порция")) + " Стойностите идват, когато кухнята ги въведе.</span></p></div></details></div>" +
     "</div></div>";
 }
 
 /* ---------- SEO ---------- */
 export function metaDescription(d: Dish): string {
-  return d.n + " от Siracusa Bar & Grill, Дружба 2: " + (d.comp ? d.comp + ". " : "") + (d.per100 ? "" : d.g ? d.g + ", " : "") + fmt(d.p) + (d.per100 ? " за 100 гр." : "") + ". Поръчайте с доставка или вземете от място.";
+  /* no "." after a text that already ends with one ("за 100 гр.", "400 гр.") */
+  return d.n + " от Siracusa Bar & Grill, Дружба 2: " + (d.comp ? endDot(d.comp) + " " : "") + endDot((d.per100 ? "" : d.g ? d.g + ", " : "") + fmt(d.p) + (d.per100 ? " за 100 гр." : "")) + " Поръчайте с доставка или вземете от място.";
+}
+
+/** <title> without " | Siracusa Bar & Grill" (Base adds it, 23 signs): the whole title stays within about 70 signs.
+    "Ястие | Категория" when it fits, else only the dish; a too long name keeps its start and its end ("... пушена сьомга"),
+    so two similar dishes do not get the same title. */
+const TITLE_MAX = 70 - " | Siracusa Bar & Grill".length;
+const SHORT = /^(и|с|със|от|в|във|на|за|по|без)$/i;
+export function shortName(n: string, max = TITLE_MAX): string {
+  if (n.length <= max) return n;
+  const w = n.split(/\s+/);
+  let k = 2; while (k < w.length - 1 && SHORT.test(w[w.length - k])) k++;
+  const tail = w.slice(-k).join(" ");
+  let head = w.slice(0, w.length - k);
+  const clean = (a: string[]) => { const b = a.slice(); while (b.length > 1 && SHORT.test(b[b.length - 1])) b.pop(); return b.join(" ").replace(/[,;:]$/, ""); };
+  while (head.length > 1 && (clean(head) + " … " + tail).length > max) head.pop();
+  return clean(head) + " … " + tail;
+}
+export function docTitle(d: Dish): string {
+  const c = catOf(d), full = d.n + " | " + c.n;
+  /* a name only 1-2 signs over stays whole (72 at most): cutting it would hurt more than the 2 signs */
+  return full.length <= TITLE_MAX ? full : d.n.length <= TITLE_MAX + 2 ? d.n : shortName(d.n);
 }
 
 export function dishLd(d: Dish, site: URL | undefined): object[] {
@@ -146,7 +116,7 @@ export function dishLd(d: Dish, site: URL | undefined): object[] {
   const c = catOf(d), price = d.p.toFixed(2);
   const offer: Record<string, unknown> = {
     "@type": "Offer", price, priceCurrency: "EUR",
-    availability: isOut(d) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+    availability: isOut(d) ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
     url: abs(url.dish(d)),
   };
   if (d.per100) offer.priceSpecification = {
@@ -161,9 +131,10 @@ export function dishLd(d: Dish, site: URL | undefined): object[] {
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Меню", item: abs(url.menu()) },
-      { "@type": "ListItem", position: 2, name: c.n, item: abs(c.href) },
-      { "@type": "ListItem", position: 3, name: d.n, item: abs(url.dish(d)) },
+      { "@type": "ListItem", position: 1, name: "Начало", item: abs(url.home()) },
+      { "@type": "ListItem", position: 2, name: "Меню", item: abs(url.menu()) },
+      { "@type": "ListItem", position: 3, name: c.n, item: abs(c.href) },
+      { "@type": "ListItem", position: 4, name: d.n, item: abs(url.dish(d)) },
     ],
   };
   return [item, crumbs];

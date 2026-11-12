@@ -7,7 +7,7 @@
 import type { GetStaticPaths } from "astro";
 import Base from "../../../layouts/Base.astro";
 import { ic, pic, badges, url, fmt, esc, isOut, type Dish } from "../../../lib/index.ts";
-import { DISHES, catOf, hasMods, modBtnInner, buyHTML, soldBarHTML, favHTML, similar, pairCard, pairsHTML, factsCard, metaDescription, dishLd } from "./_dish.ts";
+import { DISHES, ADDONS, catOf, canAdd, hasMods, modBtnInner, buyHTML, soldBarHTML, favHTML, similar, pairCard, pairsHTML, factsCard, metaDescription, dishLd, dishLite, docTitle } from "./_dish.ts";
 import { catById } from "../../../lib/data.ts";
 
 export const getStaticPaths = (() => DISHES.map((x) => ({ params: { kategoria: x.cat, yastie: x.id }, props: { id: x.id } }))) satisfies GetStaticPaths;
@@ -22,10 +22,13 @@ if (x.cat === "skara-bertha") facts.push('<span class="badge">' + ic("fire", 16)
 
 const simHTML = out ? similar(x).map((z) => pairCard(z, catById[z.cat] ? catById[z.cat].n : "")).join("") : "";
 const jsonld = dishLd(x, Astro.site);
+/* what the page script needs, so the browser does not load the whole menu at start (speed) */
+const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] }).replace(/</g, "\\u003c");
 ---
-<Base page="dish" nav="menu" back={{ href: cat.back, label: "Меню" }} title={x.n} docTitle={x.n + " | " + cat.n} share actionBar
+<Base page="dish" nav="menu" back={{ href: cat.back, label: "Меню" }} title={x.n} docTitle={docTitle(x)} share actionBar
   description={metaDescription(x)} jsonld={jsonld}>
-  <article class="dish" data-dish={x.id} data-cat={cat.id} data-cathref={cat.href} data-catn={cat.n}>
+  <article class="dish" data-dish={x.id} data-cat={cat.id} data-catn={cat.n}>
+    <script is:inline type="application/json" data-dishjson set:html={lite}></script>
     <div class="dgrid">
       <div class="hero">
         <div class="shell"><div class="core">
@@ -38,7 +41,7 @@ const jsonld = dishLd(x, Astro.site);
       <div class="info">
         <nav aria-label="Хлебни трохи"><ol class="crumbs">
           <li><a href={url.menu()}>Меню</a></li>
-          <li><Fragment set:html={ic("caret-right", 16)} /><a href={cat.href}>{cat.n}</a></li>
+          <li><Fragment set:html={ic("caret-right", 16)} /><a href={cat.href} data-catlink>{cat.n}</a></li>
         </ol></nav>
         <h1 class="h1" data-h1>{x.n}</h1>
         <div class="prow2">
@@ -55,7 +58,7 @@ const jsonld = dishLd(x, Astro.site);
           </Fragment>
         ) : (
           <Fragment>
-            {hasMods(x) && <button class="modbtn" type="button" data-mods aria-haspopup="dialog" set:html={modBtnInner(x)}></button>}
+            {hasMods(x) && <button class="modbtn" type="button" data-mods aria-haspopup="dialog" set:html={modBtnInner(x, ADDONS)}></button>}
             <div class="buy" data-buybox set:html={buyHTML(x)}></div>
           </Fragment>
         )}
@@ -230,32 +233,38 @@ details.nutr .kv span:first-child{font-weight:600}
 </style>
 
 <script>
-  import { SC } from "../../../client/sc-menu.ts";
-  import type { Dish } from "../../../lib/data.ts";
+  /* Speed: only the shared runtime (sc.ts) and the light renderers (_dish-ui.ts) load at start. The menu, the illustrations
+     and "Върви добре с" (_dish.ts) load only when the cart is not empty (the server already drew them for an empty cart). */
+  import { SC } from "../../../client/sc.ts";
   import {
-    ADDONS, compList, canAdd, extra, modsList, modBtnInner, buyHTML, buyLabel, closedNote, pairsHTML, favHTML, type Rem, type Add,
-  } from "./_dish.ts";
-  /* icons this script draws itself (the rest come from _dish.ts and render.ts) */
+    compList, canAdd, extra, modsList, modBtnInner, buyHTML, buyLabel, closedNote, favHTML, type Rem, type Add, type DishLite, type Addon,
+  } from "./_dish-ui.ts";
+  /* icons this script draws itself (the rest come from _dish-ui.ts) */
   import "../../../lib/icons/arrow-left.ts";
-  import "../../../lib/icons/hand-waving.ts";
+  import "../../../lib/icons/check.ts";
+  import "../../../lib/icons/cube.ts";
+  import "../../../lib/icons/image.ts";
 
   const { esc, ic, fmt } = SC;
   const main = SC.mount();
   const art = main.querySelector<HTMLElement>("[data-dish]")!;
-  const x: Dish = SC.byId[art.dataset.dish!];
-  const out = SC.isOut(x);
+  const J = JSON.parse(art.querySelector("[data-dishjson]")!.textContent || "{}") as { x: DishLite; addons: Addon[] };
+  const x = J.x, ADDONS = J.addons;
+  const out = !!x.out;
   const top = document.querySelector<HTMLElement>(".top.back")!;
   const ttl = top.querySelector<HTMLElement>(".ttl")!;
   const backA = top.querySelector<HTMLAnchorElement>("a.hb")!;
   let qty = 1, rem: Rem = {}, add: Add = {};
-  const unit = () => x.p + extra(add);
+  const unit = () => x.p + extra(ADDONS, add);
 
-  /* ---------- back: to the category when we came from it, else the menu (review: minor 4) ---------- */
+  /* ---------- back: to the category when we came from it, else the menu. The crumb link is the category address as
+     written in the page (relative in the demo), so it works from any sub-folder too. ---------- */
   try {
+    const catA = art.querySelector<HTMLAnchorElement>("[data-catlink]")!;
+    const norm = (u: URL) => u.pathname.replace(/index\.html$/, "");
     const ref = document.referrer ? new URL(document.referrer) : null;
-    const catPath = new URL(art.dataset.cathref!, location.href).pathname.replace(/index\.html$/, "");
-    if (ref && ref.origin === location.origin && ref.pathname.replace(/index\.html$/, "") === catPath) {
-      backA.href = art.dataset.cathref!;
+    if (ref && ref.origin === location.origin && norm(ref) === norm(new URL(catA.href))) {
+      backA.href = catA.getAttribute("href")!;
       backA.innerHTML = ic("arrow-left", 20) + esc(art.dataset.catn || "Меню");
     }
   } catch { /* keep the menu */ }
@@ -272,11 +281,13 @@ details.nutr .kv span:first-child{font-weight:600}
 
   /* ---------- "Върви добре с" for the current cart ---------- */
   const pairsBox = main.querySelector<HTMLElement>("[data-pairs]")!;
-  function paintPairs() {
-    const h = pairsHTML(x, SC.cart.lines().map((l) => l.id), SC.MANUAL_PAIRS);
-    if (pairsBox.innerHTML !== h) pairsBox.innerHTML = h;
+  const inCart = SC.cart.lines().map((l) => l.id);
+  if (inCart.length && !out) {
+    Promise.all([import("../../../client/sc-menu.ts"), import("./_dish.ts")]).then(([m, d]) => {
+      const h = d.pairsHTML(m.SC.byId[x.id], inCart, m.SC.MANUAL_PAIRS);
+      if (pairsBox.innerHTML !== h) pairsBox.innerHTML = h;
+    }).catch(() => { /* keep the pairs drawn by the server */ });
   }
-  paintPairs();
 
   /* ---------- favourites: per-viewer list (sc-fav) + the profile when signed in ---------- */
   type U = { favs?: string[] } | null;
@@ -299,14 +310,15 @@ details.nutr .kv span:first-child{font-weight:600}
   function paint() {
     if (out) return;
     const mb = main.querySelector<HTMLElement>("[data-mods]");
-    if (mb) { mb.classList.toggle("has", modsList(x, rem, add).length > 0); mb.innerHTML = modBtnInner(x, rem, add); }
+    if (mb) { mb.classList.toggle("has", modsList(x, ADDONS, rem, add).length > 0); mb.innerHTML = modBtnInner(x, ADDONS, rem, add); }
     const h = buyHTML(x, qty, unit());
     const bx = main.querySelector<HTMLElement>("[data-buybox]"); if (bx) bx.innerHTML = h;
     const bar = SC.ov.querySelector<HTMLElement>(".dish-abar"); if (bar) bar.innerHTML = h;
   }
 
   function buy(btn: HTMLElement) {
-    const m = modsList(x, rem, add), opts = m.length ? { mods: m, extra: Math.round(extra(add) * 100) / 100 } : {};
+    /* name and price go with the line, so the cart does not need to load the menu here */
+    const m = modsList(x, ADDONS, rem, add), opts = { n: x.n, p: x.p, ...(m.length ? { mods: m, extra: Math.round(extra(ADDONS, add) * 100) / 100 } : {}) };
     const n = qty, t = unit() * qty;
     SC.cart.add(x.id, qty, opts);
     SC.fly(btn, x.id); SC.haptic();
@@ -330,7 +342,7 @@ details.nutr .kv span:first-child{font-weight:600}
     sheet.insertAdjacentHTML("beforeend", '<div class="mfoot"><div class="tot"><span data-totl></span><b data-tot></b></div><div class="row"><button class="pill pill-red pill-lg" type="button" data-sbuy></button></div><button class="link" type="button" data-sreset hidden>Изчисти промените</button></div>');
     const $ = (sel: string) => sheet.querySelector<HTMLElement>(sel)!;
     function upd() {
-      const has = modsList(x, rem, add).length > 0;
+      const has = modsList(x, ADDONS, rem, add).length > 0;
       $("[data-tot]").textContent = fmt(unit() * qty);
       $("[data-totl]").textContent = (has ? "С промените, " : "Общо, ") + qty + " бр.";
       $("[data-sbuy]").innerHTML = buyLabel(x, qty, unit());
