@@ -3,19 +3,21 @@
    The server draws everything that does not depend on the hour: the H1 with the menu's date (never "днес": the build
    does not know today's date), the groups with every dish and price, the week (preview only), office, FAQ and JSON-LD
    (Menu > MenuSection > MenuItem, BreadcrumbList, FAQPage). The browser adds the hour (delivery or pickup until 15:00,
-   -30% pickup only until 22:30, closed before 10:00 and after 22:30), the date check (SC.lunchIsToday), the cart bar
-   and, only in preview (?preview=1), the "Изчерпано днес" mock and the states panel. */
+   -30% pickup only until 22:30, closed before 10:00 and after 22:30), the date check (lunchIsToday), the cart bar
+   and, only in preview (?preview=1), the "Изчерпано днес" mock and the states panel.
+   SPEED: the script uses the small runtime (client/sc.ts), not sc-menu.ts: the 20 dishes are already in the HTML, so the
+   rows are updated in place from data-id / data-p and the menu (lib/data.ts, pricing, illustrations) is never loaded. */
 import Base from "../../layouts/Base.astro";
-import { url } from "../../lib/index.ts";
-import { lunch, menu } from "../../lib/data.ts";
-import { serverView, h1HTML, leadHTML, uploadNoteHTML, todayCardHTML, listHTML, bottomHTML, lunchLd, dateText, minP } from "./_lunch.ts";
+import { h1HTML, leadHTML, uploadNoteHTML, todayCardHTML, serverView } from "./_lunch.ts";
+import { meta, listHTML, bottomHTML, lunchLd, dateText } from "./_lunch-server.ts";
 import { fmt } from "../../lib/format.ts";
 
-const v = serverView();
-const description = "Обедното меню на Siracusa в Дружба 2: " + lunch.length + " ястия от " + fmt(minP()) + ", ново всеки ден. С доставка до 15:00 и -30% при вземане от място след 15:00.";
+const M = meta();
+const v = serverView(M);
+const description = "Обедното меню на Siracusa в Дружба 2: " + M.count + " ястия от " + fmt(M.minP) + ", ново всеки ден. С доставка до 15:00 и -30% при вземане от място след 15:00.";
 ---
 <Base page="lunch" nav="lunch" title="Обедно меню" description={description} jsonld={lunchLd(Astro.site)}>
-  <div class="lgrid" data-lunch data-date={menu.lunch.date}>
+  <div class="lgrid" data-lunch data-date={M.date} data-dayname={M.dayName} data-count={M.count} data-minp={M.minP}>
     <section class="sec lhero" aria-labelledby="lh1">
       <h1 class="h1" id="lh1" data-h1 set:html={h1HTML(v)}></h1>
       <p class="lead" data-lead set:html={leadHTML(v)}></p>
@@ -23,7 +25,7 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
       <div data-deal></div>
       <div class="shell today" data-today set:html={todayCardHTML(v)}></div>
     </section>
-    <div class="sec lmain" data-list aria-label={"Ястията в обедното меню за " + dateText()} set:html={listHTML(v)}></div>
+    <div class="sec lmain" data-list aria-label={"Ястията в обедното меню за " + dateText(M)} set:html={listHTML(v)}></div>
   </div>
   <Fragment set:html={bottomHTML(v)} />
   <div data-proto></div>
@@ -217,27 +219,44 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
 </style>
 
 <script>
-  import { SC } from "../../client/sc-menu.ts";
-  import { price } from "../../lib/pricing.ts";
+  /* the small runtime only (no menu): the dishes, their prices and "+" are in the server HTML (data-id, data-p) */
+  import { SC } from "../../client/sc.ts";
+  import "./_icons.ts";
   import {
-    phaseOf, canOrderIn, h1HTML, leadHTML, uploadNoteHTML, dealHTML, todayCardHTML, modeInfoHTML, listHTML, weekHTML,
-    skeletonHTML, emptyHTML, errorHTML, clockText, type View, type Phase,
+    phaseOf, canOrderIn, sofiaToday, h1HTML, leadHTML, uploadNoteHTML, dealHTML, todayCardHTML, modeInfoHTML, weekHTML,
+    metaHTML, plusHTML, SLOT, lockedNote, offlineNote, skeletonHTML, emptyHTML, errorHTML, clockText, DISC_PCT,
+    type View, type Phase, type Meta,
   } from "./_lunch.ts";
 
   const main = SC.mount({ docTitle: "Обедно меню" });
   const root = main.querySelector<HTMLElement>("[data-lunch]")!;
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
   const ic = SC.ic;
+  const ds = root.dataset;
+  const M: Meta = { date: ds.date || "", dayName: ds.dayname || undefined, count: +(ds.count || 0), minP: +(ds.minp || 0) };
+  const list = $("[data-list]");
 
   /* MOCK (макет): демонстрира „Изчерпано днес“ само в преглед (?preview=1, демото). В истинския сайт идва от наличността на обедното меню (админ). */
   const MOCK_OUT = ["l-teleshko-sas-spanak-i-oriz"];
-  if (SC.preview) MOCK_OUT.forEach((id) => { const x = SC.byId[id]; if (x && x.t.indexOf("out") < 0) x.t.push("out"); });
+  if (SC.preview) MOCK_OUT.forEach((id) => {
+    const li = list.querySelector<HTMLElement>('.lrow[data-id="' + id + '"]');
+    if (!li || li.classList.contains("out")) return;
+    li.classList.add("out"); li.querySelector(".pic")?.classList.add("out");
+    li.parentElement!.appendChild(li); /* sold out stays visible, last in its group (decision 2) */
+  });
+  /* the lunch dishes on this page: id -> price (for the bar total and the pickup switch), and the sold out ones */
+  const LUNCH: Record<string, number> = {}, OUT = new Set<string>();
+  list.querySelectorAll<HTMLElement>(".lrow[data-id]").forEach((li) => { LUNCH[li.dataset.id!] = +li.dataset.p!; if (li.classList.contains("out")) OUT.add(li.dataset.id!); });
+  const LIST0 = list.innerHTML; /* the server list (with the mock), restored after the preview states */
+  let listState = "";
 
   /* lunch lives under "Меню" in the phone tab bar; Base marks only one key, so mark the tab here (see the report) */
   const tab = SC.ov.querySelector('.nav a[href="' + SC.url.menu() + '"]');
   if (tab) tab.setAttribute("aria-current", "page");
 
-  const isToday = SC.lunchIsToday();
+  /* BRIEF 8: the menu in the data is for one date; on another day it is never "днес" and (real site) not orderable */
+  const isToday = !!M.date && sofiaToday() === M.date;
+  ds.isToday = isToday ? "1" : "0";
   let phase: Phase = phaseOf(SC.state());
 
   type Demo = "" | "loading" | "empty" | "error" | "offline";
@@ -251,10 +270,26 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
   function view(): View {
     const now = SC.now();
     return {
-      phase, isToday, orderable: canOrderIn(phase) && (isToday || SC.preview),
+      meta: M, phase, isToday, orderable: canOrderIn(phase) && (isToday || SC.preview),
       mode: SC.cart.mode() === "pickup" ? "pickup" : "delivery", eta: SC.eta(), clock: clockText(now.h, now.m), reduce: SC.reduce, m: SC.state().m,
     };
   }
+
+  /* the bar total without the menu: lunch dishes at the page's price, -30% when picked up after 15:00 (same rounding as
+     lib/pricing.ts price()); other lines at the price saved in the cart. The cart page recomputes it from the menu. */
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  function barTotal(): number {
+    const c = SC.cart.get(), lunchOn = phase === "discount" && (c.mode === "pickup" || !SC.state().delivery);
+    let sub = 0, disc = 0;
+    for (const l of c.lines) {
+      if (OUT.has(l.id)) continue;
+      const lp = LUNCH[l.id], tot = r2(((lp ?? l.p ?? 0) + (lp == null ? l.extra || 0 : 0)) * l.q);
+      sub += tot;
+      if (lp != null && lunchOn) disc += Math.round(tot * DISC_PCT) / 100;
+    }
+    return r2(sub - disc);
+  }
+  const hasLunch = () => SC.cart.lines().some((l) => LUNCH[l.id] != null);
 
   /* ---------- action bar: one main action (only while the lunch menu can be ordered) ---------- */
   const abar = SC.ov.querySelector<HTMLElement>("[data-abar]")!;
@@ -268,8 +303,8 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
     const verb = phase === "discount" ? "Вземи от място" : "Поръчай";
     sum.hidden = !n;
     sum.innerHTML = n ? "<b>" + SC.plural(n, "ястие", "ястия") + "</b><small>в количката</small>" : "";
-    cta.innerHTML = n ? '<a class="pill pill-red" href="' + SC.url.cart() + '">' + verb + " · " + SC.fmt(price(SC.cart.get()).total) + "</a>"
-      : '<button class="pill pill-red" type="button" data-jump="first">' + (phase === "discount" ? "Вземи от място · -30%" : "Поръчай обедно меню") + ic("caret-down", 20) + "</button>";
+    cta.innerHTML = n ? '<a class="pill pill-red" href="' + SC.url.cart() + '">' + verb + " · " + SC.fmt(barTotal()) + "</a>"
+      : '<button class="pill pill-red" type="button" data-jump="first">' + (phase === "discount" ? "Вземи от място · -" + DISC_PCT + "%" : "Поръчай обедно меню") + ic("caret-down", 20) + "</button>";
   }
 
   /* ---------- render the hour-dependent parts ---------- */
@@ -282,10 +317,27 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
     $("[data-today]").innerHTML = todayCardHTML(v);
     $("[data-week]").innerHTML = weekHTML(v);
   }
+  /* the rows of the server HTML, updated in place: price (-30% after 15:00), "Изчерпано днес", "+" or an empty slot */
+  function updateRows(v: View) {
+    const can = canOrderIn(v.phase) && v.orderable;
+    list.querySelectorAll<HTMLElement>(".lrow[data-id]").forEach((li) => {
+      const id = li.dataset.id!, p = +li.dataset.p!, out = OUT.has(id), plus = can && !out;
+      li.classList.toggle("locked", !can);
+      li.querySelector(".meta")!.innerHTML = metaHTML(p, v.phase === "discount" && v.orderable, out);
+      const last = li.lastElementChild as HTMLElement;
+      if (plus !== last.classList.contains("plus")) last.outerHTML = plus ? plusHTML(id, p, li.querySelector(".nm")!.textContent || "") : SLOT;
+    });
+  }
   function renderList() {
-    const d = demo(), list = $("[data-list]");
-    list.innerHTML = d === "loading" ? skeletonHTML() : d === "empty" ? emptyHTML() : d === "error" ? errorHTML()
-      : listHTML(view(), d === "offline" || navigator.onLine === false);
+    const d = demo(), v = view();
+    if (d === "loading" || d === "empty" || d === "error") {
+      list.innerHTML = d === "loading" ? skeletonHTML() : d === "empty" ? emptyHTML() : errorHTML();
+    } else {
+      if (listState) list.innerHTML = LIST0;
+      $("[data-lnotes]").innerHTML = (d === "offline" || navigator.onLine === false ? offlineNote() : "") + lockedNote(v);
+      updateRows(v);
+    }
+    listState = d === "offline" ? "" : d;
     const p = main.querySelector("[data-demos]");
     if (p) p.innerHTML = DEMOS.map((x) => '<button class="chip" type="button" data-demo="' + x[0] + '" aria-pressed="' + (d === x[0]) + '">' + x[1] + "</button>").join("");
     SC.reveal(list);
@@ -299,14 +351,14 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
 
   /* after 15:00 the lunch menu is pickup only (decision 19): a lunch item in the cart switches the cart to pickup */
   SC.cart.on(() => {
-    if (phase === "discount" && SC.cart.mode() !== "pickup" && SC.cart.lines().some((l) => SC.byId[l.id] && SC.byId[l.id].lunch)) SC.cart.mode("pickup");
+    if (phase === "discount" && SC.cart.mode() !== "pickup" && hasLunch()) SC.cart.mode("pickup");
     updateBar();
   });
 
   function jumpTo(id: string) {
     const el = id === "first" ? main.querySelector<HTMLElement>("[data-list] .grp") : document.getElementById(id);
     if (!el) return;
-    const r2 = document.querySelector(".row2"), off = (r2 ? Math.max(0, r2.getBoundingClientRect().bottom) : 0) + 12;
+    const row2 = document.querySelector(".row2"), off = (row2 ? Math.max(0, row2.getBoundingClientRect().bottom) : 0) + 12;
     window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - off, behavior: SC.reduce ? "auto" : "smooth" });
     if (id === "first") { const p = el.querySelector<HTMLElement>(".plus"); setTimeout(() => { if (p) p.focus({ preventScroll: true }); }, SC.reduce ? 0 : 500); }
   }
@@ -331,14 +383,24 @@ const description = "Обедното меню на Siracusa в Дружба 2: 
   window.addEventListener("hashchange", render);
   window.addEventListener("offline", renderList);
   window.addEventListener("online", renderList);
-  /* the hour changes the page (10:00, 15:00, 22:30) and the "остават" line */
-  document.addEventListener("sc:tick", () => { const p = phaseOf(SC.state()); if (p !== phase) { phase = p; render(); } else renderHero(); });
+  /* the hour changes the page (10:00, 15:00, 22:30) and the "остават" line. At 15:00 a lunch cart for delivery becomes
+     pickup (decision 19) and the visitor is told why. */
+  document.addEventListener("sc:tick", () => {
+    const p = phaseOf(SC.state());
+    if (p === phase) { renderHero(); return; }
+    phase = p;
+    if (p === "discount" && view().orderable && hasLunch() && SC.cart.mode() !== "pickup") {
+      SC.cart.mode("pickup");
+      SC.toast("Вече е 15:00: обедното меню е само за вземане от място, с -" + DISC_PCT + "%.");
+    }
+    render();
+  });
 
   /* desktop: keep the day card in view while scrolling the list, but only when it fits the screen */
   const heroEl = main.querySelector<HTMLElement>(".lhero")!;
   function fitSticky() { heroEl.classList.toggle("stick", heroEl.offsetHeight + 190 < window.innerHeight); }
   window.addEventListener("resize", fitSticky);
 
-  root.dataset.ready = "1";
+  ds.ready = "1";
   render();
 </script>
