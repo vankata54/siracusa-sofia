@@ -4,11 +4,15 @@ export { MON, MONTHS, DAYS } from "./format.ts";
 
 export const RESTAURANT = {
   est: 2013 /* from the menu logo, to confirm */,
-  payment: ["В брой", "Карта при получаване (Visa, Mastercard)", "Ваучери (Sodexo, да се провери името)", "Подаръчна карта"],
+  payment: ["В брой", "Карта при получаване (Visa, Mastercard)", "Ваучер", "Подаръчна карта"],
   social: { facebook: "https://www.facebook.com/BarGrillSiracusa", instagram: null as string | null, google: null as string | null },
   googleReview: null as string | null,
   name: "Siracusa Bar & Grill",
   address: "ж.к. Дружба 2, срещу бл. 311, 1582 София",
+  /* the same address in parts (as in the prototype's JSON-LD, design/pages) */
+  street: "ж.к. Дружба 2, срещу бл. 311", postalCode: "1582", city: "София",
+  /** open every day (design/pages JSON-LD: Monday..Sunday 10:00-23:00) */
+  days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
   phone: "0894 36 55 77",
   phoneIntl: "+359894365577",
   phone2: "0700 199 55",
@@ -17,14 +21,36 @@ export const RESTAURANT = {
   maps: "https://www.google.com/maps/dir/?api=1&destination=Siracusa+Bar+%26+Grill+%D0%94%D1%80%D1%83%D0%B6%D0%B1%D0%B0+2+%D0%A1%D0%BE%D1%84%D0%B8%D1%8F",
 };
 
+/* Order rules shared by the cart, the core and the server (one place). */
+export const ORDER_RULES = {
+  /** max quantity of one line */
+  maxQty: 50,
+  /** max different lines in one order */
+  maxLines: 40,
+  /** categories whose dishes take add-ons from the "dobavki" category (owner to confirm, docs/OPEN-QUESTIONS.md) */
+  addonCats: ["pitsi", "burgeri", "pasta-i-rizoto", "salati", "zakuski"],
+  /** add-ons come only from this category */
+  addonCat: "dobavki",
+  /** pickup: the traditional menu is ready 20 min after ordering (lunch at once) */
+  pickupLeadMin: 20,
+  /** pickup slots every 15 min */
+  slotStep: 15,
+  /** pickup slots up to 3 hours ahead */
+  horizonMin: 180,
+  /** pre-orders ("за утре" / "за днес" before 10:00): from 10:30; pickup until 22:30, delivery until 20:45 */
+  preorderFrom: 630, pickupUntil: 1350, preorderDeliveryUntil: 1245,
+  /** -30% on lunch dishes after 15:00, pickup only */
+  lunchPickupDiscount: 0.3,
+} as const;
+
 export interface Zone { n: string; slug: string; etaMin: number; free: boolean; fee?: number | null; eta: string }
 export const ZONES: Zone[] = [
-  { n: "Дружба 1", slug: "druzhba-1", etaMin: 30, free: true, eta: "около 30 мин" },
-  { n: "Дружба 2", slug: "druzhba-2", etaMin: 25, free: true, eta: "около 25 мин" },
-  { n: "НПЗ Искър", slug: "npz-iskar", etaMin: 35, free: true, eta: "около 35 мин" },
-  { n: "Бусманци", slug: "busmantsi", etaMin: 40, free: true, eta: "около 40 мин" },
-  { n: "Горубляне", slug: "gorublyane", etaMin: 40, free: false, fee: null, eta: "около 40 мин" },
-  { n: "Гара Искър", slug: "gara-iskar", etaMin: 45, free: false, fee: null, eta: "около 45 мин" },
+  { n: "Дружба 1", slug: "druzhba-1", etaMin: 30, free: true, eta: "около 30\u00a0мин" },
+  { n: "Дружба 2", slug: "druzhba-2", etaMin: 25, free: true, eta: "около 25\u00a0мин" },
+  { n: "НПЗ Искър", slug: "npz-iskar", etaMin: 35, free: true, eta: "около 35\u00a0мин" },
+  { n: "Бусманци", slug: "busmantsi", etaMin: 40, free: true, eta: "около 40\u00a0мин" },
+  { n: "Горубляне", slug: "gorublyane", etaMin: 40, free: false, fee: null, eta: "около 40\u00a0мин" },
+  { n: "Гара Искър", slug: "gara-iskar", etaMin: 45, free: false, fee: null, eta: "около 45\u00a0мин" },
 ];
 
 export const TAGS: Record<TagId, [string, string]> = {

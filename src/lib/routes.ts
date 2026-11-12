@@ -67,8 +67,13 @@ export const url = {
   lunch: (hash?: string) => p(PAGES.lunch, hash),
   cart: (hash?: string) => p(PAGES.cart, hash),
   /** Order tracking. Server: /porachka/1042/ (the server serves the same static page for any number).
-      Demo (no server): porachka/index.html#1042. */
-  tracking: (no?: string | number) => (no == null ? p(PAGES.tracking) : cfg.demo ? p(PAGES.tracking, String(no)) : p(PAGES.tracking + no + "/")),
+      Demo (no server): porachka/index.html#1042. With the secret key (an order object from api.orders.create / get,
+      or "1042-k7f3m2pq"): /porachka/1042-k7f3m2pq/ and porachka/index.html#1042-k7f3m2pq. */
+  tracking: (no?: string | number | { no: string | number; key?: string }) => {
+    if (no == null) return p(PAGES.tracking);
+    const id = typeof no === "object" ? String(no.no) + (no.key ? "-" + no.key : "") : String(no);
+    return cfg.demo ? p(PAGES.tracking, id) : p(PAGES.tracking + id + "/");
+  },
   events: (hash?: string) => p(PAGES.events, hash),
   event: (slug: string, hash?: string) => p("sabitia/" + slug + "/", hash),
   reservation: (hash?: string) => p(PAGES.reservation, hash),

@@ -13,17 +13,25 @@ export interface Ctx {
   now?: () => Date;
   /** shop clock override for the hour logic ("21:30"); default real Sofia time */
   clock?: ClockInput;
-  /** real-time bus: SSE on the server, BroadcastChannel in the demo */
-  emit?: (type: string, data: unknown) => void;
+  /** real-time bus: SSE on the server, BroadcastChannel in the demo. `to` says who may receive it. */
+  emit?: (type: string, data: unknown, to: Audience) => void;
   hasher?: Hasher;
   /** demo build: SMS codes are returned to the screen (there is no SMS provider in v1 anyway) */
   demo?: boolean;
+  /** preview (demo build, or a server started with SC_PREVIEW_API=1 for tests): the lunch menu counts as today's */
+  preview?: boolean;
+  /** the tracking address must carry the order's key (/porachka/1042-k7f3m2pq/); off until the pages pass it */
+  requireTrackKey?: boolean;
 }
+
+/** Who may receive a real-time event: staff always; plus everyone ("public", data without personal details),
+    or only the subscribers of one order / one office order (subscription by key). */
+export interface Audience { public?: boolean; order?: string; office?: string }
 
 export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
-  notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log",
+  notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }
@@ -41,6 +49,16 @@ export function randomDigits(n: number): string {
   return Array.from(a, (v) => String(v % 10)).join("");
 }
 
-export function emit(ctx: Ctx, type: string, data: unknown): void {
-  try { ctx.emit && ctx.emit(type, data); } catch { /* the bus must never break a write */ }
+export function emit(ctx: Ctx, type: string, data: unknown, to: Audience = {}): void {
+  try { ctx.emit && ctx.emit(type, data, to); } catch { /* the bus must never break a write */ }
 }
+
+/** Codes people type: no 0/O, 1/I/L, 5/S confusion. */
+const CODE_ABC = "ABCDEFGHJKMNPQRTUVWXYZ2346789";
+export function randomCode(n: number, abc = CODE_ABC): string {
+  const a = new Uint32Array(n);
+  globalThis.crypto.getRandomValues(a);
+  return Array.from(a, (v) => abc[v % abc.length]).join("");
+}
+/** lower-case token for addresses (tracking key) */
+export const randomKey = (n: number): string => randomCode(n, "abcdefghjkmnpqrstuvwxyz23456789");

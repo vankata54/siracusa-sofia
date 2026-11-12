@@ -1,0 +1,335 @@
+/* Rules of the core added for v1 (core.agent.md): price only from the menu, hours, pickup time, zone from the address,
+   tracking key and public view, rating codes, office group order, reservations, settings, subscriptions. */
+import { describe, it, expect } from "vitest";
+import { createCore, MemoryRepo, publicOrder, type Ctx, type Order } from "../../src/core/index.ts";
+import { lunch, items, isOut, byId } from "../../src/lib/data.ts";
+import { price, parseMods, slotAllowed } from "../../src/lib/pricing.ts";
+import { eta, setKitchen, KITCHEN_DEFAULT } from "../../src/lib/status.ts";
+import { eventsJson } from "../../src/lib/events.ts";
+import { sofiaEpoch, addDaysYmd, validYmd } from "../../src/lib/time.ts";
+import { url, configureRoutes } from "../../src/lib/routes.ts";
+import { mayReceive, pickEncoding } from "../../server/app.ts";
+
+const NOW = new Date("2026-11-12T10:30:00Z"); /* 12:30 in Sofia */
+const mk = (clock = "12:30", extra: Partial<Ctx> = {}) => {
+  const events: [string, unknown, unknown][] = [];
+  const core = createCore({ repo: new MemoryRepo(), clock, now: () => NOW, emit: (t, d, to) => events.push([t, d, to]), ...extra });
+  return { core, events };
+};
+const pizza = byId["pitsa-margarita"] && !isOut(byId["pitsa-margarita"]) ? byId["pitsa-margarita"] : items.find((x) => x.cat === "pitsi" && !isOut(x))!;
+const soldOut = items.find((x) => isOut(x))!;
+const base = { name: "Иван Петров", phone: "0888 12 34 56" };
+const pickup = (lines: unknown[]) => ({ mode: "pickup", lines }) as never;
+const deliv = (lines: unknown[]) => ({ mode: "delivery", lines }) as never;
+const L = (id: string, q = 1, mods: string[] = [], more: Record<string, unknown> = {}) => ({ key: id, id, q, mods, ...more });
+
+describe("price only from the menu", () => {
+  it("ignores extra / p / name from the client; add-ons priced from the 'dobavki' category", async () => {
+    const { core } = mk();
+    const o = await core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+ Кашкавал"], { extra: -3, p: 0.01, n: "x", unit: 0.01 })]) });
+    expect(o.lines[0].unit).toBe(Math.round((pizza.p + byId["kashkaval"].p) * 100) / 100);
+    expect(o.total).toBe(o.lines[0].unit);
+  });
+  it("unknown add-on, add-on on a dish without add-ons, duplicate: refused", async () => {
+    const { core } = mk();
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+ Злато"])]) })).rejects.toMatchObject({ code: "bad_mod", status: 422 });
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, 1, ["+ Кашкавал", "+ Кашкавал"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+    const steak = items.find((x) => x.cat === "skara-bertha" && !isOut(x))!;
+    await expect(core.orders.create({ ...base, cart: pickup([L(steak.id, 1, ["+ Кашкавал"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+    expect(parseMods(pizza, ["без лук"]).bad).toBeNull();
+    expect(parseMods(pizza, ["нещо"]).bad).toBe("нещо");
+  });
+  it("q is a whole number 1..50; unknown and sold-out dishes refused; at most 40 lines", async () => {
+    const { core } = mk();
+    for (const q of [0, -1, 51, 1.5, "abc", 100000]) await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id, q as number)]) })).rejects.toMatchObject({ code: "bad_qty" });
+    await expect(core.orders.create({ ...base, cart: pickup([L("nyama-takova")]) })).rejects.toMatchObject({ code: "unknown_item" });
+    await expect(core.orders.create({ ...base, cart: pickup([L(soldOut.id)]) })).rejects.toMatchObject({ code: "sold_out", status: 409 });
+    const many = items.filter((x) => !isOut(x)).slice(0, 41).map((x) => L(x.id));
+    await expect(core.orders.create({ ...base, cart: pickup(many) })).rejects.toMatchObject({ code: "too_many" });
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id, 50)]) })).lines[0].q).toBe(50);
+  });
+});
+
+describe("hours: delivery until 21:00, kitchen until 22:30, lunch only today", () => {
+  it("21:30 delivery is refused with a clear error, never turned into pickup", async () => {
+    const { core } = mk("21:30");
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба 2, бл. 311" }))
+      .rejects.toMatchObject({ code: "delivery_closed", status: 409, message: "Доставката приключи за днес в 21:00. Можете да я вземете от ресторанта до 22:30." });
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id)]) })).mode).toBe("pickup");
+  });
+  it("before 10:00 its own text; 'днес' with a time works", async () => {
+    const { core } = mk("08:30");
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id)]) })).rejects.toMatchObject({ code: "closed", message: "Кухнята отваря в 10:00. Поръчайте за днес с час от 10:30." });
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id)]), sched: "днес", slot: "10:30" })).at).toBe("10:30");
+    await expect(mk("12:30").core.orders.create({ ...base, cart: pickup([L(pizza.id)]), sched: "днес", slot: "13:00" })).rejects.toMatchObject({ code: "bad_sched" });
+  });
+  it("lunch: only when the menu is today's (or preview); -30% after 15:00 only for pickup", async () => {
+    await expect(mk("12:30").core.orders.create({ ...base, cart: pickup([L(lunch[0].id)]) })).rejects.toMatchObject({ code: "lunch_stale" });
+    const today = new Date(lunch.length ? "2026-11-02T10:30:00Z" : NOW);
+    const o = await mk("16:30", { now: () => today }).core.orders.create({ ...base, cart: pickup([L(lunch[0].id)]) });
+    expect(o.discKind).toBe("lunch");
+    await expect(mk("12:30", { preview: true }).core.orders.create({ ...base, cart: pickup([L(lunch[0].id, 1, ["+ Кашкавал"])]) })).rejects.toMatchObject({ code: "bad_mod" });
+  });
+});
+
+describe("pickup time", () => {
+  const P = { mode: "pickup" as const, earliest: 770 }; /* 12:30 + 20 min */
+  it("format, future, 15 min step, 20 min for the kitchen, 3 hours ahead, until 22:30", () => {
+    expect(slotAllowed(P, "13:00", "12:30")).toBe(true);
+    for (const s of ["xx", "3:00", "12:45", "13:10", "15:45", "23:45", "03:00", "", "asap"]) expect(slotAllowed(P, s, "12:30")).toBe(false);
+    expect(slotAllowed(P, "15:30", "12:30")).toBe(true);
+    expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "22:30", "21:30")).toBe(true);
+    expect(slotAllowed({ mode: "pickup", earliest: 1290 }, "22:45", "21:30")).toBe(false);
+    expect(slotAllowed(P, "10:30", "12:30", true)).toBe(true);
+    expect(slotAllowed({ mode: "delivery", earliest: 750 }, "21:00", "12:30", true)).toBe(false);
+  });
+  it("the core refuses a bad slot with fields.slot; lunch only is ready at once", async () => {
+    const { core } = mk();
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id)]), slot: "12:40" })).rejects.toMatchObject({ code: "invalid", fields: { slot: "Изберете час от списъка." } });
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id)]), sched: "утре", slot: "" })).rejects.toMatchObject({ fields: { slot: "Изберете час от списъка." } });
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id)]), sched: "утре", slot: "23:50" })).rejects.toMatchObject({ fields: { slot: "Изберете час от списъка." } });
+    expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id)]), slot: "13:00" })).at).toBe("13:00");
+    const l = await mk("12:30", { preview: true }).core.orders.create({ ...base, cart: pickup([L(lunch[0].id)]) });
+    expect(l.at).toBe("веднага");
+  });
+});
+
+describe("zone from the address (the server's own check)", () => {
+  it("out of the zone is refused even with a free zone sent; the server's zone wins", async () => {
+    const { core } = mk();
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "ж.к. Младост 1, бл. 5" })).rejects.toMatchObject({ fields: { addr: "Адресът е извън зоната ни. Изберете „Вземи от място“." } });
+    const o = await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "кв. Горубляне, ул. 1" });
+    expect(o.zone).toBe("Горубляне");
+    expect(o.fee).toBeNull();
+  });
+  it("'Дружба' asks 1 or 2 (the chosen one must be one of them); a block without quarter takes the chosen zone", async () => {
+    const { core } = mk();
+    expect((await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 1", addr: "Дружба, бл. 72" })).zone).toBe("Дружба 1");
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Бусманци", addr: "Дружба, бл. 72" })).rejects.toMatchObject({ code: "invalid" });
+    const b = await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "бл. 311" });
+    expect(b.addr).toBe("бл. 311, Дружба 2");
+    await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), addr: "бл. 311" })).rejects.toMatchObject({ fields: { addr: "Добавете и квартала, например „Дружба 2, бл. 311“." } });
+  });
+});
+
+describe("tracking: key and public view", () => {
+  it("no name, phone, address, note; key needed when required", async () => {
+    const { core } = mk();
+    const o = await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба 2, бл. 311", note: "Звънец Петров", email: "a@b.bg" });
+    expect(o.key).toMatch(/^[a-z2-9]{8}$/);
+    const pub = await core.orders.track(o.no);
+    for (const k of ["name", "phone", "email", "addr", "note", "userId", "marketing", "key", "code"]) expect(pub).not.toHaveProperty(k);
+    expect((await core.orders.track(o.no + "-" + o.key)).key).toBe(o.key);
+    await expect(core.orders.track(o.no + "-zzzzzzzz")).rejects.toMatchObject({ code: "not_found", status: 404 });
+    await expect(core.orders.track("abc")).rejects.toMatchObject({ code: "not_found" });
+    const strict = createCore({ ...core.ctx, requireTrackKey: true });
+    await expect(strict.orders.track(o.no)).rejects.toMatchObject({ code: "not_found" });
+    expect(publicOrder(o as Order)).not.toHaveProperty("phone");
+  });
+  it("url.tracking with the key", () => {
+    configureRoutes({ demo: false, root: "/" });
+    expect(url.tracking(1042)).toBe("/porachka/1042/");
+    expect(url.tracking({ no: "1042", key: "k7f3m2pq" })).toBe("/porachka/1042-k7f3m2pq/");
+    expect(url.tracking("1042-k7f3m2pq")).toBe("/porachka/1042-k7f3m2pq/");
+  });
+  it("order.status goes only to that order's subscribers; office events only to that office", async () => {
+    const { core, events } = mk();
+    const o = await core.orders.create({ ...base, cart: pickup([L(pizza.id)]) });
+    await core.orders.setStatus(o.no, "cooking");
+    const st = events.find((e) => e[0] === "order.status")!;
+    expect(st[2]).toEqual({ order: o.no });
+    expect(events.find((e) => e[0] === "order.created")![2]).toEqual({});
+    const sub = { staff: false, orders: new Set(["9999"]), offices: new Set<string>() };
+    expect(mayReceive(sub, { order: o.no })).toBe(false);
+    expect(mayReceive({ ...sub, orders: new Set([o.no]) }, { order: o.no })).toBe(true);
+    expect(mayReceive(sub, {})).toBe(false);
+    expect(mayReceive(sub, { public: true })).toBe(true);
+    expect(mayReceive({ ...sub, staff: true }, {})).toBe(true);
+    expect(mayReceive(sub, { office: "123456" })).toBe(false);
+  });
+});
+
+describe("rating codes", () => {
+  const done = async (core: ReturnType<typeof mk>["core"], mode: "pickup" | "delivery" = "pickup") => {
+    const o = await core.orders.create({ ...base, cart: mode === "pickup" ? pickup([L(pizza.id, 2)]) : deliv([L(pizza.id, 2)]), ...(mode === "delivery" ? { zone: "Дружба 2", addr: "Дружба 2, бл. 311" } : {}) });
+    await core.orders.setStatus(o.no, mode === "pickup" ? "picked_up" : "delivered");
+    return o;
+  };
+  it("only a finished, existing order; one code per order; 10 digits", async () => {
+    const { core } = mk();
+    await expect(core.ratings.submit({ orderNo: "999999", happy: true })).rejects.toMatchObject({ code: "not_found", status: 404 });
+    const fresh = await core.orders.create({ ...base, cart: pickup([L(pizza.id)]) });
+    await expect(core.ratings.submit({ orderNo: fresh.no, happy: true })).rejects.toMatchObject({ code: "not_finished", status: 409 });
+    const o = await done(core);
+    const a = await core.ratings.submit({ orderNo: o.no + "-" + o.key, happy: true });
+    const b = await core.ratings.submit({ orderNo: o.no + "-" + o.key, happy: false, text: "Студено" });
+    expect(a.code).toMatch(/^SC10-\d{10}$/);
+    expect(b.code).toBe(a.code);
+    expect(b.rating.happy).toBe(false);
+    expect(b.rating).not.toHaveProperty("phone", "0888123456");
+  });
+  it("check, use once (-10% on the dishes, not the fee), marked only by a saved order", async () => {
+    const { core } = mk();
+    const o = await done(core);
+    const { code } = await core.ratings.submit({ orderNo: o.no + "-" + o.key, happy: true });
+    expect(await core.codes.check(code.toLowerCase().replace("-", " "))).toEqual({ code, pct: 10, valid: true });
+    await expect(core.codes.check("SC10-0000000000")).rejects.toMatchObject({ code: "invalid", fields: { code: "Няма такъв код. Проверете цифрите, например SC10-4829163057." } });
+    /* a failing order (bad phone) does not use the code */
+    await expect(core.orders.create({ ...base, phone: "1", cart: pickup([L(pizza.id)]), code })).rejects.toMatchObject({ code: "invalid" });
+    const p = await core.orders.create({ ...base, cart: pickup([L(pizza.id, 2)]), code });
+    expect(p).toMatchObject({ code, discKind: "code", codeDisc: Math.round(pizza.p * 2 * 10) / 100 });
+    expect(p.total).toBe(Math.round((p.sub - p.codeDisc!) * 100) / 100);
+    await expect(core.orders.create({ ...base, cart: pickup([L(pizza.id)]), code })).rejects.toMatchObject({ fields: { code: "Този код вече е използван." } });
+    await expect(core.codes.check(code)).rejects.toMatchObject({ fields: { code: "Този код вече е използван." } });
+  });
+  it("never together with the lunch -30%: the better one wins and the code stays unused", async () => {
+    const { core } = mk("16:30", { preview: true });
+    const o = await done(core);
+    const { code } = await core.ratings.submit({ orderNo: o.no + "-" + o.key, happy: true });
+    const l = await core.orders.create({ ...base, cart: pickup([L(lunch[0].id, 2)]), code });
+    expect(l.discKind).toBe("lunch");
+    expect(l.code).toBeUndefined();
+    expect((await core.codes.check(code)).valid).toBe(true);
+    const P = price(pickup([L(lunch[0].id, 1), L(pizza.id, 3)]), { clock: "16:30", codePct: 10 });
+    expect(P.discKind).toBe(P.codeDisc > P.lunchDisc ? "code" : "lunch");
+    expect(P.disc).toBe(Math.max(P.codeDisc, P.lunchDisc));
+  });
+});
+
+describe("office group order", () => {
+  const officeBase = { office: "Офис", addr: "Дружба 2, бл. 311", deadline: "11:30" };
+  const lunchLine = () => ({ id: lunch[0].id, q: 1, mods: [], extra: 0 });
+  it("deadline checked; the day follows the page's rule; the public view has no secrets", async () => {
+    const { core } = mk("09:30", { preview: true, now: () => new Date("2026-11-12T07:30:00Z") });
+    for (const d of ["99:99", "09:00", "14:30", "11:10", "x"]) await expect(core.office.create({ ...officeBase, deadline: d })).rejects.toMatchObject({ fields: { deadline: "Изберете краен час между 10:30 и 14:00." } });
+    const o = await core.office.create(officeBase);
+    expect(o.date).toBe("2026-11-12");
+    expect(o.orgKey).toMatch(/^[0-9a-f]{24}$/);
+    const late = await mk("11:15", { preview: true }).core.office.create(officeBase);
+    expect(late.date).toBe("2026-11-13");
+    const pub = await core.office.get(o.code);
+    expect(pub).not.toHaveProperty("orgKey");
+    expect(pub!.isOrg).toBe(false);
+    expect((await core.office.get(o.code, o.orgKey))!.isOrg).toBe(true);
+  });
+  it("colleagues by personal token, not by name; only lunch dishes; organizer may edit anyone", async () => {
+    const { core } = mk("09:30", { preview: true, now: () => new Date("2026-11-12T07:30:00Z") });
+    const o = await core.office.create(officeBase);
+    const me = await core.office.join(o.code, { name: "Мария", lines: [], orgKey: o.orgKey });
+    const ivan = await core.office.join(o.code, { name: "Иван", lines: [lunchLine()] });
+    expect(ivan.pid).toMatch(/^[0-9a-f]{24}$/);
+    expect(ivan.participants.every((p) => !("pid" in p))).toBe(true);
+    await expect(core.office.join(o.code, { name: "иван", lines: [] })).rejects.toMatchObject({ code: "name_taken", status: 409 });
+    expect((await core.office.join(o.code, { name: "Иван", lines: [], pid: ivan.pid })).participants.find((p) => p.name === "Иван")!.lines).toEqual([]);
+    await expect(core.office.join(o.code, { name: "Петя", lines: [{ id: pizza.id, q: 1, mods: [], extra: 0 }] })).rejects.toMatchObject({ code: "not_lunch" });
+    expect((await core.office.join(o.code, { name: "Иван", lines: [lunchLine()], orgKey: o.orgKey })).participants).toHaveLength(2);
+    expect(me.isOrg).toBe(true);
+  });
+  it("only the organizer sends, only once; lunch not today is refused", async () => {
+    const { core } = mk("10:45", { preview: true, now: () => new Date("2026-11-12T08:45:00Z") });
+    const o = await mk("09:30", { preview: true, now: () => new Date("2026-11-12T07:30:00Z"), repo: core.ctx.repo }).core.office.create(officeBase);
+    await core.office.join(o.code, { name: "Иван", lines: [lunchLine()] });
+    await expect(core.office.submit(o.code, { ...base })).rejects.toMatchObject({ code: "forbidden", status: 403 });
+    const r = await core.office.submit(o.code, { ...base, orgKey: o.orgKey });
+    expect(r.order.channel).toBe("office");
+    await expect(core.office.submit(o.code, { ...base, orgKey: o.orgKey })).rejects.toMatchObject({ code: "closed", message: "Поръчката вече е изпратена (№ " + r.order.no + ")." });
+    const real = mk("10:00");
+    const o2 = await real.core.office.create({ ...officeBase, deadline: "12:00" });
+    await expect(real.core.office.join(o2.code, { name: "Иван", lines: [lunchLine()] })).rejects.toMatchObject({ code: "lunch_stale" });
+  });
+  it("the deadline: the server sends with the organizer's contact; without it the order stays open with a reason", async () => {
+    const repo = new MemoryRepo();
+    const at = (clock: string, iso: string) => mk(clock, { preview: true, repo, now: () => new Date(iso) }).core;
+    const a = await at("09:30", "2026-11-12T07:30:00Z").office.create({ ...officeBase, name: "Мария", phone: "0888 11 22 33" });
+    const b = await at("09:30", "2026-11-12T07:30:00Z").office.create(officeBase);
+    for (const x of [a, b]) await at("10:00", "2026-11-12T08:00:00Z").office.join(x.code, { name: "Иван", lines: [lunchLine()] });
+    expect((await at("11:00", "2026-11-12T09:00:00Z").office.sendDue()).sent).toEqual([]);
+    const late = at("11:31", "2026-11-12T09:31:00Z");
+    await expect(late.office.join(a.code, { name: "Петя", lines: [] })).rejects.toMatchObject({ code: "deadline" });
+    const r = await late.office.sendDue();
+    expect(r.sent).toEqual([a.code]);
+    expect(r.failed).toEqual([[b.code, "no_contact"]]);
+    expect((await late.office.get(a.code))!.status).toBe("sent");
+    expect((await late.office.get(b.code))!.autoFailed).toBe("no_contact");
+    expect((await late.office.sendDue()).sent).toEqual([]);
+  });
+});
+
+describe("reservations", () => {
+  const r0 = { name: "Иван", phone: "0888123456", people: 2 };
+  it("date, time, seats validated", async () => {
+    const { core } = mk();
+    await expect(core.reservations.create({ ...r0, date: "2020-01-01", time: "19:00" })).rejects.toMatchObject({ fields: { date: "Изберете дата от днес до 3 месеца напред." } });
+    await expect(core.reservations.create({ ...r0, date: "2027-06-01", time: "19:00" })).rejects.toMatchObject({ fields: { date: "Изберете дата от днес до 3 месеца напред." } });
+    for (const t of ["03:17", "10:30", "22:00", "19:15"]) await expect(core.reservations.create({ ...r0, date: "2026-11-20", time: t })).rejects.toMatchObject({ fields: { time: "Изберете час между 11:00 и 21:30." } });
+    await expect(core.reservations.create({ ...r0, date: "2026-11-12", time: "12:00" })).rejects.toMatchObject({ fields: { time: "Този час вече мина. Изберете по-късен." } });
+    await expect(core.reservations.create({ ...r0, people: 12, table: "S1", date: "2026-11-20", time: "19:00" })).rejects.toMatchObject({ fields: { people: expect.stringContaining("Масата е за") } });
+    expect((await core.reservations.create({ ...r0, date: "2026-11-12", time: "13:00" })).status).toBe("new");
+  });
+  it("the table is held 2 hours (setting); overlap refused; get and cancel with the key", async () => {
+    const { core, events } = mk();
+    const a = await core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "19:30" });
+    expect(a.dur).toBe(120);
+    expect(await core.reservations.taken("2026-11-22", "20:00")).toEqual(["S3"]);
+    expect(await core.reservations.taken("2026-11-22", "18:00")).toEqual(["S3"]);
+    expect(await core.reservations.taken("2026-11-22", "17:30")).toEqual([]);
+    expect(await core.reservations.taken("2026-11-22", "21:30")).toEqual([]);
+    await expect(core.reservations.create({ ...r0, table: "S3", date: "2026-11-22", time: "20:30" })).rejects.toMatchObject({ code: "taken" });
+    await expect(core.reservations.get(a.id, "wrong")).rejects.toMatchObject({ code: "not_found" });
+    expect((await core.reservations.get(a.id, a.key!)).id).toBe(a.id);
+    expect((await core.reservations.cancel(a.id, a.key!)).status).toBe("cancelled");
+    expect(await core.reservations.taken("2026-11-22", "20:00")).toEqual([]);
+    const ev = events.filter((e) => e[0].startsWith("reservation."));
+    expect(ev.every((e) => (e[2] as { public?: boolean }).public && !JSON.stringify(e[1]).includes("0888"))).toBe(true);
+    await core.settings.update({ resMinutes: 90 });
+    await core.reservations.create({ ...r0, table: "S4", date: "2026-11-22", time: "19:00" });
+    expect(await core.reservations.taken("2026-11-22", "20:30")).toEqual([]);
+  });
+});
+
+describe("settings, subscriptions, events, time", () => {
+  it("kitchen busy: 55 min, zones +20; the minutes from the admin", async () => {
+    const { core } = mk();
+    await core.settings.update({ kitchen: { busy: true } });
+    expect(eta().text).toBe("Възможни са закъснения · около 55 мин");
+    const o = await core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба 2, бл. 311" });
+    expect(o.eta).toBe(45);
+    await expect(core.settings.update({ kitchen: { etaMin: 60, etaBusyMin: 50 } })).rejects.toMatchObject({ code: "invalid" });
+    await core.settings.update({ kitchen: { busy: false, etaMin: 30, etaBusyMin: 50 } });
+    expect(eta().text).toBe("около 30 мин");
+    setKitchen(KITCHEN_DEFAULT);
+  });
+  it("subscribe keeps the chosen topics", async () => {
+    const { core } = mk();
+    const s = await core.subscriptions.subscribe("A@b.bg", true, ["Тематични вечери", "нещо"]);
+    expect(s.topics).toEqual(["Тематични вечери"]);
+    expect((await core.subscriptions.subscribe("a@b.bg", true, ["Жива музика"])).topics).toEqual(["Тематични вечери", "Жива музика"]);
+    expect((await core.subscriptions.subscribe("c@b.bg", true)).topics).toEqual([]);
+  });
+  it("events with YYYY-MM-DD; Sofia time helpers", () => {
+    expect(eventsJson(new Date(2026, 10, 12))[0].date).toBe("2026-11-28");
+    expect(addDaysYmd("2026-12-31", 1)).toBe("2027-01-01");
+    expect(validYmd("2026-02-30")).toBe(false);
+    expect(new Date(sofiaEpoch("2026-11-12", 690)).toISOString()).toBe("2026-11-12T09:30:00.000Z");
+    expect(new Date(sofiaEpoch("2026-07-01", 690)).toISOString()).toBe("2026-07-01T08:30:00.000Z");
+  });
+  it("compression choice", () => {
+    expect(pickEncoding("gzip, deflate, br")).toBe("br");
+    expect(pickEncoding("gzip")).toBe("gzip");
+    expect(pickEncoding(undefined)).toBeNull();
+  });
+});
+
+describe("shared pickup constants and lunchPrice", () => {
+  it("lunch -30% only with the discount state and pickup", async () => {
+    const { lunchPrice } = await import("../../src/lib/pricing.ts");
+    const { ORDER_RULES, RESTAURANT } = await import("../../src/lib/consts.ts");
+    const x = { p: 2.4, lunch: true };
+    expect(lunchPrice(x, { lunchDiscount: true })).toEqual({ p: 1.68, old: 2.4, disc: 0.72 });
+    expect(lunchPrice(x, { lunchDiscount: true }, "delivery")).toEqual({ p: 2.4, old: null, disc: 0 });
+    expect(lunchPrice(x, { lunchDiscount: false })).toEqual({ p: 2.4, old: null, disc: 0 });
+    expect([ORDER_RULES.pickupLeadMin, ORDER_RULES.slotStep, ORDER_RULES.horizonMin]).toEqual([20, 15, 180]);
+    expect(RESTAURANT.payment[2]).toBe("Ваучер");
+    expect(RESTAURANT.postalCode).toBe("1582");
+  });
+});

@@ -48,7 +48,7 @@ const fontCss = `@font-face{font-family:"Manrope";font-style:normal;font-display
 const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(localStorage.getItem("sc-prefs")||"{}");if(p.theme==="light"||p.theme==="dark")d.dataset.theme=p.theme;if(localStorage.getItem("sc-cookie"))d.dataset.ck="1";}catch(e){}})();`;
 ---
 <!doctype html>
-<html lang="bg" data-root={root} data-demo={demo ? "1" : undefined} data-page={p.page}>
+<html lang="bg" data-root={root} data-demo={demo ? "1" : undefined} data-page={p.page} data-sc-abar={p.actionBar ? "1" : undefined} data-sc-nonav={showNav ? undefined : "1"}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -75,6 +75,8 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 </head>
 <body>
 <a class="vh skip" href="#main">Към съдържанието</a>
+<!-- the cookie banner comes first in the Tab order (it covers the page until answered); its own layer above the bars -->
+<div class="ov ov-ck" data-ov-ck><Fragment set:html={cookieBanner()} /></div>
 <div class="device" data-page={p.page}>
   <div class="scroller" data-scroller>
     <Fragment set:html={header(hopts)} />
@@ -85,8 +87,8 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <div class="ov" data-ov data-nav={showNav ? "1" : "0"} data-actionbar={p.actionBar ? "1" : "0"}>
   {showNav && <Fragment set:html={bottomNav((p.nav as string) ?? null)} />}
   {p.ai !== false && <Fragment set:html={aiFab({ actionBar: p.actionBar, bottomNav: showNav })} />}
-  <Fragment set:html={cookieBanner()} />
   <slot name="ov" />
+  <div class="toast" role="status" aria-live="polite"></div>
 </div>
 <script>import "../client/sc.ts";</script>
 </body>

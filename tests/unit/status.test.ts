@@ -16,7 +16,7 @@ describe("hours and the three states", () => {
     expect(status("12:30").cls).toBe("ok");
     expect(status("12:30").html).toContain("Отворено до 23:00");
     expect(eta("12:30").min).toBe(35);
-    expect(eta("12:30", true)).toEqual({ min: 55, busy: true, text: "Възможни са закъснения · около 55 мин" });
+    expect(eta("12:30", true)).toEqual({ min: 55, busy: true, text: "Възможни са закъснения · около 55\u00a0мин" });
   });
   it("10:30 breakfast and lunch", () => {
     expect(state("10:30")).toMatchObject({ breakfast: true, lunch: true });

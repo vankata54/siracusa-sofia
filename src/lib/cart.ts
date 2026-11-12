@@ -1,6 +1,7 @@
 /* Pure cart logic (no storage, no DOM). Line key = id + modifications ("pitsa|без лук,+ Кашкавал").
    Stored in the browser as localStorage "sc-cart" = {lines, mode} (same shape as the prototype). */
 import { resolveDish } from "./registry.ts";
+import { ORDER_RULES } from "./consts.ts";
 
 export type Mode = "delivery" | "pickup";
 /* n / p: name and unit price at the moment of adding, so the shared runtime (badge, aria label) works without the menu.
@@ -39,7 +40,7 @@ export function subtotal(c: Cart): number {
 export function sanitize(v: unknown): Cart {
   const c = (v && typeof v === "object" ? v : {}) as Partial<Cart>;
   const lines = Array.isArray(c.lines) ? c.lines.filter((l) => l && typeof l.id === "string" && l.q > 0).map((l) => ({
-    key: typeof l.key === "string" ? l.key : lineKey(l.id, l.mods), id: l.id, q: Math.floor(+l.q) || 1,
+    key: typeof l.key === "string" ? l.key : lineKey(l.id, l.mods), id: l.id, q: Math.min(ORDER_RULES.maxQty, Math.max(1, Math.floor(+l.q) || 1)),
     mods: Array.isArray(l.mods) ? l.mods.map(String) : [], extra: +l.extra || 0,
     ...(typeof l.n === "string" ? { n: l.n } : {}), ...(Number.isFinite(+(l.p as number)) && l.p != null ? { p: +(l.p as number) } : {}),
   })) : [];

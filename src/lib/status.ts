@@ -25,14 +25,30 @@ export function status(o?: ClockInput): Status {
 }
 
 export interface Eta { min: number; busy: boolean; text: string }
-/* "Натоварено" is ONLY the manual switch in the kitchen (decision 04.11.2026); +20 min. The runtime sets it from the settings. */
-let kitchenBusy = false;
-export function setKitchenBusy(b: boolean): void { kitchenBusy = !!b; }
-export function isKitchenBusy(): boolean { return kitchenBusy; }
-/** Honest delivery estimate: "около 35 мин", or "около 55 мин" while the kitchen has switched on "Натоварено". */
+/* "Натоварено" is ONLY the manual switch in the kitchen (decision 04.11.2026): normally "около 35 мин", busy "около 55 мин".
+   One source: the kitchen settings in the core (GET /api/status, or the demo store). The runtime (src/client/sc.ts) calls
+   setKitchen()/setKitchenBusy() with them; the server does the same for its own process. */
+export interface KitchenSettings { busy: boolean; etaMin: number; etaBusyMin: number }
+export const KITCHEN_DEFAULT: KitchenSettings = { busy: false, etaMin: 35, etaBusyMin: 55 };
+let kitchen: KitchenSettings = { ...KITCHEN_DEFAULT };
+const okMin = (v: unknown, d: number) => (Number.isInteger(v) && (v as number) >= 5 && (v as number) <= 240 ? (v as number) : d);
+export function setKitchen(s: Partial<KitchenSettings> | null | undefined): KitchenSettings {
+  const c = s || {};
+  kitchen = { busy: c.busy == null ? kitchen.busy : !!c.busy, etaMin: okMin(c.etaMin, kitchen.etaMin), etaBusyMin: okMin(c.etaBusyMin, kitchen.etaBusyMin) };
+  return kitchen;
+}
+export function getKitchen(): KitchenSettings { return { ...kitchen }; }
+export function setKitchenBusy(b: boolean): void { kitchen = { ...kitchen, busy: !!b }; }
+export function isKitchenBusy(): boolean { return kitchen.busy; }
+/** Extra minutes while "Натоварено" is on (default 20), added to the zone times too. */
+export function busyExtra(): number { return Math.max(0, kitchen.etaBusyMin - kitchen.etaMin); }
+/** Non-breaking space between the number and "мин" (never "35 / мин" on two lines). */
+export const NBSP = "\u00a0";
+/** Honest delivery estimate: "около 35 мин", or "Възможни са закъснения · около 55 мин" while "Натоварено" is on. */
 export function eta(_o?: ClockInput, busyOverride?: boolean): Eta {
-  const busy = busyOverride ?? kitchenBusy;
-  return busy ? { min: 55, busy: true, text: "Възможни са закъснения · около 55 мин" } : { min: 35, busy: false, text: "около 35 мин" };
+  const busy = busyOverride ?? kitchen.busy;
+  return busy ? { min: kitchen.etaBusyMin, busy: true, text: "Възможни са закъснения · около " + kitchen.etaBusyMin + NBSP + "мин" }
+    : { min: kitchen.etaMin, busy: false, text: "около " + kitchen.etaMin + NBSP + "мин" };
 }
 
 /** The last Saturday of this month (or next month if it already passed) and the days until it. */

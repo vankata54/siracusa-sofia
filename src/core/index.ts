@@ -6,11 +6,17 @@ import * as cust from "./customers.ts";
 import * as staff from "./staff.ts";
 import * as notes from "./notes.ts";
 import * as auditMod from "./audit.ts";
+import * as office from "./office.ts";
+import * as codes from "./codes.ts";
+import * as settings from "./settings.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
 export * from "./ctx.ts";
-export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, nextStatus } from "./orders.ts";
+export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, FINISHED, MSG, nextStatus, publicOrder, parseTrack, type PublicOrder } from "./orders.ts";
+export { publicOffice, officeDue, officeDueAt, OFFICE_MSG, type PublicOffice } from "./office.ts";
+export { normCode, CODE_MSG } from "./codes.ts";
+export { DEFAULT_SETTINGS } from "./settings.ts";
 export { SECTIONS, DEFAULT_ROLES } from "./staff.ts";
 export { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
@@ -26,17 +32,19 @@ function bind<M extends Record<string, unknown>>(ctx: Ctx, m: M): Bound<Pick<M, 
 export function createCore(ctx: Ctx) {
   return {
     ctx,
-    orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, list: orders.listOrders, setStatus: orders.setOrderStatus }),
-    reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenTables, setStatus: res.setReservationStatus }),
+    orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, track: orders.trackOrder, find: orders.findTracked, list: orders.listOrders, setStatus: orders.setOrderStatus }),
+    reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenTables, setStatus: res.setReservationStatus, get: res.getReservation, cancel: res.cancelReservation }),
     celebrations: bind(ctx, { create: res.createCelebration }),
-    office: bind(ctx, { create: res.createOffice, get: res.getOffice, join: res.joinOffice, submit: res.submitOffice }),
+    office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),
+    codes: bind(ctx, { check: codes.checkCode }),
+    settings: bind(ctx, { get: settings.getSettings, update: settings.updateSettings }),
     subscriptions: bind(ctx, { subscribe: res.subscribe }),
     customers: bind(ctx, {
       requestCode: cust.requestSmsCode, verifyCode: cust.verifySmsCode, bySession: cust.customerBySession, logout: cust.logout,
       update: cust.updateCustomer, toggleFav: cust.toggleFavourite, addAddress: cust.addAddress, removeAddress: cust.removeAddress,
       orders: cust.customerOrders, export: cust.exportCustomer, remove: cust.deleteCustomer,
     }),
-    ratings: bind(ctx, { submit: cust.submitRating }),
+    ratings: bind(ctx, { submit: codes.submitRating }),
     staff: bind(ctx, {
       login: staff.staffLogin, bySession: staff.staffBySession, logout: staff.staffLogout, list: staff.listStaff, upsert: staff.upsertStaff,
       roles: staff.roles, can: staff.can, setRole: staff.setRoleSections,

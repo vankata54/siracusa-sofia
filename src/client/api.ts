@@ -1,82 +1,97 @@
 /* One client for every screen. Server build: fetch("/api/...") + EventSource("/api/stream").
-   Demo build (<html data-demo="1">, static files, no server): the same core runs in the browser on localStorage
-   (KVRepo) and real-time events go through BroadcastChannel between tabs. Same method names, same results, same errors. */
-import { createCore, KVRepo, CoreError, type Core, type Hasher, type StaffUser, type RoleId } from "../core/index.ts";
-import type { OrderInput } from "../core/orders.ts";
-import type { ReservationInput, CelebrationInput } from "../core/reservations.ts";
-import type { NoteInput } from "../core/notes.ts";
-import type { ProfilePatch } from "../core/customers.ts";
-import type { NoteStatus, OrderStatus, ReservationStatus, OfficeParticipant, Customer } from "../core/types.ts";
-import { MENU } from "../data/menu.ts";
-import { state, status, eta } from "../lib/status.ts";
-import { offers } from "../lib/offers.ts";
-import { events } from "../lib/events.ts";
+   Demo build (DEMO=1, <html data-demo="1">, static files, no server): the same core runs in the browser on localStorage
+   (src/client/api-demo.ts, loaded only in the demo build) and real-time events go through BroadcastChannel between tabs.
+   Same method names, same results, same error codes and texts.
+   SIZE: this file must not import the core or the menu (they would ship to every page with the API). Only types here.
 
-export const DEMO = typeof document !== "undefined" && document.documentElement.dataset.demo === "1";
+   Secrets kept in this browser (localStorage "sc-keys") and added to the calls by this file, so the pages do not handle them:
+   - the order key (tracking address /porachka/<no>-<key>/), from orders.create;
+   - the office organizer token (orgKey) from office.create / office.get(code, orgKey), and the colleague's pid from office.join;
+   - the reservation key from reservations.create (get / cancel). */
+import type { Core, OrderInput, ReservationInput, CelebrationInput, NoteInput, ProfilePatch, NoteStatus, OrderStatus, ReservationStatus, OfficeParticipant, Customer,
+  Order, PublicOrder, OfficeOrder, PublicOffice, Reservation, Subscription, Settings, Audience } from "./api-types.ts";
+import type { SettingsPatch } from "../core/settings.ts";
+import type { SiteEventJson } from "../lib/events.ts";
+import { clockOverride, isPreview } from "../lib/time.ts";
+
+/* the demo core exists only in the demo build (Vite drops the import from the server build) */
+const BUILD_DEMO: boolean = typeof __DEMO__ !== "undefined" && __DEMO__;
+export const DEMO = BUILD_DEMO && typeof document !== "undefined" && document.documentElement.dataset.demo === "1";
 
 export class ApiError extends Error {
   code: string; status: number; fields?: Record<string, string>;
   constructor(code: string, message: string, status = 400, fields?: Record<string, string>) { super(message); this.code = code; this.status = status; this.fields = fields; }
 }
 
-/* ---------- real-time bus ---------- */
+/* ---------- keys kept in this browser ---------- */
+interface Keys { orders: Record<string, string>; org: Record<string, string>; pid: Record<string, string>; res: Record<string, string> }
+function keys(): Keys {
+  try { const k = JSON.parse(localStorage.getItem("sc-keys") || "{}"); return { orders: k.orders || {}, org: k.org || {}, pid: k.pid || {}, res: k.res || {} }; }
+  catch { return { orders: {}, org: {}, pid: {}, res: {} }; }
+}
+function remember(kind: keyof Keys, id: string, v: string | undefined | null) {
+  if (!id || !v) return;
+  try { const k = keys(); k[kind][id] = v; localStorage.setItem("sc-keys", JSON.stringify(k)); } catch { /* private mode */ }
+}
+/** "1042" -> "1042-k7f3m2pq" when this browser knows the key */
+export function trackId(no: string | number): string {
+  const s = String(no);
+  if (s.includes("-")) return s;
+  const k = keys().orders[s];
+  return k ? s + "-" + k : s;
+}
+
+/* ---------- real-time bus: subscription by key ---------- */
 type Fn = (data: unknown, type: string) => void;
 const subs = new Map<string, Set<Fn>>();
-function fire(type: string, data: unknown) {
+const watching = { orders: new Set<string>(), offices: new Set<string>() };
+/** delivers an event to this page's listeners if the page may see it (public, its order, its office order, or staff) */
+export function busFire(type: string, data: unknown, to: Audience = {}) {
+  const staff = (() => { try { return !!localStorage.getItem("sc-demo-staff"); } catch { return false; } })();
+  const ok = staff || !!to.public || (!!to.order && [...watching.orders].some((w) => w.split("-")[0] === to.order)) || (!!to.office && watching.offices.has(to.office));
+  if (!ok) return;
   subs.get(type)?.forEach((f) => f(data, type));
   subs.get("*")?.forEach((f) => f(data, type));
 }
-let bc: BroadcastChannel | null = null, es: EventSource | null = null;
-function connect(type: string) {
-  if (DEMO) {
-    if (!bc && typeof BroadcastChannel !== "undefined") { bc = new BroadcastChannel("sc-demo"); bc.onmessage = (e) => fire(e.data.type, e.data.data); }
-    return;
-  }
-  if (!es) es = new EventSource("/api/stream");
-  if (type !== "*" && !subs.get(type)?.size) es.addEventListener(type, (e) => fire(type, JSON.parse((e as MessageEvent).data)));
+let bc: BroadcastChannel | null = null, es: EventSource | null = null, esUrl = "";
+export function demoChannel(): BroadcastChannel | null {
+  if (!bc && typeof BroadcastChannel !== "undefined") { bc = new BroadcastChannel("sc-demo"); bc.onmessage = (e) => busFire(e.data.type, e.data.data, e.data.to); }
+  return bc;
 }
+function streamUrl(): string {
+  const q = new URLSearchParams();
+  if (watching.orders.size) q.set("order", [...watching.orders].join(","));
+  if (watching.offices.size) q.set("office", [...watching.offices].join(","));
+  const s = q.toString();
+  return "/api/stream" + (s ? "?" + s : "");
+}
+function connect() {
+  if (DEMO) { demoChannel(); return; }
+  if (typeof EventSource === "undefined" || !subs.size) return;
+  const u = streamUrl();
+  if (es && esUrl === u) return;
+  es?.close();
+  es = new EventSource(u); esUrl = u;
+  for (const type of subs.keys()) if (type !== "*") es.addEventListener(type, (e) => { let d: unknown = null; try { d = JSON.parse((e as MessageEvent).data); } catch { /* ignore */ } subs.get(type)?.forEach((f) => f(d, type)); subs.get("*")?.forEach((f) => f(d, type)); });
+}
+function watchOrder(id: string) { if (!watching.orders.has(id)) { [...watching.orders].forEach((w) => { if (w.split("-")[0] === id.split("-")[0]) watching.orders.delete(w); }); watching.orders.add(id); if (subs.size) connect(); } }
+function watchOffice(code: string) { if (code && !watching.offices.has(code)) { watching.offices.add(code); if (subs.size) connect(); } }
 
-/* ---------- demo core (lazy) ---------- */
-const enc = new TextEncoder();
-const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
-async function pbkdf2(password: string, salt: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode(salt), iterations: 120000 }, key, 256));
-}
-export const webHasher: Hasher = {
-  async hash(p) { const a = new Uint8Array(16); crypto.getRandomValues(a); const salt = hex(a.buffer); return { salt, hash: await pbkdf2(p, salt), algo: "pbkdf2" }; },
-  async verify(p, salt, hash) { return (await pbkdf2(p, salt)) === hash; },
-};
-let demoCore: Core | null = null;
-async function core(): Promise<Core> {
-  if (demoCore) return demoCore;
-  demoCore = createCore({
-    repo: new KVRepo(localStorage), hasher: webHasher, demo: true,
-    emit: (type, data) => { fire(type, data); bc?.postMessage({ type, data }); },
-  });
-  /* staff accounts: PBKDF2 hashes built from .env at `npm run build:demo` (never the passwords) */
-  const list = typeof __DEMO_STAFF__ !== "undefined" ? __DEMO_STAFF__ : [];
-  for (const s of list) {
-    const have = (await demoCore.ctx.repo.list<StaffUser>("staff_users", { username: s.username }))[0];
-    if (!have || have.hash !== s.hash) await demoCore.ctx.repo.put<StaffUser>("staff_users", { id: have ? have.id : "u-" + s.username, username: s.username, name: s.name, role: s.role as RoleId, salt: s.salt, hash: s.hash, algo: "pbkdf2", active: true, createdAt: new Date().toISOString() });
-  }
-  return demoCore;
-}
-const TOK = { staff: "sc-demo-staff", user: "sc-demo-user" };
-const tok = (k: keyof typeof TOK) => { try { return localStorage.getItem(TOK[k]); } catch { return null; } };
-const setTok = (k: keyof typeof TOK, v: string | null) => { try { v ? localStorage.setItem(TOK[k], v) : localStorage.removeItem(TOK[k]); } catch { /* ignore */ } };
-
+/* ---------- transport ---------- */
 async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
-  try { return await fn(await core()); }
-  catch (e) {
-    if (e instanceof CoreError) throw new ApiError(e.code, e.message, e.status, (e as CoreError & { fields?: Record<string, string> }).fields);
-    throw e;
-  }
+  const m = await import("./api-demo.ts");
+  return m.local(fn);
 }
+const pad = (n: number) => String(n).padStart(2, "0");
 async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
   let r: Response;
+  const h: Record<string, string> = {};
+  if (body) h["content-type"] = "application/json";
+  /* preview frames / tests: the server follows the page's clock only when it runs with SC_PREVIEW_API=1 */
+  const ov = isPreview() ? clockOverride() : null;
+  if (ov) h["x-sc-clock"] = pad(ov.h) + ":" + pad(ov.m);
   try {
-    r = await fetch("/api/" + path, { method, credentials: "same-origin", headers: body ? { "content-type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+    r = await fetch("/api/" + path, { method, credentials: "same-origin", headers: h, body: body ? JSON.stringify(body) : undefined });
   } catch {
     throw new ApiError("offline", "Няма връзка. Проверете интернета и опитайте пак.", 0);
   }
@@ -87,85 +102,164 @@ async function http<T>(method: string, path: string, body?: unknown): Promise<T>
 /** pick the demo or the server implementation */
 const pick = <A extends unknown[], T>(demo: (c: Core, ...a: A) => Promise<T>, server: (...a: A) => Promise<T>) =>
   (...a: A): Promise<T> => (DEMO ? local((c) => demo(c, ...a)) : server(...a));
+const demoTok = (k: "staff" | "user") => { try { return localStorage.getItem(k === "staff" ? "sc-demo-staff" : "sc-demo-user"); } catch { return null; } };
+const setDemoTok = (k: "staff" | "user", v: string | null) => { try { const n = k === "staff" ? "sc-demo-staff" : "sc-demo-user"; v ? localStorage.setItem(n, v) : localStorage.removeItem(n); } catch { /* ignore */ } };
 
 /* "sc-user": the prototype key that SC.user() and the pages read (name, phone, consents). */
 function rememberUser(c: Customer | null) {
   try { c ? localStorage.setItem("sc-user", JSON.stringify(c)) : localStorage.removeItem("sc-user"); } catch { /* ignore */ }
 }
+const noAuth = () => new ApiError("auth", "Влезте с телефона си.", 401);
+
+export type StatusInfo = { state: unknown; status: unknown; eta: { min: number; busy: boolean; text: string }; kitchen: Settings["kitchen"] };
+type JoinBody = OfficeParticipant & { pid?: string };
+type SubmitBody = Pick<OrderInput, "name" | "phone" | "pay" | "email" | "note">;
+type OfficeCreate = { office: string; addr: string; deadline?: string; payer?: "one" | "each"; mode?: "delivery" | "pickup"; name?: string; phone?: string; pay?: "cash" | "card" | "voucher" };
 
 export const api = {
   demo: DEMO,
-  /* public data (in the demo straight from the bundled menu) */
-  menu: pick(async () => MENU, () => http<typeof MENU>("GET", "menu")),
-  status: pick(async () => ({ state: state(), status: status(), eta: eta() }), () => http("GET", "status")),
-  offers: pick(async () => offers(), () => http("GET", "offers")),
-  events: pick(async () => events(), () => http("GET", "events")),
+  /* public data (in the demo straight from the bundled data) */
+  menu: async () => (DEMO ? (await import("./api-demo.ts")).MENU : http<unknown>("GET", "menu")),
+  status: async (): Promise<StatusInfo> => (DEMO ? (await import("./api-demo.ts")).statusInfo() : http<StatusInfo>("GET", "status")),
+  offers: async () => (DEMO ? (await import("./api-demo.ts")).offers() : http<unknown>("GET", "offers")),
+  /** events with the date as "YYYY-MM-DD" */
+  events: async (): Promise<SiteEventJson[]> => (DEMO ? (await import("./api-demo.ts")).eventsJson() : http<SiteEventJson[]>("GET", "events")),
 
   orders: {
-    create: pick((c, o: Omit<OrderInput, "channel" | "userId">) => c.orders.create({ ...o, channel: "web" }), (o) => http("POST", "orders", o)),
-    get: pick((c, no: string) => c.orders.get(no), (no) => http("GET", "orders/" + encodeURIComponent(no))),
+    /** returns the whole order (with `key`: the tracking address is SC.url.tracking(order)) */
+    create: async (o: Omit<OrderInput, "channel" | "userId">): Promise<Order> => {
+      const r = DEMO ? await local((c) => c.orders.create({ ...o, channel: "web" })) : await http<Order>("POST", "orders", o);
+      remember("orders", r.no, r.key); watchOrder(trackId(r.no));
+      return r;
+    },
+    /** public view for tracking; `no` may be "1042" (the key this browser knows is added) or "1042-k7f3m2pq" */
+    get: async (no: string | number): Promise<PublicOrder> => {
+      const id = trackId(no);
+      const r = DEMO ? await local((c) => c.orders.track(id)) : await http<PublicOrder>("GET", "orders/" + encodeURIComponent(id));
+      if (r.key) remember("orders", r.no, r.key);
+      watchOrder(trackId(r.no));
+      return r;
+    },
+  },
+  /** discount code from the rating, before the order: { code, pct, valid } or ApiError with fields.code */
+  codes: {
+    check: pick((c, code: string) => c.codes.check(code), (code) => http<{ code: string; pct: number; valid: true }>("POST", "codes/check", { code })),
   },
   reservations: {
-    create: pick((c, r: ReservationInput) => c.reservations.create(r), (r) => http("POST", "reservations", r)),
-    taken: pick((c, date: string, time: string) => c.reservations.taken(date, time), (date, time) => http<string[]>("GET", `reservations/taken?date=${date}&time=${time}`)),
+    /** returns the reservation with `key` (kept in this browser for get / cancel) */
+    create: async (r: ReservationInput): Promise<Reservation> => {
+      const x = DEMO ? await local((c) => c.reservations.create(r)) : await http<Reservation>("POST", "reservations", r);
+      remember("res", x.id, x.key);
+      return x;
+    },
+    taken: pick((c, date: string, time: string) => c.reservations.taken(date, time), (date, time) => http<string[]>("GET", `reservations/taken?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`)),
+    /** key: from the SMS link; without it, the key this browser kept */
+    get: async (id: string, key?: string): Promise<Reservation> => {
+      const k = keys().res[id] || key || "";
+      return DEMO ? local((c) => c.reservations.get(id, k)) : http<Reservation>("GET", "reservations/" + encodeURIComponent(id) + "?k=" + encodeURIComponent(k));
+    },
+    cancel: async (id: string, key?: string): Promise<Reservation> => {
+      const k = keys().res[id] || key || "";
+      return DEMO ? local((c) => c.reservations.cancel(id, k)) : http<Reservation>("POST", "reservations/" + encodeURIComponent(id) + "/cancel", { key: k });
+    },
   },
   celebrations: { create: pick((c, x: CelebrationInput) => c.celebrations.create(x), (x) => http("POST", "celebrations", x)) },
   office: {
-    create: pick((c, o: Parameters<Core["office"]["create"]>[0]) => c.office.create(o), (o) => http("POST", "office", o)),
-    get: pick((c, code: string) => c.office.get(code), (code) => http("GET", "office/" + code)),
-    join: pick((c, code: string, p: OfficeParticipant) => c.office.join(code, p), (code, p) => http("POST", `office/${code}/join`, p)),
-    submit: pick((c, code: string, contact: Parameters<Core["office"]["submit"]>[1]) => c.office.submit(code, contact), (code, contact) => http("POST", `office/${code}/submit`, contact)),
+    /** returns the order with `orgKey` (kept in this browser; for "continue on another device" put it in the organizer's link) */
+    create: async (o: OfficeCreate): Promise<OfficeOrder> => {
+      const r = DEMO ? await local((c) => c.office.create(o)) : await http<OfficeOrder>("POST", "office", o);
+      remember("org", r.code, r.orgKey); watchOffice(r.code);
+      return r;
+    },
+    /** orgKey: from the organizer's link (another device); kept when it is right (isOrg in the answer) */
+    get: async (code: string, orgKey?: string): Promise<PublicOffice | null> => {
+      const k = orgKey || keys().org[code] || "";
+      const r = DEMO ? await local((c) => c.office.get(code, k || null)) : await http<PublicOffice | null>("GET", "office/" + encodeURIComponent(code) + (k ? "?k=" + encodeURIComponent(k) : ""));
+      if (r && r.isOrg && orgKey) remember("org", code, orgKey);
+      if (r) watchOffice(code);
+      return r;
+    },
+    /** a colleague's choice: the organizer (this browser has orgKey) may write any name; a colleague only their own entry (pid) */
+    join: async (code: string, p: JoinBody): Promise<PublicOffice & { pid: string }> => {
+      const k = keys(), org = k.org[code];
+      const b = { ...p, ...(org ? { orgKey: org } : { pid: p.pid || k.pid[code] }) };
+      const r = DEMO ? await local((c) => c.office.join(code, b)) : await http<PublicOffice & { pid: string }>("POST", `office/${encodeURIComponent(code)}/join`, b);
+      if (!org) remember("pid", code, r.pid);
+      watchOffice(code);
+      return r;
+    },
+    submit: async (code: string, contact: SubmitBody): Promise<{ office: PublicOffice; order: Order }> => {
+      const b = { ...contact, orgKey: keys().org[code] };
+      const r = DEMO ? await local((c) => c.office.submit(code, b)) : await http<{ office: PublicOffice; order: Order }>("POST", `office/${encodeURIComponent(code)}/submit`, b);
+      remember("orders", r.order.no, r.order.key);
+      return r;
+    },
+    /** the organizer token this browser holds (for the organizer's link), or "" */
+    orgKey: (code: string): string => keys().org[code] || "",
   },
-  subscribe: pick((c, email: string, consent: boolean) => c.subscriptions.subscribe(email, consent), (email, consent) => http("POST", "subscribe", { email, consent })),
-  ratings: { submit: pick((c, r: { orderNo: string; happy: boolean; text?: string }) => c.ratings.submit(r), (r) => http("POST", "ratings", r)) },
+  /** topics: the chosen event categories (none = all) */
+  subscribe: pick((c, email: string, consent: boolean, topics?: string[]) => c.subscriptions.subscribe(email, consent, topics), (email, consent, topics) => http<Subscription>("POST", "subscribe", { email, consent, topics })),
+  ratings: {
+    submit: pick((c, r: { orderNo: string; happy: boolean; text?: string }) => c.ratings.submit({ ...r, orderNo: trackId(r.orderNo) }),
+      (r) => http<{ code: string; pct: number; google: string | null; googleMissing: boolean }>("POST", "ratings", { ...r, orderNo: trackId(r.orderNo) })),
+  },
 
   /* customers: SMS sign-in (the code is returned as demoCode and shown on screen in v1) */
   auth: {
     smsRequest: pick((c, phone: string) => c.customers.requestCode(phone), (phone) => http<{ sent: true; phone: string; demoCode: string; resendIn: number }>("POST", "auth/sms/request", { phone })),
     smsVerify: async (phone: string, code: string, extra: { name?: string; marketing?: boolean } = {}) => {
       const r = DEMO
-        ? await local(async (c) => { const v = await c.customers.verifyCode(phone, code, extra); setTok("user", v.token); return { customer: v.customer, isNew: v.isNew }; })
+        ? await local(async (c) => { const v = await c.customers.verifyCode(phone, code, extra); setDemoTok("user", v.token); return { customer: v.customer, isNew: v.isNew }; })
         : await http<{ customer: Customer; isNew: boolean }>("POST", "auth/sms/verify", { phone, code, ...extra });
       rememberUser(r.customer);
       return r;
     },
-    logout: async () => { if (DEMO) { const t = tok("user"); if (t) await local((c) => c.customers.logout(t)); setTok("user", null); } else await http("POST", "auth/sms/logout"); rememberUser(null); },
-    me: pick((c) => c.customers.bySession(tok("user")), () => http<Customer | null>("GET", "me")),
-    update: pick(async (c, patch: ProfilePatch) => { const u = await c.customers.bySession(tok("user")); if (!u) throw new CoreError("auth", "Влезте с телефона си.", 401); const r = await c.customers.update(u.id, patch); rememberUser(r); return r; }, async (patch) => { const r = await http<Customer>("PATCH", "me", patch); rememberUser(r); return r; }),
-    remove: pick(async (c) => { const u = await c.customers.bySession(tok("user")); if (u) await c.customers.remove(u.id); setTok("user", null); rememberUser(null); return { ok: true }; }, async () => { const r = await http<{ ok: boolean }>("DELETE", "me"); rememberUser(null); return r; }),
-    orders: pick(async (c) => { const u = await c.customers.bySession(tok("user")); return u ? c.customers.orders(u) : []; }, () => http("GET", "me/orders")),
-    export: pick(async (c) => { const u = await c.customers.bySession(tok("user")); if (!u) throw new CoreError("auth", "Влезте с телефона си.", 401); return c.customers.export(u); }, () => http("GET", "me/export")),
-    toggleFav: pick(async (c, id: string) => { const u = await c.customers.bySession(tok("user")); if (!u) throw new CoreError("auth", "Влезте с телефона си.", 401); return c.customers.toggleFav(u.id, id); }, (id) => http<Customer>("POST", "me/favorites", { id })),
+    logout: async () => { if (DEMO) { const t = demoTok("user"); if (t) await local((c) => c.customers.logout(t)); setDemoTok("user", null); } else await http("POST", "auth/sms/logout"); rememberUser(null); },
+    me: pick((c) => c.customers.bySession(demoTok("user")), () => http<Customer | null>("GET", "me")),
+    update: pick(async (c, patch: ProfilePatch) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = await c.customers.update(u.id, patch); rememberUser(r); return r; }, async (patch) => { const r = await http<Customer>("PATCH", "me", patch); rememberUser(r); return r; }),
+    remove: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (u) await c.customers.remove(u.id); setDemoTok("user", null); rememberUser(null); return { ok: true }; }, async () => { const r = await http<{ ok: boolean }>("DELETE", "me"); rememberUser(null); return r; }),
+    orders: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); return u ? c.customers.orders(u) : []; }, () => http<Order[]>("GET", "me/orders")),
+    export: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.export(u); }, () => http<unknown>("GET", "me/export")),
+    toggleFav: pick(async (c, id: string) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.toggleFav(u.id, id); }, (id) => http<Customer>("POST", "me/favorites", { id })),
   },
 
   /* staff sign-in (server: scrypt + httpOnly cookie; demo: PBKDF2 hashes from the build, token in localStorage) */
   staff: {
-    login: pick(async (c, username: string, password: string) => { const r = await c.staff.login(username, password); setTok("staff", r.token); return { user: r.user }; }, (username, password) => http<{ user: unknown }>("POST", "auth/login", { username, password })),
-    logout: pick(async (c) => { const t = tok("staff"); if (t) await c.staff.logout(t); setTok("staff", null); return { ok: true }; }, () => http("POST", "auth/logout")),
-    me: pick((c) => c.staff.bySession(tok("staff")), () => http("GET", "auth/me")),
+    login: pick(async (c, username: string, password: string) => { const r = await c.staff.login(username, password); setDemoTok("staff", r.token); return { user: r.user as unknown }; }, (username, password) => http<{ user: unknown }>("POST", "auth/login", { username, password })),
+    logout: pick(async (c) => { const t = demoTok("staff"); if (t) await c.staff.logout(t); setDemoTok("staff", null); return { ok: true }; }, () => http<{ ok: boolean }>("POST", "auth/logout")),
+    me: pick((c) => c.staff.bySession(demoTok("staff")), () => http<unknown>("GET", "auth/me")),
   },
 
   /* admin (the server checks the role x section matrix; the demo checks the session only) */
   admin: {
-    orders: pick((c, s?: OrderStatus) => c.orders.list(s ? { status: s } : {}), (s) => http("GET", "admin/orders" + (s ? "?status=" + s : ""))),
-    setOrderStatus: pick((c, no: string, s: OrderStatus) => c.orders.setStatus(no, s, "demo"), (no, s) => http("PATCH", "admin/orders/" + no, { status: s })),
-    reservations: pick((c) => c.reservations.list(), () => http("GET", "admin/reservations")),
-    setReservationStatus: pick((c, id: string, s: ReservationStatus) => c.reservations.setStatus(id, s, "demo"), (id, s) => http("PATCH", "admin/reservations/" + id, { status: s })),
-    staff: pick((c) => c.staff.list(), () => http("GET", "admin/staff")),
-    roles: pick((c) => c.staff.roles(), () => http("GET", "admin/roles")),
-    setRole: pick((c, id: RoleId, sections: string[]) => c.staff.setRole(id, sections, "demo"), (id, sections) => http("PUT", "admin/roles/" + id, { sections })),
-    notes: pick((c, f: { status?: NoteStatus; module?: string } = {}) => c.notes.list(f), (f = {}) => http("GET", "admin/notes?" + new URLSearchParams(f as Record<string, string>))),
-    createNote: pick(async (c, n: NoteInput) => { const s = await c.staff.bySession(tok("staff")); return c.notes.create(n, s ? s.user.username : "demo"); }, (n) => http("POST", "admin/notes", n)),
-    setNoteStatus: pick((c, id: string, s: NoteStatus) => c.notes.setStatus(id, s, "demo"), (id, s) => http("PATCH", "admin/notes/" + id, { status: s })),
-    deleteNote: pick(async (c, id: string) => { await c.notes.remove(id, "demo"); return { ok: true }; }, (id) => http("DELETE", "admin/notes/" + id)),
-    audit: pick((c) => c.audit.list(), () => http("GET", "admin/audit")),
+    orders: pick((c, s?: OrderStatus) => c.orders.list(s ? { status: s } : {}), (s) => http<Order[]>("GET", "admin/orders" + (s ? "?status=" + s : ""))),
+    setOrderStatus: pick((c, no: string, s: OrderStatus) => c.orders.setStatus(no, s, "demo"), (no, s) => http<Order>("PATCH", "admin/orders/" + no, { status: s })),
+    reservations: pick((c) => c.reservations.list(), () => http<Reservation[]>("GET", "admin/reservations")),
+    setReservationStatus: pick((c, id: string, s: ReservationStatus) => c.reservations.setStatus(id, s, "demo"), (id, s) => http<Reservation>("PATCH", "admin/reservations/" + id, { status: s })),
+    /** kitchen "Натоварено" + minutes, reservation length */
+    settings: pick((c) => c.settings.get(), () => http<Settings>("GET", "admin/settings")),
+    setSettings: pick((c, p: SettingsPatch) => c.settings.update(p, "demo"), (p) => http<Settings>("PATCH", "admin/settings", p)),
+    staff: pick((c) => c.staff.list(), () => http<unknown[]>("GET", "admin/staff")),
+    roles: pick((c) => c.staff.roles(), () => http<unknown[]>("GET", "admin/roles")),
+    setRole: pick((c, id: Parameters<Core["staff"]["setRole"]>[0], sections: string[]) => c.staff.setRole(id, sections, "demo"), (id, sections) => http<unknown>("PUT", "admin/roles/" + id, { sections })),
+    notes: pick((c, f: { status?: NoteStatus; module?: string } = {}) => c.notes.list(f), (f = {}) => http<unknown[]>("GET", "admin/notes?" + new URLSearchParams(f as Record<string, string>))),
+    createNote: pick(async (c, n: NoteInput) => { const s = await c.staff.bySession(demoTok("staff")); return c.notes.create(n, s ? s.user.username : "demo"); }, (n) => http<unknown>("POST", "admin/notes", n)),
+    setNoteStatus: pick((c, id: string, s: NoteStatus) => c.notes.setStatus(id, s, "demo"), (id, s) => http<unknown>("PATCH", "admin/notes/" + id, { status: s })),
+    deleteNote: pick(async (c, id: string) => { await c.notes.remove(id, "demo"); return { ok: true }; }, (id) => http<{ ok: boolean }>("DELETE", "admin/notes/" + id)),
+    audit: pick((c) => c.audit.list(), () => http<unknown[]>("GET", "admin/audit")),
   },
 
-  /** Real-time: api.on("order.status", (data) => ...). Returns an unsubscribe function. "*" = everything. */
+  /** Follow an order / office order in real time without reading it first (api.orders.get / api.office.* do it themselves). */
+  watch(w: { order?: string | number; office?: string }) { if (w.order != null) watchOrder(trackId(w.order)); if (w.office) watchOffice(w.office); },
+
+  /** Real-time: api.on("order.status", (data) => ...). Returns an unsubscribe function. "*" = everything this page may see.
+      A page receives public events and only the events of the orders / office orders it has read or created. */
   on(type: string, fn: Fn): () => void {
-    connect(type);
-    if (!subs.has(type)) subs.set(type, new Set());
+    const isNew = !subs.has(type);
+    if (isNew) subs.set(type, new Set());
     subs.get(type)!.add(fn);
+    if (isNew && es && type !== "*") { es.close(); es = null; esUrl = ""; }
+    connect();
     return () => { subs.get(type)?.delete(fn); };
   },
 };

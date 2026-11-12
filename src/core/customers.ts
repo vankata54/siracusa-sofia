@@ -1,14 +1,12 @@
 /* Customers: sign-in with phone + SMS code (v1/demo: the code is returned and shown on screen), profile, consents
    (marketing always false by default), favourites, addresses, internal rating (-10% code; Google link always). */
-import { COL, emit, iso, nowDate, rid, randomDigits, type Ctx } from "./ctx.ts";
-import { CoreError, type Customer, type Order, type Rating, type Session, type SmsCode } from "./types.ts";
+import { COL, iso, nowDate, rid, randomDigits, type Ctx } from "./ctx.ts";
+import { CoreError, type Customer, type Order, type Session, type SmsCode } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
-import { RESTAURANT } from "../lib/consts.ts";
 import { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
 export const SMS_TTL_MS = 5 * 60_000;
 export const SESSION_TTL_MS = 30 * 24 * 3600_000;
-export const RATING_DISCOUNT = 10;
 
 export async function requestSmsCode(ctx: Ctx, rawPhone: string): Promise<{ sent: true; phone: string; demoCode: string; resendIn: number }> {
   const phone = normPhone(rawPhone);
@@ -112,15 +110,5 @@ export async function deleteCustomer(ctx: Ctx, id: string): Promise<void> {
   await ctx.repo.del(COL.customers, id);
 }
 
-/* ---------- internal rating after an order ---------- */
-export async function submitRating(ctx: Ctx, r: { orderNo: string; happy: boolean; text?: string }): Promise<{ rating: Rating; code: string; pct: number; google: string | null; googleMissing: boolean }> {
-  const rating: Rating = {
-    id: rid(8), orderNo: String(r.orderNo), happy: !!r.happy, text: r.text ? String(r.text).slice(0, 2000) : undefined,
-    code: "SC10-" + randomDigits(4), pct: RATING_DISCOUNT, createdAt: iso(ctx),
-  };
-  await ctx.repo.put(COL.ratings, rating);
-  emit(ctx, "rating.created", { orderNo: rating.orderNo, happy: rating.happy });
-  /* The -10% is for the internal rating, the same for "Да" and "Не". The Google link is shown for both answers
-     and is never tied to a discount. */
-  return { rating, code: rating.code, pct: rating.pct, google: RESTAURANT.googleReview, googleMissing: !RESTAURANT.googleReview };
-}
+/* ---------- internal rating after an order: src/core/codes.ts ---------- */
+export { submitRating, RATING_DISCOUNT } from "./codes.ts";

@@ -2,20 +2,46 @@
    Everything business-related goes through src/core (same code as the static demo). */
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import { openDb, seedMenu, readMenu } from "./db/index.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { scryptHasher } from "./hasher.ts";
-import { createCore, CoreError, type Ctx, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
+import { createCore, CoreError, officeDueAt, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
-import { events } from "../src/lib/events.ts";
+import { eventsJson } from "../src/lib/events.ts";
+import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
 import { ZONES } from "../src/lib/data.ts";
 
-export interface AppOpts { dbFile: string; distDir: string; secure?: boolean }
+export interface AppOpts {
+  dbFile: string; distDir: string; secure?: boolean;
+  /** tests only (SC_PREVIEW_API=1): the API follows the preview clock sent by the page (x-sc-clock) and the lunch menu counts as today's */
+  previewApi?: boolean;
+  /** the tracking address must carry the order key (TRACK_KEY_REQUIRED=1), once the pages pass it */
+  requireTrackKey?: boolean;
+  /** run the timers for the automatic office send (default true; off in unit tests) */
+  timers?: boolean;
+}
+
+/* a real-time subscriber: staff (cookie) get everything; others only public events and the order / office they asked for */
+interface Sub { send: (type: string, data: unknown) => void; staff: boolean; orders: Set<string>; offices: Set<string> }
+export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices">, to: Audience): boolean {
+  return s.staff || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office));
+}
+
+/* compression for text responses (HTML, JS, CSS, SVG, JSON): brotli when the browser takes it, else gzip */
+const COMPRESSIBLE = /^(text\/html|text\/javascript|text\/css|image\/svg\+xml|application\/json|application\/xml|text\/plain|application\/manifest\+json)/;
+export function pickEncoding(accept: string | undefined): "br" | "gzip" | null {
+  const a = String(accept || "").toLowerCase();
+  return /\bbr\b/.test(a) ? "br" : /\bgzip\b/.test(a) ? "gzip" : null;
+}
+export function compressBuf(buf: Buffer, enc: "br" | "gzip"): Buffer {
+  return enc === "br" ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length } }) : zlib.gzipSync(buf, { level: 9 });
+}
 
 const STAFF_COOKIE = "sc_staff", USER_COOKIE = "sc_user";
 const MIME: Record<string, string> = {
@@ -27,9 +53,19 @@ const MIME: Record<string, string> = {
 export function createApp(opts: AppOpts) {
   const { sqlite, db } = openDb(opts.dbFile);
   seedMenu(db);
-  const clients = new Set<(type: string, data: unknown) => void>();
-  const ctx: Ctx = { repo: new SqliteRepo(sqlite), hasher: scryptHasher, emit: (type, data) => clients.forEach((f) => f(type, data)) };
+  const clients = new Set<Sub>();
+  const ctx: Ctx = {
+    repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: !!opts.requireTrackKey,
+    emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
+  };
   const core = createCore(ctx);
+  void core.settings.get(); /* kitchen minutes and "Натоварено" into this process */
+  /* preview core for one request (tests only): the page's clock, the lunch menu as today's */
+  const coreFor = (c: Context): Core => {
+    if (!opts.previewApi) return core;
+    const t = c.req.header("x-sc-clock");
+    return t && parseTime(t) ? createCore({ ...ctx, clock: t, preview: true }) : core;
+  };
   const app = new Hono();
   const dist = path.resolve(opts.distDir);
 
@@ -65,46 +101,72 @@ export function createApp(opts: AppOpts) {
     }
     c.header("Cache-Control", "no-store");
     await next();
+    /* compress JSON over 1 KB (the menu); never the SSE stream */
+    const ct = c.res.headers.get("content-type") || "", enc = pickEncoding(c.req.header("accept-encoding"));
+    if (enc && ct.startsWith("application/json") && !c.res.headers.get("content-encoding")) {
+      const buf = Buffer.from(await c.res.clone().arrayBuffer());
+      if (buf.length > 1024) {
+        const h = new Headers(c.res.headers);
+        h.set("Content-Encoding", enc); h.set("Vary", "Accept-Encoding"); h.delete("Content-Length");
+        c.res = new Response(new Uint8Array(compressBuf(buf, enc)), { status: c.res.status, headers: h });
+      }
+    }
   });
 
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.get("/api/menu", (c) => c.json(readMenu(db)));
-  app.get("/api/status", (c) => c.json({ state: state(), status: status(), eta: eta() }));
+  app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), kitchen: st.kitchen }); });
   app.get("/api/offers", (c) => c.json(offers()));
-  app.get("/api/events", (c) => c.json(events()));
+  app.get("/api/events", (c) => c.json(eventsJson()));
   app.get("/api/zones", (c) => c.json(ZONES));
   app.get("/api/zones/check", (c) => c.json(zoneOfAddress(c.req.query("q") || "")));
 
   /* ---------- orders ---------- */
   app.post("/api/orders", async (c) => {
     const b = await body(c), u = await core.customers.bySession(getCookie(c, USER_COOKIE));
-    return c.json(await core.orders.create({ ...b, channel: "web", userId: u ? u.id : null }), 201);
+    if (b && b.code) codeGate(c);
+    return c.json(await coreFor(c).orders.create({ ...b, channel: "web", userId: u ? u.id : null }), 201);
   });
-  app.get("/api/orders/:no", async (c) => {
-    const o = await core.orders.get(c.req.param("no"));
-    if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
-    /* public tracking view: no personal data */
-    const { phone: _p, email: _e, name, addr: _a, ...pub } = o;
-    return c.json({ ...pub, name: name.split(" ")[0] });
-  });
+  /* public tracking: /api/orders/1042-k7f3m2pq (or the number alone for orders without a key, until TRACK_KEY_REQUIRED) */
+  app.get("/api/orders/:id", async (c) => c.json(await core.orders.track(c.req.param("id"))));
+  /* code checks: at most 30 per IP in 15 min (the codes are 10 digits, guessing must stay slow); the order itself also counts */
+  const codeTries = new Map<string, { n: number; until: number }>();
+  const codeGate = (c: Context) => {
+    const k = ip(c), t = codeTries.get(k), now = Date.now();
+    const n = t && t.until > now ? t.n + 1 : 1;
+    codeTries.set(k, { n, until: t && t.until > now ? t.until : now + 15 * 60_000 });
+    if (n > 30) throw new CoreError("throttled", "Твърде много опити с код. Опитайте след 15 минути.", 429);
+  };
+  app.post("/api/codes/check", async (c) => { codeGate(c); return c.json(await core.codes.check(String((await body(c)).code || ""))); });
   app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {})); });
   app.patch("/api/admin/orders/:no", async (c) => {
     const s = await staff(c); const b = await body(c);
     return c.json(await core.orders.setStatus(c.req.param("no"), b.status, s.user.username));
   });
 
+  /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */
+  app.get("/api/admin/settings", async (c) => { await staff(c); return c.json(await core.settings.get()); });
+  app.patch("/api/admin/settings", async (c) => {
+    const b = await body(c);
+    const s = await staff(c, b.resMinutes != null ? "reservations" : "kitchen");
+    if (b.resMinutes != null && b.kitchen) await staff(c, "kitchen");
+    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes }, s.user.username));
+  });
+
   /* ---------- reservations, celebrations, office, subscriptions ---------- */
-  app.post("/api/reservations", async (c) => c.json(await core.reservations.create(await body(c)), 201));
+  app.post("/api/reservations", async (c) => c.json(await coreFor(c).reservations.create(await body(c)), 201));
   app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "")));
+  app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
+  app.post("/api/reservations/:id/cancel", async (c) => c.json(await core.reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
   app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(await core.reservations.list()); });
   app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
   app.post("/api/celebrations", async (c) => c.json(await core.celebrations.create(await body(c)), 201));
-  app.post("/api/office", async (c) => c.json(await core.office.create(await body(c)), 201));
-  app.get("/api/office/:code", async (c) => { const o = await core.office.get(c.req.param("code")); if (!o) throw new CoreError("not_found", "Тази обща поръчка не съществува.", 404); return c.json(o); });
-  app.post("/api/office/:code/join", async (c) => c.json(await core.office.join(c.req.param("code"), await body(c))));
-  app.post("/api/office/:code/submit", async (c) => c.json(await core.office.submit(c.req.param("code"), await body(c))));
-  app.post("/api/subscribe", async (c) => { const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent), 201); });
+  app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
+  app.get("/api/office/:code", async (c) => { const o = await coreFor(c).office.get(c.req.param("code"), c.req.query("k") || null); if (!o) throw new CoreError("not_found", "Тази обща поръчка не съществува.", 404); return c.json(o); });
+  app.post("/api/office/:code/join", async (c) => c.json(await coreFor(c).office.join(c.req.param("code"), await body(c))));
+  app.post("/api/office/:code/submit", async (c) => c.json(await coreFor(c).office.submit(c.req.param("code"), await body(c))));
+  app.post("/api/subscribe", async (c) => { const b = await body(c); return c.json(await core.subscriptions.subscribe(b.email, b.consent, b.topics), 201); });
   app.post("/api/ratings", async (c) => c.json(await core.ratings.submit(await body(c)), 201));
 
   /* ---------- customers: SMS sign-in (v1: the code is returned and shown on screen) ---------- */
@@ -154,15 +216,38 @@ export function createApp(opts: AppOpts) {
   app.delete("/api/admin/notes/:id", async (c) => { const s = await staff(c, "notes"); await core.notes.remove(c.req.param("id"), s.user.username); return c.json({ ok: true }); });
   app.get("/api/admin/audit", async (c) => { await staff(c, "audit"); return c.json(await core.audit.list()); });
 
-  /* ---------- real time ---------- */
-  app.get("/api/stream", (c) => streamSSE(c, async (stream) => {
-    const send = (type: string, data: unknown) => { stream.writeSSE({ event: type, data: JSON.stringify(data) }).catch(() => {}); };
-    clients.add(send);
-    stream.onAbort(() => { clients.delete(send); });
-    await stream.writeSSE({ event: "hello", data: "{}" });
-    while (!stream.aborted) { await stream.sleep(25_000); await stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {}); }
-    clients.delete(send);
-  }));
+  /* ---------- real time ----------
+     /api/stream?order=1042-k7f3m2pq&office=173012: public events (reservations freed/taken, kitchen minutes) + only the
+     events of these orders / office orders. Staff (cookie) get everything. Unknown keys are ignored. */
+  app.get("/api/stream", async (c) => {
+    const isStaff = !!(await core.staff.bySession(getCookie(c, STAFF_COOKIE)));
+    const orders = new Set<string>(), offices = new Set<string>();
+    for (const id of (c.req.query("order") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.orders.find(id); if (o) orders.add(o.no); }
+    for (const code of (c.req.query("office") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.office.raw(code); if (o) offices.add(o.code); }
+    return streamSSE(c, async (stream) => {
+      const sub: Sub = { staff: isStaff, orders, offices, send: (type, data) => { stream.writeSSE({ event: type, data: JSON.stringify(data) }).catch(() => {}); } };
+      clients.add(sub);
+      stream.onAbort(() => { clients.delete(sub); });
+      await stream.writeSSE({ event: "hello", data: JSON.stringify({ orders: [...orders], offices: [...offices] }) });
+      while (!stream.aborted) { await stream.sleep(25_000); await stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {}); }
+      clients.delete(sub);
+    });
+  });
+
+  /* ---------- the office deadline: send without an open page (a timer per order + a sweep every minute) ---------- */
+  const timers = new Map<string, ReturnType<typeof setTimeout>>();
+  const sweep = () => core.office.sendDue().catch((e) => console.error("office auto-send", e));
+  function schedule(o: OfficeOrder) {
+    if (opts.timers === false || o.status !== "open") return;
+    const ms = officeDueAt(o, sofiaEpoch) - Date.now() + 1000;
+    clearTimeout(timers.get(o.code));
+    if (ms < 0x7fffffff) timers.set(o.code, setTimeout(() => { timers.delete(o.code); sweep(); }, Math.max(0, ms)));
+  }
+  if (opts.timers !== false) {
+    ctx.repo.list<OfficeOrder>("office_orders").then((all) => all.filter((o) => o.status === "open").forEach(schedule)).then(sweep);
+    setInterval(sweep, 60_000).unref();
+  }
+
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 
   /* ---------- static files from dist/ ---------- */
@@ -172,13 +257,22 @@ export function createApp(opts: AppOpts) {
     try { const st = fs.statSync(p); if (st.isFile()) return p; if (st.isDirectory() && fs.existsSync(path.join(p, "index.html"))) return path.join(p, "index.html"); } catch { /* missing */ }
     return null;
   };
+  const zcache = new Map<string, { mtime: number; br?: Buffer; gzip?: Buffer }>();
   const send = (c: Context, p: string, code = 200) => {
-    const ext = path.extname(p);
-    c.header("Content-Type", MIME[ext] || "application/octet-stream");
+    const ext = path.extname(p), type = MIME[ext] || "application/octet-stream";
+    c.header("Content-Type", type);
     c.header("Cache-Control", p.includes(`${path.sep}_astro${path.sep}`) ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=3600");
     c.header("X-Content-Type-Options", "nosniff");
     c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-    return c.body(fs.readFileSync(p), code as 200);
+    const st = fs.statSync(p), enc = COMPRESSIBLE.test(type) && st.size > 1024 ? pickEncoding(c.req.header("accept-encoding")) : null;
+    if (COMPRESSIBLE.test(type)) c.header("Vary", "Accept-Encoding");
+    if (!enc) return c.body(fs.readFileSync(p), code as 200);
+    /* compressed once per file version, kept in memory (the build is a few MB) */
+    let z = zcache.get(p);
+    if (!z || z.mtime !== st.mtimeMs) { z = { mtime: st.mtimeMs }; zcache.set(p, z); }
+    const buf = z[enc] || (z[enc] = compressBuf(fs.readFileSync(p), enc));
+    c.header("Content-Encoding", enc);
+    return c.body(new Uint8Array(buf), code as 200);
   };
   app.get("*", (c) => {
     let rel = decodeURIComponent(new URL(c.req.url).pathname);
@@ -194,5 +288,5 @@ export function createApp(opts: AppOpts) {
     return nf ? send(c, nf, 404) : c.text("Not found", 404);
   });
 
-  return { app, core, sqlite, db };
+  return { app, core, sqlite, db, sweep };
 }

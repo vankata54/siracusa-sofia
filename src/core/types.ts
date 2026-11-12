@@ -37,6 +37,12 @@ export interface Order {
   marketing: boolean;    // always false unless ticked
   userId?: string | null;
   table?: string | null; // QR / waiter orders
+  /** secret part of the tracking address /porachka/<no>-<key>/ (orders before 12.11.2026 have none) */
+  key?: string;
+  /** discount code from the internal rating (used once), the discount it gave and which discount won */
+  code?: string;
+  codeDisc?: number;
+  discKind?: "" | "lunch" | "code";
   createdAt: Iso;
   updatedAt: Iso;
 }
@@ -46,6 +52,10 @@ export interface Reservation {
   id: string; date: string; time: string; people: number; table: string | null; zone: "salon" | "garden" | null;
   name: string; phone: string; email?: string; occasion?: string; note?: string; marketing: boolean;
   status: ReservationStatus; createdAt: Iso; updatedAt: Iso;
+  /** minutes the table is held (the setting at booking time, default 120) */
+  dur?: number;
+  /** secret for get/cancel from the SMS link (returned only by create) */
+  key?: string;
 }
 
 export interface Celebration {
@@ -54,13 +64,25 @@ export interface Celebration {
   early: boolean; status: "new" | "offer_sent" | "confirmed" | "declined"; createdAt: Iso;
 }
 
-export interface OfficeParticipant { name: string; lines: OrderLine[]; paid?: boolean }
+/** pid: the participant's personal token (kept in the colleague's browser; never shown to others) */
+export interface OfficeParticipant { name: string; lines: OrderLine[]; paid?: boolean; pid?: string }
 export interface OfficeOrder {
   id: string; code: string; office: string; addr: string; zone: string; deadline: string; payer: "one" | "each";
   mode: Mode; participants: OfficeParticipant[]; status: "open" | "sent" | "cancelled"; orderNo?: string; createdAt: Iso;
+  /** the day of the lunch ("YYYY-MM-DD", Sofia) */
+  date?: string;
+  /** organizer token: send, edit anyone, continue from another device (never in the public view) */
+  orgKey?: string;
+  /** organizer contact, needed for the automatic send at the deadline */
+  contact?: { name: string; phone: string; pay?: PayMethod; email?: string } | null;
+  /** why the automatic send at the deadline did not happen ("no_contact" | "empty" | an error code) */
+  autoFailed?: string;
+  sentAt?: Iso;
+  /** public view only: the caller holds the organizer token */
+  isOrg?: boolean;
 }
 
-export interface Subscription { id: string; email: string; topic: "events"; consent: boolean; createdAt: Iso }
+export interface Subscription { id: string; email: string; topic: "events"; topics: string[]; consent: boolean; createdAt: Iso; updatedAt?: Iso }
 
 export interface Customer {
   id: string; phone: string; name: string; email?: string; isNew?: boolean; since: string;
@@ -74,6 +96,19 @@ export interface SmsCode { id: string; phone: string; code: string; expiresAt: n
 
 export interface Rating {
   id: string; orderNo: string; happy: boolean; text?: string; code: string; pct: number; createdAt: Iso;
+  /** phone of the rated order (kept for the owner's later rule "one code per phone") */
+  phone?: string;
+  /** the order that used the code, once */
+  usedBy?: string | null; usedAt?: Iso | null; updatedAt?: Iso;
+}
+
+/** Settings the admin / kitchen change (one document "main"). */
+export interface Settings {
+  id: "main";
+  kitchen: { busy: boolean; etaMin: number; etaBusyMin: number };
+  /** how long a reservation holds the table, minutes (default 120, owner to confirm) */
+  resMinutes: number;
+  updatedAt?: Iso;
 }
 
 export type NoteStatus = "new" | "doing" | "done";

@@ -3,6 +3,8 @@
 //   href="/menu/"         -> href="../menu/index.html"   (from /menu/pitsi/index.html: "../index.html")
 //   src="/_astro/x.js"    -> src="../_astro/x.js"
 //   url(/_astro/f.woff2)  -> url(../_astro/f.woff2)      (in HTML and CSS)
+//   Vite's preload helper in _astro/*.js: "/" + "_astro/x.js" -> new URL("../_astro/x.js", import.meta.url)
+//   (the chunks are all in _astro/, so the dynamic imports and their preload links work from any sub-folder)
 // Absolute URLs (https:, tel:, mailto:, //) and #anchors are left alone. Usage: node scripts/relativize.mjs dist
 import fs from "node:fs";
 import path from "node:path";
@@ -23,8 +25,16 @@ function rel(fromFile, abs) {
 }
 const ABS = /^\/(?!\/)/;
 let n = 0;
+const PRELOAD = /function\((\w+)\)\{return`\/`\+\1\}/g;
+let js = 0;
 for (const f of files) {
   const ext = path.extname(f);
+  if (ext === ".js") {
+    const s = fs.readFileSync(f, "utf8");
+    if (PRELOAD.test(s)) { fs.writeFileSync(f, s.replace(PRELOAD, (_, v) => `function(${v}){return new URL("../"+${v},import.meta.url).href}`)); js++; }
+    PRELOAD.lastIndex = 0;
+    continue;
+  }
   if (ext !== ".html" && ext !== ".css") continue;
   let s = fs.readFileSync(f, "utf8");
   const before = s;
@@ -32,4 +42,4 @@ for (const f of files) {
   s = s.replace(/url\((["']?)(\/[^)"']+)\1\)/g, (all, q, v) => (ABS.test(v) ? `url(${q}${rel(f, v)}${q})` : all));
   if (s !== before) { fs.writeFileSync(f, s); n++; }
 }
-console.log(`relativize: ${n} files rewritten in ${path.relative(process.cwd(), dist) || "."}`);
+console.log(`relativize: ${n} files rewritten (+${js} JS preload helper) in ${path.relative(process.cwd(), dist) || "."}`);

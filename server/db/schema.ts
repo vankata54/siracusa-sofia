@@ -54,4 +54,6 @@ export const sessions = sqliteTable("sessions", { ...doc, userId: text("user_id"
 /* ---------- admin ---------- */
 export const feedbackNotes = sqliteTable("feedback_notes", { ...doc, status: text("status"), module: text("module") }, (t) => [index("notes_status").on(t.status)]);
 export const auditLog = sqliteTable("audit_log", { ...doc, actor: text("actor"), action: text("action") });
+/* one document "main": kitchen "Натоварено" + minutes, reservation length (the admin edits them) */
+export const settings = sqliteTable("settings", { ...doc });
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });

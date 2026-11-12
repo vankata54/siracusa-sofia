@@ -1,0 +1,428 @@
+---
+/* Delivery (/dostavka/): port of design/pages/delivery.html (design/PAGES.md "delivery.html", decisions 18-21).
+   The server draws everything that does not depend on the hour: H1, lead, the address form, the zone map (SVG),
+   the fees table, payment, FAQ and JSON-LD (BreadcrumbList, FAQPage), plus a neutral view of the hour-dependent parts
+   (delivery open, no "Сега" marker). The browser redraws the live line, the zone card, the timeline and the closing
+   CTA with SC.state(), "Натоварено" (SC.eta()) and the cart, and runs the address check (lib/zones.ts) and the map. */
+import Base from "../../layouts/Base.astro";
+import { state, busyExtra } from "../../lib/status.ts";
+import {
+  LEAD, liveHTML, checkHTML, mapSVG, feesHTML, zoneCardHTML, timelineHTML, payHTML, faqHTML, endHTML, deliveryLd, BY_SLUG, type View,
+} from "./_delivery.ts";
+
+/* neutral server view: open for delivery, not busy, no cart, no "now" marker */
+const v: View = { S: state(720), busy: false, extra: busyExtra(), cart: null, server: true };
+const description = "Доставка на пица и скара от Siracusa: безплатно до Дружба 1 и 2, НПЗ Искър и Бусманци, по тарифа до Горубляне и Гара Искър. Всеки ден от 10:00 до 21:00.";
+---
+<Base page="delivery" nav="delivery" title="Доставка" docTitle="Доставка на храна в Дружба" description={description} jsonld={deliveryLd(Astro.site)}>
+  <div class="dl" data-dl>
+    <section class="sec dl-hero"><div class="hero-grid">
+      <div>
+        <h1 class="h1">Доставка на храна в Дружба</h1>
+        <p class="lead">{LEAD}</p>
+        <div class="live" data-live set:html={liveHTML(v)}></div>
+      </div>
+      <Fragment set:html={checkHTML()} />
+    </div></section>
+
+    <section class="sec" id="karta" aria-labelledby="mapH">
+      <div class="sec-h"><h2 class="h2" id="mapH">Къде доставяме</h2></div>
+      <p class="lead maplead">Докоснете квартал, за да видите времето и таксата.</p>
+      <ul class="legend"><li><span class="sw free"></span>Безплатна доставка</li><li><span class="sw paid"></span>По тарифа</li></ul>
+      <div class="map-grid">
+        <div class="shell rv"><div class="core mapbox"><Fragment set:html={mapSVG()} /><div class="mapnote"><span>Схема без мащаб, мястото е приблизително</span></div></div></div>
+        <div class="map-side">
+          <div class="card zcard" data-zcard aria-live="polite" set:html={zoneCardHTML(BY_SLUG["druzhba-2"], v)}></div>
+          <div data-fees set:html={feesHTML(v)}></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="hoursH"><div class="hours-grid">
+      <div><div class="sec-h"><h2 class="h2" id="hoursH">Кога доставяме</h2></div>
+        <div class="card tl rv" data-tl set:html={timelineHTML(v)}></div></div>
+      <div><div class="sec-h"><h2 class="h2" id="payH">Плащане при доставка</h2></div>
+        <Fragment set:html={payHTML()} /></div>
+    </div></section>
+
+    <section class="sec" aria-labelledby="faqH" set:html={faqHTML()}></section>
+
+    <section class="sec end"><div class="shell rv"><div class="core" data-end set:html={endHTML(v)}></div></div></section>
+  </div>
+</Base>
+
+<style is:global>
+/* delivery page only (design/pages/delivery.html). Tokens only; zone tints are mixes of --ok / --ember with --surface. */
+.dl{--z-free:color-mix(in srgb, var(--ok) 22%, var(--surface)); --z-free-2:color-mix(in srgb, var(--ok) 36%, var(--surface));
+  --z-paid:color-mix(in srgb, var(--ember) 26%, var(--surface)); --z-hatch:color-mix(in srgb, var(--ember) 75%, var(--surface));
+  --tl-lunch:color-mix(in srgb, var(--ok) 55%, var(--surface))}
+
+/* ---------- hero ---------- */
+.dl-hero{padding-top:28px}
+.dl-hero .h1{max-width:13ch}
+.dl-hero .lead{margin-top:12px; max-width:38ch}
+.live{display:inline-flex; align-items:center; gap:10px; margin-top:18px; min-height:44px; padding:8px 16px 8px 14px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-weight:700; font-size:15px; line-height:1.3}
+.live .dot{width:10px; height:10px; border-radius:50%; flex:none; background:var(--off)}
+.live .dot.ok{background:var(--ok)} .live .dot.warn{background:var(--warn)}
+.live .ic{color:var(--muted)}
+.live b{font-weight:800}
+.hero-grid{display:grid; gap:24px}
+.hero-grid > *,.map-grid > *,.hours-grid > *{min-width:0}
+.dl .rcard .pill,.dl .zcard .pill,.dl .end .pill{white-space:normal; text-align:center}
+
+/* address check */
+.chk{margin-top:24px}
+.chk .core{padding:20px 18px 18px}
+.chk h2{font-size:22px; letter-spacing:-.03em; line-height:1.15; margin:0 0 4px; font-weight:800}
+.chk .sub{margin:0 0 16px; color:var(--muted); font-size:16px}
+.chk form{display:grid; gap:12px}
+.inwrap{position:relative}
+.inwrap .ic{position:absolute; left:16px; top:15px; color:var(--muted); pointer-events:none}
+.inwrap .input{padding-left:48px; min-height:56px; font-size:17px}
+.inwrap .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--muted); display:grid; place-items:center; cursor:pointer}
+.inwrap .clr .ic{position:static}
+.inwrap .clr[hidden]{display:none}
+.res{margin-top:16px}
+.res:empty{display:none}
+.rcard{border-radius:20px; padding:16px; background:var(--surface-2); display:grid; gap:12px; animation:rin var(--t-slow) var(--ease)}
+@keyframes rin{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+.rcard .rh{display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:start}
+.rcard .ri{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--ink)}
+.rcard.free .ri{background:var(--ok); color:var(--on-ok)}
+.rcard.paid .ri{background:var(--ember); color:var(--on-ember)}
+.rcard.out .ri,.rcard.err .ri{background:var(--surface); color:var(--warn)}
+.rcard h3{margin:0; font-size:19px; line-height:1.25; letter-spacing:-.02em; font-weight:800}
+.rcard p{margin:2px 0 0}
+.rfacts{display:flex; flex-wrap:wrap; gap:6px 8px}
+.fact{display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:4px 12px 4px 10px; border-radius:999px; background:var(--surface); font-size:15px; font-weight:700; line-height:1.25}
+.fact .ic{color:var(--muted)}
+.fact.missing{font-weight:600}
+.ropts{display:flex; flex-wrap:wrap; gap:8px}
+.rnote{font-size:15px; color:var(--muted); display:flex; gap:8px; align-items:flex-start}
+.rnote .ic{margin-top:2px}
+.rnote .link{display:inline; min-height:0}
+.skl{display:grid; gap:10px; padding:16px; border-radius:20px; background:var(--surface-2)}
+.skl .skel{height:16px; display:block}
+
+/* ---------- map ---------- */
+.maplead{margin:-4px 0 14px}
+.legend{display:flex; flex-wrap:wrap; gap:8px 18px; margin:0 0 14px; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.legend li{display:inline-flex; align-items:center; gap:8px}
+.sw{width:18px; height:18px; border-radius:6px; flex:none}
+.sw.free{background:var(--z-free-2); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.sw.paid{background:repeating-linear-gradient(45deg, var(--z-hatch) 0 2px, var(--z-paid) 2px 6px); box-shadow:inset 0 0 0 1.5px var(--z-hatch)}
+.sw.out{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.map-grid{display:grid; gap:16px}
+.mapbox{position:relative; padding:0; overflow:hidden; background:var(--surface)}
+.map{display:block; width:100%; height:auto; touch-action:manipulation; user-select:none; -webkit-user-select:none}
+.map .grid-dot{fill:var(--line-strong); opacity:.45}
+.map .edge{fill:none; stroke:var(--line-strong); stroke-width:1.5; stroke-dasharray:2 6; stroke-linecap:round}
+.map .z{cursor:pointer; transform-box:fill-box; transform-origin:center; transition:transform var(--t-slow) var(--ease)}
+.map .z path{stroke:var(--surface); stroke-width:6; stroke-linejoin:round; transition:opacity var(--t-base) var(--ease)}
+.map .z.free path.f{fill:var(--z-free)}
+.map .z.paid path.f{fill:var(--z-paid)}
+.map .z.paid path.h{fill:url(#hatch); stroke:none; pointer-events:none}
+.map .z path.sel{fill:var(--ok); stroke:none; opacity:0; pointer-events:none}
+.map .z.paid path.sel{fill:var(--ember)}
+.map .z.on{transform:scale(1.035)}
+.map .z.on path.sel{opacity:1}
+.map .z:hover path.f{fill:var(--z-free-2)}
+.map .z.paid:hover path.f{fill:color-mix(in srgb, var(--ember) 40%, var(--surface))}
+.map .zl{font:800 17px var(--font); letter-spacing:-.02em; fill:var(--ink); stroke:var(--surface); stroke-width:4px; stroke-linejoin:round; paint-order:stroke; pointer-events:none; text-anchor:middle; transition:fill var(--t-base) var(--ease)}
+.map .z.free .zl{stroke:var(--z-free)}
+.map .z.on .zl{fill:var(--on-ok); stroke:none}
+.map .z.paid.on .zl{fill:var(--on-ember)}
+.map .air path{fill:var(--surface-2); stroke:var(--surface); stroke-width:6; stroke-linejoin:round}
+.map .air text{font:700 14px var(--font); fill:var(--muted); text-anchor:middle}
+.map .route{fill:none; stroke:var(--ink); stroke-width:2.5; stroke-dasharray:1 7; stroke-linecap:round; opacity:0; transition:opacity var(--t-slow) var(--ease)}
+.map .route.on{opacity:.8}
+.map .pin .ring{fill:none; stroke:var(--ink); stroke-width:2; transform-box:fill-box; transform-origin:center; opacity:0; animation:ring 2.4s var(--ease) 600ms 3}
+@keyframes ring{0%{transform:scale(.6); opacity:.55}100%{transform:scale(2.4); opacity:0}}
+.map .pin .dotp{fill:var(--ink); stroke:var(--surface); stroke-width:3}
+.map .pin .tag rect{fill:var(--ink)}
+.map .pin .tag text{font:800 14px var(--font); fill:var(--bg); text-anchor:middle; letter-spacing:-.01em}
+.map .rider{transition:transform 900ms var(--ease); pointer-events:none}
+.map .rider circle{fill:var(--surface); stroke:var(--ink); stroke-width:2}
+.map .rider .rico{color:var(--ink)}
+.mapnote{display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 16px 12px; font-size:14px; color:var(--muted); font-weight:600; border-top:1px solid var(--line)}
+
+/* selected zone card */
+.zcard{padding:20px 18px 18px}
+.zcard .zt{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.zcard h3{font-size:26px; letter-spacing:-.035em; line-height:1.1}
+.ztag{display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:4px 12px 4px 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.ztag.free{background:var(--ok); color:var(--on-ok)}
+.ztag.paid{background:var(--ember); color:var(--on-ember)}
+.ztag.out{background:var(--surface-2); color:var(--ink)}
+.zcard .here{margin:6px 0 0; display:flex; gap:6px; align-items:center; color:var(--muted); font-weight:600; font-size:15px}
+.zcard dl{margin:14px 0 16px}
+.zcard .kv{padding:11px 0; align-items:baseline}
+.zcard dt{color:var(--muted); font-weight:600; white-space:nowrap}
+.zcard dd{margin:0; font-weight:800; text-align:right}
+.zcard dd.missing{font-weight:600; white-space:nowrap}
+.zcard .busy{color:var(--warn)}
+.zcard .busy.idle{color:var(--ink)}
+.zcard .busy small{display:block; font-size:14px; font-weight:700}
+.zcard .note{margin:12px 0 0; font-size:15px; color:var(--muted)}
+.zcard .zbtns{display:grid; gap:10px; margin-top:16px}
+.zswap{animation:rin var(--t-slow) var(--ease)}
+
+/* fees table (also the list alternative to the map) */
+.map-side{display:grid; gap:16px}
+.fees{width:100%; border-collapse:collapse; margin-top:6px}
+.fees caption{text-align:left; font-weight:800; font-size:20px; letter-spacing:-.02em; padding:0 0 6px}
+.fees thead th{font-size:14px; color:var(--muted); font-weight:700; text-align:left; padding:8px 0}
+.fees thead th:last-child{text-align:right}
+.fees td,.fees th[scope=row]{padding:0; border-top:1px solid var(--line); vertical-align:middle}
+.fees th[scope=row]{text-align:left; font-weight:inherit}
+.fees .zbtn{width:100%; min-height:64px; display:grid; grid-template-columns:auto 1fr; column-gap:12px; align-items:center; padding:10px 8px 10px 0; border:0; background:transparent; text-align:left; cursor:pointer; color:inherit; border-radius:16px; font:inherit}
+.fees .zbtn .sw{grid-row:span 2}
+.fees .zbtn b{font-size:17px; font-weight:800; line-height:1.2; white-space:nowrap}
+.fees .zbtn small{font-size:14px; color:var(--muted); font-weight:600}
+.fees tr.on .zbtn b{text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px}
+.fees td{text-align:right; font-weight:800; white-space:nowrap; padding-left:8px}
+.fees td .okt{display:inline-flex; align-items:center; gap:6px; color:var(--ok)}
+.fees td.missing{font-weight:600; font-size:15px}
+.fees tr.outrow td,.fees tr.outrow th{padding:14px 0}
+.fees tr.outrow td{font-weight:700; color:var(--muted); white-space:normal}
+.minline{display:flex; gap:10px; align-items:flex-start; margin-top:14px; padding:14px 16px; border-radius:18px; background:var(--surface-2); font-size:15px}
+.minline .ic{margin-top:2px; color:var(--muted)}
+
+/* ---------- hours timeline ---------- */
+.dl .tl{padding:20px 18px 18px}
+.hours-grid{display:grid; gap:56px}
+.tl-body{position:relative; display:grid; gap:18px; padding-top:34px}
+.tl-body.closed{padding-top:4px}
+.tl-row .lab{display:flex; justify-content:space-between; gap:12px; font-weight:800; font-size:16px; margin-bottom:8px}
+.tl-row .lab span{font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+.track{position:relative; height:14px; border-radius:999px; background:var(--surface-2)}
+.track i{position:absolute; top:0; bottom:0; left:0; border-radius:999px; transform-origin:left}
+.track i.dlv{background:var(--ok)}
+.track i.lun{background:var(--tl-lunch)}
+.track i.pk{background:var(--muted)}
+.rv-on .rv .track i{transform:scaleX(.02); transition:transform 900ms var(--ease) 200ms}
+.rv-on .rv.in .track i{transform:none}
+.axis{position:relative; height:22px; margin-top:6px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.axis span{position:absolute; top:0; transform:translateX(-50%)}
+.axis span:first-child{transform:none}
+.dl .now{position:absolute; top:0; width:0; pointer-events:none}
+.dl .now::after{content:""; position:absolute; top:24px; left:-1px; width:2px; height:8px; background:var(--ink)}
+.track .tick{position:absolute; top:-5px; bottom:-5px; width:4px; margin-left:-2px; border-radius:2px; background:var(--ink); box-shadow:0 0 0 2px var(--surface)}
+.dl .now b{position:absolute; top:0; left:0; transform:translateX(-50%); white-space:nowrap; font-size:14px; font-weight:800; line-height:1; padding:6px 10px; border-radius:999px; background:var(--ink); color:var(--bg); font-variant-numeric:tabular-nums}
+.dl .now.l b{transform:translateX(-14px)} .dl .now.r b{transform:translateX(calc(-100% + 14px))}
+.tl-say{margin:18px 0 0; padding:14px 16px; border-radius:18px; background:var(--surface-2); display:flex; gap:10px; align-items:flex-start; font-weight:600}
+.tl-say .ic{margin-top:2px; flex:none}
+.tl-say.ok .ic{color:var(--ok)} .tl-say.warn .ic{color:var(--warn)}
+
+/* ---------- payment ---------- */
+.pay{display:grid; gap:12px}
+.pay .card{display:grid; grid-template-columns:52px 1fr; gap:14px; align-items:start; padding:18px}
+.pay .pi{width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.pay h3{font-size:18px; margin:2px 0 4px}
+.pay p{margin:0; color:var(--muted)}
+.paynote{margin:14px 0 0; display:flex; gap:10px; align-items:flex-start; color:var(--muted); font-size:15px}
+.paynote .ic{margin-top:2px; flex:none}
+
+/* ---------- FAQ ---------- */
+.dl .faq{display:grid; gap:10px}
+.faq-grid{display:grid; gap:20px}
+.faq-side{display:grid; gap:12px; justify-items:start}
+.faq-side .pill{margin-top:4px}
+.dl .faq details{border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.dl .faq summary{list-style:none; cursor:pointer; min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 14px 20px; font-weight:800; font-size:17px; line-height:1.3; letter-spacing:-.01em; border-radius:22px}
+.dl .faq summary::-webkit-details-marker{display:none}
+.dl .faq summary .cv{width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none; transition:transform var(--t-slow) var(--ease)}
+.dl .faq details[open] summary .cv{transform:rotate(180deg)}
+.dl .faq .ans{padding:0 20px 18px; color:var(--muted)}
+.dl .faq .ans p{margin:0}
+.dl .faq .ans .link{display:inline; min-height:0; text-decoration:underline; text-underline-offset:3px}
+
+/* ---------- closing CTA ---------- */
+.end .core{padding:28px 20px 20px; display:grid; gap:16px}
+.end h2{max-width:16ch}
+.end .btns{display:grid; gap:10px}
+
+@container app (min-width:700px){
+  .pay{grid-template-columns:1fr 1fr}
+}
+@container app (min-width:900px){
+  .dl-hero{padding-top:56px}
+  .hero-grid{grid-template-columns:1fr minmax(400px, 480px); gap:56px; align-items:center}
+  .dl-hero .lead{font-size:19px}
+  .chk{margin-top:0}
+  .chk .core{padding:28px}
+  .chk h2{font-size:26px}
+  .map-grid{grid-template-columns:minmax(0, 1.25fr) minmax(360px, 1fr); gap:28px; align-items:start}
+  .map-grid > .shell{position:sticky; top:160px}
+  .map .zl{font-size:13px; stroke-width:3px}
+  .map .air text{font-size:11px}
+  .map .pin .tag text{font-size:11px}
+  .map-side{gap:20px}
+  .zcard{padding:24px}
+  .hours-grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:28px; align-items:start}
+  .faq-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:56px; align-items:start}
+  .faq-side{position:sticky; top:160px}
+  .end h2{max-width:none}
+  .pay{grid-template-columns:1fr}
+  .end .core{grid-template-columns:1fr auto; align-items:center; padding:40px 40px}
+  .end .btns{grid-auto-flow:column; min-width:440px}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import { busyExtra } from "../../lib/status.ts";
+  import { zoneOfAddress } from "../../lib/zones.ts";
+  import type { Zone } from "../../lib/consts.ts";
+  import {
+    liveHTML, zoneCardHTML, timelineHTML, endHTML, etaText, resultHTML, riderTarget, LOADING_HTML, PIN, BY_SLUG, type View, type CheckResult,
+  } from "./_delivery.ts";
+
+  const main = SC.mount({ docTitle: "Доставка на храна в Дружба" });
+  const root = main.querySelector<HTMLElement>("[data-dl]")!;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+
+  function view(): View {
+    const n = SC.cart.count();
+    return { S: SC.state(), busy: SC.eta().busy, extra: busyExtra(), cart: n ? { n, sub: SC.cart.subtotal() } : null };
+  }
+
+  /* ---------- zone card + map selection ---------- */
+  const zcard = $("[data-zcard]"), svg = root.querySelector<SVGSVGElement>(".map")!;
+  const rider = svg.querySelector<SVGGElement>("[data-rider]")!, route = svg.querySelector<SVGPathElement>("[data-route]")!;
+  let current: Zone | null = null;
+
+  function select(slug: string | null, opts: { quiet?: boolean; reveal?: boolean } = {}) {
+    const z = slug ? BY_SLUG[slug] || null : null;
+    current = z;
+    svg.querySelectorAll<SVGGElement>(".z").forEach((g) => g.classList.toggle("on", !!z && g.dataset.zone === slug));
+    root.querySelectorAll<HTMLElement>("[data-row]").forEach((r) => {
+      const on = !!z && r.dataset.row === slug;
+      r.classList.toggle("on", on);
+      r.querySelector("[data-pick]")!.setAttribute("aria-pressed", String(on));
+    });
+    /* the one strong motion: the rider glides from the restaurant to the chosen quarter */
+    if (z) {
+      const t = riderTarget(z);
+      route.setAttribute("d", "M" + PIN.x + " " + PIN.y + " Q " + (PIN.x + t.x) / 2 + " " + (Math.min(PIN.y, t.y) - 30) + " " + t.x + " " + t.y);
+      route.classList.add("on");
+      rider.style.transform = "translate(" + t.x + "px," + t.y + "px)";
+    } else {
+      route.classList.remove("on");
+      rider.style.transform = "translate(" + PIN.x + "px," + PIN.y + "px)";
+    }
+    zcard.innerHTML = zoneCardHTML(z, view());
+    if (!opts.quiet) { try { history.replaceState(null, "", "#" + (slug || "izvan-zonite")); } catch { /* ignore */ } }
+    if (opts.reveal) {
+      const r = zcard.getBoundingClientRect(), vh = window.innerHeight;
+      const pad = SC.device.clientWidth < 900 ? 150 : 40;
+      let dy = 0;
+      if (r.bottom > vh - pad) dy = r.bottom - (vh - pad);
+      if (r.top - dy < 150) dy = r.top - 150;
+      if (Math.abs(dy) > 4) window.scrollBy({ top: dy, behavior: SC.reduce ? "auto" : "smooth" });
+    }
+  }
+  svg.addEventListener("click", (e) => {
+    const t = e.target as Element, g = t.closest<SVGGElement>(".z");
+    if (g) select(g.dataset.zone!, { reveal: true });
+    else if (!t.closest(".air")) select(null, { reveal: true });
+  });
+  root.addEventListener("click", (e) => {
+    const t = e.target as Element;
+    const p = t.closest<HTMLElement>("[data-pick]");
+    if (p) { select(p.dataset.pick!, { reveal: true }); return; }
+    const m = t.closest<HTMLElement>("[data-mode]");
+    if (m) SC.cart.mode(m.dataset.mode === "pickup" ? "pickup" : "delivery");
+  });
+
+  /* ---------- address check (lib/zones.ts: the same parser as the cart) ---------- */
+  const form = $<HTMLFormElement>("[data-chk]"), inp = form.querySelector<HTMLInputElement>("#adr")!;
+  const err = form.querySelector<HTMLElement>("#adrErr")!, res = $("[data-res]"), clr = form.querySelector<HTMLButtonElement>("[data-clear]")!;
+  /* simulated states, preview only (?preview=1 and the demo): #greshka, #offline */
+  let force: "error" | "offline" | null = null;
+  let last: CheckResult | null = null;
+  let timer = 0;
+
+  function show(r: CheckResult) {
+    last = r;
+    res.innerHTML = resultHTML(r, view());
+    if (r.type === "zone") select(r.zone.slug, { quiet: true });
+    else if (r.type === "out") select(null, { quiet: true });
+  }
+  function check(instant: boolean) {
+    const text = inp.value.trim(), r = zoneOfAddress(text);
+    clearTimeout(timer);
+    if (r.type === "short") {
+      err.textContent = text ? "Напишете поне името на квартала, например Дружба 2." : "Напишете квартала си, например Дружба 2.";
+      inp.setAttribute("aria-invalid", "true"); res.innerHTML = ""; last = null; inp.focus(); return;
+    }
+    err.textContent = ""; inp.removeAttribute("aria-invalid");
+    SC.store("sc-delivery-address", { text });
+    if (force === "offline" || navigator.onLine === false) { show({ type: "offline" }); return; }
+    const out: CheckResult = force === "error" ? { type: "error" } : r;
+    if (instant) { show(out); return; }
+    res.innerHTML = LOADING_HTML; last = null;
+    timer = window.setTimeout(() => { show(out); force = null; }, SC.reduce ? 60 : 450);
+  }
+  form.addEventListener("submit", (e) => { e.preventDefault(); check(false); });
+  inp.addEventListener("input", () => { clr.hidden = !inp.value; if (err.textContent) { err.textContent = ""; inp.removeAttribute("aria-invalid"); } });
+  clr.addEventListener("click", () => { inp.value = ""; clr.hidden = true; res.innerHTML = ""; last = null; inp.focus(); });
+  res.addEventListener("click", (e) => {
+    const t = e.target as Element;
+    const a = t.closest<HTMLElement>("[data-ans]");
+    if (a) {
+      if (a.dataset.ans === "none") show({ type: "out" });
+      else { const z = BY_SLUG[a.dataset.ans!]; inp.value = z.n; clr.hidden = false; SC.store("sc-delivery-address", { text: inp.value }); show({ type: "zone", zone: z }); }
+      return;
+    }
+    if (t.closest("[data-retry]")) { force = null; check(false); return; }
+    const m = t.closest<HTMLElement>("[data-tomap]");
+    if (m) { e.preventDefault(); document.getElementById("karta")!.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "start" }); }
+  });
+
+  /* ---------- hour, "Натоварено" and cart dependent parts ---------- */
+  function renderLive() {
+    const v = view();
+    $("[data-live]").innerHTML = liveHTML(v);
+    $("[data-tl]").innerHTML = timelineHTML(v);
+    $("[data-end]").innerHTML = endHTML(v);
+    root.querySelectorAll<HTMLElement>("[data-eta]").forEach((el) => {
+      const z = BY_SLUG[el.dataset.eta!]; if (z) el.textContent = "около " + (z.etaMin + (v.busy ? v.extra : 0)) + " мин";
+    });
+  }
+  function renderAll() {
+    renderLive();
+    zcard.innerHTML = zoneCardHTML(current, view());
+    if (last) res.innerHTML = resultHTML(last, view());
+  }
+  let phaseKey = "";
+  const key = () => { const s = SC.state(); return [s.delivery, s.kitchen, s.lunch, s.m < 600, SC.eta().busy].join(); };
+  document.addEventListener("sc:tick", () => {
+    const k = key();
+    if (k !== phaseKey) { phaseKey = k; renderAll(); } else $("[data-tl]").innerHTML = timelineHTML(view());
+  });
+  SC.cart.on(() => renderAll());
+
+  /* ---------- start: zone or state from the address (#druzhba-1, #izvan-zonite, #adres=..., preview: #offline, #greshka) ---------- */
+  const h = decodeURIComponent((location.hash || "").slice(1));
+  const saved = SC.load<{ text?: string } | null>("sc-delivery-address", null);
+  phaseKey = key();
+  renderLive();
+  if (SC.preview && (h === "offline" || h === "greshka")) {
+    force = h === "offline" ? "offline" : "error";
+    inp.value = (saved && saved.text) || "Дружба 2"; clr.hidden = false;
+    select("druzhba-2", { quiet: true }); check(true);
+  } else if (h.indexOf("adres=") === 0) {
+    inp.value = h.slice(6); clr.hidden = !inp.value;
+    check(true);
+    if (!current && !(last && last.type === "out")) select("druzhba-2", { quiet: true });
+  } else if (h === "izvan-zonite") select(null, { quiet: true });
+  else if (BY_SLUG[h]) select(h, { quiet: true });
+  else {
+    select("druzhba-2", { quiet: true });
+    if (saved && saved.text) { inp.value = saved.text; clr.hidden = false; }
+  }
+  window.addEventListener("online", () => { if (last && last.type === "offline" && force !== "offline") check(false); });
+  root.dataset.ready = "1";
+  SC.reveal();
+</script>

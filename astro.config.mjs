@@ -24,6 +24,8 @@ export default defineConfig({
   compressHTML: true,
   devToolbar: { enabled: false },
   vite: {
+    /* demo from any sub-folder: Vite's preload helper builds "/_astro/..." links for the dynamic imports;
+       scripts/relativize.mjs rewrites it to a URL relative to the chunk (no 404 from a sub-folder). */
     define: {
       __DEMO__: JSON.stringify(DEMO),
       __DEMO_STAFF__: JSON.stringify(demoStaff()),

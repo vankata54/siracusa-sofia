@@ -14,7 +14,7 @@ import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
 import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, footer, MORE_PAGES } from "../lib/chrome.ts";
 import { configureRoutes, url, fromProto } from "../lib/routes.ts";
-import { setClock, parseTime, now, minutes } from "../lib/time.ts";
+import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
 import type { Cart, CartLine, Mode } from "../lib/cart.ts";
 import type { AiKind } from "../lib/assistant.ts";
@@ -37,8 +37,11 @@ const prefs = load<Prefs>("sc-prefs", { theme: "system", time: "now" });
 const qs = new URLSearchParams(location.search);
 const previewMode = DEMO || prefs.preview === true || qs.has("preview");
 if (previewMode) {
+  setPreview(true);
   const t = qs.get("t");
-  if (t && parseTime(t)) setClock(t);
+  /* ?t= is remembered for the next pages of the review (demo / preview only); ?t=now goes back to the real clock */
+  if (t === "now") { prefs.time = "now"; store("sc-prefs", prefs); }
+  else if (t && parseTime(t)) { setClock(t); prefs.time = t; store("sc-prefs", prefs); }
   else if (prefs.time && prefs.time !== "now") setClock(prefs.time);
 }
 
@@ -113,6 +116,7 @@ let toastT: ReturnType<typeof setTimeout> | undefined;
 function toast(text: string, undo?: () => void) {
   let t = ov.querySelector<HTMLElement>(".toast");
   if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); ov.appendChild(t); }
+  /* the empty role="status" region is in the HTML from the start (Base.astro), so the first message is announced too */
   t.innerHTML = "<span>" + F.esc(text) + "</span>" + (undo ? '<button type="button">Отмени</button>' : "");
   if (undo) t.querySelector("button")!.onclick = () => { undo(); t!.classList.remove("on"); };
   requestAnimationFrame(() => t!.classList.add("on"));
@@ -122,20 +126,46 @@ function flash(btn: HTMLElement, html: string, ms?: number) {
   const old = btn.innerHTML; btn.classList.add("done"); btn.innerHTML = html;
   setTimeout(() => { if (btn.isConnected) { btn.classList.remove("done"); btn.innerHTML = old; } }, ms || 1200);
 }
-/* generic bottom sheet: returns {el, close} */
+/* generic bottom sheet: returns {el, close}. While it is open everything behind it is inert (Tab stays in the sheet,
+   screen readers do not leave it); Escape closes it and the focus goes back to the button that opened it. */
+const inertMarks = new WeakSet<Element>();
+function setInert(top: HTMLElement | null) {
+  const behind = [device, ...Array.from(document.querySelectorAll("[data-ov-ck]")), ...Array.from(ov.children)].filter((el) => el !== top) as HTMLElement[];
+  behind.forEach((el) => {
+    if (top) { if (!el.inert) { el.inert = true; inertMarks.add(el); } }
+    else if (inertMarks.has(el)) { el.inert = false; inertMarks.delete(el); }
+  });
+  if (top) { top.inert = false; inertMarks.delete(top); }
+}
 function sheet(opts: { title?: string; html?: string; onClose?: () => void }) {
   const w = document.createElement("div"), id = "sh" + Math.random().toString(36).slice(2, 7), back = document.activeElement as HTMLElement | null;
   w.className = "sheetwrap";
   w.innerHTML = sheetHTML(id, opts.title || "", opts.html || "");
   ov.appendChild(w); de.classList.add("sheet-open");
+  setInert(w);
+  let closed = false;
   const close = () => {
+    if (closed) return; closed = true;
     w.classList.remove("on");
+    w.inert = true;
+    const open = Array.from(ov.querySelectorAll<HTMLElement>(".sheetwrap")).filter((x) => x !== w);
+    setInert(null);
+    if (open.length) setInert(open[open.length - 1]);
     setTimeout(() => { w.remove(); if (!ov.querySelector(".sheetwrap")) de.classList.remove("sheet-open"); }, 340);
     opts.onClose && opts.onClose();
     back && back.isConnected && back.focus({ preventScroll: true });
   };
   (w.querySelector(".scrim") as HTMLElement).onclick = close;
   (w.querySelector("[data-close]") as HTMLElement).onclick = close;
+  /* Tab cycles inside the sheet (inert already keeps it there; this also covers the browser UI edge) */
+  w.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const f = Array.from(w.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   requestAnimationFrame(() => { w.classList.add("on"); const f = w.querySelector<HTMLElement>("[data-close]"); f && f.focus({ preventScroll: true }); });
   return { el: w, close };
 }
@@ -154,8 +184,33 @@ function tick() {
   if (box) { const html = statusHTML(); if (box.innerHTML !== html) box.innerHTML = html; }
   document.dispatchEvent(new CustomEvent("sc:tick", { detail: { state: T.state(), status: st } }));
 }
+/* "Натоварено" and the minutes: one source, the kitchen settings in the core (server: GET /api/status; demo: the local
+   core store). Read once per page (cached 60 s for the next page) and again every 5 minutes. */
+function applyKitchen(k: Partial<T.KitchenSettings> | null | undefined) {
+  if (!k) return;
+  const before = T.eta().text;
+  T.setKitchen(k);
+  if (T.eta().text !== before) tick();
+}
+function loadKitchen() {
+  try {
+    if (DEMO) { const db = JSON.parse(localStorage.getItem("sc-db-settings") || "{}"); applyKitchen(db.main && db.main.kitchen); return; }
+    const c = JSON.parse(sessionStorage.getItem("sc-kitchen") || "null");
+    if (c && Date.now() - c.at < 60_000) { applyKitchen(c.k); return; }
+  } catch { /* storage blocked */ }
+  if (DEMO || typeof fetch !== "function") return;
+  fetch("/api/status", { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    if (!j || !j.kitchen) return;
+    try { sessionStorage.setItem("sc-kitchen", JSON.stringify({ at: Date.now(), k: j.kitchen })); } catch { /* ignore */ }
+    applyKitchen(j.kitchen);
+  }).catch(() => { /* offline: keep the default */ });
+}
 tick();
 setInterval(tick, 60_000);
+const idle = (f: () => void) => ("requestIdleCallback" in window ? (window as Window & { requestIdleCallback: (f: () => void) => void }).requestIdleCallback(f) : setTimeout(f, 200));
+idle(loadKitchen);
+setInterval(() => { try { sessionStorage.removeItem("sc-kitchen"); } catch { /* ignore */ } loadKitchen(); }, 5 * 60_000);
+window.addEventListener("storage", (e) => { if (e.key === "sc-db-settings") loadKitchen(); });
 
 /* ---------- header scroll state + assistant pill/mini ---------- */
 const sent = scroller.querySelector("[data-sent]");

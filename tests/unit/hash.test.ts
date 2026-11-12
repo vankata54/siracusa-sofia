@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import crypto from "node:crypto";
-import { webHasher } from "../../src/client/api.ts";
+import { webHasher } from "../../src/client/api-demo.ts";
 import { scryptHasher } from "../../server/hasher.ts";
 
 describe("password hashing", () => {

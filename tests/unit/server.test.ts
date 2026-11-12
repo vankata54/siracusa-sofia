@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createApp } from "../../server/app.ts";
 
 describe("server API (in-memory SQLite)", async () => {
-  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist" });
+  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
   await core.staff.upsert({ username: "admin", name: "Главен админ", role: "admin", password: "test-password-123" });
   const json = (method: string, body?: unknown, cookie?: string) => ({ method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
 
@@ -32,10 +32,47 @@ describe("server API (in-memory SQLite)", async () => {
     expect(o.no).toBe("1042");
     const pub = await (await app.request("/api/orders/1042")).json();
     expect(pub.phone).toBeUndefined();
-    expect(pub.name).toBe("Иван");
+    expect(pub.name).toBeUndefined();
+    expect(pub.key).toBeUndefined();
+    const withKey = await (await app.request("/api/orders/1042-" + o.key)).json();
+    expect(withKey.key).toBe(o.key);
+    expect((await app.request("/api/orders/1042-wrongkey")).status).toBe(404);
   });
   it("cross-origin POST is refused", async () => {
     const r = await app.request("http://localhost/api/subscribe", { method: "POST", headers: { origin: "https://evil.example", host: "localhost", "content-type": "application/json" }, body: "{}" });
     expect(r.status).toBe(403);
+  });
+  it("status carries the kitchen settings; only staff change them", async () => {
+    const st = await (await app.request("/api/status")).json();
+    expect(st.kitchen).toEqual({ busy: false, etaMin: 35, etaBusyMin: 55 });
+    expect((await app.request("/api/admin/settings", json("PATCH", { kitchen: { busy: true } }))).status).toBe(401);
+  });
+  it("office: the public view has no organizer token; submit needs it", async () => {
+    const r = await app.request("/api/office", json("POST", { office: "Офис", addr: "Дружба 2, бл. 311", deadline: "14:00" }));
+    expect(r.status).toBe(201);
+    const o = await r.json();
+    expect(o.orgKey).toBeTruthy();
+    const pub = await (await app.request("/api/office/" + o.code)).json();
+    expect(pub.orgKey).toBeUndefined();
+    expect(pub.contact).toBeUndefined();
+    expect((await app.request("/api/office/" + o.code + "/submit", json("POST", { name: "Иван", phone: "0888123456" }))).status).toBe(403);
+  });
+  it("events: dates as YYYY-MM-DD; /api/menu compressed when asked", async () => {
+    const ev = await (await app.request("/api/events")).json();
+    expect(ev[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const m = await app.request("/api/menu", { headers: { "accept-encoding": "gzip" } });
+    expect(m.headers.get("content-encoding")).toBe("gzip");
+  });
+  it("preview clock header is ignored without SC_PREVIEW_API", async () => {
+    const r = await app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456", sched: "утре", slot: "10:30" }));
+    expect(r.status).toBe(201);
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, previewApi: true });
+    const late = await t.app.request("/api/orders", { method: "POST", headers: { "content-type": "application/json", "x-sc-clock": "23:30" }, body: JSON.stringify({ cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456" }) });
+    expect(late.status).toBe(409);
+  });
+  it("code checks are limited per IP", async () => {
+    let last = 0;
+    for (let i = 0; i < 31; i++) last = (await app.request("/api/codes/check", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "9.9.9.9" }, body: JSON.stringify({ code: "SC10-0000000000" }) })).status;
+    expect(last).toBe(429);
   });
 });

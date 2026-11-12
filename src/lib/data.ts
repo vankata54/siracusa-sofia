@@ -29,6 +29,8 @@ export function sofiaDate(d: Date = new Date()): string {
   try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(d); }
   catch { return d.toISOString().slice(0, 10); }
 }
+/** The date of the lunch menu in the data ("YYYY-MM-DD"). */
+export const MENU_LUNCH_DATE: string = MENU.lunch.date;
 /** The lunch menu in the data is for one date; never present it as "today" on another day. */
 export function lunchIsToday(d: Date = new Date()): boolean {
   return sofiaDate(d) === MENU.lunch.date;

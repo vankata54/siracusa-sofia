@@ -18,13 +18,13 @@ const TABLES: Record<string, Cols> = {
   sessions: { user_id: (d) => d.userId, kind: (d) => d.kind, expires_at: (d) => d.expiresAt },
   feedback_notes: { status: (d) => d.status, module: (d) => d.module },
   audit_log: { actor: (d) => d.actor, action: (d) => d.action },
-  events: {}, offers: {},
+  events: {}, offers: {}, settings: {},
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {
   orders: { status: "status", phone: "phone", mode: "mode" }, reservations: { date: "date", time: "time", table: "table_id", phone: "phone", status: "status" },
   office_orders: { code: "code" }, subscriptions: { email: "email" }, users: { phone: "phone" }, staff_users: { username: "username" },
-  sessions: { userId: "user_id" }, feedback_notes: { status: "status", module: "module" },
+  sessions: { userId: "user_id" }, ratings: { orderNo: "order_no" }, feedback_notes: { status: "status", module: "module" },
 };
 const val = (v: unknown) => (typeof v === "boolean" ? Number(v) : v === undefined ? null : v);
 
@@ -67,10 +67,13 @@ export class SqliteRepo implements Repo {
     const r = this.db.prepare(`INSERT INTO counters (name, value) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET value = value + 1 RETURNING value`).get(name, start) as { value: number };
     return r.value;
   }
-  /* better-sqlite3 is synchronous; the core awaits only these synchronous calls, so BEGIN/COMMIT around them is atomic. */
+  /* better-sqlite3 is synchronous; the core awaits only these synchronous calls, so BEGIN/COMMIT around them is atomic.
+     Re-entrant: a transaction inside a transaction (office submit -> createOrder) joins the outer one. */
+  private depth = 0;
   async transaction<R>(fn: () => Promise<R>): Promise<R> {
-    this.db.exec("BEGIN IMMEDIATE");
-    try { const r = await fn(); this.db.exec("COMMIT"); return r; }
-    catch (e) { this.db.exec("ROLLBACK"); throw e; }
+    if (this.depth > 0) { this.depth++; try { return await fn(); } finally { this.depth--; } }
+    this.db.exec("BEGIN IMMEDIATE"); this.depth = 1;
+    try { const r = await fn(); this.depth = 0; this.db.exec("COMMIT"); return r; }
+    catch (e) { this.depth = 0; this.db.exec("ROLLBACK"); throw e; }
   }
 }

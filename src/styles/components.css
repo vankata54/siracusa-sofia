@@ -21,6 +21,13 @@ img{max-width:100%}
 .scroller{position:relative; background:var(--bg)}
 .ov{position:fixed; inset:0; pointer-events:none; z-index:40; container-type:inline-size; container-name:app}
 .ov > *{pointer-events:auto}
+.ov.ov-ck{z-index:41}
+/* the focused element never hides under the sticky header, the bottom nav, the action bar or the assistant (WCAG 2.4.11) */
+html{scroll-padding-top:132px; scroll-padding-bottom:160px}
+html[data-sc-abar]{scroll-padding-bottom:224px}
+html[data-sc-nonav]{scroll-padding-bottom:84px}
+html[data-sc-nonav][data-sc-abar]{scroll-padding-bottom:156px}
+@media (min-width:900px){ html{scroll-padding-top:150px; scroll-padding-bottom:96px} html[data-sc-abar]{scroll-padding-bottom:164px} }
 html.sheet-open{overflow:hidden}
 [data-ck] .cookie{display:none}
 
@@ -131,6 +138,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .top{position:sticky; top:8px; z-index:20; margin:8px 8px 0; display:flex; align-items:center; justify-content:space-between; gap:2px; height:60px; padding:0 6px 0 18px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .top.back{padding-left:6px}
 .word{font-weight:800; font-size:22px; letter-spacing:-.05em; line-height:1; text-decoration:none; white-space:nowrap}
+.top a.word{min-height:48px; display:inline-flex; align-items:center}
 .top .ttl{flex:1; min-width:0; font-weight:800; font-size:17px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px}
 .hact{display:flex; align-items:center}
 .hb{display:inline-flex; align-items:center; gap:6px; min-height:48px; min-width:48px; justify-content:center; padding:0 10px; border:0; background:transparent; border-radius:999px; font-weight:700; font-size:16px; cursor:pointer; white-space:nowrap; text-decoration:none; transition:transform var(--t-fast) var(--ease)}
@@ -157,7 +165,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 @container app (max-width:370px){ .word{font-size:20px} .hb{padding:0 7px} .hb.call{padding:0 11px} .top{padding-left:14px} }
 @container app (min-width:900px){
   .top{top:14px; margin:14px max(24px, calc((100% - 1240px)/2)) 0; height:68px; padding:0 8px 0 26px}
-  .dnav a{min-height:44px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; font-weight:700; text-decoration:none; font-size:15px}
+  .dnav a{min-height:48px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; font-weight:700; text-decoration:none; font-size:15px}
   .dnav a[aria-current="page"]{background:var(--surface-2)}
   .row2{top:90px; margin:10px max(24px, calc((100% - 1240px)/2)) 0}
   .status{flex:0 1 auto}
@@ -230,6 +238,8 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 /* ---------- misc components ---------- */
 .toast{position:absolute; left:50%; top:148px; z-index:90; transform:translate(-50%,-140%); opacity:0; display:flex; align-items:center; gap:12px; min-height:52px; padding:0 8px 0 18px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); max-width:min(560px, calc(100% - 24px)); width:max-content; white-space:normal; line-height:1.3}
 .toast.on{transform:translate(-50%,0); opacity:1}
+.toast:not(.on){pointer-events:none}
+.toast:empty{padding:0; min-height:0}
 .toast button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:rgba(255,255,255,.16); color:inherit; font-weight:800; cursor:pointer}
 .empty{display:grid; justify-items:center; gap:12px; text-align:center; padding:32px 16px}
 .empty .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
