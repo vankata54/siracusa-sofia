@@ -1,0 +1,102 @@
+---
+/* Shared template of the three legal pages: crumbs, h1, lead, "Съдържание", numbered sections, links to the other two.
+   Same building blocks as the rest of the site (Base, .sec, .h1, .lead, .shell/.core, .missing, tokens only).
+   The default slot goes right after the lead (the cookie page puts its "Промени избора" box there). */
+import Base from "../../layouts/Base.astro";
+import { ic, url, type PageKey } from "../../lib/index.ts";
+import { LEGAL, M, breadcrumbLd, type LegalSection } from "./_legal.ts";
+
+export interface Props { k: PageKey; name: string; docTitle: string; description: string; lead: string; sections: LegalSection[] }
+const p = Astro.props;
+---
+<Base page={p.k} nav={null} title={p.name} docTitle={p.docTitle} description={p.description} jsonld={breadcrumbLd(Astro.site, p.k, p.name)}>
+  <section class="sec lg-hero">
+    <nav class="lg-crumbs" aria-label="Път до страницата"><a href={url.home()}>Начало</a><Fragment set:html={ic("caret-right", 16)} /><span aria-current="page">{p.name}</span></nav>
+    <h1 class="h1">{p.name}</h1>
+    <p class="lead lg-lead" set:html={p.lead}></p>
+    <p class="lg-upd">Последна промяна: <Fragment set:html={M("дата на текста от юрист")} /></p>
+    <slot />
+  </section>
+  <section class="sec lg-body">
+    <div class="lg-cols">
+      <nav class="lg-toc" aria-labelledby="lg-toc-h">
+        <h2 class="h3" id="lg-toc-h">Съдържание</h2>
+        <ol>{p.sections.map((s, i) => <li><a href={"#" + s.id}><span class="n">{i + 1}</span>{s.h}</a></li>)}</ol>
+      </nav>
+      <div class="lg-secs">
+        {p.sections.map((s, i) => (
+          <article class="lg-sec" id={s.id} aria-labelledby={s.id + "-h"}>
+            <h2 class="h2" id={s.id + "-h"}><span class="n" aria-hidden="true">{i + 1}</span>{s.h}</h2>
+            <div class="lg-text" set:html={s.html}></div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+  <section class="sec lg-more">
+    <h2 class="h3">Вижте също</h2>
+    <div class="lg-links">
+      {LEGAL.filter((l) => l[0] !== p.k).map((l) => <a class="pill pill-line" href={url.page(l[0])}>{l[1]}<Fragment set:html={ic("caret-right", 18)} /></a>)}
+      <a class="pill pill-line" href={url.page("contacts")}>Контакти<Fragment set:html={ic("caret-right", 18)} /></a>
+    </div>
+  </section>
+</Base>
+
+<style is:global>
+/* ---------- legal pages (page-only, tokens only) ---------- */
+.lg-hero{padding-top:28px}
+.lg-crumbs{display:flex; flex-wrap:wrap; align-items:center; gap:4px; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:14px}
+.lg-crumbs a{color:inherit; text-decoration:none; min-height:48px; display:inline-flex; align-items:center}
+.lg-crumbs a:hover{color:var(--ink)}
+.lg-crumbs [aria-current]{color:var(--ink)}
+.lg-lead{margin-top:14px; max-width:60ch}
+.lg-upd{margin:14px 0 0; font-size:14px; color:var(--muted); font-weight:600}
+.lg-body{padding-top:36px}
+.lg-cols{display:grid; gap:28px}
+.lg-toc{padding:18px 20px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.lg-toc h2{margin:0 0 6px}
+.lg-toc ol{list-style:none; margin:0; padding:0; display:grid}
+.lg-toc a{display:flex; align-items:center; gap:12px; min-height:48px; text-decoration:none; color:var(--ink); font-weight:700; font-size:16px; line-height:1.3}
+.lg-toc a:hover{color:var(--red)}
+.lg-toc li + li a{border-top:1px solid var(--line)}
+.lg-toc .n, .lg-sec .n{flex:none; width:28px; height:28px; border-radius:50%; display:inline-grid; place-items:center; background:var(--surface-2); color:var(--muted); font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+.lg-secs{display:grid; gap:36px; min-width:0}
+.lg-sec{scroll-margin-top:120px}
+.lg-sec h2{display:flex; align-items:center; gap:12px; font-size:24px; margin:0 0 12px}
+.lg-sec .n{width:34px; height:34px; font-size:15px; background:var(--ink); color:var(--bg)}
+.lg-text{font-size:16px; line-height:1.6; max-width:68ch}
+.lg-text p{margin:0 0 12px}
+.lg-text ul{margin:0 0 12px; padding-left:20px}
+.lg-text li{margin:0 0 6px}
+.lg-text a:not(.pill){color:var(--red); font-weight:700}
+.lg-text .lg-miss{padding:12px 16px; border-radius:14px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.lg-dl{display:grid; margin:0 0 12px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.lg-dl > div{display:grid; grid-template-columns:minmax(110px, 34%) 1fr; gap:12px; padding:12px 16px; align-items:center; min-height:48px}
+.lg-dl > div + div{border-top:1px solid var(--line)}
+.lg-dl dt{font-size:14px; font-weight:700; color:var(--muted)}
+.lg-dl dd{margin:0; min-width:0; overflow-wrap:anywhere}
+.lg-dl .link{min-height:0}
+.lg-tbl{width:100%; border-collapse:collapse; margin:0 0 12px; font-size:16px}
+.lg-tbl caption{text-align:left; font-weight:700; padding:0 0 8px}
+.lg-tbl th{text-align:left; font-size:14px; color:var(--muted); font-weight:700; padding:8px 10px 8px 0; border-bottom:1px solid var(--line)}
+.lg-tbl td{padding:10px 10px 10px 0; border-bottom:1px solid var(--line); vertical-align:top}
+.lg-tbl code{font-size:14px; padding:2px 6px; border-radius:6px; background:var(--surface-2); overflow-wrap:anywhere}
+.lg-more h2{margin:0 0 12px}
+.lg-links{display:flex; flex-wrap:wrap; gap:10px}
+/* phone: the table becomes a list of cards (one row = one card) */
+@container app (max-width:699px){
+  .lg-tbl thead{display:none}
+  .lg-tbl caption{display:block; width:100%}
+  .lg-tbl, .lg-tbl tbody, .lg-tbl tr, .lg-tbl td{display:block; width:100%}
+  .lg-tbl tr{padding:10px 0; border-bottom:1px solid var(--line)}
+  .lg-tbl td{border:0; padding:2px 0}
+  .lg-tbl td[data-l]::before{content:attr(data-l) ": "; color:var(--muted); font-size:14px; font-weight:700}
+}
+@container app (min-width:900px){
+  .lg-hero{padding-top:56px}
+  .lg-body{padding-top:48px}
+  .lg-cols{grid-template-columns:300px minmax(0,1fr); gap:56px; align-items:start}
+  .lg-toc{position:sticky; top:140px}
+  .lg-sec h2{font-size:28px}
+}
+</style>

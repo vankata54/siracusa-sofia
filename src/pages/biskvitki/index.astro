@@ -1,0 +1,101 @@
+---
+/* Бисквитки (/biskvitki/): simple text template (docs/BUILD-PLAN.md, legal pages) + "Промени избора".
+   Facts only from the code: the banner and its three choices (src/lib/chrome.ts cookieBanner, cookieSettings), the two
+   httpOnly login cookies (server/app.ts), the keys the site keeps in the browser (localStorage "sc-*"), the Google map
+   that loads only on a tap. The site has no analytics or marketing tools today. Legal wording: "[ЛИПСВА: текст от юрист]".
+   "Промени избора" uses the shared runtime: [data-cookie-settings] clears the choice and shows the banner again. */
+import Legal from "../poveritelnost/_Legal.astro";
+import { url, ic, RESTAURANT as R } from "../../lib/index.ts";
+import { M, MP, type LegalSection } from "../poveritelnost/_legal.ts";
+
+type Row = [string, string, string, string];
+const table = (cap: string, rows: Row[]) => '<table class="lg-tbl"><caption>' + cap + "</caption><thead><tr><th>Име</th><th>За какво</th><th>Вид</th><th>Срок</th></tr></thead><tbody>" +
+  rows.map((r) => '<tr><td><code>' + r[0] + '</code></td><td data-l="За какво">' + r[1] + '</td><td data-l="Вид">' + r[2] + '</td><td data-l="Срок">' + r[3] + "</td></tr>").join("") + "</tbody></table>";
+const KEEP = "докато не ги изтриете от браузъра";
+const sections: LegalSection[] = [
+  { id: "kakvo", h: "Какво са бисквитките", html: MP("текст от юрист: какво са бисквитките и подобните технологии (локално хранилище)") },
+  {
+    id: "banner", h: "Вашият избор",
+    html: "<p>При първото посещение банерът „Бисквитки“ ви пита с три бутона:</p><ul>" +
+      "<li><b>Приеми всички</b>: необходимите и аналитичните.</li><li><b>Само необходимите</b>: само тези, без които количката и входът не работят.</li><li><b>Настройки</b>: избирате сами. Аналитичните и маркетинговите са изключени по подразбиране.</li></ul>" +
+      "<p>В момента сайтът <b>не използва</b> аналитични и маркетингови инструменти. Затова при всеки избор се ползват само необходимите, описани по-долу.</p>" +
+      "<p>Изборът се пази в браузъра ви. Можете да го смените по всяко време с бутона „Промени избора“ горе на тази страница или от връзката „Бисквитки“ в долната част на всяка страница.</p>",
+  },
+  {
+    id: "neobhodimi", h: "Необходими",
+    html: "<p>Винаги включени: без тях количката, входът и настройките на сайта не работят.</p>" +
+      table("Бисквитки (изпраща ги сървърът)", [
+        ["sc_user", "Вход в профила ви (след SMS код)", "Необходима, само за сайта", "30 дни"],
+        ["sc_staff", "Вход на персонала на ресторанта (не и на клиентите)", "Необходима, само за сайта", "12 часа"],
+      ]) +
+      table("Данни в браузъра (локално хранилище)", [
+        ["sc-cookie", "Изборът ви в банера за бисквитки", "Необходими", KEEP],
+        ["sc-cart", "Количката", "Необходими", KEEP],
+        ["sc-order", "Последната ви поръчка, за да я проследите", "Необходими", KEEP],
+        ["sc-prefs", "Светла или тъмна тема", "Необходими", KEEP],
+        ["sc-user, sc-fav", "Профилът ви и любимите ястия на това устройство", "Необходими", KEEP],
+        ["sc-delivery-address, sc-pickup", "Адресът за доставка и часът за вземане, които сте избрали", "Необходими", KEEP],
+        ["sc-res-last", "Име и телефон от последната резервация, за да не ги пишете пак", "Необходими", KEEP],
+        ["sc-contact-draft", "Неизпратено съобщение от формата за контакт", "Необходими", KEEP],
+        ["sc-bday", "Рожденият ден, ако сте го въвели след поръчка", "Необходими", KEEP],
+      ]) + MP("текст от юрист: правно основание за необходимите бисквитки"),
+  },
+  { id: "analitichni", h: "Аналитични", html: "<p>Помагат ни да виждаме кое се поръчва. Изключени по подразбиране. В момента сайтът не използва такива.</p>" + MP("текст от юрист, ако се добавят аналитични инструменти") },
+  { id: "marketingovi", h: "Маркетингови", html: "<p>Изключени по подразбиране. В момента сайтът не използва такива.</p>" + MP("текст от юрист, ако се добавят маркетингови инструменти") },
+  {
+    id: "google", h: "Карта от Google Maps",
+    html: "<p>Картата на страниците <a href=\"" + url.home() + "\">Начало</a> и <a href=\"" + url.page("contacts") + "\">Контакти</a> се зарежда от Google само когато натиснете бутона за картата. Дотогава на мястото ѝ стои рисунка.</p>" +
+      MP("текст от юрист: бисквитките на Google Maps и връзка към правилата на Google"),
+  },
+  { id: "iztrivane", h: "Как да изтриете бисквитките", html: MP("текст от юрист: изтриване през настройките на браузъра") + "<p>Въпроси: <a href=\"mailto:" + R.email + "\">" + R.email + "</a>, <a href=\"tel:" + R.phoneIntl + "\">" + R.phone + "</a>.</p>" },
+];
+---
+<Legal k="cookies" name="Бисквитки" docTitle="Бисквитки и данни в браузъра" sections={sections}
+  description={"Какви бисквитки и данни в браузъра използва сайтът на " + R.name + " и как да промените избора си."}
+  lead="Какво пази сайтът на Siracusa в браузъра ви и как да промените избора си.">
+  <div class="shell ck-box"><div class="core">
+    <span class="ck-ic" aria-hidden="true" set:html={ic("cookie", 26)}></span>
+    <div>
+      <b>Вашият избор</b>
+      <p class="muted" data-ck-now aria-live="polite">Изборът ви се пази в този браузър.</p>
+    </div>
+    <button class="pill pill-red" type="button" data-cookie-settings data-ck-change><Fragment set:html={ic("arrow-counter-clockwise", 20)} />Промени избора</button>
+  </div></div>
+  <p class="ck-also">Как използваме данните от формите: <a class="link" href={url.page("privacy")}>Поверителност</a></p>
+</Legal>
+
+<style is:global>
+.ck-box{margin-top:24px; max-width:720px}
+.ck-box .core{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; align-items:center; padding:18px}
+.ck-box .core > div b{display:block; font-size:17px}
+.ck-box .core > div p{margin:2px 0 0; font-size:16px}
+.ck-box .pill{grid-column:1 / -1; margin-top:10px}
+.ck-ic{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.ck-also{margin:12px 0 0; font-size:16px; color:var(--muted); display:flex; flex-wrap:wrap; align-items:center; column-gap:6px}
+@container app (min-width:700px){
+  .ck-box .core{grid-template-columns:auto 1fr auto}
+  .ck-box .pill{grid-column:auto; margin-top:0}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  SC.mount();
+  const NAMES: Record<string, string> = { all: "Приехте всички бисквитки.", min: "Избрахте само необходимите.", set: "Отворихте настройките на бисквитките." };
+  const now = document.querySelector<HTMLElement>("[data-ck-now]")!;
+  function show() {
+    const v = SC.load<string | null>("sc-cookie", null);
+    now.textContent = v && NAMES[v] ? NAMES[v] + " Сайтът сега ползва само необходимите." : "Още не сте избрали. Банерът „Бисквитки“ е отворен долу на екрана.";
+  }
+  show();
+  document.addEventListener("click", (e) => {
+    const t = (e.target as Element).closest("[data-cookie], [data-cookie-settings]");
+    if (!t) return;
+    /* after the shared runtime has handled the click (it clears or stores the choice) */
+    setTimeout(() => {
+      show();
+      if (t.hasAttribute("data-cookie-settings")) document.querySelector<HTMLElement>(".cookie button")?.focus({ preventScroll: true });
+    }, 0);
+  });
+  SC.reveal();
+</script>

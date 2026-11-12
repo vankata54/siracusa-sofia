@@ -1,18 +1,183 @@
 ---
-/* Simple 404 (the designed one from design/pages/404.html is made by its own agent). */
+/* 404: port of design/pages/404.html (design/PAGES.md "gallery.html + 404.html", design/reviews/404.review.md),
+   with three variants by address (docs/BUILD-TODO.md):
+     general           "Тази страница я няма в менюто" + "Към менюто", "Начало", phone line, "Може би търсите", pizzas
+     /menu/<x>/        "Тази категория я няма в менюто"; /menu/<кат>/<x>/ "Това ястие го няма в менюто"
+                       + the categories (catsHTML logic) + "Обади се"
+     /sabitia/<x>/     "Това събитие го няма в програмата" + "Виж всички събития" + "Предстои" (event.html, invalid event)
+   All variants are in the server HTML (the general one visible); a tiny inline script picks one before the first paint
+   by location.pathname, or in the demo (static files, 404.html at the root) by the hash: 404.html#/menu/xyz/. */
 import Base from "../layouts/Base.astro";
-import { url, ic } from "../lib/index.ts";
+import { ic, url, dishCard, RESTAURANT as R } from "../lib/index.ts";
+import { v, emptyPlate, callLine, suggestionsHTML, pizzas, catsHTML, upcomingHTML, TEL } from "./_404.ts";
 ---
-<Base page="404" nav={null} title="Страницата я няма" noindex>
-  <section class="sec" style="padding-top:28px">
-    <div class="empty">
-      <span class="ill"><Fragment set:html={ic("question", 44)} /></span>
-      <h1 class="h2">Тази страница я няма в менюто</h1>
-      <p class="lead">Може адресът да е сгрешен или страницата да е преместена.</p>
-      <div class="row" style="flex-wrap:wrap;justify-content:center">
-        <a class="pill pill-red" href={url.menu()}>Към менюто</a>
-        <a class="pill pill-line" href={url.home()}>Начало</a>
-      </div>
+<Base page="404" nav={null} title="Страницата я няма" noindex description="Тази страница я няма в менюто на Siracusa Bar & Grill. Вижте менюто, събитията или ни се обадете.">
+  <section class="sec nf" data-nf>
+    <div class="nf-art" role="img" aria-label="Празна чиния с прибори, оставени като след хубаво ядене" set:html={'<span class="d4" aria-hidden="true">4</span><span class="nf-plate">' + emptyPlate() + '</span><span class="d4" aria-hidden="true">4</span>'} data-v="gen cat dish"></div>
+    <span class="ill nf-ill" data-v="ev" hidden set:html={ic("calendar-blank", 44)}></span>
+    <h1 class="h1"><span data-v="gen">Тази страница я няма в&nbsp;менюто</span><span data-v="cat" hidden>Тази категория я няма в&nbsp;менюто</span><span data-v="dish" hidden>Това ястие го няма в&nbsp;менюто</span><span data-v="ev" hidden>Това събитие го няма в&nbsp;програмата</span></h1>
+    <p class="lead"><span data-v="gen">Явно някой я е изял до последната троха. Възможно е адресът да е сгрешен или страницата да е преместена.</span><span data-v="cat dish" hidden>Възможно е адресът да е сгрешен или да е отпаднало от менюто. Вижте категориите по-долу или ни се обадете.</span><span data-v="ev" hidden>Може вече да е минало или връзката да е непълна. Вижте какво предстои при нас.</span></p>
+    <div class="nf-acts" data-v="gen">
+      <a class="pill pill-red pill-lg pill-block" href={url.menu()}><Fragment set:html={ic("fork-knife", 20)} />Към менюто</a>
+      <a class="pill pill-line pill-lg pill-block" href={url.home()}><Fragment set:html={ic("house", 20)} />Начало</a>
     </div>
+    <div class="nf-acts" data-v="cat dish" hidden>
+      <a class="pill pill-red pill-lg pill-block" href={url.menu()} data-tocat><Fragment set:html={ic("fork-knife", 20)} /><span data-tocat-t>Към менюто</span></a>
+      <a class="pill pill-line pill-lg pill-block" href={TEL}><Fragment set:html={ic("phone", 20)} />Обади се · {R.phone}</a>
+    </div>
+    <div class="nf-acts" data-v="ev" hidden>
+      <a class="pill pill-red pill-lg pill-block" href={url.events()}><Fragment set:html={ic("calendar-dots", 20)} />Виж всички събития</a>
+    </div>
+    <p class="nf-call" data-call data-v="gen" set:html={callLine(null)}></p>
+    <div class="nf-up" data-v="ev" hidden set:html={upcomingHTML()}></div>
   </section>
+  <section class="sec" data-v="cat dish" hidden aria-labelledby="nf-cats-h">
+    <h2 class="h2" id="nf-cats-h" style="margin-bottom:16px">Категории в менюто</h2>
+    <Fragment set:html={catsHTML()} />
+    <a class="pill pill-line pill-block nf-all" href={url.menu()}><Fragment set:html={ic("fork-knife", 20)} />Цялото меню на една страница</a>
+  </section>
+  <section class="sec" data-v="gen">
+    <h2 class="h2" style="margin-bottom:14px">Може би търсите</h2>
+    <Fragment set:html={suggestionsHTML()} />
+  </section>
+  <section class="sec" data-v="gen">
+    <div class="sec-h"><h2 class="h2">Пици на пещ</h2><a class="link" href={url.cat("pitsi")}>Всички<Fragment set:html={ic("caret-right", 18)} /></a></div>
+    <div class="grid-dishes" set:html={pizzas().map((x) => dishCard(x)).join("")}></div>
+  </section>
+  <!-- after all variants are parsed, before the first paint: pick the variant -->
+  <script is:inline>
+  (function(){
+    var T0 = document.title, dflt = {};
+    function pick(){
+      var p = location.pathname, h = location.hash.replace(/^#\/?/, "");
+      /* demo / direct 404.html: the missing address may come in the hash (404.html#/menu/xyz/) */
+      if (/(^|\/)404(\.html)?\/?$/.test(p)) p = "/" + h;
+      try { p = decodeURIComponent(p); } catch (e) {}
+      var s = p.split(/[/?#&]/).filter(Boolean), i = s.indexOf("menu"), j = s.indexOf("sabitia"), k = "gen";
+      var known = function(c){ return !!c && !!document.querySelector('[data-cat="' + c.replace(/["\\]/g, "") + '"]'); };
+      if (j > -1 && (i < 0 || j < i)) k = "ev";
+      else if (i > -1) k = known(s[i + 1]) && s[i + 2] ? "dish" : "cat";
+      if (k === "gen") delete document.documentElement.dataset.nf; else document.documentElement.dataset.nf = k;
+      document.querySelectorAll("[data-v]").forEach(function(el){ el.hidden = el.getAttribute("data-v").split(" ").indexOf(k) < 0; });
+      document.title = k === "gen" ? T0 : ({cat:"Категорията я няма", dish:"Ястието го няма", ev:"Събитието не е намерено"})[k] + " | Siracusa Bar & Grill";
+      var ttl = document.querySelector(".top .ttl"); if (ttl) ttl.textContent = k === "ev" ? "Събитие" : k === "gen" ? "Страницата я няма" : "Меню";
+      var b = document.querySelector("[data-tocat]"), bt = b && b.querySelector("[data-tocat-t]");
+      if (b && !dflt.href) { dflt.href = b.getAttribute("href"); dflt.t = bt.textContent; }
+      var c = k === "dish" && document.querySelector('[data-cat="' + s[i + 1] + '"]');
+      if (b) { b.setAttribute("href", c ? c.getAttribute("href") : dflt.href); bt.textContent = c ? "Към " + c.getAttribute("data-name") : dflt.t; }
+    }
+    pick();
+    addEventListener("hashchange", pick);
+  })();
+  </script>
 </Base>
+
+<style is:global>
+/* ---------- 404 (page-only, tokens only); 1:1 from design/pages/404.html + the invalid-event state of event.html ---------- */
+.nf{padding-top:36px; display:grid; justify-items:center; text-align:center}
+.nf-art{display:flex; align-items:center; justify-content:center; gap:10px; margin:4px 0 26px}
+.nf-art .d4{font-size:118px; line-height:.9; font-weight:800; letter-spacing:-.07em; color:var(--ink); font-variant-numeric:tabular-nums}
+.nf-plate{width:150px; height:150px; flex:none; border-radius:50%; box-shadow:var(--shadow-lg)}
+.nf-plate svg{display:block; width:100%; height:100%; overflow:visible}
+.nf-plate .cut{fill:var(--off)}
+.nf .h1{max-width:13ch}
+html[data-nf] .nf .h1{max-width:18ch}
+.nf .lead{margin-top:12px; max-width:32ch}
+html[data-nf] .nf .lead{max-width:34ch}
+.nf-acts{display:grid; gap:10px; width:100%; margin-top:28px}
+.nf-call{margin-top:14px; text-wrap:balance; font-size:16px; color:var(--muted); font-weight:600; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; column-gap:6px}
+.nf-call .link{min-height:48px}
+.nf-ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); margin:0 0 20px}
+[data-v][hidden]{display:none !important}
+
+/* entrance: the plate is "served", then the cutlery lands in the "finished" position */
+@keyframes nfServe{from{transform:translateY(-28px) rotate(-70deg) scale(.86); opacity:0} to{transform:none; opacity:1}}
+@keyframes nfSide{from{transform:translateX(var(--dx)); opacity:0} to{transform:none; opacity:1}}
+@keyframes nfLay{from{transform:translate(18px,18px); opacity:0} to{transform:none; opacity:1}}
+@keyframes nfFade{from{opacity:0} to{opacity:1}}
+.nf-plate{animation:nfServe 900ms var(--ease) both}
+.nf-art .d4:first-child{--dx:18px; animation:nfSide 700ms var(--ease) 80ms both}
+.nf-art .d4:last-child{--dx:-18px; animation:nfSide 700ms var(--ease) 80ms both}
+.nf-plate .cutlery{animation:nfLay 600ms var(--ease) 620ms both}
+.nf-plate .crumbs{animation:nfFade 500ms ease-out 760ms both}
+@media (prefers-reduced-motion: reduce){ .nf-plate, .nf-art .d4, .nf-plate .cutlery, .nf-plate .crumbs{animation:none} }
+
+/* ---------- suggestions ---------- */
+.sug-list{display:grid}
+.sug{display:grid; grid-template-columns:48px 1fr 22px; gap:14px; align-items:center; min-height:72px; padding:12px 18px; text-decoration:none; color:inherit; text-align:left}
+.sug + .sug{border-top:1px solid var(--line)}
+.sug .ico{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.sug b{display:block; font-size:17px; line-height:1.25; letter-spacing:-.01em}
+.sug small{display:block; font-size:14px; color:var(--muted); font-weight:600; margin-top:2px}
+.sug > .ic{color:var(--muted)}
+.sug:active{background:var(--surface-2)}
+
+/* ---------- categories (same look as "Други категории" on the category page) ---------- */
+.nf-cats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0; padding:0; list-style:none}
+.nf-cats .cat{display:flex; align-items:center; gap:10px; min-height:60px; padding:6px 14px 6px 6px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line), var(--shadow); text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
+.nf-cats .cat:active{transform:scale(.97)}
+.nf-cats .cat .pic{width:48px; height:48px; border-radius:50%; flex:none}
+.nf-cats .cat .pic > svg{inset:4%; width:92%; height:92%; filter:none}
+.nf-cats .cat b{display:block; font-size:15px; line-height:1.2; letter-spacing:-.01em}
+.nf-cats .cat small{display:block; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.nf-all{margin-top:14px}
+
+/* ---------- missing event: "Предстои" (event.html) ---------- */
+.nf-up{width:100%}
+.ev-up{max-width:560px; margin:36px auto 0; text-align:left}
+.ev-up h2{margin-bottom:12px}
+.ev-upcard{display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; padding:16px; text-decoration:none; color:inherit}
+.ev-upcard .cal{width:76px; border-radius:18px; overflow:hidden; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line)}
+.ev-upcard .cal .m{display:block; padding:4px 0 3px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; line-height:1.2}
+.ev-upcard .cal .d{display:block; padding:6px 0 0; font-size:36px; font-weight:800; letter-spacing:-.06em; line-height:1; font-variant-numeric:tabular-nums}
+.ev-upcard .cal .w{display:block; padding:4px 0 8px; font-size:14px; font-weight:700; color:var(--muted)}
+.ev-upcard .cal.nodate .m{letter-spacing:.02em}
+.ev-upcard .cal.nodate .d{font-size:30px}
+.ev-upcard b{display:block; font-size:18px; line-height:1.3}
+.ev-upcard .go2{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red)}
+
+@container app (min-width:700px){ .nf-cats{grid-template-columns:repeat(3,1fr)} }
+@container app (min-width:900px){
+  .nf{padding-top:72px}
+  .nf-art{gap:18px; margin-bottom:36px}
+  .nf-art .d4{font-size:210px}
+  .nf-plate{width:248px; height:248px}
+  .nf .h1{max-width:none}
+  .nf .lead{font-size:19px; max-width:44ch}
+  .nf-acts{grid-auto-flow:column; width:auto; justify-content:center}
+  .nf-acts .pill{padding:0 32px}
+  .sug-wrap .core{background:transparent; box-shadow:none; overflow:visible}
+  .sug-wrap.shell{padding:0; background:transparent; box-shadow:none}
+  .sug-list{grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px}
+  .sug{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-height:96px; padding:18px 20px; transition:transform var(--t-base) var(--ease)}
+  .sug + .sug{border-top:0}
+  .sug:hover{transform:translateY(-3px)}
+}
+@container app (min-width:1100px){ .nf-cats{grid-template-columns:repeat(4,1fr)} }
+</style>
+
+<script>
+  import { SC } from "../client/sc.ts";
+  import "../lib/icons/phone.ts";
+  /* browser only, no menu: the same words as callLine() in _404.ts (that module loads the menu, so it stays on the server) */
+  const R = SC.RESTAURANT;
+  function callLine(st: { open: boolean; m: number }): string {
+    const tel = '<a class="link" href="tel:' + R.phoneIntl + '">' + SC.ic("phone", 18);
+    if (st.open) return "Търсите нещо конкретно? " + tel + "Обадете се: " + R.phone + "</a>";
+    return "Търсите нещо конкретно? Обадете ни се " + (st.m < 600 ? "след 10:00" : "утре след 10:00") + ": " + tel + R.phone + "</a>";
+  }
+  SC.mount();
+  /* the phone line follows the hour (Sofia clock; ?preview=1&t=.. in a preview frame) */
+  const call = document.querySelector<HTMLElement>("[data-call]");
+  const draw = () => { if (call) call.innerHTML = callLine(SC.state()); };
+  draw();
+  document.addEventListener("sc:tick", draw);
+  /* "Предстои": a "last Saturday" evening gets its date in the browser */
+  const up = document.querySelector<HTMLElement>(".ev-upcard[data-ls]");
+  if (up) {
+    const d = SC.lastSaturday().d, leaf = up.querySelector(".cal"), when = up.querySelector("[data-when]");
+    if (leaf) leaf.outerHTML = '<span class="cal" aria-hidden="true"><span class="m">' + SC.MON[d.getMonth()] + '</span><span class="d">' + d.getDate() + '</span><span class="w">' + SC.DAYS[d.getDay()] + "</span></span>";
+    if (when) when.textContent = SC.dateLong(d);
+  }
+  SC.reveal();
+</script>
