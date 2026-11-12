@@ -19,7 +19,7 @@ import { normPhone, hhmm, dateLong } from "../../lib/format.ts";
 import { clockOverride, sofiaYmd } from "../../lib/time.ts";
 import { artSvg } from "../../lib/art.ts";
 import { busyExtra } from "../../lib/status.ts";
-import type { Zone } from "../../lib/consts.ts";
+import { ORDER_RULES, type Zone } from "../../lib/consts.ts";
 import type { Dish } from "../../data/menu.ts";
 import type { OrderLine, Order } from "../../core/types.ts";
 import type { PublicOffice } from "../../core/office.ts";
@@ -104,8 +104,8 @@ export function start(): void {
   let pickDay = "today";
   /** dishes can be chosen only from the lunch menu of the order's day (in the preview always, as an example) */
   const canOrder = () => SC.preview || (pickDay === "today" ? lunchIsToday() : pickDay === "tomorrow" && DATA.date === addDays(today(), 1));
-  /** at most 10 different dishes per person (the core: too_many) */
-  const MAX_DISHES = 10;
+  /** at most 10 portions per person: the sum of the counts (the core: too_many) */
+  const MAX_PORTIONS = ORDER_RULES.officePortionsPerPerson;
   const GROUPS: { n: string; id: string; items: Dish[] }[] = [];
   DATA.items.forEach((x) => {
     let g = GROUPS.find((z) => z.n === x.group);
@@ -186,8 +186,9 @@ export function start(): void {
     };
   }
   type Ctx = ReturnType<typeof ctx>;
-  const left = (sec: number) => { sec = Math.max(0, sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h >= 1 ? h + "<small> ч </small>" + m + "<small> мин</small>" : pad(m) + ":" + pad(s); };
-  const leftWords = (sec: number) => { const m = Math.max(0, Math.ceil(sec / 60)); if (m >= 90) { const h = Math.floor(m / 60), r = m % 60; return h + " ч" + (r ? " " + r + " мин" : ""); } return m + " мин"; };
+  const left = (sec: number) => { sec = Math.max(0, sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h >= 1 ? h + "<small>\u00a0ч </small>" + m + "<small>\u00a0мин</small>" : pad(m) + ":" + pad(s); };
+  /** the same rounding as the timer (down), no breaks inside "17 ч 7 мин" */
+  const leftWords = (sec: number) => { const m = Math.max(0, Math.floor(sec / 60)); if (m >= 90) { const h = Math.floor(m / 60), r = m % 60; return h + "\u00a0ч" + (r ? "\u00a0" + r + "\u00a0мин" : ""); } return m + "\u00a0мин"; };
   const whereText = (o: { mode: string; zone: string; addr: string }) => (o.mode === "pickup" ? "Вземане от ресторанта" : o.zone || o.addr || "ж.к. Дружба 2");
   const feeText = (c: Ctx) => (c.mode === "pickup" ? "Без доставка" : !c.z || c.z.free ? "Безплатна" : '<span class="missing">[ЛИПСВА: такса в €]</span>');
   const orgOf = (o: OfficeOrder) => (o.participants[0] && o.participants[0].name) || "Колегата";
@@ -428,7 +429,7 @@ export function start(): void {
   function viewList(o: OfficeOrder) {
     const c = ctx(o), list = eaters(o), N = totalCount(o);
     const payFields = '<div class="shell"><div class="core o-card" style="display:grid;gap:18px"><h2 class="o-h3">За шофьора</h2>' +
-      '<div class="field"><label for="o-phone">Вашият телефон' + (o.hasContact ? ' <span class="muted" style="font-weight:600">(по желание)</span>' : "") + '</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h">' + (o.hasContact ? "Телефонът от създаването е при нас. Напишете друг само ако искате да ви търсим на него." : "Обаждаме се само ако има въпрос по поръчката.") + '</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>' +
+      '<div class="field"><label for="o-phone">Вашият телефон' + (o.hasContact ? ' <span class="muted" style="font-weight:600">(по желание)</span>' : "") + '</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h"' + (o.hasContact && L.phone.trim() ? " hidden" : "") + ">" + (o.hasContact ? "Телефонът от създаването е при нас. Напишете друг само ако искате да ви търсим на него." : "Обаждаме се само ако има въпрос по поръчката.") + '</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>' +
       (o.payer === "one" ? '<div class="field"><span class="label" id="o-pay-l">Как плащате</span><div class="seg" role="group" aria-labelledby="o-pay-l"><button type="button" data-pay="cash" aria-pressed="' + (L.pay === "cash") + '">' + ic("money", 20) + 'В брой</button><button type="button" data-pay="card" aria-pressed="' + (L.pay === "card") + '">' + ic("credit-card", 20) + 'С карта</button></div><span class="help">При получаване. Без онлайн плащане.</span></div>' : "") +
       "<div data-senderr></div>" +
       '<div class="o-onlydesk o-sendinline" data-sendinline>' + sendBtn(o, c, "pill-lg pill-block") + "</div>" +
@@ -511,8 +512,9 @@ export function start(): void {
   function viewJoin(o: OfficeOrder) {
     const c = ctx(o), org = orgOf(o), g = guestOf(o.code), gp = g.picks, s = sum(gp);
     if (c.closed || c.late) {
-      return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill">' + ic("clock", 40) + '</div><h1 class="h2">' + (c.sent ? "Поръчката е изпратена" : "Изборът приключи в " + clock(c.dl)) + "</h1>" +
+      return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill' + (c.sent ? " ok" : "") + '">' + ic(c.sent ? "check" : "clock", 40) + '</div><h1 class="h2">' + (c.sent ? "Поръчката е изпратена" : "Изборът приключи в " + clock(c.dl)) + "</h1>" +
         '<p class="muted">' + (c.sent ? esc(org) + " я изпрати на ресторанта." + (o.orderAt ? " " + (o.mode === "pickup" ? "Готова в " : "Пристига около ") + esc(o.orderAt) + "." : "") : esc(org) + " вече изпраща поръчката на ресторанта.") + (g.done && cnt(gp) ? " Вашият избор е вътре." : " Ако не сте успели, обадете се на " + esc(org) + " или поръчайте сами.") + "</p>" +
+        (g.done && cnt(gp) ? '<div style="width:100%;text-align:left;margin-top:8px">' + minePicks(gp) + '<div class="o-tot"><b>' + (o.payer === "one" ? "Дължите на " + esc(org) : "Плащате при получаване") + '</b><span class="price">' + fmt(s) + "</span></div></div>" : "") +
         '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.lunch() + '">Поръчай си сам</a><a class="pill pill-line pill-block" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се на ресторанта</a></div></div></div></section>";
     }
     if (g.done) {
@@ -753,7 +755,9 @@ export function start(): void {
       case "forbidden": return "Само организаторът може да изпрати поръчката. Отворете я от неговата връзка.";
       case "too_early": return "Поръчката е за друг ден. Изпраща се в деня на обяда.";
       case "offline": return "Няма връзка. Проверете интернета и опитайте пак.";
-      case "too_many": return "До " + MAX_DISHES + " различни ястия на човек. Махнете някое и опитайте пак.";
+      case "too_many": return "До " + MAX_PORTIONS + " порции на човек. Махнете някое ястие и опитайте пак.";
+      case "full": return "Поръчката е пълна: до " + ORDER_RULES.officeMaxPeople + " души. Поръчайте си сами или се обадете на " + R.phone + ".";
+      case "too_big": return "Общата поръчка стига " + ORDER_RULES.maxTotal + " €. За по-голяма поръчка се обадете на " + R.phone + ": ще я приготвим навреме.";
       case "throttled": return err.message || "Твърде много опити. Опитайте след 10 минути.";
       default: return err.message || "Не успяхме. Опитайте пак.";
     }
@@ -765,7 +769,7 @@ export function start(): void {
     if (t.id === "o-office") { d.office = t.value; save(); setErr("office"); updEta(); }
     else if (t.id === "o-name") { d.name = t.value; save(); setErr("name"); updEta(); }
     else if (t.id === "o-addr") { d.addr = t.value; save(); setErr("addr"); updAddr(true); }
-    else if (t.id === "o-phone") { L.phone = t.value; save(); setErr("phone"); }
+    else if (t.id === "o-phone") { L.phone = t.value; save(); setErr("phone"); if (O && O.hasContact) { const h = document.getElementById("o-phone-h"); if (h) h.hidden = !!t.value.trim(); } }
     else if (t.id === "o-cphone") { L.phone = t.value; save(); setErr("cphone"); }
     else if (t.id === "o-gname") { const rt = route(); guestOf(rt.code || "").name = t.value; save(); setErr("gname"); }
   });
@@ -829,8 +833,8 @@ export function start(): void {
     if (t.dataset.jump) { scrollToEl(document.getElementById(t.dataset.jump)); return; }
     if (t.dataset.q && t.dataset.id) {
       const id = t.dataset.id, picks = pickTarget(), q = (picks[id] || 0) + +t.dataset.q;
-      if (!picks[id] && q > 0 && Object.keys(picks).length >= MAX_DISHES) { SC.toast("До " + MAX_DISHES + " различни ястия на човек."); return; }
-      if (q <= 0) delete picks[id]; else picks[id] = Math.min(q, 9);
+      if (+t.dataset.q > 0 && cnt(picks) >= MAX_PORTIONS) { SC.toast("До " + MAX_PORTIONS + " порции на човек."); return; }
+      if (q <= 0) delete picks[id]; else picks[id] = q;
       save(); SC.haptic();
       const nr = updPicker(id), f = nr && (nr.querySelector<HTMLElement>('[data-q="' + t.dataset.q + '"]') || nr.querySelector<HTMLElement>(".plus") || nr.querySelector<HTMLElement>('[data-q="1"]'));
       f?.focus({ preventScroll: true });

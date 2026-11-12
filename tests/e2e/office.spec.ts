@@ -198,3 +198,22 @@ test("office: without preview the old lunch menu is only for reference", async (
   await expect(g.locator(".o-invite")).toContainText("Офисът на Мария");
   await c1.close();
 });
+
+test("office: a colleague stops at 10 portions (the sum of the counts)", async ({ page }) => {
+  await open(page);
+  await page.fill("#o-name", "Мария");
+  await page.locator('[data-zone="Дружба 2"]').click();
+  await page.locator(".o-form [type=submit]").click();
+  await expect(page.locator("h1:visible")).toHaveText("Поръчката е отворена");
+  const code = /#join-(\d{6})/.exec((await page.locator("[data-link]").textContent()) || "")![1];
+  await page.goto(PATH + "?preview=1&t=09:30#join-" + code);
+  const items = page.locator(".o-item:not(.out)");
+  await items.nth(0).locator(".plus").click();
+  for (let i = 0; i < 7; i++) await items.nth(0).locator('[data-q="1"]').click();
+  await items.nth(1).locator(".plus").click();
+  await items.nth(1).locator('[data-q="1"]').click();
+  await items.nth(1).locator('[data-q="1"]').click(); /* the 11th portion is refused */
+  await expect(items.nth(0).locator("output")).toHaveText("8");
+  await expect(items.nth(1).locator("output")).toHaveText("2");
+  await expect(page.locator(".toast, [role=status]").filter({ hasText: "До 10 порции на човек" }).first()).toBeVisible();
+});
