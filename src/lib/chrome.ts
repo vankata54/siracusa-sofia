@@ -1,4 +1,5 @@
-/* Page chrome renderers WITHOUT the menu (shared runtime + server): header, nav, footer, cookie, "Още", sheet.
+/* Page chrome renderers WITHOUT the menu (shared runtime + server): header, nav, footer, cookie banner, sheet.
+   The "Още" panel and the cookie settings are in chrome-sheets.ts (loaded on demand in the browser).
    Same DOM and classes as design/ds/sc.js, with the addresses from routes.ts. */
 import { ic } from "./icons.ts";
 import "./icons/x.ts";
@@ -7,17 +8,18 @@ import "./icons/caret-right.ts";
 import "./icons/phone.ts";
 import { RESTAURANT } from "./consts.ts";
 import { esc } from "./format.ts";
-import { status } from "./status.ts";
+import { statusHTML } from "./chrome-core.ts";
 import { url, type PageKey } from "./routes.ts";
 import type { ClockInput } from "./time.ts";
 
 export { ic, registerIcons, loadAllIcons } from "./icons.ts";
+/* the two renderers the browser runtime needs live in chrome-core.ts (small); the rest here is mostly for the server */
+export { statusHTML, sheetHTML } from "./chrome-core.ts";
 
 /* ---------- chrome ---------- */
 export type NavKey = "menu" | "reserve" | "offers" | "profile";
 const NAV: [NavKey, string, string, PageKey][] = [["menu", "Меню", "fork-knife", "menu"], ["reserve", "Резервирай", "calendar-blank", "reservation"], ["offers", "Оферти", "seal-percent", "offers"], ["profile", "Профил", "user", "profile"]];
 const DNAV: [string, string, PageKey][] = [["menu", "Меню", "menu"], ["lunch", "Обедно меню", "lunch"], ["reserve", "Резервирай", "reservation"], ["events", "Събития", "events"], ["offers", "Оферти", "offers"], ["delivery", "Доставка", "delivery"], ["about", "За нас", "about"]];
-export const MORE_PAGES: [PageKey, string][] = [["home", "Начало"], ["menu", "Меню"], ["lunch", "Обедно меню"], ["offers", "Оферти"], ["events", "Събития и поводи"], ["celebration", "Калкулатор на празник"], ["office", "Обедна поръчка за офиса"], ["reservation", "Резервирай маса"], ["delivery", "Доставка"], ["pickup", "Вземи от място"], ["bertha", "Нашата фурна Bertha"], ["about", "За нас"], ["gallery", "Галерия"], ["contacts", "Контакти"], ["allergens", "Алергени"], ["profile", "Профил"]];
 
 export interface HeaderOpts {
   nav?: string | null;                 // active section (desktop links)
@@ -29,10 +31,6 @@ export interface HeaderOpts {
   clock?: ClockInput;                  // for status at render time
 }
 
-export function statusHTML(o?: ClockInput): string {
-  const st = status(o);
-  return '<span class="dot ' + st.cls + '"></span><span>' + st.html + "</span>";
-}
 
 export function header(o: HeaderOpts = {}): string {
   const cartBtn = '<a class="cartbtn" href="' + url.cart() + '" data-cartnav aria-label="Количка">' + ic("shopping-bag", 24) + '<span class="cnt" data-cnt hidden>0</span></a>';
@@ -65,20 +63,5 @@ export function cookieBanner(): string {
   return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите. <a href="' + url.page("cookies") + '">За бисквитките</a> · <a href="' + url.page("privacy") + '">Поверителност</a></p><div class="btns"><button class="pill pill-line" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>';
 }
 
-/** Stored cookie choices ("sc-cookie-prefs"): the necessary ones are always on. */
-export interface CookiePrefs { analytics: boolean; marketing: boolean }
-export function cookieSettings(prefs: CookiePrefs = { analytics: false, marketing: false }): string {
-  const ck = (b: boolean) => (b ? " checked" : "");
-  return '<form data-cookie-form class="stack" style="gap:6px"><label class="check"><input type="checkbox" checked disabled id="ck1"><span><b>Необходими</b><br><span class="muted small">Количка, вход, език. Винаги включени.</span></span></label><label class="check"><input type="checkbox" id="ck2" name="analytics"' + ck(prefs.analytics) + '><span><b>Аналитични</b><br><span class="muted small">Помагат ни да виждаме кое се поръчва. Изключени по подразбиране.</span></span></label><label class="check"><input type="checkbox" id="ck3" name="marketing"' + ck(prefs.marketing) + '><span><b>Маркетингови</b><br><span class="muted small">Изключени по подразбиране.</span></span></label>' +
-    '<p class="small muted" style="margin:6px 0 0"><a href="' + url.page("cookies") + '">Какво ползваме и защо</a></p><button class="pill pill-red pill-block" type="submit" style="margin-top:8px">Запази избора</button></form>';
-}
 
-export function morePanel(): string {
-  return '<div class="stack" style="gap:2px">' + MORE_PAGES.map((p) => '<a class="kv" href="' + url.page(p[0]) + '" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">' + p[1] + ic("caret-right", 18) + "</a>").join("") + '</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:' + RESTAURANT.phoneIntl + '">' + ic("phone", 20) + RESTAURANT.phone + '</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div>';
-}
-
-/** Generic bottom-sheet markup (the client wires it). */
-export function sheetHTML(id: string, title: string, body: string): string {
-  return '<button class="scrim" type="button" tabindex="-1" aria-label="Затвори"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle"></div><div class="sheet-h"><h2 id="' + id + '">' + esc(title) + '</h2><button class="hb" type="button" data-close>' + ic("x", 20) + 'Затвори</button></div><div class="body">' + body + "</div></div>";
-}
 

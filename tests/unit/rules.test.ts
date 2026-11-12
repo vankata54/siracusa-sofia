@@ -348,7 +348,8 @@ describe("feedback, cookies, 404, non-breaking spaces", () => {
     expect(await core.feedback.list()).toHaveLength(2);
   });
   it("cookie settings keep the stored choice; url.notFound; fromProto 404", async () => {
-    const { cookieSettings, cookieBanner, footer } = await import("../../src/lib/chrome.ts");
+    const { cookieBanner, footer } = await import("../../src/lib/chrome.ts");
+    const { cookieSettings } = await import("../../src/lib/chrome-sheets.ts");
     const { fromProto } = await import("../../src/lib/routes.ts");
     expect(cookieSettings({ analytics: true, marketing: false })).toMatch(/name="analytics" checked/);
     expect(cookieSettings({ analytics: true, marketing: false })).not.toMatch(/name="marketing" checked/);

@@ -12,7 +12,8 @@ import * as T from "../lib/status.ts";
 import * as C from "../lib/consts.ts";
 import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
-import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, footer, MORE_PAGES, type CookiePrefs } from "../lib/chrome.ts";
+import { ic, loadAllIcons, statusHTML, sheetHTML } from "../lib/chrome-core.ts";
+import type { CookiePrefs } from "../lib/chrome-sheets.ts";
 import { configureRoutes, url, fromProto } from "../lib/routes.ts";
 import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
@@ -222,22 +223,15 @@ if (sent && "IntersectionObserver" in window) new IntersectionObserver((es) => {
   if (f) { f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t = setTimeout(() => f.classList.add("mini"), 2600); }
 }, { rootMargin: "40px 0px 0px 0px" }).observe(sent);
 
-/* ---------- assistant (loaded on first use: it needs the menu) ---------- */
-const assistant = () => import("../lib/assistant.ts");
-function aiAsk(text: string, kind: AiKind) {
-  const box = ov.querySelector<HTMLElement>("[data-aimsgs]");
-  if (!box) return;
-  box.insertAdjacentHTML("beforeend", '<div class="msg me">' + F.esc(text) + '</div><div class="msg bot typing" data-typing><span></span><span></span><span></span></div>');
-  box.scrollTop = box.scrollHeight;
-  const wait = new Promise((r) => setTimeout(r, reduce ? 50 : 700));
-  Promise.all([assistant(), wait]).then(([A]) => { const t = box.querySelector("[data-typing]"); if (t) { t.outerHTML = '<div class="msg bot">' + A.aiReply(kind) + "</div>"; box.scrollTop = box.scrollHeight; } });
-}
-async function openAI() {
-  const A = await assistant();
-  const s = sheet({ title: "Асистент", html: A.aiPanelHTML() });
-  s.el.classList.add("aisheetwrap");
-  setTimeout(() => { const i = s.el.querySelector<HTMLInputElement>("#aiq"); i && i.focus({ preventScroll: true }); }, 60);
-}
+/* ---------- on-demand UI: "Още", cookie settings, assistant, share (src/client/sc-ui.ts) ---------- */
+const ui = () => import("./sc-ui.ts");
+const aiAsk = (text: string, kind: AiKind) => { ui().then((m) => m.aiAsk(text, kind)); };
+const openAI = () => ui().then((m) => m.openAI());
+/* start loading it as soon as a finger / the keyboard is on such a button: no wait on the tap */
+const UI_SEL = "[data-more], [data-ai], [data-cookie], [data-share], [data-aiq], [data-cookie-settings]";
+const warm = (e: Event) => { if ((e.target as Element | null)?.closest?.(UI_SEL)) { ui(); document.removeEventListener("pointerdown", warm, true); document.removeEventListener("focusin", warm, true); } };
+document.addEventListener("pointerdown", warm, true);
+document.addEventListener("focusin", warm, true);
 
 /* ---------- cookie banner ---------- */
 /* "sc-cookie": the answer to the banner (all | min | set); "sc-cookie-prefs": {analytics, marketing}. The site has no
@@ -245,25 +239,8 @@ async function openAI() {
 const cookiePrefs = (): CookiePrefs => { const p = load<Partial<CookiePrefs>>("sc-cookie-prefs", {}); return { analytics: p.analytics === true, marketing: p.marketing === true }; };
 function cookieChoice(v: string) {
   store("sc-cookie", v); de.dataset.ck = "1";
-  if (v === "all") store("sc-cookie-prefs", { analytics: true, marketing: true });
-  if (v === "min") store("sc-cookie-prefs", { analytics: false, marketing: false });
-  if (v === "set") {
-    const s = sheet({ title: "Бисквитки", html: cookieSettings(cookiePrefs()) });
-    s.el.querySelector("[data-cookie-form]")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const f = e.target as HTMLFormElement, on = (n: string) => !!(f.elements.namedItem(n) as HTMLInputElement | null)?.checked;
-      store("sc-cookie-prefs", { analytics: on("analytics"), marketing: on("marketing") });
-      s.close(); toast("Изборът е запазен");
-    });
-  }
-}
-
-/* ---------- share ---------- */
-async function share() {
-  const data = { title: document.title, url: location.href };
-  try { if ("share" in navigator) { await navigator.share(data); return; } } catch { return; }
-  try { await (navigator as Navigator).clipboard.writeText(location.href); } catch { /* ignore */ }
-  toast("Връзката е копирана");
+  if (v !== "set") store("sc-cookie-prefs", { analytics: v === "all", marketing: v === "all" });
+  else ui().then((m) => m.cookieSettingsSheet(cookiePrefs()));
 }
 
 /* ---------- global delegation (same attributes as the prototype) ---------- */
@@ -275,9 +252,9 @@ document.addEventListener("click", (e) => {
   if (t.hasAttribute("data-ai")) { openAI(); return; }
   if (t.dataset.aiq) { aiAsk(t.textContent || "", t.dataset.aiq as AiKind); return; }
   if (t.dataset.aiadd) { t.dataset.aiadd.split(",").forEach((k, i) => { cartApi.add(k, 1); setTimeout(() => fly(t, k), i * 120); }); flash(t, ic("check", 22) + "Добавено в количката", 1600); return; }
-  if (t.hasAttribute("data-more")) { sheet({ title: "Още", html: morePanel() }); return; }
+  if (t.hasAttribute("data-more")) { ui().then((m) => m.openMore()); return; }
   if (t.hasAttribute("data-lang")) { toast("Английската версия идва след българската."); return; }
-  if (t.hasAttribute("data-share")) { share(); return; }
+  if (t.hasAttribute("data-share")) { ui().then((m) => m.share()); return; }
   if (t.dataset.cookie) { cookieChoice(t.dataset.cookie); return; }
   if (t.hasAttribute("data-cookie-settings")) {
     e.preventDefault(); try { localStorage.removeItem("sc-cookie"); } catch { /* ignore */ } delete de.dataset.ck;
@@ -292,7 +269,7 @@ document.addEventListener("submit", (e) => {
   const inp = af.querySelector("input")!, v = inp.value.trim();
   if (!v) return;
   inp.value = "";
-  assistant().then((A) => aiAsk(v, A.aiClassify(v)));
+  ui().then((m) => m.aiAskText(v));
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
@@ -320,7 +297,7 @@ export const SC = {
   events: () => events(),
   /** compat with SC.href("dish", id) from the prototype */
   href: (page: string, id?: string) => fromProto(page + ".html" + (id ? "#" + id : "")),
-  url, fromProto, PAGES: MORE_PAGES, footer: () => footer(),
+  url, fromProto,
   /* cart & user */
   cart: cartApi, updateCartUI, user: () => load<Record<string, unknown> | null>("sc-user", null),
   /** the cookie choice: necessary always; analytics / marketing only when the visitor allowed them */

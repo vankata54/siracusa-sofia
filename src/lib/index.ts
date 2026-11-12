@@ -12,5 +12,6 @@ export * from "./pricing.ts";
 export * from "./zones.ts";
 export * as cartLib from "./cart.ts";
 export * from "./render.ts";
+export * from "./chrome-sheets.ts";
 export * from "./assistant.ts";
 export { kind, artSvg } from "./art.ts";

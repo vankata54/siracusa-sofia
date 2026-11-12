@@ -24,3 +24,17 @@ describe("runtime without the menu", () => {
     expect(url.dish("pitsa-dyavolo")).toBe("/menu/");
   });
 });
+
+describe("runtime size: on-demand parts stay out of the shared chunk", () => {
+  it("sc.ts imports only the small chrome-core; sheets / assistant / share come from sc-ui.ts on demand", async () => {
+    const fs = await import("node:fs");
+    const src = fs.readFileSync("src/client/sc.ts", "utf8");
+    const statics = [...src.matchAll(/^import\s+(?!type)[^;]*?from\s+"([^"]+)"/gm)].map((m) => m[1]);
+    expect(statics).toContain("../lib/chrome-core.ts");
+    for (const bad of ["../lib/chrome.ts", "../lib/chrome-sheets.ts", "./sc-ui.ts", "../lib/data.ts", "../lib/assistant.ts"]) expect(statics).not.toContain(bad);
+    expect(src).toContain('import("./sc-ui.ts")');
+    const { morePanel, cookieSettings } = await import("../../src/lib/chrome-sheets.ts");
+    expect(morePanel()).toContain("Нашата фурна Bertha");
+    expect(cookieSettings({ analytics: false, marketing: true })).toMatch(/name="marketing" checked/);
+  });
+});
