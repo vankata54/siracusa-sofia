@@ -1,0 +1,452 @@
+---
+/* Contacts (/kontakti/): port of design/pages/contacts.html (design/PAGES.md "contacts.html", design/reviews/contacts.review.md).
+   The server draws every section: hero, phones / e-mail / address with "Копирай", the hours (neutral "every day" card and
+   the week table), the map placeholder and "Как да стигнете", FAQ, socials, the feedback form, plus JSON-LD
+   (BreadcrumbList, ContactPage > Restaurant with facts from RESTAURANT only, FAQPage without [ЛИПСВА]).
+   The browser adds the hour and the day (main action, hero note, live "Днес" card, today highlighted in the table), the real
+   Google map on tap, copying, and the form (draft, validation, sending through ./_send.ts, success). */
+import Base from "../../layouts/Base.astro";
+import { topHTML, hoursHTML, wayHTML, faqHTML, socHTML, fbIntroHTML, contactsLd, DESCRIPTION } from "./_sections.ts";
+import { formHTML, EMPTY } from "./_form.ts";
+---
+<Base page="contacts" nav={null} title="Контакти" description={DESCRIPTION} jsonld={contactsLd(Astro.site)}>
+  <div class="ct" data-contacts>
+    <Fragment set:html={topHTML()} />
+    <Fragment set:html={hoursHTML()} />
+    <Fragment set:html={wayHTML()} />
+    <Fragment set:html={faqHTML()} />
+    <Fragment set:html={socHTML()} />
+    <section class="sec" id="pishete" aria-labelledby="h-fb">
+      <div class="ct-fb">
+        <Fragment set:html={fbIntroHTML()} />
+        <div class="shell"><div class="core" data-fbox set:html={formHTML(EMPTY)}></div></div>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style is:global>
+/* contacts.html - page-only styles, tokens only */
+
+/* ---------- shared bits ---------- */
+.ct-tile{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); flex:none}
+.ct-note{display:flex; gap:10px; align-items:flex-start; margin:16px 0 0; font-size:16px; color:var(--muted)}
+.ct-note .ic{margin-top:2px; color:var(--warn)}
+.ct-note b{color:var(--ink)}
+.ct-sec-lead{margin:-4px 0 18px}
+
+/* ---------- top: hero + contact list ---------- */
+.ct-top{padding-top:28px}
+.ct-hero .lead{margin-top:10px}
+.ct-cta{display:grid; gap:10px; margin-top:24px}
+.ct-cta .pill-lg{font-size:18px}
+.ct-cta .duo{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.ct-cta .duo .pill{min-height:52px; padding:0 14px}
+.ct-cta .num{font-variant-numeric:tabular-nums; letter-spacing:.01em}
+
+.ct-contacts{margin-top:56px}
+.ct-contacts .h2{margin-bottom:14px}
+.ct-list .core{display:grid}
+.ct-row{display:grid; gap:12px; padding:18px}
+.ct-row + .ct-row{border-top:1px solid var(--line)}
+.ct-row .lbl{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.ct-row .val{display:flex; align-items:center; min-height:48px; margin-top:0; font-weight:800; letter-spacing:-.02em; line-height:1.2; color:var(--ink); text-decoration:none; overflow-wrap:break-word}
+.ct-row .val.tel{font-size:26px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.ct-row .val.mail{font-size:20px}
+.ct-row .val.addr{font-size:19px; letter-spacing:-.015em}
+.ct-row .acts{display:grid; grid-template-columns:1fr auto; gap:8px}
+.ct-row .acts .pill{padding:0 16px; gap:8px}
+.ct-row .acts .cp{min-width:126px}
+.ct-row .ct-tile{display:none}
+
+/* ---------- hours ---------- */
+.ct-hours{display:grid; grid-template-columns:minmax(0,1fr); gap:12px}
+.ct-today{padding:20px 18px 18px}
+.ct-today .day{font-size:14px; font-weight:700; color:var(--muted)}
+.ct-today .st{display:flex; align-items:center; gap:10px; margin-top:6px}
+.ct-today .st .h3{font-size:26px; letter-spacing:-.03em}
+.ct-dot{width:12px; height:12px; border-radius:50%; background:var(--off); flex:none}
+.ct-dot.ok{background:var(--ok)} .ct-dot.warn{background:var(--warn)}
+.ct-today .sub{margin:6px 0 0; color:var(--muted)}
+.ct-today .sub b{color:var(--ink); font-weight:700}
+
+.ct-chart{position:relative; margin-top:22px; display:grid; gap:16px}
+.ct-chart .nowrow{position:relative; height:30px; margin-bottom:-6px}
+.ct-chart .nowchip{position:absolute; top:0; transform:translateX(-50%); min-height:28px; display:inline-flex; align-items:center; gap:6px; padding:0 10px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums}
+.ct-trk .top{all:unset; display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px}
+.ct-trk .nm{font-weight:700; font-size:16px}
+.ct-trk .rg{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap}
+.ct-bar{position:relative; height:12px; border-radius:6px; background:var(--surface-2); overflow:visible}
+.ct-seg{position:absolute; top:0; bottom:0; border-radius:6px; transform-origin:left center; transition:transform 900ms var(--ease)}
+.ct-seg.past{background:var(--line-strong)}
+.ct-seg.ok{background:var(--ok)}
+.ct-seg.em{background:var(--ember)}
+.ct-tick{position:absolute; top:-5px; bottom:-5px; width:3px; margin-left:-1.5px; border-radius:2px; background:var(--ink); box-shadow:0 0 0 2px var(--surface)}
+.rv-on .ct-today.rv .ct-seg.ok,.rv-on .ct-today.rv .ct-seg.em{transform:scaleX(0)}
+.rv-on .ct-today.rv.in .ct-seg.ok,.rv-on .ct-today.rv.in .ct-seg.em{transform:none}
+.rv-on .ct-today.rv.in .ct-trk:nth-child(3) .ct-seg{transition-delay:80ms}
+.rv-on .ct-today.rv.in .ct-trk:nth-child(4) .ct-seg{transition-delay:160ms}
+.rv-on .ct-today.rv.in .ct-trk:nth-child(5) .ct-seg{transition-delay:240ms}
+.ct-legend{display:flex; flex-wrap:wrap; gap:8px 16px; margin:20px 0 0; padding:16px 0 0; border-top:1px solid var(--line); list-style:none; font-size:14px; font-weight:600; color:var(--muted)}
+.ct-legend li{display:inline-flex; align-items:center; gap:8px}
+.ct-legend i{width:18px; height:10px; border-radius:5px; flex:none}
+.ct-lunchnote{margin:10px 0 0; font-size:14px; color:var(--muted)}
+.ct-legend i.ok{background:var(--ok)} .ct-legend i.past{background:var(--line-strong)} .ct-legend i.em{background:var(--ember)}
+
+.ct-week{padding:10px}
+.ct-week table{width:100%; border-collapse:separate; border-spacing:0 2px}
+.ct-week th,.ct-week td{padding:0 12px; height:50px; text-align:left; font-weight:600}
+.ct-week th{font-weight:700}
+.ct-week td{text-align:right; font-variant-numeric:tabular-nums; color:var(--muted)}
+.ct-week tr > *:first-child{border-radius:16px 0 0 16px}
+.ct-week tr > *:last-child{border-radius:0 16px 16px 0}
+.ct-week tr.today > *{background:var(--ink); color:var(--bg)}
+.ct-week tr.today td{font-weight:800}
+.ct-week .chip-s{display:inline-flex; align-items:center; min-height:24px; margin-left:8px; padding:0 9px; border-radius:999px; font-size:14px; font-weight:800; vertical-align:2px; background:var(--surface-2); color:var(--ink)}
+.ct-week tr.today .chip-s{background:var(--bg); color:var(--ink)}
+.ct-week .foot-n{margin:8px 12px 6px; padding-top:12px; border-top:1px solid var(--line); font-size:14px; color:var(--muted); display:grid; gap:4px}
+
+/* ---------- map + getting here ---------- */
+.ct-way{display:grid; grid-template-columns:minmax(0,1fr); gap:16px}
+.ct-map{position:relative; aspect-ratio:4/3; border-radius:var(--r-core); overflow:hidden; background:var(--surface-2)}
+.ct-mapbtn{all:unset; position:absolute; inset:0; cursor:pointer; display:block}
+.ct-mapbtn:focus-visible{outline:3px solid var(--red); outline-offset:-3px; border-radius:var(--r-core)}
+.ct-dots{position:absolute; inset:0; background-image:radial-gradient(var(--line-strong) 1.2px, transparent 1.4px); background-size:18px 18px; opacity:.55}
+.ct-missing{position:absolute; top:14px; left:14px; right:14px; font-size:14px; text-align:center}
+.ct-mark{position:absolute; left:50%; top:54%; width:0; height:0}
+.ct-pin{position:absolute; left:0; top:0; width:46px; height:58px; transform:translate(-50%,-100%); pointer-events:none}
+.ct-pin svg{display:block; width:100%; height:100%}
+.ct-pin .pb{fill:var(--ink)} .ct-pin .pd{fill:var(--bg)}
+.ct-pulse{position:absolute; left:0; top:0; width:64px; height:64px; margin:-32px 0 0 -32px; border-radius:50%; background:var(--ink); opacity:0; pointer-events:none; animation:ctpulse 2.4s var(--ease) 600ms 3}
+@keyframes ctpulse{0%{transform:scale(.2); opacity:.28}100%{transform:scale(1.6); opacity:0}}
+.ct-flag{position:absolute; left:0; top:0; transform:translate(30px, calc(-100% - 22px)); pointer-events:none; display:grid; justify-items:start; padding:8px 14px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); white-space:nowrap; line-height:1.25}
+.ct-flag b{font-size:16px; font-weight:800; letter-spacing:-.01em}
+.ct-flag span{font-size:14px; color:var(--muted); font-weight:700}
+.ct-show{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); pointer-events:none; box-shadow:var(--shadow)}
+.ct-map iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+.ct-map .skel{position:absolute; inset:0; border-radius:0}
+.ct-mapstate{position:absolute; inset:0; display:grid; place-content:center; justify-items:center; gap:10px; padding:20px; text-align:center}
+.ct-mapstate p{margin:0; max-width:30ch}
+.ct-mapstate .ill{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--muted)}
+
+.ct-addr{padding:20px 18px}
+.ct-addr .lbl{font-size:14px; font-weight:700; color:var(--muted)}
+.ct-addr .h3{margin-top:4px; font-size:22px; letter-spacing:-.025em; line-height:1.25}
+.ct-addr .btns{display:grid; gap:10px; margin-top:18px}
+.ct-addr .btns .duo{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.ct-addr .btns .duo .pill{padding:0 12px; gap:8px; min-height:52px}
+.ct-info{list-style:none; margin:0; padding:0 18px}
+.ct-info li{display:grid; grid-template-columns:48px 1fr; gap:14px; align-items:start; padding:16px 0}
+.ct-info li + li{border-top:1px solid var(--line)}
+.ct-info b{display:block; line-height:1.3; margin-top:2px}
+.ct-info p{margin:2px 0 0; color:var(--muted)}
+.ct-info .link{min-height:48px}
+
+/* ---------- FAQ ---------- */
+.ct-faq{padding:0 18px}
+.ct-q + .ct-q{border-top:1px solid var(--line)}
+.ct-q summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:10px 0; font-weight:700; cursor:pointer}
+.ct-q summary::-webkit-details-marker{display:none}
+.ct-q summary .ic{color:var(--muted); transition:transform var(--t-base) var(--ease)}
+.ct-q[open] summary .ic{transform:rotate(180deg)}
+.ct-q p{margin:0 0 18px; color:var(--muted); max-width:62ch}
+@container app (min-width:900px){ .ct-faq{padding:0 30px} }
+
+/* ---------- socials ---------- */
+.ct-soc{display:grid; gap:12px}
+.ct-scard{display:grid; grid-template-columns:48px 1fr auto; gap:14px; align-items:center; padding:16px 16px 16px 18px; text-decoration:none; color:inherit; min-height:84px}
+.ct-scard b{display:block; font-size:18px; letter-spacing:-.01em}
+.ct-scard span.h{display:block; color:var(--muted); font-size:16px; overflow-wrap:anywhere}
+.ct-scard .go-t{display:inline-flex; align-items:center; gap:6px; color:var(--red); font-weight:700}
+.ct-scard.is-missing .ct-tile{color:var(--muted)}
+.ct-scard.is-missing .missing{font-size:16px}
+a.ct-scard{transition:transform var(--t-fast) var(--ease)}
+a.ct-scard:active{transform:scale(.98)}
+
+/* ---------- feedback form ---------- */
+.ct-fb{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
+.ct-route{margin-top:18px; padding:4px 18px}
+.ct-route .t{margin:12px 0 0; font-size:14px; font-weight:700; color:var(--muted)}
+.ct-route a{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; text-decoration:none; color:inherit}
+.ct-route a + a{border-top:1px solid var(--line)}
+.ct-route a span{display:grid; line-height:1.3}
+.ct-route a small{font-size:14px; color:var(--muted); font-weight:600}
+.ct-route a b{font-weight:700}
+.ct-route a .ic{color:var(--muted)}
+
+.ct-form{padding:22px 18px; display:grid; gap:22px}
+.ct-form .chips{margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
+.ct-form .chip{min-height:48px}
+.ct-form fieldset{border:0; margin:0; padding:0; min-width:0}
+.ct-form legend{padding:0; margin-bottom:8px; font-weight:700; font-size:15px}
+.ct-form legend span,.ct-form label span.opt{font-weight:600; color:var(--muted)}
+.ct-form .seg{margin-bottom:10px}
+.ct-form .seg button{min-height:48px; gap:8px}
+.ct-form .help,.ct-form .err{margin:0}
+.ct-form .err{display:flex; gap:6px; align-items:flex-start}
+.ct-form .err .ic{margin-top:2px}
+.ct-form .err[hidden]{display:none}
+.ct-form textarea.input{min-height:140px; line-height:1.5}
+.ct-form .cnt-row{display:flex; justify-content:space-between; gap:12px}
+.ct-form .count{font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; margin-left:auto}
+.ct-form .hint{display:flex; gap:8px; align-items:flex-start; margin:10px 0 0; font-size:14px; color:var(--muted)}
+.ct-form .hint .ic{margin-top:1px}
+.ct-form .hint[hidden]{display:none}
+.ct-form .two{display:grid; gap:22px}
+.ct-form .priv{margin:-6px 0 0; font-size:14px; color:var(--muted)}
+.ct-form .priv a{color:var(--ink); font-weight:700}
+.ct-alert{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:18px; background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.ct-alert .ic{color:var(--warn); margin-top:1px}
+.ct-alert p{margin:0}
+.ct-alert[hidden]{display:none}
+.ct-spin{width:20px; height:20px; border-radius:50%; border:2.5px solid currentColor; border-right-color:transparent; animation:ctspin .8s linear infinite; flex:none}
+@keyframes ctspin{to{transform:rotate(360deg)}}
+.ct .pill.is-busy{opacity:.85; pointer-events:none}
+
+.ct-ok{scroll-margin-top:150px; padding:28px 20px 22px; display:grid; gap:14px; justify-items:start}
+.ct-ok .badge-ok{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--surface)}
+.ct-ok .h3{font-size:26px; letter-spacing:-.03em; outline:none}
+.ct-ok p{margin:0}
+.ct-ok .quote{width:100%; padding:14px 16px; border-radius:18px; background:var(--surface-2); color:var(--ink)}
+.ct-ok .quote small{display:block; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:4px}
+.ct-ok .quote p{display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere}
+.ct-ok .acts{display:grid; gap:10px; width:100%; margin-top:4px}
+.rv-on .ct-ok .badge-ok{transform:scale(.4); opacity:0; transition:transform 500ms var(--ease), opacity 300ms var(--ease)}
+.rv-on .ct-ok.on .badge-ok{transform:none; opacity:1}
+
+.ct [id]{scroll-margin-top:150px}
+
+/* ---------- small phones ---------- */
+@container app (max-width:370px){
+  .ct-row .val.tel{font-size:24px}
+  .ct-row .acts .cp{min-width:0}
+  .ct-row .acts .pill{font-size:15px; padding:0 10px; gap:6px}
+  .ct-addr .btns .duo .pill{font-size:15px; padding:0 10px}
+}
+
+/* ---------- tablet+ ---------- */
+@container app (min-width:700px){
+  .ct-soc{grid-template-columns:repeat(3,1fr)}
+  .ct-scard{grid-template-columns:48px 1fr; align-content:start; min-height:0; padding:20px}
+  .ct-scard .go-t{grid-column:2}
+}
+
+/* ---------- desktop ---------- */
+@container app (min-width:900px){
+  .ct-top{display:grid; grid-template-columns:minmax(0,4fr) minmax(0,7fr); gap:56px; align-items:center; padding-top:56px}
+  .ct-hero .h1{font-size:72px; letter-spacing:-.05em}
+  .ct-hero .lead{font-size:19px; margin-top:16px}
+  .ct-cta{display:flex; flex-wrap:wrap; gap:10px; margin-top:32px}
+  .ct-cta .pill-lg{padding:0 26px}
+  .ct-cta .duo{display:contents}
+  .ct-cta .duo .pill{padding:0 20px}
+  .ct-contacts{margin-top:0}
+  .ct-contacts .h2{font-size:28px}
+  .ct-row{grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:18px; padding:18px 18px 18px 20px}
+  .ct-row .ct-tile{display:grid}
+  .ct-row .lbl .ic{display:none}
+  .ct-row .val.tel{font-size:24px}
+  .ct-row .acts{grid-template-columns:auto auto}
+
+  .ct-hours{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:16px; align-items:stretch}
+  .ct-today{padding:28px 30px 26px}
+  .ct-today .st .h3{font-size:32px}
+  .ct-chart{gap:20px; margin-top:30px}
+  .ct-hours > .shell{display:flex} .ct-hours > .shell > .core{flex:1}
+  .ct-week{padding:14px; display:flex; flex-direction:column; justify-content:center}
+
+  .ct-way{grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:16px; align-items:stretch}
+  .ct-way > .shell:first-child{display:flex}
+  .ct-way > .shell:first-child .core{flex:1; display:flex}
+  .ct-map{aspect-ratio:auto; min-height:460px; flex:1}
+  .ct-addr{padding:26px 26px 22px}
+  .ct-addr .h3{font-size:26px}
+  .ct-info{padding:0 26px 6px}
+
+  .ct-fb{grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:64px; align-items:start}
+  .ct-fb .intro{position:sticky; top:170px}
+  .ct-form{padding:30px 30px 28px}
+  .ct-ok{padding:40px 36px 32px}
+  .ct-ok .acts{grid-template-columns:auto auto; justify-content:start}
+}
+</style>
+
+<script>
+  import { SC } from "../../client/sc.ts";
+  import "../../lib/icons/chat-circle-dots.ts";
+  import "../../lib/icons/map-trifold.ts";
+  import "../../lib/icons/clock.ts";
+  import "../../lib/icons/check.ts";
+  import "../../lib/icons/pencil-simple.ts";
+  import "../../lib/icons/paper-plane-right.ts";
+  import "../../lib/icons/info.ts";
+  import "../../lib/icons/warning.ts";
+  import "../../lib/icons/warning-circle.ts";
+  import { ctaHTML, heroNoteHTML, todayHTML, weekHTML, okHTML, dayIdx, type Sent } from "./_live.ts";
+  import { formHTML, fieldError, cleanDraft, MODES, MAX, COMPLAINT, type Draft } from "./_form.ts";
+  import { sendFeedback, OfflineError } from "./_send.ts";
+
+  const main = SC.mount();
+  const root = main.querySelector<HTMLElement>("[data-contacts]")!;
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const ic = SC.ic;
+  const hash = (location.hash || "").slice(1);
+
+  /* ---------- live: hero action + note, "Днес" card, week table (Sofia clock; ?preview=1&t=.. in preview / demo) ---------- */
+  function renderLive() {
+    const m = SC.minutes(), d = dayIdx();
+    const set = (sel: string, html: string) => { const el = $(sel); if (el.innerHTML !== html) el.innerHTML = html; };
+    set("[data-cta]", ctaHTML(m));
+    set("[data-heronote]", heroNoteHTML(m));
+    set("[data-today]", todayHTML(m, d));
+    set("[data-week]", weekHTML(m, d));
+  }
+  renderLive();
+  let lastM = SC.minutes();
+  document.addEventListener("sc:tick", () => { const m = SC.minutes(); if (m !== lastM) { lastM = m; renderLive(); } });
+
+  /* ---------- map: placeholder first, the real Google map on tap (slow / offline states) ---------- */
+  const mapEl = $("[data-map]");
+  function mapError(text: string) {
+    mapEl.innerHTML = '<div class="ct-mapstate" role="alert"><span class="ill">' + ic("warning-circle", 30) + "</span><p><b>Картата не се зареди.</b></p><p class=\"muted\">" + text + "</p>" +
+      '<button class="pill pill-ink" type="button" data-mapgo>' + ic("map-trifold", 20) + "Опитай пак</button></div>";
+  }
+  function loadMap() {
+    if (navigator.onLine === false) { mapError("Няма връзка с интернет. Адресът и бутоните за маршрут работят и без картата."); return; }
+    mapEl.innerHTML = '<div class="skel" aria-hidden="true"></div><div class="ct-mapstate" aria-live="polite"><span class="ill">' + ic("map-trifold", 28) + '</span><p class="muted">Зареждаме картата...</p></div>';
+    const f = document.createElement("iframe");
+    let ok = false;
+    f.title = "Карта: " + SC.RESTAURANT.name + ", Дружба 2"; f.loading = "lazy"; f.referrerPolicy = "no-referrer-when-downgrade"; f.style.opacity = "0";
+    f.onload = () => { ok = true; f.style.opacity = "1"; mapEl.querySelectorAll(".skel,.ct-mapstate").forEach((n) => n.remove()); };
+    f.src = mapEl.dataset.embed || "";
+    mapEl.appendChild(f);
+    setTimeout(() => { if (!ok && f.isConnected) mapError("Връзката е бавна. Опитайте пак или отворете маршрута в Google Maps."); }, 12000);
+  }
+
+  /* ---------- copy ---------- */
+  function copyText(text: string, btn: HTMLElement, msg?: string) {
+    const done = () => { SC.flash(btn, ic("check", 20) + "Копирано", 1600); SC.toast(msg || "Копирано"); };
+    const fallback = () => {
+      const ta = document.createElement("textarea"); let ok = false;
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand("copy"); } catch { /* ignore */ }
+      ta.remove();
+      if (ok) done(); else SC.toast("Не успяхме да копираме. Задръжте пръст върху текста.");
+    };
+    try { if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback); else fallback(); } catch { fallback(); }
+  }
+
+  /* ---------- feedback form ---------- */
+  const fbox = $("[data-fbox]");
+  let draft: Draft = cleanDraft(SC.load("sc-contact-draft", null));
+  const saveDraft = () => SC.store("sc-contact-draft", draft);
+  type Field = "name" | "contact" | "msg";
+  const inp = (id: Field) => fbox.querySelector<HTMLInputElement | HTMLTextAreaElement>("#f-" + id)!;
+
+  function setErr(id: Field, text: string) {
+    const i = inp(id), e = fbox.querySelector<HTMLElement>("#e-" + id)!;
+    if (text) { e.innerHTML = ic("warning-circle", 16) + "<span>" + text + "</span>"; e.hidden = false; i.setAttribute("aria-invalid", "true"); }
+    else { e.hidden = true; e.innerHTML = ""; i.removeAttribute("aria-invalid"); }
+  }
+  function check(id: Field): boolean { const err = fieldError(id, inp(id).value, draft.mode); setErr(id, err); return !err; }
+  const isField = (s: string): s is Field => s === "name" || s === "contact" || s === "msg";
+
+  function mountForm() { fbox.innerHTML = formHTML(draft); }
+  function mountOk(s: Sent, focus: boolean) {
+    fbox.innerHTML = okHTML(s, SC.minutes());
+    const ok = fbox.querySelector<HTMLElement>("[data-ok]")!;
+    requestAnimationFrame(() => requestAnimationFrame(() => ok.classList.add("on")));
+    if (focus) {
+      ok.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "start" });
+      setTimeout(() => ok.querySelector<HTMLElement>("h3")?.focus({ preventScroll: true }), 400);
+    }
+  }
+  /* preview only: the success state with a neutral sample (design/pages/contacts.html#form-ok) */
+  if (SC.preview && hash === "form-ok") mountOk({ topic: "Въпрос", name: "Мария", mode: "phone", contact: "0888 12 34 56", msg: "Имате ли места в събота вечер?" }, false);
+  else mountForm();
+
+  fbox.addEventListener("input", (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.id === "f-name") draft.name = t.value;
+    if (t.id === "f-contact") draft.contact = t.value;
+    if (t.id === "f-msg") { draft.msg = t.value; fbox.querySelector("[data-count]")!.textContent = t.value.length + " / " + MAX; }
+    const id = t.id.slice(2);
+    if (t.getAttribute("aria-invalid") === "true" && isField(id)) check(id);
+    saveDraft();
+  });
+  fbox.addEventListener("focusout", (e) => {
+    const t = e.target as HTMLInputElement, id = (t.id || "").slice(2);
+    if (t.matches && t.matches(".input") && t.value.trim() && isField(id)) check(id);
+  });
+  fbox.addEventListener("click", (e) => {
+    const tg = e.target as Element;
+    const c = tg.closest<HTMLElement>("[data-topics] .chip");
+    if (c) {
+      const on = c.getAttribute("aria-pressed") !== "true";
+      fbox.querySelectorAll("[data-topics] .chip").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      c.setAttribute("aria-pressed", String(on));
+      draft.topic = on ? c.textContent || "" : ""; saveDraft();
+      fbox.querySelector<HTMLElement>("[data-tophint]")!.hidden = draft.topic !== COMPLAINT;
+      return;
+    }
+    const md = tg.closest<HTMLElement>("[data-mode]");
+    if (md) {
+      draft.mode = md.dataset.mode === "email" ? "email" : "phone"; saveDraft();
+      const M = MODES[draft.mode], i = inp("contact") as HTMLInputElement;
+      fbox.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b === md)));
+      i.type = M.type; i.inputMode = M.im; i.autocomplete = M.ac as AutoFill; i.placeholder = M.ph;
+      fbox.querySelector("#h-contact")!.textContent = M.help;
+      setErr("contact", ""); if (i.value.trim()) check("contact");
+      i.focus();
+      return;
+    }
+    if (tg.closest("[data-again]")) {
+      draft = { topic: "", name: draft.name, mode: draft.mode, contact: draft.contact, msg: "" }; saveDraft();
+      mountForm(); inp("msg").focus();
+    }
+  });
+  fbox.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement, alert = form.querySelector<HTMLElement>("[data-alert]")!, btn = form.querySelector<HTMLButtonElement>("[data-send]")!;
+    if (btn.classList.contains("is-busy")) return;
+    alert.hidden = true;
+    const bad = (["name", "contact", "msg"] as Field[]).filter((id) => !check(id));
+    if (bad.length) { const f = inp(bad[0]); f.focus({ preventScroll: true }); f.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "center" }); return; }
+    const old = btn.innerHTML;
+    btn.classList.add("is-busy"); btn.setAttribute("aria-busy", "true");
+    btn.innerHTML = '<span class="ct-spin" aria-hidden="true"></span>Изпращаме съобщението...';
+    const sent: Sent = { topic: draft.topic, name: draft.name.trim(), mode: draft.mode, contact: draft.contact.trim(), msg: draft.msg.trim() };
+    try {
+      await sendFeedback(sent, { offline: SC.preview && hash === "form-offline" });
+      draft.msg = ""; draft.topic = ""; saveDraft();
+      mountOk(sent, true);
+    } catch (err) {
+      btn.classList.remove("is-busy"); btn.removeAttribute("aria-busy"); btn.innerHTML = old;
+      alert.innerHTML = err instanceof OfflineError
+        ? ic("warning", 22) + "<p><b>Няма връзка.</b> Съобщението ви е запазено - опитайте пак, щом интернетът се върне.</p>"
+        : ic("warning", 22) + "<p><b>Съобщението не се изпрати.</b> Запазихме го - опитайте пак след малко или се обадете.</p>";
+      alert.hidden = false;
+    }
+  });
+
+  /* ---------- page-level clicks ---------- */
+  root.addEventListener("click", (e) => {
+    const tg = e.target as Element;
+    const cp = tg.closest<HTMLElement>("[data-copy]");
+    if (cp) { copyText(cp.dataset.copy || "", cp, cp.dataset.msg); return; }
+    if (tg.closest("[data-mapgo]")) { loadMap(); return; }
+    const j = tg.closest<HTMLElement>("[data-jump]");
+    if (j) {
+      e.preventDefault();
+      const t = document.getElementById(j.dataset.jump || "");
+      if (!t) return;
+      t.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth", block: "start" });
+      setTimeout(() => t.querySelector<HTMLElement>(".input, .ct-ok h3")?.focus({ preventScroll: true }), SC.reduce ? 50 : 650);
+    }
+  });
+  if (hash === "pishete" || (SC.preview && (hash === "form-ok" || hash === "form-offline"))) setTimeout(() => document.getElementById("pishete")?.scrollIntoView({ block: "start" }), 50);
+
+  root.dataset.ready = "1";
+  SC.reveal();
+</script>
