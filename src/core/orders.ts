@@ -9,7 +9,10 @@
    - the zone comes from the address (zones.ts), the zone sent by the client is only used to answer "Дружба 1 или 2?";
    - a discount code from the internal rating: once, -10% on the dishes, never together with the lunch -30%. */
 import { COL, emit, iso, nowDate, randomKey, type Ctx } from "./ctx.ts";
-import { CoreError, PAY_LABEL, type Channel, type Order, type OrderStatus, type PayMethod } from "./types.ts";
+import { CoreError, PAY_LABEL, type Channel, type Customer, type Order, type OrderStatus, type PayMethod } from "./types.ts";
+
+/** the coupon a new profile gets (customers.ts): -10% once, from the first order after sign-up */
+export const PROFILE_COUPON = "PROFIL10";
 import { audit } from "./audit.ts";
 import { getSettings } from "./settings.ts";
 import { findCode, markCodeUsed } from "./codes.ts";
@@ -131,7 +134,11 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
 
   let zone: Zone | null = null, addr = "";
   if (mode === "delivery") { const z = resolveZone(input.addr || "", input.zone); if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; } }
-  const P = price(cart, { zone, scheduled: !!sched, clock: ctx.clock, busy: settings.kitchen.busy, codePct });
+  /* the profile bonus: signed in (userId from the session, never from the body) with the profile's phone, unused coupon */
+  const phone0 = normPhone(input.phone);
+  const prof = input.userId ? await ctx.repo.get<Customer>(COL.customers, input.userId) : null;
+  const bonus = prof && phone0 && prof.phone === phone0 ? (prof.coupons || []).find((c) => c.code === PROFILE_COUPON && !c.used) : undefined;
+  const P = price(cart, { zone, scheduled: !!sched, clock: ctx.clock, busy: settings.kitchen.busy, codePct, profilePct: bonus ? bonus.pct : 0 });
   if (!String(input.name || "").trim()) errs.name = "Напишете името си.";
   const phone = normPhone(input.phone);
   if (!phone) errs.phone = "Телефонът трябва да е 10 цифри, например 0888 12 34 56.";
@@ -156,6 +163,13 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   const make = async (): Promise<Order> => {
     const no = String(await ctx.repo.seq("order_no", FIRST_ORDER_NO));
     if (useCode) await markCodeUsed(ctx, codeIn, no);   /* throws if someone used it a moment ago: nothing is saved */
+    if (P.discKind === "profile" && prof) {
+      const c = await ctx.repo.get<Customer>(COL.customers, prof.id);
+      const k = c ? c.coupons.findIndex((x) => x.code === PROFILE_COUPON && !x.used) : -1;
+      if (!c || k < 0) throw new CoreError("bonus_used", "Бонусът с профил вече е използван. Обновете страницата.", 409);
+      c.coupons[k] = { ...c.coupons[k], used: true, orderNo: no } as Customer["coupons"][number];
+      await ctx.repo.put(COL.customers, c);
+    }
     const ts = nowDate(ctx);
     const o: Order = {
       id: no, no, mode, channel: input.channel || "web",
@@ -166,7 +180,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       status: "accepted", name: String(input.name).trim().slice(0, 80), phone: phone!, email: input.email ? String(input.email).trim() : undefined,
       note: input.note ? String(input.note).trim().slice(0, 2000) : undefined,
       marketing: input.marketing === true, userId: input.userId || null, table: input.table || null,
-      key: randomKey(8), discKind: P.discKind, ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}),
+      key: randomKey(8), discKind: P.discKind, ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
       createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
     };
     await ctx.repo.put(COL.orders, o);
@@ -183,14 +197,14 @@ export async function getOrder(ctx: Ctx, no: string): Promise<Order | null> {
 
 /* ---------- public tracking (/porachka/<no>-<key>/) ---------- */
 export type PublicOrder = Pick<Order, "id" | "no" | "mode" | "channel" | "status" | "lunchOnly" | "zone" | "pay" | "payLabel" | "sub" | "disc" | "fee" | "total" |
-  "eta" | "at" | "sched" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc"> & { lines: Order["lines"]; key?: string };
+  "eta" | "at" | "sched" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> & { lines: Order["lines"]; key?: string };
 
 /** What the tracking page needs, nothing personal: no name, phone, e-mail, address, note, profile, code. */
 export function publicOrder(o: Order, withKey = false): PublicOrder {
   const p: PublicOrder = {
     id: o.id, no: o.no, mode: o.mode, channel: o.channel, status: o.status, lunchOnly: o.lunchOnly, zone: o.zone, pay: o.pay, payLabel: o.payLabel,
     sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, placedAt: o.placedAt, ts: o.ts,
-    createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0,
+    createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0, profileDisc: o.profileDisc || 0,
     lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit })),
   };
   if (withKey && o.key) p.key = o.key;

@@ -4,7 +4,9 @@ import { COL, emit, iso, rid, type Ctx } from "./ctx.ts";
 import { CoreError } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
 
+/** topic: free text from /kontakti/, or "voucher" (gift voucher request) and "birthday" (a guest's birthday without a profile) */
 export interface FeedbackInput { name: string; contact: string; message: string; mode?: "phone" | "email"; topic?: string }
+export const FEEDBACK_TOPICS = ["voucher", "birthday"] as const;
 export interface Feedback {
   id: string; name: string; contact: string; mode: "phone" | "email"; message: string; topic?: string;
   status: "new" | "done"; createdAt: string; updatedAt: string;

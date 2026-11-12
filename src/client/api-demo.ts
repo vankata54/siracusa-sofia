@@ -7,6 +7,7 @@ import { state, status, eta, getKitchen } from "../lib/status.ts";
 import { offers } from "../lib/offers.ts";
 import { eventsJson } from "../lib/events.ts";
 import { ApiError, busFire, demoChannel } from "./api.ts";
+import { publicSettings } from "../core/settings.ts";
 
 export { MENU, offers, eventsJson };
 
@@ -47,12 +48,12 @@ export async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
     await c.office.sendDue().catch(() => undefined);
     return await fn(c);
   } catch (e) {
-    if (e instanceof CoreError) throw new ApiError(e.code, e.message, e.status, (e as CoreError & { fields?: Record<string, string> }).fields);
+    if (e instanceof CoreError) { const x = e as CoreError & { fields?: Record<string, string>; retryIn?: number }; throw new ApiError(e.code, e.message, e.status, x.fields, x.retryIn); }
     throw e;
   }
 }
 
 export async function statusInfo() {
-  await core();
-  return { state: state(), status: status(), eta: eta(), kitchen: getKitchen() };
+  const c = await core();
+  return { state: state(), status: status(), eta: eta(), ...publicSettings(await c.settings.get()), kitchen: getKitchen() };
 }

@@ -306,19 +306,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
 <script>
   import { SC } from "../../client/sc-menu.ts";
   import { price } from "../../lib/pricing.ts";
-  import "../../lib/icons/moon.ts";
-  import "../../lib/icons/truck.ts";
-  import "../../lib/icons/seal-percent.ts";
-  import "../../lib/icons/arrow-right.ts";
-  import "../../lib/icons/warning.ts";
-  import "../../lib/icons/warning-circle.ts";
-  import "../../lib/icons/arrow-clockwise.ts";
-  import "../../lib/icons/check-circle.ts";
-  import "../../lib/icons/shopping-bag.ts";
-  import "../../lib/icons/info.ts";
-  import "../../lib/icons/bowl-food.ts";
-  import "../../lib/icons/caret-right.ts";
-  import "../../lib/icons/sliders-horizontal.ts";
+  import "sc-icons:moon,truck,seal-percent,arrow-right,warning,warning-circle,arrow-clockwise,check-circle,shopping-bag,info,bowl-food,caret-right,sliders-horizontal"; /* the page's icons in one module (scripts/icon-groups.mjs) */
   import { ctaHTML, alertHTML, liveHTML, dealHTML, hoursHTML, plan, tomorrowName, KITCHEN_END, type Kind, type Sim, type CtaView } from "./_pickup.ts";
 
   const main = SC.mount({ docTitle: "Вземи от място" });

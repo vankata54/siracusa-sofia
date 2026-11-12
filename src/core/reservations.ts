@@ -144,16 +144,35 @@ export async function setReservationStatus(ctx: Ctx, id: string, status: Reserva
 /* ---------- celebration inquiries (калкулатор на празник) ---------- */
 export type CelebrationInput = Omit<Celebration, "id" | "status" | "createdAt" | "marketing" | "early"> & { marketing?: boolean; early?: boolean };
 
+export const CELEB_MAX_PEOPLE = 300; /* technical limit of the form, not the capacity */
 export async function createCelebration(ctx: Ctx, c: CelebrationInput): Promise<Celebration> {
   const f: Record<string, string> = {};
+  const today = sofiaYmd(nowDate(ctx)), date = String(c.date || "");
   need(String(c.kind || "").trim(), f, "kind", "Изберете повод.");
-  need(c.people >= 1, f, "people", "Изберете брой гости.");
+  need(Number.isInteger(c.people) && c.people >= 1 && c.people <= CELEB_MAX_PEOPLE, f, "people", "Изберете брой гости (от 1 до " + CELEB_MAX_PEOPLE + ").");
+  if (!validYmd(date)) f.date = "Изберете дата.";
+  else if (date <= today || date > addDaysYmd(today, 366)) f.date = "Изберете дата от утре до една година напред.";
+  if (c.time != null && c.time !== "" && !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(c.time))) f.time = "Изберете начален час.";
   need(String(c.name || "").trim(), f, "name", "Напишете името си.");
   const phone = normPhone(c.phone);
   need(phone, f, "phone", "Телефонът трябва да е 10 цифри, например 0888 12 34 56.");
   need(emailOk(c.email), f, "email", "Проверете имейла, например ime@primer.bg.");
+  if (c.cakeNote && String(c.cakeNote).length > 300) f.cakeNote = "Пожеланията за тортата са до 300 знака.";
+  if (c.wishes && String(c.wishes).length > 1000) f.wishes = "Пожеланията са до 1000 знака.";
+  if (c.note && String(c.note).length > 2000) f.note = "Бележката е до 2000 знака.";
   invalid(f);
-  const doc: Celebration = { ...c, id: rid(8), phone: phone!, marketing: c.marketing === true, early: c.early === true, status: "new", createdAt: iso(ctx) };
+  /* "ранна резервация" -5%: only when the owner has set the days (null = [ЛИПСВА]); the core decides, not the page */
+  const st = await getSettings(ctx);
+  let days = 0; for (let d = today; d < date && days < 400; d = addDaysYmd(d, 1)) days++;
+  const early = st.earlyDays != null && days >= st.earlyDays;
+  const s = (v: unknown, n: number) => (v == null || v === "" ? undefined : String(v).trim().slice(0, n));
+  const doc: Celebration = {
+    id: rid(8), kind: String(c.kind).trim().slice(0, 60), people: c.people, date, pack: s(c.pack, 80), custom: c.custom === true,
+    items: Array.isArray(c.items) ? c.items.map(String).slice(0, 60) : undefined, cake: c.cake === true, decor: c.decor === true,
+    zone: c.zone === "salon" || c.zone === "garden" || c.zone === "all" ? c.zone : undefined,
+    name: String(c.name).trim().slice(0, 80), phone: phone!, email: s(c.email, 120), note: s(c.note, 2000), marketing: c.marketing === true,
+    early, status: "new", createdAt: iso(ctx), time: s(c.time, 5), cakeNote: s(c.cakeNote, 300), wishes: s(c.wishes, 1000),
+  };
   await ctx.repo.put(COL.celebrations, doc);
   emit(ctx, "celebration.created", { id: doc.id, kind: doc.kind, people: doc.people });
   return doc;

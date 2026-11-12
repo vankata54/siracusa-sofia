@@ -42,7 +42,9 @@ export interface Order {
   /** discount code from the internal rating (used once), the discount it gave and which discount won */
   code?: string;
   codeDisc?: number;
-  discKind?: "" | "lunch" | "code";
+  /** the one-time -10% of a new profile ("Отстъпка с профил: -X €") */
+  profileDisc?: number;
+  discKind?: "" | "lunch" | "code" | "profile";
   createdAt: Iso;
   updatedAt: Iso;
 }
@@ -62,6 +64,8 @@ export interface Celebration {
   id: string; kind: string; people: number; date?: string; pack?: string; custom?: boolean; items?: string[]; cake?: boolean; decor?: boolean;
   zone?: "salon" | "garden" | "all"; name: string; phone: string; email?: string; note?: string; marketing: boolean;
   early: boolean; status: "new" | "offer_sent" | "confirmed" | "declined"; createdAt: Iso;
+  /** start time "HH:MM"; wishes for the cake (cake: true) and for the decoration / the evening (up to 300 / 1000 characters) */
+  time?: string; cakeNote?: string; wishes?: string;
 }
 
 /** pid: the participant's personal token (kept in the colleague's browser; never shown to others) */
@@ -87,12 +91,15 @@ export interface Subscription { id: string; email: string; topic: "events"; topi
 export interface Customer {
   id: string; phone: string; name: string; email?: string; isNew?: boolean; since: string;
   consent: { marketing: boolean; birthday: boolean; bday: string };
+  /** notifications the customer wants (all off by default): order status, new events, offers */
+  notify?: { order: boolean; events: boolean; offers: boolean };
   favs: string[]; addrs: { id: string; label: string; addr: string; zone: string }[];
-  stamps: number; coupons: { code: string; pct: number; note: string; used: boolean }[];
+  stamps: number; coupons: { code: string; pct: number; note: string; used: boolean; orderNo?: string }[];
   blocked?: boolean; createdAt: Iso;
 }
 
-export interface SmsCode { id: string; phone: string; code: string; expiresAt: number; tries: number }
+/** sentAt: last code (30 s between codes); sends: codes in the current hour window from windowAt */
+export interface SmsCode { id: string; phone: string; code: string; expiresAt: number; tries: number; sentAt?: number; sends?: number; windowAt?: number }
 
 export interface Rating {
   id: string; orderNo: string; happy: boolean; text?: string; code: string; pct: number; createdAt: Iso;
@@ -108,6 +115,10 @@ export interface Settings {
   kitchen: { busy: boolean; etaMin: number; etaBusyMin: number };
   /** how long a reservation holds the table, minutes (default 120, owner to confirm) */
   resMinutes: number;
+  /** the celebration calculator: show an estimate to the guest, or only "Ще ви изпратим оферта" (OPEN-QUESTIONS 3) */
+  celebrationPrice: "estimate" | "offer";
+  /** "early booking" -5% for a celebration booked this many days ahead; null = [ЛИПСВА] (OPEN-QUESTIONS 13): no -5% */
+  earlyDays: number | null;
   updatedAt?: Iso;
 }
 

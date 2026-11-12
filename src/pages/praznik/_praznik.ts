@@ -159,7 +159,7 @@ export function start(): void {
   }
   /* field errors from the core: kind / people belong to step 1, name / phone / email to step 3 */
   function fieldErrors(f: Record<string, string>): boolean {
-    const step1 = { kind: "e-type", people: "e-guests" } as Record<string, string>, step3 = { name: "e-name", phone: "e-phone", email: "e-email" } as Record<string, string>;
+    const step1 = { kind: "e-type", people: "e-guests", date: "e-date" } as Record<string, string>, step3 = { name: "e-name", phone: "e-phone", email: "e-email" } as Record<string, string>;
     const k1 = Object.keys(f).filter((k) => step1[k]), k3 = Object.keys(f).filter((k) => step3[k]);
     if (!k1.length && !k3.length) return false;
     if (k1.length) { go(1); k1.forEach((k) => setErr(step1[k], f[k])); scrollToEl(document.getElementById(step1[k1[0]])); return true; }
@@ -178,7 +178,8 @@ export function start(): void {
       await api.celebrations.create({
         kind: typeName(S), people: S.guests, date: S.date, zone: S.zone as "salon" | "garden" | "all",
         pack: S.menu && S.menu !== "custom" ? PKG[S.menu].n : undefined, custom: S.menu === "custom", items: S.menu === "custom" ? S.picks.slice() : S.menu && PKG[S.menu] ? pkgItems(PKG[S.menu]).map((it) => it.x.id) : undefined,
-        cake: S.cake !== "none", decor: S.decor === "yes",
+        cake: S.cake !== "none", decor: S.decor === "yes", time: S.time || undefined,
+        cakeNote: S.cake === "ours" && S.cakeNote.trim() ? S.cakeNote.trim() : undefined, wishes: S.decor === "yes" && S.wishes.length ? S.wishes.join(", ") : undefined,
         name: S.name.trim(), phone: S.phone.trim(), email: S.email.trim() || undefined, note: inquiryNote(S), marketing: S.consent === true, early: false,
       });
       sending = false; sent = true;

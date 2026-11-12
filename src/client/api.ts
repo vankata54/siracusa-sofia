@@ -20,7 +20,9 @@ export const DEMO = BUILD_DEMO && typeof document !== "undefined" && document.do
 
 export class ApiError extends Error {
   code: string; status: number; fields?: Record<string, string>;
-  constructor(code: string, message: string, status = 400, fields?: Record<string, string>) { super(message); this.code = code; this.status = status; this.fields = fields; }
+  /** seconds to wait ("too_soon": a new SMS code) */
+  retryIn?: number;
+  constructor(code: string, message: string, status = 400, fields?: Record<string, string>, retryIn?: number) { super(message); this.code = code; this.status = status; this.fields = fields; if (retryIn != null) this.retryIn = retryIn; }
 }
 
 /* ---------- keys kept in this browser ---------- */
@@ -96,7 +98,7 @@ async function http<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError("offline", "Няма връзка. Проверете интернета и опитайте пак.", 0);
   }
   const j = await r.json().catch(() => null);
-  if (!r.ok) throw new ApiError(j?.error || "server", j?.message || "Нещо се обърка. Опитайте пак.", r.status, j?.fields);
+  if (!r.ok) throw new ApiError(j?.error || "server", j?.message || "Нещо се обърка. Опитайте пак.", r.status, j?.fields, j?.retryIn);
   return j as T;
 }
 /** pick the demo or the server implementation */
@@ -111,7 +113,9 @@ function rememberUser(c: Customer | null) {
 }
 const noAuth = () => new ApiError("auth", "Влезте с телефона си.", 401);
 
-export type StatusInfo = { state: unknown; status: unknown; eta: { min: number; busy: boolean; text: string }; kitchen: Settings["kitchen"] };
+export type StatusInfo = { state: unknown; status: unknown; eta: { min: number; busy: boolean; text: string }; kitchen: Settings["kitchen"];
+  /** the celebration calculator: "estimate" (show the price) or "offer" (only "Ще ви изпратим оферта"); earlyDays null = no -5% */
+  celebrationPrice: Settings["celebrationPrice"]; earlyDays: number | null };
 type JoinBody = OfficeParticipant & { pid?: string };
 type SubmitBody = Pick<OrderInput, "name" | "phone" | "pay" | "email" | "note">;
 type OfficeCreate = { office: string; addr: string; deadline?: string; payer?: "one" | "each"; mode?: "delivery" | "pickup"; name?: string; phone?: string; pay?: "cash" | "card" | "voucher" };
@@ -128,7 +132,7 @@ export const api = {
   orders: {
     /** returns the whole order (with `key`: the tracking address is SC.url.tracking(order)) */
     create: async (o: Omit<OrderInput, "channel" | "userId">): Promise<Order> => {
-      const r = DEMO ? await local((c) => c.orders.create({ ...o, channel: "web" })) : await http<Order>("POST", "orders", o);
+      const r = DEMO ? await local(async (c) => { const u = await c.customers.bySession(demoTok("user")); return c.orders.create({ ...o, channel: "web", userId: u ? u.id : null }); }) : await http<Order>("POST", "orders", o);
       remember("orders", r.no, r.key); watchOrder(trackId(r.no));
       return r;
     },
@@ -226,7 +230,8 @@ export const api = {
 
   /* customers: SMS sign-in (the code is returned as demoCode and shown on screen in v1) */
   auth: {
-    smsRequest: pick((c, phone: string) => c.customers.requestCode(phone), (phone) => http<{ sent: true; phone: string; demoCode: string; resendIn: number }>("POST", "auth/sms/request", { phone })),
+    /** demoCode only in the demo / test mode (no SMS provider); known: the number has a profile; too_soon -> e.retryIn seconds */
+    smsRequest: pick((c, phone: string) => c.customers.requestCode(phone), (phone) => http<{ sent: true; phone: string; demoCode?: string; resendIn: number; known: boolean }>("POST", "auth/sms/request", { phone })),
     smsVerify: async (phone: string, code: string, extra: { name?: string; marketing?: boolean } = {}) => {
       const r = DEMO
         ? await local(async (c) => { const v = await c.customers.verifyCode(phone, code, extra); setDemoTok("user", v.token); return { customer: v.customer, isNew: v.isNew }; })
@@ -235,11 +240,24 @@ export const api = {
       return r;
     },
     logout: async () => { if (DEMO) { const t = demoTok("user"); if (t) await local((c) => c.customers.logout(t)); setDemoTok("user", null); } else await http("POST", "auth/sms/logout"); rememberUser(null); },
-    me: pick((c) => c.customers.bySession(demoTok("user")), () => http<Customer | null>("GET", "me")),
+    /** the signed-in customer or null; null also clears "sc-user" (an expired session must not look signed in) */
+    me: async (): Promise<Customer | null> => {
+      const r = DEMO ? await local((c) => c.customers.bySession(demoTok("user"))) : await http<Customer | null>("GET", "me");
+      if (!r) rememberUser(null);
+      return r;
+    },
     update: pick(async (c, patch: ProfilePatch) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = await c.customers.update(u.id, patch); rememberUser(r); return r; }, async (patch) => { const r = await http<Customer>("PATCH", "me", patch); rememberUser(r); return r; }),
     remove: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (u) await c.customers.remove(u.id); setDemoTok("user", null); rememberUser(null); return { ok: true }; }, async () => { const r = await http<{ ok: boolean }>("DELETE", "me"); rememberUser(null); return r; }),
     orders: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); return u ? c.customers.orders(u) : []; }, () => http<Order[]>("GET", "me/orders")),
     export: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.export(u); }, () => http<unknown>("GET", "me/export")),
+    /** "Моите кодове" from the ratings: { code, pct, orderNo, used, usedBy, createdAt }[] */
+    codes: pick(async (c) => { const u = await c.customers.bySession(demoTok("user")); return u ? c.customers.codes(u) : []; }, () => http<{ code: string; pct: number; orderNo: string; used: boolean; usedBy: string | null; createdAt: string }[]>("GET", "me/codes")),
+    /** saved addresses: the list is customer.addrs (auth.me()); add / remove return the updated customer */
+    addAddress: pick(async (c, a: { label: string; addr: string; zone: string }) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = await c.customers.addAddress(u.id, a); rememberUser(r); return r; },
+      async (a) => { const r = await http<Customer>("POST", "me/addresses", a); rememberUser(r); return r; }),
+    removeAddress: pick(async (c, id: string) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); const r = await c.customers.removeAddress(u.id, id); rememberUser(r); return r; },
+      async (id) => { const r = await http<Customer>("DELETE", "me/addresses/" + encodeURIComponent(id)); rememberUser(r); return r; }),
+    addresses: async () => ((await api.auth.me())?.addrs || []),
     toggleFav: pick(async (c, id: string) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.toggleFav(u.id, id); }, (id) => http<Customer>("POST", "me/favorites", { id })),
   },
 

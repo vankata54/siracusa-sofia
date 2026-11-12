@@ -56,9 +56,9 @@ export function slideHTML(o: OfferLike, key: string = o.id): string {
 export function dotHTML(title: string, i: number): string {
   return '<button type="button" data-dot="' + i + '" aria-label="Оферта ' + (i + 1) + ": " + esc(title) + '"><span class="d"><i></i></span></button>';
 }
-/** Which first slide fits the hour: lunch (today / another day), -30% after 15:00, or "for tomorrow". */
+/** Which first slide fits the hour: lunch (today / another day), -30% after 15:00 (only on a day with a lunch menu), or "for tomorrow". */
 export function firstOfferKey(st: State, lunchToday: boolean): string {
-  return st.lunch ? (lunchToday ? "lunchToday" : "lunch") : st.lunchDiscount ? "lunch30" : "tomorrow";
+  return st.lunch ? (lunchToday ? "lunchToday" : "lunch") : st.lunchDiscount && lunchToday ? "lunch30" : "tomorrow";
 }
 /** "След 24 дни" / "Днес": the start of the Greek night text (the rest comes from offers()). */
 export function greekLead(days: number): string { return days === 0 ? "Днес" : "След " + plural(days, "ден", "дни"); }

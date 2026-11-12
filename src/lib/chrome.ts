@@ -39,8 +39,8 @@ export function header(o: HeaderOpts = {}): string {
   const row1 = o.back
     ? '<header class="top back"><a class="hb" href="' + o.back.href + '">' + ic("arrow-left", 20) + esc(o.back.label || "Назад") + '</a><span class="ttl">' + esc(o.title || "") + '</span><div class="hact">' + (o.share ? '<button class="hb" type="button" data-share>' + ic("export", 20) + "Сподели</button>" : "") + "</div></header>"
     : '<header class="top"><a class="word" href="' + url.home() + '" title="Заместител до новото лого">Siracusa</a><nav class="dnav" aria-label="Раздели">' + DNAV.map((d) => '<a href="' + url.page(d[2]) + '"' + (o.nav === d[0] ? ' aria-current="page"' : "") + ">" + d[1] + "</a>").join("") + '</nav><div class="hact">' +
-      '<a class="hb call" href="tel:' + RESTAURANT.phoneIntl + '" aria-label="Обади се на ' + RESTAURANT.phone + '">' + ic("phone", 20) + 'Обади се</a><button class="hb" type="button" data-lang aria-label="Смени езика на английски">BG</button><button class="hb more" type="button" data-more>' + ic("list", 20) + "Още</button></div></header>";
-  const row2 = o.status === false && o.cart === false ? "" : '<div class="row2">' + (o.status === false ? "" : '<div class="status" data-status>' + statusHTML(o.clock) + "</div>") + (o.cart === false ? "" : cartBtn) + "</div>";
+      '<a class="hb call" href="tel:' + RESTAURANT.phoneIntl + '" aria-label="Обади се на ' + RESTAURANT.phone + '">' + ic("phone", 20) + 'Обади се</a><button class="hb" type="button" data-lang>BG<span class="vh">, смени езика на английски</span></button><button class="hb more" type="button" data-more>' + ic("list", 20) + "Още</button></div></header>";
+  const row2 = o.status === false && o.cart === false ? "" : '<div class="row2" role="region" aria-label="Работно време и количка">' + (o.status === false ? "" : '<div class="status" data-status>' + statusHTML(o.clock) + "</div>") + (o.cart === false ? "" : cartBtn) + "</div>";
   return '<div class="sentinel" data-sent></div>' + row1 + row2;
 }
 
@@ -79,6 +79,6 @@ export function morePanel(): string {
 
 /** Generic bottom-sheet markup (the client wires it). */
 export function sheetHTML(id: string, title: string, body: string): string {
-  return '<button class="scrim" type="button" aria-label="Затвори"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle"></div><div class="sheet-h"><h2 id="' + id + '">' + esc(title) + '</h2><button class="hb" type="button" data-close>' + ic("x", 20) + 'Затвори</button></div><div class="body">' + body + "</div></div>";
+  return '<button class="scrim" type="button" tabindex="-1" aria-label="Затвори"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle"></div><div class="sheet-h"><h2 id="' + id + '">' + esc(title) + '</h2><button class="hb" type="button" data-close>' + ic("x", 20) + 'Затвори</button></div><div class="body">' + body + "</div></div>";
 }
 

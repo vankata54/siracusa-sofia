@@ -32,7 +32,9 @@ const p = Astro.props;
 const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
 const SITE = "Siracusa Bar & Grill";
 const t = p.docTitle || p.title;
-const fullTitle = t ? `${t} | ${SITE}` : `${SITE} | Пица на пещ и скара в Дружба 2`;
+/* long titles (dish names) get the short ending, so search results do not cut the name (target: 70 characters) */
+const TITLE_MAX = 70;
+const fullTitle = !t ? `${SITE} | Пица на пещ и скара в Дружба 2` : (t + " | " + SITE).length <= TITLE_MAX ? `${t} | ${SITE}` : `${t} | Siracusa`;
 const description = p.description || "Пица на пещ и скара на дървени въглища в Дружба 2, София. Доставка до 21:00, кухня до 22:30, обедно меню всеки ден.";
 const path = Astro.url.pathname;
 const canonical = new URL(p.canonical || path, Astro.site).href;

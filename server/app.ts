@@ -14,6 +14,7 @@ import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
+import { publicSettings } from "../src/core/settings.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
 import { ZONES } from "../src/lib/data.ts";
 
@@ -23,6 +24,8 @@ export interface AppOpts {
   previewApi?: boolean;
   /** the tracking address must carry the order key (default on; TRACK_KEY_REQUIRED=0 turns it off) */
   requireTrackKey?: boolean;
+  /** no SMS provider yet: return the code as demoCode (SMS_DEMO=1, tests); otherwise 503 sms_unavailable */
+  smsDemo?: boolean;
   /** run the timers for the automatic office send (default true; off in unit tests) */
   timers?: boolean;
 }
@@ -55,7 +58,7 @@ export function createApp(opts: AppOpts) {
   seedMenu(db);
   const clients = new Set<Sub>();
   const ctx: Ctx = {
-    repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false,
+    repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
     emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
   };
   const core = createCore(ctx);
@@ -88,7 +91,7 @@ export function createApp(opts: AppOpts) {
   const ip = (c: Context) => c.req.header("x-forwarded-for")?.split(",")[0].trim() || "local";
 
   app.onError((err, c) => {
-    if (err instanceof CoreError) return c.json({ error: err.code, message: err.message, fields: (err as CoreError & { fields?: unknown }).fields }, err.status as 400);
+    if (err instanceof CoreError) { const x = err as CoreError & { fields?: unknown; retryIn?: number }; return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}) }, err.status as 400); }
     console.error(err);
     return c.json({ error: "server", message: "Нещо се обърка. Опитайте пак." }, 500);
   });
@@ -116,7 +119,7 @@ export function createApp(opts: AppOpts) {
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.get("/api/menu", (c) => c.json(readMenu(db)));
-  app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), kitchen: st.kitchen }); });
+  app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), ...publicSettings(st) }); });
   app.get("/api/offers", (c) => c.json(offers()));
   app.get("/api/events", (c) => c.json(eventsJson()));
   app.get("/api/zones", (c) => c.json(ZONES));
@@ -141,7 +144,7 @@ export function createApp(opts: AppOpts) {
     const k = ip(c), t = codeTries.get(k), now = Date.now();
     const n = t && t.until > now ? t.n + 1 : 1;
     codeTries.set(k, { n, until: t && t.until > now ? t.until : now + 15 * 60_000 });
-    if (n > 30) throw new CoreError("throttled", "Твърде много опити с код. Опитайте след 15 минути.", 429);
+    if (n > 30 && !opts.previewApi) throw new CoreError("throttled", "Твърде много опити с код. Опитайте след 15 минути.", 429);
   };
   /* an invalid code is an expected answer, not an HTTP error (no red line in the browser console):
      200 { valid: false, error: { code, message, fields } }; api.codes.check() turns it back into the same ApiError */
@@ -165,7 +168,8 @@ export function createApp(opts: AppOpts) {
     const b = await body(c);
     const s = await staff(c, b.resMinutes != null ? "reservations" : "kitchen");
     if (b.resMinutes != null && b.kitchen) await staff(c, "kitchen");
-    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes }, s.user.username));
+    if ((b.celebrationPrice != null || b.earlyDays !== undefined) && !(s.user.role === "admin" || s.sections.includes("offers"))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays }, s.user.username));
   });
 
   /* ---------- reservations, celebrations, office, subscriptions ---------- */
@@ -187,7 +191,7 @@ export function createApp(opts: AppOpts) {
   const fbTries = new Map<string, number[]>();
   app.post("/api/feedback", async (c) => {
     const k = ip(c), now = Date.now(), list = (fbTries.get(k) || []).filter((t) => t > now - 10 * 60_000);
-    if (list.length >= 5) throw new CoreError("throttled", "Изпратихте няколко съобщения току-що. Опитайте след 10 минути или ни се обадете на 0894 36 55 77.", 429);
+    if (list.length >= 5 && !opts.previewApi) throw new CoreError("throttled", "Изпратихте няколко съобщения току-що. Опитайте след 10 минути или ни се обадете на 0894 36 55 77.", 429);
     const r = await core.feedback.create(await body(c));
     list.push(now); fbTries.set(k, list);
     return c.json({ ok: true, id: r.id }, 201);
@@ -195,7 +199,14 @@ export function createApp(opts: AppOpts) {
   app.get("/api/admin/feedback", async (c) => { await staff(c, "customers"); return c.json(await core.feedback.list()); });
 
   /* ---------- customers: SMS sign-in (v1: the code is returned and shown on screen) ---------- */
-  app.post("/api/auth/sms/request", async (c) => c.json(await core.customers.requestCode((await body(c)).phone)));
+  /* SMS codes: at most 10 requests per IP in 10 min (the core adds 30 s and 5 an hour per number) */
+  const smsTries = new Map<string, number[]>();
+  app.post("/api/auth/sms/request", async (c) => {
+    const k = ip(c), now = Date.now(), list = (smsTries.get(k) || []).filter((t) => t > now - 10 * 60_000);
+    if (list.length >= 10 && !opts.previewApi) throw new CoreError("throttled", "Твърде много опити. Опитайте след 10 минути.", 429);
+    list.push(now); smsTries.set(k, list);
+    return c.json(await core.customers.requestCode((await body(c)).phone));
+  });
   app.post("/api/auth/sms/verify", async (c) => {
     const b = await body(c);
     const r = await core.customers.verifyCode(b.phone, b.code, { name: b.name, marketing: b.marketing });
@@ -207,6 +218,7 @@ export function createApp(opts: AppOpts) {
   app.patch("/api/me", async (c) => { const u = await customer(c); return c.json(await core.customers.update(u.id, await body(c))); });
   app.delete("/api/me", async (c) => { const u = await customer(c); await core.customers.remove(u.id); deleteCookie(c, USER_COOKIE, { path: "/" }); return c.json({ ok: true }); });
   app.get("/api/me/orders", async (c) => c.json(await core.customers.orders(await customer(c))));
+  app.get("/api/me/codes", async (c) => c.json(await core.customers.codes(await customer(c))));
   app.get("/api/me/export", async (c) => { const data = await core.customers.export(await customer(c)); c.header("Content-Disposition", 'attachment; filename="siracusa-moite-danni.json"'); return c.json(data); });
   app.post("/api/me/favorites", async (c) => { const u = await customer(c); return c.json(await core.customers.toggleFav(u.id, (await body(c)).id)); });
   app.post("/api/me/addresses", async (c) => { const u = await customer(c); return c.json(await core.customers.addAddress(u.id, await body(c))); });

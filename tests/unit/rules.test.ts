@@ -420,3 +420,71 @@ describe("reservations: change and cancel deadline, change in one step", () => {
     expect(await core.reservations.taken("2026-11-22", "19:00")).toEqual(["S3"]);
   });
 });
+
+describe("round 3: nouns, SMS limits, profile bonus, celebration, offers", () => {
+  it("nouns: count form, 'Всички ...'", async () => {
+    const { noun, allOf } = await import("../../src/lib/filters.ts");
+    expect(noun("studeni-predyastia", 10)).toBe("10 предястия");
+    expect(noun("burgeri", 3)).toBe("3 бургера");
+    expect(noun("hlebcheta", 3)).toBe("3 хлебчета");
+    expect(noun("sosove", 1)).toBe("1 сос");
+    expect(noun("skara-bertha", 9)).toBe("9 ястия");
+    expect(allOf("burgeri")).toBe("Всички бургери");
+    expect(allOf("sosove")).toBe("Всички сосове");
+    expect(allOf("pasta-i-rizoto")).toBe("Всички ястия");
+  });
+  it("SMS: no provider -> 503; 30 s between codes; 5 an hour; known", async () => {
+    await expect(mk().core.customers.requestCode("0888123456")).rejects.toMatchObject({ code: "sms_unavailable", status: 503 });
+    let t = Date.parse("2026-11-12T10:30:00Z");
+    const core = createCore({ repo: new MemoryRepo(), clock: "12:30", now: () => new Date(t), smsDemo: true });
+    const a = await core.customers.requestCode("0888123456");
+    expect(a).toMatchObject({ known: false, resendIn: 30 });
+    t += 10_000;
+    await expect(core.customers.requestCode("0888123456")).rejects.toMatchObject({ code: "too_soon", status: 429, retryIn: 20, message: "Нов код може след 20 сек." });
+    for (let i = 0; i < 4; i++) { t += 31_000; await core.customers.requestCode("0888123456"); }
+    t += 31_000;
+    await expect(core.customers.requestCode("0888123456")).rejects.toMatchObject({ code: "too_many" });
+    t += 3600_000;
+    const b = await core.customers.requestCode("0888123456");
+    await core.customers.verifyCode("0888123456", b.demoCode!);
+    t += 31_000;
+    expect((await core.customers.requestCode("0888123456")).known).toBe(true);
+  });
+  it("profile -10%: once, signed in with the profile's phone, the better discount wins", async () => {
+    const core = createCore({ repo: new MemoryRepo(), clock: "12:30", now: () => NOW, smsDemo: true });
+    const s = await core.customers.requestCode("0888123456");
+    const v = await core.customers.verifyCode("0888123456", s.demoCode!, { name: "Мария" });
+    const cart = pickup([L(pizza.id, 2)]);
+    const other = await core.orders.create({ ...base, phone: "0888999999", cart, userId: v.customer.id });
+    expect(other.discKind).toBe("");
+    const o = await core.orders.create({ ...base, phone: "0888 12 34 56", cart, userId: v.customer.id });
+    expect(o).toMatchObject({ discKind: "profile", profileDisc: Math.round(pizza.p * 2 * 10) / 100 });
+    expect(o.total).toBe(Math.round((o.sub - o.profileDisc!) * 100) / 100);
+    expect((await core.customers.bySession(v.token))!.coupons[0]).toMatchObject({ used: true, orderNo: o.no });
+    expect((await core.orders.create({ ...base, cart, userId: v.customer.id })).discKind).toBe("");
+    expect((await core.orders.track(o.no + "-" + o.key)).profileDisc).toBe(o.profileDisc);
+  });
+  it("celebration: date ahead, guests 1..300, early only with the setting", async () => {
+    const { core } = mk();
+    const c0 = { kind: "Рожден ден", name: "Иван", phone: "0888123456" };
+    await expect(core.celebrations.create({ ...c0, people: 0, date: "2026-11-12" })).rejects.toMatchObject({ fields: { people: "Изберете брой гости (от 1 до 300).", date: "Изберете дата от утре до една година напред." } });
+    await expect(core.celebrations.create({ ...c0, people: 2.5, date: "2028-01-01" })).rejects.toMatchObject({ fields: { people: expect.any(String), date: expect.any(String) } });
+    await expect(core.celebrations.create({ ...c0, people: 20, date: "2026-12-12", time: "25:00" })).rejects.toMatchObject({ fields: { time: "Изберете начален час." } });
+    const a = await core.celebrations.create({ ...c0, people: 20, date: "2026-12-12", time: "19:00", cake: true, cakeNote: "шоколад", wishes: "балони", early: true });
+    expect(a).toMatchObject({ early: false, time: "19:00", cakeNote: "шоколад", wishes: "балони" });
+    await core.settings.update({ earlyDays: 14, celebrationPrice: "estimate" });
+    expect((await core.celebrations.create({ ...c0, people: 20, date: "2026-12-12" })).early).toBe(true);
+    expect((await core.celebrations.create({ ...c0, people: 20, date: "2026-11-20" })).early).toBe(false);
+    expect((await core.settings.get()).celebrationPrice).toBe("estimate");
+    await expect(core.settings.update({ celebrationPrice: "x" as never })).rejects.toMatchObject({ code: "invalid" });
+  });
+  it("offers: -30% only when the lunch menu is today's (or in preview)", async () => {
+    const { offers } = await import("../../src/lib/offers.ts");
+    const { setPreview } = await import("../../src/lib/time.ts");
+    expect(offers("16:30", new Date("2026-11-12T12:00:00Z"))[0].id).toBe("tomorrow");
+    expect(offers("16:30", new Date("2026-11-02T12:00:00Z"))[0].id).toBe("lunch30");
+    setPreview(true);
+    expect(offers("16:30", new Date("2026-11-12T12:00:00Z"))[0].id).toBe("lunch30");
+    setPreview(false);
+  });
+});

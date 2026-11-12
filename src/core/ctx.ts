@@ -20,6 +20,10 @@ export interface Ctx {
   demo?: boolean;
   /** preview (demo build, or a server started with SC_PREVIEW_API=1 for tests): the lunch menu counts as today's */
   preview?: boolean;
+  /** there is no SMS provider: the code is returned as demoCode (demo build, tests, SMS_DEMO=1); otherwise 503 sms_unavailable */
+  smsDemo?: boolean;
+  /** test mode only (SC_PREVIEW_API=1): no per-number SMS limits (the e2e tests reuse numbers in parallel) */
+  noLimits?: boolean;
   /** the tracking address must carry the order's key (/porachka/1042-k7f3m2pq/); off until the pages pass it */
   requireTrackKey?: boolean;
 }

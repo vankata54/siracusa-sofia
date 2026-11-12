@@ -65,7 +65,7 @@ export function catsHTML(): string {
   return '<ul class="nf-cats">' + cats.filter((c) => inCat(c.id).length).map((c) => {
     const its = inCat(c.id), h = heroDish(its);
     return '<li><a class="cat" href="' + url.cat(c.id) + '" data-cat="' + c.id + '" data-name="' + esc(c.n) + '"><span class="pic" aria-hidden="true">' + art(h) + "</span><span><b>" + esc(c.n) + "</b><small>" +
-      (c.id === "zakuski" ? its.length + " · до 11:30" : noun(c.id, its.length)) + "</small></span></a></li>";
+      (c.id === "zakuski" ? noun(c.id, its.length) + " · до 11:30" : noun(c.id, its.length)) + "</small></span></a></li>";
   }).join("") + "</ul>";
 }
 

@@ -79,7 +79,8 @@ describe("offers and events", () => {
   const nov4 = new Date(2026, 10, 4);
   it("lunch before 15:00, -30% after, tomorrow at night; -10% with profile always 'от следващата поръчка'", () => {
     expect(offers("12:30", nov4)[0].id).toBe("lunch");
-    expect(offers("16:30", nov4)[0].id).toBe("lunch30");
+    expect(offers("16:30", nov4)[0].id).toBe("tomorrow"); /* the lunch menu in the data is for 02.11, not 04.11 */
+    expect(offers("16:30", new Date(2026, 10, 2, 12))[0].id).toBe("lunch30");
     expect(offers("23:30", nov4)[0].id).toBe("tomorrow");
     const o = offers("12:30", nov4);
     expect(o.map((x) => x.id)).toEqual(["lunch", "greek", "birthday", "signup"]);

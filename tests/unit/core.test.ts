@@ -12,7 +12,7 @@ const hasher: Hasher = {
 const NOW = new Date("2026-11-12T10:30:00Z");
 const mk = (clock = "12:30", preview = false) => {
   const events: [string, unknown][] = [];
-  const core = createCore({ repo: new MemoryRepo(), clock, hasher, now: () => NOW, preview, emit: (t, d) => events.push([t, d]) });
+  const core = createCore({ repo: new MemoryRepo(), clock, hasher, now: () => NOW, preview, smsDemo: true, emit: (t, d) => events.push([t, d]) });
   return { core, events };
 };
 const pizza = items.find((x) => x.cat === "pitsi" && !isOut(x))!;
@@ -76,7 +76,7 @@ describe("reservations, SMS login, profile, rating", () => {
     const s = await core.customers.requestCode("0888123456");
     expect(s.demoCode).toMatch(/^\d{6}$/);
     await expect(core.customers.verifyCode("0888123456", "000000x")).rejects.toMatchObject({ code: "wrong_code" });
-    const v = await core.customers.verifyCode("0888123456", s.demoCode, { name: "Мария" });
+    const v = await core.customers.verifyCode("0888123456", s.demoCode!, { name: "Мария" });
     expect(v.isNew).toBe(true);
     expect(v.customer.consent.marketing).toBe(false);
     expect(v.customer.coupons[0].note).toContain("следващата поръчка");

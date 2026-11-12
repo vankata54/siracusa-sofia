@@ -3,6 +3,7 @@
 import { defineConfig } from "astro/config";
 import crypto from "node:crypto";
 import { readEnv, staffFromEnv } from "./scripts/env.mjs";
+import { iconGroups } from "./scripts/icon-groups.mjs";
 
 const DEMO = process.env.DEMO === "1";
 const env = { ...readEnv(), ...process.env };
@@ -24,6 +25,8 @@ export default defineConfig({
   compressHTML: true,
   devToolbar: { enabled: false },
   vite: {
+    /* import "sc-icons:moon,truck,info": the page's icons in ONE module inside the page's own chunk (scripts/icon-groups.mjs) */
+    plugins: [iconGroups()],
     /* demo from any sub-folder: Vite's preload helper builds "/_astro/..." links for the dynamic imports;
        scripts/relativize.mjs rewrites it to a URL relative to the chunk (no 404 from a sub-folder). */
     define: {

@@ -10,7 +10,8 @@ import { hhmm } from "./format.ts";
 import { zoneMin } from "./zones.ts";
 import type { Cart, Mode } from "./cart.ts";
 
-export const LUNCH_PICKUP_DISCOUNT = ORDER_RULES.lunchPickupDiscount;
+import { LUNCH_PICKUP_DISCOUNT } from "./lunch.ts";
+export { LUNCH_PICKUP_DISCOUNT };
 export const FEE_MISSING = "[ЛИПСВА: такса за доставка]";
 
 export interface PricedRow { key: string; x: Dish; q: number; mods: string[]; unit: number; tot: number; out: boolean; disc: number; badMod: string | null }
@@ -21,9 +22,9 @@ export interface Priced {
   conflict: "" | "delivery" | "sched";
   etaMin: number; busy: boolean; earliest: number;
   /** which discount is applied: none, the lunch -30% (pickup after 15:00) or a code; never both (the better one wins) */
-  discKind: "" | "lunch" | "code";
+  discKind: "" | "lunch" | "code" | "profile";
   /** what each would give (for the cart: "Отстъпка с код: -X €" or why the code is not used) */
-  lunchDisc: number; codeDisc: number;
+  lunchDisc: number; codeDisc: number; profileDisc: number;
 }
 
 /** Is the -30% lunch discount active for this mode and time? */
@@ -33,12 +34,7 @@ export function lunchDiscountActive(mode: Mode, o?: ClockInput): boolean {
 
 export function round2(v: number): number { return Math.round(v * 100) / 100; }
 
-/** Price of a lunch dish now: -30% after 15:00 for pickup (st = state(); mode default pickup). */
-export function lunchPrice(x: Pick<Dish, "p" | "lunch">, st: Pick<ReturnType<typeof state>, "lunchDiscount">, mode: Mode = "pickup"): { p: number; old: number | null; disc: number } {
-  if (!x.lunch || !st.lunchDiscount || mode !== "pickup") return { p: x.p, old: null, disc: 0 };
-  const disc = Math.round(x.p * Math.round(LUNCH_PICKUP_DISCOUNT * 100)) / 100;
-  return { p: round2(x.p - disc), old: x.p, disc };
-}
+export { lunchPrice } from "./lunch.ts";
 
 /** Fee for a zone: 0 free, null unknown (paid zones until the owner gives the fee). */
 export function zoneFee(z: Zone | null): number | null {
@@ -81,7 +77,9 @@ export function parseMods(x: Dish, mods: string[]): { extra: number; adds: strin
   return { extra: round2(extra), adds, bad };
 }
 
-export interface PriceOpts { zone?: Zone | null; scheduled?: boolean; clock?: ClockInput; busy?: boolean; codePct?: number }
+export interface PriceOpts { zone?: Zone | null; scheduled?: boolean; clock?: ClockInput; busy?: boolean; codePct?: number;
+  /** the one-time -10% for a new profile (first order after sign-up, signed in, the profile's phone) */
+  profilePct?: number }
 
 export function price(cart: Cart, opts: PriceOpts = {}): Priced {
   const s = state(opts.clock), m = minutes(opts.clock), sched = !!opts.scheduled, today = !sched;
@@ -105,10 +103,13 @@ export function price(cart: Cart, opts: PriceOpts = {}): Priced {
   if (lunchOn) for (const r of rows) if (!r.out && r.x.lunch) { r.disc = Math.round(r.tot * Math.round(LUNCH_PICKUP_DISCOUNT * 100)) / 100; lunchDisc += r.disc; }
   lunchDisc = round2(lunchDisc);
   const codeDisc = opts.codePct && opts.codePct > 0 ? round2((sub * opts.codePct) / 100) : 0;
-  /* never both: the better one for the customer (equal -> the lunch discount, the code stays unused) */
-  const discKind: Priced["discKind"] = codeDisc > lunchDisc ? "code" : lunchDisc > 0 ? "lunch" : "";
-  if (discKind === "code") rows.forEach((r) => { r.disc = 0; });
-  const disc = discKind === "code" ? codeDisc : lunchDisc;
+  const profileDisc = opts.profilePct && opts.profilePct > 0 ? round2((sub * opts.profilePct) / 100) : 0;
+  /* never together: the best one for the customer. Ties: lunch (no code or bonus spent), then the code typed by the
+     customer, then the profile bonus (it stays for a later order). */
+  const best = Math.max(lunchDisc, codeDisc, profileDisc);
+  const discKind: Priced["discKind"] = best <= 0 ? "" : lunchDisc === best ? "lunch" : codeDisc === best ? "code" : "profile";
+  if (discKind === "code" || discKind === "profile") rows.forEach((r) => { r.disc = 0; });
+  const disc = discKind === "" ? 0 : best;
   const closed = today && !s.kitchen;
   const conflict = !hasLunch ? "" : closed || sched ? "sched" : mode === "delivery" && !s.lunch ? "delivery" : "";
   const zone = mode === "delivery" ? opts.zone || null : null;
@@ -118,7 +119,7 @@ export function price(cart: Cart, opts: PriceOpts = {}): Priced {
   return {
     mode, rows, n, outN, sub: round2(sub), disc: round2(disc), fee, feeUnknown: mode === "delivery" && fee === null,
     total: round2(sub - disc + (fee || 0)), hasLunch, hasTrad, deliveryOk, closed, conflict,
-    etaMin, busy: e.busy, earliest: m + (hasTrad ? ORDER_RULES.pickupLeadMin : 0), discKind, lunchDisc, codeDisc,
+    etaMin, busy: e.busy, earliest: m + (hasTrad ? ORDER_RULES.pickupLeadMin : 0), discKind, lunchDisc, codeDisc, profileDisc,
   };
 }
 

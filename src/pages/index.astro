@@ -16,7 +16,7 @@ const otherDay = new Date(lunchDay.getTime() + 864e5);
 const variants: Record<string, ReturnType<typeof offers>[number]> = {
   lunchToday: offers("11:00", lunchDay)[0],
   lunch: offers("11:00", otherDay)[0],
-  lunch30: offers("16:00")[0],
+  lunch30: offers("16:00", lunchDay)[0], /* the -30% slide exists only on a day with a lunch menu */
   tomorrow: offers("23:30")[0],
 };
 const rest = offers().slice(1);
@@ -502,7 +502,7 @@ const jsonld = restaurantLd(Astro.site);
   let slides: HTMLElement[] = [], dots: HTMLButtonElement[] = [], cur = 0, timer: ReturnType<typeof setTimeout> | undefined, started = 0, left = DUR;
   let playing = !SC.reduce, userPaused = false;
   function promoSetup(st: ReturnType<typeof SC.state>, lt: boolean) {
-    const fk = firstOfferKey(st, lt);
+    const fk = firstOfferKey(st, lt || SC.preview); /* preview and the demo count the menu as today, like the other pages */
     const first = variants.querySelector<HTMLElement>('[data-key="' + fk + '"]')!.cloneNode(true) as HTMLElement;
     first.removeAttribute("data-key");
     const rest = Array.from(slidesBox.querySelectorAll<HTMLElement>(".slide")).filter((s) => !/^(lunch|lunch30|tomorrow)$/.test(s.dataset.oid || ""));

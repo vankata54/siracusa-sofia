@@ -16,6 +16,7 @@ import { ic, loadAllIcons, statusHTML, sheetHTML, morePanel, cookieSettings, foo
 import { configureRoutes, url, fromProto } from "../lib/routes.ts";
 import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
+import { lunchIsToday } from "../lib/lunch.ts";
 import type { Cart, CartLine, Mode } from "../lib/cart.ts";
 import type { AiKind } from "../lib/assistant.ts";
 
@@ -313,6 +314,8 @@ export const SC = {
   RESTAURANT: C.RESTAURANT, ZONES: C.ZONES, TAGS: C.TAGS, ALLERGENS: C.ALLERGENS, allergenName: C.allergenName, FILTERS: C.FILTERS,
   TABLES: C.TABLES, EVENT_CATS: C.EVENT_CATS, COURSE_NAME: C.COURSE_NAME, EVENT_SLUGS,
   /* time */
+  /** the lunch menu is for today (without the menu: the date is generated at build) */
+  lunchIsToday: () => lunchIsToday(),
   now: () => now(), minutes: () => minutes(), state: () => T.state(), status: () => T.status(), eta: () => T.eta(), lastSaturday: () => T.lastSaturday(),
   events: () => events(),
   /** compat with SC.href("dish", id) from the prototype */

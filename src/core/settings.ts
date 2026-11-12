@@ -7,7 +7,9 @@ import { audit } from "./audit.ts";
 import { KITCHEN_DEFAULT, setKitchen } from "../lib/status.ts";
 
 export const RES_MINUTES_DEFAULT = 120;
-export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT };
+export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT, celebrationPrice: "offer", earlyDays: null };
+/** what any page may read (GET /api/status): no internal settings */
+export function publicSettings(s: Settings) { return { kitchen: s.kitchen, celebrationPrice: s.celebrationPrice, earlyDays: s.earlyDays }; }
 
 export async function getSettings(ctx: Ctx): Promise<Settings> {
   const s = await ctx.repo.get<Settings>(COL.settings, "main");
@@ -16,7 +18,7 @@ export async function getSettings(ctx: Ctx): Promise<Settings> {
   return out;
 }
 
-export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number };
+export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number; celebrationPrice?: Settings["celebrationPrice"]; earlyDays?: number | null };
 
 export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "system"): Promise<Settings> {
   const cur = await getSettings(ctx);
@@ -27,11 +29,15 @@ export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "sy
   if (!okMin(k.etaBusyMin) || k.etaBusyMin < k.etaMin) f.etaBusyMin = "Минутите при натоварване са поне колкото обичайните.";
   const resMinutes = patch.resMinutes == null ? cur.resMinutes : patch.resMinutes;
   if (!Number.isInteger(resMinutes) || resMinutes < 30 || resMinutes > 360 || resMinutes % 30) f.resMinutes = "Продължителността е от 30 до 360 минути, през 30.";
+  const celebrationPrice = patch.celebrationPrice == null ? cur.celebrationPrice : patch.celebrationPrice;
+  if (celebrationPrice !== "estimate" && celebrationPrice !== "offer") f.celebrationPrice = "Изберете „ориентировъчна цена“ или „само оферта“.";
+  const earlyDays = patch.earlyDays === undefined ? cur.earlyDays : patch.earlyDays;
+  if (earlyDays !== null && (!Number.isInteger(earlyDays) || earlyDays < 1 || earlyDays > 365)) f.earlyDays = "Дните са цяло число от 1 до 365 (или празно).";
   if (Object.keys(f).length) throw Object.assign(new CoreError("invalid", "Проверете полетата.", 422), { fields: f });
-  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin }, resMinutes, updatedAt: iso(ctx) };
+  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin }, resMinutes, celebrationPrice, earlyDays, updatedAt: iso(ctx) };
   await ctx.repo.put(COL.settings, next);
   setKitchen(next.kitchen);
   await audit(ctx, actor, "settings.update", "main", patch);
-  emit(ctx, "settings", { kitchen: next.kitchen }, { public: true });
+  emit(ctx, "settings", publicSettings(next), { public: true });
   return next;
 }
