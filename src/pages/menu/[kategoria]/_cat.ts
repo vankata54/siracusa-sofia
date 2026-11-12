@@ -212,9 +212,14 @@ export function laterText(c: Category, S: State | null): string | null {
   if (!S || c.id !== "zakuski" || S.breakfast) return null;
   return S.m < 600 ? "от 10:00" : "утре<br>от 10:00";
 }
-/** The menu's card; a sold-out dish also gets muted name and price (.is-out). */
-export function cardC(x: Dish, nd: boolean, later: string | null): string {
-  const h = card(x, { nd, later: isOut(x) ? null : later });
+/** Cards after the first EAGER ones get lazy illustrations (placeholder SVGs until the photo shoot, 5 - 12 KB each):
+    the browser draws them near the viewport, like /menu/. Names, prices and links stay in the HTML. */
+export const EAGER = 4;
+/** The menu's card; a sold-out dish also gets muted name and price (.is-out); without composition and with a ticked
+    allergen, the prototype's note under the price ("Няма данни за алергени. Попитайте ни."). */
+export function cardC(x: Dish, nd: boolean, later: string | null, lazy = false): string {
+  let h = card(x, { later: isOut(x) ? null : later, lazy });
+  if (nd && !x.comp) h = h.replace(/<\/div><\/div>$/, '</div><p class="nodata">' + ic("warning-circle", 16) + "<span>Няма данни за алергени. Попитайте ни.</span></p></div>");
   return isOut(x) ? h.replace('<div class="dcard"', '<div class="dcard is-out"') : h;
 }
 export function resultsHTML(c: Category, st: CatState, S: State | null): string {
@@ -225,18 +230,18 @@ export function resultsHTML(c: Category, st: CatState, S: State | null): string 
     '<div class="res-note"><span class="note-auto">' + ic("info", 18) + "<span>Алергените са предварителни, от състава. Кухнята ги потвърждава.</span></span>" +
     (any ? '<button class="link" type="button" data-clear>' + ic("x", 16) + "Изчисти филтрите</button>" : "") + "</div>";
   const later = laterText(c, S), nd = st.a.length > 0;
-  const grid = res.length ? res.map((x) => cardC(x, nd, later)).join("") :
+  const grid = res.length ? res.map((x, i) => cardC(x, nd, later, i >= EAGER)).join("") :
     '<div class="empty empty-f"><span class="ill">' + ic("funnel", 40) + '</span><h3 class="h3">Няма ' + many(c.id) + ' с тези филтри</h3><p class="muted">Махнете някой филтър или вижте цялото меню.</p>' +
     '<div class="row" style="flex-wrap:wrap;justify-content:center"><button class="pill pill-red" type="button" data-clear>Изчисти филтрите</button><a class="pill pill-line" href="' + url.menu() + '">Цялото меню</a></div></div>';
   return head + '<div class="grid-dishes">' + grid + "</div>";
 }
 
-/* ---------- other categories ---------- */
+/* ---------- other categories (below the fold: the small plates are drawn by the browser, lazily) ---------- */
 export function catsHTML(current: string | null): string {
   return '<ul class="cats">' + CATS.filter((c) => c.id !== current).map((c) => {
     const its = inCat(c.id), h = hero(its);
-    return '<li><a class="cat" href="' + url.cat(c.id) + '"><span class="pic" aria-hidden="true">' + art(h) + "</span><span><b>" + esc(c.n) + "</b><small>" +
-      (c.id === "zakuski" ? its.length + " · до 11:30" : count(c.id, its.length)) + "</small></span></a></li>";
+    return '<li><a class="cat" href="' + url.cat(c.id) + '"><span class="pic" aria-hidden="true" data-art="' + h.id + '"></span><span><b>' + esc(c.n) + "</b><small>" +
+      count(c.id, its.length) + (c.id === "zakuski" ? " · до 11:30" : "") + "</small></span></a></li>";
   }).join("") + "</ul>";
 }
 export function othersHTML(c: Category): string {
@@ -280,9 +285,11 @@ export function catLd(c: Category, site: URL | undefined): object[] {
     if (x.t.indexOf("veg") > -1) m.suitableForDiet = "https://schema.org/VegetarianDiet";
     return m;
   };
+  /* this page's own part of the menu: its own @id (the whole menu, /menu/#menu, is a different set), linked with isPartOf */
   const menu = {
-    "@context": "https://schema.org", "@type": "Menu", "@id": abs(url.menu()) + "#menu", name: "Меню на " + RESTAURANT.name, url: abs(url.menu()), inLanguage: "bg",
-    hasMenuSection: { "@type": "MenuSection", name: c.n, url: abs(url.cat(c.id)), hasMenuItem: inCat(c.id).map(item) },
+    "@context": "https://schema.org", "@type": "Menu", "@id": abs(url.cat(c.id)) + "#menu", name: c.n + " · Меню на " + RESTAURANT.name, url: abs(url.cat(c.id)), inLanguage: "bg",
+    isPartOf: { "@type": "Menu", "@id": abs(url.menu()) + "#menu", url: abs(url.menu()) },
+    hasMenuSection: { "@type": "MenuSection", "@id": abs(url.cat(c.id)) + "#section", name: c.n, url: abs(url.cat(c.id)), hasMenuItem: inCat(c.id).map(item) },
   };
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList",

@@ -29,6 +29,10 @@ test("menu: SEO, all 127 dishes in the server HTML, JSON-LD Menu", async ({ requ
   expect(pizza.offers.priceCurrency).toBe("EUR");
   expect(pizza.description).toBeTruthy();
   expect(ld.find((x) => x["@type"] === "BreadcrumbList")).toBeTruthy();
+  /* the whole menu owns /menu/#menu; sold out is the same schema.org value as on the category and the dish */
+  expect(menu["@id"]).toMatch(/\/menu\/#menu$/);
+  const out = all.find((x: { name: string }) => x.name === "Плескавица");
+  expect(out.offers.availability).toBe("https://schema.org/SoldOut");
 });
 
 test("menu: filters, allergens and search are kept in the address", async ({ page }) => {
