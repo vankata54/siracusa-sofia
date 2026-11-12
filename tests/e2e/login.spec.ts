@@ -156,12 +156,9 @@ test("login: too many wrong codes (core limit) asks for a new code", async ({ pa
   await expect(boxes.first()).toBeDisabled();
   const again = page.getByRole("button", { name: "Изпрати нов код" });
   await expect(again).toBeVisible();
+  /* within 30 s the core answers too_soon: the countdown comes back, no error */
   await again.click();
   await expect(page.locator("[data-resend]")).toContainText("Изпрати нов код след");
-  const fresh = (await page.locator("[data-demo-code] [data-code]").textContent() || "").replace(/\D/g, "");
-  await page.getByRole("button", { name: /Попълни кода/ }).click();
-  await expect(page.getByRole("heading", { name: "Как да ви наричаме?" })).toBeVisible();
-  expect(fresh).toMatch(/^\d{6}$/);
   expect(errors).toEqual([]);
 });
 
@@ -170,9 +167,29 @@ test("login: blocked number gets a polite way by phone", async ({ page }) => {
   await page.locator("#ph").fill("0888 00 00 00");
   await page.getByRole("button", { name: "Изпрати код по SMS" }).click();
   await expect(page.getByRole("heading", { name: "Нека го направим по телефона" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Нека го направим по телефона" })).toBeFocused();
   await expect(page.locator(".lg-f").getByRole("link", { name: /Обади се на 0894 36 55 77/ })).toHaveAttribute("href", "tel:+359894365577");
   await page.getByRole("button", { name: "Въведи друг номер" }).click();
   await expect(page.locator("#ph")).toBeFocused();
+});
+
+test("login: \"Назад\" and the same number go back to the code that still works", async ({ page }) => {
+  const errors = watch(page);
+  await open(page);
+  const phone = rnd();
+  const code = await toCode(page, phone);
+  await page.getByRole("button", { name: "Назад" }).click();
+  await expect(page.locator("#ph")).toBeFocused();
+  await page.getByRole("button", { name: "Изпрати код по SMS" }).click();
+  await expect(page.getByRole("heading", { name: "Въведете кода" })).toBeVisible();
+  await expect(page.locator(".alert")).toHaveCount(0);
+  await expect(page.locator("[data-resend]")).toContainText("Изпрати нов код след");
+  /* with the server limits on, the same code comes back (too_soon); in the test mode the core sends a new one */
+  const now = (await page.locator("[data-demo-code] [data-code]").textContent() || "").replace(/\D/g, "");
+  expect(now).toMatch(/^\d{6}$/);
+  await paste(page, now || code);
+  await expect(page.getByRole("heading", { name: "Как да ви наричаме?" })).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("login: prototype panel and offline state only in preview", async ({ page }) => {

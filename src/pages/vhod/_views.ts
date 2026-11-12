@@ -49,7 +49,7 @@ export function phoneHTML(phone = "", err = ""): string {
 
 export function blockedHTML(phone: string): string {
   return '<div class="view center"><span class="ring">' + ic("phone", 30) + "</span>" +
-    '<h2 class="h3">Нека го направим по телефона</h2>' +
+    '<h2 class="h3" tabindex="-1" data-focus>Нека го направим по телефона</h2>' +
     '<p class="sub">С номер <b>' + esc(prettyPhone(phone)) + "</b> не можем да направим профил онлайн. Обадете ни се и ще помогнем с удоволствие.</p>" +
     '<a class="pill pill-red pill-lg pill-block" href="tel:' + R.phoneIntl + '">' + ic("phone", 20) + "Обади се на " + R.phone + "</a>" +
     '<button class="pill pill-line pill-lg pill-block" type="button" data-again>' + ic("arrow-left", 20) + "Въведи друг номер</button>" +

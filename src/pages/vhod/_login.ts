@@ -35,6 +35,7 @@ type User = Partial<Customer> & { phone?: string; name?: string };
 const S = {
   ready: false, phone: "", isNew: true, offline: false, sim: false,
   timer: 0 as ReturnType<typeof setInterval> | 0, left: 0, finishing: false, mkt: false, name: "",
+  last: null as null | { phone: string; demo: string; known?: boolean },
   view: "phone" as "phone" | "code" | "name" | "done" | "signed" | "blocked",
 };
 
@@ -87,6 +88,7 @@ function show(html: string, focusSel?: string | null) {
   box.innerHTML = '<div class="view' + (SC.reduce ? "" : " in") + '">' + html + "</div>";
   if (focusSel) { const f = box.querySelector<HTMLElement>(focusSel); if (f) setTimeout(() => f.focus({ preventScroll: true }), 30); }
   /* after the first view, bring the card's top under the header so the new step is in sight */
+  if (S.ready && S.finishing) { window.scrollTo({ top: 0, behavior: SC.reduce ? "auto" : "smooth" }); return; }
   if (S.ready) {
     const top = box.getBoundingClientRect().top;
     if (top < 120 || top > innerHeight * 0.45) window.scrollTo({ top: Math.max(0, scrollY + top - 150), behavior: SC.reduce ? "auto" : "smooth" });
@@ -139,11 +141,13 @@ function viewPhone(err = "", focus = false, reuse = false) {
     busy(btn, "Изпращаме кода...");
     try {
       const r = await call(() => api.auth.smsRequest(d));
-      viewCode(r.demoCode, r.resendIn);
+      viewCode(r.demoCode, r.resendIn, r.known);
     } catch (x) {
       idle(btn, BTN);
       const ex = x as ApiError;
       if (ex.code === "blocked") return viewBlocked();
+      /* "Назад" and the same number again: the code sent a moment ago is still valid, so back to it */
+      if (ex.code === "too_soon" && S.last && S.last.phone === d) return viewCode(S.last.demo, ex.retryIn ?? 30, S.last.known);
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.code === "invalid") return fieldErr(ex.fields?.phone || ex.message);
       alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.");
@@ -154,7 +158,7 @@ function viewPhone(err = "", focus = false, reuse = false) {
 /* ---------- blocked number: polite, no blame ---------- */
 function viewBlocked() {
   S.view = "blocked";
-  show(blockedHTML(S.phone));
+  show(blockedHTML(S.phone), "[data-focus]");
   box.querySelector<HTMLButtonElement>("[data-again]")!.onclick = () => viewPhone("", true);
 }
 
@@ -165,10 +169,11 @@ function demoHTML(code: string) {
     '<span class="c">Вашият код: <b data-code>' + esc(spaced(code)) + "</b></span>" +
     '<button class="link" type="button" data-fill>Попълни кода' + ic("caret-right", 18) + "</button></div>";
 }
-function viewCode(demoCode?: string, resendIn = 30) {
+function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
   S.view = "code";
-  S.isNew = !known()[S.phone];
+  S.isNew = typeof isKnown === "boolean" ? !isKnown : !known()[S.phone];
   let demo = demoCode || "";
+  S.last = { phone: S.phone, demo, known: typeof isKnown === "boolean" ? isKnown : undefined };
   show(stepper(2, "Код от SMS", S.isNew ? 3 : 2) +
     '<div class="head"><h2 class="h3">Въведете кода</h2><p class="sub">Изпратихме 6 цифри на <b>' + esc(prettyPhone(S.phone)) + "</b>. Грешен номер? Натиснете „Назад“.</p></div>" +
     '<div data-demo-slot>' + (demo ? demoHTML(demo) : "") + "</div>" +
@@ -254,7 +259,7 @@ function viewCode(demoCode?: string, resendIn = 30) {
     busy(b, "Изпращаме...");
     try {
       const r = await call(() => api.auth.smsRequest(S.phone));
-      demo = r.demoCode || ""; slot.innerHTML = demo ? demoHTML(demo) : "";
+      demo = r.demoCode || ""; S.last = { phone: S.phone, demo, known: r.known }; slot.innerHTML = demo ? demoHTML(demo) : "";
       clearErr(); ins.forEach((x) => { x.disabled = false; x.value = ""; }); sync(); ins[0].focus();
       startTimer(r.resendIn ?? 30);
       SC.toast("Изпратихме нов код на " + prettyPhone(S.phone));
@@ -262,6 +267,7 @@ function viewCode(demoCode?: string, resendIn = 30) {
       const ex = x as ApiError;
       idle(b, ic("paper-plane-right", 20) + "Изпрати нов код");
       if (ex.code === "blocked") return viewBlocked();
+      if (ex.code === "too_soon") { startTimer(ex.retryIn ?? 30); return; }
       er.textContent = ex.code === "offline" ? "Няма връзка с интернет. Проверете връзката и поискайте кода пак." : ex.message || "Нещо се обърка. Опитайте пак.";
       er.hidden = false;
     }
@@ -339,7 +345,7 @@ let paintOffline: (() => void) | null = null;
 function proto() {
   const slot = main.querySelector<HTMLElement>("[data-lproto]");
   if (!slot || !SC.preview) return;
-  slot.innerHTML = '<aside class="lproto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
+  slot.innerHTML = '<aside class="lproto" aria-label="Само в прегледа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
     "<p>Тези бутони ги няма в истинския сайт. Блокиран номер: " + prettyPhone(BLOCKED) + ". Докато няма SMS доставчик, кодът се показва на екрана.</p>" +
     '<div class="btns"><button class="pill" type="button" data-offline aria-pressed="false"></button><a class="pill" href="' + SC.url.page("profile") + '">' + ic("user", 18) + "Примерен профил</a></div></aside>";
   const b = slot.querySelector<HTMLButtonElement>("[data-offline]")!;
@@ -355,7 +361,7 @@ function route(first = false) {
   S.sim = false; S.offline = h === "offline";
   paintOffline?.();
   if (h) S.phone = SAMPLE;
-  if (h === "kod") { call(() => api.auth.smsRequest(SAMPLE)).then((r) => viewCode(r.demoCode, r.resendIn)).catch(() => viewPhone()); return; }
+  if (h === "kod") { call(() => api.auth.smsRequest(SAMPLE)).then((r) => viewCode(r.demoCode, r.resendIn, r.known)).catch(() => viewPhone()); return; }
   if (h === "ime") { S.sim = true; S.isNew = true; viewName(); return; }
   if (h === "gotovo") { S.sim = true; S.isNew = true; S.name = "Мария"; finish({ name: "Мария", phone: SAMPLE, stamps: 0 }, true); return; }
   if (h === "blokiran") { S.phone = BLOCKED; viewBlocked(); return; }
