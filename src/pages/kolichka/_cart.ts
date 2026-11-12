@@ -14,6 +14,7 @@ import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
+import { ORDER_RULES } from "../../lib/consts.ts";
 
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "../../lib/icons/arrow-left.ts";
@@ -126,7 +127,7 @@ export function start(): void {
     const stale = staleLines.length ? price({ ...cart, lines: staleLines }, { scheduled: true }).rows.map((r) => ({ ...r, out: true, disc: 0 })) : [];
     const I = { ...p, stale, profilePct, closed, s, m: s.m, sched, today, delivOK: p.deliveryOk, dMin: p.etaMin, slots: [] as Slot[], ok1: false, ok2: false } as Info;
     I.slots = slotList(I);
-    I.ok1 = I.n > 0 && !I.conflict && !I.closed;
+    I.ok1 = I.n > 0 && !I.conflict && !I.closed && !tooBig(I);
     I.ok2 = I.ok1 && (I.mode === "delivery" ? (D.zk === "free" || D.zk === "paid") && !!D.addr && (today || validSlot(I)) : validSlot(I));
     return I;
   }
@@ -135,6 +136,8 @@ export function start(): void {
      In preview and in the demo the core counts the menu as today's, so the page does the same. */
   function lunchStale() { return !SC.preview && !api.demo && sofiaYmd() !== LUNCH_DATE; }
   const lunchDay = () => SC.dateLong(ymdDate(LUNCH_DATE));
+  /* over the limits of a web order (the core says too_big): known before the 3 steps */
+  const tooBig = (I: Priced) => I.n > ORDER_RULES.maxPortions || I.sub > ORDER_RULES.maxTotal;
   /* the profile bonus: only with the profile's phone (the core checks the same and gives it once per phone) */
   function profileOn() {
     if (!P.me || !P.me.bonus) return false;
@@ -154,6 +157,7 @@ export function start(): void {
   }
 
   function etaText(I: Info): { big: string; small: string } {
+    if (!I.n) return { big: "", small: "" };
     if (I.conflict === "delivery") return { big: "Само за вземане от място", small: "Обедното меню след 15:00 не се доставя" };
     if (I.closed) return { big: I.m < 600 ? "Днес, от 10:30" : "Утре, от 10:30", small: "Изберете час в следващата стъпка" };
     if (I.sched) {
@@ -187,6 +191,9 @@ export function start(): void {
     if (I.conflict === "delivery") h += note("warn", "warning-circle", "Обедното меню след 15:00 е само за вземане от място (-30%)", "Вземете я от ресторанта и отстъпката се смята сама. Или махнете обедните ястия и я доставяме.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
     if (I.conflict === "sched") h += note("warn", "warning-circle", "Обедното меню не се поръчва предварително", "Поръчва се в деня, от 10:00 до 15:00. Махнете обедните ястия, за да поръчате за " + (I.m < 600 ? "по-късно" : "утре") + ". Другото остава в количката.");
+    if (step === 1 && tooBig(I)) h += note("bad", "warning-circle", "Голяма поръчка: обадете ни се",
+      "През сайта се поръчват до " + ORDER_RULES.maxPortions + " порции и до " + fmt(ORDER_RULES.maxTotal) + " за ястията. За по-голяма поръчка се обадете на " + R.phone + ": ще я приготвим навреме.",
+      '<a class="pill pill-ink" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>");
     if (step === 1 && I.stale.length) h += note("warn", "warning-circle", "Обедното меню за днес още не е качено",
       "Обедните ястия в количката са от менюто за " + lunchDay() + " и не се броят в поръчката. Махнете ги, а другото остава.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
@@ -235,7 +242,7 @@ export function start(): void {
   function ffHTML(I: Info, step: number) {
     const s = I.s, e = SC.eta();
     const dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около " + I.dMin + " мин") : "по избран час";
-    const pSmall = I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
+    const pSmall = !I.n ? "от ресторанта" : I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
     let h = '<div class="seg ff" role="group" aria-label="Как да получите поръчката">' +
       '<button type="button" data-act="mode" data-v="delivery" aria-pressed="' + (I.mode === "delivery") + '"' + (I.delivOK ? "" : " disabled") + ">" + ic("moped", 26) + "<b>Доставка</b><small>" + dSmall + "</small></button>" +
       '<button type="button" data-act="mode" data-v="pickup" aria-pressed="' + (I.mode === "pickup") + '">' + ic("storefront", 26) + "<b>Вземи от място</b><small>" + pSmall + "</small></button></div>";
@@ -259,6 +266,7 @@ export function start(): void {
     if (step === 3 && P.sending) return '<button class="pill pill-red pill-lg' + (block ? " pill-block" : "") + '" type="button" aria-busy="true" aria-disabled="true">' + esc(lbl) + '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
     if (step === 1 && I.conflict === "delivery") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Смени на вземане · " + fmt(pickupTotal(I)) + "</button>";
     if (step === 2 && I.mode === "delivery" && D.zk === "out") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
+    if (step === 1 && tooBig(I)) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>";
     if (step === 1 && !I.n && I.stale.length) return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     if (step === 1 && I.conflict === "sched") return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     return '<button class="' + cls + '" type="button" data-act="next" data-n="' + step + '">' + esc(lbl) + "</button>";
@@ -278,7 +286,7 @@ export function start(): void {
       (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", върху ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + del[0] + del[1] + "</span><span>" + del[2] + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span><span class="price" data-total>' + fmt(I.total) + "</span>" + (I.feeUnknown ? "<small>+ таксата за доставка</small>" : "") + "</span></div>" +
-      '<div class="eta-row">' + ic(I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" +
+      (e.big ? '<div class="eta-row">' + ic(I.conflict === "delivery" ? "storefront" : I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" : "") +
       '<p class="fine">Плащате при получаване: в брой, с карта или ваучер. Опаковка и минимална поръчка: <span class="missing">[ЛИПСВА: от собственика]</span></p>' +
       '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link" type="button" data-act="go" data-n="' + (step - 1) + '">' + ic("arrow-left", 18) + "Назад: " + STEPS[step - 2][1] + "</button>" : "") + "</div>" +
       "</div></section>";
@@ -334,7 +342,7 @@ export function start(): void {
     if (!D.addr || !D.zk) return "";
     const z = zoneByName(D.zone);
     if (D.zk === "out" || !z) return note("bad", "warning-circle", "Извън зоната ни", "Не доставяме до този адрес. Можете да я вземете от ресторанта.", '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + 'Вземи от място</button><a class="pill pill-line" href="' + SC.url.page("delivery") + '">' + ic("map-trifold", 20) + "Виж зоните</a>");
-    const mins = zoneMin(z) + (I.busy ? 20 : 0), when = I.today ? " · около " + mins + " мин" : "";
+    const mins = zoneMin(z) + (I.busy ? 20 : 0), when = I.today ? "\u00a0· около\u00a0" + mins + "\u00a0мин" : "";
     if (D.zk === "free") return note("ok", "check-circle", "Безплатна доставка" + when, esc(D.zone) + " е в нашата зона." + (I.busy && I.today ? " Кухнята е натоварена, затова времето е по-дълго." : ""));
     return note("info", "moped", 'Доставка <span class="missing">[ЛИПСВА: такса]</span>' + when, esc(D.zone) + " е в зоната по тарифа. Таксата ще се вижда тук, преди да поръчате.");
   }
@@ -417,7 +425,7 @@ export function start(): void {
       '<div style="margin-top:22px" id="topnotes">' + topNotes(I, 3) +
       (P.err === "offline" ? note("bad", "warning-circle", "Няма връзка. Поръчката ви е запазена - опитайте пак.", "Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: " + R.phone + ".", '<a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>") : "") +
       (P.err === "server" ? note("bad", "warning-circle", "Поръчката не е изпратена", esc(P.errMsg) + " Или ни се обадете: " + R.phone + ".", '<a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>") : "") +
-      (P.err === "form" ? note("bad", "warning-circle", "Попълнете отбелязаните полета", "Името и телефонът са задължителни.") : "") + "</div>" +
+      (P.err === "form" ? '<div id="form-note">' + note("bad", "warning-circle", "Попълнете отбелязаните полета", "Името и телефонът са задължителни.") + "</div>" : "") + "</div>" +
       '<section class="blk"><div class="card recap"><div class="kv">' + where + '<button class="link" type="button" data-act="go" data-n="2">Промени</button></div>' +
       '<div class="kv"><span><small>Поръчка</small><b>' + dishWord(I.n) + " · " + fmt(I.total) + (I.feeUnknown ? " + доставка" : "") + '</b></span><button class="link" type="button" data-act="go" data-n="1">Промени</button></div></div></section>' +
       '<section class="blk" aria-labelledby="dh"><div class="blk-h"><h2 class="h3" id="dh">За връзка</h2></div><div class="form">' +
@@ -521,23 +529,23 @@ export function start(): void {
       const q = inp.value;
       if (q.trim().length < 2 || D.zk) { list.hidden = true; inp.setAttribute("aria-expanded", "false"); return; }
       const r = addrOptions(q); aOpts = r.opts;
-      list.innerHTML = aOpts.length ? aOpts.map((a, k) => '<li role="option" id="ao-' + k + '" data-i="' + k + '" aria-selected="' + (k === aIdx) + '">' + ic("map-pin", 20) + "<span>" + esc(a.a) + (a.hint && a.hint !== a.a ? " · " + esc(a.hint) : "") + "<small>" + (a.z && !hasStreet(a.a) ? "Добавете улица или блок" : zoneSmall(a.z)) + "</small></span></li>").join("")
+      list.innerHTML = aOpts.length ? aOpts.map((a, k) => '<li role="option" id="ao-' + k + '" data-i="' + k + '" aria-selected="' + (k === aIdx) + '">' + ic("map-pin", 20) + "<span>" + esc(a.a) + (a.hint && a.a.toLowerCase().indexOf(a.hint.toLowerCase()) < 0 ? " · " + esc(a.hint) : "") + "<small>" + (a.z && !hasStreet(a.a) ? "Добавете улица или блок" : zoneSmall(a.z)) + "</small></span></li>").join("")
         : '<li class="none" role="option" aria-disabled="true">' + r.none + "</li>";
       list.hidden = false; inp.setAttribute("aria-expanded", "true");
       if (aIdx > -1 && aOpts.length) inp.setAttribute("aria-activedescendant", "ao-" + aIdx); else inp.removeAttribute("aria-activedescendant");
     };
-    inp.addEventListener("input", () => { D.addr = inp.value; D.zone = ""; D.zk = ""; aIdx = -1; save(); const res = main.querySelector("#addr-res"); if (res) res.innerHTML = P.needStreet ? streetNote() : ""; paint(); refreshSide(); });
+    inp.addEventListener("input", () => { D.addr = inp.value; D.zone = ""; D.zk = ""; aIdx = -1; if (P.needStreet && hasStreet(inp.value)) P.needStreet = ""; save(); const res = main.querySelector("#addr-res"); if (res) res.innerHTML = P.needStreet ? streetNote() : ""; paint(); refreshSide(); });
     inp.addEventListener("keydown", (e) => {
       const n = list.querySelectorAll("li[data-i]").length;
       if (e.key === "ArrowDown" && n) { e.preventDefault(); aIdx = (aIdx + 1) % n; paint(); }
       else if (e.key === "ArrowUp" && n) { e.preventDefault(); aIdx = aIdx <= 0 ? n - 1 : aIdx - 1; paint(); }
-      else if (e.key === "Enter") { e.preventDefault(); const pick = aIdx > -1 ? aOpts[aIdx] : n === 1 ? aOpts[0] : null; if (pick) pickAddr(pick); }
+      else if (e.key === "Enter") { e.preventDefault(); const pick = aIdx > -1 ? aOpts[aIdx] : n === 1 ? aOpts[0] : null; if (pick) pickAddr(pick); else autoResolve(); }
       else if (e.key === "Escape") { list.hidden = true; inp.setAttribute("aria-expanded", "false"); }
     });
     list.addEventListener("mousedown", (e) => { const li = (e.target as Element).closest<HTMLElement>("li[data-i]"); if (li) { e.preventDefault(); pickAddr(aOpts[+li.dataset.i!]); } });
     if (D.addr && !D.zk && !P.needStreet) paint(); /* right after "НПЗ Искър" was picked the list waits for the street */
   }
-  function pickAddr(o: AddrOpt | undefined) {
+  function pickAddr(o: AddrOpt | undefined, then?: () => void) {
     if (!o) return;
     /* the quarter alone ("НПЗ Искър", "кв. Бусманци"): the core refuses it, so ask for the street or block right here */
     if (o.z && !hasStreet(o.a)) {
@@ -552,13 +560,13 @@ export function start(): void {
     D.addr = o.a; D.zone = o.z; const z = o.z ? zoneByName(o.z) : null; D.zk = z ? (z.free ? "free" : "paid") : "out"; aIdx = -1; save();
     (document.activeElement as HTMLElement | null)?.blur();
     P.checking = true; render({ keepScroll: true });
-    setTimeout(() => { P.checking = false; render({ keepScroll: true }); const r = main.querySelector("#addr-res"); r && r.scrollIntoView({ block: "nearest", behavior: smooth() }); }, SC.reduce ? 0 : 450);
+    setTimeout(() => { P.checking = false; render({ keepScroll: true }); const r = main.querySelector("#addr-res"); r && r.scrollIntoView({ block: "nearest", behavior: smooth() }); if (then) then(); }, SC.reduce ? 0 : 450);
   }
   /* "Към данните" with a typed address that was never picked: resolve it when the parser is sure */
-  function autoResolve(): boolean {
+  function autoResolve(then?: () => void): boolean {
     if (!D.addr || D.zk) return false;
     const r = zoneOfAddress(D.addr);
-    if (r.type === "zone") { pickAddr({ a: D.addr.trim(), z: r.zone.n }); return true; }
+    if (r.type === "zone") { pickAddr({ a: D.addr.trim(), z: r.zone.n }, then); return true; }
     if (r.type === "out") { pickAddr({ a: D.addr.trim(), z: "" }); return true; }
     return false;
   }
@@ -577,6 +585,11 @@ export function start(): void {
     if (!inp || !p) return;
     if (e) { inp.setAttribute("aria-invalid", "true"); p.hidden = false; p.innerHTML = ic("warning-circle", 18) + esc(e); }
     else { inp.removeAttribute("aria-invalid"); p.hidden = true; p.innerHTML = ""; }
+  }
+  /* the top "Попълнете отбелязаните полета" goes with the same check that clears the messages under the fields */
+  function formNoteGone() {
+    if (P.err !== "form" || ["name", "phone", "email"].some((k) => P.errs[k])) return;
+    P.err = ""; main.querySelector("#form-note")?.remove();
   }
   const scrollToEl = (el: Element | null) => el && el.scrollIntoView({ block: "center", behavior: smooth() });
 
@@ -680,6 +693,10 @@ export function start(): void {
       case "bad_sched": P.err = ""; setSched(""); P.flash = { step: 1, kind: "info", title: "Кухнята вече работи", text: "Поръчката може да е за сега. Изберете отново как да я получите." }; go(1); return true;
       case "lunch_stale": case "lunch_delivery": case "lunch_sched":
         P.err = ""; P.flash = { step: 1, kind: "warn", title: esc(e.message), acts: '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>" }; go(1); return true;
+      case "too_big":
+        P.err = ""; go(1); return true; /* step 1 shows the limit with the phone (the cart itself is over it) */
+      case "throttled":
+        P.err = "server"; P.errMsg = e.message; return false;
       case "sold_out": case "unknown_item": case "bad_qty": case "bad_mod": case "too_many": case "empty":
         P.err = ""; P.flash = { step: 1, kind: "warn", title: "Проверете количката", text: esc(e.message) }; SC.toast(e.message); go(1); return true;
     }
@@ -724,7 +741,8 @@ export function start(): void {
         go(2); return;
       }
       if (n === 2) {
-        if (!I.ok2 && autoResolve()) return;
+        /* a typed address the parser is sure of: check it and go on in the same press (one press, not two) */
+        if (!I.ok2 && autoResolve(() => { if (info().ok2) go(3); })) return;
         if (!I.ok2) {
           SC.toast(I.mode === "delivery" ? (D.zk === "out" ? "Този адрес е извън зоната ни" : P.needStreet ? "Добавете улица или блок" : "Изберете адрес от списъка") : "Изберете час за вземане");
           const t = main.querySelector<HTMLElement>(I.mode === "delivery" ? (D.zk && D.zk !== "out" ? ".slots" : "#addr") : ".opts input, .slots .slot:not([disabled])");
@@ -773,7 +791,7 @@ export function start(): void {
     if (t.id === "f-code") { P.codeTxt = t.value; if (P.errs.code) { P.errs.code = undefined; showErr("code"); } return; }
     if (!f || f === "consent" || f === "pay") return;
     (D as unknown as Record<string, string>)[f] = t.value; save();
-    if (P.errs[f]) { const v = validate(); P.errs[f] = v[f]; showErr(f); }
+    if (P.errs[f]) { const v = validate(); P.errs[f] = v[f]; showErr(f); formNoteGone(); }
     if (f === "phone" && P.me && P.me.bonus) { refreshSide(); const b = main.querySelector("#bonus-slot"); if (b) b.innerHTML = bonusNote(); }
   });
   main.addEventListener("keydown", (e) => {
@@ -783,7 +801,7 @@ export function start(): void {
     const t = e.target as HTMLInputElement, f = t.dataset && t.dataset.f;
     if (!f || !/^(name|phone|email)$/.test(f)) return;
     if (!String(t.value).trim() && f !== "email") return; /* do not scold an empty field the person only passed through */
-    const v = validate(); P.errs[f] = v[f]; showErr(f);
+    const v = validate(); P.errs[f] = v[f]; showErr(f); formNoteGone();
   });
 
   SC.cart.on(() => render());

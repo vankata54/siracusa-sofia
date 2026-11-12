@@ -98,10 +98,12 @@ const skeleton =
 .ln-tot{margin-left:auto; display:grid; justify-items:end; line-height:1.15}
 .ln-tot .price{font-size:18px}
 .ln-tot .old{font-size:14px}
-.ln.out .ln-pic, .ln.out .ln-name{opacity:.55}
+/* contrast: only the picture is faded; the name stays a readable link (--muted 4,5:1+), the message text in --ink */
+.ln.out .ln-pic{opacity:.55}
+.ln.out .ln-name{color:var(--muted)}
 .ln-outmsg{grid-column:1 / -1; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:10px; padding:14px; border-radius:18px; background:var(--surface-2); font-size:15px}
 .ln-outmsg > .ic{color:var(--warn); margin-top:2px}
-.ln-outmsg b{color:var(--warn)}
+.ln-outmsg b{color:var(--ink)}
 .ln-outmsg .pill{grid-column:1 / -1; min-height:48px; white-space:normal; text-align:center; line-height:1.25; padding:8px 18px}
 @container app (min-width:700px){ .ln-outmsg .pill{grid-column:2; justify-self:start} }
 @container app (min-width:700px){

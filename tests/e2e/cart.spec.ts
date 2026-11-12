@@ -123,6 +123,38 @@ test("cart: an address with the quarter only asks for the street or block", asyn
   await expect(page.locator("#addr")).toHaveValue("НПЗ Искър, бл. 5");
 });
 
+test("cart: over 60 portions -> the limit with the phone already on step 1", async ({ page }) => {
+  await open(page, "12:30", { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 40, mods: [], extra: 0 }, { key: "svinski-rebra", id: "svinski-rebra", q: 25, mods: [], extra: 0 }] });
+  await expect(page.locator(".note.bad").first()).toContainText("Голяма поръчка");
+  await expect(cta(page)).toHaveAttribute("href", /^tel:/);
+  await expect(cta(page)).toContainText("Обади се");
+});
+
+test("cart: a typed address goes on with one press, the old street note goes away", async ({ page }) => {
+  await open(page, "12:30", { ...CART, lines: [CART.lines[0]] });
+  await cta(page).click();
+  await page.locator("#addr").fill("Дружба 2");
+  await page.locator("#addr-list li[data-i]").first().click();
+  await expect(page.locator("#addr-res")).toContainText("Добавете улица или блок");
+  await page.locator("#addr").pressSequentially("бл. 311");
+  await expect(page.locator("#addr-res")).not.toContainText("Добавете улица или блок");
+  await page.locator("#addr").press("Escape");
+  await cta(page).click();
+  await expect(page.locator("h1")).toHaveText("Вашите данни");
+});
+
+test("cart: the top form note goes when the fields are fixed", async ({ page }) => {
+  await open(page, "12:30", { ...CART, mode: "pickup", lines: [CART.lines[0]] });
+  await cta(page).click();
+  await cta(page).click();
+  await cta(page).click();
+  await expect(page.locator("#form-note")).toBeVisible();
+  await page.fill("#f-name", "Мария");
+  await page.fill("#f-phone", "0888123456");
+  await page.locator("#f-email").focus();
+  await expect(page.locator("#form-note")).toHaveCount(0);
+});
+
 test("cart: 21:30 delivery is off, pickup slots until 22:30", async ({ page }) => {
   await open(page, "21:30", { ...CART, lines: [CART.lines[0]] });
   await expect(page.locator('.seg.ff [data-v="delivery"]')).toBeDisabled();
