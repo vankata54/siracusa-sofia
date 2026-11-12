@@ -24,7 +24,7 @@ test("pickup: SEO, server HTML, JSON-LD", async ({ request }) => {
   expect(html).toContain("[ЛИПСВА: паркиране]");
   expect(html).toContain("Часове за вземане");
   expect(html).toContain("Често задавани въпроси");
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
   const crumbs = ld.find((x) => x["@type"] === "BreadcrumbList");

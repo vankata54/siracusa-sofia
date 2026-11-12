@@ -8,7 +8,7 @@
      (only shown as an example in the preview panel);
    - capacity, cakes, decoration and the call-back time are [ЛИПСВА]. */
 import { ic } from "../../lib/icons.ts";
-import { esc, fmt, plural, MONTHS, DAYS_SHORT } from "../../lib/format.ts";
+import { esc, fmt, plural, MONTHS, DAYS_SHORT, prettyPhone } from "../../lib/format.ts";
 import { byId, inCat, catById, RESTAURANT as R, type Dish } from "../../lib/data.ts";
 import { art, badges } from "../../lib/render.ts";
 import { url } from "../../lib/routes.ts";
@@ -315,7 +315,7 @@ export function successHTML(v: View): string {
   const conf = C.map((c) => '<i class="' + c[0] + '" style="--x:' + c[1] + "px;--y:" + c[2] + "px;--r:" + c[3] + 'deg"></i>').join("");
   return '<div class="shell done"><div class="core"><div class="burst" aria-hidden="true">' + conf + '<span class="ok">' + ic("check", 48) + "</span></div>" +
     '<h2 class="h2" tabindex="-1" data-focus>Запитването е изпратено</h2>' +
-    '<p class="lead">Управителят ще ви се обади <span class="missing">до 24 часа</span> на ' + esc(S.phone) + '.</p><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: срок за обаждане]</span></p>' +
+    '<p class="lead">Управителят ще ви се обади <span class="missing">до 24 часа</span> на ' + esc(prettyPhone(S.phone)) + '.</p><p class="help" style="margin:0"><span class="missing">[ЛИПСВА: срок за обаждане]</span></p>' +
     (!v.open ? '<p class="night">Сега сме затворени, затова ще ви потърсим ' + (v.beforeOpen ? "днес" : "утре") + " след " + R.open + ".</p>" : "") +
     summaryHTML(v, true) +
     '<div class="btns"><a class="pill pill-line pill-lg" href="' + url.page("events") + '">' + ic("calendar-blank", 20) + 'Към събитията и поводите</a><button class="link" type="button" data-again style="justify-self:center">Ново запитване</button></div></div></div>';

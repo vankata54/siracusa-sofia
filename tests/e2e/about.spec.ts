@@ -21,7 +21,7 @@ test("about: SEO, numbers from the data, [ЛИПСВА], JSON-LD", async ({ requ
   expect(html).toContain("За нас: ресторант с градина в Дружба 2 | Siracusa Bar &amp; Grill");
   expect(html).toMatch(/<link rel="canonical" href="[^"]*\/za-nas\/">/);
   expect(html).not.toMatch(/[—–]/);
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   /* numbers: 124 dishes in 14 categories (breakfast is a separate menu), 15 pizzas, 11 from Bertha, 4 free zones */
   const nums = [...html.matchAll(/class="ab-n[^"]*"[^>]*>.*?<b>(\d+)<\/b>/g)].map((m) => +m[1]);
   expect(nums).toEqual([124, 14, 15, 11, 7, 4]);

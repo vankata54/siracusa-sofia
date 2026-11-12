@@ -25,7 +25,7 @@ test("gallery: SEO, tiles from the data, [ЛИПСВА], JSON-LD, light HTML", a
   expect(html).toMatch(/<link rel="canonical" href="[^"]*\/galeria\/">/);
   expect(html).toMatch(/<meta name="description" content="Галерия на Siracusa/);
   expect(html).not.toMatch(/[—–]/);
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/href="[^"]*\.html/);
   /* 12 dishes + 12 photo slots; the counts on the chips come from the same list */
   expect(html.match(/class="gi"/g)?.length).toBe(24);

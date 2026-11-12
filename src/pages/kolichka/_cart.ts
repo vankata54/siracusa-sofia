@@ -257,7 +257,7 @@ export function start(): void {
   /* the prototype panel: only in preview (?preview=1, the admin frames, the demo) */
   function protoHTML(view: string) {
     if (!SC.preview) return "";
-    let h = '<aside class="proto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прототипа</h2><p>Тези бутони ги няма в истинския сайт.</p><div class=\"row\">";
+    let h = '<aside class="proto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2><p>Тези бутони ги няма в истинския сайт.</p><div class=\"row\">";
     h += '<button class="pill" type="button" data-act="demo">' + ic("shopping-bag", 18) + "Напълни примерна количка</button>";
     if (view !== "empty") h += '<button class="pill" type="button" data-act="clear">' + ic("trash", 18) + "Изпразни количката</button>" +
       '<button class="pill" type="button" data-act="addout">' + ic("clock", 18) + "Добави изчерпано ястие</button>" +

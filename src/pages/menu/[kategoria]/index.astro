@@ -378,13 +378,13 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
     }).catch(() => { /* the menu in the HTML stays; nothing to tell */ });
   }
 
-  /* ---------- preview only: the simulated states ("Само в прототипа"), never on the real site ---------- */
+  /* ---------- preview only: the simulated states ("Само в прегледа"), never on the real site ---------- */
   if (SC.preview) {
     const q = location.search;
     const links: [string, string][] = [["Изчерпано ястие", SC.url.cat("skara-bertha")], ["Без данни за алергени", SC.url.cat("supi", "a=gluten")], ["Закуски", SC.url.cat("zakuski")],
       ["Търсене „моцарела“", SC.url.cat("pitsi", "q=" + encodeURIComponent("моцарела"))], ["Няма такава категория", SC.url.menu().replace(/(index\.html)?$/, "") + "napitki/"]];
     elBody.querySelector('[aria-labelledby="faq-h"]')!.insertAdjacentHTML("beforeend",
-      '<aside class="proto" aria-label="Само в прототипа"><h2>Само в прототипа: състояния</h2><p class="muted">Не влиза в сайта. Показва как изглежда страницата в различни случаи.</p><div class="chips">' +
+      '<aside class="proto" aria-label="Само в прегледа"><h2>Само в прегледа: състояния</h2><p class="muted">Не влиза в сайта. Показва как изглежда страницата в различни случаи.</p><div class="chips">' +
       ([["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]] as const).map(([k, n]) => '<button class="chip" type="button" data-view="' + k + '" aria-pressed="false">' + n + "</button>").join("") +
       links.map(([n, h]) => { const [p, hs] = h.split("#"); return '<a class="chip" href="' + p + q + (hs ? "#" + hs : "") + '">' + n + "</a>"; }).join("") + "</div></aside>");
   }

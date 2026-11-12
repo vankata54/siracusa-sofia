@@ -27,7 +27,7 @@ test("bertha: SEO, dishes in the server HTML, JSON-LD, no invented facts", async
   expect(grid.indexOf("Свински ребра")).toBeLessThan(grid.indexOf("Кебапчета")); /* hit first */
   expect(grid.lastIndexOf("Изчерпано днес")).toBeGreaterThan(grid.indexOf("Рибай")); /* sold out last */
   expect(html).toContain("[ЛИПСВА: модел на фурната]");
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
   const crumbs = ld.find((x) => x["@type"] === "BreadcrumbList");

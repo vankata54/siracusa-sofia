@@ -339,7 +339,7 @@ let paintOffline: (() => void) | null = null;
 function proto() {
   const slot = main.querySelector<HTMLElement>("[data-lproto]");
   if (!slot || !SC.preview) return;
-  slot.innerHTML = '<aside class="lproto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прототипа</h2>" +
+  slot.innerHTML = '<aside class="lproto" aria-label="Само за прототипа"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
     "<p>Тези бутони ги няма в истинския сайт. Блокиран номер: " + prettyPhone(BLOCKED) + ". Докато няма SMS доставчик, кодът се показва на екрана.</p>" +
     '<div class="btns"><button class="pill" type="button" data-offline aria-pressed="false"></button><a class="pill" href="' + SC.url.page("profile") + '">' + ic("user", 18) + "Примерен профил</a></div></aside>";
   const b = slot.querySelector<HTMLButtonElement>("[data-offline]")!;

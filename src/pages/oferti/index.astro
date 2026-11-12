@@ -6,7 +6,7 @@
    (BreadcrumbList, OfferCatalog > Offer from decided rules only, FAQPage). The browser redraws the hero and the coupons
    by the hour (SC.state(): active in ember, the rest grey with when they apply), by the lunch date (-30% only with today's
    lunch menu) and by the signed-in customer (birthday consent), and sends the two forms through `api` (server or demo).
-   The "Само в прототипа" panel only in preview (?preview=1). */
+   The "Само в прегледа" panel only in preview (?preview=1). */
 import Base from "../../layouts/Base.astro";
 import { heroHTML, gridHTML, sumHTML } from "./_offers.ts";
 import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } from "./_static.ts";
@@ -464,7 +464,7 @@ import { DATA, DESCRIPTION, JUMP, loyaltyHTML, voucherHTML, faqHTML, offersLd } 
 
   /* ---------- preview only: the states panel (bottom of the page) ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec"><div class="proto" role="group" aria-labelledby="h-proto"><h2 id="h-proto">' + ic("sliders-horizontal", 18) + "Само в прототипа</h2>" +
+    $("[data-proto]").outerHTML = '<section class="sec"><div class="proto" role="group" aria-labelledby="h-proto"><h2 id="h-proto">' + ic("sliders-horizontal", 18) + "Само в прегледа</h2>" +
       "<p>Покажете състоянията на страницата. Часът се сменя с ?t=21:30 в адреса.</p>" +
       '<div class="btns"><button class="pill pill-soft" type="button" data-proto="loading">Зареждане</button>' +
       '<button class="pill pill-soft" type="button" data-proto="error">Грешка при зареждане</button>' +

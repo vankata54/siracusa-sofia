@@ -322,7 +322,7 @@ export function startTracking(main: HTMLElement) {
   function protoHTML() {
     if (!SC.preview) return "";
     const has = S.view === "order" && S.o, D = has && isD();
-    return '<section class="proto" aria-label="Само в прототипа"><p class="ptag">' + ic("sliders-horizontal", 18) + "Само в прототипа</p>" +
+    return '<section class="proto" aria-label="Само в прегледа"><p class="ptag">' + ic("sliders-horizontal", 18) + "Само в прегледа</p>" +
       '<div class="pbtns">' +
       (has ? '<button class="pill pill-soft" type="button" data-sim="next"' + (finished() ? " disabled" : "") + ">" + ic("arrow-right", 18) + "Следващ етап</button>" +
         '<button class="pill pill-ink" type="button" data-sim="done">' + ic("check", 18) + "Симулирай: " + (D ? "доставена" : "взета") + "</button>" +

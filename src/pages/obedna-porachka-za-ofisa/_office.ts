@@ -576,7 +576,7 @@ export function start(): void {
     const code = L.code || "000000";
     const views = [["", "1. Създаване", "start"], ["share", "2. Връзка", "share"], ["list", "3. Общ списък", "list"], ["join-" + code, "Поканен колега", "join"], ["sent", "Изпратена", "sent"]];
     const states: [keyof typeof sim, string][] = [["closed", "Крайният час мина"], ["offline", "Без интернет"], ["loading", "Зареждане"]];
-    return '<section class="sec" aria-labelledby="o-proto-h"><div class="o-proto"><h2 id="o-proto-h">' + ic("sliders-horizontal", 20) + "Само в прототипа</h2><p>Изгледи на групата и състояния. Часът се сменя с ?t=12:30 в адреса.</p>" +
+    return '<section class="sec" aria-labelledby="o-proto-h"><div class="o-proto"><h2 id="o-proto-h">' + ic("sliders-horizontal", 20) + "Само в прегледа</h2><p>Изгледи на групата и състояния. Часът се сменя с ?t=12:30 в адреса.</p>" +
       '<h3>Изгледи</h3><div class="o-quick">' + views.map((x) => '<a class="chip" href="#' + x[0] + '"' + (v === x[2] ? ' aria-current="true"' : "") + ">" + x[1] + "</a>").join("") + "</div>" +
       "<h3>Колеги</h3><div class=\"o-quick\"><button class=\"chip\" type=\"button\" data-act=\"team\"" + (L.code ? "" : " disabled") + ">" + ic("users", 18) + "Добави 3 примерни колеги</button></div>" +
       '<h3>Състояния</h3><div class="o-quick">' + states.map((x) => '<button class="chip" type="button" data-sim="' + x[0] + '" aria-pressed="' + sim[x[0]] + '">' + x[1] + "</button>").join("") +

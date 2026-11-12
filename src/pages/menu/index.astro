@@ -514,9 +514,9 @@ const jsonld = menuLd(Astro.site);
     }).catch(() => { /* the menu in the HTML stays; nothing to tell */ });
   }
 
-  /* ---------- preview only: the simulated states ("Само в прототипа"), never on the real site ---------- */
+  /* ---------- preview only: the simulated states ("Само в прегледа"), never on the real site ---------- */
   if (SC.preview) {
-    root.insertAdjacentHTML("beforeend", '<section class="sec" style="padding-top:64px"><div class="proto"><p class="lbl">' + SC.ic("eye", 18) + "Само в прототипа</p><p>Покажете как изглежда менюто в другите състояния.</p>" +
+    root.insertAdjacentHTML("beforeend", '<section class="sec" style="padding-top:64px"><div class="proto"><p class="lbl">' + SC.ic("eye", 18) + "Само в прегледа</p><p>Покажете как изглежда менюто в другите състояния.</p>" +
       '<div class="chips" role="group" aria-label="Състояние за прототипа">' + ([["ok", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]] as const)
         .map(([k, n]) => '<button class="chip" type="button" data-view="' + k + '" aria-pressed="' + (k === view) + '">' + n + "</button>").join("") + "</div></div></section>");
   }

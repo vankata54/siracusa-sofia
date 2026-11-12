@@ -33,7 +33,7 @@ test("lunch: SEO, every dish in the server HTML, JSON-LD", async ({ request }) =
   expect(html).toContain("2\u00a0ное"); /* week: short dates as on the site */
   expect(html).toMatch(/data-id="l-supa-topcheta" data-p="2.4"/);
   expect(html).not.toMatch(/днес/i); /* the build does not know today's date */
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
   expect(html).toContain("[ЛИПСВА: меню за вторник]");
   const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));

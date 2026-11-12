@@ -369,7 +369,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   /* ---------- preview only: the states panel (bottom of the page) ---------- */
   const SIMS: [Sim, string][] = [["normal", "Нормално"], ["loading", "Зареждане"], ["busy", "Пълна кухня"], ["offline", "Няма връзка"], ["error", "Грешка"]];
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-labelledby="pk-proto"><div class="pk-proto"><div><h2 id="pk-proto">' + SC.ic("sliders-horizontal", 20) + "Само в прототипа</h2><p>Покажи състоянията на часовете. Часът се сменя с ?t=21:30 в адреса.</p></div>" +
+    $("[data-proto]").outerHTML = '<section class="sec" aria-labelledby="pk-proto"><div class="pk-proto"><div><h2 id="pk-proto">' + SC.ic("sliders-horizontal", 20) + "Само в прегледа</h2><p>Покажи състоянията на часовете. Часът се сменя с ?t=21:30 в адреса.</p></div>" +
       '<div class="chips" role="group" aria-label="Състояние">' + SIMS.map((x) => '<button class="chip" type="button" data-sim="' + x[0] + '" aria-pressed="' + (x[0] === sim) + '">' + x[1] + "</button>").join("") + "</div></div></section>";
   }
   function setSim(v: Sim) {

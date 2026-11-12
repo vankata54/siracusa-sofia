@@ -607,7 +607,7 @@ svg.ic{fill:currentColor}
 
   /* ---------- preview only: the states panel ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<div class="proto"><p class="lbl">' + ic("eye", 18) + "Само в прототипа</p><p>Покажете как изглежда таблицата в другите състояния. Не влиза в сайта.</p>" +
+    $("[data-proto]").outerHTML = '<div class="proto"><p class="lbl">' + ic("eye", 18) + "Само в прегледа</p><p>Покажете как изглежда таблицата в другите състояния. Не влиза в сайта.</p>" +
       '<div class="chips" role="group" aria-label="Състояние за прототипа">' + [["ok", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"], ["empty", "Без резултати"]].map((z) => '<button class="chip" type="button" data-view="' + z[0] + '" aria-pressed="false">' + z[1] + "</button>").join("") + "</div></div>";
   }
 

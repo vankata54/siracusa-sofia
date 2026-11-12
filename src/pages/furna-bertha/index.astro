@@ -314,7 +314,7 @@ const cta = "Виж ястията от скарата";
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
   const svcEl = $("[data-svc]"), countEl = $("[data-count]"), dishEl = $("[data-dishes]"), sidesEl = $("[data-sides]");
 
-  /* ---------- preview-only states ("Само в прототипа"): #loading, #error, #offline ---------- */
+  /* ---------- preview-only states ("Само в прегледа"): #loading, #error, #offline ---------- */
   type Demo = "" | "loading" | "error" | "offline";
   const DEMOS: [Demo, string][] = [["", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]];
   let demo: Demo = "";
@@ -398,7 +398,7 @@ const cta = "Виж ястията от скарата";
 
   /* ---------- preview only: the states panel at the bottom ---------- */
   if (SC.preview) {
-    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Само в прототипа"><aside class="proto"><h2>' + ic("sliders-horizontal", 18) + "Само в прототипа: състояния</h2><p>Не влиза в сайта. Показва как изглеждат ястията в другите случаи. Часът се сменя с ?t=21:30 в адреса.</p><div class=\"chips\">" +
+    $("[data-proto]").outerHTML = '<section class="sec" aria-label="Само в прегледа"><aside class="proto"><h2>' + ic("sliders-horizontal", 18) + "Само в прегледа: състояния</h2><p>Не влиза в сайта. Показва как изглеждат ястията в другите случаи. Часът се сменя с ?t=21:30 в адреса.</p><div class=\"chips\">" +
       DEMOS.map((z) => '<button class="chip" type="button" data-demo="' + z[0] + '" aria-pressed="' + (demo === z[0]) + '">' + z[1] + "</button>").join("") + "</div></aside></section>";
   }
 

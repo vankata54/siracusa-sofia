@@ -38,7 +38,7 @@ test("tracking: unknown number -> polite empty state, noindex, one h1", async ({
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator('a[href^="tel:"]', { hasText: "Обади се в ресторанта" })).toBeVisible();
-  await expect(page.getByText("Само в прототипа")).toHaveCount(0);
+  await expect(page.getByText("Само в прегледа")).toHaveCount(0);
   await noHScroll(page);
   expect(errors.filter((e) => !/404/.test(e))).toEqual([]);
 });

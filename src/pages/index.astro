@@ -571,7 +571,7 @@ const jsonld = restaurantLd(Astro.site);
   window.addEventListener("offline", () => { net(); SC.toast("Няма връзка. Менюто остава, поръчката ще изпратите по-късно."); });
   window.addEventListener("online", () => { net(); SC.toast("Връзката се върна."); });
 
-  /* ---------- preview only: simulated states + the "Само в прототипа" panel ---------- */
+  /* ---------- preview only: simulated states + the "Само в прегледа" panel ---------- */
   if (SC.preview) {
     if (demo === "loading") {
       $("[data-popbody]").innerHTML = '<div class="rail pop" aria-busy="true" aria-label="Зареждане">' + [0, 1, 2, 3].map(() => '<div class="skcard"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>').join("") + "</div>";
@@ -580,7 +580,7 @@ const jsonld = restaurantLd(Astro.site);
       $("[data-popbody]").innerHTML = '<div class="errbox" role="alert">' + ic("warning-circle", 28) + "<b>Не успяхме да заредим ястията.</b><p>Проверете връзката и опитайте пак. Можете да поръчате и по телефона: " + SC.RESTAURANT.phone + '.</p><button class="pill pill-line" type="button" data-retry>Опитай пак</button></div>';
     }
     const states: [string, string][] = [["", "Нормално"], ["loading", "Зареждане"], ["error", "Грешка"], ["offline", "Без интернет"]];
-    home.insertAdjacentHTML("beforeend", '<section class="sec" aria-label="Само в прототипа"><div class="proto"><b>Само в прототипа</b><div class="chips" style="margin:8px 0 0;padding:2px 0;flex-wrap:wrap">' +
+    home.insertAdjacentHTML("beforeend", '<section class="sec" aria-label="Само в прегледа"><div class="proto"><b>Само в прегледа</b><div class="chips" style="margin:8px 0 0;padding:2px 0;flex-wrap:wrap">' +
       states.map((x) => '<a class="chip" href="#' + x[0] + '" data-demo="' + x[0] + '"' + (demo === x[0] ? ' aria-current="true"' : "") + ">" + x[1] + "</a>").join("") + "</div></div></section>");
     home.querySelectorAll<HTMLAnchorElement>("[data-demo]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); location.hash = a.dataset.demo!; location.reload(); }));
   }

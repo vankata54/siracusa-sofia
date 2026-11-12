@@ -29,7 +29,7 @@ test("allergens: SEO, all dishes in the server HTML, JSON-LD, no invented facts"
   expect(html).toContain("Състав имаме за 54 от 127 ястия");
   expect(html).toContain("Няма данни за алергени,</b> попитайте ни");
   expect(html).toContain("[ЛИПСВА: дата на проверката от кухнята]");
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
   /* Шопска: no allergen found, never a green "safe" mark */
   const shopska = html.split('/shopska-salata/"')[1].split("</tr>")[0];

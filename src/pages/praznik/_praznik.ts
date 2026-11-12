@@ -2,7 +2,7 @@
    The server drew the hero, step 1 (fresh state), the summary and "Как става"; here the draft is restored (localStorage
    "sc-celebration-draft", consent always unticked again), the steps are redrawn on every change, and the inquiry goes
    through api.celebrations.create (server or demo core). "Назад" keeps everything (one state for the 3 steps).
-   #<type> (from /sabitia/) preselects the occasion. Only in preview (?preview=1): the panel "Само в прототипа"
+   #<type> (from /sabitia/) preselects the occasion. Only in preview (?preview=1): the panel "Само в прегледа"
    (price for the guest, -5% example, send error / offline) and the review states #demo-2, #demo-custom, #demo-3, #demo-sent. */
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
@@ -59,11 +59,11 @@ export function start(): void {
     else { el.hidden = true; el.innerHTML = ""; }
   }
 
-  /* ---------- preview panel ("Само в прототипа") ---------- */
+  /* ---------- preview panel ("Само в прегледа") ---------- */
   function renderProto() {
     if (!SC.preview) { protoEl.hidden = true; return; }
     protoEl.hidden = false;
-    protoEl.innerHTML = '<div class="proto-h">' + ic("sliders-horizontal", 20) + "<span><b>Само в прототипа.</b> Тук пробвате решенията на админа и състоянията на страницата.</span></div>" +
+    protoEl.innerHTML = '<div class="proto-h">' + ic("sliders-horizontal", 20) + "<span><b>Само в прегледа.</b> Тук пробвате решенията на админа и състоянията на страницата.</span></div>" +
       '<div class="proto-row"><span class="label" id="pp-l">Цена за госта</span><div class="seg" role="group" aria-labelledby="pp-l"><button type="button" data-pp="show" aria-pressed="' + (P.price === "show") + '">Ориентировъчна</button><button type="button" data-pp="offer" aria-pressed="' + (P.price === "offer") + '">Ще ви изпратим оферта</button></div></div>' +
       '<div class="proto-row"><label class="label" for="ps">При изпращане</label><div class="selw"><select class="input" id="ps" data-ps><option value="ok"' + (P.send === "ok" ? " selected" : "") + '>Успешно</option><option value="error"' + (P.send === "error" ? " selected" : "") + '>Грешка</option><option value="offline"' + (P.send === "offline" ? " selected" : "") + ">Без интернет</option></select>" + ic("caret-down", 18) + "</div></div>" +
       '<div class="proto-row"><span class="label" id="pe-l">Ранна резервация -5%</span><div class="seg" role="group" aria-labelledby="pe-l"><button type="button" data-pe="0" aria-pressed="' + !P.early + '">Не важи</button><button type="button" data-pe="1" aria-pressed="' + P.early + '">Важи (пример)</button></div></div>';
@@ -142,7 +142,7 @@ export function start(): void {
       if (S.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) bad("e-email", "Проверете имейла, например ime@primer.bg. Или го оставете празен.", "#cemail");
       markInvalid();
     }
-    if (first) { const f0 = first as { el: HTMLElement; f: string }; scrollToEl(f0.el.closest(".blk, .field, .picker") || f0.el); flow.querySelector<HTMLElement>(f0.f)?.focus({ preventScroll: true }); return false; }
+    if (first) { const f0 = first as { el: HTMLElement; f: string }; scrollToEl(f0.el.id === "e-picks" ? f0.el : (f0.el.closest(".blk, .field, .picker") || f0.el)); /* the dish list is long: show the message itself, not the top of the list */ flow.querySelector<HTMLElement>(f0.f)?.focus({ preventScroll: true }); return false; }
     return true;
   }
   function markInvalid() {

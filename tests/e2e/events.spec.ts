@@ -23,7 +23,7 @@ test("events: SEO, server HTML, JSON-LD", async ({ request }) => {
   expect(html).toContain('href="/sabitia/gratska-vecher/"');
   expect(html).toContain("Празник при нас");
   expect(html).toContain('href="/praznik/#rozhden-den"');
-  expect(html).not.toContain("Само в прототипа");
+  expect(html).not.toContain("Само в прегледа");
   expect(html).not.toContain("Само в прегледа");
   /* one calendar in the HTML (it was drawn twice), the table drawing is a separate file */
   expect(html.match(/class="shell calbox"/g)?.length).toBe(1);
