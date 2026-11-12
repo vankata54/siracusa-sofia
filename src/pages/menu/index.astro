@@ -259,7 +259,7 @@ const jsonld = menuLd(Astro.site);
 
 <script>
   import { SC } from "../../client/sc-menu.ts";
-  import { stateBox, loadingText, previewPanel, pvChip, PV } from "../../lib/ui.ts";
+  import { stateBox, loadingText, skeleton, previewPanel, pvChip, PV } from "../../lib/ui.ts";
   import {
     parseHash, hashOf, results, scopeItems, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML, LAZY_AFTER,
     filterById, fic, FICON, plural, type MenuState, type Group,
@@ -313,7 +313,8 @@ const jsonld = menuLd(Astro.site);
     let cards = "";
     for (let i = 0; i < 4; i++) cards += '<div class="sk-card"><div class="skel p"></div><div class="skel a"></div><div class="skel b"></div></div>';
     const sec = '<div class="sk-sec"><div class="skel t"></div><div class="skel d"></div><div class="grid-dishes">' + cards + "</div></div>";
-    return '<div aria-busy="true" aria-label="' + loadingText("менюто") + '"><div class="sk-row">' + [90, 120, 150, 110].map((w) => '<span class="skel" style="width:' + w + 'px"></span>').join("") + "</div>" + sec + sec + "</div>";
+    /* the count line (aria-live) already says "Зареждаме менюто…" */
+    return skeleton('<div class="sk-row">' + [90, 120, 150, 110].map((w) => '<span class="skel" style="width:' + w + 'px"></span>').join("") + "</div>" + sec + sec);
   }
   function errorHTML(): string {
     /* the shared box (lib/ui.ts): same title words and buttons on every page */

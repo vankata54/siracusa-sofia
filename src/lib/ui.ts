@@ -3,7 +3,7 @@
      callBtn       "Обади се · 0894 36 55 77"
      miss          the [ЛИПСВА] marks from MISS (consts.ts)
      faqHead       "Често задавани въпроси" + "Не намерихте отговор? Обадете ни се, ще ви кажем." + callBtn
-     stateBox      error / offline (title, one sentence, "Опитай пак" + callBtn); loadingText "Зареждаме …"
+     stateBox      error / offline (title, one sentence, "Опитай пак" + callBtn); loadingText "Зареждаме …"; skeleton
      hourNote      after 21:00 "Доставката приключи за днес" / after 22:30 "Кухнята затвори за днес"
      photoSlot     the one photo / video placeholder; mapSlot the one map placeholder
      stepperHTML   "Стъпка 2 от 3" + "Следва: …" / "Последна стъпка"
@@ -44,6 +44,11 @@ export function faqHead(id: string, o: { h?: "h2" | "h3"; cls?: string } = {}): 
 export const OFFLINE = "Няма връзка с интернет";
 export const errTitle = (what: string) => "Не успяхме да заредим " + what;
 export const loadingText = (what: string) => "Зареждаме " + what + "…";
+/** A loading skeleton: the grey shapes are aria-hidden (a div without a role cannot carry aria-label), the words
+    "Зареждаме …" are a visually hidden role="status". Omit `what` where a live line on the page already says it. */
+export function skeleton(inner: string, what = "", attrs = ""): string {
+  return "<div" + (attrs ? " " + attrs : "") + ' aria-hidden="true">' + inner + "</div>" + (what ? '<span class="vh" role="status">' + loadingText(what) + "</span>" : "");
+}
 export const RETRY = "Опитай пак";
 export interface StateOpts {
   kind: "error" | "offline";

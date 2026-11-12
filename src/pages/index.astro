@@ -194,7 +194,7 @@ const jsonld = restaurantLd(Astro.site);
 /* hero actions */
 .acts{grid-area:acts; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding:16px 16px 0}
 .go .gol{display:grid; min-width:0; text-align:left; line-height:1.15; white-space:normal}
-.go .gol small{font-size:14px; font-weight:600; opacity:.86; margin-top:3px}
+.go .gol small{font-size:14px; font-weight:600; margin-top:3px} /* no opacity: white on --red is 5,4:1, with .86 it was 4,29:1 (axe, closed hours) */
 .tiles{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
 .tile{position:relative; display:grid; align-content:start; gap:10px; min-height:104px; padding:12px 12px 14px 14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow);
   text-decoration:none; color:var(--ink); transition:transform var(--t-fast) var(--ease)}
@@ -426,7 +426,7 @@ const jsonld = restaurantLd(Astro.site);
 <script>
   import { SC } from "../client/sc.ts";
   import { lunchTileText, goHTML, etaInner, eventsHTML, deliveryNote, dotHTML, firstOfferKey, greekLead, checkAddress, popErrHTML } from "./_home.ts";
-  import { previewPanel, PV } from "../lib/ui.ts";
+  import { previewPanel, PV, skeleton } from "../lib/ui.ts";
   /* the icons this script draws itself (the server ones are already in the HTML) */
   import "sc-icons:arrow-right,calendar-blank,calendar-check,check-circle,confetti,hourglass,map-pin,moped,pause,play,seal-percent,sliders-horizontal,storefront,warning-circle"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
@@ -562,8 +562,8 @@ const jsonld = restaurantLd(Astro.site);
   /* ---------- preview only: simulated states + the "Само в прегледа" panel ---------- */
   if (SC.preview) {
     if (demo === "loading") {
-      $("[data-popbody]").innerHTML = '<div class="rail pop" aria-busy="true" aria-label="Зареждане">' + [0, 1, 2, 3].map(() => '<div class="skcard"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>').join("") + "</div>";
-      $("[data-evs]").innerHTML = '<div class="card ev" aria-busy="true"><div class="skel" style="height:96px"></div><div class="stack"><div class="skel" style="height:22px;width:70%"></div><div class="skel" style="height:18px;width:50%"></div><div class="skel" style="height:48px;width:60%;border-radius:999px"></div></div></div>';
+      $("[data-popbody]").innerHTML = skeleton([0, 1, 2, 3].map(() => '<div class="skcard"><div class="skel a"></div><div class="skel b"></div><div class="skel c"></div></div>').join(""), "любимите ястия", 'class="rail pop"');
+      $("[data-evs]").innerHTML = skeleton('<div class="skel" style="height:96px"></div><div class="stack"><div class="skel" style="height:22px;width:70%"></div><div class="skel" style="height:18px;width:50%"></div><div class="skel" style="height:48px;width:60%;border-radius:999px"></div></div>', "събитията", 'class="card ev"');
     } else if (demo === "error") {
       $("[data-popbody]").innerHTML = popErrHTML();
     }

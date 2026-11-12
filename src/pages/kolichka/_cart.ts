@@ -333,7 +333,7 @@ export function start(): void {
     const sl = I.slots, lim = I.sched && !P.allSlots ? 12 : 99, any = sl.some((s) => s.busy);
     if (!sl.length) return '<p class="slots-h">' + title + "</p>" + note("info", "clock", "Няма свободни часове днес", "Кухнята приема до 22:30. Поръчайте за утре или се обадете на " + R.phone + ".");
     return '<p class="slots-h" id="slh">' + title + '</p><div class="slots" role="group" aria-labelledby="slh">' + sl.slice(0, lim).map((s) =>
-      '<button class="slot" type="button" data-act="slot" data-v="' + s.v + '" data-fk="slot-' + s.v + '" aria-pressed="' + (D.slot === s.v) + '"' + (s.busy ? ' disabled aria-label="' + s.v + ', заето"' : "") + ">" + (D.slot === s.v ? '<span class="row" style="gap:5px">' + ic("check", 16) + s.v + "</span>" : s.v) + (s.busy ? "<small>заето</small>" : "") + "</button>").join("") + "</div>" +
+      '<button class="slot" type="button" data-act="slot" data-v="' + s.v + '" data-fk="slot-' + s.v + '" aria-pressed="' + (D.slot === s.v) + '"' + (s.busy ? ' disabled aria-label="' + s.v + ' заето: пълна кухня"' : "") + ">" + (D.slot === s.v ? '<span class="row" style="gap:5px">' + ic("check", 16) + s.v + "</span>" : s.v) + (s.busy ? " <small>заето</small>" : "") + "</button>").join("") + "</div>" +
       (sl.length > lim ? '<button class="pill pill-soft pill-block more-slots" type="button" data-act="allslots">' + ic("caret-down", 20) + "Покажи часовете до " + sl[sl.length - 1].v + "</button>" : "") +
       (any ? '<p class="slot-why">Зачеркнатите часове са заети: кухнята е пълна. Изберете друг.</p>' : "");
   }

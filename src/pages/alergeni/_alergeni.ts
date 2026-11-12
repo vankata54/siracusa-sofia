@@ -152,7 +152,8 @@ export function offlineHTML(): string {
 export function loadingHTML(): string {
   let rows = "";
   for (let i = 0; i < 5; i++) rows += '<div class="skrow"><div class="skel" style="height:20px;width:' + [70, 55, 82, 62, 48][i] + '%"></div><div class="skel" style="height:16px;width:' + [90, 76, 60, 84, 70][i] + '%"></div><div class="tks"><div class="skel" style="height:34px;width:96px;border-radius:999px"></div><div class="skel" style="height:34px;width:84px;border-radius:999px"></div></div></div>';
-  return '<div aria-busy="true" aria-label="' + ui.loadingText("алергените") + '"><div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">' + rows + "</div></div></div>";
+  /* the summary line above (aria-live) already says "Зареждаме …" */
+  return ui.skeleton('<div class="skel" style="height:24px;width:120px;margin:32px 4px 14px"></div><div class="shell" style="padding:0;background:none;box-shadow:none"><div class="core">' + rows + "</div></div>");
 }
 
 /* ---------- the lunch note: never "today" unless the lunch menu in the data is for today (BRIEF 8) ---------- */

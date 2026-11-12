@@ -4,14 +4,15 @@
    Everything depends on the order, so the server draws the loading skeleton and ./_track.ts draws the rest. */
 import Base from "../../layouts/Base.astro";
 import { RESTAURANT } from "../../lib/index.ts";
+import { skeleton as skeletonBox } from "../../lib/ui.ts";
 
 const sk = (w: string, h: number, r = "") => `<span class="skel" style="width:${w};height:${h}px${r ? ";border-radius:" + r : ""}"></span>`;
 const skeleton =
   `<section class="sec trk-s"><div class="trk-title"><h1 class="vh">Проследяване на поръчка</h1>${sk("220px", 32)}</div>` +
-  `<div class="trk" aria-busy="true" aria-label="Зареждаме поръчката"><div class="trk-l"><div class="shell"><div class="core sk">` +
+  skeletonBox(`<div class="trk-l"><div class="shell"><div class="core sk">` +
   `${sk("100%", 40, "999px")}${sk("196px", 196, "50%")}${sk("52%", 18)}${sk("46%", 64)}${sk("70%", 24)}</div>` +
   `<div class="skrow">${[1, 2, 3, 4, 5].map(() => sk("28px", 28, "50%")).join("")}</div></div>${sk("100%", 56, "999px")}</div>` +
-  `<div class="trk-r"><div class="shell"><div class="core cpad cgap">${sk("60%", 24)}${sk("100%", 56)}${sk("100%", 56)}</div></div></div></div></section>`;
+  `<div class="trk-r"><div class="shell"><div class="core cpad cgap">${sk("60%", 24)}${sk("100%", 56)}${sk("100%", 56)}</div></div></div>`, "поръчката", 'class="trk"') + `</section>`;
 ---
 <Base page="tracking" nav={null} title="Проследяване" docTitle="Проследяване на поръчка"
   description="Проследяване на поръчка от Siracusa Bar & Grill: етап, около колко минути и обаждане до ресторанта."

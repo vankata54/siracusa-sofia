@@ -195,7 +195,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
 
 <script>
   import { SC } from "../../../client/sc-menu.ts";
-  import { stateBox, loadingText, previewPanel, pvChip, PV } from "../../../lib/ui.ts";
+  import { stateBox, skeleton, previewPanel, pvChip, PV } from "../../../lib/ui.ts";
   import type { Dish } from "../../../lib/data.ts";
   import { plural } from "../_menu.ts";
   import {
@@ -246,7 +246,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   function loadingHTML(): string {
     let cards = "";
     for (let i = 0; i < 6; i++) cards += '<div class="dcard" aria-hidden="true"><div class="skel" style="aspect-ratio:1;border-radius:24px"></div><div class="skel" style="height:18px;width:80%"></div><div class="skel" style="height:14px;width:60%"></div><div class="skel" style="height:22px;width:40%"></div></div>';
-    return '<div class="skel-hero" aria-busy="true" aria-label="' + loadingText("ястията") + '"><div class="skel" style="height:16px;width:140px"></div><div class="skel" style="height:40px;width:62%"></div><div class="skel" style="height:16px;width:100%"></div><div class="skel" style="height:16px;width:88%"></div><div class="skel" style="height:16px;width:70%"></div></div>' +
+    return skeleton('<div class="skel" style="height:16px;width:140px"></div><div class="skel" style="height:40px;width:62%"></div><div class="skel" style="height:16px;width:100%"></div><div class="skel" style="height:16px;width:88%"></div><div class="skel" style="height:16px;width:70%"></div>', "ястията", 'class="skel-hero"') +
       '<div class="flt"><div class="row" style="gap:8px;margin-bottom:24px"><div class="skel" style="height:44px;width:120px;border-radius:999px"></div><div class="skel" style="height:44px;width:150px;border-radius:999px"></div><div class="skel" style="height:44px;width:90px;border-radius:999px"></div></div><div class="grid-dishes">' + cards + "</div></div>";
   }
   function errorHTML(): string {

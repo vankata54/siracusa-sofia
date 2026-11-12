@@ -256,7 +256,7 @@ export function start(): void {
     let anyFull = false;
     h += '<div class="slots" role="group" aria-label="Часове, ' + per.n.toLowerCase() + '">' + list.map((m) => {
       const full = slotFull(d, m, st.n); if (full) anyFull = true;
-      if (full) return '<button type="button" class="slot full" data-full="' + m + '" data-fk="s' + m + '" aria-label="' + hm(m) + ', няма свободни маси. Запиши ме в списъка на чакащите"><span>' + hm(m) + "</span><small>пълно</small></button>";
+      if (full) return '<button type="button" class="slot full" data-full="' + m + '" data-fk="s' + m + '" aria-label="' + hm(m) + ' пълно. Няма свободни маси, запиши ме в списъка на чакащите"><span>' + hm(m) + "</span> <small>пълно</small></button>";
       return '<button type="button" class="slot" data-slot="' + m + '" data-fk="s' + m + '" aria-pressed="' + (st.slot === m) + '">' + hm(m) + "</button>";
     }).join("") + "</div>";
     if (anyFull) h += '<p class="hint">Пълно? Докоснете часа и ще ви запишем в списъка на чакащите.</p>';
@@ -282,7 +282,8 @@ export function start(): void {
   const needOk = (t: Table) => { const n = st.need; return (!n.access || t.access) && (!n.stroller || t.stroller) && (!n.window || t.window); };
   function tState(t: Table): string { if (st.sel === t.id) return "sel"; if (isTaken(t, st.date!, st.slot!)) return "taken"; if (!suits(t, st.n) || !needOk(t)) return "unfit"; return "free"; }
   const tLabel = (t: Table, s: string) => (s === "taken" ? "заета" : s === "sel" ? "избрана" : t.seats + " места");
-  const tAria = (t: Table, s: string) => "Маса " + t.n + ", " + t.seats + " места, " + (s === "free" ? "свободна" : s === "sel" ? "избрана" : s === "taken" ? "заета" : "не е подходяща за " + ppl(st.n)) + (featShort(t).length ? ", " + featShort(t).join(", ") : "");
+  /* the name starts with the visible text (number + label under it), then the details (axe "Label in Name") */
+  const tAria = (t: Table, s: string) => t.n + " " + tLabel(t, s) + ". " + (s === "free" ? "Свободна маса за " + t.seats : s === "sel" ? "Маса за " + t.seats : s === "taken" ? "Маса за " + t.seats : "Не е подходяща за " + ppl(st.n)) + (featShort(t).length ? ", " + featShort(t).join(", ") : "");
   function shape(t: Table, cx: number, cy: number): string {
     let s = "";
     if (t.shape === "round") s += '<rect class="ch" x="' + (cx - 40) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><rect class="ch" x="' + (cx + 30) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><circle class="top" cx="' + cx + '" cy="' + cy + '" r="25"/>';
@@ -313,7 +314,7 @@ export function start(): void {
       const cx = 60 + t.x * 80, cy = top + 38 + t.y * RH, s = tState(t);
       h += '<g class="tbl ' + s + '" data-t="' + t.id + '" data-fk="t' + t.id + '" role="button" tabindex="0" aria-pressed="' + (s === "sel") + '" aria-label="' + tAria(t, s) + '">' +
         '<rect class="hit" x="' + (cx - 40) + '" y="' + (cy - 46) + '" width="80" height="104" rx="16"/><rect class="ring" x="' + (cx - 38) + '" y="' + (cy - 44) + '" width="76" height="100" rx="16"/>' +
-        '<g class="shp">' + shape(t, cx, cy) + (s === "taken" ? hatch(t, cx, cy) : "") + '<text class="no" x="' + cx + '" y="' + (cy + 8) + '">' + t.n + "</text></g>" +
+        '<g class="shp">' + shape(t, cx, cy) + (s === "taken" ? hatch(t, cx, cy) : "") + '<text class="no" x="' + cx + '" y="' + (cy + 8) + '">' + t.n + "</text></g> " + /* the space keeps "1 2 места" apart for the accessible-name check */
         '<text class="lb" x="' + cx + '" y="' + (cy + 61) + '">' + tLabel(t, s) + "</text></g>";
     });
     return h + "</svg>";

@@ -9,7 +9,7 @@ import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes } from "../../lib/time.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
-import { callBtn, stateBox, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
+import { callBtn, stateBox, skeleton, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
 import "sc-icons:arrow-clockwise,arrow-left,arrow-right,arrow-up-right,bell,bell-ringing,calendar-check,check-circle,chef-hat,clock,copy,fork-knife,globe,google-logo,hourglass,house,info,map-pin,moped,paper-plane-right,pencil-simple,receipt,seal-percent,share-network,shopping-bag,sliders-horizontal,storefront,thumbs-down,thumbs-up,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
@@ -360,10 +360,10 @@ export function startTracking(main: HTMLElement) {
 
   /* ---------- other views ---------- */
   function skeletonHTML() {
-    return '<div class="trk-title"><h1 class="vh">Проследяване на поръчка</h1><span class="skel" style="width:220px;height:32px"></span></div><div class="trk" aria-busy="true" aria-label="Зареждаме поръчката"><div class="trk-l"><div class="shell"><div class="core sk">' +
+    return '<div class="trk-title"><h1 class="vh">Проследяване на поръчка</h1><span class="skel" style="width:220px;height:32px"></span></div>' + skeleton('<div class="trk-l"><div class="shell"><div class="core sk">' +
       '<span class="skel" style="width:100%;height:40px;border-radius:999px"></span><span class="skel" style="width:196px;height:196px;border-radius:50%"></span><span class="skel" style="width:52%;height:18px"></span><span class="skel" style="width:46%;height:64px"></span><span class="skel" style="width:70%;height:24px"></span></div>' +
       '<div class="skrow">' + [1, 2, 3, 4, 5].map(() => '<span class="skel" style="width:28px;height:28px;border-radius:50%"></span>').join("") + '</div></div><span class="skel" style="height:56px;border-radius:999px"></span></div>' +
-      '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div></div>';
+      '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div>', "поръчката", 'class="trk"');
   }
   function stateHTML(kind: View) {
     const call = callBtn("pill pill-red pill-lg pill-block");

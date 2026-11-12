@@ -117,7 +117,7 @@ function slotsHTML(p: Plan, chosen: number | null, tomorrow: string): string {
   return '<div class="pk-pick">Или изберете час<span>' + (p.day === "tomorrow" ? "утре, " + tomorrow : "днес") + "</span></div>" +
     '<button class="pk-asap" type="button" data-slot="asap" aria-pressed="' + (chosen == null) + '"><span>' + asapLabel + '</span><span class="price">' + asapRight + "</span></button>" +
     (p.slots.length ? '<div class="pk-slots" role="group" aria-label="Часове за вземане">' + p.slots.map((x) => x.full
-      ? '<button class="pk-slot" type="button" disabled aria-label="' + hm(x.t) + ', зает час: пълна кухня">' + hm(x.t) + "<small>заето</small></button>"
+      ? '<button class="pk-slot" type="button" disabled aria-label="' + hm(x.t) + ' заето: пълна кухня">' + hm(x.t) + " <small>заето</small></button>"
       : '<button class="pk-slot" type="button" data-slot="' + x.t + '" aria-pressed="' + (chosen === x.t) + '">' + hm(x.t) + "</button>").join("") + "</div>" +
       (p.slots.some((x) => x.full) ? '<div class="pk-legend"><span><i></i>Свободен час</span><span><i class="full"></i>Заето: пълна кухня</span></div>' : "") : "") +
     (chosen != null ? '<p class="pk-chosen">' + ic("check-circle", 20) + "Запазихме " + hm(chosen) + ". Ще го видите в количката.</p>" : "");
