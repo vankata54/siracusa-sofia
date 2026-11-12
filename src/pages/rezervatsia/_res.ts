@@ -11,51 +11,13 @@ import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
 import type { Reservation } from "../../client/api-types.ts";
-/* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
-import "../../lib/icons/caret-left.ts";
-import "../../lib/icons/caret-down.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/mask-happy.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/minus.ts";
-import "../../lib/icons/plus.ts";
-import "../../lib/icons/timer.ts";
-import "../../lib/icons/wallet.ts";
-import "../../lib/icons/chat-circle-dots.ts";
-import "../../lib/icons/bell.ts";
-import "../../lib/icons/chair.ts";
-import "../../lib/icons/tree.ts";
-import "../../lib/icons/sun.ts";
-import "../../lib/icons/baby.ts";
-import "../../lib/icons/wheelchair.ts";
-import "../../lib/icons/users-three.ts";
-import "../../lib/icons/thermometer.ts";
-import "../../lib/icons/map-trifold.ts";
-import "../../lib/icons/list-bullets.ts";
-import "../../lib/icons/calendar-blank.ts";
-import "../../lib/icons/calendar-check.ts";
-import "../../lib/icons/users.ts";
-import "../../lib/icons/pencil-simple.ts";
-import "../../lib/icons/cake.ts";
-import "../../lib/icons/heart.ts";
-import "../../lib/icons/briefcase.ts";
-import "../../lib/icons/gift.ts";
-import "../../lib/icons/confetti.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/warning.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/arrow-left.ts";
-import "../../lib/icons/arrow-up-right.ts";
-import "../../lib/icons/map-pin.ts";
-import "../../lib/icons/fork-knife.ts";
-import "../../lib/icons/lock.ts";
-import "../../lib/icons/sliders-horizontal.ts";
-import "../../lib/icons/image.ts";
+/* the icons this script draws in one module (sc.ts has x, check, caret-right, phone, question; scripts/icon-groups.mjs) */
+import "sc-icons:caret-left,caret-down,info,mask-happy,clock,minus,plus,timer,wallet,chat-circle-dots,bell,chair,tree,sun,baby,wheelchair,users-three,thermometer,map-trifold,list-bullets,calendar-blank,calendar-check,users,pencil-simple,cake,heart,briefcase,gift,confetti,warning-circle,warning,arrow-right,arrow-left,arrow-up-right,map-pin,fork-knife,lock,sliders-horizontal,image";
 
 type Zone = "salon" | "garden";
 type View = "flow" | "done" | "manage";
 interface Period { id: string; n: string; from: number; to: number }
-interface Booking { id?: string; key?: string; status?: string; date: Date; slot: number; n: number; selLabel: string; name?: string; phone: string; occ?: string; note?: string; changed?: boolean; fake?: number }
+interface Booking { id?: string; key?: string; status?: string; table?: string | null; dur?: number; date: Date; slot: number; n: number; selLabel: string; name?: string; phone: string; occ?: string; note?: string; changed?: boolean; fake?: number }
 interface SelInfo { joined: boolean; zone: Zone; label: string; short: string; seats: number; t?: Table }
 interface Draft { name: string; phone: string; email: string; occ: string; note: string; consent: boolean }
 
@@ -76,8 +38,9 @@ export function start(): void {
   /* ---------- dates & slots ---------- */
   const DS = ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], WD = ["пн", "вт", "ср", "чт", "пт", "сб", "нд"];
   const TODAY = sofiaToday();
-  const MIN_M = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1), MAX_M = new Date(TODAY.getFullYear(), TODAY.getMonth() + 2, 1);
-  const LAST_DAY = new Date(TODAY.getFullYear(), TODAY.getMonth() + 3, 0);
+  /* the same rule as the core: from today up to 92 days ahead (RES_DAYS_AHEAD in src/core/reservations.ts) */
+  const LAST_DAY = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 92);
+  const MIN_M = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1), MAX_M = new Date(LAST_DAY.getFullYear(), LAST_DAY.getMonth(), 1);
   /* reservation hours: 11:00 - 21:30 every 30 min (OPEN-QUESTIONS 18, default until the owner decides) */
   const PERIODS: Period[] = [{ id: "lunch", n: "Обед", from: 660, to: 870 }, { id: "aft", n: "Следобед", from: 900, to: 1050 }, { id: "eve", n: "Вечер", from: 1080, to: 1290 }];
   const SLOTS: number[] = []; for (let m0 = 660; m0 <= 1290; m0 += 30) SLOTS.push(m0);
@@ -137,7 +100,19 @@ export function start(): void {
   const known = (d: Date, m: number) => taken.has(key(d, m));
   function isTaken(t: Table, d: Date, m: number): boolean {
     if (SC.preview && st.proto.eventFull && isEvent(d) && m >= 1140 && m <= 1230) return true; /* preview panel only: the event night fully booked 19:00 - 20:30 */
+    if (ownOld(t, d, m)) return false;
     return !!taken.get(key(d, m))?.has(t.id);
+  }
+  /** a change: the guest's own old booking does not take its table (the core frees it in the same step, `replaces`).
+     If another booking also holds that table, the core answers 409 "taken" and the page shows it. */
+  function ownOld(t: Table, d: Date, m: number): boolean {
+    const o = st.changing;
+    if (!o || !o.id || o.status === "cancelled" || !same(o.date, d)) return false;
+    const no = /^Маса (\d+)/.exec(o.selLabel || ""); /* a booking stored before `table` was kept */
+    const tid = o.table !== undefined ? o.table : no ? SC.TABLES.filter((x) => String(x.n) === no[1])[0]?.id : null;
+    if (tid !== t.id) return false;
+    const dur = o.dur || 120; /* resMinutes, the core's default */
+    return o.slot < m + dur && m < o.slot + dur;
   }
   const suits = (t: Table, n: number) => n <= 6 && t.seats >= n && t.seats <= n + 2;
   const zoneTables = (z: Zone) => SC.TABLES.filter((t) => t.zone === z);
@@ -188,6 +163,7 @@ export function start(): void {
     if (h === "manage-late" && SC.preview) { openManage(true); return true; }
     const link = /^r-([0-9a-f]+)-([0-9a-f]+)$/i.exec(h); /* the link in the SMS: #r-<id>-<key> */
     if (link) { openLink(link[1], link[2]); return true; }
+    if (/^r-[0-9a-f]+-?$/i.test(h)) { st.msg = "Връзката е непълна: липсва краят ѝ. Отворете цялата връзка от SMS-а или се обадете на " + R.phone + "."; return false; }
     const d = parseYmd(h); if (!h) return false;
     if (!d) { st.msg = "Не разпознахме датата в адреса. Изберете ден от календара."; return false; }
     if (d < TODAY) { st.msg = "Датата " + d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : "") + " вече мина. Изберете друг ден."; return false; }
@@ -523,7 +499,7 @@ export function start(): void {
     const d = parseYmd(r.date); if (!d) return null;
     const t = r.table ? tById(r.table) : null;
     const label = t ? "Маса " + t.n + " · " + zoneName(t.zone) : r.status === "waitlist" ? "Списък на чакащите" : "Съединени маси" + (r.zone ? " · " + zoneName(r.zone) : "");
-    return { id: r.id, key: r.key || key, status: r.status, date: d, slot: toMin(r.time), n: r.people, selLabel: label, name: r.name, phone: fmtPhone(r.phone), occ: r.occasion, note: r.note };
+    return { id: r.id, key: r.key || key, status: r.status, table: r.table, dur: r.dur, date: d, slot: toMin(r.time), n: r.people, selLabel: label, name: r.name, phone: fmtPhone(r.phone), occ: r.occasion, note: r.note };
   }
   const minsLeft = (b: Booking) => b.fake || (same(b.date, TODAY) ? b.slot - SC.minutes() : b.date < TODAY ? -1 : 99999);
   function setManage(b: Booking): void {
@@ -678,7 +654,7 @@ export function start(): void {
         replaces: old && old.id ? { id: old.id, key: old.key || "" } : undefined,
       });
       st.busy = false;
-      st.booking = { id: r.id, key: r.key, date: d, slot: m, n: st.n, selLabel: s.label + " · " + zoneName(s.zone), name: f.name.trim(), phone: fmtPhone(f.phone), occ: f.occ, note: f.note.trim(), changed: !!old };
+      st.booking = { id: r.id, key: r.key, table: s.joined ? null : s.t!.id, dur: r.dur, date: d, slot: m, n: st.n, selLabel: s.label + " · " + zoneName(s.zone), name: f.name.trim(), phone: fmtPhone(f.phone), occ: f.occ, note: f.note.trim(), changed: !!old };
       saveLast(st.booking);
       st.view = "done"; st.changing = null; st.sel = null; st.anim = true;
       try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ }

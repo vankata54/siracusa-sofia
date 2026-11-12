@@ -202,3 +202,37 @@ test("reservation: fields.time / people from the core go back to step 1, under t
   await expect(page.locator("#q-ppl .qerr")).toContainText("Масата е за 2 души");
   expect(errors).toEqual([]);
 });
+
+test("reservation: change keeps the guest's own table free (30 min later, same table)", async ({ page, request }, info) => {
+  const errors = watch(page);
+  const tbl = info.project.name === "phone" ? "S6" : "G2";
+  /* a day where the table is free at 19:30 - 21:30 (an earlier run may have kept one) */
+  let b: { id: string; key: string } | null = null;
+  for (let k = 28; k < 80 && !b; k += 2) {
+    const date = future(k + (info.project.name === "phone" ? 0 : 1));
+    if ((await (await request.get("/api/reservations/taken?date=" + date + "&time=20:00")).json()).includes(tbl)) continue;
+    const r = await request.post("/api/reservations", { data: { date, time: "19:30", people: 4, table: tbl, name: "Сменящ", phone: "0888 55 66 77" } });
+    if (r.status() === 201) b = await r.json();
+  }
+  if (!b) throw new Error("no free day");
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  await page.goto("/rezervatsia/?preview=1&t=12:30#r-" + b.id + "-" + b.key);
+  await page.locator("[data-change]").click();
+  await page.locator(".slot", { hasText: "20:00" }).click();
+  await next(page).click();
+  await expect(page.locator(".fp")).toBeVisible();
+  if (tbl.startsWith("G")) await page.locator("[data-zone=garden]").first().click();
+  await expect(page.locator('.tbl[data-t="' + tbl + '"]')).not.toHaveClass(/taken/);
+  await page.locator('.tbl[data-t="' + tbl + '"]').click();
+  await page.locator(".sheet [data-pick]").click();
+  await next(page).click();
+  await next(page).click();
+  await expect(page.locator("h1:visible")).toHaveText("Резервацията е променена");
+  expect((await (await request.get("/api/reservations/" + b.id + "?k=" + b.key)).json()).status).toBe("cancelled");
+  expect(errors).toEqual([]);
+});
+
+test("reservation: a link without its key says it is incomplete", async ({ page }) => {
+  await open(page, "r-deadbeef");
+  await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Връзката е непълна");
+});
