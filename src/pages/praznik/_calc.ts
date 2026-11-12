@@ -204,7 +204,7 @@ export function nextLabel(v: View, compact: boolean): string {
 export function asideHTML(v: View): string {
   const S = v.S;
   /* the main button, "Назад" under it as a text link (the same on every flow at 1440), then the call link with the common words */
-  return summaryHTML(v, false) + '<div class="sum-btns"><button class="pill pill-red pill-lg" type="button" data-next' + (v.sending ? ' aria-busy="true"' : "") + ">" + nextLabel(v, S.step > 1) + '</button><button class="link flow-back" type="button" data-back' + (S.step > 1 ? "" : " hidden") + ">" + ic("arrow-left", 18) + "Назад</button></div>" +
+  return summaryHTML(v, false) + '<div class="sum-btns"><button class="pill pill-red pill-lg" type="button" data-next' + (v.sending ? ' aria-busy="true"' : "") + ">" + nextLabel(v, S.step > 1) + '</button><button class="link flow-back" type="button" data-back' + (S.step > 1 ? ' aria-label="Назад: ' + STEPS[S.step - 2] + '"' : " hidden") + ">" + ic("arrow-left", 18) + "Назад</button></div>" +
     '<div class="sum-call"><a class="link" href="' + TEL + '">' + ic("phone", 18) + 'Обади се · <span class="nw">' + R.phone + "</span></a></div>";
 }
 export function barSummary(v: View): string {
@@ -216,7 +216,7 @@ export function barSummary(v: View): string {
 }
 export function barHTML(v: View): string {
   return '<button class="sumbtn" type="button" data-sum aria-haspopup="dialog">' + barSummary(v) + '<span class="vh">. Виж какво включва празникът и цената</span></button>' +
-    '<div class="cbtns"><button class="pill pill-line" type="button" data-back' + (v.S.step < 2 ? " hidden" : "") + ">" + ic("arrow-left", 20) + 'Назад</button><button class="pill pill-red" type="button" data-next>' + nextLabel(v, v.S.step > 1) + "</button></div>";
+    '<div class="cbtns"><button class="pill pill-soft back" type="button" data-back' + (v.S.step < 2 ? " hidden" : ' aria-label="Назад: ' + STEPS[v.S.step - 2] + '"') + ">" + ic("arrow-left", 20) + 'Назад</button><button class="pill pill-red" type="button" data-next>' + nextLabel(v, v.S.step > 1) + "</button></div>";
 }
 
 /* ---------- success ---------- */

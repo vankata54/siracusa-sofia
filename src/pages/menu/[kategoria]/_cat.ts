@@ -2,7 +2,7 @@
    Port of design/pages/category.html (design/PAGES.md "category.html" + the common logic of menus and filters).
    Pure string renderers, no DOM. The card, the chip icons and the plural come from ../_menu.ts (same look as /menu/).
    Pieces that depend on the hour take a State; the server calls them without one and the browser fills them in. */
-import { crumbs, hourNote, hourTitle, hourLine, faqHead } from "../../../lib/ui.ts";
+import { crumbs, hourNote, hourTitle, hourLine, faqHead, offlineKeep } from "../../../lib/ui.ts";
 import { cats, catById, inCat, isOut, FILTERS, ZONES, RESTAURANT, type Dish, type Category } from "../../../lib/data.ts";
 import type { State, Eta } from "../../../lib/status.ts";
 import { art } from "../../../lib/render.ts";
@@ -157,7 +157,7 @@ function notice(icon: string, title: string, text: string, acts: string): string
 }
 export function noticesHTML(c: Category, S: State, offline: boolean): string {
   const n: string[] = [];
-  if (offline) n.push(notice("warning-circle", "Няма връзка с интернет", "Показваме менюто от последното ви посещение. Количката е запазена; ще поръчате, когато връзката се върне.", '<button class="pill pill-line" type="button" data-retry>' + ic("arrow-up-right", 18) + "Опитай пак</button>"));
+  if (offline) n.push(offlineKeep({ retry: true }));
   if (c.id === "zakuski" && !S.breakfast && S.m >= 690) n.push(notice("coffee", "Закуските свършиха за днес", "Сервираме ги всеки ден от 10:00 до 11:30. Можете да изберете нещо друго от менюто.", '<a class="pill pill-line" href="' + url.menu() + '">Към менюто</a>'));
   else if (c.id === "zakuski" && S.m < 600) n.push(notice("coffee", "Закуските са от 10:00 до 11:30", "Отваряме в 10:00. Тогава можете да поръчате.", ""));
   else if (!S.kitchen) n.push(hourNote(S)); /* the one hour note (lib/ui.ts) */
@@ -247,7 +247,8 @@ export function metaDescription(c: Category): string {
   const it = inCat(c.id), pr = priceRange(it);
   /* at most 160 characters (build check): the first variant that fits, the same facts in fewer words */
   const head = c.n + " в Siracusa, Дружба 2: " + count(c.id, it.length) + " от " + fmt(pr.min) + " до " + fmt(pr.max) + ".";
-  const v = [head + " Безплатна доставка в " + listJoin(FREE) + " до 21:00, вземане до 22:30.", head + " Безплатна доставка до 21:00, вземане до 22:30.", head + " Доставка до 21:00, вземане до 22:30."];
+  /* never "Безплатна доставка" without the quarters: it is free only there */
+  const v = [head + " Безплатна доставка в " + listJoin(FREE) + " до 21:00, поръчки за вземане до 22:30.", head + " Безплатна доставка в " + listJoin(FREE) + " до 21:00.", head + " Доставка до 21:00, поръчки за вземане до 22:30."];
   return v.find((s) => s.length <= 160) || head;
 }
 /** JSON-LD: Menu > MenuSection > MenuItem (prices in EUR), BreadcrumbList, FAQPage (only answers without [ЛИПСВА]). */

@@ -47,14 +47,14 @@ const evLd = JSON.stringify(eventLd(ev, site));
           <div class="sec-h"><h2 class="h2">Програма</h2></div>
           <ol class="tl">
             <li><span class="t">{ev.time}</span><span class="dot em"></span><div><b>Начало на вечерта</b></div></li>
-            <li><span class="t muted">...</span><span class="dot miss"></span><div set:html={miss("greek")}></div></li>
+            <li><span class="t muted">...</span><span class="dot miss"></span><div set:html={miss("program")}></div></li>
             <li><span class="t">{R.kitchen}</span><span class="dot"></span><div><b>Последни поръчки от кухнята</b></div></li>
             <li><span class="t">{R.close}</span><span class="dot"></span><div><b>Ресторантът затваря</b></div></li>
           </ol>
         </div>
         <div>
           <div class="sec-h"><h2 class="h2">Меню на вечерта</h2></div>
-          <div class="card slot-menu"><Fragment set:html={ic("fork-knife", 24)} /><Fragment set:html={miss("greek")} /></div>
+          <div class="card slot-menu"><Fragment set:html={ic("fork-knife", 24)} /><Fragment set:html={miss("eveningMenu")} /></div>
           {gs && <Fragment>
             <p class="ev-also">За гръцко настроение и у дома, от основното меню:</p>
             <div class="card ev-dish" set:html={dishCard(gs, "row")}></div>

@@ -137,7 +137,8 @@ npm run build:demo     # статично демо в dist/ (относител�
 npm run db:seed        # меню + акаунти на персонала от .env
 npm run db:migrate     # нова миграция след промяна в server/db/schema.ts
 npm test               # vitest (src/lib, src/core, сървърът)
-npm run test:e2e       # playwright (сам прави build и пуска сървъра на порт 8788)
+npm run test:e2e       # playwright (сам прави build в dist-e2e/ и пуска сървъра на порт 8788; dist/ не се пипа)
+npm run check          # astro check: типовете и в .astro (tsc не ги вижда)
 node scripts/make-env.mjs   # прави .env със случайни пароли, само ако липсва
 ```
 
@@ -157,4 +158,4 @@ cd design && node tools/shoot.js pages/menu.html /tmp/ref-menu --time=21:30   # 
 
 ## 8. Преди „готово“
 
-`npm test` и `npm run test:e2e` минават; снимки на 390 и 1440 в светла и тъмна тема; без грешки в конзолата, без хоризонтален скрол на 360, текст поне 14px, цели поне 48px, без дълги тирета; всички състояния от `design/PAGES.md`.
+`npm test`, `npx tsc --noEmit`, `npm run check` и `npm run test:e2e` минават; снимки на 390 и 1440 в светла и тъмна тема; без грешки в конзолата, без хоризонтален скрол на 360, текст поне 14px, цели поне 48px, без дълги тирета; всички състояния от `design/PAGES.md`.

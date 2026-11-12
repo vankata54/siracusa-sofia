@@ -54,7 +54,7 @@ test("bertha 12:30: no pizza claim, CTA to the dishes, + to the cart, delivery n
   expect(errors).toEqual([]);
 });
 
-for (const [t, txt] of [["21:30", "Вземане до 22:30"], ["22:45", "Кухнята затвори за днес"], ["08:30", "Кухнята още не е отворила"]]) {
+for (const [t, txt] of [["21:30", "Поръчки за вземане до 22:30"], ["22:45", "Кухнята затвори за днес"], ["08:30", "Кухнята още не е отворила"]]) {
   test("bertha " + t + ": service note", async ({ page }) => {
     const errors = watch(page);
     await open(page, t);

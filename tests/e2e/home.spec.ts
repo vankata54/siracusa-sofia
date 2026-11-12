@@ -85,6 +85,8 @@ test("home: no horizontal scroll at 360, targets at least 48px", async ({ page }
   await page.setViewportSize({ width: 360, height: 780 });
   await open(page, "12:30");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBe(0);
+  /* measure after the entrance animations (a button scaled in mid-animation looks smaller); endless ones are skipped */
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect && a.effect.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => undefined))));
   const small = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>("[data-home] button, [data-home] .pill"))
     .filter((b) => b.offsetParent && b.getBoundingClientRect().height < 48).map((b) => b.outerHTML.slice(0, 80)));
   expect(small).toEqual([]);

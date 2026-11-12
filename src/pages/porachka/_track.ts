@@ -212,7 +212,7 @@ export function startTracking(main: HTMLElement) {
       sub = c.id === "acc" && sc.left > 60 ? "Можете да я промените до " + clock(sc.at - 60) + " (1 час преди часа)." : "Вече я подготвяме. За промяна се обадете на " + esc(R.phone) + ".";
     } else if (!D && c.id === "ready") {
       label = "Готова от"; big = '<span class="enum clock"><b>' + clock(stepAt("ready")) + "</b></span>";
-      say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта. Вземане до " + R.kitchen + ".";
+      say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта до " + R.close + ".";
     } else {
       const r = remaining(), pr = promised(), now = SC.minutes();
       const arrive = clock(!r.late && (((pr - now) % 1440) + 1440) % 1440 === r.m ? pr : now + r.m);

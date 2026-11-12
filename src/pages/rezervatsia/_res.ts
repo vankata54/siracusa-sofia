@@ -434,14 +434,14 @@ export function start(): void {
   function renderBar(): void {
     if (st.view !== "flow") { bar.hidden = true; SC.ov.classList.remove("rfocus"); return; }
     bar.hidden = false; const focus = st.step > 1; bar.classList.toggle("nonav", focus); SC.ov.classList.toggle("rfocus", focus);
-    bar.innerHTML = (st.step > 1 ? '<button class="pill pill-soft back" type="button" data-act="back">' + ic("arrow-left", 20) + "Назад</button>" : "") + ctaBtn();
+    bar.innerHTML = (st.step > 1 ? '<button class="pill pill-soft back" type="button" data-act="back" aria-label="Назад: ' + STEP_N[st.step - 2] + '">' + ic("arrow-left", 20) + "Назад</button>" : "") + ctaBtn();
   }
   function summary(): string {
     const s = selInfo();
     const kv = (k: string, v: string | null | false | undefined) => '<div class="kv"><span>' + k + "</span>" + (v ? "<b>" + v + "</b>" : '<b class="no">избирате</b>') + "</div>";
     return '<aside class="aside" aria-label="Вашата резервация"><div class="shell sum"><div class="core"><h2>Вашата резервация</h2>' +
       kv("Ден", st.date && fShort(st.date)) + kv("Час", st.slot != null && hm(st.slot)) + kv("Хора", ppl(st.n)) + kv("Маса", s && (s.label + " · " + zoneName(s.zone))) +
-      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back">' + ic("arrow-left", 18) + "Назад</button>" : "") +
+      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back" aria-label="Назад: ' + STEP_N[st.step - 2] + '">' + ic("arrow-left", 18) + "Назад</button>" : "") +
       '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + '<a class="link" href="tel:' + R.phoneIntl + '">Обади се · <span class="nw">' + R.phone + "</span></a></li></ul></aside>";
   }
 
@@ -700,7 +700,14 @@ export function start(): void {
     if (!st.date || !bookable(st.date)) setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1));
     await loadTaken(st.date!, openSlots(st.date!));
     if (st.slot == null || slotFull(st.date!, st.slot, st.n)) { const o = openSlots(st.date!).filter((m) => !slotFull(st.date!, m, st.n)); st.slot = o.filter((m) => m >= 1140)[0] ?? o[0]; st.period = periodOf(st.slot).id; }
-    if (!st.sel) { const t = freeTables("salon", st.date!, st.slot!, st.n)[0] || freeTables("garden", st.date!, st.slot!, st.n)[0]; if (t) { st.sel = t.id; st.zone = t.zone; st.hold = Date.now() + 600000; st.expired = false; } }
+    if (!st.sel) {
+      const t = freeTables("salon", st.date!, st.slot!, st.n)[0] || freeTables("garden", st.date!, st.slot!, st.n)[0];
+      /* a group of 7+ has no single table: joined tables in a zone with enough free seats (as step 2 offers them) */
+      const jz = !t && st.n > 6 ? (["salon", "garden"] as Zone[]).find((z) => freeSeats(z, st.date!, st.slot!) >= st.n) : undefined;
+      if (t) { st.sel = t.id; st.zone = t.zone; }
+      else if (jz) { st.sel = "J-" + jz; st.zone = jz; }
+      if (st.sel) { st.hold = Date.now() + 600000; st.expired = false; }
+    }
     if (withData) { if (!st.f.name) st.f.name = "Примерен гост"; if (!st.f.phone) st.f.phone = "0888 12 34 56"; }
   }
 
@@ -835,7 +842,7 @@ export function start(): void {
     }
     if (k === "group") { st.view = "flow"; releaseIfNeeded(); st.released = null; st.n = 8; st.step = 1; await ready(false); st.sel = null; st.hold = 0; go(2); return; }
     if (k === "expire") { st.view = "flow"; await ready(false); if (st.step < 2) st.step = 2; st.hold = Date.now() + 5000; st.expired = false; st.anim = true; render(); toTop(); SC.toast("Задържането ще изтече след 5 секунди"); return; }
-    if (k === "blocked") { st.view = "flow"; await ready(true); st.f.phone = "0888 00 00 00"; st.blocked = false; st.err = {}; st.step = 3; st.anim = true; render(); toTop(); SC.toast("Натиснете „Резервирай“, за да видите съобщението"); return; }
+    if (k === "blocked") { st.view = "flow"; await ready(true); if (!st.sel) { st.n = 2; await ready(true); } st.f.phone = "0888 00 00 00"; st.blocked = false; st.err = {}; st.step = st.sel ? 3 : 2; st.anim = true; render(); toTop(); SC.toast("Натиснете „Резервирай“, за да видите съобщението"); return; }
     if (k === "manage" || k === "late") { openManage(k === "late"); if (k === "manage" && st.view !== "manage") { const b0: Booking = { date: addDays(TODAY, 1), slot: 1170, n: 4, selLabel: "Маса 5 · Салон", phone: "0888 12 34 56" }; st.manage = { b: b0, late: false, cancelled: false }; st.view = "manage"; } render(); toTop(); return; }
   }
   document.addEventListener("keydown", (e) => {

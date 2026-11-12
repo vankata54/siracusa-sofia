@@ -60,6 +60,13 @@ export interface StateOpts {
   /** role (default alert) */
   role?: string;
 }
+/** No connection, but the page stays (the menu, the cart, the offers): ONE note on every page, in the look of the hour note.
+    retry: only where "Опитай пак" really loads something again (data-retry); text: only where the page needs its own words. */
+export const OFFLINE_KEEP = "Показваме последно зареденото. Количката е запазена.";
+export function offlineKeep(o: { retry?: boolean; text?: string; cls?: string } = {}): string {
+  return '<div class="sc-note off' + (o.cls ? " " + o.cls : "") + '" role="status">' + ic("warning-circle", 22) + "<div><b>" + OFFLINE + "</b><span>" + (o.text || OFFLINE_KEEP) + "</span>" +
+    (o.retry ? '<div class="acts"><button class="pill pill-line" type="button" data-retry>' + ic("arrow-clockwise", 20) + RETRY + "</button></div>" : "") + "</div></div>";
+}
 /** the error / no-connection box: icon, title, one sentence, "Опитай пак" + "Обади се · 0894 36 55 77" */
 export function stateBox(o: StateOpts): string {
   const off = o.kind === "offline";
@@ -73,18 +80,18 @@ export function stateBox(o: StateOpts): string {
 
 /* ---------- the hour notes (one component): after 21:00 and after 22:30 ---------- */
 export interface HourState { open: boolean; kitchen: boolean; delivery: boolean; m: number }
-/** "" while delivery runs; 21:00-22:30 "Доставката приключи за днес" + "Вземане до 22:30"; closed: "Кухнята затвори за днес"
+/** "" while delivery runs; 21:00-22:30 "Доставката приключи за днес" + "Поръчки за вземане до 22:30"; closed: "Кухнята затвори за днес"
     + "Приемаме поръчки утре от 10:00" (+ action buttons, e.g. "Поръчай за утре"). Before 10:00: "Приемаме поръчки днес от 10:00". */
 export function hourNote(st: HourState, o: { pickup?: string; tomorrow?: string; cls?: string; more?: string } = {}): string {
   if (st.delivery) return "";
   const early = !st.kitchen && st.m < 600;
   const t = st.kitchen ? "Доставката приключи за днес" : early ? "Кухнята още не е отворила" : "Кухнята затвори за днес";
-  const s = st.kitchen ? "Вземане до " + R.kitchen : "Приемаме поръчки " + (early ? "днес" : "утре") + " от " + R.open;
+  const s = st.kitchen ? "Поръчки за вземане до " + R.kitchen : "Приемаме поръчки " + (early ? "днес" : "утре") + " от " + R.open;
   const act = st.kitchen ? (o.pickup || "") : (o.tomorrow || "");
   return '<div class="sc-note' + (o.cls ? " " + o.cls : "") + '" role="status">' + ic("clock", 22) + "<div><b>" + t + "</b><span>" + s + (o.more ? ". " + o.more : "") + "</span>" + (act ? '<div class="acts">' + act + "</div>" : "") + "</div></div>";
 }
 export const hourTitle = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Доставката приключи за днес" : st.m < 600 ? "Кухнята още не е отворила" : "Кухнята затвори за днес");
-export const hourLine = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Вземане до " + R.kitchen : "Приемаме поръчки " + (st.m < 600 ? "днес" : "утре") + " от " + R.open);
+export const hourLine = (st: HourState) => (st.delivery ? "" : st.kitchen ? "Поръчки за вземане до " + R.kitchen : "Приемаме поръчки " + (st.m < 600 ? "днес" : "утре") + " от " + R.open);
 
 /* ---------- photo and map slots (one look everywhere) ---------- */
 export interface SlotOpts {

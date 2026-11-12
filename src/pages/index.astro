@@ -2,6 +2,7 @@
 /* Home (design/pages/home.html, design/PAGES.md "home.html"). Everything that does not depend on the hour is drawn here
    (SEO, fast first paint). The parts that depend on the hour, the date or the visitor (Поръчай, обедно меню, доставка сега,
    оферти, събития, бележката за доставка) are drawn here for the build moment and redrawn in the browser from _home.ts. */
+import { PAY_METHODS } from "../lib/pay.ts";
 import Base from "../layouts/Base.astro";
 import { miss, mapSlot, callBtn } from "../lib/ui.ts";
 import { url, ic, art, dishCard, byId, isOut, inCat, lunchIsToday, offers, events, state, eta, lastSaturday, ZONES, RESTAURANT } from "../lib/index.ts";
@@ -131,7 +132,7 @@ const jsonld = restaurantLd(Astro.site);
       <div class="zgroup"><h3>Безплатна доставка</h3><ul class="ztags">{free.map((z) => <li><Fragment set:html={ic("check-circle", 20)} />{z.n}</li>)}</ul></div>
       <div class="zgroup"><h3>По тарифа</h3><ul class="ztags paid">{paid.map((z) => <li><Fragment set:html={ic("map-pin", 20)} />{z.n}</li>)}</ul><Fragment set:html={miss("fee")} /></div>
       <a class="link" href={url.page("delivery")}>Карта на зоните<Fragment set:html={ic("caret-right", 18)} /></a>
-      <p class="pay"><Fragment set:html={ic("wallet", 20)} /><span>Плащане на място: В брой, Карта при получаване или Ваучер.</span></p>
+      <p class="pay"><Fragment set:html={ic("wallet", 20)} /><span>Плащане при получаване: {PAY_METHODS.join(" · ")}</span></p>
     </div>
     <form class="card chk rv" data-chk novalidate action={url.page("delivery")}><div class="field"><label for="addr">Провери адреса</label>
       <div class="irow"><input class="input" id="addr" name="addr" type="text" autocomplete="street-address" placeholder="Например: Дружба 2, бл. 311" aria-describedby="addr-err"><button class="pill pill-red" type="submit">Провери</button></div>

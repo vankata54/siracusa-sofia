@@ -80,7 +80,7 @@ export function todayView(m: number, d: number): TodayView {
   const tm = (d + 1) % 7;
   if (m < OPEN) return { dot: "", st: "Затворено сега", sub: "Отваряме днес в " + R.open + ", след <b>" + dur(OPEN - m) + "</b>." };
   if (m < DELIVERY) return { dot: "ok", st: "Отворено сега", sub: "Доставяме още <b>" + dur(DELIVERY - m) + "</b>, до " + R.delivery + ". Кухнята приема поръчки до " + R.kitchen + "." };
-  if (m < KITCHEN) return { dot: "warn", st: "Отворено сега", sub: "Доставката приключи за днес. Вземане до " + R.kitchen + ", още <b>" + dur(KITCHEN - m) + "</b>." };
+  if (m < KITCHEN) return { dot: "warn", st: "Отворено сега", sub: "Доставката приключи за днес. Поръчки за вземане до " + R.kitchen + ", още <b>" + dur(KITCHEN - m) + "</b>." };
   if (m < CLOSE) return { dot: "warn", st: "Кухнята затвори", sub: "Отворено до " + R.close + ". Поръчки приемаме утре от " + R.open + "." };
   return { dot: "", st: "Затворено сега", sub: "Отваряме утре, <b>" + DAYS[tm].toLowerCase() + "</b>, в " + R.open + "." };
 }

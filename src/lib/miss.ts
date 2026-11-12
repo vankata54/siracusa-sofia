@@ -8,6 +8,8 @@ export const MISS = {
   capacity: "капацитет",
   earlyDays: "колко дни по-рано",
   greek: "програма, меню и цена",
+  program: "програма",
+  eveningMenu: "меню на вечерта",
   cardTerminal: "терминал за карти в колата",
   stampRule: "за какво се дава печат",
   stampReward: "наградата",

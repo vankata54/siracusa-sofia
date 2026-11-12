@@ -26,7 +26,7 @@ const jsonld = dishLd(x, Astro.site);
 /* what the page script needs, so the browser does not load the whole menu at start (speed) */
 const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] }).replace(/</g, "\\u003c");
 ---
-<Base page="dish" nav="menu" back={{ href: cat.href, label: cat.n }} title={x.n} docTitle={docTitle(x)} actionBar
+<Base page="dish" nav="menu" back={{ href: cat.href, label: cat.n }} title={x.n} docTitle={docTitle(x)} actionBar share
   description={metaDescription(x)} jsonld={jsonld}>
   <article class="dish" data-dish={x.id} data-cat={cat.id} data-catn={cat.n}>
     <script is:inline type="application/json" data-dishjson set:html={lite}></script>
@@ -104,7 +104,15 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
 
 /* info column */
 .dish .crow{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 2px}
-.sharebtn{flex:none}
+/* the path on ONE line next to "Сподели": the dish name (the same as the H1 right below) is cut with "…", the links never */
+.dish .crow .sc-crumbs{flex:1 1 auto; min-width:0}
+.dish .crow .sc-crumbs ol{flex-wrap:nowrap}
+.dish .crow .sc-crumbs li{flex:none}
+.dish .crow .sc-crumbs li:last-child{flex:0 1 auto; min-width:0}
+.dish .crow .sc-crumbs li:last-child span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* "Сподели": on the phone in the top bar (as in the prototype), so the path has the whole line; on the computer next to it */
+.sharebtn{flex:none; display:none}
+@container app (min-width:900px){ .sharebtn{display:inline-flex} }
 .dish .h1{font-size:36px}
 .prow2{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px}
 .prow2 .pg{display:flex; align-items:baseline; gap:12px; min-width:0}

@@ -162,14 +162,14 @@ export function zoneCardHTML(z: Zone | null, v: View): string {
 /* ---------- hours timeline ---------- */
 export function timelineHTML(v: View): string {
   const S = v.S, span = 780, pc = (min: number) => (min - 600) / span * 100;
-  const rows: [string, string, string, number][] = [["Доставка", "10:00 - 21:00", "dlv", 1260], ["Обедно меню с доставка", "10:00 - 15:00", "lun", 900], ["Вземане от място", "10:00 - 22:30", "pk", 1350]];
+  const rows: [string, string, string, number][] = [["Доставка", "10:00 - 21:00", "dlv", 1260], ["Обедно меню с доставка", "10:00 - 15:00", "lun", 900], ["Поръчки за вземане", "10:00 - 22:30", "pk", 1350]];
   const m = S.m, inDay = !v.server && m >= 600 && m < 1380;
   const hh = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
   const pos = pc(m), side = pos < 12 ? " l" : pos > 88 ? " r" : "";
   let say: [string, string, string];
   if (S.delivery && S.lunch) say = ["ok", "check-circle", "Сега доставяме, включително обедното меню до 15:00."];
   else if (S.delivery) say = ["ok", "check-circle", "Сега доставяме до 21:00. Обедното меню след 15:00 е само за вземане от място (-30%)."];
-  else if (S.kitchen) say = ["warn", "clock", "Доставката приключи за днес · Вземане до 22:30."];
+  else if (S.kitchen) say = ["warn", "clock", "Доставката приключи за днес · Поръчки за вземане до 22:30."];
   else say = ["", "moon", hourTitle(S) + " · " + hourLine(S) + "."]; /* the one hour note's words (lib/ui.ts) */
   return '<div class="tl-body' + (inDay ? "" : " closed") + '">' + (inDay ? '<div class="now' + side + '" style="left:' + pos.toFixed(2) + '%" aria-hidden="true"><b>Сега ' + hh + "</b></div>" : "") +
     rows.map((r) => '<div class="tl-row"><div class="lab">' + r[0] + "<span>" + r[1] + '</span></div><div class="track" aria-hidden="true"><i class="' + r[2] + '" style="width:' + pc(r[3]).toFixed(2) + '%"></i>' + (inDay ? '<b class="tick" style="left:' + pos.toFixed(2) + '%"></b>' : "") + "</div></div>").join("") +
@@ -200,7 +200,7 @@ export const FAQ: Faq[] = [
     /* the cart can show the fee only once it is in the data; until then no promise about it */
     ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа." + (FEES_KNOWN ? " Таксата се вижда в количката, преди да поръчате." : "") },
   { q: "Има ли минимална поръчка?", a: '<span class="missing">' + MISS_MIN + "</span>", ld: null },
-  { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00 можете да вземете поръчката от ресторанта до 22:30.", ld: "" },
+  { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00 приемаме поръчки за вземане от ресторанта до 22:30.", ld: "" },
   { q: "Доставяте ли обедното меню?", a: 'Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class="link" href="' + url.page("pickup") + '">Вземи от място</a>.', ld: "" },
   { q: "Колко бързо пристига поръчката?", a: "Обикновено " + eta(undefined, false).text + ", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате.", ld: "" },
   { q: "Как ще разбера кога идва шофьорът?", a: "Следите поръчката на живо: приета, готви се, готова, на път. 10 минути преди пристигане ви пращаме известие по SMS, Viber или в браузъра, както изберете.", ld: "" },

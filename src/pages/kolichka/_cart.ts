@@ -16,7 +16,7 @@ import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
 import { PAY_METHODS } from "../../lib/pay.ts";
-import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, offlineKeep, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
 /* icons this script draws (render.ts brings plus, fire, sparkle, leaf, pepper, clock; sc.ts x, check, caret-right, phone) */
 import "sc-icons:arrow-left,arrow-right,bowl-food,calendar-blank,caret-down,check-circle,credit-card,fork-knife,hourglass,info,map-pin,map-trifold,minus,money,moped,path,receipt,seal-percent,shopping-bag,sliders-horizontal,storefront,ticket,timer,trash,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
@@ -163,7 +163,7 @@ export function start(): void {
   function topNotes(I: Info, step: number) {
     let h = "";
     if (P.flash && P.flash.step === step) h += note(P.flash.kind, "warning-circle", P.flash.title, P.flash.text, P.flash.acts);
-    if (P.offline && !(step === 3 && P.err === "offline")) h += note("warn", "warning-circle", OFFLINE, "Количката е запазена на това устройство. Опитайте пак, когато връзката се върне.");
+    if (P.offline && !(step === 3 && P.err === "offline")) h += offlineKeep({ text: "Количката е запазена. Изпратете поръчката, когато връзката се върне." });
     if (I.closed) h += I.m < 600
       ? note("info", "clock", "Кухнята отваря в 10:00", "Можете да поръчате още сега за днес. Изберете час и ще я приготвим точно тогава.")
       : note("info", "clock", "Кухнята приема поръчки до 22:30", "Поръчайте за утре: изберете час и ще я приготвим точно тогава.");
@@ -227,7 +227,7 @@ export function start(): void {
       '<button type="button" data-act="mode" data-v="delivery" aria-pressed="' + (I.mode === "delivery") + '"' + (I.delivOK ? "" : " disabled") + ">" + ic("moped", 26) + "<b>Доставка</b><small>" + dSmall + "</small></button>" +
       '<button type="button" data-act="mode" data-v="pickup" aria-pressed="' + (I.mode === "pickup") + '">' + ic("storefront", 26) + "<b>Вземи от място</b><small>" + pSmall + "</small></button></div>";
     if (P.flash && P.flash.step === step) { /* the message from the core above already says it */ }
-    else if (!I.delivOK) h += '<div class="ff-note">' + note("info", "info", "Доставката е до 21:00", "Можете да я вземете от ресторанта до 22:30.") + "</div>";
+    else if (!I.delivOK) h += '<div class="ff-note">' + note("info", "info", "Доставката е до 21:00", "За вземане от ресторанта приемаме поръчки до 22:30. Готова е най-късно в 23:00.") + "</div>";
     else if (step === 1 && I.mode === "delivery" && I.today && e.busy) h += '<div class="ff-note">' + note("info", "clock", esc(e.text), "Кухнята е натоварена. Ако бързате, вземете я от място.") + "</div>";
     else if (I.mode === "pickup" && I.today && s.lunchDiscount && I.hasLunch) h += '<div class="ff-note">' + note("promo", "seal-percent", "-30% на обедното меню", "След 15:00 при вземане от място. Отстъпката вече е сметната.") + "</div>";
     return h;
@@ -477,7 +477,7 @@ export function start(): void {
   function renderBar(view: string, st: number, I: Info) {
     if (view !== "cart") { bar.hidden = true; bar.innerHTML = ""; return; }
     bar.hidden = false;
-    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back" type="button" data-act="go" data-n="' + (st - 1) + '">' + ic("arrow-left", 20) + "Назад</button>" : "") + ctaBtn(I, st, false);
+    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back" type="button" data-act="go" data-n="' + (st - 1) + '" aria-label="' + BACK + ": " + STEPS[st - 2][1] + '">' + ic("arrow-left", 20) + BACK + "</button>" : "") + ctaBtn(I, st, false);
   }
   /* refresh only the summary and the bar (keeps the caret in text fields) */
   function refreshSide() {
@@ -607,7 +607,7 @@ export function start(): void {
   }
   /* delivery was chosen, but it is after 21:00 now: never switch to pickup silently */
   function deliveryClosed() {
-    P.flash = { step: 1, kind: "bad", title: "Доставката приключи за днес в 21:00", text: "Можете да я вземете от ресторанта до 22:30. Нищо не е изпратено.",
+    P.flash = { step: 1, kind: "bad", title: "Доставката приключи за днес в 21:00", text: "За вземане от ресторанта приемаме поръчки до 22:30. Нищо не е изпратено.",
       acts: '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Вземи от място</button>" };
     go(1);
   }

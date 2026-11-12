@@ -93,7 +93,7 @@ test("pickup 22:45 and 09:30: tomorrow, before opening", async ({ page }) => {
 test("pickup 22:45 with a full cart: the button says \"Поръчай за утре\" like the alert", async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem("sc-cart", JSON.stringify({ mode: "pickup", lines: [{ key: "pitsa-kaprichoza", id: "pitsa-kaprichoza", q: 1, mods: [], extra: 0 }] })); } catch { /* ignore */ } });
   await open(page, "22:45");
-  await expect(page.locator("[data-alert]")).toContainText("поръчате сега за утре");
+  await expect(page.locator("[data-alert]")).toContainText("Изберете сега и поръчайте за утре.");
   await expect(page.locator("[data-hero-cta] [data-pickup-go]")).toContainText(/Поръчай за утре · \d+,\d\d €/);
 });
 

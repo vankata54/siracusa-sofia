@@ -196,6 +196,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
 <script>
   import { SC } from "../../../client/sc-menu.ts";
   import { stateBox, loadingText, previewPanel, pvChip, PV } from "../../../lib/ui.ts";
+  import { AL_INTRO, alNote } from "../../../lib/allergen-text.ts";
   import type { Dish } from "../../../lib/data.ts";
   import { plural } from "../_menu.ts";
   import {
@@ -273,8 +274,9 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   const many = (n?: number) => (n == null ? count(cat.id, 2).replace(/^2 /, "") : count(cat.id, n));
   function allergenSheet() {
     let pick = st.a.slice();
-    const html = '<p style="margin:0 0 6px">Отметнете какво не ядете. Ще скрием ' + many() + ", които го съдържат. Числото до алергена казва в колко ги има.</p>" +
-      '<p class="note-auto" style="margin:0 0 14px">' + ic("info", 18) + "<span>Предварително, от състава. Кухнята ги потвърждава. При силна алергия ни се обадете.</span></p>" +
+    const nd = items().filter((x) => !x.comp).length;
+    const html = '<p style="margin:0 0 6px">' + AL_INTRO + "</p>" +
+      '<p class="note-auto" style="margin:0 0 14px">' + ic("info", 18) + "<span>" + alNote(nd ? plural(nd) : "") + "</span></p>" +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + SC.ALLERGENS.map((a) => {
         const n = items().filter((x) => x.al.indexOf(a[0]) > -1).length;
         return '<button class="chip" type="button" data-al="' + a[0] + '" aria-pressed="' + (pick.indexOf(a[0]) > -1) + '" style="justify-content:flex-start;min-height:52px;padding:0 14px">' + ic(a[2], 18) + '<span style="flex:1;text-align:left">' + a[1] + "</span>" + '<span class="n">' + (n ? "в " + many(n) : "няма в състава") + "</span>" + "</button>";

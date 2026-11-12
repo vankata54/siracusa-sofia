@@ -55,7 +55,7 @@ describe("hours: delivery until 21:00, kitchen until 22:30, lunch only today", (
   it("21:30 delivery is refused with a clear error, never turned into pickup", async () => {
     const { core } = mk("21:30");
     await expect(core.orders.create({ ...base, cart: deliv([L(pizza.id)]), zone: "Дружба 2", addr: "Дружба 2, бл. 311" }))
-      .rejects.toMatchObject({ code: "delivery_closed", status: 409, message: "Доставката приключи за днес в 21:00. Можете да я вземете от ресторанта до 22:30." });
+      .rejects.toMatchObject({ code: "delivery_closed", status: 409, message: "Доставката приключи за днес в 21:00. За вземане от ресторанта приемаме поръчки до 22:30." });
     expect((await core.orders.create({ ...base, cart: pickup([L(pizza.id)]) })).mode).toBe("pickup");
   });
   it("before 10:00 its own text; 'днес' with a time works", async () => {

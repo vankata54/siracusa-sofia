@@ -89,7 +89,18 @@ export function metaDescription(d: Dish): string {
   /* no "." after a text that already ends with one ("за 100 гр.", "400 гр.") */
   const head = d.n + " от Siracusa, Дружба 2", tail = " " + endDot((d.per100 ? "" : d.g ? d.g + ", " : "") + fmt(d.p) + (d.per100 ? " за 100 гр." : "")) + " Поръчайте с доставка или вземете от място.";
   if (!d.comp) return head + "." + tail;
-  const parts = d.comp.replace(/\.\s*$/, "").split(/,\s*/);
+  /* the composition reads as a continuation after ":": a small first letter (not for "BBQ"-like words), "/…/" as "(…)",
+     cut only at a comma outside the brackets */
+  let comp = d.comp.replace(/\.\s*$/, "").replace(/\s*\/([^/]+)\/?/g, " ($1)").trim();
+  if (/^\p{Lu}\p{Ll}/u.test(comp)) comp = comp[0].toLowerCase() + comp.slice(1);
+  const parts: string[] = [];
+  let depth = 0, cur = "";
+  for (const ch of comp) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && !depth) { parts.push(cur.trim()); cur = ""; } else cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
   for (let k = parts.length; k > 0; k--) {
     const s = head + ": " + parts.slice(0, k).join(", ") + (k < parts.length ? "…" : ".") + tail;
     if (s.length <= DESC_MAX) return s;

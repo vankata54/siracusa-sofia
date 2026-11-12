@@ -28,7 +28,7 @@ describe("hours and the three states", () => {
   it("21:30 delivery is over, pickup until 22:30 (state 2)", () => {
     const s = state("21:30");
     expect(s).toMatchObject({ open: true, kitchen: true, delivery: false, lunchDiscount: true });
-    expect(status("21:30")).toEqual({ cls: "warn", html: '<b>Доставката приключи за днес</b> <span class="nw">· Вземане до 22:30</span>' });
+    expect(status("21:30")).toEqual({ cls: "warn", html: '<b>Доставката приключи за днес</b> <span class="nw">· Поръчки за вземане до 22:30</span>' });
   });
   it("22:45 kitchen closed", () => {
     expect(state("22:45")).toMatchObject({ open: true, kitchen: false, lunchDiscount: false });

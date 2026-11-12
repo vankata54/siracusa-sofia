@@ -2,11 +2,11 @@
    used by index.astro on the server (first paint, SEO) and by its client script (redrawn with the real Sofia time).
    The "_" prefix keeps this file out of the routes. Port of the time logic in design/pages/home.html. */
 import { ic } from "../lib/icons.ts";
-import { esc, plural, MON, dateLong, DAYS_SHORT } from "../lib/format.ts";
+import { esc, plural, MON, dateLong, DAYS_SHORT, hhmm } from "../lib/format.ts";
 import { hourTitle, hourLine, stateBox, miss } from "../lib/ui.ts";
 import "sc-icons:arrow-clockwise,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
 import { url } from "../lib/routes.ts";
-import { ZONES, RESTAURANT, type Zone } from "../lib/consts.ts";
+import { ZONES, RESTAURANT, ORDER_RULES, type Zone } from "../lib/consts.ts";
 import type { State, Eta } from "../lib/status.ts";
 /* the same non-breaking space as status.ts (a type-only import keeps status.ts out of this file) */
 const NBSP = "\u00a0";
@@ -16,8 +16,10 @@ import type { SiteEvent } from "../lib/events.ts";
 export function goHTML(st: State): string {
   let o: { t: string; s: string; pickup?: boolean };
   if (st.delivery) o = { t: "Поръчай", s: "Доставка или вземане от място" };
-  else if (st.kitchen) o = { t: "Поръчай за вземане", s: hourLine(st), pickup: true };
-  else o = { t: st.m < 600 ? "Поръчай за днес" : "Поръчай за утре", s: hourLine(st) }; /* "Приемаме поръчки утре от 10:00", as the note under it */
+  /* the status above and the hour note right below already say "Поръчки за вземане до 22:30" / "Приемаме поръчки утре от
+     10:00": the button adds what they do not (ready until closing; a pre-order picks its time from 10:30) */
+  else if (st.kitchen) o = { t: "Поръчай за вземане", s: "Готова до " + RESTAURANT.close, pickup: true };
+  else o = { t: st.m < 600 ? "Поръчай за днес" : "Поръчай за утре", s: "Изберете час от " + hhmm(ORDER_RULES.preorderFrom) };
   return '<a class="pill pill-red go" data-go href="' + url.menu() + '"' + (o.pickup ? " data-pickup" : "") + '><span class="gol"><span>' + o.t + "</span><small>" + o.s + '</small></span><span class="knob">' + ic("arrow-right", 22) + "</span></a>";
 }
 

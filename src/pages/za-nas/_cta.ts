@@ -9,7 +9,7 @@ export interface EndCta { label: string; href: string; text: string }
 export function endCta(st: Pick<State, "kitchen" | "delivery">): EndCta {
   const R = RESTAURANT;
   if (!st.kitchen) return { label: "Поръчай за утре", href: url.menu(), text: "Кухнята затвори за днес. Приемаме поръчки утре от " + R.open + ". Или запазете маса." };
-  if (!st.delivery) return { label: "Поръчай за вземане", href: url.page("pickup"), text: "Доставката приключи за днес. Вземане до " + R.kitchen + "." };
+  if (!st.delivery) return { label: "Поръчай за вземане", href: url.page("pickup"), text: "Доставката приключи за днес. Поръчки за вземане до " + R.kitchen + "." };
   return { label: "Поръчай", href: url.menu(), text: "Запазете маса в салона или в градината. Или поръчайте и ние ще донесем, до " + R.delivery + "." };
 }
 

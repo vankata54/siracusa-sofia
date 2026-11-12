@@ -70,8 +70,8 @@ export function ctaHTML(cls: string, v: CtaView | null): string {
 export function alertHTML(s: State): string {
   const m = s.m;
   /* the one hour note of the site (lib/ui.ts) */
-  if (m < OPEN) return hourNote(s, { more: "Можете да изберете час за днес още сега." });
-  if (!s.kitchen) return hourNote(s, { more: "Можете да поръчате сега за утре." });
+  if (m < OPEN) return hourNote(s, { more: "Изберете сега и поръчайте за днес." });
+  if (!s.kitchen) return hourNote(s, { more: "Изберете сега и поръчайте за утре." });
   if (!s.delivery) return hourNote(s, { more: "-" + PCT + "% на обедното меню още важи." });
   if (s.lunchDiscount) return '<div class="pk-alert ember">' + ic("seal-percent", 22) + "<span><b>Сега: -" + PCT + "% на обедното меню</b> при вземане, до " + K + '. <a href="#deal">Как става</a></span></div>';
   return "";
@@ -96,10 +96,10 @@ function resultHTML(p: Plan, s: State, chosen: number | null, tomorrow: string):
   else if (p.now) big = "веднага";
   else if (p.kind === "lunch") big = "<small>" + (dayWord || "днес ") + "в</small>" + hm(p.asap);
   else big = "<small>" + dayWord + "около</small>" + hm(p.asap);
-  if (p.closedToday && s.m >= OPEN && s.kitchen && p.kind !== "lunch") sub = "За днес не стигаме: ястията от менюто са готови най-рано след " + LEAD + " минути, а кухнята приема до " + K + ". Изберете час за утре, " + tomorrow + ".";
-  else if (p.closedToday) sub = "Кухнята приема поръчки до " + K + ". Изберете час за утре, " + tomorrow + ".";
+  if (p.closedToday && s.m >= OPEN && s.kitchen && p.kind !== "lunch") sub = "За днес не стигаме: ястията от менюто са готови най-рано след " + LEAD + " минути, а кухнята приема до " + K + ".";
+  else if (p.closedToday) sub = "Кухнята приема поръчки до " + K + "."; /* the day is in the heading of the slots right below */
   else if (p.early) sub = "Отваряме в " + R.open + ". " + (p.kind === "lunch" ? "Обедното меню е готово от отварянето." : "Ястията от менюто са готови най-рано в " + hm(OPEN + LEAD) + ".");
-  else if (p.kind === "lunch") sub = "Обедното меню е готово веднага. <b>Минете, когато ви е удобно</b>, до " + K + ".";
+  else if (p.kind === "lunch") sub = "Обедното меню е готово веднага. <b>Минете, когато ви е удобно</b>, до " + R.close + ".";
   else if (p.kind === "both") sub = "Поръчката е готова, когато е готово и последното ястие: <b>най-рано след " + LEAD + "&nbsp;минути</b>.";
   else sub = "Ястията от менюто се приготвят на момента: <b>най-рано след " + LEAD + "&nbsp;минути</b>.";
   const tag = p.kind !== "menu" && s.lunchDiscount && p.day === "today" ? '<span class="pk-tag">' + ic("seal-percent", 16) + "-" + PCT + "% на обедното, смята се само</span>" : "";
@@ -145,7 +145,7 @@ export function hoursHTML(s: State | null): string {
     '<div class="shell"><div class="core" aria-labelledby="pk-hours">' +
       '<div class="pk-tl">' +
         (inDay ? '<span class="pk-flag ' + nowCls + '" style="left:' + pct(m) + '" aria-hidden="true">Сега ' + hm(m) + "</span>" : "") +
-        '<div class="pk-lane"><div class="t">Вземане от място<span>' + R.open + " - " + K + '</span></div><div class="pk-track"><span class="pk-fill ink" style="width:' + pct(KITCHEN_END) + '"></span>' + mark + "</div></div>" +
+        '<div class="pk-lane"><div class="t">Поръчки за вземане<span>' + R.open + " - " + K + '</span></div><div class="pk-track"><span class="pk-fill ink" style="width:' + pct(KITCHEN_END) + '"></span>' + mark + "</div></div>" +
         '<div class="pk-lane"><div class="t">Обедно меню<span>' + R.open + " - " + L + '</span></div><div class="pk-track"><span class="pk-fill soft" style="width:' + pct(LUNCH_END) + '"></span><span class="pk-fill emb" style="left:' + pct(LUNCH_END) + ";width:calc(" + pct(KITCHEN_END) + " - " + pct(LUNCH_END) + ')"></span>' + mark + "</div>" +
           '<div class="pk-key"><span><i class="soft"></i>' + R.open + " - " + L + ': доставка или вземане</span><span><i class="emb"></i>после до ' + K + ": само вземане, -" + PCT + "%</span></div></div>" +
         '<div class="pk-lane"><div class="t">Доставка<span>' + R.open + " - " + D + '</span></div><div class="pk-track"><span class="pk-fill dim" style="width:' + pct(DELIVERY_END) + '"></span>' + mark + "</div></div>" +
@@ -164,7 +164,7 @@ export function hoursHTML(s: State | null): string {
 /* ---------- FAQ (server HTML + FAQPage JSON-LD; no [ЛИПСВА] in the answers) ---------- */
 export const FAQ: [string, string][] = [
   ["Колко време ще чакам?", "Обедното меню е готово веднага. Ястията от менюто са готови най-рано след " + LEAD + " минути. Ако поръчате и от двете, най-ранният час е след " + LEAD + " минути."],
-  ["Мога ли да избера по-късен час?", "Да. Часовете са през " + STEP + " минути, до " + aheadText() + " напред, но не след " + K + ". Ако кухнята е пълна в даден час, той е неактивен и виждате това преди да поръчате."],
+  ["Мога ли да избера по-късен час?", "Да. Часовете са през " + STEP + " минути, до " + aheadText() + " напред, най-късно в " + R.close + ". Поръчки приемаме до " + K + ". Ако кухнята е пълна в даден час, той е неактивен и виждате това преди да поръчате."],
   ["Как се смята -" + PCT + "% на обедното меню?", "След " + L + " отстъпката се прилага сама в количката, без код. Важи само за ястията от обедното меню и само при вземане от място."],
   ["Трябва ли ми профил?", "Не. Достатъчни са име и телефон. С профил получавате -10% от следващата поръчка."],
   ["Доставката приключи. Мога ли още да поръчам?", "Да. Доставката е до " + D + ", а за вземане приемаме поръчки до " + K + "."],

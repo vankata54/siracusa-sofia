@@ -111,7 +111,6 @@ const jsonld = menuLd(Astro.site);
 .notice{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:start; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .notice .nic{grid-row:span 3; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
 .notice.warn .nic{color:var(--warn)}
-.notice.off .nic{color:var(--danger)}
 .notice b{font-size:17px; line-height:1.3; letter-spacing:-.01em}
 .notice p{margin:0; color:var(--muted); font-size:15px}
 .notice .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
@@ -148,7 +147,8 @@ const jsonld = menuLd(Astro.site);
 .mcat{padding-top:48px}
 .mcat:first-child{padding-top:28px}
 .mcat .sec-h{margin-bottom:6px; align-items:center}
-.mcat .sec-h .link{flex:none}
+.mcat .sec-h{flex-wrap:wrap; column-gap:16px}
+.mcat .sec-h .link{flex:none} /* on a narrow screen it goes under the heading, never past the edge */
 .cdesc{margin:0; font-size:15px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums}
 .cseo{margin:4px 0 18px; font-size:14px}
 .qhead{padding-top:28px}
@@ -258,6 +258,7 @@ const jsonld = menuLd(Astro.site);
 <script>
   import { SC } from "../../client/sc-menu.ts";
   import { stateBox, loadingText, previewPanel, pvChip, PV } from "../../lib/ui.ts";
+  import { AL_INTRO, alNote } from "../../lib/allergen-text.ts";
   import {
     parseHash, hashOf, results, scopeItems, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML, LAZY_AFTER,
     filterById, fic, FICON, plural, type MenuState, type Group,
@@ -426,8 +427,8 @@ const jsonld = menuLd(Astro.site);
     }).join("");
     const nd = list.filter((x) => !x.comp).length;
     const s = SC.sheet({ title: "Алергени", html:
-      '<p class="sh-intro">Отметнете какво не ядете. Ще скрием ястията, които го съдържат.</p>' +
-      '<p class="sh-note">' + SC.ic("info", 18) + "<span>Алергените са предварителни, от състава. Кухнята ги потвърждава." + (nd ? " За " + plural(nd) + " още нямаме състав: показваме ги с бележка „попитайте ни“." : "") + "</span></p>" +
+      '<p class="sh-intro">' + AL_INTRO + "</p>" +
+      '<p class="sh-note">' + SC.ic("info", 18) + "<span>" + alNote(nd ? plural(nd) : "") + "</span></p>" +
       '<div class="flist">' + rows + "</div>" + foot });
     wireSheet(s, (inp) => { const id = inp.dataset.al!; st.a = st.a.filter((k) => k !== id); if (inp.checked) st.a.push(id); }, () => { st.a = []; });
   }

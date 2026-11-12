@@ -268,7 +268,7 @@ test("cart: discount code with the lunch -30% after 15:00 - the better one wins,
 });
 
 test("cart: delivery closed by the core -> step 1 with the reason and 'Вземи от място'", async ({ page }) => {
-  await page.route("**/api/orders", (r) => r.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "delivery_closed", message: "Доставката приключи за днес в 21:00. Можете да я вземете от ресторанта до 22:30." }) }));
+  await page.route("**/api/orders", (r) => r.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "delivery_closed", message: "Доставката приключи за днес в 21:00. За вземане от ресторанта приемаме поръчки до 22:30." }) }));
   await open(page, "12:30", { ...CART, lines: [CART.lines[0]] });
   await cta(page).click();
   await page.locator("#addr").fill("Дружба 2, бл. 311");

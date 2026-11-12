@@ -59,6 +59,7 @@ export function blockedHTML(phone: string): string {
 
 /** retry: "Опитай пак"; "call": too many tries (429), trying again is refused, so the action is the call (as in the reservation) */
 export function alertHTML(title: string, text: string, retry: boolean | "call" = true): string {
-  return '<div class="alert" role="alert">' + ic("warning-circle", 24) + "<b>" + esc(title) + "</b><span>" + esc(text) + "</span>" +
+  /* the title takes the focus (putAlert), as in the cart and the reservation (decision 12.11, кръг 2) */
+  return '<div class="alert" role="alert">' + ic("warning-circle", 24) + '<b tabindex="-1" data-ah>' + esc(title) + "</b><span>" + esc(text) + "</span>" +
     (retry === "call" ? callBtn("pill pill-line") : retry ? '<button class="pill pill-line" type="submit">' + ic("arrow-right", 18) + "Опитай пак</button>" : "") + "</div>";
 }

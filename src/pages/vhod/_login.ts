@@ -105,9 +105,16 @@ function viewSignedIn(u: User) {
   };
 }
 
+/** an error on sending: the message, and the focus on its title (not left on the button) */
+function putAlert(slot: Element | null, html: string, focus = true) {
+  if (!slot) return;
+  slot.innerHTML = html;
+  if (focus) slot.querySelector<HTMLElement>("[data-ah]")?.focus();
+}
+
 /* ---------- step 1: phone ---------- */
-function offlineAlert(slot: Element | null) {
-  if (slot) slot.innerHTML = alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак.");
+function offlineAlert(slot: Element | null, focus = true) {
+  putAlert(slot, alertHTML("Няма връзка с интернет", "Номерът ви е запазен. Проверете Wi-Fi или мобилните данни и опитайте пак."), focus);
 }
 function viewPhone(err = "", focus = false, reuse = false) {
   S.bonus = true;
@@ -144,7 +151,7 @@ function viewPhone(err = "", focus = false, reuse = false) {
       if (ex.code === "too_soon" && S.last && S.last.phone === d) return viewCode(S.last.demo, ex.retryIn ?? 30, S.last.known);
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.code === "invalid") return fieldErr(ex.fields?.phone || ex.message);
-      alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.", ex.code === "throttled" ? "call" : true);
+      putAlert(alert, alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.", ex.code === "throttled" ? "call" : true));
     }
   });
 }
@@ -305,7 +312,7 @@ function viewName() {
       idle(btn, BTN);
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.fields?.name) { inp.setAttribute("aria-invalid", "true"); er.textContent = ex.fields.name; er.hidden = false; inp.focus(); return; }
-      alert.innerHTML = alertHTML("Профилът не се запази", ex.code === "auth" ? "Входът изтече. Въведете номера си отново." : ex.message || "Нещо се обърка. Опитайте пак.", ex.code !== "auth");
+      putAlert(alert, alertHTML("Профилът не се запази", ex.code === "auth" ? "Входът изтече. Въведете номера си отново." : ex.message || "Нещо се обърка. Опитайте пак.", ex.code !== "auth"));
       if (ex.code === "auth") setTimeout(() => viewPhone("", true), 2500);
     }
   });
@@ -363,7 +370,8 @@ function route(first = false) {
   if (h === "ime") { S.sim = true; S.isNew = true; viewName(); return; }
   if (h === "gotovo") { S.sim = true; S.isNew = true; S.name = "Мария"; finish({ name: "Мария", phone: SAMPLE, stamps: 0 }, true); return; }
   if (h === "blokiran") { S.phone = BLOCKED; viewBlocked(); return; }
-  if (h === "offline") { viewPhone(); offlineAlert(box.querySelector("[data-alert]")); return; }
+  /* preview: the state on opening, the focus stays where the page put it */
+  if (h === "offline") { viewPhone(); offlineAlert(box.querySelector("[data-alert]"), false); return; }
   const me = SC.user() as User | null;
   if (me && me.phone) { viewSignedIn(me); return; }
   viewPhone("", false, first);
