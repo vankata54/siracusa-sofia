@@ -1,26 +1,32 @@
 /* Обща поръчка за офиса: the browser part (port of the script in design/pages/office.html).
    Views in the address hash:
-     ""            create form (the rest of the start view is drawn on the server)
-     #share        link for colleagues (organizer)
-     #list         shared list, timer, bill, send (organizer)
-     #mine         the organizer's own lunch
-     #join-<код>   invited colleague: name + lunch menu, no profile
-     #sent         sent to the restaurant
-   The order lives in the core (api.office.*: server, or localStorage core in the demo). localStorage "sc-office" keeps
-   only per-viewer conveniences: the form draft, which order this browser organizes, the phone, a colleague's draft.
-   The organizer is the first participant of the order (the core has no organizer field).
-   OPEN-QUESTIONS 17 defaults: automatic send at the deadline, colleagues without a profile, one payment. */
-import { SC } from "../../client/sc-menu.ts";
+     ""                   create form (the rest of the start view is drawn on the server)
+     #share               link for colleagues + the organizer's own link (organizer)
+     #list                shared list, timer, bill, send (organizer)
+     #list-<код>-<ключ>   the organizer's link: continue on another device (the key is kept, the address becomes #list)
+     #mine                the organizer's own lunch
+     #join-<код>          invited colleague: name + lunch menu, no profile
+     #sent                sent to the restaurant
+   The order lives in the core (api.office.*: server, or localStorage core in the demo). The core sends the order at the
+   deadline by itself when the organizer gave a name and a phone at create (else `autoFailed` and the organizer sends it).
+   localStorage "sc-office" keeps only per-viewer conveniences: the form draft, which order this browser organizes,
+   the phone, a colleague's draft. The organizer is the first participant of the order.
+   Speed: no menu runtime (sc-menu.ts); the lunch menu comes as JSON in the HTML (#o-data, drawn by index.astro). */
+import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { zoneOfAddress, zoneByName, zoneMin, type AddressResult } from "../../lib/zones.ts";
 import { normPhone, hhmm, dateLong } from "../../lib/format.ts";
-import { sofiaDate } from "../../lib/data.ts";
-import { clockOverride } from "../../lib/time.ts";
+import { clockOverride, sofiaYmd } from "../../lib/time.ts";
+import { artSvg } from "../../lib/art.ts";
+import { busyExtra } from "../../lib/status.ts";
 import type { Zone } from "../../lib/consts.ts";
 import type { Dish } from "../../data/menu.ts";
-import type { OfficeOrder, OrderLine, Order } from "../../core/types.ts";
-import { TEAM } from "./_views.ts";
-/* icons this script draws (sc.ts: x, check, caret-right, phone, question; render.ts: plus, clock ...) */
+import type { OrderLine, Order } from "../../core/types.ts";
+import type { PublicOffice } from "../../core/office.ts";
+/* icons this script draws (sc.ts: x, check, caret-right, phone, question) */
+import "../../lib/icons/plus.ts";
+import "../../lib/icons/clock.ts";
+import "../../lib/icons/calendar-dots.ts";
 import "../../lib/icons/arrow-left.ts";
 import "../../lib/icons/arrow-right.ts";
 import "../../lib/icons/arrow-up-right.ts";
@@ -46,22 +52,27 @@ import "../../lib/icons/sliders-horizontal.ts";
 import "../../lib/icons/trash.ts";
 import "../../lib/icons/users.ts";
 
+/** What index.astro puts in #o-data: the lunch menu of the data (its date) and the prototype's sample colleagues. */
+export interface OfficeData { date: string; dayName: string; items: Dish[]; team: { n: string; picks: Record<string, number> }[] }
+type OfficeOrder = PublicOffice & { isOrg?: boolean };
+
 type Picks = Record<string, number>;
 type Mode = "delivery" | "pickup";
 type Day = "today" | "tomorrow";
 interface Draft { office: string; name: string; addr: string; mode: Mode; deadline: number | null; day: Day | null; pays: "one" | "each" }
 interface Guest { name: string; picks: Picks; done: boolean; as: string }
-interface Sent { code: string; no: string; at: string; total: number; count: number; people: number; owe: [string, number][]; pays: "one" | "each"; mode: Mode; office: string }
+interface Sent { code: string; no: string; key?: string; at: string; total: number; count: number; people: number; owe: [string, number][]; pays: "one" | "each"; mode: Mode; office: string }
 interface Local {
   draft: Draft; code: string; me: string; phone: string; pay: "cash" | "card"; mine: Picks;
-  days: Record<string, string>; guests: Record<string, Guest>; sent: Sent | null;
+  /** days: the lunch day of each order (from the core); auto: the organizer gave a phone at create (the core sends at the deadline) */
+  days: Record<string, string>; auto: Record<string, boolean>; guests: Record<string, Guest>; sent: Sent | null;
 }
 interface Person { n: string; picks: Picks; me?: boolean; guest?: boolean; cls?: string }
 
 const KEY = "sc-office";
 const DEF: Local = {
   draft: { office: "", name: "", addr: "", mode: "delivery", deadline: null, day: null, pays: "one" },
-  code: "", me: "", phone: "", pay: "cash", mine: {}, days: {}, guests: {}, sent: null,
+  code: "", me: "", phone: "", pay: "cash", mine: {}, days: {}, auto: {}, guests: {}, sent: null,
 };
 
 export function start(): void {
@@ -74,37 +85,45 @@ export function start(): void {
   const createEl = main.querySelector<HTMLElement>("[data-create]")!;
 
   const raw = SC.load<Partial<Local>>(KEY, {});
-  const L: Local = { ...DEF, ...raw, draft: { ...DEF.draft, ...(raw.draft || {}) }, days: raw.days || {}, guests: raw.guests || {}, mine: raw.mine || {} };
+  const L: Local = { ...DEF, ...raw, draft: { ...DEF.draft, ...(raw.draft || {}) }, days: raw.days || {}, auto: raw.auto || {}, guests: raw.guests || {}, mine: raw.mine || {} };
   const save = () => SC.store(KEY, L);
 
   /* simulated states: only in the preview panel (?preview=1) */
   const sim = { closed: false, offline: false, loading: false };
   const t0 = Date.now();
 
-  /* the lunch menu, grouped; sold out stays visible, last in its group (decision 2) */
+  /* the lunch menu (JSON in the HTML), grouped; sold out stays visible, last in its group (decision 2) */
+  let DATA: OfficeData = { date: "", dayName: "", items: [], team: [] };
+  try { DATA = { ...DATA, ...JSON.parse(document.getElementById("o-data")?.textContent || "{}") }; } catch { /* keep empty */ }
+  const byId: Record<string, Dish> = Object.fromEntries(DATA.items.map((x) => [x.id, x]));
+  const isOut = (x: Dish) => (x.t || []).indexOf("out") > -1;
+  const pic = (x: Dish) => '<div class="pic' + (isOut(x) ? " out" : "") + '" role="img" aria-label="' + esc(x.n) + ' (илюстрация до новата фотосесия)">' + artSvg(x) + "</div>";
+  /** BRIEF 8: the lunch menu in the data is for one date; dishes are ordered only on that day (in the preview always, as an example) */
+  const lunchIsToday = () => sofiaYmd(new Date()) === DATA.date;
+  const canOrder = () => lunchIsToday() || SC.preview;
   const GROUPS: { n: string; id: string; items: Dish[] }[] = [];
-  SC.lunch.forEach((x) => {
+  DATA.items.forEach((x) => {
     let g = GROUPS.find((z) => z.n === x.group);
     if (!g) { g = { n: x.group || "", id: "g" + GROUPS.length, items: [] }; GROUPS.push(g); }
     g.items.push(x);
   });
-  GROUPS.forEach((g) => g.items.sort((a, b) => Number(SC.isOut(a)) - Number(SC.isOut(b))));
+  GROUPS.forEach((g) => g.items.sort((a, b) => Number(isOut(a)) - Number(isOut(b))));
 
   /* ---------- remote order ---------- */
-  let O: OfficeOrder | null = null, Ocode = "", loadErr: ApiError | null = null, loading = false, autoTried = "";
+  let O: OfficeOrder | null = null, Ocode = "", loadErr: ApiError | null = null, loading = false;
 
   /* ---------- helpers ---------- */
   const pad = (n: number) => (n < 10 ? "0" : "") + n;
   const clock = (m: number) => hhmm(((m % 1440) + 1440) % 1440);
   const toMin = (s: string) => +s.slice(0, 2) * 60 + +s.slice(3, 5);
-  const sum = (p: Picks) => Math.round(Object.keys(p || {}).reduce((s, k) => s + (SC.byId[k] ? SC.byId[k].p * p[k] : 0), 0) * 100) / 100;
+  const sum = (p: Picks) => Math.round(Object.keys(p || {}).reduce((s, k) => s + (byId[k] ? byId[k].p * p[k] : 0), 0) * 100) / 100;
   const cnt = (p: Picks) => Object.values(p || {}).reduce((s, q) => s + q, 0);
   const dishes = (n: number) => n + " " + (n === 1 ? "ястие" : "ястия");
   const souls = (n: number) => n + " " + (n === 1 ? "човек" : "души");
   const initial = (n: string) => esc((n || "?").trim().charAt(0).toUpperCase());
-  const picksOf = (lines: OrderLine[]) => { const p: Picks = {}; (lines || []).forEach((l) => { if (SC.byId[l.id]) p[l.id] = (p[l.id] || 0) + l.q; }); return p; };
-  const linesOf = (p: Picks): OrderLine[] => Object.keys(p).filter((k) => p[k] > 0).map((k) => ({ id: k, q: p[k], mods: [], extra: 0, name: SC.byId[k]?.n, unit: SC.byId[k]?.p }));
-  const today = () => sofiaDate(new Date());
+  const picksOf = (lines: OrderLine[]) => { const p: Picks = {}; (lines || []).forEach((l) => { if (byId[l.id]) p[l.id] = (p[l.id] || 0) + l.q; }); return p; };
+  const linesOf = (p: Picks): OrderLine[] => Object.keys(p).filter((k) => p[k] > 0).map((k) => ({ id: k, q: p[k], mods: [], extra: 0, name: byId[k]?.n, unit: byId[k]?.p }));
+  const today = () => sofiaYmd(new Date());
   const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
   const dateOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd, 12); };
   /** seconds since midnight on the shop clock (in preview the fixed clock moves on from page load) */
@@ -112,7 +131,8 @@ export function start(): void {
   const busy = () => SC.eta().busy;
   function copy(text: string) { try { navigator.clipboard?.writeText(text).catch(() => undefined); } catch { /* not allowed */ } }
   function scrollToEl(el: Element | null) { if (!el) return; const y = el.getBoundingClientRect().top + window.scrollY - 150; window.scrollTo({ top: Math.max(0, y), behavior: SC.reduce ? "auto" : "smooth" }); }
-  function focusLater(el: HTMLElement | null, ms = 350) { if (el) setTimeout(() => el.focus({ preventScroll: true }), SC.reduce ? 0 : ms); }
+  /** focus at once (the screen reader reads the field with its error first); scrollToEl does the scrolling */
+  function focusLater(el: HTMLElement | null) { if (el) el.focus({ preventScroll: true }); }
 
   /* ---------- the plan for a new order: deadline slots every 30 min, 10:30-14:00 (lunch is delivered until 15:00) ---------- */
   function plan() {
@@ -128,7 +148,7 @@ export function start(): void {
   }
   function etaMin(z: Zone | null, mode: Mode, day: string) {
     if (mode === "pickup") return 0;
-    return (z ? zoneMin(z) : 35) + (day === "today" && busy() ? 20 : 0); /* same rule as the cart: "Натоварено" adds 20 min */
+    return (z ? zoneMin(z) : 35) + (day === "today" && busy() ? busyExtra() : 0); /* the core's rule (pricing): "Натоварено" adds the minutes from the settings */
   }
   function zr(): AddressResult { return zoneOfAddress(L.draft.addr || ""); }
   function draftCtx() {
@@ -137,10 +157,11 @@ export function start(): void {
   }
 
   /* ---------- an existing order: its day, deadline, time left ---------- */
+  /** the lunch day: the core's `date` (the same for the organizer and every colleague); older orders: the create time */
   function targetDate(o: OfficeOrder): string {
+    if (o.date) return o.date;
     if (L.days[o.code]) return L.days[o.code];
-    /* another browser: the day follows the create time (after the last slot it was opened for the next day) */
-    const c = new Date(o.createdAt), cd = sofiaDate(c);
+    const c = new Date(o.createdAt), cd = sofiaYmd(c);
     const f = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(c).split(":");
     const cm = (+f[0] % 24) * 60 + +f[1];
     return cm + 30 > toMin(o.deadline) ? addDays(cd, 1) : cd;
@@ -165,7 +186,8 @@ export function start(): void {
   const whereText = (o: { mode: string; zone: string; addr: string }) => (o.mode === "pickup" ? "Вземане от ресторанта" : o.zone || o.addr || "ж.к. Дружба 2");
   const feeText = (c: Ctx) => (c.mode === "pickup" ? "Без доставка" : !c.z || c.z.free ? "Безплатна" : '<span class="missing">[ЛИПСВА: такса в €]</span>');
   const orgOf = (o: OfficeOrder) => (o.participants[0] && o.participants[0].name) || "Колегата";
-  const isMine = (o: OfficeOrder | null) => !!o && o.code === L.code;
+  /** this browser organizes the order: the core says so (isOrg: it holds the organizer key) */
+  const isMine = (o: OfficeOrder | null) => !!o && (o.isOrg != null ? o.isOrg : o.code === L.code);
 
   function people(o: OfficeOrder, guestView = false): Person[] {
     const g = L.guests[o.code];
@@ -181,7 +203,10 @@ export function start(): void {
   const joinHref = (code: string) => SC.url.page("office", "join-" + code);
   const joinURL = (code: string) => new URL(joinHref(code), location.href).href;
   const shortURL = (code: string) => joinURL(code).replace(/^https?:\/\//, "");
-  function linkHTML(code: string) { const u = shortURL(code), i = u.indexOf("#"); return "<span>" + esc(u.slice(0, i)) + "</span><wbr><span class=\"nw\">" + esc(u.slice(i)) + "</span>"; }
+  /** the organizer's own link (continue on another device): never for the colleagues */
+  const orgURL = (code: string) => { const k = api.office.orgKey(code); return k ? new URL(SC.url.page("office", "list-" + code + "-" + k), location.href).href : ""; };
+  /** one line: the start of the address shrinks with "…", the code stays whole (the copy button gives the whole link) */
+  function linkHTML(u: string) { const i = u.indexOf("#"); return '<span class="o-lh">' + esc(u.slice(0, i)) + '</span><span class="nw">' + esc(u.slice(i)) + "</span>"; }
   function chatMsg(o: OfficeOrder, c: Ctx) { return "Поръчваме обяд от Siracusa. Изберете си от обедното меню до " + clock(c.dl) + (c.day === "tomorrow" ? " утре" : "") + ": " + joinURL(o.code); }
 
   /* ---------- small templates ---------- */
@@ -195,7 +220,7 @@ export function start(): void {
   const back = (href: string, label: string) => '<a class="link o-back" href="' + href + '">' + ic("arrow-left", 20) + esc(label) + "</a>";
   function person(p: Person, o: { edit?: boolean; closed?: boolean; guestView?: boolean; fresh?: boolean } = {}) {
     const n = cnt(p.picks);
-    const items = Object.keys(p.picks).map((k) => '<li><span class="q">' + p.picks[k] + " ×</span><span>" + esc(SC.byId[k].n) + "</span></li>").join("");
+    const items = Object.keys(p.picks).map((k) => '<li><span class="q">' + p.picks[k] + " ×</span><span>" + esc(byId[k].n) + "</span></li>").join("");
     const tag = p.me ? '<span class="o-tag">' + (o.guestView ? "организатор" : "вие, организатор") + "</span>" : p.guest ? '<span class="o-tag">вие</span>' : "";
     let acts = "";
     if (o.edit && p.me && !o.closed) acts = '<div class="acts"><a class="link" href="#mine">' + ic(n ? "pencil-simple" : "plus", 18) + (n ? "Промени моя избор" : "Избери своето") + "</a></div>";
@@ -222,9 +247,10 @@ export function start(): void {
       '<form class="o-form" data-form novalidate>' +
         '<div class="field"><label for="o-office">Име на офиса <span class="muted" style="font-weight:600">(по желание)</span></label><input class="input" id="o-office" name="office" autocomplete="organization" placeholder="Например: Счетоводство, 3-ти етаж" value="' + esc(d.office) + '" aria-describedby="o-office-h o-office-e"><span class="help" id="o-office-h">Колегите ще го видят в поканата.</span><span class="err" id="o-office-e" data-err="office" hidden></span></div>' +
         '<div class="field"><label for="o-name">Вашето име</label><input class="input" id="o-name" name="name" autocomplete="given-name" placeholder="Например: Мария" value="' + esc(d.name) + '" aria-describedby="o-name-e"><span class="err" id="o-name-e" data-err="name" hidden></span></div>' +
+        '<div class="field"><label for="o-cphone">Вашият телефон <span class="muted" style="font-weight:600">(по желание)</span></label><input class="input" id="o-cphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-cphone-h o-cphone-e"><span class="help" id="o-cphone-h">С телефона поръчката тръгва към ресторанта сама в крайния час, а шофьорът може да ви се обади. Без него я изпращате с бутон.</span><span class="err" id="o-cphone-e" data-err="cphone" hidden></span></div>' +
         '<div class="field" data-addrbox>' + addrHTML() + "</div>" +
-        '<div class="field"><span class="label" id="o-slots-l">Колегите избират до</span><div class="o-slots" role="group" aria-labelledby="o-slots-l">' + slots + "</div>" +
-          (anyOff ? '<span class="help">Зачертаните часове за днес минаха.</span>' : "") +
+        '<div class="field"><span class="label" id="o-slots-l">Колегите избират до</span><div class="o-slots" id="o-slots" role="group" aria-labelledby="o-slots-l" aria-describedby="o-slots-e">' + slots + "</div>" +
+          (anyOff ? '<span class="help">Зачертаните часове за днес минаха.</span>' : "") + '<span class="err" id="o-slots-e" data-err="deadline" hidden></span>' +
           '<div class="o-res" data-eta aria-live="polite"></div></div>' +
         '<fieldset class="o-choice"><legend class="label">Кой плаща</legend>' +
           '<label class="o-opt"><input type="radio" name="pays" value="one"' + (d.pays === "one" ? " checked" : "") + '><span class="o-fi">' + ic("wallet", 22) + '</span><span><b>Плащам аз за всички</b><span class="muted">Виждате кой колко ви дължи.</span></span><span class="o-radio">' + ic("check", 16) + "</span></label>" +
@@ -232,7 +258,7 @@ export function start(): void {
         "</fieldset>" +
         '<div data-formerr></div>' +
         '<div class="o-actions"><button class="pill pill-red pill-lg pill-block" type="submit" data-create-btn>Създай връзка за колегите' + ic("arrow-right", 20) + "</button>" +
-        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане в брой или с карта при получаване. В крайния час поръчката тръгва към ресторанта сама, или я изпращате по-рано.</span></p></div>" +
+        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане в брой или с карта при получаване. Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано.</span></p></div>" +
       "</form></div>" +
       '<aside class="o-aside o-onlydesk" aria-label="Преглед на поканата"><div class="o-preview shell"><div class="core"><span class="label">' + ic("eye", 18) + 'Така ще я видят колегите</span><div data-preview></div></div></div></aside>' +
     "</div>";
@@ -263,12 +289,14 @@ export function start(): void {
     if (el) el.innerHTML = ic(d.mode === "pickup" ? "storefront" : "truck", 20) + "<span>" + (d.mode === "pickup" ? "Готово за вземане " + c.dayWord + " в " + clock(c.dl) : "Доставка " + c.dayWord + " около " + clock(c.eta)) + "</span>";
     const pv = main.querySelector("[data-preview]"); if (pv) pv.innerHTML = previewHTML();
   }
+  /** the name the colleagues see: the office name, or "Офисът на Мария" (what the core gets when it is empty) */
+  const officeName = (d: Draft) => d.office.trim() || (d.name.trim() ? "Офисът на " + d.name.trim() : "");
   function previewHTML() {
-    const c = draftCtx(), d = L.draft, nm = d.name.trim() || "Вие", r = zr();
+    const c = draftCtx(), d = L.draft, nm = d.name.trim() || "Вие", r = zr(), offName = officeName(d);
     const where = d.mode === "pickup" ? "Вземане от ресторанта" : r.type === "zone" ? r.zone.n : d.addr.trim() || "ж.к. Дружба 2";
     return '<div class="o-bubble"><span class="who">' + esc(nm) + "</span>Поръчваме обяд от Siracusa. Изберете си до " + clock(c.dl) + (c.day === "tomorrow" ? " утре" : "") + '.<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + "<span>" + esc(shortURL("······")) + "</span></span></div>" +
       '<div class="o-kv">' +
-      '<div class="kv"><span>Офис</span><b>' + esc(d.office.trim() || (d.name.trim() ? "Офисът на " + d.name.trim() : "Без име")) + "</b></div>" +
+      (offName ? '<div class="kv"><span>Офис</span><b>' + esc(offName) + "</b></div>" : "") +
       '<div class="kv"><span>' + (d.mode === "pickup" ? "Вземане" : "Доставка до") + "</span><b>" + esc(where) + "</b></div>" +
       '<div class="kv"><span>Избор до</span><b>' + c.dayWord + ", " + clock(c.dl) + "</b></div>" +
       '<div class="kv"><span>' + (d.mode === "pickup" ? "Готово" : "Пристига около") + "</span><b>" + clock(c.eta) + "</b></div>" +
@@ -276,6 +304,15 @@ export function start(): void {
   }
 
   /* ======================= view: link for colleagues ======================= */
+  /** the organizer's link: the same order on another phone or computer (with the organizer key) */
+  function orgLinkHTML(o: OfficeOrder) {
+    const u = orgURL(o.code);
+    if (!u) return "";
+    return '<div class="shell"><div class="core o-card o-orglink"><h2 class="o-h3">' + ic("lock", 20) + 'Връзка само за вас</h2>' +
+      '<p class="muted" style="margin:6px 0 10px">С нея довършвате поръчката от друг телефон или компютър: виждате списъка и я изпращате. Не я пращайте на колегите.</p>' +
+      '<div class="o-link">' + ic("lock", 20) + '<output aria-label="Връзка само за вас">' + linkHTML(u.replace(/^https?:\/\//, "").replace(/-[^-]+$/, "-…")) + "</output></div>" +
+      '<button class="pill pill-line pill-block" type="button" data-act="copyorg" style="margin-top:10px">' + ic("copy", 20) + "Копирай връзката за вас</button></div></div>";
+  }
   function viewShare(o: OfficeOrder) {
     const c = ctx(o), msg = chatMsg(o, c), me = orgOf(o);
     return '<section class="sec o-top"><div class="o-lay"><div class="o-col">' +
@@ -285,12 +322,14 @@ export function start(): void {
         '<h1 class="h2">Поръчката е отворена</h1>' +
         '<p class="lead o-sub">Пратете връзката в чата на офиса. Колегите избират до <b style="color:var(--ink)">' + clock(c.dl) + "</b> " + c.dayWord + ".</p>" +
         '<div class="o-linkwrap"><span class="label" id="o-link-l">Връзка за колегите</span>' +
-        '<div class="o-link">' + ic("arrow-up-right", 20) + '<output aria-labelledby="o-link-l" data-link>' + linkHTML(o.code) + "</output></div>" +
+        '<div class="o-link" title="' + esc(joinURL(o.code)) + '">' + ic("arrow-up-right", 20) + '<output aria-labelledby="o-link-l" data-link>' + linkHTML(shortURL(o.code)) + "</output></div>" +
         '<button class="pill pill-red pill-lg pill-block" type="button" data-act="copylink">' + ic("copy", 22) + "Копирай връзката</button>" +
         '<div class="o-two"><a class="pill pill-line" href="viber://forward?text=' + encodeURIComponent(msg) + '" data-act="viber">' + ic("chat-circle-dots", 20) + 'Във Viber</a><button class="pill pill-line" type="button" data-act="sharenative">' + ic("share-network", 20) + "Друг начин</button></div></div>" +
+      (api.demo ? note("warn", "info", "<p><b>Това е демо.</b> Поръчката се пази само в този браузър, затова поканата работи само тук (в нов раздел). На истинския сайт колегите отварят връзката от всеки телефон или компютър.</p>") : "") +
       "</div></div>" +
       '<div><h2 class="o-h3" style="margin-bottom:12px">Готово съобщение за чата</h2><div class="o-bubble"><span class="who">' + esc(me) + "</span>" + esc(msg.replace(joinURL(o.code), "")).trim() + '<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + "<span>" + esc(shortURL(o.code)) + "</span></span></div>" +
         '<button class="link" type="button" data-act="copymsg" style="min-height:48px">' + ic("copy", 18) + "Копирай цялото съобщение</button></div>" +
+      orgLinkHTML(o) +
     "</div>" +
     '<aside class="o-aside o-col">' +
       '<div class="shell"><div class="core o-card"><h2 class="o-h3" style="margin-bottom:4px">Вашата поръчка</h2>' +
@@ -309,9 +348,26 @@ export function start(): void {
   /* ======================= view: shared list ======================= */
   function timerHTML(o: OfficeOrder, c: Ctx) {
     if (c.late) return note("warn", "clock", '<p>Обедното меню вече не се доставя днес (до 15:00). Отворете нова поръчка за утре.</p><button class="pill pill-line" type="button" data-act="restart">Нова поръчка за утре</button>');
-    if (c.closed) return '<div class="o-closed"><span class="o-fi">' + ic("lock", 22) + "</span><div><b>Изборът приключи в " + clock(c.dl) + "</b><span>" + (eaters(o).length ? "Списъкът е затворен. " + (normPhone(L.phone) ? "Изпращаме поръчката на ресторанта." : "Напишете телефона си и изпратете поръчката.") : "Никой не избра ястие.") + "</span></div></div>";
+    if (c.closed) return '<div class="o-closed"><span class="o-fi">' + ic("lock", 22) + "</span><div><b>Изборът приключи в " + clock(c.dl) + "</b><span>" + closedText(o) + "</span></div></div>" + autoFailedHTML(o);
     return '<div class="o-timer"><div><span class="lbl">Остават за избор</span><span class="o-time" data-left>' + left(c.remain) + '</span></div><div class="o-until"><span class="o-live"><i></i>На живо</span><br>до ' + clock(c.dl) + " " + c.dayWord + "</div></div>" +
       '<div class="o-track" aria-hidden="true"><span data-track style="transform:scaleX(' + trackScale(c) + ')"></span></div>';
+  }
+  /** after the deadline: what happens with the order (the core sends it when the organizer gave a phone at create) */
+  function closedText(o: OfficeOrder) {
+    if (o.status !== "open") return "Поръчката е изпратена" + (o.orderNo ? " (№ " + esc(o.orderNo) + ")." : ".");
+    if (!eaters(o).length) return "Никой не избра ястие.";
+    if (o.autoFailed) return "Списъкът е затворен.";
+    return "Списъкът е затворен. " + (L.auto[o.code] ? "Поръчката тръгва към ресторанта до минута." : "Напишете телефона си и изпратете поръчката.");
+  }
+  /** o.autoFailed: why the core did not send it at the deadline; the organizer sends it with the button */
+  function autoFailedHTML(o: OfficeOrder) {
+    const why = o.status === "open" ? o.autoFailed : "";
+    if (!why) return "";
+    const txt = why === "no_contact" ? "<b>Поръчката не тръгна сама:</b> при създаването не беше даден телефон. Напишете го отдолу и натиснете „Изпрати на ресторанта“."
+      : why === "empty" ? "<b>Поръчката не тръгна:</b> никой не избра ястие. Добавете ястие или отворете нова поръчка."
+      : why === "lunch_stale" ? "<b>Поръчката не тръгна сама:</b> обедното меню за днес още не е качено. Обадете ни се на " + esc(R.phone) + "."
+      : "<b>Поръчката не тръгна сама.</b> Изпратете я с бутона „Изпрати на ресторанта“ или ни се обадете на " + esc(R.phone) + ".";
+    return '<div style="margin-top:12px">' + note("bad", "warning-circle", "<p>" + txt + "</p>", "alert") + "</div>";
   }
   const trackScale = (c: Ctx) => Math.min(1, Math.max(0, c.remain / (c.day === "today" ? 7200 : 86400))).toFixed(4);
   function peopleHTML(o: OfficeOrder, c: Ctx, fresh: Set<string>) {
@@ -353,10 +409,16 @@ export function start(): void {
     const s = sendState(o, c);
     return '<button class="pill pill-red ' + cls + '" type="button" data-act="send"' + (s.ok ? "" : " disabled") + ">" + s.lbl + "</button>";
   }
+  /** the truth about the deadline: the core sends by itself only with the phone given at create (L.auto; unknown on another device) */
   function sendNote(o: OfficeOrder, c: Ctx) {
     if (c.closed || c.late) return "";
-    if (c.day === "tomorrow" || c.day === "later") return '<p class="o-fine">' + ic("info", 18) + "<span>" + (c.day === "tomorrow" ? "Утре" : "На " + esc(c.dayWord)) + " в " + clock(c.dl) + " поръчката тръгва към ресторанта сама. Дотогава колегите могат да избират.</span></p>";
-    return '<p class="o-fine">' + ic("info", 18) + "<span>В " + clock(c.dl) + " поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано: тогава списъкът се затваря.</span></p>";
+    const when = (c.day === "tomorrow" ? "Утре в " : c.day === "later" ? "На " + esc(c.dayWord) + " в " : "В ") + clock(c.dl);
+    const auto = L.auto[o.code];
+    const first = auto === true ? when + " поръчката тръгва към ресторанта сама."
+      : auto === false ? when + " списъкът се затваря. Поръчката не тръгва сама (при създаването нямаше телефон): изпратете я с бутона."
+      : when + " списъкът се затваря. Ако при създаването сте дали телефон, поръчката тръгва сама; иначе я изпратете с бутона.";
+    const tail = c.day === "tomorrow" || c.day === "later" ? " Дотогава колегите могат да избират." : auto === true ? " Можете да я изпратите и по-рано: тогава списъкът се затваря." : " Можете да я изпратите и по-рано.";
+    return '<p class="o-fine">' + ic("info", 18) + "<span>" + first + tail + "</span></p>";
   }
   function viewList(o: OfficeOrder) {
     const c = ctx(o), list = eaters(o), N = totalCount(o);
@@ -366,6 +428,7 @@ export function start(): void {
       "<div data-senderr></div>" +
       '<div class="o-onlydesk o-sendinline" data-sendinline>' + sendBtn(o, c, "pill-lg pill-block") + "</div>" +
       '<div data-sendnote>' + sendNote(o, c) + "</div>" +
+      (orgURL(o.code) && !c.sent ? '<button class="link" type="button" data-act="copyorg" style="min-height:48px">' + ic("lock", 18) + "Копирай връзката за друго устройство</button>" : "") +
     "</div></div>";
     const html = '<section class="sec o-top">' + back("#share", "Назад: връзката за колегите") + stepper(3) +
       '<div class="o-lay"><div class="o-col">' +
@@ -396,26 +459,27 @@ export function start(): void {
 
   /* ======================= picker (organizer and colleague) ======================= */
   function pickerHTML(picks: Picks, day: string) {
-    const lunchDay = SC.lunchIsToday() ? esc(SC.menu.lunch.dayName) + ", " + dateLong(dateOf(SC.menu.lunch.date)).split(", ")[1] : "Обедното меню се качва всяка сутрин.";
-    return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2><p class="muted" style="margin:-6px 0 0;font-weight:600">' + lunchDay + "</p>" +
-      (day === "tomorrow" ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] Показваме последното качено.</p>' : "") +
+    const lunchDay = lunchIsToday() ? esc(DATA.dayName) + ", " + dateLong(dateOf(DATA.date)).split(", ")[1] : "Меню за " + esc(dateLong(dateOf(DATA.date)));
+    const stale = !canOrder() ? note("warn", "calendar-dots", "<p><b>Обедното меню за днес още не е качено.</b> Отдолу е последното меню, за справка. Поръчки приемаме, щом качим менюто за деня.</p>") : "";
+    return '<section class="o-menu" aria-labelledby="o-menu-h"><div class="o-menu-h"><h2 class="h2" id="o-menu-h">Обедно меню</h2><p class="muted" style="margin:-6px 0 0;font-weight:600">' + lunchDay + "</p>" + stale +
+      (day === "tomorrow" && canOrder() ? '<p class="missing small" style="margin:0">[ЛИПСВА: обедното меню за утре] Показваме последното качено.</p>' : "") +
       '<div class="chips" role="list">' + GROUPS.map((g) => '<button class="chip" type="button" role="listitem" data-jump="' + g.id + '">' + esc(g.n) + '<span class="n">' + g.items.length + "</span></button>").join("") + "</div></div>" +
       GROUPS.map((g) => '<div class="o-grp" id="' + g.id + '"><h3 class="h3">' + esc(g.n) + '</h3><div class="o-items">' + g.items.map((x) => itemHTML(x, picks[x.id] || 0)).join("") + "</div></div>").join("") + "</section>";
   }
   function itemHTML(x: Dish, q: number) {
-    const out = SC.isOut(x);
-    const ctrl = out ? '<span class="o-slotempty" aria-hidden="true"></span>'
+    const out = isOut(x);
+    const ctrl = out || !canOrder() ? '<span class="o-slotempty" aria-hidden="true"></span>'
       : q ? '<span class="counter"><button type="button" data-q="-1" data-id="' + x.id + '" aria-label="Едно по-малко: ' + esc(x.n) + '">' + ic("minus", 20) + '</button><output aria-live="polite">' + q + '</output><button type="button" data-q="1" data-id="' + x.id + '" aria-label="Още едно: ' + esc(x.n) + '">' + ic("plus", 20) + "</button></span>"
       : '<button class="plus" type="button" data-q="1" data-id="' + x.id + '" aria-label="Избери ' + esc(x.n) + '">' + ic("plus", 22) + "</button>";
-    return '<div class="o-item' + (out ? " out" : "") + (q ? " on" : "") + '" data-row="' + x.id + '">' + SC.pic(x) + '<span><span class="nm">' + esc(x.n) + '</span><span class="meta"><span class="price">' + fmt(x.p) + "</span>" + (out ? '<span class="badge out">' + ic("clock", 16) + "Изчерпано днес</span>" : "") + "</span></span>" + ctrl + "</div>";
+    return '<div class="o-item' + (out ? " out" : "") + (q ? " on" : "") + '" data-row="' + x.id + '">' + pic(x) + '<span><span class="nm">' + esc(x.n) + '</span><span class="meta"><span class="price">' + fmt(x.p) + "</span>" + (out ? '<span class="badge out">' + ic("clock", 16) + "Изчерпано днес</span>" : "") + "</span></span>" + ctrl + "</div>";
   }
   function minePicks(picks: Picks) {
     const ks = Object.keys(picks);
     if (!ks.length) return '<p class="muted" style="margin:6px 0 0">Още нищо. Натиснете „+“ до ястие.</p>';
-    return '<div class="o-mine">' + ks.map((k) => '<div class="kv"><span>' + picks[k] + " × " + esc(SC.byId[k].n) + '</span><span class="price">' + fmt(SC.byId[k].p * picks[k]) + "</span></div>").join("") + "</div>";
+    return '<div class="o-mine">' + ks.map((k) => '<div class="kv"><span>' + picks[k] + " × " + esc(byId[k].n) + '</span><span class="price">' + fmt(byId[k].p * picks[k]) + "</span></div>").join("") + "</div>";
   }
-  const saveLbl = (p: Picks, verb: string) => (sum(p) ? verb + " · " + fmt(sum(p)) : "Изберете ястие от менюто");
-  const saveDis = (p: Picks) => (sum(p) ? "" : ' aria-disabled="true"');
+  const saveLbl = (p: Picks, verb: string) => (!canOrder() ? "Менюто за днес още не е качено" : sum(p) ? verb + " · " + fmt(sum(p)) : "Изберете ястие от менюто");
+  const saveDis = (p: Picks) => (sum(p) && canOrder() ? "" : ' aria-disabled="true"');
 
   /* ======================= view: the organizer's own lunch ======================= */
   function viewMine(o: OfficeOrder) {
@@ -433,6 +497,7 @@ export function start(): void {
   function guestOf(code: string): Guest { return (L.guests[code] = L.guests[code] || { name: "", picks: {}, done: false, as: "" }); }
   function viewInvalid() {
     return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("warning-circle", 40) + '</div><h1 class="h2">Тази връзка не работи</h1><p class="muted">Може поръчката вече да е изпратена или връзката да е непълна. Помолете колегата за нова връзка или поръчайте сами.</p>' +
+      (api.demo ? '<p class="muted">В демото поръчката се пази само в браузъра, в който е отворена, затова връзката работи само там.</p>' : "") +
       '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.lunch() + '">Към обедното меню</a><a class="pill pill-line pill-block" href="' + SC.url.page("office", "o-create") + '" data-act="toform">Започни обща поръчка</a></div></div></div></section>';
   }
   function viewJoin(o: OfficeOrder) {
@@ -470,6 +535,14 @@ export function start(): void {
   }
 
   /* ======================= view: sent ======================= */
+  /** sent by the core at the deadline (or from another device): the screen is built from the order itself */
+  function ensureSent(o: OfficeOrder) {
+    if (L.sent && L.sent.code === o.code) return;
+    const list = eaters(o);
+    L.sent = { code: o.code, no: o.orderNo || "", at: clock(ctx(o).eta), total: total(o), count: totalCount(o), people: list.length,
+      owe: list.filter((p) => !p.me).map((p) => [p.n, sum(p.picks)] as [string, number]), pays: o.payer, mode: o.mode as Mode, office: o.office };
+    save();
+  }
   function viewSent() {
     const S = L.sent;
     if (!S) return viewInvalid();
@@ -478,7 +551,7 @@ export function start(): void {
       '<p class="muted">Ресторантът я получи. Ще ви известим, когато тръгне към вас.</p>' +
       '<div class="o-sentmeta"><div><span>Поръчка</span><b>№ ' + esc(S.no) + "</b></div><div><span>" + (S.mode === "pickup" ? "Готова" : "Пристига около") + "</span><b>" + esc(S.at) + "</b></div><div><span>Ястия</span><b>" + S.count + " за " + souls(S.people) + '</b></div><div><span>Общо</span><b class="price">' + fmt(S.total) + "</b></div></div>" +
       (S.pays === "one" && S.owe.length ? '<div style="width:100%;max-width:420px;text-align:left"><h2 class="o-h3" style="font-size:17px;margin:12px 0 2px">Колегите ви дължат</h2><div class="o-owe">' + S.owe.map(([n, v]) => '<div class="kv"><span>' + esc(n) + '</span><span class="price">' + fmt(v) + "</span></div>").join("") + "</div></div>" : "") +
-      '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.tracking(S.no) + '">Следи поръчката' + ic("arrow-right", 20) + "</a>" +
+      '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.tracking({ no: S.no, key: S.key }) + '">Следи поръчката' + ic("arrow-right", 20) + "</a>" +
       '<button class="pill pill-line pill-block" type="button" data-act="copydone">' + ic("copy", 20) + "Копирай съобщение за чата</button></div>" +
       '<p class="muted small" style="max-width:420px;margin-top:6px">Обяд за офиса всеки ден с абонамент идва скоро. Интересува ли ви? <a class="link" href="tel:' + R.phoneIntl + '">' + esc(R.phone) + "</a></p>" +
       '<a class="link" href="' + SC.url.page("office", "o-create") + '" data-act="restart" style="min-height:48px">Започни нова обща поръчка</a>' +
@@ -519,15 +592,17 @@ export function start(): void {
   }
 
   /* ======================= routing and render ======================= */
-  type Route = { v: "start" | "share" | "list" | "mine" | "join" | "sent"; code?: string };
+  type Route = { v: "start" | "share" | "list" | "mine" | "join" | "sent" | "org"; code?: string; key?: string };
   function route(): Route {
     const h = decodeURIComponent(location.hash.slice(1));
     const m = /^join-?([A-Za-z0-9]*)/.exec(h);
     if (m) return { v: "join", code: m[1] };
+    const g = /^list-(\d+)-([A-Za-z0-9]+)$/.exec(h);
+    if (g) return { v: "org", code: g[1], key: g[2] };
     if (h === "share" || h === "list" || h === "mine" || h === "sent") return { v: h };
     return { v: "start" };
   }
-  const codeFor = (rt: Route) => (rt.v === "join" ? rt.code || "" : rt.v === "share" || rt.v === "list" || rt.v === "mine" ? L.code : "");
+  const codeFor = (rt: Route) => (rt.v === "join" || rt.v === "org" ? rt.code || "" : rt.v === "share" || rt.v === "list" || rt.v === "mine" ? L.code : "");
 
   let lastV: string | null = null, tick: ReturnType<typeof setInterval> | undefined, poll: ReturnType<typeof setInterval> | undefined;
   function render(keepScroll = false) {
@@ -547,7 +622,7 @@ export function start(): void {
       else if (loadErr && !O) html = viewError();
       else if (!O || O.code !== code) html = viewInvalid();
       else if (rt.v === "join") html = viewJoin(O);
-      else if (O.status !== "open" && L.sent && L.sent.code === O.code) html = viewSent();
+      else if (O.status !== "open" && isMine(O)) { ensureSent(O); html = viewSent(); }
       else if (rt.v === "share") html = viewShare(O);
       else if (rt.v === "mine") html = viewMine(O);
       else html = viewList(O);
@@ -561,7 +636,9 @@ export function start(): void {
   }
   /** route change: load the order the view needs, then draw */
   async function go(keepScroll = false) {
-    const rt = route(), code = codeFor(rt);
+    const rt = route();
+    if (rt.v === "org") { await openOrgLink(rt.code || "", rt.key || ""); return; }
+    const code = codeFor(rt);
     if ((rt.v === "share" || rt.v === "list" || rt.v === "mine") && !L.code) { if (L.sent) { location.hash = "sent"; return; } location.hash = ""; return; }
     if (rt.v === "mine" && O && O.code === L.code) L.mine = picksOf(O.participants[0]?.lines || []);
     if (code && (Ocode !== code || loadErr)) {
@@ -571,7 +648,23 @@ export function start(): void {
       if (rt.v === "mine" && O) L.mine = picksOf(O.participants[0]?.lines || []);
     }
     render(keepScroll);
-    autoSend();
+  }
+  /** the organizer's link on another device: the core checks the key (isOrg), this browser keeps it and becomes the organizer */
+  async function openOrgLink(code: string, key: string) {
+    loading = true; render();
+    let r: OfficeOrder | null = null, err: ApiError | null = null;
+    try { r = (await api.office.get(code, key)) as OfficeOrder | null; } catch (e) { err = e instanceof ApiError ? e : new ApiError("server", "Нещо се обърка. Опитайте пак."); }
+    loading = false;
+    if (r && r.isOrg) {
+      O = r; Ocode = code; loadErr = null;
+      if (L.code !== code) { L.code = code; L.me = orgOf(r); L.mine = picksOf(r.participants[0]?.lines || []); L.sent = null; }
+      if (r.date) L.days[code] = r.date;
+      save();
+      history.replaceState(null, "", location.pathname + location.search + "#list"); /* the key leaves the address bar */
+      go(); return;
+    }
+    O = null; Ocode = code; loadErr = err && err.code !== "not_found" ? err : null;
+    render();
   }
   async function fetchO(code: string, quiet = false): Promise<boolean> {
     try { O = (await api.office.get(code)) as OfficeOrder | null; Ocode = code; loadErr = null; return true; }
@@ -603,7 +696,8 @@ export function start(): void {
     const c = ctx(O), v = route().v;
     if (c.remain <= 0 && !sim.closed && O.status === "open" && !main.querySelector("[data-timer] .o-closed, .o-state")) {
       if (v === "list") updList(O, new Set()); else render(true);
-      autoSend();
+      /* the core sends it now (server: within a minute; demo: on the next call): read the order again */
+      setTimeout(refresh, 4000); setTimeout(refresh, 65000);
       return;
     }
     const el = main.querySelector("[data-left]"), w = main.querySelector("[data-leftw]"), tr = main.querySelector<HTMLElement>("[data-track]");
@@ -612,21 +706,12 @@ export function start(): void {
     if (tr) tr.style.transform = "scaleX(" + trackScale(c) + ")";
   }
 
-  /* ---------- automatic send at the deadline (OPEN-QUESTIONS 17): from the organizer's open page ---------- */
-  function autoSend() {
-    if (!O || !isMine(O) || O.status !== "open" || autoTried === O.code) return;
-    const c = ctx(O), v = route().v;
-    if (sim.closed || c.remain > 0 || c.late || c.early || !eaters(O).length || !normPhone(L.phone)) return;
-    if (v !== "list" && v !== "share") return;
-    autoTried = O.code;
-    if (v !== "list") { location.hash = "list"; setTimeout(() => send(null, true), 50); return; }
-    send(null, true);
-  }
-
   /* ======================= interactions ======================= */
+  /** the error under a field of the visible view (the hidden create form stays in the page) */
   function setErr(key: string, msg?: string) {
-    const e = main.querySelector<HTMLElement>('[data-err="' + key + '"]'); if (!e) return;
-    const inp = document.getElementById(e.id.replace(/-e$/, ""));
+    const root = route().v === "start" ? createEl : viewEl;
+    const e = root.querySelector<HTMLElement>('[data-err="' + key + '"]'); if (!e) return;
+    const inp = root.querySelector<HTMLElement>("#" + e.id.replace(/-e$/, ""));
     e.hidden = !msg; e.textContent = msg || "";
     if (inp) inp.setAttribute("aria-invalid", msg ? "true" : "false");
   }
@@ -634,7 +719,7 @@ export function start(): void {
   function updPicker(id: string) {
     const picks = pickTarget(), row = main.querySelector('[data-row="' + id + '"]');
     let nr: Element | null = null;
-    if (row) { const tmp = document.createElement("div"); tmp.innerHTML = itemHTML(SC.byId[id], picks[id] || 0); nr = tmp.firstElementChild; if (nr) row.replaceWith(nr); }
+    if (row) { const tmp = document.createElement("div"); tmp.innerHTML = itemHTML(byId[id], picks[id] || 0); nr = tmp.firstElementChild; if (nr) row.replaceWith(nr); }
     const m = main.querySelector("[data-mine]"); if (m) m.innerHTML = minePicks(picks);
     const verb = route().v === "mine" ? "Запази моя избор" : "Добави към поръчката";
     document.querySelectorAll("[data-savebtn]").forEach((b) => { b.innerHTML = saveLbl(picks, verb); if (sum(picks)) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", "true"); });
@@ -646,6 +731,19 @@ export function start(): void {
       else if (b.dataset.label != null) { b.removeAttribute("data-busy"); b.innerHTML = b.dataset.label; delete b.dataset.label; }
     });
   }
+  /** the core's errors in words for people (the core's own text, a few made clearer for this page) */
+  function errText(err: unknown): string {
+    if (!(err instanceof ApiError)) return "Не успяхме. Опитайте пак.";
+    switch (err.code) {
+      case "deadline": return "Крайният час мина и списъкът е затворен. Обадете се на организатора.";
+      case "not_lunch": return "В общата поръчка са само ястия от обедното меню.";
+      case "lunch_stale": return "Обедното меню за днес още не е качено. Поръчки приемаме, щом го качим.";
+      case "forbidden": return "Само организаторът може да изпрати поръчката. Отворете я от неговата връзка.";
+      case "too_early": return "Поръчката е за друг ден. Изпраща се в деня на обяда.";
+      case "offline": return "Няма връзка. Проверете интернета и опитайте пак.";
+      default: return err.message || "Не успяхме. Опитайте пак.";
+    }
+  }
   const offlineErr = () => new ApiError("offline", "Няма връзка. Проверете интернета и опитайте пак.", 0);
 
   main.addEventListener("input", (e) => {
@@ -654,6 +752,7 @@ export function start(): void {
     else if (t.id === "o-name") { d.name = t.value; save(); setErr("name"); updEta(); }
     else if (t.id === "o-addr") { d.addr = t.value; save(); setErr("addr"); updAddr(true); }
     else if (t.id === "o-phone") { L.phone = t.value; save(); setErr("phone"); }
+    else if (t.id === "o-cphone") { L.phone = t.value; save(); setErr("cphone"); }
     else if (t.id === "o-gname") { const rt = route(); guestOf(rt.code || "").name = t.value; save(); setErr("gname"); }
   });
   main.addEventListener("change", (e) => { const t = e.target as HTMLInputElement; if (t.name === "pays") { L.draft.pays = t.value === "each" ? "each" : "one"; save(); updEta(); } });
@@ -671,21 +770,35 @@ export function start(): void {
       else if (r.type === "out") { setErr("addr", "До този адрес не доставяме. Изберете „Ще я вземем от ресторанта“."); bad = bad || "o-addr"; }
       else if (r.type !== "zone") { setErr("addr", "Допишете квартала, за да проверим дали доставяме, например „Дружба 2“."); bad = bad || "o-addr"; }
     }
+    const phoneRaw = L.phone.trim(), phone = phoneRaw ? normPhone(phoneRaw) : "";
+    if (phoneRaw && !phone) { setErr("cphone", "Проверете номера: 10 цифри, например 0888 12 34 56. Или го оставете празен."); bad = bad || "o-cphone"; }
     if (bad) { const el = document.getElementById(bad); scrollToEl(el); focusLater(el); return; }
     const box = main.querySelector("[data-formerr]"); if (box) box.innerHTML = "";
     busyBtns("[data-create-btn]", true);
     try {
       if (sim.offline) throw offlineErr();
       syncPlan();
-      const o = (await api.office.create({ office: d.office.trim() || "Офисът на " + name, addr: d.mode === "pickup" ? "" : d.addr.trim(), deadline: hhmm(d.deadline || 690), payer: d.pays, mode: d.mode })) as OfficeOrder;
+      /* the organizer's name and phone go to the core: with them the order leaves at the deadline by itself */
+      const o = (await api.office.create({
+        office: officeName(d), addr: d.mode === "pickup" ? "" : d.addr.trim(), deadline: hhmm(d.deadline || 690), payer: d.pays, mode: d.mode,
+        name, ...(phone ? { phone, pay: L.pay } : {}),
+      })) as unknown as OfficeOrder;
       await api.office.join(o.code, { name, lines: [] });
-      L.code = o.code; L.me = name; L.mine = {}; L.sent = null; autoTried = "";
-      L.days[o.code] = d.day === "tomorrow" ? addDays(today(), 1) : today();
+      L.code = o.code; L.me = name; L.mine = {}; L.sent = null;
+      L.days[o.code] = o.date || (d.day === "tomorrow" ? addDays(today(), 1) : today());
+      L.auto[o.code] = !!phone;
       save();
       Ocode = ""; location.hash = "share";
     } catch (err) {
       busyBtns("[data-create-btn]", false);
-      if (err instanceof ApiError && err.fields) { Object.entries(err.fields).forEach(([k, v]) => setErr(k, v)); const k = Object.keys(err.fields)[0]; const el = document.getElementById("o-" + k); scrollToEl(el); focusLater(el); return; }
+      if (err instanceof ApiError && err.fields) {
+        /* core field -> the field on this form */
+        const map: Record<string, string> = { office: "office", name: "name", addr: "addr", phone: "cphone", deadline: "deadline" };
+        const ids: Record<string, string> = { office: "o-office", name: "o-name", addr: "o-addr", cphone: "o-cphone", deadline: "o-slots" };
+        let first = "";
+        Object.entries(err.fields).forEach(([k, v]) => { const key = map[k]; if (key) { setErr(key, v); first = first || ids[key]; } });
+        if (first) { const el = document.getElementById(first); scrollToEl(el); focusLater((el && el.matches("[role=group]") ? el.querySelector<HTMLElement>("button:not([disabled])") : el) || el); return; }
+      }
       const msg = err instanceof ApiError ? err.message : "Нещо се обърка. Опитайте пак.";
       if (box) box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + "</p>", "alert");
       SC.toast(msg);
@@ -717,6 +830,7 @@ export function start(): void {
       case "pickup": L.draft.mode = "pickup"; save(); setErr("addr"); updAddr(false); return;
       case "delivery": L.draft.mode = "delivery"; save(); updAddr(false); return;
       case "copylink": if (O) { copy(joinURL(O.code)); SC.flash(t, ic("check", 22) + "Копирано", 1600); SC.toast("Връзката е копирана. Поставете я в чата."); } return;
+      case "copyorg": if (O) { const u = orgURL(O.code); if (u) { copy(u); SC.flash(t, ic("check", 20) + "Копирано", 1600); SC.toast("Връзката за вас е копирана. Отворете я на другото устройство."); } } return;
       case "copymsg": if (O) { copy(chatMsg(O, ctx(O))); SC.toast("Съобщението е копирано"); } return;
       case "viber": if (O && !/Android|iPhone|iPad/i.test(navigator.userAgent)) { e.preventDefault(); copy(chatMsg(O, ctx(O))); SC.toast("Съобщението е копирано. Поставете го във Viber."); } return;
       case "sharenative": if (O) { const m = chatMsg(O, ctx(O)); if (navigator.share) navigator.share({ title: "Обяд от Siracusa", text: m }).catch(() => undefined); else { copy(m); SC.toast("Съобщението е копирано. Поставете го в чата."); } } return;
@@ -735,6 +849,7 @@ export function start(): void {
       }
       case "savemine": {
         if (!O) return;
+        if (!canOrder()) { SC.toast("Обедното меню за днес още не е качено."); return; }
         if (!sum(L.mine)) { SC.toast("Изберете поне едно ястие"); return; }
         if (t.hasAttribute("data-busy")) return;
         busyBtns("[data-savebtn]", true);
@@ -742,7 +857,7 @@ export function start(): void {
           if (sim.offline) throw offlineErr();
           O = (await api.office.join(O.code, { name: orgOf(O), lines: linesOf(L.mine) })) as OfficeOrder; save();
           SC.toast("Изборът ви е в общия списък ✓"); location.hash = "list";
-        } catch (err) { busyBtns("[data-savebtn]", false); SC.toast(err instanceof ApiError ? err.message : "Не успяхме. Опитайте пак."); if (err instanceof ApiError && err.code === "closed") { await fetchO(O.code, true); render(true); } }
+        } catch (err) { busyBtns("[data-savebtn]", false); SC.toast(errText(err)); if (err instanceof ApiError && (err.code === "closed" || err.code === "deadline")) { await fetchO(O.code, true); render(true); } }
         return;
       }
       case "guestsave": {
@@ -751,19 +866,22 @@ export function start(): void {
         if (!name) { setErr("gname", "Напишете името си, за да знае " + org + " чие е ястието."); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
         const taken = O.participants.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.name !== g.as);
         if (taken) { setErr("gname", "„" + name + "“ вече е в поръчката. Добавете първата буква от фамилията, например „" + name + " П.“"); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
+        if (!canOrder()) { SC.toast("Обедното меню за днес още не е качено."); return; }
         if (!sum(g.picks)) { SC.toast("Изберете поне едно ястие"); return; }
         if (t.hasAttribute("data-busy")) return;
         const box = main.querySelector("[data-joinerr]"); if (box) box.innerHTML = "";
         busyBtns("[data-savebtn]", true);
         try {
           if (sim.offline) throw offlineErr();
-          if (g.as && g.as !== name) await api.office.join(O.code, { name: g.as, lines: [] });
+          /* a colleague renames their own entry by its pid (the core); the organizer's browser writes by name: clear the old one */
+          if (g.as && g.as !== name && api.office.orgKey(O.code)) await api.office.join(O.code, { name: g.as, lines: [] });
           O = (await api.office.join(O.code, { name, lines: linesOf(g.picks) })) as OfficeOrder;
           g.as = name; g.name = name; g.done = true; save(); render();
         } catch (err) {
           busyBtns("[data-savebtn]", false);
-          if (err instanceof ApiError && (err.code === "closed" || err.code === "not_found")) { await fetchO(O.code, true); render(true); return; }
-          const msg = err instanceof ApiError ? err.message : "Не успяхме. Опитайте пак.";
+          if (err instanceof ApiError && (err.code === "closed" || err.code === "not_found" || err.code === "deadline")) { SC.toast(errText(err)); await fetchO(O.code, true); render(true); return; }
+          if (err instanceof ApiError && err.code === "name_taken") { setErr("gname", (err.fields && err.fields.name) || err.message); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
+          const msg = errText(err);
           if (box) { box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + " Изборът ви е запазен.</p>", "alert"); scrollToEl(box); }
           SC.toast(msg);
         }
@@ -774,7 +892,7 @@ export function start(): void {
       case "retry": loadErr = null; Ocode = ""; go(true); return;
       case "team": {
         if (!L.code) return;
-        try { for (const tm of TEAM) await api.office.join(L.code, { name: tm.n, lines: linesOf(tm.picks) }); await refresh(); if (route().v !== "list") location.hash = "list"; else render(true); SC.toast("Добавени: Иван, Петя, Георги"); }
+        try { for (const tm of DATA.team) await api.office.join(L.code, { name: tm.n, lines: linesOf(tm.picks) }); await refresh(); if (route().v !== "list") location.hash = "list"; else render(true); SC.toast("Добавени: Иван, Петя, Георги"); }
         catch (err) { SC.toast(err instanceof ApiError ? err.message : "Не успяхме."); }
         return;
       }
@@ -782,14 +900,14 @@ export function start(): void {
         Object.assign(L, JSON.parse(JSON.stringify(DEF))); save(); sim.closed = sim.offline = sim.loading = false; O = null; Ocode = "";
         SC.toast("Данните на прототипа са изчистени"); if (location.hash) location.hash = ""; else render(); return;
       }
-      case "send": if (!t.hasAttribute("data-busy")) send(t, false); return;
+      case "send": if (!t.hasAttribute("data-busy")) send(t); return;
     }
   }
   main.addEventListener("click", onClick);
   SC.ov.addEventListener("click", (e) => { if ((e.target as Element).closest(".o-bar")) onClick(e); });
 
   /* ---------- send to the restaurant: api.office.submit -> an order (channel "office") ---------- */
-  async function send(btn: HTMLElement | null, auto: boolean) {
+  async function send(btn: HTMLElement | null) {
     if (!O) return;
     const phone = normPhone(L.phone), errBox = main.querySelector("[data-senderr]");
     if (errBox) errBox.innerHTML = "";
@@ -799,27 +917,29 @@ export function start(): void {
     }
     const o = O, me = orgOf(o), list = eaters(o);
     busyBtns('[data-act="send"]', true);
-    const lines = list.map((p) => p.n + ": " + Object.keys(p.picks).map((k) => p.picks[k] + " × " + SC.byId[k].n).join(", ") + " (" + fmt(sum(p.picks)) + ")").join("; ");
+    const lines = list.map((p) => p.n + ": " + Object.keys(p.picks).map((k) => p.picks[k] + " × " + byId[k].n).join(", ") + " (" + fmt(sum(p.picks)) + ")").join("; ");
     const noteText = "Обща поръчка за офиса „" + o.office + "“, " + souls(list.length) + ". " + (o.payer === "each" ? "Всеки плаща своето. " : "Плаща " + me + " за всички. ") + lines;
     try {
       if (sim.offline) throw offlineErr();
-      const fresh = (await api.office.get(o.code)) as OfficeOrder | null;   /* never send twice */
-      if (fresh && fresh.status !== "open") { O = fresh; render(true); return; }
-      const r = (await api.office.submit(o.code, { name: me, phone, pay: o.payer === "one" ? L.pay : "cash", note: noteText })) as { office: OfficeOrder; order: Order };
+      /* the core sends once: a second call (two tabs, the deadline) is refused with "closed" */
+      const r = (await api.office.submit(o.code, { name: me, phone, pay: o.payer === "one" ? L.pay : "cash", note: noteText })) as unknown as { office: OfficeOrder; order: Order };
       O = r.office;
       const owe = list.filter((p) => !p.me).map((p) => [p.n, sum(p.picks)] as [string, number]);
-      L.sent = { code: o.code, no: r.order.no, at: r.order.at, total: r.order.total, count: totalCount(o), people: list.length, owe, pays: o.payer, mode: o.mode as Mode, office: o.office };
+      /* "Пристига около": the core's time; in the preview (?t=) the page's clock, the same rule as the list (now + zone + busy) */
+      const at = clockOverride() && o.mode !== "pickup" ? clock(SC.minutes() + etaMin(o.zone ? zoneByName(o.zone) : null, o.mode as Mode, "today")) : r.order.at;
+      L.sent = { code: o.code, no: r.order.no, key: r.order.key, at, total: r.order.total, count: totalCount(o), people: list.length, owe, pays: o.payer, mode: o.mode as Mode, office: o.office };
       save();
       SC.store("sc-order", r.order); /* the tracking page can show it at once */
-      if (auto) SC.toast("Крайният час дойде: поръчката е изпратена");
       location.hash = "sent";
     } catch (err) {
       busyBtns('[data-act="send"]', false);
       const e = err instanceof ApiError ? err : null;
-      if (e && e.fields && e.fields.phone) { setErr("phone", e.fields.phone); return; }
-      const msg = e ? (e.code === "offline" ? "Няма връзка. Поръчката ви е запазена - опитайте пак." : e.message) : "Нещо се обърка. Опитайте пак.";
+      if (e && e.fields && e.fields.phone) { setErr("phone", e.fields.phone); const p = document.getElementById("o-phone"); scrollToEl(p); focusLater(p); return; }
+      if (e && e.code === "closed") { SC.toast(e.message); await fetchO(o.code, true); render(true); return; } /* already sent: the sent screen */
+      const msg = e ? (e.code === "offline" ? "Няма връзка. Поръчката ви е запазена - опитайте пак." : errText(e)) : "Нещо се обърка. Опитайте пак.";
+      const retry = !e || e.code === "offline" || (e.status || 0) >= 500;
       const box = main.querySelector("[data-senderr]");
-      if (box) { box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + '</p><button class="pill pill-line" type="button" data-act="send">Опитай пак</button>', "alert"); scrollToEl(box); }
+      if (box) { box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + "</p>" + (retry ? '<button class="pill pill-line" type="button" data-act="send">Опитай пак</button>' : ""), "alert"); scrollToEl(box); }
       SC.toast(e && e.code === "offline" ? "Няма връзка. Опитайте пак." : msg);
     }
     void btn;
@@ -827,7 +947,7 @@ export function start(): void {
 
   /* ---------- start ---------- */
   const lunchLink = main.querySelector("[data-lunchlink]");
-  if (lunchLink) lunchLink.innerHTML = (SC.lunchIsToday() ? "Виж днешното обедно меню" : "Виж обедното меню") + ic("caret-right", 18);
+  if (lunchLink) lunchLink.innerHTML = (lunchIsToday() ? "Виж днешното обедно меню" : "Виж обедното меню") + ic("caret-right", 18);
   window.addEventListener("hashchange", () => { if (location.hash === "#o-create" && route().v === "start" && lastV === "start") return; go(); });
   go().then(() => { if (location.hash === "#o-create") scrollToEl(document.getElementById("o-create")); });
 }

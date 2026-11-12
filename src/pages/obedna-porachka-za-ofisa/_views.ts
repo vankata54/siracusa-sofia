@@ -2,7 +2,7 @@
    (hero, "Как работи", subscription teaser, FAQ). Drawn on the server for SEO; the browser script (./_office.ts)
    draws the create form and the other views. Port of design/pages/office.html. */
 import { ic, pic, esc, fmt } from "../../lib/render.ts";
-import { byId, RESTAURANT, lunchIsToday } from "../../lib/data.ts";
+import { byId, RESTAURANT, lunchIsToday, lunch, menu } from "../../lib/data.ts";
 import { url } from "../../lib/routes.ts";
 
 /** The example in the hero (a picture of the idea, real dishes from the lunch menu). In the shared list the same
@@ -52,7 +52,7 @@ export function howHTML(): string {
   return `<section class="sec" aria-labelledby="o-how-h"><div class="sec-h"><h2 class="h2" id="o-how-h">Как работи</h2></div><ol class="o-how">` +
     `<li class="rv"><span class="o-num">1</span><div><h3 class="h3">Отворете поръчка</h3><p>Име на офиса, адрес и до колко часа избират колегите. По подразбиране 11:30.</p></div></li>` +
     `<li class="rv"><span class="o-num">2</span><div><h3 class="h3">Пратете връзката в чата</h3><p>Във Viber, в чата на фирмата или по имейл. Колегите пишат само името си, без профил.</p></div></li>` +
-    `<li class="rv"><span class="o-num">3</span><div><h3 class="h3">Всеки избира, вие изпращате</h3><p>Виждате кой какво поръча и колко дължи. В крайния час поръчката тръгва към ресторанта сама, или я изпращате по-рано с едно докосване.</p></div></li>` +
+    `<li class="rv"><span class="o-num">3</span><div><h3 class="h3">Всеки избира, вие изпращате</h3><p>Виждате кой какво поръча и колко дължи. Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Иначе я изпращате с едно докосване, и по-рано.</p></div></li>` +
   `</ol></section>`;
 }
 
@@ -61,7 +61,8 @@ export const FAQ: [string, string][] = [
   ["До колко часа може да е крайният час?", "До 14:00. Обедното меню се доставя до 15:00, а след крайния час ние приготвяме и тръгваме към вас."],
   ["Как плащаме?", "В брой или с карта при получаване, без онлайн плащане. Може да плати един за всички или всеки своето."],
   ["Трябва ли колегите да имат профил?", "Не. Колегите отварят връзката, пишат само името си и избират от обедното меню."],
-  ["Какво става в крайния час?", "Списъкът се затваря и поръчката тръгва към ресторанта сама. Организаторът може да я изпрати и по-рано."],
+  ["Какво става в крайния час?", "Списъкът се затваря. Ако организаторът е дал телефон при създаването, поръчката тръгва към ресторанта сама. Без телефон организаторът я изпраща с един бутон. Може да я изпрати и по-рано."],
+  ["Може ли организаторът да довърши поръчката от друго устройство?", "Да. След създаването получавате връзка само за вас. С нея отваряте списъка на друг телефон или компютър и изпращате поръчката."],
   ["Има ли минимална поръчка?", '<span class="missing">[ЛИПСВА: минимална поръчка за обща доставка]</span>'],
   ["Може ли фактура на фирмата?", '<span class="missing">[ЛИПСВА: фактура при обща поръчка]</span>'],
 ];
@@ -75,6 +76,12 @@ export function subFaqHTML(): string {
       `<p style="margin:0;font-weight:600">Интересува ли ви? Обадете ни се:</p><a class="pill pill-line" href="tel:${RESTAURANT.phoneIntl}" style="justify-self:start" aria-label="Обади се на ${RESTAURANT.phone}">${ic("phone", 20)}${RESTAURANT.phone}</a></div></div>` +
     `<div><h2 class="h2" style="margin-bottom:10px">Въпроси</h2><div class="o-faq">${faq}</div></div>` +
   `</div></section>`;
+}
+
+/** The data the browser script needs (JSON in the page, #o-data): the lunch menu of the data and its date, the
+    prototype's sample colleagues. Instead of the whole menu runtime (sc-menu.ts): speed. */
+export function officeData() {
+  return { date: menu.lunch.date, dayName: menu.lunch.dayName, items: lunch, team: TEAM };
 }
 
 export function officeLd(site: URL | undefined): object[] {

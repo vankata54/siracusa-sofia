@@ -6,7 +6,7 @@
    #share (link for colleagues), #list (shared list), #mine, #join-<код> (invited colleague), #sent.
    Everything goes through api.office.create/get/join/submit (server, or the core in the browser in the demo). */
 import Base from "../../layouts/Base.astro";
-import { heroHTML, howHTML, subFaqHTML, officeLd } from "./_views.ts";
+import { heroHTML, howHTML, subFaqHTML, officeLd, officeData } from "./_views.ts";
 
 const site = (Astro.site || new URL("https://siracusa-sofia.com")).href;
 const sk = (w: string, h: number, r = 14) => `<span class="skel" style="display:block;width:${w};height:${h}px;border-radius:${r}px"></span>`;
@@ -27,6 +27,7 @@ const formSkeleton =
     <Fragment set:html={subFaqHTML()} />
   </div>
   <div data-view hidden></div>
+  <script type="application/json" id="o-data" set:html={JSON.stringify(officeData()).replace(/</g, "\\u003c")}></script>
   <div data-proto></div>
 </Base>
 
@@ -185,6 +186,11 @@ const formSkeleton =
 .o-link .ic{color:var(--muted); flex:none}
 .o-link output{flex:1; min-width:0; line-height:1.35; overflow-wrap:anywhere}
 .nw{white-space:nowrap}
+.o-link output{display:flex; min-width:0}
+.o-link .o-lh{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.o-link .nw{flex:none}
+.o-orglink .o-h3{display:flex; align-items:center; gap:8px}
+.o-orglink .o-h3 .ic{color:var(--muted)}
 
 /* ---------- shared list ---------- */
 .o-timer{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:nowrap}
