@@ -15,3 +15,5 @@ playwright-report/
 dist-*/
 *.tmp.config.ts
 test-results-*/
+pw-*.config.ts
+*.tmp.*
