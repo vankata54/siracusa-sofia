@@ -33,6 +33,9 @@ test("pickup: SEO, server HTML, JSON-LD", async ({ request }) => {
   const faq = ld.find((x) => x["@type"] === "FAQPage");
   expect(faq.mainEntity).toHaveLength(5);
   expect(JSON.stringify(faq)).not.toContain("ЛИПСВА");
+  expect(html).toContain("Не намерихте отговор? Обадете ни се, ще ви кажем.");
+  expect(html).toContain("Обади се · 0894 36 55 77");
+  expect(html).toContain("Карта при получаване");
 });
 
 test("pickup 12:30: live plan, kinds, slot saved for the cart, CTA sets pickup", async ({ page }) => {
@@ -87,6 +90,13 @@ test("pickup 22:45 and 09:30: tomorrow, before opening", async ({ page }) => {
   await expect(big(page)).toContainText("днес в10:00");
 });
 
+test("pickup 22:45 with a full cart: the button says \"Поръчай за утре\" like the alert", async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cart", JSON.stringify({ mode: "pickup", lines: [{ key: "pitsa-kaprichoza", id: "pitsa-kaprichoza", q: 1, mods: [], extra: 0 }] })); } catch { /* ignore */ } });
+  await open(page, "22:45");
+  await expect(page.locator("[data-alert]")).toContainText("Поръчайте за утре");
+  await expect(page.locator("[data-hero-cta] [data-pickup-go]")).toContainText(/Поръчай за утре · \d+,\d\d €/);
+});
+
 test("pickup: states panel only in preview; busy and error states", async ({ page }) => {
   await page.goto("/vzemi-ot-myasto/");
   await expect(page.locator("[data-live][data-ready]")).toHaveCount(1);
@@ -106,4 +116,7 @@ test("pickup: no horizontal scroll at 360", async ({ page }) => {
   await open(page, "16:30");
   const w = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
   expect(w[0]).toBeLessThanOrEqual(w[1]);
+  /* the hero column keeps the 16px gutter on both sides (minmax(0,1fr)) */
+  const r = await page.evaluate(() => [".pk-copy", ".pk-live"].map((s) => { const b = document.querySelector(s)!.getBoundingClientRect(); return [b.left, b.right]; }));
+  for (const [l, rt] of r) { expect(l).toBeGreaterThanOrEqual(15.5); expect(rt).toBeLessThanOrEqual(344.5); }
 });

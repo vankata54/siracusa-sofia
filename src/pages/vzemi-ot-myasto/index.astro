@@ -69,17 +69,17 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
         <div class="pk-msg" aria-label="Пример за съобщение"><small>Siracusa · Viber</small>Поръчката ви е готова. Очакваме ви!</div></div>
     </div></section>
 
-  <section class="sec rv" aria-labelledby="pk-faq"><div class="pk-faq-grid"><div class="pk-sh"><span class="pk-kicker"><Fragment set:html={ic("question", 18)} />Въпроси</span><h2 class="h2" id="pk-faq">Често задавани въпроси</h2><p class="lead">Не намирате отговор? Обадете ни се, ще помогнем с поръчката.</p><a class="pill pill-line" style="margin-top:16px" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{R.phone}</a></div><div class="pk-faq" set:html={faqHTML()}></div></div></section>
+  <section class="sec rv" aria-labelledby="pk-faq"><div class="pk-faq-grid"><div class="pk-sh"><h2 class="h2" id="pk-faq">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line" style="margin-top:16px" href={"tel:" + R.phoneIntl}><Fragment set:html={ic("phone", 20)} />{"Обади се · " + R.phone}</a></div><div class="pk-faq" set:html={faqHTML()}></div></div></section>
 
   <div data-proto></div>
-  <div class="abar pk-abar hide" slot="ov" data-abar set:html={ctaHTML("", null)}></div>
+  <div class="abar pk-abar hide" slot="ov" role="region" aria-label="Поръчка за вземане" data-abar set:html={ctaHTML("", null)}></div>
 </Base>
 
 <style is:global>
 /* pickup page only (design/pages/pickup.html), tokens from tokens.css. Prefix: pk- */
 /* ---------- hero ---------- */
 .pk-hero{padding-top:28px; position:relative}
-.pk-grid{display:grid; gap:28px}
+.pk-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:28px}
 .pk-eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:14px}
 .pk-eyebrow .ic{color:var(--ink)}
 .pk-h1{font-size:44px}
@@ -278,7 +278,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
 }
 @container app (min-width:900px){
   .pk-hero{padding-top:56px}
-  .pk-grid{grid-template-columns:1.05fr 1fr; gap:64px; align-items:center}
+  .pk-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:64px; align-items:center}
   .pk-h1{font-size:72px}
   .pk-trust{display:flex; flex-wrap:wrap; gap:8px 18px}
   .pk-abar{display:none}
@@ -297,7 +297,7 @@ const pay = [R.payment[0], R.payment[1].replace(/ \((.+)\)$/, ' <span class="mut
   .pk-proto p{margin:0}
 }
 @container app (max-width:899px){ .pk-deal-grid > * + *{margin-top:56px} .pk-where-grid > * + *{margin-top:20px} .pk-faq-grid .pk-sh{margin-bottom:12px} }
-@container app (max-width:370px){ .pk-h1{font-size:38px} .pk-big{font-size:40px} .pk-slot{font-size:15px} .pk-asap{padding:0 16px; font-size:15px} }
+@container app (max-width:370px){ .pk-h1{font-size:38px} .pk-big{font-size:40px} .pk-slot{font-size:15px} .pk-asap{padding:8px 16px; font-size:15px; white-space:normal; text-align:left} .pk-asap .price{white-space:nowrap} }
 @container app (min-width:1100px){ .pk-slots{grid-template-columns:repeat(6,1fr)} }
 .pk-cta .link .ic{flex:none}
 .pk-ex .plus{justify-self:end}

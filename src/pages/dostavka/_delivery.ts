@@ -12,30 +12,7 @@ import { ic, ICONS } from "../../lib/icons.ts";
 import { esc, fmt } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
-import "../../lib/icons/moped.ts";
-import "../../lib/icons/map-pin.ts";
-import "../../lib/icons/map-pin-line.ts";
-import "../../lib/icons/map-trifold.ts";
-import "../../lib/icons/magnifying-glass.ts";
-import "../../lib/icons/check.ts";
-import "../../lib/icons/check-circle.ts";
-import "../../lib/icons/receipt.ts";
-import "../../lib/icons/money.ts";
-import "../../lib/icons/credit-card.ts";
-import "../../lib/icons/ticket.ts";
-import "../../lib/icons/gift.ts";
-import "../../lib/icons/info.ts";
-import "../../lib/icons/phone.ts";
-import "../../lib/icons/caret-down.ts";
-import "../../lib/icons/storefront.ts";
-import "../../lib/icons/arrow-right.ts";
-import "../../lib/icons/tag.ts";
-import "../../lib/icons/question.ts";
-import "../../lib/icons/warning-circle.ts";
-import "../../lib/icons/clock.ts";
-import "../../lib/icons/moon.ts";
-import "../../lib/icons/fork-knife.ts";
-import "../../lib/icons/x.ts";
+import "sc-icons:moped,map-pin,map-pin-line,map-trifold,magnifying-glass,check,check-circle,receipt,money,credit-card,ticket,gift,info,phone,caret-down,storefront,arrow-right,tag,question,warning-circle,clock,moon,fork-knife,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 const R = RESTAURANT;
 export const MISS_FEE = "[ЛИПСВА: такса в €]";
@@ -81,6 +58,8 @@ export function etaRange(v: View): string { const a = ZONES.map((z) => etaMin(z,
 function etaRangeBase(): string { const a = ZONES.map(zoneMin); return Math.min(...a) + " до " + Math.max(...a) + " минути"; }
 export const etaText = (z: Zone, v: View): string => "около " + etaMin(z, v) + NB + "мин";
 const feeText = (z: Zone): string => (z.free ? "Безплатно" : z.fee != null ? fmt(z.fee) : MISS_FEE);
+/** every paid zone has its fee in the data: only then can the cart show it (otherwise [ЛИПСВА]) */
+const FEES_KNOWN = ZONES.every((z) => z.free || z.fee != null);
 
 /* ---------- what can be done right now ---------- */
 interface Action { label: string; href: string; mode: "delivery" | "pickup"; note?: string }
@@ -209,31 +188,42 @@ export function payHTML(): string {
     '<p class="paynote">' + ic("info", 20) + "<span>Онлайн плащане засега няма. Никой няма да ви поиска данни за карта предварително.</span></p>";
 }
 
+/* ---------- the one answer about payment in the group (decision 12.11): from RESTAURANT.payment, [ЛИПСВА] for the
+   voucher name; the same text as /za-nas/ and /kontakti/ (request to the chief: one shared function in src/lib) ---------- */
+const plain = (h: string) => h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+const MISSING_SPAN = /\s*<span class="missing">[^<]*<\/span>/g;
+export function payAnswer(): string {
+  const p = R.payment.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x))
+    .map((x) => (/^ваучер$/i.test(x) ? x + ' Sodexo <span class="missing">[ЛИПСВА: актуалното име на ваучера]</span>' : x));
+  return p.slice(0, -1).join(", ") + " или " + p[p.length - 1] + ". Онлайн плащане засега няма: плащате, когато получите поръчката.";
+}
+
 /* ---------- FAQ (also FAQPage JSON-LD; ld = the answer for structured data, without [ЛИПСВА], null = left out) ---------- */
 interface Faq { q: string; a: string; ld: string | null }
 export const FAQ: Faq[] = [
   { q: "Колко струва доставката?",
-    a: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + ' е по тарифа: <span class="missing">' + MISS_FEE + "</span>. Таксата се вижда в количката, преди да поръчате.",
-    ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа. Таксата се вижда в количката, преди да поръчате." },
+    a: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа" +
+      (FEES_KNOWN ? ": " + ZONES.filter((z) => !z.free).map((z) => esc(z.n) + " " + fmt(z.fee as number)).join(", ") + ". Таксата се вижда в количката, преди да поръчате." : ': <span class="missing">' + MISS_FEE + "</span>."),
+    /* the cart can show the fee only once it is in the data; until then no promise about it */
+    ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа." + (FEES_KNOWN ? " Таксата се вижда в количката, преди да поръчате." : "") },
   { q: "Има ли минимална поръчка?", a: '<span class="missing">' + MISS_MIN + "</span>", ld: null },
   { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00 можете да вземете поръчката от ресторанта до 22:30.", ld: "" },
   { q: "Доставяте ли обедното меню?", a: 'Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class="link" href="' + url.page("pickup") + '">Вземи от място</a>.', ld: "" },
   { q: "Колко бързо пристига поръчката?", a: "Обикновено за " + etaRangeBase() + ", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате.", ld: "" },
   { q: "Как ще разбера кога идва шофьорът?", a: "Следите поръчката на живо: приета, готви се, готова, на път. 10 минути преди пристигане ви пращаме известие по SMS, Viber или в браузъра, както изберете.", ld: "" },
-  { q: "Как да платя?", a: "В брой, с карта при получаване или с ваучер. Онлайн плащане засега няма: плащате, когато получите поръчката.", ld: "" },
+  { q: "Как мога да платя?", a: payAnswer(), ld: plain(payAnswer().replace(MISSING_SPAN, "")) },
   { q: "Адресът ми не е в зоните. Какво да направя?", a: "Можете да вземете поръчката от ресторанта: " + esc(R.address) + '. Ако сте наблизо, обадете се на <a class="link" href="' + TEL + '">' + R.phone + "</a> и ще проверим.", ld: "" },
 ];
 export function faqHTML(): string {
-  return '<div class="faq-grid"><div class="faq-side"><h2 class="h2" id="faqH">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href="' + TEL + '">' + ic("phone", 20) + R.phone + "</a></div>" +
+  return '<div class="faq-grid"><div class="faq-side"><h2 class="h2" id="faqH">Често задавани въпроси</h2><p class="lead">Не намерихте отговор? Обадете ни се, ще ви кажем.</p><a class="pill pill-line pill-lg" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div>" +
     '<div class="faq">' + FAQ.map((f, i) => '<details class="rv"' + (i === 0 ? " open" : "") + "><summary>" + f.q + '<span class="cv">' + ic("caret-down", 20) + '</span></summary><div class="ans"><p>' + f.a + "</p></div></details>").join("") + "</div></div>";
 }
-const plain = (h: string) => h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
 /* ---------- closing CTA ---------- */
 export function endHTML(v: View): string {
   const S = v.S, a = action(null, v);
   const title = S.delivery ? "Доставяме днес до 21:00." : S.kitchen ? "Доставката приключи за днес." : S.m < 600 ? "Доставяме днес от 10:00." : "Утре доставяме от 10:00.";
-  const lead = S.delivery ? "Изберете от менюто. Адресът, таксата и времето се виждат в количката, преди да поръчате."
+  const lead = S.delivery ? "Изберете от менюто. Адресът, зоната и времето се виждат в количката, преди да поръчате."
     : S.kitchen ? "Утре доставяме от 10:00. Днес можете да вземете поръчката си от ресторанта до 22:30."
       : S.m < 600 ? "Разгледайте менюто отсега. Кухнята приема поръчки до 22:30." : "Кухнята приема поръчки до 22:30. Можете да изберете отсега.";
   return '<div><h2 class="h2">' + title + '</h2><p class="lead" style="margin-top:10px">' + lead + "</p></div>" +

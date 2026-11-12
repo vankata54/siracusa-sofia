@@ -377,7 +377,7 @@ export function start(): void {
     const deliv = I.mode === "delivery", e = etaText(I);
     const where = deliv ? "<span><small>Доставка до</small><b>" + esc(D.addr) + (D.addrMore ? ", " + esc(D.addrMore) : "") + '</b><span class="muted small">' + esc(e.big) + "</span></span>"
       : "<span><small>Вземане от ресторанта</small><b>" + (D.slot === "asap" ? esc(e.big) : I.sched ? esc(e.big) : "В " + esc(D.slot)) + '</b><span class="muted small">Siracusa, Дружба 2, срещу бл. 311</span></span>';
-    const pays: [Pay, string, string, string][] = [["cash", "money", "В брой", deliv ? "На шофьора" : "В ресторанта"], ["card", "credit-card", deliv ? "Карта при получаване" : "Карта в ресторанта", "Visa или Mastercard"], ["voucher", "ticket", "Ваучер", "Или подаръчна карта"]]; /* no brand names: which vouchers is [ЛИПСВА] */
+    const pays: [Pay, string, string, string][] = [["cash", "money", "В брой", deliv ? "На шофьора" : "В ресторанта"], ["card", "credit-card", "Карта при получаване", "Visa или Mastercard"], ["voucher", "ticket", "Ваучер", "Или подаръчна карта"]]; /* no brand names: which vouchers is [ЛИПСВА] */
     const h = stepper(3, true) + '<h1 class="h1 ck-title" tabindex="-1">Вашите данни</h1><p class="lead ck-lead">' + (U ? "Попълнихме ги от профила ви. Проверете ги." : "Без регистрация. Обаждаме се само ако нещо не е ясно.") + "</p>" +
       '<div style="margin-top:22px" id="topnotes">' + topNotes(I, 3) +
       (P.err === "offline" ? note("bad", "warning-circle", "Няма връзка. Поръчката ви е запазена - опитайте пак.", "Нищо не е изпратено и нищо не е изгубено. Или ни се обадете: " + R.phone + ".", '<a class="pill pill-line" href="' + TEL + '">' + ic("phone", 20) + "Обади се</a>") : "") +

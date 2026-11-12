@@ -63,7 +63,8 @@ export function plan(kind: Kind, s: State, busy: boolean): Plan {
 /* ---------- CTA (one main action; the script sets SC.cart.mode("pickup") on click) ---------- */
 export interface CtaView { n: number; total: number; kind: Kind; later: boolean }
 export function cta(v: CtaView | null): { href: string; label: string } {
-  if (v && v.n) return { href: url.cart(), label: "Вземи от място · " + fmt(v.total) };
+  /* after the kitchen closes the alert above says "Поръчайте за утре": the button says the same, also with a full cart */
+  if (v && v.n) return { href: url.cart(), label: (v.later ? "Поръчай за утре · " : "Вземи от място · ") + fmt(v.total) };
   return { href: v && v.kind === "lunch" ? url.lunch() : url.menu(), label: v && v.later ? "Поръчай за утре" : "Поръчай за вземане" };
 }
 export function ctaHTML(cls: string, v: CtaView | null): string {

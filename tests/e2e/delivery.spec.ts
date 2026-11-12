@@ -38,6 +38,12 @@ test("delivery: SEO, zones and [ЛИПСВА] fees in the server HTML, JSON-LD",
   const faq = ld.find((x) => x["@type"] === "FAQPage");
   expect(faq.mainEntity.length).toBe(7);
   expect(JSON.stringify(faq)).not.toContain("ЛИПСВА");
+  /* the fees are [ЛИПСВА]: no promise that the cart shows them; one payment answer for the group (RESTAURANT.payment) */
+  expect(JSON.stringify(faq)).not.toContain("се вижда в количката");
+  const pay = faq.mainEntity.find((q: { name: string }) => q.name === "Как мога да платя?");
+  expect(pay.acceptedAnswer.text).toContain("карта при получаване (Visa, Mastercard)");
+  expect(html).toContain("Не намерихте отговор? Обадете ни се, ще ви кажем.");
+  expect(html).toContain("Обади се · 0894 36 55 77");
   expect(JSON.stringify(faq)).not.toContain("<");
 });
 
@@ -81,7 +87,7 @@ test("delivery 12:30: address check, map and table select the zone", async ({ pa
   await expect(zcard(page)).toContainText("Гара Искър");
   await expect(zcard(page)).toContainText("По тарифа");
   await expect(page).toHaveURL(/#gara-iskar$/);
-  await page.locator('.map [data-zone="busmantsi"] path.f').click({ force: true });
+  await page.locator('[data-row="busmantsi"] [data-pick]').click();
   await expect(zcard(page)).toContainText("Бусманци");
   await expect(page.locator('[data-row="busmantsi"]')).toHaveClass(/on/);
 
@@ -129,12 +135,16 @@ test("delivery: no simulated error on the real site", async ({ page }) => {
   await expect(zcard(page)).toContainText("Дружба 2");
 });
 
-test("delivery: no horizontal scroll at 360", async ({ page }) => {
+test("delivery: no horizontal scroll at 360, the zone card and the fees table fit (nothing cut)", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
-  await open(page, "12:30");
+  await open(page, "12:30", "#gara-iskar");
   await check(page, "Дружба");
   const w = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(w).toBeLessThanOrEqual(360);
+  /* every box of the card and the table ends at least 16px before the right edge (the gutter) */
+  const over = await page.evaluate(() => [...document.querySelectorAll(".zcard, .zcard *, .fees, .fees *, .minline")]
+    .filter((el) => el.getBoundingClientRect().right > 344.5).map((el) => el.className || el.tagName));
+  expect(over).toEqual([]);
 });
 
 test("delivery: \"Натоварено\" from the kitchen adds the extra minutes everywhere", async ({ page }) => {
