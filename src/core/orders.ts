@@ -17,7 +17,7 @@ import { audit } from "./audit.ts";
 import { getSettings } from "./settings.ts";
 import { findCode, markCodeUsed } from "./codes.ts";
 import { bonusTaken, markBonusTaken } from "./customers.ts";
-import { price, parseMods, slotAllowed, pickupToday } from "../lib/pricing.ts";
+import { price, parseMods, slotAllowed, pickupToday, slotBusy } from "../lib/pricing.ts";
 import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
 import { hasStreet, zoneByName, zoneOfAddress } from "../lib/zones.ts";
 export { hasStreet };
@@ -68,6 +68,7 @@ export const MSG = {
   lunchStale: "Обедното меню за днес още не е качено. Махнете обедните ястия от количката.",
   sched: "Поръчка „за днес“ с час се прави само преди 10:00. Обновете страницата.",
   slot: "Изберете час от списъка.",
+  slotBusy: "Този час вече е зает: кухнята е пълна.",
   addr: "Напишете адреса за доставка.",
   addrOut: "Адресът е извън зоната ни. Изберете „Вземи от място“.",
   addrQuarter: "Добавете и квартала, например „Дружба 2, бл. 311“.",
@@ -157,6 +158,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   const slot = String(input.slot || "asap");
   if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
   else if (mode === "pickup" && (slot === "asap" ? !pickupToday(P, ctx.clock).asap : !slotAllowed(P, slot, ctx.clock, false))) errs.slot = MSG.slot; /* the one pickup rule (lib/pricing.ts) */
+  else if (mode === "pickup" && slot !== "asap" && slotBusy(+slot.slice(0, 2) * 60 + +slot.slice(3), m, settings.kitchen.busy)) errs.slot = MSG.slotBusy; /* "заето" (the same rule as the screen) */
   if (Object.keys(errs).length) invalid(errs);
   /* a big order goes by phone (the office has its own limits per person, the sum limit is the same) */
   if ((input.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);

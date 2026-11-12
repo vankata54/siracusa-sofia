@@ -8,7 +8,7 @@ import { fmt, esc, hhmm, DAYS } from "../../lib/format.ts";
 import { ic } from "../../lib/icons.ts";
 import { url } from "../../lib/routes.ts";
 import { pic, plusBtn } from "../../lib/render.ts";
-import { price, pickupSlots, pickupToday, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
+import { price, pickupSlots, pickupToday, slotBusy, LUNCH_PICKUP_DISCOUNT, round2 } from "../../lib/pricing.ts";
 import type { State } from "../../lib/status.ts";
 import { hourNote, stateBox, loadingText } from "../../lib/ui.ts";
 import "sc-icons:arrow-clockwise,clock,globe,warning-circle"; /* the icons of the shared components it draws (lib/ui.ts) */
@@ -59,7 +59,7 @@ export function plan(kind: Kind, s: State, busy: boolean): Plan {
   else if (pickupToday({ earliest: m + lead, mode: "pickup" }, m).ok) base = m;
   else { day = "tomorrow"; base = OPEN; }
   const start = base + lead, asap = lead ? Math.ceil(start / 5) * 5 : start, b = busy && day === "today";
-  const slots = pickupSlots({ earliest: asap, mode: "pickup" }, base).map((t) => ({ t, full: b && t < m + 60 }));
+  const slots = pickupSlots({ earliest: asap, mode: "pickup" }, base).map((t) => ({ t, full: slotBusy(t, m, b) }));
   return { kind, day, asap, now: lead === 0 && day === "today" && m >= OPEN, slots, closedToday: day === "tomorrow", early: m < OPEN, busy: b };
 }
 

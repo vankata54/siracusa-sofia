@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { createCore, MemoryRepo, publicOrder, type Ctx, type Order } from "../../src/core/index.ts";
 import { lunch, items, isOut, byId } from "../../src/lib/data.ts";
-import { price, parseMods, slotAllowed, pickupToday } from "../../src/lib/pricing.ts";
+import { price, parseMods, slotAllowed, pickupToday, slotBusy } from "../../src/lib/pricing.ts";
 import { eta, setKitchen, KITCHEN_DEFAULT } from "../../src/lib/status.ts";
 import { eventsJson } from "../../src/lib/events-json.ts";
 import { sofiaEpoch, addDaysYmd } from "../../src/lib/time.ts";
@@ -254,6 +254,23 @@ describe("office group order", () => {
     expect((await late.office.get(a.code))!.status).toBe("sent");
     expect((await late.office.get(b.code))!.autoFailed).toBe("no_contact");
     expect((await late.office.sendDue()).sent).toEqual([]);
+  });
+});
+
+describe("pickup slots while the kitchen is busy („заето“)", () => {
+  it("the next hour is full in the core too (the same helper as the screen); asap, later slots and tomorrow are not", async () => {
+    const { core } = mk("12:30");
+    await core.settings.update({ kitchen: { busy: true } });
+    const o = (slot: string, more: Record<string, unknown> = {}) => core.orders.create({ ...base, cart: pickup([L(pizza.id)]), slot, ...more } as never);
+    for (const s of ["13:00", "13:15"]) await expect(o(s)).rejects.toMatchObject({ code: "invalid", fields: { slot: "Този час вече е зает: кухнята е пълна." } });
+    expect((await o("13:30")).at).toBe("13:30");
+    expect((await o("asap")).mode).toBe("pickup");
+    expect((await o("12:00", { sched: "утре" })).sched).toBe("утре");
+    expect(slotBusy(13 * 60 + 29, 12 * 60 + 30, true)).toBe(true);
+    expect(slotBusy(13 * 60 + 30, 12 * 60 + 30, true)).toBe(false);
+    expect(slotBusy(13 * 60, 12 * 60 + 30, false)).toBe(false);
+    await core.settings.update({ kitchen: { busy: false } });
+    expect((await o("13:00")).at).toBe("13:00");
   });
 });
 

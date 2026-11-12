@@ -147,6 +147,13 @@ export function pickupToday(p: Pick<Priced, "earliest" | "mode">, o?: ClockInput
   return { ok, asap: ok && p.earliest <= ORDER_RULES.pickupReadyUntil, slots: ok ? pickupSlots(p, o, false) : [] };
 }
 
+/** While the kitchen has "Натоварено" on, today's pickup slots in the next hour are full ("заето"). The one rule for the
+    core, the cart and /vzemi-ot-myasto/ (t, m: minutes of the day; only for today, never for a pre-order). */
+export const BUSY_FULL_MIN = 60;
+export function slotBusy(t: number, m: number, busy: boolean): boolean {
+  return busy && t < m + BUSY_FULL_MIN;
+}
+
 /** Is this "HH:MM" one of the allowed slots (format, future, opening hours, 15 min step, earliest, 3 hours ahead)? */
 export function slotAllowed(p: Pick<Priced, "earliest" | "mode">, slot: string, o?: ClockInput, sched = false): boolean {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(slot))) return false;

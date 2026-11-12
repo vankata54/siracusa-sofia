@@ -7,7 +7,7 @@
    on the server and in the demo; each code is shown here as text for a person, on the step where it can be fixed. */
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
-import { price, pickupSlots, pickupToday, type Priced, type PricedRow } from "../../lib/pricing.ts";
+import { price, pickupSlots, pickupToday, slotBusy, type Priced, type PricedRow } from "../../lib/pricing.ts";
 import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
 import type { Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
@@ -125,7 +125,7 @@ export function start(): void {
   /* pickup slots: every 15 min, up to 3 hours ahead, not after 22:30. Pre-orders: the whole day.
      "заето": while the kitchen has switched on "Натоварено", the next hour is full. In preview one slot is always full (to show the state). */
   function slotList(I: Info): Slot[] {
-    return pickupSlots(I, undefined, !!I.sched).map((t, k) => ({ t, v: t2(t), busy: (I.today && I.busy && t < I.m + 60) || (SC.preview && k === 4) }));
+    return pickupSlots(I, undefined, !!I.sched).map((t, k) => ({ t, v: t2(t), busy: (I.today && slotBusy(t, I.m, !!I.busy)) || (SC.preview && k === 4) }));
   }
   function validSlot(I: Info) {
     if (!D.slot) return false;
