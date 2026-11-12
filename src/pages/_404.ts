@@ -41,7 +41,7 @@ export function callLine(st: { open: boolean; m: number } | null): string {
 export function suggestionsHTML(): string {
   const SUG: [string, string, string, string][] = [
     [url.lunch(), "Обедно меню", "Ястия и цени за деня", "bowl-food"],
-    [url.reservation(), "Резервирай маса", "Салон или отоплена градина", "calendar-blank"],
+    [url.reservation(), "Резервирай маса", "Салон или отоплявана градина", "calendar-blank"],
     [url.page("delivery"), "Доставка", "Зони, часове и такси", "truck"],
     [url.events(), "Събития и поводи", "Гръцка вечер и празници при нас", "confetti"],
     [url.offers(), "Оферти", "Всички отстъпки на едно място", "seal-percent"],

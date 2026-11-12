@@ -59,7 +59,7 @@ import { v, emptyPlate, callLine, suggestionsHTML, pizzas, catsHTML, upcomingHTM
       else if (i > -1) k = known(s[i + 1]) && s[i + 2] ? "dish" : "cat";
       if (k === "gen") delete document.documentElement.dataset.nf; else document.documentElement.dataset.nf = k;
       document.querySelectorAll("[data-v]").forEach(function(el){ el.hidden = el.getAttribute("data-v").split(" ").indexOf(k) < 0; });
-      document.title = k === "gen" ? T0 : ({cat:"Категорията я няма", dish:"Ястието го няма", ev:"Събитието не е намерено"})[k] + " | Siracusa Bar & Grill";
+      document.title = k === "gen" ? T0 : ({cat:"Категорията я няма", dish:"Ястието го няма", ev:"Събитието го няма"})[k] + " | Siracusa Bar & Grill";
       var ttl = document.querySelector(".top .ttl"); if (ttl) ttl.textContent = k === "ev" ? "Събитие" : k === "gen" ? "Страницата я няма" : "Меню";
       var b = document.querySelector("[data-tocat]"), bt = b && b.querySelector("[data-tocat-t]");
       if (b && !dflt.href) { dflt.href = b.getAttribute("href"); dflt.t = bt.textContent; }
