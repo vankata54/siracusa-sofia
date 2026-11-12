@@ -114,8 +114,10 @@ test("reservation: full hour -> waitlist (preview), large group joins tables", a
   await open(page);
   await page.locator(".proto summary").click();
   await page.locator('[data-proto="event"]').click();
-  await page.locator('.slot.full').first().click();
+  await page.locator('.slot.full', { hasText: "19:00" }).click();
   await expect(page.locator(".sheet")).toContainText("Пълно в");
+  /* the closest free hours (a tie goes to the earlier one), as in the prototype */
+  await expect(page.locator(".sheet [data-wlslot]")).toHaveText(["17:00", "17:30", "18:00", "18:30"]);
   await page.fill("#wl-name", "Чакащ");
   await page.fill("#wl-phone", "0888 22 33 44");
   await page.locator("[data-wlgo]").click();
@@ -131,4 +133,72 @@ test("reservation: manage late is locked (under 2 h / 1 h)", async ({ page }) =>
   await page.locator('[data-proto="late"]').click();
   await expect(page.locator(".alert.warn")).toContainText("Онлайн промяна вече не е възможна");
   await expect(page.locator('.alert.warn a[href^="tel:"]')).toBeVisible();
+});
+
+test("reservation: link from the SMS (#r-<id>-<key>) opens the booking, fits 360, cancels online", async ({ page, request }, info) => {
+  const errors = watch(page);
+  const date = future(info.project.name === "phone" ? 24 : 25);
+  const r = await request.post("/api/reservations", { data: { date, time: "19:30", people: 2, table: info.project.name === "phone" ? "S2" : "G1", name: "Гост От Линк", phone: "0888 44 55 66" } });
+  expect(r.status()).toBe(201);
+  const b = await r.json();
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/rezervatsia/#r-" + b.id + "-" + b.key);
+  await expect(page.locator("h1:visible")).toHaveText("Вашата резервация");
+  await expect(page.locator("[data-rview] .dcard")).toContainText("Гост От Линк");
+  await expect(page.locator("[data-change]")).toBeVisible();
+  const over = await page.evaluate(() => [...document.querySelectorAll("[data-rview] *")].filter((e) => e.getBoundingClientRect().right > innerWidth + 0.5).length);
+  expect(over).toBe(0);
+  const small = await page.evaluate(() => [...document.querySelectorAll("[data-rview] a, [data-rview] button")].filter((e) => { const h = e.getBoundingClientRect().height; return h > 0 && h < 48; }).length);
+  expect(small).toBe(0);
+  await page.locator("[data-cancel=ask]").click();
+  await page.locator("[data-cancel=yes]").click();
+  await expect(page.locator("h1:visible")).toHaveText("Резервацията е отказана");
+  const after = await request.get("/api/reservations/" + b.id + "?k=" + b.key);
+  expect((await after.json()).status).toBe("cancelled");
+  /* the table is free again */
+  const tk = await request.get("/api/reservations/taken?date=" + date + "&time=19:30");
+  expect(await tk.json()).not.toContain(b.table);
+  /* a wrong key: a polite message on step 1 */
+  await page.evaluate(() => { location.hash = "r-deadbeef-00112233"; });
+  await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Не намерихме тази резервация");
+  expect(errors.filter((e) => !/status of 404/.test(e))).toEqual([]);
+});
+
+test("reservation: a new #date on an open page updates the message (year for another year)", async ({ page }) => {
+  await open(page, "nonsense");
+  await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Не разпознахме датата");
+  await page.evaluate(() => { location.hash = "2020-02-02"; });
+  await expect(page.locator("[data-flow] .note[role=alert]")).toHaveText("Датата 2 февруари 2020 вече мина. Изберете друг ден.");
+  const d = future(8);
+  await page.evaluate((x) => { location.hash = x; }, d);
+  await expect(page.locator(".day[aria-pressed=true]")).toHaveAttribute("data-day", d);
+  await expect(page.locator("[data-flow] .note[role=alert]")).toHaveCount(0);
+});
+
+test("reservation: chips in \"Нужно ви е\" show that they slide on a phone", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone");
+  await page.setViewportSize({ width: 360, height: 800 });
+  await toStep2(page, future(11));
+  await expect(page.locator("[data-morehint]")).toBeVisible();
+  await expect(page.locator(".needs .chips")).toHaveAttribute("data-more", "");
+  await page.locator(".needs .chips").evaluate((c) => { c.scrollLeft = c.scrollWidth; });
+  await expect(page.locator("[data-morehint]")).toBeHidden();
+});
+
+test("reservation: fields.time / people from the core go back to step 1, under the question", async ({ page }, info) => {
+  const errors = watch(page);
+  await page.route("**/api/reservations", (r) => r.request().method() === "POST"
+    ? r.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ error: "invalid", message: "Проверете полетата.", fields: { time: "Този час вече мина. Изберете по-късен.", people: "Масата е за 2 души. Изберете по-голяма маса или съединени маси." } }) })
+    : r.continue());
+  await toStep2(page, future(info.project.name === "phone" ? 26 : 27));
+  await pickFree(page);
+  await next(page).click();
+  await page.fill("#f-name", "Тест");
+  await page.fill("#f-phone", "0888 12 34 56");
+  await next(page).click();
+  await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 1 от 3");
+  await expect(page.locator("#q-time .qerr")).toHaveText("Този час вече мина. Изберете по-късен.");
+  await expect(page.locator("#q-ppl .qerr")).toContainText("Масата е за 2 души");
+  expect(errors).toEqual([]);
 });

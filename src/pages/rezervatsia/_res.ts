@@ -3,12 +3,14 @@
    (Салон / Градина from TABLES, a mock layout, not a capacity) or "Предпочитам списък"; 3) details with unticked consent.
    Taken tables and the booking itself go through api.reservations.taken / create (server or demo core).
    The date can come from the address: #2026-11-28 (from "Запази място" on an event). #manage opens the last booking
-   made in this browser (change / cancel, locked under 2 h in the evening / 1 h during the day).
+   made in this browser, #r-<id>-<key> (the link in the SMS) opens any booking through api.reservations.get; change and
+   cancel go through api.reservations.cancel (locked under 2 h in the evening / 1 h during the day).
    The hero and "Добре е да знаете" are drawn on the server (SEO); the flow depends on the day and hour, so it is drawn here. */
 import { SC } from "../../client/sc.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
+import type { Reservation } from "../../client/api-types.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
 import "../../lib/icons/caret-left.ts";
 import "../../lib/icons/caret-down.ts";
@@ -53,7 +55,7 @@ import "../../lib/icons/image.ts";
 type Zone = "salon" | "garden";
 type View = "flow" | "done" | "manage";
 interface Period { id: string; n: string; from: number; to: number }
-interface Booking { id?: string; date: Date; slot: number; n: number; selLabel: string; name?: string; phone: string; occ?: string; note?: string; changed?: boolean; fake?: number }
+interface Booking { id?: string; key?: string; status?: string; date: Date; slot: number; n: number; selLabel: string; name?: string; phone: string; occ?: string; note?: string; changed?: boolean; fake?: number }
 interface SelInfo { joined: boolean; zone: Zone; label: string; short: string; seats: number; t?: Table }
 interface Draft { name: string; phone: string; email: string; occ: string; note: string; consent: boolean }
 
@@ -70,8 +72,6 @@ export function start(): void {
   const protoEl = document.querySelector<HTMLElement>("[data-rproto]")!;
   const bar = document.querySelector<HTMLElement>("[data-rbar]")!;
   const smooth = (): ScrollBehavior => (SC.reduce ? "auto" : "smooth");
-  /* cancel / change from the page needs an API the core does not have yet (see the report); until then: by phone */
-  const cancelApi = (api.reservations as unknown as { cancel?: (id: string, phone: string) => Promise<unknown> }).cancel;
 
   /* ---------- dates & slots ---------- */
   const DS = ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], WD = ["пн", "вт", "ср", "чт", "пт", "сб", "нд"];
@@ -157,7 +157,7 @@ export function start(): void {
     f: { name: "", phone: "", email: "", occ: "", note: "", consent: false } as Draft, err: {} as Record<string, string>,
     busy: false, fail: null as null | "offline" | "error", blocked: false, msg: null as string | null, released: null as string | null,
     anim: true, changing: null as Booking | null, booking: null as Booking | null,
-    manage: null as null | { b: Booking; late: boolean; cancelled: boolean; busy?: boolean; err?: string }, confirmCancel: false,
+    manage: null as null | { b: Booking; late: boolean; cancelled: boolean; was?: boolean; past?: boolean; busy?: boolean; err?: string }, confirmCancel: false, mload: false,
     proto: { offline: false, fail: false, eventFull: false }, protoOpen: false,
   };
   /* a known guest (profile) or the last booking in this browser fills name and phone */
@@ -186,12 +186,14 @@ export function start(): void {
     const h = decodeURIComponent((location.hash || "").slice(1));
     if (h === "manage") { openManage(false); return true; }
     if (h === "manage-late" && SC.preview) { openManage(true); return true; }
+    const link = /^r-([0-9a-f]+)-([0-9a-f]+)$/i.exec(h); /* the link in the SMS: #r-<id>-<key> */
+    if (link) { openLink(link[1], link[2]); return true; }
     const d = parseYmd(h); if (!h) return false;
     if (!d) { st.msg = "Не разпознахме датата в адреса. Изберете ден от календара."; return false; }
-    if (d < TODAY) { st.msg = "Датата " + d.getDate() + " " + MONTHS[d.getMonth()] + " вече мина. Изберете друг ден."; return false; }
+    if (d < TODAY) { st.msg = "Датата " + d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : "") + " вече мина. Изберете друг ден."; return false; }
     if (d > LAST_DAY) { st.msg = "Онлайн приемаме резервации до " + LAST_DAY.getDate() + " " + MONTHS[LAST_DAY.getMonth()] + ". За по-късна дата се обадете на " + R.phone + "."; return false; }
     if (!bookable(d)) { st.msg = "За днес часовете за резервация свършиха. Изберете друг ден."; return false; }
-    st.view = "flow"; st.step = 1; setDate(d, true);
+    st.view = "flow"; st.step = 1; st.msg = null; setDate(d, true);
     if (isEvent(d)) { const evm = 1140; /* from "Запази място": the event starts at 19:00 */ if (slotOpen(d, evm)) { st.slot = evm; st.period = "eve"; } }
     return true;
   }
@@ -301,9 +303,11 @@ export function start(): void {
       (st.n >= 12 ? '<p class="ppl-more">Повече от 12 души? Направете празник при нас.<br><a class="link" href="' + SC.url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a></p>" : "");
   }
 
+  /* an error under a step-1 question (own check or fields.date / time / people from the core) */
+  const qErr = (k: string) => (st.err[k] ? '<p class="err qerr" role="alert" id="e-' + k + '">' + esc(st.err[k]) + "</p>" : "");
   function step1(): string {
-    return '<div class="s1"><div class="q" id="q-day"><h2 class="qh" tabindex="-1" data-h>Кой ден?</h2>' + (st.msg ? '<p class="note" role="alert" style="margin:0 0 12px">' + ic("info", 20) + "<span>" + esc(st.msg) + "</span></p>" : "") + cal() + "</div>" +
-      '<div class="qcol"><div class="q" id="q-time"><h2 class="qh">В колко часа?</h2>' + times() + (st.err.slot ? '<p class="err" role="alert" style="color:var(--danger);font-weight:700;margin:10px 2px 0">' + st.err.slot + "</p>" : "") + '</div><div class="q">' + people() + "</div></div></div>";
+    return '<div class="s1"><div class="q" id="q-day"><h2 class="qh" tabindex="-1" data-h>Кой ден?</h2>' + (st.msg ? '<p class="note" role="alert" style="margin:0 0 12px">' + ic("info", 20) + "<span>" + esc(st.msg) + "</span></p>" : "") + cal() + qErr("date") + "</div>" +
+      '<div class="qcol"><div class="q" id="q-time"><h2 class="qh">В колко часа?</h2>' + times() + qErr("slot") + '</div><div class="q" id="q-ppl">' + people() + qErr("people") + "</div></div></div>";
   }
 
   /* step 2: floor plan (SVG) from TABLES: a mock layout, 4 columns */
@@ -389,7 +393,7 @@ export function start(): void {
     const cnt: Record<Zone, number> = { salon: freeTables("salon", d, m, n).length, garden: freeTables("garden", d, m, n).length };
     h += '<h2 class="vh" tabindex="-1" data-h>Изберете маса</h2><div class="seg zseg" role="group" aria-label="Зона">' + (["salon", "garden"] as Zone[]).map((z) =>
       '<button type="button" data-zone="' + z + '" data-fk="z' + z + '" aria-pressed="' + (st.zone === z) + '">' + ic(z === "salon" ? "chair" : "tree", 22) + "<span>" + zoneName(z) + "<small>" + (cnt[z] ? SC.plural(cnt[z], "свободна", "свободни") : "няма свободни") + "</small></span></button>").join("") + "</div>";
-    if (st.zone === "garden") h += '<p class="znote">' + ic("thermometer", 20) + "Затворена и отоплявана, работи през цялата година.</p>";
+    if (st.zone === "garden") h += '<p class="znote">' + ic("thermometer", 20) + "Затворена и отоплявана, работи целогодишно.</p>";
     const other: Zone = st.zone === "salon" ? "garden" : "salon";
     if (!cnt[st.zone]) h += '<div class="alert zempty" style="margin-top:14px">' + ic("info", 22) + "<div><b>" + cap(zoneName(st.zone, "in")) + " няма свободна маса за " + ppl(n) + " в " + hm(m) + '.</b><div class="acts">' +
       (cnt[other] ? '<button class="pill pill-red" type="button" data-zone="' + other + '" data-fk="zo">Виж ' + (other === "garden" ? "градината" : "салона") + " · " + cnt[other] + " " + (cnt[other] === 1 ? "свободна" : "свободни") + "</button>" : "") +
@@ -397,7 +401,7 @@ export function start(): void {
     const legend = '<ul class="lgd" aria-label="Легенда"><li><i class="sw free"></i>Свободна</li><li><i class="sw sel"></i>Избрана</li><li><i class="sw taken"></i>Заета</li><li><i class="sw unfit"></i>Не е за ' + ppl(n) + "</li>" + (st.zone === "salon" ? '<li><i class="sw win"></i>Прозорец</li>' : "") + "</ul>";
     const needs = '<div class="needs"><span class="label">Нужно ви е:</span><div class="chips">' +
       ([["access", "wheelchair", "Достъпна маса"], ["stroller", "baby", "Място за количка"]].concat(st.zone === "salon" ? [["window", "sun", "До прозореца"]] : [])).map((x) =>
-        '<button class="chip" type="button" data-need="' + x[0] + '" data-fk="n' + x[0] + '" aria-pressed="' + !!st.need[x[0]] + '">' + ic(x[1], 20) + x[2] + "</button>").join("") + "</div></div>";
+        '<button class="chip" type="button" data-need="' + x[0] + '" data-fk="n' + x[0] + '" aria-pressed="' + !!st.need[x[0]] + '">' + ic(x[1], 20) + x[2] + "</button>").join("") + '</div><p class="more" data-morehint hidden>Плъзнете настрани за още' + ic("caret-right", 18) + "</p></div>";
     const view = st.list ? tList(st.zone) : '<div class="shell mapbox"><div class="core">' + plan(st.zone) + "</div></div>";
     const toggle = '<div class="below"><button class="link" type="button" data-list data-fk="lv">' + ic(st.list ? "map-trifold" : "list-bullets", 20) + (st.list ? "Предпочитам картата" : "Предпочитам списък") + "</button>" + (st.list ? "" : '<span class="small muted">Докоснете маса за подробности</span>') + "</div>";
     h += '<div class="s2" style="margin-top:4px"><div>' + (st.list ? "" : legend) + view + toggle + '</div><div class="side">' + needs + "</div></div>";
@@ -430,7 +434,7 @@ export function start(): void {
     h += '<div class="field"><label for="f-note">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="f-note" data-f="note" data-fk="fnote" rows="3" placeholder="Например: идваме с бебе в количка">' + esc(st.f.note) + "</textarea></div>";
     h += '<div class="consent"><label class="check"><input type="checkbox" data-consent data-fk="cs"' + (st.f.consent ? " checked" : "") + '><span><b>Искам да получавам оферти и първи да научавам за събитията</b><span class="muted">По желание. Можете да се откажете по всяко време.</span></span></label></div>';
     if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + "<div><b>" + (st.fail === "offline" ? "Няма връзка" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".") + '</p><div class="acts"><button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-right", 20) + "Опитай пак</button></div></div></div>";
-    h += '<p class="rules">' + ic("info", 20) + "<span>Без депозит. Промяна или отказ от линка в съобщението: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</span></p>";
+    h += '<p class="rules">' + ic("info", 20) + "<span>Без депозит. Промяна или отказ от връзката в SMS-а: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</span></p>";
     h += '<button type="submit" class="vh" tabindex="-1">Резервирай</button></form>';
     return h;
   }
@@ -502,7 +506,7 @@ export function start(): void {
       (ev ? '<div class="evnote" style="margin-top:16px"><span class="evic">' + ic("mask-happy", 22) + "</span><div><b>Този ден е " + EV.n + "</b><p>Започва в " + EV.time + ". " + esc(EV.text) + '</p><a class="link" href="' + SC.url.event(EV.id) + '">За събитието' + ic("caret-right", 18) + "</a></div></div>" : "") +
       '<h2 class="h3" style="margin-top:36px">Какво следва</h2><ol class="nexts">' +
       '<li><span class="ni">' + ic("bell", 22) + "</span><span><b>Напомняме ви ден преди и 3 часа преди</b><p>По SMS или Viber, на същия номер.</p></span></li>" +
-      '<li><span class="ni">' + ic("pencil-simple", 22) + "</span><span><b>Промяна или отказ от линка в съобщението</b><p>До 2 часа преди резервация след 17:00 и до 1 час преди през деня. По-късно: на " + R.phone + ".</p></span></li>" +
+      '<li><span class="ni">' + ic("pencil-simple", 22) + "</span><span><b>Промяна или отказ от връзката в SMS-а</b><p>Или от „Промени или откажи“ по-долу. До 2 часа преди резервация след 17:00 и до 1 час преди през деня. По-късно: на " + R.phone + ".</p></span></li>" +
       '<li><span class="ni">' + ic("wallet", 22) + "</span><span><b>Без депозит</b><p>Плащате само това, което поръчате.</p></span></li></ol>" +
       '<div class="row" style="flex-wrap:wrap;gap:8px 20px;margin-top:20px"><button class="link" type="button" data-manage="ok" data-fk="mg">' + ic("pencil-simple", 20) + 'Промени или откажи</button><a class="link" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + 'Разгледай менюто</a><button class="link" type="button" data-new data-fk="nw">' + ic("plus", 20) + "Нова резервация</button></div></div></section>";
   }
@@ -513,32 +517,76 @@ export function start(): void {
     const d = x && parseYmd(x.date);
     return x && d ? { ...x, date: d } : null;
   }
+  const toMin = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3);
+  /** the core's record -> what the manage screen shows */
+  function fromRes(r: Reservation, key?: string): Booking | null {
+    const d = parseYmd(r.date); if (!d) return null;
+    const t = r.table ? tById(r.table) : null;
+    const label = t ? "Маса " + t.n + " · " + zoneName(t.zone) : r.status === "waitlist" ? "Списък на чакащите" : "Съединени маси" + (r.zone ? " · " + zoneName(r.zone) : "");
+    return { id: r.id, key: r.key || key, status: r.status, date: d, slot: toMin(r.time), n: r.people, selLabel: label, name: r.name, phone: fmtPhone(r.phone), occ: r.occasion, note: r.note };
+  }
+  const minsLeft = (b: Booking) => b.fake || (same(b.date, TODAY) ? b.slot - SC.minutes() : b.date < TODAY ? -1 : 99999);
+  function setManage(b: Booking): void {
+    const lim = b.slot >= EVENING ? 120 : 60, left = minsLeft(b);
+    const past = !b.fake && (left < 0 || b.status === "seated" || b.status === "no_show");
+    const was = b.status === "cancelled";
+    st.manage = { b, late: !past && left < lim, past, cancelled: was, was }; st.view = "manage"; st.confirmCancel = false; st.anim = true;
+  }
+  /** the stored copy can be old (the staff may have cancelled it): ask the core when there is an id */
+  function refresh(b: Booking): void {
+    if (!b.id) return;
+    api.reservations.get(b.id, b.key).then((r) => {
+      const fresh = fromRes(r, b.key); const M = st.manage;
+      if (!fresh || !M || M.b.id !== b.id || st.view !== "manage" || M.busy || st.confirmCancel) return;
+      if (fresh.status !== b.status || fresh.slot !== b.slot || ymd(fresh.date) !== ymd(b.date) || fresh.n !== b.n) { setManage({ ...b, ...fresh }); st.anim = false; render(); }
+    }).catch(() => { /* keep the stored copy */ });
+  }
   function openManage(late: boolean): void {
     let b = st.booking || loadLast();
     if (late) { /* preview only: a booking that starts soon */
       const base = b || { date: TODAY, slot: 1170, n: 4, selLabel: "Маса 5 · Салон", phone: "0888 12 34 56" };
       const nowM = SC.minutes(), m = Math.ceil((nowM + 40) / 10) * 10;
-      b = m <= 1290 ? { ...base, date: TODAY, slot: m } : { ...base, date: TODAY, slot: 1170, fake: 80 };
+      b = m <= 1290 ? { ...base, id: undefined, status: undefined, date: TODAY, slot: m } : { ...base, id: undefined, status: undefined, date: TODAY, slot: 1170, fake: 80 };
     }
-    if (!b) { st.msg = "Не намерихме ваша резервация в този браузър. Направете нова или се обадете на " + R.phone + "."; st.view = "flow"; return; }
-    const lim = b.slot >= EVENING ? 120 : 60;
-    const left = b.fake || (same(b.date, TODAY) ? b.slot - SC.minutes() : 99999);
-    st.manage = { b, late: left < lim, cancelled: false }; st.view = "manage"; st.confirmCancel = false; st.anim = true;
+    if (!b) { st.msg = "Не намерихме ваша резервация в този браузър. Отворете връзката от SMS-а, направете нова или се обадете на " + R.phone + "."; st.view = "flow"; return; }
+    setManage(b);
+    if (!late) refresh(b);
+  }
+  /** #r-<id>-<key>: the link in the SMS, from any device */
+  function openLink(id: string, k: string): void {
+    st.view = "manage"; st.manage = null; st.mload = true; st.confirmCancel = false;
+    api.reservations.get(id, k).then((r) => {
+      st.mload = false;
+      const b = fromRes(r, k);
+      if (!b) throw new Error("bad date");
+      setManage(b); render(); toTop(true);
+    }).catch((e) => {
+      st.mload = false; st.view = "flow"; st.step = 1;
+      st.msg = e instanceof ApiError && e.code === "not_found" ? "Не намерихме тази резервация. Проверете връзката в SMS-а или се обадете на " + R.phone + "."
+        : "Не успяхме да заредим резервацията. Проверете интернета и опитайте пак или се обадете на " + R.phone + ".";
+      if (!st.date) setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1), true);
+      st.anim = true; render(); toTop();
+    });
   }
   function manage(): string {
-    const M = st.manage!, b = M.b, lim = b.slot >= EVENING ? 120 : 60;
-    const left = b.fake || (same(b.date, TODAY) ? b.slot - SC.minutes() : 99999);
-    if (M.cancelled) return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">' + ic("calendar-blank", 44) + '</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.</p>' +
+    if (!st.manage) return '<section class="sec rdone"><div class="done-in" style="max-width:640px" aria-busy="true"><p class="small muted" style="margin:0 0 6px;font-weight:700">Промяна или отказ</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>' +
+      '<div class="skel" style="height:220px;border-radius:22px;margin-top:20px"></div><p class="muted center" style="margin-top:12px" role="status">Зареждаме резервацията...</p></div></section>';
+    const M = st.manage, b = M.b, lim = b.slot >= EVENING ? 120 : 60;
+    const left = minsLeft(b);
+    if (M.cancelled) return '<section class="sec rdone"><div class="done-in"><div class="dhero"><div class="okm off" aria-hidden="true">' + ic("calendar-blank", 44) + '</div><h1 class="h1" tabindex="-1" data-h>Резервацията е отказана</h1><p class="lead">' +
+      (M.was ? "Резервацията за " + fShort(b.date) + ", " + hm(b.slot) + " вече е отказана. Ако искате да дойдете, запазете нова маса." : "Благодарим, че ни казахте навреме. Така масата ще стигне до други гости.") + "</p>" +
       '<button class="pill pill-red pill-lg" type="button" data-new data-fk="nw" style="margin-top:12px">' + ic("calendar-blank", 22) + "Резервирай нова маса</button></div></div></section>";
     let h = '<section class="sec rdone"><div class="done-in" style="max-width:640px"><p class="small muted" style="margin:0 0 6px;font-weight:700">Промяна или отказ</p><h1 class="h1" tabindex="-1" data-h>Вашата резервация</h1>' +
       '<div class="shell dcard" style="margin-top:20px"><div class="core">' + kvRows(b) + '</div></div><div style="margin-top:16px">';
     const rule = lim === 120 ? "2 часа преди резервация след 17:00" : "1 час преди резервация през деня";
-    if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts"><a class="pill pill-red" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a></div></div></div>";
-    else if (!cancelApi || !b.id) h += '<div class="mng acts" style="display:grid;gap:8px"><a class="pill pill-red pill-lg pill-block" href="' + TEL + '">' + ic("phone", 22) + "Промени или откажи · " + R.phone + "</a>" +
-      '<p class="rules" style="margin-top:8px">' + ic("info", 20) + "<span>Засега промяна и отказ приемаме по телефона, до " + rule + ".</span></p></div>";
-    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><b id="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</b><p>Масата ще се освободи за други гости.</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
-    else h += '<div class="mng acts" style="display:grid;gap:8px"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">' + ic("pencil-simple", 22) + 'Промени деня, часа или масата</button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">' + ic("x", 22) + "Откажи резервацията</button>" +
-      '<p class="rules" style="margin-top:8px">' + ic("info", 20) + "<span>Можете да промените или откажете до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ".</span></p></div>";
+    const callBtn = (cls: string) => '<a class="pill pill-red ' + cls + '" href="' + TEL + '">' + ic("phone", 20) + "<span>Обади се · " + nb(R.phone) + "</span></a>";
+    if (M.past) h += '<div class="alert">' + ic("calendar-blank", 22) + "<div><b>Тази резервация вече мина</b><p>Промяна и отказ вече не са нужни. Ако искате да дойдете пак, запазете нова маса.</p>" +
+      '<div class="acts"><button class="pill pill-red" type="button" data-new data-fk="nw">' + ic("calendar-blank", 20) + "Резервирай нова маса</button></div></div></div>";
+    else if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts">' + callBtn("") + "</div></div></div>";
+    else if (!b.id && !SC.preview) h += '<div class="mng"><p class="rules">' + ic("info", 20) + "<span>Тази резервация не намираме онлайн. Промяна и отказ: по телефона, до " + rule + ".</span></p>" + callBtn("pill-lg pill-block") + "</div>";
+    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><b id="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</b><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
+    else h += '<div class="mng"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">' + ic("pencil-simple", 22) + '<span>Промени деня, часа или масата</span></button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">' + ic("x", 22) + "<span>Откажи резервацията</span></button>" +
+      '<p class="rules">' + ic("info", 20) + "<span>Можете да промените или откажете тук или от връзката в SMS-а до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ". По-късно: на " + R.phone + ".</span></p></div>";
     return h + "</div></div></section>";
   }
 
@@ -564,10 +612,21 @@ export function start(): void {
       viewEl.innerHTML = "";
     } else viewEl.innerHTML = st.view === "done" ? done() : manage();
     protoEl.innerHTML = proto();
-    renderBar(); st.anim = false;
+    renderBar(); st.anim = false; moreChips();
     if (fk) { const el = document.querySelector<HTMLInputElement>('[data-fk="' + fk + '"]'); if (el) { try { el.focus({ preventScroll: true }); if (selS != null && el.setSelectionRange) el.setSelectionRange(selS, selS); } catch { /* ignore */ } } }
     want();
   }
+  /* the "Нужно ви е" row slides on a phone: fade the edge and say so while chips are hidden on the right */
+  function moreChips(): void {
+    document.querySelectorAll<HTMLElement>(".needs .chips").forEach((c) => {
+      const more = c.scrollWidth - c.clientWidth - c.scrollLeft > 4;
+      c.toggleAttribute("data-more", more);
+      const hint = c.parentElement?.querySelector<HTMLElement>("[data-morehint]");
+      if (hint) hint.hidden = !(c.scrollWidth - c.clientWidth > 4) || c.scrollLeft > 4;
+    });
+  }
+  document.addEventListener("scroll", (e) => { const el = e.target as HTMLElement; if (el && el.matches && el.matches(".needs .chips")) moreChips(); }, true);
+  window.addEventListener("resize", moreChips);
   const wide = () => SC.device.clientWidth >= 900;
   function toTop(focusHead = false): void {
     const tgt = st.view === "flow" ? flowEl : viewEl;
@@ -616,9 +675,9 @@ export function start(): void {
         email: f.email.trim() || undefined, occasion: f.occ || undefined, note: [s.joined ? "Съединени маси, " + zoneName(s.zone) : "", f.note.trim()].filter(Boolean).join(". ") || undefined, marketing: f.consent === true,
       });
       const old = st.changing;
-      if (old && old.id && cancelApi) { try { await cancelApi(old.id, old.phone); } catch { /* the new booking stands; the old one is cancelled by the staff */ } }
+      if (old && old.id) { try { await api.reservations.cancel(old.id, old.key); } catch { /* the new booking stands; the old one is cancelled by the staff */ } }
       st.busy = false;
-      st.booking = { id: r.id, date: d, slot: m, n: st.n, selLabel: s.label + " · " + zoneName(s.zone), name: f.name.trim(), phone: fmtPhone(f.phone), occ: f.occ, note: f.note.trim(), changed: !!old };
+      st.booking = { id: r.id, key: r.key, date: d, slot: m, n: st.n, selLabel: s.label + " · " + zoneName(s.zone), name: f.name.trim(), phone: fmtPhone(f.phone), occ: f.occ, note: f.note.trim(), changed: !!old };
       saveLast(st.booking);
       st.view = "done"; st.changing = null; st.sel = null; st.anim = true;
       try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ }
@@ -630,6 +689,16 @@ export function start(): void {
         if (e.code === "taken") { /* someone else was faster: back to the plan with fresh data */
           st.released = (s.label) + " току-що беше заета от друг гост. Изберете друга маса."; st.sel = null; st.hold = 0; st.step = 2; st.anim = true;
           taken.delete(key(d, m)); takenErr = false; loadTaken(d, [m], true).then(() => render()); render(); toTop(true); return;
+        }
+        if (e.code === "invalid" && e.fields && (e.fields.date || e.fields.time || e.fields.people || e.fields.table)) {
+          /* the day, hour or party size no longer works (the core checks them too): back to step 1, the message under the question */
+          const fe: Record<string, string> = {};
+          if (e.fields.date) fe.date = e.fields.date;
+          if (e.fields.time) fe.slot = e.fields.time;
+          if (e.fields.people || e.fields.table) fe.people = e.fields.people || e.fields.table;
+          releaseIfNeeded(); st.released = null; st.step = 1; st.anim = true; st.err = fe; render();
+          const first = main.querySelector<HTMLElement>(".qerr"); if (first) { scrollToEl(first.closest(".q")); }
+          return;
         }
         if (e.code === "invalid" && e.fields) {
           const map: Record<string, string> = { name: "name", phone: "phone", email: "email" };
@@ -664,20 +733,23 @@ export function start(): void {
         '<button class="pill pill-red pill-lg pill-block" type="button" data-pick="' + t.id + '">' + ic("check", 22) + 'Избери тази маса</button><p class="muted small center" style="margin:0">Задържаме я за вас 10 минути, докато попълните данните.</p></div>',
     });
   }
+  /** the 4 free hours closest to m (a tie goes to the earlier hour), from the whole day's occupancy */
+  const nearSlots = (d: Date, m: number) => openSlots(d).filter((x) => x !== m && known(d, x) && !slotFull(d, x, st.n))
+    .sort((a, b) => Math.abs(a - m) - Math.abs(b - m) || a - b).slice(0, 4).sort((a, b) => a - b);
+  const nearHtml = (list: number[]) => (list.length ? '<p class="label" style="margin-top:4px">Или изберете свободен час:</p><div class="chips">' + list.map((x) => '<button class="chip" type="button" data-wlslot="' + x + '">' + hm(x) + "</button>").join("") + "</div>" : "");
   function waitSheet(m: number): void {
-    const d = st.date!;
-    const near = openSlots(d).filter((x) => x !== m && known(d, x) && !slotFull(d, x, st.n)).sort((a, b) => Math.abs(a - m) - Math.abs(b - m)).slice(0, 4).sort((a, b) => a - b);
+    const d = st.date!, all = openSlots(d);
+    const whole = all.every((x) => known(d, x));
     const html = '<div class="wl" data-wl><p>В ' + hm(m) + " на " + fShort(d) + " няма свободна маса за " + ppl(st.n) + ". Запишете се и ще ви пишем по SMS или Viber, ако се освободи.</p>" +
       '<div class="field"><label for="wl-name">Име</label><input class="input" id="wl-name" autocomplete="name" value="' + esc(st.f.name) + '"><span class="err" data-wlnerr hidden></span></div>' +
       '<div class="field"><label for="wl-phone">Телефон</label><input class="input" id="wl-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(st.f.phone) + '"><span class="err" data-wlerr hidden></span></div>' +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-wlgo="' + m + '">' + ic("bell", 22) + "Запиши ме в списъка на чакащите</button>" +
-      (near.length ? '<p class="label" style="margin-top:4px">Или изберете свободен час:</p><div class="chips">' + near.map((x) => '<button class="chip" type="button" data-wlslot="' + x + '">' + hm(x) + "</button>").join("") + "</div>" : "") + "</div>";
+      '<div data-wlnear>' + (whole ? nearHtml(nearSlots(d, m)) : "") + "</div></div>";
     cur = SC.sheet({ title: "Пълно в " + hm(m), html });
-    /* nearby free hours need fresh data for the whole day */
-    if (!near.length) loadTaken(d, openSlots(d)).then(() => {
-      const box = document.querySelector("[data-wl]"); if (!box || box.querySelector(".chips")) return;
-      const n2 = openSlots(d).filter((x) => x !== m && !slotFull(d, x, st.n)).sort((a, b) => Math.abs(a - m) - Math.abs(b - m)).slice(0, 4).sort((a, b) => a - b);
-      if (n2.length) box.insertAdjacentHTML("beforeend", '<p class="label" style="margin-top:4px">Или изберете свободен час:</p><div class="chips">' + n2.map((x) => '<button class="chip" type="button" data-wlslot="' + x + '">' + hm(x) + "</button>").join("") + "</div>");
+    /* the closest free hours need the whole day (only the visible part of the day is loaded) */
+    if (!whole) loadTaken(d, all).then(() => {
+      const box = document.querySelector<HTMLElement>("[data-wl] [data-wlnear]"); if (!box) return;
+      box.innerHTML = nearHtml(nearSlots(d, m));
     });
   }
   async function joinWaitlist(btn: HTMLElement, m: number): Promise<void> {
@@ -712,7 +784,7 @@ export function start(): void {
     const t = (e.target as HTMLElement).closest<HTMLElement>("[data-day],[data-mon],[data-period],[data-slot],[data-full],[data-ppl],[data-go],[data-act],[data-zone],[data-t],[data-pick],[data-need],[data-list],[data-rehold],[data-occ],[data-unblock],[data-ics],[data-new],[data-manage],[data-change],[data-cancel],[data-proto],[data-waitlist],[data-wlgo],[data-wlslot],[data-retake]");
     if (!t) return;
     const ds = t.dataset;
-    if (ds.day) { setDate(parseYmd(ds.day)!); st.msg = null; render(); return; }
+    if (ds.day) { setDate(parseYmd(ds.day)!); st.msg = null; delete st.err.date; delete st.err.slot; render(); return; }
     if (ds.mon) {
       st.month = new Date(st.month.getFullYear(), st.month.getMonth() + (+ds.mon), 1); render();
       const f = document.querySelector<HTMLButtonElement>('[data-fk="' + (ds.mon === "1" ? "mn" : "mp") + '"]');
@@ -725,7 +797,7 @@ export function start(): void {
     if (ds.waitlist) { waitSheet(+ds.waitlist); return; }
     if (ds.ppl) {
       const n = Math.max(1, Math.min(12, st.n + (+ds.ppl)));
-      if (n !== st.n) { releaseIfNeeded(); st.n = n; if (st.slot != null && st.date && slotFull(st.date, st.slot, n)) st.slot = null; }
+      if (n !== st.n) { releaseIfNeeded(); st.n = n; delete st.err.people; if (st.slot != null && st.date && slotFull(st.date, st.slot, n)) st.slot = null; }
       render(); return;
     }
     if (ds.go) { const g = +ds.go; if (g < st.step) go(g); else if (g === 2 && st.step === 3) go(2); return; }
@@ -748,7 +820,7 @@ export function start(): void {
     if (ds.occ) { st.f.occ = st.f.occ === ds.occ ? "" : ds.occ; render(); return; }
     if (t.hasAttribute("data-unblock")) { st.blocked = false; st.f.phone = ""; st.err = {}; render(); const pi = document.getElementById("f-phone"); if (pi) { scrollToEl(pi); pi.focus({ preventScroll: true }); } return; }
     if (t.hasAttribute("data-ics")) { icsFile(st.booking!); SC.toast("Файлът за календара е изтеглен"); return; }
-    if (t.hasAttribute("data-new")) { st.view = "flow"; st.step = 1; st.sel = null; st.slot = null; st.booking = null; st.blocked = false; st.f.occ = ""; st.f.note = ""; st.released = null; st.msg = null; st.anim = true; if (!st.date || !bookable(st.date)) { st.date = null; setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1), true); } pickDefaultPeriod(); render(); toTop(true); return; }
+    if (t.hasAttribute("data-new")) { if (/^#(r-|manage)/.test(location.hash)) { try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ } } st.view = "flow"; st.step = 1; st.sel = null; st.slot = null; st.booking = null; st.blocked = false; st.f.occ = ""; st.f.note = ""; st.released = null; st.msg = null; st.anim = true; if (!st.date || !bookable(st.date)) { st.date = null; setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1), true); } pickDefaultPeriod(); render(); toTop(true); return; }
     if (ds.manage) { openManage(false); render(); toTop(true); return; }
     if (t.hasAttribute("data-change")) {
       const b = st.manage!.b; st.view = "flow"; st.step = 1; st.changing = b; st.n = b.n; st.slot = null; st.sel = null; st.date = null;
@@ -760,10 +832,10 @@ export function start(): void {
       const M = st.manage!;
       if (ds.cancel === "ask") { st.confirmCancel = true; M.err = undefined; render(); return; }
       if (ds.cancel === "no") { st.confirmCancel = false; render(); toTop(true); return; }
-      if (!cancelApi || !M.b.id) return;
+      if (!M.b.id) { if (SC.preview) { M.cancelled = true; render(); toTop(true); } return; } /* preview sample: no record */
       M.busy = true; render();
-      cancelApi(M.b.id, M.b.phone).then(() => { M.busy = false; M.cancelled = true; st.booking = null; SC.store("sc-res-last", null); render(); toTop(true); })
-        .catch((er) => { M.busy = false; M.err = er instanceof ApiError ? er.message : "Не успяхме да откажем резервацията. Обадете се на " + R.phone + "."; render(); });
+      api.reservations.cancel(M.b.id, M.b.key).then(() => { M.busy = false; M.cancelled = true; st.booking = null; SC.store("sc-res-last", null); render(); toTop(true); })
+        .catch((er) => { M.busy = false; M.err = er instanceof ApiError && er.code !== "offline" && er.code !== "error" ? er.message : "Не успяхме да откажем резервацията. Проверете интернета и опитайте пак или се обадете на " + R.phone + "."; render(); });
       return;
     }
     if (ds.wlslot) { if (cur) { cur.close(); cur = null; } releaseIfNeeded(); st.slot = +ds.wlslot; st.period = periodOf(st.slot).id; render(); SC.toast("Избрахте " + hm(st.slot)); return; }
@@ -799,7 +871,12 @@ export function start(): void {
   document.addEventListener("submit", (e) => { if ((e.target as HTMLElement).closest("[data-form]")) { e.preventDefault(); next(); } });
   document.addEventListener("toggle", (e) => { const el = e.target as HTMLDetailsElement; if (el.matches && el.matches("[data-protod]")) st.protoOpen = el.open; }, true);
   window.addEventListener("offline", () => SC.toast("Няма връзка. Данните ви са запазени тук."));
-  window.addEventListener("hashchange", () => { if (fromHash()) { st.anim = true; render(); toTop(); } });
+  /* a new #date / #r-... on an open page: draw it, and a wrong or past date shows its message on step 1 */
+  window.addEventListener("hashchange", () => {
+    st.msg = null;
+    if (fromHash()) { st.anim = true; render(); toTop(); return; }
+    if (st.msg) { if (st.view !== "flow") { st.view = "flow"; } st.step = 1; st.anim = true; render(); toTop(); }
+  });
   /* the hour passes: today's slots close (step 1 only, so nothing typed is lost) */
   document.addEventListener("sc:tick", () => { if (st.view === "flow" && st.step === 1 && st.date && same(st.date, TODAY)) { if (!bookable(TODAY)) { st.date = null; setDate(addDays(TODAY, 1), true); } else if (st.slot != null && !slotOpen(st.date, st.slot)) st.slot = null; render(); } });
   /* a booking made in another tab or by the staff frees / takes a table: refresh what is shown */

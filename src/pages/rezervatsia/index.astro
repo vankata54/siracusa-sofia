@@ -37,7 +37,7 @@ const skeleton =
     <div class="infog">
       <div class="card ic-card"><span class="ni" set:html={ic("wallet", 22)}></span><span><b>Без депозит</b><p>Резервацията е безплатна. Плащате само това, което поръчате.</p></span></div>
       <div class="card ic-card"><span class="ni" set:html={ic("bell", 22)}></span><span><b>Напомняне</b><p>Потвърждение веднага, напомняне ден преди и 3 часа преди. По SMS или Viber.</p></span></div>
-      <div class="card ic-card"><span class="ni" set:html={ic("clock", 22)}></span><span><b>Промяна или отказ</b><p>От линка в съобщението: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</p></span></div>
+      <div class="card ic-card"><span class="ni" set:html={ic("clock", 22)}></span><span><b>Промяна или отказ</b><p>От връзката в SMS-а: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</p></span></div>
       <div class="card ic-card"><span class="ni" set:html={ic("confetti", 22)}></span><span><b>Повече от 12 души?</b><p>Рожден ден, кръщене, фирмено парти: -5% при ранна резервация.</p><a class="link" href={url.page("celebration")} set:html={"Празник при нас" + ic("caret-right", 18)}></a></span></div>
     </div>
     <div class="card ic-card addr"><span class="ni" set:html={ic("map-pin", 22)}></span><span><b>{R.address}</b><p>Всеки ден {R.open} - {R.close}. Кухнята приема до {R.kitchen}. Паркиране: <span class="missing">[ЛИПСВА: паркиране]</span></p>
@@ -99,7 +99,6 @@ const skeleton =
 .evnote .evic{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember)}
 .evnote b{display:block; font-size:17px; line-height:1.3}
 .evnote p{margin:4px 0 0; color:var(--muted); font-size:16px}
-.evnote .link{min-height:44px}
 .note{display:flex; gap:10px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:16px; font-weight:600}
 .note .ic{flex:none; margin-top:1px; color:var(--muted)}
 .slots{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px}
@@ -172,11 +171,16 @@ const skeleton =
 .tbl.unfit .no, .tbl.unfit .lb{opacity:.8}
 .fp .hatch line{stroke:var(--line-strong); stroke-width:1.5}
 .below{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 16px; margin-top:8px}
-.needs{margin:0 0 4px}
+.needs{margin:16px 0 4px}
 .s2{display:flex; flex-direction:column}
 .s2 .side{order:-1}
 .needs .label{display:block; margin:0 0 8px 2px}
-.needs .chips{flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px}
+.needs .chips{flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px; scrollbar-width:none}
+.needs .chips::-webkit-scrollbar{display:none}
+/* the row slides on a phone: the edge fades while more chips are hidden on the right (set in _res.ts) */
+.needs .chips[data-more]{-webkit-mask-image:linear-gradient(to left, transparent 0, var(--ink) 64px); mask-image:linear-gradient(to left, transparent 0, var(--ink) 64px)}
+.needs .more{display:flex; align-items:center; gap:4px; margin:6px 0 0 2px; font-size:14px; color:var(--muted); font-weight:600}
+.qerr{color:var(--danger); font-weight:700; margin:10px 2px 0}
 .needs .chip{min-height:48px}
 .needs .chip .ic{color:var(--muted)}
 .needs .chip[aria-pressed="true"] .ic{color:inherit}
@@ -228,7 +232,6 @@ const skeleton =
 .rc .li{display:flex; align-items:center; gap:10px; font-weight:700; min-height:32px}
 .rc .li .ic{color:var(--muted)}
 .rc .acts{display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:4px}
-.rc .acts .link{min-height:44px}
 .form{display:grid; gap:20px; margin-top:22px}
 .form .two{display:grid; gap:20px}
 .opt{font-weight:600; color:var(--muted)}
@@ -296,7 +299,10 @@ const skeleton =
 .nexts b{display:block}
 .nexts p{margin:2px 0 0; color:var(--muted); font-size:16px}
 .mng .core{padding:18px; display:grid; gap:14px}
-.mng .acts{display:grid; gap:8px}
+.mng{display:grid; gap:10px}
+.mng .rules{margin:2px 0 0}
+.rdone .pill{white-space:normal; text-align:center; line-height:1.25; min-width:0; padding-top:8px; padding-bottom:8px}
+.rdone .pill .ic{flex:none}
 .confirm{padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
 .confirm b{display:block; font-size:18px}
 .confirm p{margin:6px 0 14px; color:var(--muted)}
@@ -308,7 +314,6 @@ const skeleton =
 .ic-card .ni{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
 .ic-card b{display:block; font-size:17px; line-height:1.3}
 .ic-card p{margin:4px 0 0; color:var(--muted); font-size:16px}
-.ic-card .link{min-height:44px}
 .proto{border-radius:var(--r-core); border:1.5px dashed var(--line-strong); padding:0 16px}
 .proto summary{min-height:56px; display:flex; align-items:center; gap:10px; font-weight:800; cursor:pointer; list-style:none}
 .proto summary::-webkit-details-marker{display:none}
@@ -335,6 +340,8 @@ const skeleton =
 .wl .pill, .ts .pill{white-space:normal; text-align:center; line-height:1.2}
 .wl p{margin:0}
 .wl .chips{flex-wrap:wrap; overflow:visible; margin:0; padding:0}
+.wl [data-wlnear]{display:grid; gap:12px}
+.wl [data-wlnear]:empty{display:none}
 .wl .okm{width:72px; height:72px; margin:4px auto 0}
 
 /* ---------- small phones ---------- */
