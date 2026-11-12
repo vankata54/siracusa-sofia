@@ -7,7 +7,7 @@
 import { SC } from "../../client/sc.ts";
 import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
-import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch } from "../../lib/time.ts";
+import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes } from "../../lib/time.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
 import "../../lib/icons/receipt.ts";
@@ -145,7 +145,8 @@ export function startTracking(main: HTMLElement) {
     if (at == null) return null;
     let ymd = sofiaYmd(new Date(x.ts || Date.now()));
     if (x.sched === "утре" || (S.sim.sched && !x.sched)) ymd = addDaysYmd(ymd, 1);
-    const left = (sofiaEpoch(ymd, at) - Date.now()) / 60000;
+    /* "now" is the page clock (the real Sofia time, or ?t= in preview/demo), so a pre-order never looks late in preview */
+    const left = (sofiaEpoch(ymd, at) - sofiaEpoch(sofiaYmd(), minutes())) / 60000;
     const [y, mo, d] = ymd.split("-").map(Number);
     return { at, date: new Date(y, mo - 1, d, 12), left, tomorrow: ymd !== sofiaYmd() };
   }

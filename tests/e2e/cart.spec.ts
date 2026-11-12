@@ -96,7 +96,7 @@ test("cart: the -10% profile bonus is shown like the core counts it, only with t
   await page.addInitScript((u) => { localStorage.setItem("sc-user", JSON.stringify(u)); }, me);
   await open(page, "12:30", { ...CART, mode: "pickup", lines: [CART.lines[0]] });
   await expect(page.locator(".sum")).toContainText("Отстъпка с профил");
-  await expect(page.locator(".sum")).toContainText("Прилага се сам на следващата ви поръчка");
+  await expect(page.locator(".sum")).toContainText("Бонусът за профила ви, веднъж");
   await expect(page.locator(".sum [data-total]")).toHaveText("7,36 €"); /* 8,18 € - 10% (0,82 €), as the core: № 1101 in the review */
   await cta(page).click();
   await cta(page).click();

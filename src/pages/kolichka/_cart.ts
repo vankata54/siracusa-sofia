@@ -274,7 +274,7 @@ export function start(): void {
     return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Сметка</h2>' + list +
       '<div class="kv"><span>Ястия · ' + I.n + '</span><span class="price">' + fmt(I.sub) + "</span></div>" +
       (I.discKind === "lunch" ? '<div class="kv"><span><span class="disc-b">-30%</span>Отстъпка след 15:00<small>Обедното меню при вземане</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
-      (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Прилага се сам на следващата ви поръчка</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
+      (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Бонусът за профила ви, веднъж</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
       (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", върху ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + del[0] + del[1] + "</span><span>" + del[2] + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span><span class="price" data-total>' + fmt(I.total) + "</span>" + (I.feeUnknown ? "<small>+ таксата за доставка</small>" : "") + "</span></div>" +
