@@ -155,7 +155,7 @@ export function start(): void {
     view: "flow" as View, step: 1, date: null as Date | null, month: MIN_M, slot: null as number | null, period: "eve", n: 2, zone: "salon" as Zone,
     sel: null as string | null, hold: 0, expired: false, list: false, need: {} as Record<string, boolean>,
     f: { name: "", phone: "", email: "", occ: "", note: "", consent: false } as Draft, err: {} as Record<string, string>,
-    busy: false, fail: null as null | "offline" | "error", blocked: false, msg: null as string | null, released: null as string | null,
+    busy: false, fail: null as null | "offline" | "error", failText: null as string | null, blocked: false, msg: null as string | null, released: null as string | null,
     anim: true, changing: null as Booking | null, booking: null as Booking | null,
     manage: null as null | { b: Booking; late: boolean; cancelled: boolean; was?: boolean; past?: boolean; busy?: boolean; err?: string }, confirmCancel: false, mload: false,
     proto: { offline: false, fail: false, eventFull: false }, protoOpen: false,
@@ -433,7 +433,7 @@ export function start(): void {
       (st.f.occ === "Рожден ден" || st.f.occ === "Имен ден" ? '<span class="help">Искате торта или украса?</span><a class="link" href="' + SC.url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a>" : "") + "</div>";
     h += '<div class="field"><label for="f-note">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="f-note" data-f="note" data-fk="fnote" rows="3" placeholder="Например: идваме с бебе в количка">' + esc(st.f.note) + "</textarea></div>";
     h += '<div class="consent"><label class="check"><input type="checkbox" data-consent data-fk="cs"' + (st.f.consent ? " checked" : "") + '><span><b>Искам да получавам оферти и първи да научавам за събитията</b><span class="muted">По желание. Можете да се откажете по всяко време.</span></span></label></div>';
-    if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + "<div><b>" + (st.fail === "offline" ? "Няма връзка" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".") + '</p><div class="acts"><button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-right", 20) + "Опитай пак</button></div></div></div>";
+    if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + "<div><b>" + (st.fail === "offline" ? "Няма връзка" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : (st.failText ? esc(st.failText) : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".")) + '</p><div class="acts"><button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-right", 20) + "Опитай пак</button></div></div></div>";
     h += '<p class="rules">' + ic("info", 20) + "<span>Без депозит. Промяна или отказ от връзката в SMS-а: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</span></p>";
     h += '<button type="submit" class="vh" tabindex="-1">Резервирай</button></form>';
     return h;
@@ -664,18 +664,19 @@ export function start(): void {
     submit();
   }
   async function submit(): Promise<void> {
-    st.busy = true; st.fail = null; render();
+    st.busy = true; st.fail = null; st.failText = null; render();
     const s = selInfo()!, f = st.f, d = st.date!, m = st.slot!;
     const done1 = (fail: "offline" | "error") => { st.busy = false; st.fail = fail; render(); scrollToEl(main.querySelector(".alert.bad")); };
     if (SC.preview && (st.proto.offline || st.proto.fail)) { await new Promise((r) => setTimeout(r, 700)); done1(st.proto.offline ? "offline" : "error"); return; }
     if (navigator.onLine === false) { done1("offline"); return; }
+    const old = st.changing;
     try {
+      /* a change: the core cancels the old booking in the same step, so its table is not counted as taken */
       const r = await api.reservations.create({
         date: ymd(d), time: hm(m), people: st.n, table: s.joined ? null : s.t!.id, name: f.name.trim(), phone: f.phone,
         email: f.email.trim() || undefined, occasion: f.occ || undefined, note: [s.joined ? "Съединени маси, " + zoneName(s.zone) : "", f.note.trim()].filter(Boolean).join(". ") || undefined, marketing: f.consent === true,
+        replaces: old && old.id ? { id: old.id, key: old.key || "" } : undefined,
       });
-      const old = st.changing;
-      if (old && old.id) { try { await api.reservations.cancel(old.id, old.key); } catch { /* the new booking stands; the old one is cancelled by the staff */ } }
       st.busy = false;
       st.booking = { id: r.id, key: r.key, date: d, slot: m, n: st.n, selLabel: s.label + " · " + zoneName(s.zone), name: f.name.trim(), phone: fmtPhone(f.phone), occ: f.occ, note: f.note.trim(), changed: !!old };
       saveLast(st.booking);
@@ -706,6 +707,7 @@ export function start(): void {
           Object.keys(e.fields).forEach((k) => { if (map[k]) fe[map[k]] = e.fields![k]; });
           if (Object.keys(fe).length) { st.err = fe; render(); const first = main.querySelector<HTMLElement>('[aria-invalid="true"]'); if (first) { scrollToEl(first); first.focus({ preventScroll: true }); } return; }
         }
+        if (e.code === "too_late") { st.failText = e.message; done1("error"); return; }
         done1(e.code === "offline" ? "offline" : "error"); return;
       }
       done1("error");

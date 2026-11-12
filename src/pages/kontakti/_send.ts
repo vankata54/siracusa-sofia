@@ -1,14 +1,17 @@
-/* Contacts (/kontakti/): sending the feedback form.
-   TEMPORARY: src/client/api.ts has no method for a contact message (and the core has no "feedback" store yet), so the page
-   sends through this one thin function. It checks the connection and answers like the prototype (about 1 s); nothing
-   leaves the browser. When the boss adds e.g. api.feedback.create({topic, name, mode, contact, msg}), only the body of
-   sendFeedback() changes (see reviews-code/contacts.agent.md, "Искания към шефа"). */
+/* Contacts (/kontakti/): sending the feedback form through the core (api.feedback.create: server and demo).
+   Errors from the core are ApiError with fields name / contact / message; "offline" becomes OfflineError. */
 import type { Sent } from "./_live.ts";
 
 export class OfflineError extends Error { constructor() { super("offline"); } }
 
-export async function sendFeedback(_msg: Sent, opts: { offline?: boolean } = {}): Promise<{ ok: true }> {
-  await new Promise((r) => setTimeout(r, 1100));
+export async function sendFeedback(msg: Sent, opts: { offline?: boolean } = {}): Promise<{ ok: true }> {
   if (opts.offline || (typeof navigator !== "undefined" && navigator.onLine === false)) throw new OfflineError();
-  return { ok: true };
+  const { api, ApiError } = await import("../../client/api.ts");
+  try {
+    await api.feedback.create({ name: msg.name, contact: msg.contact, mode: msg.mode, message: msg.msg, topic: msg.topic || undefined });
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof ApiError && e.code === "offline") throw new OfflineError();
+    throw e;
+  }
 }

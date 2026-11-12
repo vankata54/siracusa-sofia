@@ -423,7 +423,18 @@ a.ct-scard:active{transform:scale(.98)}
       mountOk(sent, true);
     } catch (err) {
       btn.classList.remove("is-busy"); btn.removeAttribute("aria-busy"); btn.innerHTML = old;
-      alert.innerHTML = err instanceof OfflineError
+      /* the core checks the fields too: its message goes under the field */
+      const fe = (err as { fields?: Record<string, string> }).fields;
+      if (fe && (fe.name || fe.contact || fe.message)) {
+        const map: [Field, string | undefined][] = [["name", fe.name], ["contact", fe.contact], ["msg", fe.message]];
+        const first = map.find(([, t]) => t);
+        map.forEach(([id, t]) => { if (t) setErr(id, t); });
+        if (first) inp(first[0]).focus();
+        return;
+      }
+      const human = (err as { code?: string; message?: string }).code === "throttled" ? (err as Error).message : "";
+      alert.innerHTML = human ? ic("warning", 22) + "<p><b>Съобщението не се изпрати.</b> " + SC.esc(human) + "</p>"
+        : err instanceof OfflineError
         ? ic("warning", 22) + "<p><b>Няма връзка.</b> Съобщението ви е запазено - опитайте пак, щом интернетът се върне.</p>"
         : ic("warning", 22) + "<p><b>Съобщението не се изпрати.</b> Запазихме го - опитайте пак след малко или се обадете.</p>";
       alert.hidden = false;
