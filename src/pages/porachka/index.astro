@@ -74,6 +74,8 @@ const skeleton =
 .hnote{display:flex; gap:10px; align-items:flex-start; margin:0; padding:2px 14px 12px; font-size:15px; color:var(--muted)}
 .hnote .ic{margin-top:2px}
 .is-off .enum,.is-off .say{opacity:.55}
+.offchip{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; margin-bottom:10px; border-radius:var(--r-pill); font-size:14px; font-weight:800; color:var(--muted); background:var(--surface-2)}
+.is-off .enum b{color:var(--muted)}
 
 /* status timeline (inside the shell, under the core) */
 .tl{position:relative; list-style:none; margin:0; padding:18px 10px 12px; display:flex; justify-content:space-between; gap:6px}
@@ -123,7 +125,7 @@ const skeleton =
 .ans p{margin:0}
 .code{border-radius:var(--r-core); padding:18px; display:grid; gap:12px}
 .code .k{font-size:14px; font-weight:800}
-.code .v{font-size:30px; font-weight:800; letter-spacing:.04em; font-variant-numeric:tabular-nums; line-height:1}
+.code .v{font-size:26px; font-weight:800; letter-spacing:.02em; white-space:nowrap; font-variant-numeric:tabular-nums; line-height:1}
 .code .row{justify-content:space-between; flex-wrap:wrap}
 .code p{font-size:15px}
 .code .pill{background:var(--on-ember); color:var(--ember)}
@@ -179,12 +181,12 @@ const skeleton =
 
 
 /* success content right after checkout (from design/pages/cart.html "viewDone") */
-.okhead{display:grid; justify-items:center; text-align:center; gap:10px; padding:12px 0 22px}
+.okhead{display:grid; justify-items:center; text-align:center; gap:6px; padding:0 0 14px}
 .okhead .ok-h{outline:none; margin:0; text-wrap:balance}
 .okhead .lead{margin:0}
-.okmark{position:relative; width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}
+.okmark{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:okPop 560ms var(--ease) both}
 .okmark::before{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); opacity:0; animation:okRing 1100ms 260ms var(--ease) both}
-.okmark .ic{position:relative; animation:okTick 460ms 200ms var(--ease) both}
+.okmark .ic{position:relative; width:38px; height:38px; animation:okTick 460ms 200ms var(--ease) both}
 @keyframes okPop{from{transform:scale(.5); opacity:0}to{transform:none; opacity:1}}
 @keyframes okTick{from{transform:scale(.2) rotate(-25deg); opacity:0}to{transform:none; opacity:1}}
 @keyframes okRing{0%{transform:scale(1); opacity:.35}100%{transform:scale(1.7); opacity:0}}
@@ -211,6 +213,9 @@ const skeleton =
 @media (prefers-reduced-motion: reduce){
   .live i::after,.ring .now,.vb::before,.tl .now .dot::after,.is-cook .viz .plate > svg,.enter .viz,.enter .etxt,.ans,.okmark,.okmark::before,.okmark .ic{animation:none}
 }
+@container app (max-width:699px){
+  .okhead .ok-h{font-size:28px; line-height:1.1}
+}
 @container app (max-width:370px){
   .tl{padding-left:2px; padding-right:2px; gap:4px}
   .tl.n5 .nm{max-width:min-content}
@@ -218,6 +223,9 @@ const skeleton =
   .viz{width:176px; height:176px}
 }
 @container app (min-width:700px){
+  .okhead{gap:10px; padding:12px 0 22px}
+  .okmark{width:112px; height:112px}
+  .okmark .ic{width:64px; height:64px}
   .hero > .core{padding:14px 14px 32px}
   .hgrid{grid-template-columns:auto minmax(0,1fr); align-items:center; justify-items:start; gap:8px 36px; padding:6px 18px 0 22px}
   .viz{margin:14px 0 18px}
@@ -236,13 +244,14 @@ const skeleton =
   .viz{width:248px; height:248px}
   .enum b{font-size:104px}
   .enum.clock b{font-size:88px}
-  .say{font-size:30px}
+  .say{font-size:28px}
+  .hgrid{gap:8px 28px; padding-right:12px}
   .tl .nm{font-size:15px}
 }
 </style>
 
 <script>
-  import { SC } from "../../client/sc-menu.ts";
+  import { SC } from "../../client/sc.ts";
   import { startTracking } from "./_track.ts";
   startTracking(SC.mount());
 </script>

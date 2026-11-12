@@ -1,8 +1,11 @@
 /* Order tracking (/porachka/<номер>/, demo: porachka/index.html#<номер>): port of design/pages/tracking.html
    (design/PAGES.md "tracking.html"). The browser part: the order is read with api.orders.get(no) and follows
    api.on("order.status") live (SSE on the server, BroadcastChannel in the demo). Status comes from the order,
-   the minutes from its promised time (eta + ts). The prototype panel (simulated states) lives only behind SC.preview. */
-import { SC } from "../../client/sc-menu.ts";
+   the minutes from its promised time (eta + ts). The prototype panel (simulated states) lives only behind SC.preview.
+   Address with the secret key: /porachka/1042-k7f3m2pq/ and #1042-k7f3m2pq (shown number = the part before "-").
+   The menu (illustration in the plate, grams, "Поръчай същото") is a lazy chunk, loaded in parallel with the order. */
+import { SC } from "../../client/sc.ts";
+import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
 import "../../lib/icons/receipt.ts";
@@ -36,6 +39,10 @@ import "../../lib/icons/pencil-simple.ts";
 import "../../lib/icons/arrow-clockwise.ts";
 import "../../lib/icons/user.ts";
 
+type Dish = SCMenu["items"][number];
+/* preview tokens after the number (#1042-sample-delivered); anything else right after the number is the order key */
+const PREVIEW_TOK = new Set(["sample", "delivered", "done", "pickup", "delivery", "late", "offline", "tomorrow", "welcome", "notfound", "none", "loading", "way"]);
+const KEY_RE = /^[a-z0-9]{4,32}$/;
 type View = "loading" | "order" | "notfound" | "none" | "error";
 type Stage = { id: "acc" | "cook" | "ready" | "way" | "done"; nm: string; ic: string };
 type Rated = { happy: boolean; code: string; google: string | null; fbSent?: boolean };
@@ -50,16 +57,25 @@ const toMin = (t: string) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); re
 export function startTracking(main: HTMLElement) {
   /* ---------- the number: /porachka/1042/ on the server, porachka/index.html#1042 in the demo ---------- */
   const tok: Record<string, boolean> = {};
-  let hashNo: string | null = null;
-  location.hash.slice(1).split("-").forEach((t) => { if (/^\d{1,9}$/.test(t)) hashNo = t; else if (t) tok[decodeURIComponent(t)] = true; });
+  const dec = (t: string) => { try { return decodeURIComponent(t); } catch { return t; } };
+  let hashNo: string | null = null, hashKey = "";
+  location.hash.slice(1).split("-").map(dec).forEach((t, i, a) => {
+    if (!hashNo && /^\d{1,9}$/.test(t)) hashNo = t;
+    else if (hashNo && !hashKey && a[i - 1] === hashNo && KEY_RE.test(t) && !PREVIEW_TOK.has(t)) hashKey = t;
+    else if (t) tok[t] = true;
+  });
   const pathNo = (/\/porachka\/([^/]+)\/?$/.exec(location.pathname) || [])[1];
-  const fromPath = pathNo && pathNo !== "index.html" ? decodeURIComponent(pathNo) : null;
+  const pathId = pathNo && pathNo !== "index.html" ? dec(pathNo) : null;
+  const pm = pathId ? /^(\d{1,9})(?:-([a-z0-9]{4,32}))?$/.exec(pathId) : null;
+  const fromPath = pm ? pm[1] : pathId, pathKey = pm && pm[2] ? pm[2] : "";
   /* preview tokens (#delivered, #late ...) only in preview / the demo, like the prototype */
   const P = SC.preview ? tok : {};
 
   const saved = SC.load<Order | null>("sc-order", null);
   const S = {
+    /** the number to show; key: the secret part of the address (from the address, the cart or the API) */
     no: (fromPath || hashNo || (saved && saved.no ? String(saved.no) : "")) as string,
+    key: pathKey || hashKey,
     view: "loading" as View,
     o: null as Order | null,
     offline: navigator.onLine === false,
@@ -71,6 +87,16 @@ export function startTracking(main: HTMLElement) {
     sim: { k: null as number | null, late: !!P.late, sched: !!P.tomorrow, sample: false },
   };
   if (P.offline) S.offline = true;
+  if (!S.key && saved && String(saved.no) === S.no && saved.key) S.key = saved.key;
+  /** the id for the API: "1042-k7f3m2pq" (or "1042" when the key is unknown: api adds the one this browser kept) */
+  const trackId = () => S.no + (S.key ? "-" + S.key : "");
+  const shareUrl = () => SC.url.tracking({ no: S.no, key: S.key || (S.o && S.o.key) || "" });
+
+  /* ---------- the menu: a lazy chunk (illustrations, grams, categories); everything works without it ---------- */
+  let MN: SCMenu | null = null;
+  const menuReady = import("../../client/sc-menu.ts").then((m) => { MN = m.SC; }, () => { /* without the menu: names and prices from the order */ });
+  const dish = (id: string): Dish | undefined => (MN ? MN.byId[id] : undefined);
+  const pic = (d: Dish | undefined, kind?: string) => (MN && d ? MN.pic(d, kind) : '<span class="pic"></span>');
 
   /* ---------- per-order memory in this browser (rating answer and chosen notifications) ---------- */
   const memKey = () => "sc-track-" + S.no;
@@ -126,21 +152,29 @@ export function startTracking(main: HTMLElement) {
       : { acc: 0, cook: Math.max(1, T - 18), ready: T };
   }
   const stepAt = (id: string) => placed() + Math.min(offs()[id] ?? 0, elapsed());
-  /** minutes left and how late we are (0 = on time) */
+  /** the promised hour on the shop clock: the order's "at" (the cart shows the same), else start + promised minutes */
+  function promised(): number {
+    const sc = schedInfo(); if (sc) return sc.at;
+    const a = toMin(o().at); return a != null ? a : placed() + total();
+  }
+  /** minutes left and how late we are (0 = on time); on time the minutes run to the promised hour, so it never shifts */
   function remaining(): { m: number; late: number } {
     const add = S.sim.late ? 10 : 0;
     const left = total() - elapsed();
     if (S.sim.late) return { m: Math.max(1, Math.round(left)) + add, late: add };
-    if (left >= 1) return { m: Math.round(left), late: 0 };
+    if (left >= 1) {
+      const toAt = (((promised() - SC.minutes()) % 1440) + 1440) % 1440;
+      return { m: toAt >= 1 && Math.abs(toAt - left) <= 2 ? toAt : Math.round(left), late: 0 };
+    }
     if ((o().eta ?? 1) === 0) return { m: 5, late: 0 }; /* pickup "веднага" */
     return { m: 5, late: Math.max(5, Math.ceil(-left / 5) * 5) };
   }
   const mainDish = () => {
-    const ls = o().lines.map((l) => SC.byId[l.id]).filter(Boolean);
+    const ls = o().lines.map((l) => dish(l.id)).filter((x): x is Dish => !!x);
     return ls.find((x) => x.cat === "pitsi") || ls.find((x) => x.course === "main") || ls[0];
   };
   function cookSay() { const m = mainDish(); if (m && m.cat === "pitsi") return "Пицата е в пещта"; if (m && m.cat === "skara-bertha") return "Месото е във фурната Bertha"; return "Готвим поръчката ви"; }
-  const lineSum = (l: OrderLine) => { const x = SC.byId[l.id]; const unit = l.unit ?? (x ? x.p + (l.extra || 0) : 0); return Math.round(unit * l.q * 100) / 100; };
+  const lineSum = (l: OrderLine) => { const x = dish(l.id); const unit = l.unit ?? (x ? x.p + (l.extra || 0) : 0); return Math.round(unit * l.q * 100) / 100; };
 
   /* ---------- ring around the plate: one arc per step, starting and ending at the badge ---------- */
   function ringSVG() {
@@ -162,7 +196,7 @@ export function startTracking(main: HTMLElement) {
       a.map((s, i) => {
         const st = done || i < K ? "done" : i === K ? "now" : "next";
         const tm = st === "done" ? clock(s.id === "acc" ? placed() : stepAt(s.id)) : st === "now" ? (sc && s.id === "acc" ? clock(placed()) : "Сега") : "";
-        return '<li class="' + st + '"' + (st === "now" ? ' aria-current="step"' : "") + '><span class="dot">' + (st === "done" ? ic("check", 16) : "") + '</span><span class="nm">' + s.nm + '</span><span class="tm">' + (tm || "&nbsp;") + '</span><span class="vh">' + (st === "done" ? "готово" : st === "now" ? "сега" : "предстои") + "</span></li>";
+        return '<li class="' + st + '"' + (st === "now" ? ' aria-current="step"' : "") + '><span class="dot">' + (st === "done" ? ic("check", 16) : "") + '</span><span class="nm">' + s.nm + '</span><span class="tm">' + (tm || "&nbsp;") + '</span><span class="vh">' + (st === "done" ? "готово" : st === "now" ? (tm === "Сега" ? "" : "сега") : "предстои") + "</span></li>";
       }).join("") + "</ol></div>";
   }
   function heroHTML() {
@@ -184,7 +218,8 @@ export function startTracking(main: HTMLElement) {
       label = "Готова от"; big = '<span class="enum clock"><b>' + clock(stepAt("ready")) + "</b></span>";
       say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта. Вземане до " + R.kitchen + ".";
     } else {
-      const r = remaining(), arrive = clock(SC.minutes() + r.m);
+      const r = remaining(), pr = promised(), now = SC.minutes();
+      const arrive = clock(!r.late && (((pr - now) % 1440) + 1440) % 1440 === r.m ? pr : now + r.m);
       late = r.late;
       label = D ? "Пристига след" : "Готова след";
       big = '<span class="enum"><span class="ab">около</span><b>' + r.m + '</b><span class="u">мин</span></span>';
@@ -196,13 +231,13 @@ export function startTracking(main: HTMLElement) {
       if (o().lunchOnly && (c.id === "acc" || c.id === "ready")) note = '<p class="hnote">' + ic("info", 18) + "<span>Обедното меню е приготвено предварително, затова пропуска етапа „Готви се“.</span></p>";
       else if (BUSY && !late && (c.id === "acc" || c.id === "cook")) note = '<p class="hnote">' + ic("info", 18) + "<span>Кухнята е натоварена в момента, затова времето е малко по-дълго.</span></p>";
     }
-    const dish = mainDish();
+    const md = mainDish();
     const cls = "shell hero" + (c.id === "cook" && !done ? " is-cook" : "") + (done ? " is-done" : "") + (late && !done ? " is-late" : "") + (S.offline ? " is-off" : "") + (S.first ? " enter" : "");
     const modeChip = D ? '<span class="mode">' + ic("moped", 20) + "Доставка</span>" : '<span class="mode">' + ic("storefront", 20) + "Вземане от място</span>";
     return '<div class="' + cls + '" data-hero>' +
       '<div class="core"><div class="hrow">' + modeChip + '<button class="hb" type="button" data-share>' + ic("share-network", 20) + "Сподели</button></div>" +
-      '<div class="hgrid"><div class="viz">' + ringSVG() + (dish ? SC.pic(dish, "plate") : "") + '<span class="vb" aria-hidden="true">' + ic(badgeIc, 26) + "</span></div>" +
-      '<div class="etxt" aria-live="polite">' + (late && !done ? '<span class="latechip">' + ic("clock", 18) + "Закъснява с около " + late + " мин</span>" : "") +
+      '<div class="hgrid"><div class="viz">' + ringSVG() + (md ? pic(md, "plate") : "") + '<span class="vb" aria-hidden="true">' + ic(badgeIc, 26) + "</span></div>" +
+      '<div class="etxt" aria-live="polite">' + (S.offline && !done ? '<span class="offchip">' + ic("warning-circle", 18) + "Последно известно, от " + clock(S.updated) + "</span>" : "") + (late && !done ? '<span class="latechip">' + ic("clock", 18) + "Закъснява с около " + late + " мин</span>" : "") +
       '<span class="elab">' + label + "</span>" + big + '<h2 class="say">' + say + '</h2><p class="sub">' + sub + "</p></div></div>" +
       "</div>" + timelineHTML() + note + "</div>";
   }
@@ -236,7 +271,8 @@ export function startTracking(main: HTMLElement) {
   }
   function codeHTML() {
     const code = S.rating ? S.rating.code : "";
-    return '<div class="code ember-card"><span class="k">Вашият код за -10% от следващата поръчка</span><div class="row"><span class="v">' + esc(code) + '</span><button class="pill pill-ink" type="button" data-copy>' + ic("copy", 18) + "Копирай кода</button></div><p>Въведете го в количката при следващата поръчка. Един код на телефонен номер.</p></div>";
+    const sampleNote = simulated() ? '<span class="small">Примерен код: само в прототипа.</span>' : "";
+    return '<div class="code ember-card"><span class="k">Вашият код за -10% от следващата поръчка</span><div class="row"><span class="v">' + esc(code) + '</span><button class="pill pill-ink" type="button" data-copy>' + ic("copy", 18) + "Копирай кода</button></div><p>При следващата поръчка го въведете в количката, в полето „Код за отстъпка“ (стъпка 3). Важи веднъж, за ястията.</p>" + sampleNote + "</div>";
   }
   function googleHref() { return (S.rating && S.rating.google) || R.googleReview || ""; }
   function googleMiss() { return googleHref() ? "" : '<span class="missing small">[ЛИПСВА: линк към профила в Google]</span>'; }
@@ -266,13 +302,16 @@ export function startTracking(main: HTMLElement) {
   function orderHTML() {
     const x = o(), D = isD();
     const rows = x.lines.map((l) => {
-      const d = SC.byId[l.id];
-      return '<div class="oline">' + (d ? SC.pic(d) : '<span class="pic"></span>') + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + (d && d.g ? " · " + esc(d.g) : "") + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
+      const d = dish(l.id);
+      return '<div class="oline">' + pic(d) + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + (d && d.g ? " · " + esc(d.g) : "") + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
     }).join("");
+    /* which discount won (core: discKind); the code discount is codeDisc, the lunch one is disc */
+    const codeD = x.codeDisc || (x.discKind === "code" ? x.disc : 0), lunchD = x.discKind === "code" || codeD ? 0 : x.disc;
     const fee = x.fee === 0 ? "безплатна" : x.fee == null ? 'по тарифа <span class="missing">[ЛИПСВА: такса]</span>' : SC.fmt(x.fee);
     const kv = (D ? '<div class="kv"><span>Доставка до</span><span>' + esc(x.zone || "") + " · " + fee + "</span></div>"
       : '<div class="kv"><span>Вземане от</span><span>Siracusa, Дружба 2</span></div>') +
-      (x.disc ? '<div class="kv disc"><span>Отстъпка след 15:00</span><span class="price">-' + SC.fmt(x.disc) + "</span></div>" : "") +
+      (lunchD ? '<div class="kv disc"><span>Отстъпка след 15:00</span><span class="price">-' + SC.fmt(lunchD) + "</span></div>" : "") +
+      (codeD ? '<div class="kv disc"><span>Отстъпка с код</span><span class="price">-' + SC.fmt(codeD) + "</span></div>" : "") +
       '<div class="kv"><span>Плащане</span><span>' + esc(x.payLabel || "В брой") + "</span></div>" +
       '<div class="kv tot"><span>Общо</span><span class="price">' + SC.fmt(x.total) + "</span></div>";
     const sub = x.lines.reduce((a, l) => a + lineSum(l), 0);
@@ -300,7 +339,7 @@ export function startTracking(main: HTMLElement) {
   /* right after checkout the cart comes straight here: the success content from the cart prototype sits on top
      ("Благодарим! Поръчката е приета.", profile -10%, birthday gift switch, off by default) */
   function welcomeHeadHTML() {
-    const x = o(), first = (x.name || "").trim().split(" ")[0];
+    const sv = fromSaved(), first = ((sv && sv.name) || "").trim().split(" ")[0]; /* the public order has no name: from this browser's checkout */
     return '<div class="okhead"><div class="okmark" aria-hidden="true">' + ic("check", 64) + '</div><p class="ono">Поръчка <b>№ ' + esc(S.no) + '</b></p><h1 class="h1 ok-h" tabindex="-1">Благодарим! Поръчката е приета.</h1><p class="lead">' + (first ? esc(first) + ", " : "") + (isD() && !schedInfo() ? "вече я подготвяме." : "ще я приготвим навреме.") + "</p></div>";
   }
   function welcomeCardsHTML() {
@@ -400,8 +439,9 @@ export function startTracking(main: HTMLElement) {
   /* ---------- data ---------- */
   function sample(): Order {
     const st = SC.state(), D = st.delivery, m = SC.minutes();
-    const pz = SC.inCat("pitsi").filter((x) => !SC.isOut(x)), pick = pz.find((x) => x.t.includes("hit")) || pz[0];
-    const sal = SC.inCat("salati").filter((x) => !SC.isOut(x))[0];
+    const M = MN as SCMenu; /* sample() runs after menuReady */
+    const pz = M.inCat("pitsi").filter((x) => !M.isOut(x)), pick = pz.find((x) => x.t.includes("hit")) || pz[0];
+    const sal = M.inCat("salati").filter((x) => !M.isOut(x))[0];
     const lines: OrderLine[] = [pick && { id: pick.id, q: 2, mods: [], extra: 0, name: pick.n, unit: pick.p }, sal && { id: sal.id, q: 1, mods: [], extra: 0, name: sal.n, unit: sal.p }].filter(Boolean) as OrderLine[];
     const sub = Math.round(lines.reduce((a, l) => a + (l.unit || 0) * l.q, 0) * 100) / 100;
     const now = new Date().toISOString();
@@ -420,15 +460,18 @@ export function startTracking(main: HTMLElement) {
     loading = true;
     const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false;
     try {
-      const x = (await api.orders.get(S.no)) as Order | null;
+      const x = (await api.orders.get(trackId())) as Order | null;
       if (!x) throw new ApiError("not_found", "Няма такава поръчка.", 404);
+      await menuReady;
+      if (x.key && !S.key) S.key = x.key;
       S.o = Object.assign({}, S.o || fromSaved() || {}, x) as Order;
       if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x));
       S.offline = !!P.offline; S.updated = SC.minutes(); S.view = "order";
-      render();
+      render(); syncAddress();
       if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished)) announce();
     } catch (e) {
       const err = e as ApiError;
+      await menuReady;
       if (err && err.code === "not_found") { S.o = null; S.view = "notfound"; }
       else if (S.o) S.offline = true;
       else { S.offline = err?.code === "offline" || navigator.onLine === false; S.view = "error"; }
@@ -436,12 +479,22 @@ export function startTracking(main: HTMLElement) {
     } finally { loading = false; if (again) { again = false; load({ quiet: true }); } }
   }
 
+  /** the screen shows a state of the prototype panel, not the real order */
+  const simulated = () => SC.preview && (S.sim.sample || S.sim.k != null);
+  /* ratings.submit: 409 not_finished (not delivered yet: the screen was ahead, e.g. a preview simulation) and 404 */
+  function rateError(err: unknown, other = "Не успяхме да запишем отговора. Опитайте пак.") {
+    const e = err instanceof ApiError ? err : null;
+    if (e && e.code === "not_finished") { SC.toast("Ще можете да оцените поръчката, след като е " + (S.o && isD() ? "доставена." : "взета.")); if (!S.sim.sample) { S.sim.k = null; load({ quiet: true }); } return; }
+    if (e && e.code === "not_found") { SC.toast("Не намираме поръчка № " + S.no + ". Обадете ни се на " + R.phone + "."); return; }
+    SC.toast(e && e.code !== "offline" ? e.message : other);
+  }
+
   /* ---------- interactions ---------- */
   main.addEventListener("click", async (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>("button, a"); if (!t) return;
     const ds = t.dataset;
     if (t.hasAttribute("data-share")) {
-      const link = new URL(SC.url.tracking(S.no), location.href).href;
+      const link = new URL(shareUrl(), location.href).href;
       const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
       if (nav.share) nav.share({ title: "Поръчка № " + S.no + " от Siracusa", url: link }).catch(() => {});
       else { try { navigator.clipboard.writeText(link).catch(() => {}); } catch { /* no clipboard */ } SC.toast("Връзката е копирана"); }
@@ -454,7 +507,7 @@ export function startTracking(main: HTMLElement) {
       if (kk === "late") { S.sim.late = !S.sim.late; if (finished()) S.sim.k = 1; render(); return; }
       if (kk === "sched") { S.sim.sched = !S.sim.sched; S.sim.k = 0; lastFill = 0; render(); return; }
       if (kk === "offline") { S.offline = !S.offline; if (!S.offline) { S.updated = SC.minutes(); SC.toast("Връзката се върна"); } render(); return; }
-      if (kk === "sample") { S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.sim.k = null; S.view = "order"; S.first = true; lastFill = 0; loadMem(); render(); return; }
+      if (kk === "sample") { await menuReady; S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.sim.k = null; S.view = "order"; S.first = true; lastFill = 0; loadMem(); render(); return; }
       if (kk === "loading") { const v = S.view; S.view = "loading"; render(); setTimeout(() => { S.view = v === "loading" ? "order" : v; S.first = true; render(); }, 1600); return; }
       if (kk === "notfound" || kk === "none") { S.view = kk; render(); window.scrollTo(0, 0); return; }
       if (kk === "reset") { S.sim = { k: null, late: false, sched: false, sample: false }; S.offline = false; S.first = true; lastFill = 0; S.view = "loading"; render(); window.scrollTo(0, 0); load(); return; }
@@ -495,13 +548,15 @@ export function startTracking(main: HTMLElement) {
       if (S.rating && S.rating.happy === happy) { render(); main.querySelector<HTMLElement>("[data-focus]")?.focus({ preventScroll: true }); return; }
       S.sending = true; render();
       try {
-        const r = (await api.ratings.submit({ orderNo: S.no, happy })) as { code: string; google: string | null };
-        /* one code per order in this browser: a changed answer keeps the first code */
-        S.rating = { happy, code: S.rating ? S.rating.code : r.code, google: r.google, fbSent: false };
-        saveMem();
+        /* a simulated state in the prototype panel: the real order is not delivered (the core would answer 409), so a sample code */
+        const r = simulated() ? (await new Promise((ok) => setTimeout(ok, 400)), { code: S.rating ? S.rating.code : "SC10-0000000000", google: null })
+          : (await api.ratings.submit({ orderNo: trackId(), happy })) as { code: string; google: string | null };
+        /* one rating and one code per order (the core returns the same code when the answer changes) */
+        S.rating = { happy, code: r.code || (S.rating ? S.rating.code : ""), google: r.google, fbSent: false };
+        if (!simulated()) saveMem();
       } catch (err) {
         S.choice = S.rating ? (S.rating.happy ? "yes" : "no") : null;
-        SC.toast(err instanceof ApiError ? err.message : "Не успяхме да запишем отговора. Опитайте пак.");
+        rateError(err);
       }
       S.sending = false; render();
       main.querySelector<HTMLElement>("[data-focus]")?.focus({ preventScroll: true });
@@ -513,16 +568,16 @@ export function startTracking(main: HTMLElement) {
       if (S.fb.trim().length < 3) { S.fbErr = "Напишете няколко думи, за да го изпратим."; render(); main.querySelector<HTMLElement>("#fb")?.focus(); return; }
       S.fbErr = ""; (t as HTMLButtonElement).disabled = true;
       try {
-        await api.ratings.submit({ orderNo: S.no, happy: false, text: S.fb.trim() });
-        if (S.rating) S.rating.fbSent = true; saveMem(); S.fb = ""; render(); SC.toast("Изпратихме го на управителя");
-      } catch (err) { (t as HTMLButtonElement).disabled = false; SC.toast(err instanceof ApiError ? err.message : "Не успяхме да го изпратим. Опитайте пак."); }
+        if (!simulated()) await api.ratings.submit({ orderNo: trackId(), happy: false, text: S.fb.trim() });
+        if (S.rating) S.rating.fbSent = true; if (!simulated()) saveMem(); S.fb = ""; render(); SC.toast("Изпратихме го на управителя");
+      } catch (err) { (t as HTMLButtonElement).disabled = false; rateError(err, "Не успяхме да го изпратим. Опитайте пак."); }
       return;
     }
     if (t.hasAttribute("data-copy")) { try { navigator.clipboard.writeText(S.rating ? S.rating.code : "").catch(() => {}); } catch { /* no clipboard */ } SC.flash(t, ic("check", 18) + "Копирано", 1400); return; }
     if (t.hasAttribute("data-google")) { e.preventDefault(); SC.toast("Линкът към профила в Google още липсва"); return; }
     if (t.hasAttribute("data-again") && S.o) {
       o().lines.forEach((l, i) => {
-        const d = SC.byId[l.id]; if (!d || SC.isOut(d)) return;
+        const d = dish(l.id); if (!d || (MN && MN.isOut(d))) return;
         SC.cart.add(l.id, l.q, { mods: l.mods, extra: l.extra, p: l.unit ?? d.p + (l.extra || 0), n: d.n });
         setTimeout(() => SC.fly(t, l.id), i * 120);
       });
@@ -558,15 +613,22 @@ export function startTracking(main: HTMLElement) {
   });
 
   /* ---------- start ---------- */
-  /* demo: keep the number in the address so "Сподели" and a reload work */
-  if (!fromPath && !hashNo && S.no && SC.demo) history.replaceState(null, "", SC.url.tracking(S.no));
-  else if (!fromPath && !hashNo && S.no && !SC.demo) history.replaceState(null, "", SC.url.tracking(S.no) + location.search);
+  /* keep the number and the key in the address, so a reload and "Сподели" work (not over the preview tokens) */
+  let shownId = pathId || (hashNo ? hashNo + (hashKey ? "-" + hashKey : "") : "");
+  function syncAddress() {
+    if (!S.no || !/^\d{1,9}$/.test(S.no) || Object.keys(tok).length || shownId === trackId()) return;
+    try { history.replaceState(null, "", shareUrl() + (SC.demo ? "" : location.search)); shownId = trackId(); } catch { /* ignore */ }
+  }
+  (async () => {
+  syncAddress();
   loadMem();
   { const b = SC.load<{ on?: boolean; d?: string; m?: string }>("sc-bday", {}); S.bd = { d: b.d || "", m: b.m || "" }; /* the switch itself starts off */ }
   if (P.notfound) { S.view = "notfound"; render(); return; }
   if (P.none) { S.view = "none"; render(); return; }
-  if (P.sample) { S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.view = "order"; }
+  if (P.sample) { await menuReady; S.sim.sample = true; if (!S.no) S.no = "1042"; S.o = sample(); S.view = "order"; }
   else { const s = fromSaved(); if (s) { S.o = s; S.view = "order"; } }
+  /* the API call and the menu chunk run in parallel; the order is drawn when both are here */
+  const first = !S.sim.sample && !P.loading ? load({ quiet: !!S.o }) : null;
   /* "just placed": the order from this browser's checkout, first opening, within 15 min (or the cart's flag) */
   const fresh = fromSaved() as (Order & { fresh?: boolean }) | null;
   if ((fresh && !welcomed && (fresh.fresh === true || Date.now() - (fresh.ts || 0) < 15 * 60000)) || P.welcome) { S.welcome = true; welcomed = true; saveMem(); }
@@ -577,6 +639,8 @@ export function startTracking(main: HTMLElement) {
     if (P.way && isD()) S.sim.k = stages().length - 2;
   }
   if (P.loading) { render(); setTimeout(() => { S.view = S.o ? "order" : "none"; render(); }, 1600); return; }
-  render();
-  if (!S.sim.sample) load({ quiet: !!S.o });
+  await menuReady;
+  if (S.o && !first) render();
+  else if (S.o && loading) render(); /* the order from this browser's checkout, while the API answers */
+  })();
 }

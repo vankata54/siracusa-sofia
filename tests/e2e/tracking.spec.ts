@@ -1,7 +1,7 @@
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import fs from "node:fs";
 
-/* Tracking (/porachka/<номер>/): not found, pre-order "за утре" + "Промени", live status over SSE (the manager changes it),
+/* Tracking (/porachka/<номер>-<ключ>/; the server may run with TRACK_KEY_REQUIRED=1): not found, pre-order "за утре" + "Промени", live status over SSE (the manager changes it),
    rating Да / Не through api.ratings.submit, the success content right after checkout, the prototype panel only with ?preview=1.
    Orders are made "за утре", so the test works at any hour (today's orders are refused after 22:30). */
 function watch(page: Page) {
@@ -13,14 +13,18 @@ function watch(page: Page) {
 async function cookies(page: Page) {
   await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
 }
-async function makeOrder(request: APIRequestContext) {
+async function makeOrder(request: APIRequestContext, extra: Record<string, unknown> = {}) {
   const r = await request.post("/api/orders", { data: {
     cart: { mode: "delivery", lines: [{ id: "pitsa-s-burata-i-proshuto-krudo", q: 2, mods: ["без лук"] }, { id: "gratska-salata", q: 1, mods: [] }] },
-    zone: "Дружба 2", addr: "бл. 311", name: "Иван Петров", phone: "0888123456", pay: "card", sched: "утре", slot: "19:00",
+    zone: "Дружба 2", addr: "бл. 311", name: "Иван Петров", phone: "0888123456", pay: "card", sched: "утре", slot: "19:00", ...extra,
   } });
   expect(r.status()).toBe(201);
-  return r.json();
+  const o = await r.json();
+  expect(o.key).toMatch(/^[a-z0-9]{8}$/);
+  return o;
 }
+/** the tracking address with the secret key */
+const trk = (o: { no: string; key: string }) => "/porachka/" + o.no + "-" + o.key + "/";
 function env(): Record<string, string> {
   try { return Object.fromEntries(fs.readFileSync(".env", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()])); } catch { return {}; }
 }
@@ -43,7 +47,7 @@ test("tracking: pre-order for tomorrow, Промени, share, no prototype pane
   const errors = watch(page);
   const o = await makeOrder(request);
   await cookies(page);
-  await page.goto("/porachka/" + o.no + "/");
+  await page.goto(trk(o));
   await expect(page.locator("h1")).toHaveText("Поръчка № " + o.no);
   await expect(page.locator(".elab")).toContainText("Приета за утре");
   await expect(page.locator(".enum.clock b")).toHaveText("19:00");
@@ -57,6 +61,10 @@ test("tracking: pre-order for tomorrow, Промени, share, no prototype pane
   await expect(page.locator(".sheet")).toContainText("18:00");
   await expect(page.locator(".sheet a[href^='tel:']")).toBeVisible();
   await page.locator(".sheet [data-close]").click();
+  /* "Сподели" gives the address with the key */
+  await page.evaluate(() => { (navigator as unknown as { share?: unknown }).share = undefined; (window as unknown as { _c: string })._c = ""; navigator.clipboard.writeText = async (t: string) => { (window as unknown as { _c: string })._c = t; }; });
+  await page.locator("[data-share]").click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { _c: string })._c)).toMatch(new RegExp("/porachka/" + o.no + "-" + o.key + "/$"));
   await noHScroll(page);
   expect(errors).toEqual([]);
 });
@@ -67,7 +75,7 @@ test("tracking: live status from the kitchen, then rating Да / Не", async ({
   const errors = watch(page);
   const o = await makeOrder(request);
   await cookies(page);
-  await page.goto("/porachka/" + o.no + "/");
+  await page.goto(trk(o));
   await expect(page.locator(".tl li.now .nm")).toHaveText("Приета");
   const staff = await playwright.request.newContext({ baseURL });
   expect((await staff.post("/api/auth/login", { data: { username: "manager", password: E.MANAGER_PASSWORD } })).ok()).toBe(true);
@@ -78,9 +86,18 @@ test("tracking: live status from the kitchen, then rating Да / Не", async ({
   await set("ready"); await set("on_way"); await set("delivered");
   await expect(page.locator("#rate-h")).toHaveText("Останахте ли доволни?");
   await expect(page.locator(".trk-live")).toContainText("Доставена");
+  /* ratings.submit answers 409 not_finished (e.g. the kitchen took the step back): a clear message, no code */
+  let first = true;
+  await page.route("**/api/ratings", (r) => { if (!first) return r.continue(); first = false; return r.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "not_finished", message: "x" }) }); });
   await page.locator('[data-rate="yes"]').click();
-  await expect(page.locator(".code .v")).toHaveText(/^[A-Z0-9]+-\d+$/);
+  await expect(page.locator(".toast", { hasText: "след като е доставена" })).toBeVisible();
+  await expect(page.locator(".code")).toHaveCount(0);
+  await expect(page.locator("#rate-h")).toBeVisible();
+  await page.locator('[data-rate="yes"]').click();
+  await expect(page.locator(".code .v")).toHaveText(/^SC10-\d{10}$/);
   const code = await page.locator(".code .v").textContent();
+  await expect(page.locator(".code p")).toContainText("в полето „Код за отстъпка“");
+  await expect(page.locator(".code p")).not.toContainText("телефонен номер");
   await expect(page.getByText("Напиши отзив в Google")).toBeVisible();
   await expect(page.getByText("[ЛИПСВА: линк към профила в Google]")).toBeVisible();
   await page.locator("[data-rate-reset]").click();
@@ -93,16 +110,23 @@ test("tracking: live status from the kitchen, then rating Да / Не", async ({
   await page.locator("[data-fb]").click();
   await expect(page.getByText("Изпратихме го на управителя.")).toBeVisible();
   await expect(page.locator("[data-again]")).toContainText("Поръчай същото · 26,52 €");
+  /* the code on the next order: "Отстъпка с код" in the order summary (o.codeDisc) */
+  const o2 = await makeOrder(request, { code });
+  expect(o2.discKind).toBe("code");
+  await page.goto(trk(o2));
+  await expect(page.locator(".okv .disc")).toHaveText(/Отстъпка с код\s*-2,65 €/);
+  await expect(page.locator(".okv")).not.toContainText("Отстъпка след 15:00");
   await staff.dispose();
-  expect(errors).toEqual([]);
+  expect(errors.filter((e) => !/409/.test(e))).toEqual([]);   /* the network line of the mocked 409 */
 });
 
 test("tracking: right after checkout shows the success content on top", async ({ page, request }) => {
   const errors = watch(page);
   const o = await makeOrder(request);
   await page.addInitScript((ord) => { try { localStorage.setItem("sc-cookie", '"min"'); if (!sessionStorage.getItem("t")) { localStorage.setItem("sc-order", JSON.stringify(ord)); sessionStorage.setItem("t", "1"); } } catch { /* ignore */ } }, o);
-  await page.goto("/porachka/" + o.no + "/");
+  await page.goto("/porachka/" + o.no + "/");   /* the cart's address without the key: the key comes from sc-order */
   await expect(page.locator("h1")).toHaveText("Благодарим! Поръчката е приета.");
+  await expect(page).toHaveURL(new RegExp("/porachka/" + o.no + "-" + o.key + "/$"));
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator(".ono")).toContainText("№ " + o.no);
   await expect(page.locator(".okhead .lead")).toContainText("Иван,");
@@ -122,10 +146,26 @@ test("tracking: ?preview=1 shows the prototype panel and 'Симулирай: д
   const errors = watch(page);
   const o = await makeOrder(request);
   await cookies(page);
-  await page.goto("/porachka/" + o.no + "/?preview=1&t=12:30");
+  await page.goto(trk(o) + "?preview=1&t=12:30");
   await page.getByRole("button", { name: "Симулирай: доставена" }).click();
   await expect(page.locator("#rate-h")).toBeVisible();
   await expect(page.locator(".elab")).toHaveText("Доставена в");
+  /* a simulated state: the real order is not delivered, so no API call and a sample code, marked as such */
+  await page.locator('[data-rate="yes"]').click();
+  await expect(page.locator(".code .v")).toHaveText("SC10-0000000000");
+  await expect(page.locator(".code")).toContainText("Примерен код: само в прототипа.");
   await noHScroll(page);
   expect(errors).toEqual([]);
+});
+
+test("tracking: the key in the address, the number alone on screen; a wrong key is 'not found'", async ({ page, request }) => {
+  const errors = watch(page);
+  const o = await makeOrder(request);
+  await cookies(page);
+  await page.goto(trk(o));
+  await expect(page.locator("h1")).toHaveText("Поръчка № " + o.no);
+  await expect(page.locator(".trk-live")).toBeVisible();
+  await page.goto("/porachka/" + o.no + "-zzzzzzzz/");
+  await expect(page.locator("h1")).toHaveText("Не намираме поръчка № " + o.no);
+  expect(errors.filter((e) => !/404/.test(e))).toEqual([]);
 });
