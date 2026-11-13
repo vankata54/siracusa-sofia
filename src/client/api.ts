@@ -8,7 +8,7 @@
    - the order key (tracking address /porachka/<no>-<key>/), from orders.create;
    - the office organizer token (orgKey) from office.create / office.get(code, orgKey), and the colleague's pid from office.join;
    - the reservation key from reservations.create (get / cancel). */
-import type { Core, OrderInput, ReservationInput, CelebrationInput, NoteInput, ProfilePatch, NoteStatus, OrderStatus, ReservationStatus, OfficeParticipant, Customer,
+import type { Core, OrderInput, OrderChange, ReservationInput, CelebrationInput, NoteInput, ProfilePatch, NoteStatus, OrderStatus, ReservationStatus, OfficeParticipant, Customer,
   Order, PublicOrder, OfficeOrder, PublicOffice, Reservation, Subscription, Settings, Audience, Feedback, FeedbackInput } from "./api-types.ts";
 import type { SettingsPatch } from "../core/settings.ts";
 import type { SiteEventJson } from "../lib/events.ts";
@@ -76,6 +76,12 @@ function connect() {
   if (es && esUrl === u) return;
   es?.close();
   es = new EventSource(u); esUrl = u;
+  /* the connection drops and the browser reconnects by itself: "stream.lost" / "stream.back" let a page say so and load
+     again what it may have missed while the stream was down (tracking: the status can change in between) */
+  let lost = false;
+  const fire = (type: string) => { subs.get(type)?.forEach((f) => f({}, type)); };
+  es.addEventListener("error", () => { if (!lost) { lost = true; fire("stream.lost"); } });
+  es.addEventListener("open", () => { if (lost) { lost = false; fire("stream.back"); } });
   for (const type of subs.keys()) if (type !== "*") es.addEventListener(type, (e) => { let d: unknown = null; try { d = JSON.parse((e as MessageEvent).data); } catch { /* ignore */ } subs.get(type)?.forEach((f) => f(d, type)); subs.get("*")?.forEach((f) => f(d, type)); });
 }
 function watchOrder(id: string) { if (!watching.orders.has(id)) { [...watching.orders].forEach((w) => { if (w.split("-")[0] === id.split("-")[0]) watching.orders.delete(w); }); watching.orders.add(id); if (subs.size) connect(); } }
@@ -152,6 +158,26 @@ export const api = {
       watchOrder(trackId(o.no));
       return o;
     },
+    /** a pre-order changed by the customer (time, dishes, address, note, payment): only with the key, while it is "Приета",
+        at the latest 1 hour before its time (core/orders.ts changeOrder); returns the public view */
+    change: async (no: string | number, patch: OrderChange): Promise<PublicOrder> => {
+      const id = trackId(no);
+      const r = DEMO ? await local(async (c) => { await c.orders.change(id, patch); return c.orders.track(id); }) : await http<PublicOrder>("PATCH", "orders/" + encodeURIComponent(id), patch);
+      return r;
+    },
+  },
+  /** Web Push for one order (core/push.ts). The demo has no push server: 503 push_unavailable (the page keeps its
+      in-browser notification). Used by src/client/push.ts, loaded only when the guest switches it on. */
+  push: {
+    key: async (): Promise<string> => {
+      if (DEMO) throw new ApiError("push_unavailable", "Известията в браузъра още не работят. Ще видите статуса тук.", 503);
+      return (await http<{ key: string }>("GET", "push/key")).key;
+    },
+    subscribe: async (no: string | number, sub: unknown): Promise<{ ok: true }> => {
+      if (DEMO) throw new ApiError("push_unavailable", "Известията в браузъра още не работят. Ще видите статуса тук.", 503);
+      return http<{ ok: true }>("POST", "push/subscribe", { order: trackId(no), sub });
+    },
+    unsubscribe: async (no: string | number, endpoint: string): Promise<{ ok: true }> => (DEMO ? { ok: true } : http<{ ok: true }>("POST", "push/unsubscribe", { order: trackId(no), endpoint })),
   },
   /** discount code from the rating, before the order: { code, pct, valid } or ApiError with fields.code */
   codes: {

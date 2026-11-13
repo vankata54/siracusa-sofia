@@ -24,6 +24,8 @@ export interface Ctx {
   smsDemo?: boolean;
   /** test mode only (SC_PREVIEW_API=1): no per-number SMS limits (the e2e tests reuse numbers in parallel) */
   noLimits?: boolean;
+  /** Web Push sender (the server with VAPID keys in .env); missing in the demo and the tests: no push */
+  push?: import("./push.ts").PushSender;
   /** the tracking address must carry the order's key (/porachka/1042-k7f3m2pq/); off until the pages pass it */
   requireTrackKey?: boolean;
 }
@@ -36,6 +38,7 @@ export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
   notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback", bonusUsed: "bonus_used",
+  push: "push_subs",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }

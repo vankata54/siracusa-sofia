@@ -48,6 +48,11 @@ export interface Order {
   /** the one-time -10% of a new profile ("Отстъпка с профил: -X €") */
   profileDisc?: number;
   discKind?: "" | "lunch" | "code" | "profile";
+  /** when each status was reached (ISO), e.g. {accepted, cooking, ready}; orders before 13.11.2026 have only createdAt */
+  times?: Partial<Record<OrderStatus, Iso>>;
+  /** changes by the customer (pre-orders only): how many and when the last one was */
+  changes?: number;
+  changedAt?: Iso;
   createdAt: Iso;
   updatedAt: Iso;
 }

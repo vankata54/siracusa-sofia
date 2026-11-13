@@ -11,11 +11,13 @@ import * as codes from "./codes.ts";
 import * as settings from "./settings.ts";
 import * as feedback from "./feedback.ts";
 import * as menu from "./menu.ts";
+import * as push from "./push.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
 export * from "./ctx.ts";
-export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, FINISHED, MSG, nextStatus, publicOrder, parseTrack, type PublicOrder } from "./orders.ts";
+export { pushText, PUSH_MSG, PUSH_MAX_PER_ORDER, type PushSub, type PushPayload, type PushSender } from "./push.ts";
+export { FLOW, STATUS_LABEL, FIRST_ORDER_NO, FINISHED, MSG, nextStatus, publicOrder, parseTrack, orderDay, CHANGE_BEFORE_MIN, CHANGE_MSG, type PublicOrder, type OrderChange } from "./orders.ts";
 export { publicOffice, officeDue, officeDueAt, OFFICE_MSG, type PublicOffice } from "./office.ts";
 export { normCode, CODE_MSG } from "./codes.ts";
 export { DEFAULT_SETTINGS } from "./settings.ts";
@@ -36,7 +38,8 @@ function bind<M extends Record<string, unknown>>(ctx: Ctx, m: M): Bound<Pick<M, 
 export function createCore(ctx: Ctx) {
   return {
     ctx,
-    orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, track: orders.trackOrder, find: orders.findTracked, list: orders.listOrders, setStatus: orders.setOrderStatus }),
+    orders: bind(ctx, { create: orders.createOrder, get: orders.getOrder, track: orders.trackOrder, find: orders.findTracked, list: orders.listOrders, setStatus: orders.setOrderStatus, change: orders.changeOrder }),
+    push: bind(ctx, { subscribe: push.pushSubscribe, unsubscribe: push.pushUnsubscribe, status: push.pushStatus }),
     reservations: bind(ctx, { create: res.createReservation, list: res.listReservations, taken: res.takenForGuest, setStatus: res.setReservationStatus, get: res.getReservation, cancel: res.cancelReservation }),
     celebrations: bind(ctx, { create: res.createCelebration }),
     office: bind(ctx, { create: office.createOffice, get: office.viewOffice, raw: office.getOffice, join: office.joinOffice, update: office.updateOffice, submit: office.submitOffice, sendDue: office.sendDueOffices }),

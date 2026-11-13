@@ -14,6 +14,7 @@ import { CoreError, PAY_LABEL, type Channel, type Customer, type Order, type Ord
 /** the coupon a new profile gets (customers.ts): -10% once, from the first order after sign-up */
 export const PROFILE_COUPON = "PROFIL10";
 import { audit } from "./audit.ts";
+import { pushStatus } from "./push.ts";
 import { getSettings } from "./settings.ts";
 import { findCode, markCodeUsed } from "./codes.ts";
 import { bonusTaken, markBonusTaken } from "./customers.ts";
@@ -21,7 +22,7 @@ import { price, parseMods, slotAllowed, pickupToday, slotBusy } from "../lib/pri
 import { lineKey, sanitize, type Cart, type Mode } from "../lib/cart.ts";
 import { hasStreet, zoneByName, zoneOfAddress } from "../lib/zones.ts";
 export { hasStreet };
-import { minutes, sofiaYmd } from "../lib/time.ts";
+import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 import { outNow, soldOutToday, type SoldOutToday } from "./menu.ts";
 import { state } from "../lib/status.ts";
 import { byId, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
@@ -199,7 +200,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       /* a table only for QR / waiter orders (never from a web order's body) */
       table: input.channel === "qr" || input.channel === "waiter" ? input.table || null : null,
       key: randomKey(8), discKind: P.discKind, ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
-      createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
+      times: { accepted: ts.toISOString() }, createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
     };
     await ctx.repo.put(COL.orders, o);
     return o;
@@ -215,7 +216,8 @@ export async function getOrder(ctx: Ctx, no: string): Promise<Order | null> {
 
 /* ---------- public tracking (/porachka/<no>-<key>/) ---------- */
 export type PublicOrder = Pick<Order, "id" | "no" | "mode" | "channel" | "status" | "lunchOnly" | "zone" | "pay" | "payLabel" | "sub" | "disc" | "fee" | "total" |
-  "eta" | "at" | "sched" | "slot" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> & { lines: Order["lines"]; key?: string };
+  "eta" | "at" | "sched" | "slot" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> &
+  { lines: Order["lines"]; key?: string; times: Partial<Record<OrderStatus, string>>; changes: number };
 
 /** What the tracking page needs, nothing personal: no name, phone, e-mail, address, note, profile, code. */
 export function publicOrder(o: Order, withKey = false): PublicOrder {
@@ -224,6 +226,7 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, slot: o.slot || (o.at && /^\d{2}:\d{2}$/.test(o.at) && o.mode === "pickup" ? o.at : "asap"), placedAt: o.placedAt, ts: o.ts,
     createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0, profileDisc: o.profileDisc || 0,
     lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course })),
+    times: o.times || { accepted: o.createdAt }, changes: o.changes || 0,
   };
   if (withKey && o.key) p.key = o.key;
   return p;
@@ -265,9 +268,106 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   const o = await getOrder(ctx, no);
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
-  o.status = status; o.updatedAt = iso(ctx);
+  const now = iso(ctx);
+  o.status = status; o.updatedAt = now; o.times = { ...(o.times || { accepted: o.createdAt }), [status]: now };
   await ctx.repo.put(COL.orders, o);
   await audit(ctx, actor, "order.status", o.no, { status });
-  emit(ctx, "order.status", { no: o.no, status }, { order: o.no });
+  emit(ctx, "order.status", { no: o.no, status, at: now }, { order: o.no });
+  /* Web Push to the browsers that asked for it: in the background, a slow push service never delays the kitchen */
+  pushStatus(ctx, o).catch(() => { /* logged by the sender */ });
+  return o;
+}
+
+/* ---------- change by the customer: pre-orders only ("за утре", or "за днес" made before 10:00) ----------
+   [ЛИПСВА: до кога клиентът може да променя поръчка за утре] The default from docs/OPEN-QUESTIONS.md ("до 1 час преди
+   часа") is the safest rule that the tracking page already promises: only while the order is "Приета" (the kitchen has
+   not started), only with the tracking key, and at the latest CHANGE_BEFORE_MIN minutes before the old AND the new time.
+   Everything is checked again as for a new order (menu, zone, slots, limits, lunch); the price comes from the menu.
+   A discount code or the profile bonus the order already used stays with it (it is not used a second time). */
+export const CHANGE_BEFORE_MIN = 60;
+export interface OrderChange { cart?: Cart; slot?: string; addr?: string; zone?: string; note?: string; pay?: PayMethod }
+export const CHANGE_MSG = {
+  notSched: "Онлайн се променя само поръчка за по-късен час. За тази се обадете на 0894 36 55 77.",
+  started: "Кухнята вече приготвя поръчката. За промяна се обадете на 0894 36 55 77.",
+  late: "Промени приемаме до 1 час преди часа на поръчката. Обадете се на 0894 36 55 77.",
+  nothing: "Няма какво да променим.",
+};
+
+/** the Sofia date ("YYYY-MM-DD") a pre-order is for: the day it was placed, +1 for "утре" */
+export function orderDay(o: Pick<Order, "createdAt" | "sched">): string {
+  const d = sofiaYmd(new Date(o.createdAt));
+  return o.sched === "утре" ? addDaysYmd(d, 1) : d;
+}
+/** may a pre-order for `day` at `slot` still be changed now? (CHANGE_BEFORE_MIN minutes before) */
+function beforeDeadline(ctx: Ctx, day: string, slot: string): boolean {
+  const t = /^(\d{2}):(\d{2})$/.exec(slot);
+  if (!t) return false;
+  const today = sofiaYmd(nowDate(ctx));
+  if (day > today) return true;
+  if (day < today) return false;
+  return minutes(ctx.clock) <= +t[1] * 60 + +t[2] - CHANGE_BEFORE_MIN;
+}
+
+export async function changeOrder(ctx: Ctx, id: string, patch: OrderChange): Promise<Order> {
+  const t = parseTrack(id);
+  const o0 = t && t.key ? await getOrder(ctx, t.no) : null;
+  /* only with the key: a number alone never changes anything (and says nothing about the order) */
+  if (!o0 || !o0.key || o0.key !== t!.key) throw new CoreError("not_found", "Няма такава поръчка.", 404);
+  if (!o0.sched) throw new CoreError("not_changeable", CHANGE_MSG.notSched, 409);
+  if (o0.status !== "accepted") throw new CoreError("not_changeable", CHANGE_MSG.started, 409);
+  const day = orderDay(o0);
+  if (!beforeDeadline(ctx, day, String(o0.slot || o0.at))) throw new CoreError("too_late", CHANGE_MSG.late, 409);
+  const p = patch && typeof patch === "object" ? patch : {};
+  if (p.cart === undefined && p.slot === undefined && p.addr === undefined && p.zone === undefined && p.note === undefined && p.pay === undefined) throw new CoreError("invalid", CHANGE_MSG.nothing, 422);
+
+  const today = sofiaYmd(nowDate(ctx)) === day;
+  const mode: Mode = p.cart ? (p.cart.mode === "pickup" ? "pickup" : "delivery") : o0.mode;
+  const raw = p.cart ? { ...p.cart, mode } : { mode, lines: o0.lines.map((l) => ({ key: lineKey(l.id, l.mods), id: l.id, q: l.q, mods: l.mods, extra: 0 })) };
+  const cart = checkLines(ctx, raw, mode, today ? await soldOutToday(ctx) : {});
+  const errs: Record<string, string> = {};
+  let zone: Zone | null = null, addr = "";
+  if (mode === "delivery") {
+    const z = resolveZone(p.addr !== undefined ? String(p.addr) : o0.addr, p.zone !== undefined ? p.zone : o0.zone, (o0.channel || "web") === "web");
+    if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; }
+  }
+  /* the discounts the order already has: the same percentage, never a second use */
+  let codePct = 0, profilePct = 0;
+  if (o0.code) { const r = (await ctx.repo.list<{ id: string; code: string; pct: number }>(COL.ratings)).find((x) => x.code === o0.code); codePct = r ? r.pct : 0; }
+  if (o0.discKind === "profile" && o0.userId) {
+    const c = await ctx.repo.get<Customer>(COL.customers, o0.userId);
+    const k = c ? (c.coupons || []).find((x) => x.code === PROFILE_COUPON && (x as { orderNo?: string }).orderNo === o0.no) : undefined;
+    profilePct = k ? k.pct : 0;
+  }
+  const settings = await getSettings(ctx);
+  const P = price(cart, { zone, scheduled: true, clock: ctx.clock, busy: settings.kitchen.busy, codePct, profilePct });
+  const slot = p.slot !== undefined ? String(p.slot) : String(o0.slot || o0.at);
+  if (!slotAllowed(P, slot, ctx.clock, true) || !beforeDeadline(ctx, day, slot)) errs.slot = today && slotAllowed(P, slot, ctx.clock, true) ? CHANGE_MSG.late : MSG.slot;
+  if (Object.keys(errs).length) invalid(errs);
+  if ((o0.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);
+  if (P.sub > ORDER_RULES.maxTotal) throw new CoreError("too_big", MSG.big, 422);
+  if (P.conflict === "delivery") throw new CoreError("lunch_delivery", MSG.lunchDelivery, 409);
+  if (P.conflict === "sched") throw new CoreError("lunch_sched", MSG.lunchSched, 409);
+
+  const pay: PayMethod = p.pay && PAY_LABEL[p.pay] ? p.pay : o0.pay;
+  const apply = async (): Promise<Order> => {
+    const o = await getOrder(ctx, o0.no);
+    /* the kitchen may have started in the meantime */
+    if (!o || o.status !== "accepted") throw new CoreError("not_changeable", CHANGE_MSG.started, 409);
+    const now = iso(ctx);
+    Object.assign(o, {
+      mode, zone: zone ? zone.n : "", addr, pay, payLabel: PAY_LABEL[pay],
+      lines: P.rows.map((r) => ({ id: r.x.id, q: r.q, mods: r.mods || [], extra: Math.round((r.unit - r.x.p) * 100) / 100, name: r.x.n, unit: r.unit, cat: r.x.cat, course: r.x.course })),
+      lunchOnly: P.rows.every((r) => !!r.x.lunch), sub: P.sub, disc: P.disc, fee: P.fee, total: P.total,
+      slot, at: slot, discKind: P.discKind,
+      ...(o.code ? { codeDisc: P.codeDisc } : {}), ...(o.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
+      note: p.note !== undefined ? (String(p.note).trim().slice(0, 2000) || undefined) : o.note,
+      changes: (o.changes || 0) + 1, changedAt: now, updatedAt: now,
+    });
+    await ctx.repo.put(COL.orders, o);
+    return o;
+  };
+  const o = ctx.repo.transaction ? await ctx.repo.transaction(apply) : await apply();
+  await audit(ctx, "customer", "order.change", o.no, { slot: o.slot, total: o.total, mode: o.mode });
+  emit(ctx, "order.changed", { no: o.no, slot: o.slot, total: o.total, mode: o.mode }, { order: o.no });
   return o;
 }

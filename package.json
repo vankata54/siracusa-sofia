@@ -29,7 +29,8 @@
     "astro": "^7.4.5",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
-    "hono": "^4.13.16"
+    "hono": "^4.13.16",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
@@ -37,6 +38,7 @@
     "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"

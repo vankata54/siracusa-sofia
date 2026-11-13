@@ -40,6 +40,14 @@ describe("server API (in-memory SQLite)", async () => {
       expect(r.status).toBe(200);
       expect(await r.json()).toEqual({ found: false });
     }
+    /* a change of the pre-order (PATCH): only with the key; the answer is the public view */
+    expect((await app.request("/api/orders/1042", json("PATCH", { slot: "13:00" }))).status).toBe(404);
+    const ch = await app.request("/api/orders/1042-" + o.key, json("PATCH", { slot: "13:00", name: "Друг" }));
+    expect(ch.status).toBe(200);
+    const cj = await ch.json();
+    expect(cj).toMatchObject({ no: "1042", slot: "13:00", changes: 1 });
+    expect(cj.name).toBeUndefined();
+    expect(cj.times.accepted).toBeTruthy();
     const open = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, requireTrackKey: false });
     const o2 = await (await open.app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ id: "pitsa-dyavolo", q: 1 }] }, name: "И", phone: "0888123456", sched: "утре", slot: "12:00" }))).json();
     expect((await (await open.app.request("/api/orders/" + o2.no)).json()).no).toBe(o2.no);
@@ -187,5 +195,34 @@ describe("server API (in-memory SQLite)", async () => {
     expect((await core.ctx.repo.list("audit_log", { actor: "k1" } as never)).length).toBeGreaterThan(0);
     expect(await (await put("pitsa-dyavolo", false, k)).json()).toEqual({ id: "pitsa-dyavolo", out: false });
     expect((await (await app.request("/api/menu")).json()).items.find((x: { id: string }) => x.id === "pitsa-dyavolo").t).not.toContain("out");
+  });
+
+  it("Web Push: subscribe with the tracking key, a status change sends the step, the end forgets the browser", async () => {
+    const sent: { endpoint: string; body: string; url: string }[] = [];
+    const t = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, pushSender: async (subs, p) => { subs.forEach((s) => sent.push({ endpoint: s.endpoint, body: p.body, url: p.url })); return subs.filter((s) => s.endpoint.includes("gone")).map((s) => s.endpoint); } });
+    await t.core.staff.upsert({ username: "admin", name: "Админ", role: "admin", password: "test-password-123" });
+    const o = await (await t.app.request("/api/orders", json("POST", { cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] }, name: "Иван", phone: "0888123456", sched: "утре", slot: "12:00" }))).json();
+    const sub = { endpoint: "https://push.example.com/abc", keys: { p256dh: "B".repeat(87), auth: "A".repeat(22) } };
+    expect((await t.app.request("/api/push/key")).status).toBe(200);
+    /* never without the key, never a bad subscription */
+    expect((await t.app.request("/api/push/subscribe", json("POST", { order: o.no, sub }))).status).toBe(404);
+    expect((await t.app.request("/api/push/subscribe", json("POST", { order: o.no + "-" + o.key, sub: { endpoint: "http://x", keys: {} } }))).status).toBe(422);
+    expect((await t.app.request("/api/push/subscribe", json("POST", { order: o.no + "-" + o.key, sub }))).status).toBe(201);
+    await t.app.request("/api/push/subscribe", json("POST", { order: o.no + "-" + o.key, sub: { ...sub, endpoint: "https://push.example.com/gone" } }));
+    await t.core.orders.setStatus(o.no, "cooking");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent.map((x) => x.body)).toEqual(["Приготвяме поръчката ви.", "Приготвяме поръчката ви."]);
+    expect(sent[0].url).toBe("/porachka/" + o.no + "-" + o.key + "/");
+    /* the gone endpoint is forgotten; the end of the order forgets the rest */
+    await t.core.orders.setStatus(o.no, "ready");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent.slice(2).map((x) => x.endpoint)).toEqual(["https://push.example.com/abc"]);
+    await t.core.orders.setStatus(o.no, "picked_up");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent.at(-1)!.body).toBe("Поръчката е взета. Добър апетит!");
+    expect(await t.core.ctx.repo.list("push_subs")).toEqual([]);
+    /* without keys push is off */
+    const off = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
+    expect((await off.app.request("/api/push/key")).status).toBe(503);
   });
 });

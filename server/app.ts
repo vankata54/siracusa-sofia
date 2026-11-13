@@ -9,8 +9,9 @@ import { streamSSE } from "hono/streaming";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { openDb, seedMenu, readMenu } from "./db/index.ts";
 import { SqliteRepo } from "./db/repo.ts";
+import { webPushSender, type Vapid } from "./push.ts";
 import { scryptHasher } from "./hasher.ts";
-import { createCore, CoreError, officeDueAt, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus } from "../src/core/index.ts";
+import { createCore, CoreError, officeDueAt, publicOrder, PUSH_MSG, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus, type PushSender } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events-json.ts";
@@ -32,6 +33,9 @@ export interface AppOpts {
   trustProxy?: boolean;
   /** run the timers for the automatic office send (default true; off in unit tests) */
   timers?: boolean;
+  /** Web Push: the VAPID keys from .env (server/push.ts vapidFromEnv); without them push is off. pushSender: tests only. */
+  vapid?: Vapid | null;
+  pushSender?: PushSender;
 }
 
 /* a real-time subscriber: staff (cookie) get everything; others only public events and the order / office they asked for */
@@ -64,6 +68,7 @@ export function createApp(opts: AppOpts) {
   const ctx: Ctx = {
     repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
     emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
+    push: opts.pushSender || (opts.vapid ? webPushSender(opts.vapid) : undefined),
   };
   const core = createCore(ctx);
   void core.settings.get(); /* kitchen minutes and "Натоварено" into this process */
@@ -156,6 +161,21 @@ export function createApp(opts: AppOpts) {
     const o = await core.orders.find(c.req.param("id"));
     return c.json(o ? await core.orders.track(c.req.param("id")) : { found: false });
   });
+  /* a pre-order changed by the customer (only with the key in the address; core/orders.ts changeOrder): at most 20 per IP
+     in 10 min; the answer is the public view, as for tracking */
+  app.patch("/api/orders/:id", async (c) => {
+    const b = await body(c);
+    const undo = limit("ord-change:" + ip(c), 20, 10, TRY_LATER(10));
+    return c.json(await counted([undo], async () => publicOrder(await coreFor(c).orders.change(c.req.param("id"), b), true)));
+  });
+  /* Web Push for one order (core/push.ts): the public key for the browser, subscribe / unsubscribe with the tracking key */
+  app.get("/api/push/key", (c) => (opts.vapid || opts.pushSender ? c.json({ key: opts.vapid ? opts.vapid.publicKey : "test" }) : c.json({ error: "push_unavailable", message: PUSH_MSG.unavailable }, 503)));
+  app.post("/api/push/subscribe", async (c) => {
+    const b = await body(c);
+    const undo = limit("push:" + ip(c), 20, 10, TRY_LATER(10));
+    return c.json(await counted([undo], () => core.push.subscribe(String(b && b.order || ""), b && b.sub)), 201);
+  });
+  app.post("/api/push/unsubscribe", async (c) => { const b = await body(c); return c.json(await core.push.unsubscribe(String(b && b.order || ""), String(b && b.endpoint || ""))); });
   /* code checks: at most 30 per IP in 15 min (the codes are 10 digits, guessing must stay slow); the order itself also counts */
   const codeTries = new Map<string, { n: number; until: number }>();
   const codeGate = (c: Context) => {

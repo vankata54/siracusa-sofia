@@ -19,12 +19,13 @@ const TABLES: Record<string, Cols> = {
   feedback_notes: { status: (d) => d.status, module: (d) => d.module },
   audit_log: { actor: (d) => d.actor, action: (d) => d.action },
   events: {}, offers: {}, settings: {}, bonus_used: {}, feedback: { status: (d) => d.status },
+  push_subs: { order_no: (d) => d.orderNo },
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {
   orders: { status: "status", phone: "phone", mode: "mode" }, reservations: { date: "date", time: "time", table: "table_id", phone: "phone", status: "status" },
   office_orders: { code: "code" }, subscriptions: { email: "email" }, users: { phone: "phone" }, staff_users: { username: "username" },
-  sessions: { userId: "user_id" }, ratings: { orderNo: "order_no" }, feedback_notes: { status: "status", module: "module" },
+  sessions: { userId: "user_id" }, ratings: { orderNo: "order_no" }, feedback_notes: { status: "status", module: "module" }, push_subs: { orderNo: "order_no" },
 };
 const val = (v: unknown) => (typeof v === "boolean" ? Number(v) : v === undefined ? null : v);
 

@@ -60,4 +60,6 @@ export const settings = sqliteTable("settings", { ...doc });
 export const bonusUsed = sqliteTable("bonus_used", { ...doc });
 /* contact messages from /kontakti/ */
 export const feedback = sqliteTable("feedback", { ...doc, status: text("status") });
+/* Web Push subscriptions of a browser to one order (tracking page, "Включи известията"); removed when the order ends */
+export const pushSubs = sqliteTable("push_subs", { ...doc, orderNo: text("order_no") }, (t) => [index("push_order").on(t.orderNo)]);
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });
