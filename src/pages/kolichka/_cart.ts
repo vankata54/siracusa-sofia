@@ -135,7 +135,7 @@ export function start(): void {
 
   function etaText(I: Info): { big: string; small: string } {
     if (!I.n) return { big: "", small: "" };
-    if (I.conflict === "delivery") return { big: "Само за вземане от място", small: "Обедното меню след 15:00 не се доставя" };
+    if (I.conflict === "delivery") return { big: "Само за вземане от място", small: "Обедното меню след\u00a015:00 не\u00a0се\u00a0доставя" }; /* "не се доставя" stays together on the second line */
     if (I.closed) return { big: I.m < 600 ? "Днес, от 10:30" : "Утре, от 10:30", small: "Изберете час в следващата стъпка" };
     if (I.sched) {
       if (D.slot && D.slot !== "asap") return { big: (I.sched === "утре" ? "Утре" : "Днес") + " в " + D.slot, small: I.mode === "delivery" ? "Доставка в този час" : "Готова за вземане" };
@@ -164,7 +164,8 @@ export function start(): void {
     let h = "";
     if (P.flash && P.flash.step === step) h += note(P.flash.kind, "warning-circle", P.flash.title, P.flash.text, P.flash.acts);
     if (P.offline && !(step === 3 && P.err === "offline")) h += offlineKeep({ text: "Количката е запазена. Изпратете поръчката, когато връзката се върне.", cls: "ck-off" }); /* the one note (lib/ui.ts) */
-    if (I.closed) h += I.m < 600
+    /* closed kitchen: the note only when something in the cart can be ordered (only old lunch / sold-out lines: nothing to order) */
+    if (I.closed) h += !I.n ? "" : I.m < 600
       ? note("info", "clock", "Кухнята отваря в 10:00", "Можете да поръчате още сега за днес. Изберете час и ще я приготвим точно тогава.")
       : note("info", "clock", "Кухнята приема поръчки до 22:30", "Поръчайте за утре: изберете час и ще я приготвим точно тогава.");
     else if (I.sched) h += note("info", "calendar-blank", "Поръчвате за " + (I.sched === "утре" ? "утре, " + tomorrowLabel() : "днес"), "Ще я приготвим за часа, който изберете.");
@@ -177,7 +178,7 @@ export function start(): void {
     if (step === 1 && I.stale.length) h += note("warn", "warning-circle", "Обедното меню за днес още не е качено",
       "Обедните ястия в количката са от менюто за " + lunchDay() + " и не се броят в поръчката. Махнете ги, а другото остава.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
-    if (step === 1 && I.n === 0 && I.outN) h += note("warn", "warning-circle", "Всичко в количката е изчерпано днес", "Сменете ястията с подобни или изберете нещо друго от менюто.");
+    if (step === 1 && I.n === 0 && I.outN) h += note("warn", "warning-circle", "Всичко в количката е изчерпано днес", "Изчерпаните ястия остават в количката с „Изчерпано днес“, но не влизат в поръчката. Сменете ги с подобни или изберете друго от менюто.");
     return h;
   }
 
@@ -188,7 +189,7 @@ export function start(): void {
   function lineHTML(r: PricedRow, stale = false) {
     const x = r.x, out = r.out, extra = Math.round((r.unit - x.p) * 100) / 100;
     const mods = (r.mods || []).map((md) => { const add = /^\+/.test(md); let txt = add ? md.replace(/^\+\s*/, "") : md; txt = txt.charAt(0).toUpperCase() + txt.slice(1); return '<span class="tag' + (add ? " add" : "") + '">' + (add ? ic("plus", 14) : "") + esc(txt) + "</span>"; }).join("");
-    const tags = (x.lunch && !stale ? '<span class="tag lunch">' + ic("bowl-food", 16) + "Обедно меню</span>" : "") + (r.disc ? '<span class="tag promo">-30% след 15:00</span>' : "") + mods;
+    const tags = (x.lunch && !stale ? '<span class="tag lunch">' + ic("bowl-food", 16) + "Обедно меню</span>" : "") + (r.disc ? '<span class="tag promo">-30% след&nbsp;15:00</span>' : "") + mods;
     const sub = fmt(r.unit) + (r.q > 1 ? " за брой" : "") + (x.g ? " · " + esc(x.g) : "") + (extra ? " · с добавки" : "");
     const pr = out ? '<span class="muted small">Не се брои</span>' : r.disc ? '<span class="old">' + fmt(r.tot) + '</span><span class="price">' + fmt(r.tot - r.disc) + "</span>" : '<span class="price">' + fmt(r.tot) + "</span>";
     const k = esc(r.key);
@@ -221,7 +222,7 @@ export function start(): void {
 
   function ffHTML(I: Info, step: number) {
     const s = I.s, e = SC.eta();
-    const dSmall = !I.delivOK ? "до 21:00" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около " + I.dMin + " мин") : "по избран час";
+    const dSmall = !I.delivOK ? "до 21:00" : !I.n ? "според адреса" : I.today ? (I.hasLunch && !s.lunch ? "без обедното меню" : "около " + I.dMin + " мин") : "по избран час";
     const pSmall = !I.n ? "от ресторанта" : I.today ? (I.hasTrad ? "готова след 20 мин" : "готова веднага") : "по избран час";
     let h = '<div class="seg ff" role="group" aria-label="Как да получите поръчката">' +
       '<button type="button" data-act="mode" data-v="delivery" aria-pressed="' + (I.mode === "delivery") + '"' + (I.delivOK ? "" : " disabled") + ">" + ic("moped", 26) + "<b>Доставка</b><small>" + dSmall + "</small></button>" +
@@ -250,6 +251,8 @@ export function start(): void {
     /* too many orders from this phone / place: trying again is refused too, so the main action is the call (as in the reservation) */
     if (step === 3 && P.err === "throttled") return callBtn(cls.replace(" js-next", "") + " js-next");
     if (step === 1 && !I.n && I.stale.length) return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
+    /* only sold-out dishes: nothing to order, the way on is the menu (the lines stay with "Изчерпано днес") */
+    if (step === 1 && !I.n && I.outN) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + "Към менюто</a>";
     if (step === 1 && I.conflict === "sched") return '<button class="' + cls + '" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>";
     return '<button class="' + cls + '" type="button" data-act="next" data-n="' + step + '">' + esc(lbl) + "</button>";
   }
@@ -263,7 +266,7 @@ export function start(): void {
     const list = step > 1 ? "<details><summary>" + ic("receipt", 20) + "Виж ястията (" + I.n + ")" + ic("caret-down", 18) + "</summary><ul>" + I.rows.filter((r) => !r.out).map((r) => "<li><span>" + r.q + " × " + esc(r.x.n) + '</span><span class="price">' + fmt(r.tot - r.disc) + "</span></li>").join("") + "</ul></details>" : "";
     return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Вашата поръчка</h2>' + list +
       '<div class="kv"><span>Ястия · ' + I.n + '</span><span class="price">' + fmt(I.sub) + "</span></div>" +
-      (I.discKind === "lunch" ? '<div class="kv"><span><span class="disc-b">-30%</span>Отстъпка след 15:00<small>Обедното меню при вземане</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
+      (I.discKind === "lunch" ? '<div class="kv"><span><span class="disc-b">-30%</span>Отстъпка след&nbsp;15:00<small>Обедното меню при вземане</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
       (I.discKind === "profile" ? '<div class="kv"><span><span class="disc-b">-' + I.profilePct + '%</span>Отстъпка с профил<small>Бонусът за профила ви,&nbsp;веднъж</small></span><span class="price">-' + fmt(I.disc) + "</span></div>" : "") +
       (I.discKind === "code" ? '<div class="kv"><span><span class="disc-b">-' + D.codePct + '%</span>Отстъпка с код<small>' + esc(D.code) + ", на ястията</small></span><span class=\"price\">-" + fmt(I.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + del[0] + del[1] + "</span><span>" + del[2] + "</span></div>" +
@@ -331,7 +334,7 @@ export function start(): void {
 
   function slotsHTML(I: Info, title: string) {
     const sl = I.slots, lim = I.sched && !P.allSlots ? 12 : 99, any = sl.some((s) => s.busy);
-    if (!sl.length) return '<p class="slots-h">' + title + "</p>" + note("info", "clock", "Няма свободни часове днес", "Кухнята приема до 22:30. Поръчайте за утре или се обадете на " + R.phone + ".");
+    if (!sl.length) return '<p class="slots-h">' + title + "</p>" + note("info", "clock", "Няма свободни часове днес", "Поръчки за вземане до 22:30. Поръчайте за утре или се обадете на " + R.phone + ".");
     return '<p class="slots-h" id="slh">' + title + '</p><div class="slots" role="group" aria-labelledby="slh">' + sl.slice(0, lim).map((s) =>
       '<button class="slot" type="button" data-act="slot" data-v="' + s.v + '" data-fk="slot-' + s.v + '" aria-pressed="' + (D.slot === s.v) + '"' + (s.busy ? ' disabled aria-label="' + s.v + ' заето: пълна кухня"' : "") + ">" + (D.slot === s.v ? '<span class="row" style="gap:5px">' + ic("check", 16) + s.v + "</span>" : s.v) + (s.busy ? " <small>заето</small>" : "") + "</button>").join("") + "</div>" +
       (sl.length > lim ? '<button class="pill pill-soft pill-block more-slots" type="button" data-act="allslots">' + ic("caret-down", 20) + "Покажи часовете до " + sl[sl.length - 1].v + "</button>" : "") +
@@ -477,7 +480,10 @@ export function start(): void {
   function renderBar(view: string, st: number, I: Info) {
     if (view !== "cart") { bar.hidden = true; bar.innerHTML = ""; return; }
     bar.hidden = false;
-    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back" type="button" data-act="go" data-n="' + (st - 1) + '" aria-label="' + BACK + ": " + STEPS[st - 2][1] + '">' + ic("arrow-left", 20) + BACK + "</button>" : "") + ctaBtn(I, st, false);
+    /* 429: the main action is the call with the whole number, so "Назад" keeps only the arrow (the name stays in aria-label) */
+    const call = st === 3 && P.err === "throttled";
+    bar.classList.toggle("ck-call", call);
+    bar.innerHTML = (st > 1 ? '<button class="pill pill-soft back' + (call ? " ico" : "") + '" type="button" data-act="go" data-n="' + (st - 1) + '" aria-label="' + BACK + ": " + STEPS[st - 2][1] + '">' + ic("arrow-left", 20) + (call ? "" : BACK) + "</button>" : "") + ctaBtn(I, st, false);
   }
   /* refresh only the summary and the bar (keeps the caret in text fields) */
   function refreshSide() {

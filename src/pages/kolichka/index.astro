@@ -155,7 +155,7 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .disc-b{display:inline-flex; align-items:center; min-height:26px; padding:0 9px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800; margin-right:6px}
 .eta-row{display:flex; gap:12px; align-items:center; margin-top:12px; padding:14px 16px; border-radius:18px; background:var(--surface-2)}
 .eta-row b{display:block; font-size:17px; letter-spacing:-.01em; line-height:1.25}
-.eta-row span span{display:block; font-size:14px; color:var(--muted); font-weight:600; text-wrap:balance}
+.eta-row span span{display:block; font-size:14px; color:var(--muted); font-weight:600; text-wrap:pretty}
 .sum .fine{margin:12px 0 0; font-size:14px; color:var(--muted)}
 .sum details{margin:0 0 6px; border-bottom:1px solid var(--line)}
 .sum details summary{list-style:none; display:flex; align-items:center; gap:8px; min-height:48px; font-weight:700; cursor:pointer}
@@ -261,6 +261,11 @@ details.allerg[open] summary .ic:last-child{transform:rotate(180deg)}
 .ck-bar .pill.back{flex:none; padding:0 16px 0 14px; gap:6px}
 .ck-bar .pill-red{min-width:0; overflow:hidden; text-overflow:ellipsis}
 .ck-bar .pill-red{padding:0 14px}
+/* 429: "Назад" is the arrow only (aria-label keeps the name), the call shows the whole number; the label is cut with "…", never silently */
+.ck-bar .pill.back.ico{width:52px; padding:0}
+.ck-bar .js-next > span{min-width:0; overflow:hidden; text-overflow:ellipsis}
+/* 320: the whole number does not fit next to the icon even with 12px sides, so the icon goes (the words say "Обади се") */
+@container app (max-width:340px){ .ck-call .js-next{padding:0 12px} .ck-call .js-next > .ic{display:none} }
 @container app (min-width:900px){ .ck-bar{display:none} }
 @container app (max-width:370px){ .ck-bar .pill{font-size:16px} .ck-bar .pill.back{padding:0 12px 0 10px} }
 

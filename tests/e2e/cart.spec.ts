@@ -61,6 +61,9 @@ test("cart: lunch after 15:00 is pickup only with -30%", async ({ page }) => {
   await expect(page.locator(".sum")).toContainText("Отстъпка след 15:00");
   await expect(page.locator(".sum [data-total]")).toHaveText(after + " €");
   await expect(page.locator(".tag.promo")).toHaveText("-30% след 15:00");
+  /* the hour never stays alone on the next line: a no-break space in "след 15:00" (cart.review Дребна 1) */
+  expect(await page.locator(".sum .kv", { hasText: "Отстъпка след" }).first().evaluate((el) => el.textContent)).toContain("след\u00a015:00");
+  expect(await page.locator(".tag.promo").first().evaluate((el) => el.textContent)).toBe("-30% след\u00a015:00");
   await expect(cta(page)).toContainText("Избери час");
 });
 
@@ -68,6 +71,52 @@ test("cart: 16:30 lunch in a delivery cart promises no delivery time", async ({ 
   await open(page, "16:30");
   await expect(page.locator(".sum .eta-row")).toContainText("Само за вземане от място");
   await expect(page.locator(".sum")).not.toContainText("Пристига");
+  /* the second line is not wrapped early (pretty, not balance: cart.review Дребна 2) */
+  expect(await page.locator(".sum .eta-row span span").evaluate((el) => getComputedStyle(el).getPropertyValue("text-wrap-style"))).toBe("pretty");
+});
+
+test("cart: only sold-out dishes -> the main action is the menu, no delivery time, the reason is said", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "12:30", { mode: "delivery", lines: [{ key: "pleskavitsa", id: "pleskavitsa", q: 2, mods: [], extra: 0 }] });
+  await expect(page.locator(".ln.out")).toHaveCount(1);
+  await expect(page.locator(".ln.out")).toContainText("Изчерпано днес");
+  await expect(page.locator(".note.warn").first()).toContainText("Всичко в количката е изчерпано днес");
+  await expect(page.locator(".note.warn").first()).toContainText("остават в количката с „Изчерпано днес“, но не влизат в поръчката");
+  await expect(cta(page)).toHaveText("Към менюто");
+  await expect(cta(page)).toHaveAttribute("href", "/menu/");
+  await expect(page.locator(".js-next", { hasText: "Към адреса" })).toHaveCount(0);
+  await expect(page.locator(".seg.ff")).not.toContainText("мин");
+  await expect(page.locator('.seg.ff [data-v="delivery"] small')).toHaveText("според адреса");
+  await expect(page.locator(".sum .eta-row")).toHaveCount(0);
+  await cta(page).click();
+  await page.waitForURL(/\/menu\/$/);
+  expect(errors).toEqual([]);
+});
+
+test("cart: only old lunch dishes before 10:00 -> no 'Кухнята отваря' note (nothing to order), the action removes them", async ({ page }) => {
+  /* the real clock (no preview) at 08:30 Sofia on a day without the lunch menu in the data */
+  await page.clock.setFixedTime(new Date("2026-11-13T06:30:00Z"));
+  await page.addInitScript(([c]) => {
+    if (sessionStorage.getItem("ck-init")) return;
+    sessionStorage.setItem("ck-init", "1");
+    localStorage.setItem("sc-cookie", '"min"'); localStorage.removeItem("sc-checkout");
+    localStorage.setItem("sc-cart", JSON.stringify(c));
+  }, [{ mode: "pickup", lines: [CART.lines[1]] }]);
+  await page.goto("/kolichka/");
+  await expect(page.locator(".ln.out")).toContainText("Не се брои");
+  await expect(page.locator(".note.warn").first()).toContainText("Обедното меню за днес още не е качено");
+  await expect(page.locator(".ck-main")).not.toContainText("Кухнята отваря в 10:00");
+  await expect(cta(page)).toContainText("Махни обедните ястия");
+});
+
+test("cart: no free pickup slots -> the one text 'Поръчки за вземане до 22:30' (decision 12.11, round 3)", async ({ request }) => {
+  /* the state is not reachable on the clock (there is always 23:00 until 22:30, then it is "за утре"): check the page script */
+  const html = await (await request.get("/kolichka/")).text();
+  const srcs = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((m) => m[1]);
+  let js = "";
+  for (const src of srcs) js += await (await request.get(src)).text();
+  expect(js).toContain("Поръчки за вземане до 22:30. Поръчайте за утре");
+  expect(js).not.toContain("Кухнята приема до 22:30");
 });
 
 test("cart: lunch dishes from a day without a lunch menu are marked at once (real clock, no preview)", async ({ page }) => {
@@ -342,6 +391,33 @@ for (const [name, status, body] of [
     } else await expect(cta(page)).toContainText("Опитай пак");
   });
 }
+
+test("cart: 429 at 360 - 'Назад' is the arrow only, the call shows the whole number", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.route("**/api/orders", (r) => r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "throttled", message: "С този телефон вече има няколко поръчки за кратко време. Обадете ни се на 0894 36 55 77." }) }));
+  await toStep3(page);
+  const back = page.locator(".ck-bar .back");
+  await expect(back).toHaveText("Назад");
+  await cta(page).click();
+  await expect(page.locator("#topnotes [data-errh]")).toBeFocused();
+  await expect(cta(page)).toHaveText("Обади се · 0894 36 55 77");
+  await expect(cta(page)).toHaveAttribute("href", "tel:+359894365577");
+  await expect(back).toHaveText("");
+  await expect(back).toHaveAttribute("aria-label", "Назад: Къде и кога");
+  const m = await cta(page).evaluate((a) => {
+    const sp = a.querySelector(":scope > span") as HTMLElement, ar = a.getBoundingClientRect(), sv = a.querySelector("svg");
+    const first = (sv && sv.getBoundingClientRect().width ? sv : sp).getBoundingClientRect(), last = sp.getBoundingClientRect();
+    return { sw: a.scrollWidth, cw: a.clientWidth, ssw: sp.scrollWidth, scw: sp.clientWidth, l: first.left - ar.left, r: ar.right - last.right };
+  });
+  expect(m.sw).toBeLessThanOrEqual(m.cw);
+  expect(m.ssw).toBeLessThanOrEqual(m.scw); /* nothing cut from the number */
+  expect(m.l).toBeGreaterThanOrEqual(12);
+  expect(m.r).toBeGreaterThanOrEqual(12);
+  expect((await back.boundingBox())!.width).toBeGreaterThanOrEqual(48);
+  await back.click();
+  await expect(page.locator("h1")).toHaveText("Кога ще я вземете?");
+  await expect(back).toHaveText("Назад"); /* the word comes back outside the 429 state */
+});
 
 test("cart: offline send: the focus on the title, no toast on top of the message", async ({ page, context }) => {
   await toStep3(page);
