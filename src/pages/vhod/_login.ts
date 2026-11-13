@@ -11,7 +11,8 @@ import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Customer } from "../../client/api-types.ts";
 import { HERO, phoneHTML, blockedHTML, alertHTML, stepper, focusAlert } from "./_views.ts";
-import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB, OFFLINE } from "../../lib/ui.ts";
+import { previewPanel, pvToggle, PV, MKT_TITLE, MKT_SUB, OFFLINE, BACK, callBtn } from "../../lib/ui.ts";
+import { RESTAURANT as R } from "../../lib/consts.ts";
 /* icons this script draws (sc.ts has x, check, caret-right, phone, question) */
 import "sc-icons:arrow-clockwise,arrow-left,arrow-right,fire,gift,info,paper-plane-right,shopping-bag,sign-out,sliders-horizontal,timer,user,warning,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
@@ -21,12 +22,17 @@ const BLOCKED = "0888000000";
 const SAMPLE = "0888123456";
 
 type User = Partial<Customer> & { phone?: string; name?: string };
+/** too_many is per number (5 codes an hour), throttled per place (10 requests in 10 min), sms_unavailable for everyone */
+type Lock = { kind: "throttled" | "too_many" | "unavailable"; phone: string; until: number; text: string };
 const S = {
   ready: false, phone: "", isNew: true, offline: false, sim: false,
   /** the -10% is free for this number (sms/verify says so: customer.profileBonus); a used one is never promised */
   bonus: true,
   timer: 0 as ReturnType<typeof setInterval> | 0, left: 0, finishing: false, mkt: false, name: "",
   last: null as null | { phone: string; demo: string; known?: boolean },
+  /** a refusal that trying again cannot change (429 throttled / too_many, 503 sms_unavailable): while it lasts the main
+      action is the call (decision 12.11: "при 429 главното действие е „Обади се · 0894 36 55 77“", as in the cart) */
+  lock: null as null | Lock,
   view: "phone" as "phone" | "code" | "name" | "done" | "signed" | "blocked",
 };
 
@@ -38,6 +44,28 @@ async function call<T>(fn: () => Promise<T>): Promise<T> {
   if (S.offline || (typeof navigator !== "undefined" && navigator.onLine === false)) { await wait(400); throw offlineErr(); }
   return fn();
 }
+
+/* ---------- refusals that "Опитай пак" cannot change: the call is the main action while they last ---------- */
+function lockOf(ex: ApiError, phone: string): Lock | null {
+  if (ex.code === "sms_unavailable") return { kind: "unavailable", phone, until: 0, text: "Засега не можем да изпратим SMS. Обадете ни се на " + R.phone + " и ще помогнем." };
+  if (ex.code === "too_soon" || !(ex.status === 429 || ex.code === "throttled" || ex.code === "too_many")) return null;
+  const kind = ex.code === "too_many" ? "too_many" : "throttled";
+  /* the server says how long ("след 10 минути", "след час"); without a number: 10 min, an hour for too_many */
+  const m = /(\d+)\s*мин/.exec(ex.message || ""), min = m ? +m[1] : kind === "too_many" ? 60 : 10;
+  return { kind, phone, until: Date.now() + min * 60_000, text: ex.message || "Твърде много опити. Обадете ни се на " + R.phone + "." };
+}
+/** the lock that applies to this number now (too_many only to the number it came with; an old one is dropped) */
+function lockFor(phone: string): Lock | null {
+  const L = S.lock;
+  if (!L) return null;
+  if (L.until && Date.now() >= L.until) { S.lock = null; return null; }
+  if (L.kind === "too_many" && phone && phone !== L.phone) return null;
+  return L;
+}
+const lockTitle = (L: Lock, again = false) => (L.kind === "unavailable" ? "Входът с код още не работи" : again ? "Не успяхме да изпратим нов код" : "Не успяхме да изпратим кода");
+const callMain = (cls = "pill pill-red pill-lg pill-block") => callBtn(cls, "data-callmain");
+/** "Назад" to the phone: in the bar on a phone, a text link under the main button at 1440 (decision 12.11, as in the cart) */
+const backTo = (cls: string, size: number) => '<button class="' + cls + '" type="button" data-back aria-label="' + BACK + ': Телефон">' + ic("arrow-left", size) + BACK + "</button>";
 
 /* numbers that already have a profile on this device: only to show "Стъпка 2 от 2" instead of "от 3" */
 const known = () => SC.load<Record<string, 1>>("sc-known", {});
@@ -114,20 +142,37 @@ function viewPhone(err = "", focus = false, reuse = false) {
   S.view = "phone";
   if (!reuse) show(phoneHTML(S.phone, err), focus ? "#ph" : null);
   const f = box.querySelector<HTMLFormElement>("form[data-f=phone]")!, inp = f.querySelector<HTMLInputElement>("#ph")!, er = f.querySelector<HTMLElement>("#ph-err")!;
-  const alert = f.querySelector("[data-alert]")!;
+  const alert = f.querySelector("[data-alert]")!, send = f.querySelector<HTMLElement>("[data-send]")!;
   const BTN = ic("paper-plane-right", 20) + "Изпрати код по SMS";
+  /* while a lock lasts: the message without "Опитай пак", the call in the place of "Изпрати код по SMS" */
+  let lockT: ReturnType<typeof setTimeout> | undefined;
+  function paintLock(d: string, focus: boolean) {
+    const L = lockFor(d), cur = f.querySelector("[data-callmain]");
+    clearTimeout(lockT);
+    if (!L) { if (cur) { cur.remove(); send.hidden = false; alert.innerHTML = ""; } return; }
+    if (!cur) {
+      send.hidden = true; send.insertAdjacentHTML("afterend", callMain());
+      alert.innerHTML = alertHTML(lockTitle(L), L.text, false);
+    }
+    if (L.until) lockT = setTimeout(() => { if (f.isConnected) paintLock(normPhone(inp.value) || "", false); }, L.until - Date.now() + 50);
+    if (focus) focusAlert(alert);
+  }
+  paintLock(normPhone(S.phone) || "", false);
   const fieldErr = (msg: string) => { inp.setAttribute("aria-invalid", "true"); er.textContent = msg; er.hidden = false; inp.focus(); };
   inp.addEventListener("input", () => {
     S.phone = inp.value;
+    if (S.lock && S.lock.kind === "too_many") paintLock(normPhone(inp.value) || "", false); /* another number is not limited */
     if (inp.getAttribute("aria-invalid") && (normPhone(inp.value) || !inp.value.trim())) { inp.removeAttribute("aria-invalid"); er.hidden = true; }
   });
   inp.addEventListener("blur", () => { const d = normPhone(inp.value); if (d) inp.value = prettyPhone(d); });
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const btn = f.querySelector<HTMLElement>("button.pill-red")!;
+    const btn = send;
     if (btn.classList.contains("busy")) return;
     const raw = inp.value.trim(), d = normPhone(raw);
     S.phone = d || raw;
+    /* Enter during a lock: the message again, nothing sent */
+    if (lockFor(d || "")) return paintLock(d || "", true);
     alert.innerHTML = "";
     if (!raw) return fieldErr("Напишете номера си, например 0888 12 34 56.");
     if (!d) return fieldErr("Номерът изглежда непълен. Трябват 10 цифри, започващи с 0 (или +359), например 0888 12 34 56.");
@@ -135,16 +180,20 @@ function viewPhone(err = "", focus = false, reuse = false) {
     busy(btn, "Изпращаме кода...");
     try {
       const r = await call(() => api.auth.smsRequest(d));
+      S.lock = null;
       viewCode(r.demoCode, r.resendIn, r.known);
     } catch (x) {
       idle(btn, BTN);
       const ex = x as ApiError;
       if (ex.code === "blocked") return viewBlocked();
-      /* "Назад" and the same number again: the code sent a moment ago is still valid, so back to it */
-      if (ex.code === "too_soon" && S.last && S.last.phone === d) return viewCode(S.last.demo, ex.retryIn ?? 30, S.last.known);
+      /* a code went to this number less than 30 s ago (after "Назад", a reload or a new tab): it is still valid, so the
+         code step with the countdown; the demo box only when this page knows that code */
+      if (ex.code === "too_soon") { const same = S.last && S.last.phone === d ? S.last : null; return viewCode(same ? same.demo : "", ex.retryIn ?? 30, same ? same.known : undefined); }
       if (ex.code === "offline") return offlineAlert(alert);
       if (ex.code === "invalid") return fieldErr(ex.fields?.phone || ex.message);
-      alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.", ex.code === "throttled" ? "call" : true);
+      const L = lockOf(ex, d);
+      if (L) { S.lock = L; return paintLock(d, true); }
+      alert.innerHTML = alertHTML("Не успяхме да изпратим кода", ex.message || "Нещо се обърка. Опитайте пак.");
       focusAlert(alert);
     }
   });
@@ -177,15 +226,17 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
         [0, 1, 2, 3, 4, 5].map((i) => '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" ' + (i === 0 ? 'autocomplete="one-time-code" ' : 'autocomplete="off" ') + 'aria-label="Цифра ' + (i + 1) + ' от 6" data-i="' + i + '">').join("") +
       "</div></fieldset>" +
       '<p class="err" id="otp-err" role="alert" hidden></p>' +
-      '<div class="acts2"><button class="pill pill-line pill-lg" type="button" data-back>' + ic("arrow-left", 20) + 'Назад</button><button class="pill pill-red pill-lg" type="submit" disabled>' + ic("check", 20) + "Потвърди кода</button></div>" +
+      '<div class="acts2">' + backTo("pill pill-line pill-lg back", 20) + '<button class="pill pill-red pill-lg" type="submit" disabled>' + ic("check", 20) + "Потвърди кода</button></div>" +
+      backTo("link flow-back", 18) +
     "</form>" +
-    '<div class="resend" data-resend aria-live="off"></div>' +
+    "<div data-alert></div>" +
+    '<div class="resend" data-resend tabindex="-1" aria-live="off"></div>' +
     '<p class="hint">' + ic("info", 20) + "<span>Кодът идва до минута. Ако не дойде, проверете дали номерът е верен.</span></p>", ".otp input");
   const f = box.querySelector<HTMLFormElement>("form[data-f=code]")!;
   const ins = [...f.querySelectorAll<HTMLInputElement>(".otp input")];
   const fs = f.querySelector<HTMLElement>(".otp")!, er = f.querySelector<HTMLElement>("#otp-err")!, btn = f.querySelector<HTMLButtonElement>("[type=submit]")!;
   const BTN = ic("check", 20) + "Потвърди кода";
-  box.querySelector<HTMLButtonElement>("[data-back]")!.onclick = () => viewPhone("", true);
+  box.querySelectorAll<HTMLButtonElement>("[data-back]").forEach((b) => { b.onclick = () => viewPhone("", true); });
   const code = () => ins.map((x) => x.value).join("");
   const sync = () => { ins.forEach((x) => x.classList.toggle("full", !!x.value)); btn.disabled = code().length !== 6 || btn.classList.contains("busy"); };
   const clearErr = () => { fs.removeAttribute("aria-invalid"); er.hidden = true; };
@@ -210,12 +261,16 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
   const slot = box.querySelector<HTMLElement>("[data-demo-slot]")!;
   slot.addEventListener("click", (e) => { if ((e.target as Element).closest("[data-fill]") && demo) { clearErr(); ins.forEach((x) => { x.value = ""; x.disabled = false; }); fill(0, demo); } });
 
-  /* the limit of tries lives in the core: after it, or when the code expired, a new code is the only way on */
+  /* the limit of tries lives in the core: after it, or when the code expired, a new code is the only way on.
+     Within 30 s of the last code the countdown goes on (the server would answer too_soon) and the focus waits on it;
+     the button takes the focus when the countdown ends. */
+  let dead = false;
   function needNew(msg: string) {
+    dead = true;
     er.textContent = msg; er.hidden = false; fs.setAttribute("aria-invalid", "true");
     ins.forEach((x) => { x.value = ""; x.disabled = true; }); sync(); btn.disabled = true;
-    clearInterval(S.timer as number); S.left = 0; tick();
-    rs.querySelector<HTMLElement>("[data-resend-btn]")?.focus();
+    if (S.left > 0) { rs.focus(); return; }
+    tick(); rs.querySelector<HTMLElement>("[data-resend-btn]")?.focus();
   }
   async function submit() {
     if (code().length !== 6 || btn.classList.contains("busy")) return;
@@ -246,7 +301,29 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
   const rs = box.querySelector<HTMLElement>("[data-resend]")!;
   function tick() {
     if (S.left > 0) rs.innerHTML = ic("timer", 20) + "<span>Изпрати нов код след 0:" + (S.left < 10 ? "0" : "") + S.left + "</span>";
-    else { clearInterval(S.timer as number); S.timer = 0; if (!rs.querySelector("[data-resend-btn]")) rs.innerHTML = '<button class="link" type="button" data-resend-btn>' + ic("paper-plane-right", 20) + "Изпрати нов код</button>"; }
+    else {
+      clearInterval(S.timer as number); S.timer = 0;
+      if (!rs.querySelector("[data-resend-btn]")) {
+        const had = document.activeElement === rs;
+        rs.innerHTML = '<button class="link" type="button" data-resend-btn>' + ic("paper-plane-right", 20) + "Изпрати нов код</button>";
+        if (had) rs.querySelector<HTMLElement>("[data-resend-btn]")!.focus();
+      }
+    }
+  }
+  /* a lock on "Изпрати нов код" (429 throttled / too_many, 503): the message, the call in its place; red when the code
+     is dead (the call is then the only way on), else the code still works and "Потвърди кода" stays the main action */
+  const rsAlert = box.querySelector<HTMLElement>("[data-alert]")!;
+  let lockT: ReturnType<typeof setTimeout> | undefined;
+  function paintLock(L: Lock) {
+    clearInterval(S.timer as number); S.timer = 0; S.left = 0; clearTimeout(lockT);
+    rsAlert.innerHTML = alertHTML(lockTitle(L, true), L.text, false);
+    rs.innerHTML = callMain(dead ? "pill pill-red pill-lg pill-block" : "pill pill-line pill-lg pill-block");
+    btn.hidden = dead; btn.parentElement!.classList.toggle("solo", dead); /* the bar keeps only "Назад" */
+    /* at 1440 "Назад" stays under the main button, now the call */
+    const fb = box.querySelector(".flow-back"); if (dead && fb) rs.after(fb);
+    if (dead) er.textContent = er.textContent!.replace(/\s*(За сигурност )?поискайте нов код отдолу\.?/i, "");
+    focusAlert(rsAlert);
+    if (L.until) lockT = setTimeout(() => { if (!rs.isConnected || lockFor(S.phone)) return; rsAlert.innerHTML = ""; btn.hidden = false; btn.parentElement!.classList.remove("solo"); rs.innerHTML = ""; tick(); }, L.until - Date.now() + 50);
   }
   function startTimer(sec: number) { S.left = Math.max(0, Math.min(59, sec)); clearInterval(S.timer as number); rs.innerHTML = ""; tick(); S.timer = setInterval(() => { S.left--; tick(); }, 1000); }
   rs.addEventListener("click", async (e) => {
@@ -256,6 +333,7 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
     try {
       const r = await call(() => api.auth.smsRequest(S.phone));
       demo = r.demoCode || ""; S.last = { phone: S.phone, demo, known: r.known }; slot.innerHTML = demo ? demoHTML(demo) : "";
+      S.lock = null; dead = false;
       clearErr(); ins.forEach((x) => { x.disabled = false; x.value = ""; }); sync(); ins[0].focus();
       startTimer(r.resendIn ?? 30);
       SC.toast("Изпратихме нов код на " + prettyPhone(S.phone));
@@ -263,7 +341,10 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
       const ex = x as ApiError;
       idle(b, ic("paper-plane-right", 20) + "Изпрати нов код");
       if (ex.code === "blocked") return viewBlocked();
-      if (ex.code === "too_soon") { startTimer(ex.retryIn ?? 30); return; }
+      /* too_soon: the countdown from the server's retryIn, the focus on it (not dropped on <body> with the button) */
+      if (ex.code === "too_soon") { startTimer(ex.retryIn ?? 30); rs.focus(); return; }
+      const L = lockOf(ex, S.phone);
+      if (L) { S.lock = L; return paintLock(L); }
       er.textContent = ex.code === "offline" ? "Няма връзка с интернет. Проверете връзката и поискайте кода пак." : ex.message || "Нещо се обърка. Опитайте пак.";
       er.hidden = false;
     }
@@ -351,7 +432,8 @@ function proto() {
   const b = main.querySelector<HTMLButtonElement>("[data-pv] [data-offline]")!;
   const paint = () => { b.setAttribute("aria-pressed", String(S.offline)); b.textContent = PV.offline + ": " + (S.offline ? "вкл." : "изкл."); };
   paint();
-  b.onclick = () => { S.offline = !S.offline; paint(); SC.toast(S.offline ? "Симулираме липса на връзка" : "Връзката е обратно"); };
+  /* no toast: the switch itself says "вкл."/"изкл." (a toast covered the hero for 2.4 s) */
+  b.onclick = () => { S.offline = !S.offline; paint(); };
   paintOffline = paint;
 }
 

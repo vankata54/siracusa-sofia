@@ -43,7 +43,7 @@ export function phoneHTML(phone = "", err = ""): string {
         '<p class="help" id="ph-help">Пращаме SMS с 6 цифри. Без парола.</p>' +
         '<p class="err" id="ph-err"' + (err ? "" : " hidden") + ">" + esc(err) + "</p></div>" +
       "<div data-alert></div>" +
-      '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("paper-plane-right", 20) + "Изпрати код по SMS</button>" +
+      '<button class="pill pill-red pill-lg pill-block" type="submit" data-send>' + ic("paper-plane-right", 20) + "Изпрати код по SMS</button>" +
       '<p class="fine">С входа приемате <a href="' + url.page("terms") + '">Общите условия</a> и <a href="' + url.page("privacy") + '">Политиката за поверителност</a>.</p>' +
     "</form>";
 }
@@ -57,12 +57,12 @@ export function blockedHTML(phone: string): string {
     '<p class="fine">Всеки ден от ' + R.open + " до " + R.close + ".</p></div>";
 }
 
-/** retry: "Опитай пак"; "call": too many tries (429), trying again is refused, so the action is the call (as in the reservation) */
 /** after alertHTML is drawn: the focus on its title (not left on the button, not on <body>) */
 export function focusAlert(box: Element | null): void { const h = box && box.querySelector<HTMLElement>("[data-alerth]"); if (h) h.focus(); }
-export function alertHTML(title: string, text: string, retry: boolean | "call" = true): string {
+/** retry: "Опитай пак" + the call; false: only the words (a lock: 429 / 503, where the form's main action is the call) */
+export function alertHTML(title: string, text: string, retry = true): string {
   /* the title takes the focus after an error (tabindex=-1, focusAlert), as in the cart and the reservation */
   return '<div class="alert" role="alert">' + ic("warning-circle", 24) + '<b tabindex="-1" data-alerth>' + esc(title) + "</b><span>" + esc(text) + "</span>" +
     /* the same actions as the cart and the reservation: "Опитай пак" with the round arrow + "Обади се · 0894 36 55 77" */
-    (retry === "call" ? '<div class="acts">' + callBtn("pill pill-line") + "</div>" : retry ? '<div class="acts"><button class="pill pill-red" type="submit">' + ic("arrow-clockwise", 20) + RETRY + "</button>" + callBtn("pill pill-line") + "</div>" : "") + "</div>";
+    (retry ? '<div class="acts"><button class="pill pill-red" type="submit">' + ic("arrow-clockwise", 20) + RETRY + "</button>" + callBtn("pill pill-line") + "</div>" : "") + "</div>";
 }
