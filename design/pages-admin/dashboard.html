@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Табло | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+/* status line under the greeting */
+.db-st{display:inline-flex; align-items:center; gap:10px; margin-top:14px; min-height:44px; padding:0 16px 0 14px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:16px; color:var(--muted); font-weight:600}
+.db-st b{color:var(--ink)}
+.db-st .dot{width:10px; height:10px; border-radius:50%; background:var(--off); flex:none}
+.db-st .dot.ok{background:var(--ok)} .db-st .dot.warn{background:var(--warn)}
+
+/* today: one shell, four cores */
+.kpis{display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr))}
+@container page (min-width:900px){ .kpis{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.kpi{min-width:0; display:grid; align-content:space-between; gap:14px; min-height:168px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; transition:transform var(--t-base) var(--ease)}
+.kpi:hover{transform:translateY(-2px)}
+.kpi:active{transform:scale(.98)}
+.kpi .lb{display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; color:var(--muted); line-height:1.25}
+.kpi .lb .ic{color:var(--red)}
+.kpi .v{font-size:52px; line-height:.95; letter-spacing:-.05em; font-weight:800; font-variant-numeric:tabular-nums}
+.kpi .ft{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15px; color:var(--muted); font-weight:600; min-height:28px}
+.kpi .sa-tag{white-space:normal; text-align:left}
+.kpi.hot{background:var(--chip-dark); color:var(--on-chip-dark)}
+.kpi.hot .lb, .kpi.hot .ft{color:var(--on-chip-dark); opacity:.85}
+.kpi.hot .lb .ic{color:var(--ember)}
+@container page (max-width:420px){ .kpi{min-height:150px; padding:16px} .kpi .v{font-size:44px} }
+
+/* modules */
+.mods{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:620px){ .mods{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1000px){ .mods{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.mod{display:flex; flex-direction:column; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mod .vis{position:relative; height:172px; border-radius:22px; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 120% at 70% 0%, var(--plate-1), var(--plate-2))}
+.mod .vis .cnt{position:absolute; left:12px; top:12px; width:max-content; display:inline-flex; align-items:center; min-height:30px; padding:0 11px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:800; color:var(--ink)}
+.mod .vis .dv{position:absolute; right:14px; top:16px; width:max-content; font-size:14px; font-weight:700; color:var(--muted)}
+.mod .body{flex:1; display:grid; gap:8px; align-content:start; padding:16px 14px 6px}
+.mod h3{margin:0; font-size:21px; letter-spacing:-.025em; font-weight:800; line-height:1.15; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.mod p{margin:0; color:var(--muted)}
+.mod .who{font-size:15px; font-weight:700; color:var(--ink)}
+.mod .who span{color:var(--muted); font-weight:600}
+.mod .act{padding:10px 8px 8px}
+.mod .open{width:100%; justify-content:space-between; padding:0 6px 0 20px; min-height:56px; font-size:17px}
+.mod .open .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-slow) var(--ease)}
+.mod .open:hover .knob{transform:translate(2px,-2px) scale(1.05)}
+.mod.soon .vis{background:transparent; box-shadow:inset 0 0 0 2px var(--line-strong); box-shadow:none; border:2px dashed var(--line-strong)}
+.mod.soon .note{padding:10px 14px 14px; font-size:15px; color:var(--muted); font-weight:600}
+/* device glyphs (pure CSS, token colours) */
+.g{position:relative; display:grid; place-items:center; color:var(--red); background:var(--surface); box-shadow:inset 0 0 0 3px var(--ink), var(--shadow); transition:transform var(--t-spring) var(--ease)}
+.mod:hover .g{transform:translateY(-4px) rotate(-2deg)}
+.g.phone{width:58px; height:104px; border-radius:16px}
+.g.phone::before{content:""; position:absolute; top:7px; width:16px; height:4px; border-radius:2px; background:var(--ink)}
+.g.tablet{width:132px; height:92px; border-radius:14px}
+.g.desktop{width:136px; height:84px; border-radius:10px; margin-bottom:14px}
+.g.desktop::after{content:""; position:absolute; bottom:-14px; width:44px; height:9px; border-radius:0 0 8px 8px; background:var(--ink)}
+.g.watch{width:74px; height:74px; border-radius:50%}
+.g.watch::before, .g.watch::after{content:""; position:absolute; left:50%; width:30px; height:16px; margin-left:-15px; background:var(--ink)}
+.g.watch::before{top:-14px; border-radius:6px 6px 0 0} .g.watch::after{bottom:-14px; border-radius:0 0 6px 6px}
+.soon .g{box-shadow:inset 0 0 0 3px var(--line-strong); color:var(--muted); background:transparent}
+.soon .g::before, .soon .g::after{background:var(--line-strong)}
+
+/* sections: bento of groups */
+.groups{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:700px){ .groups{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1100px){ .groups{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.grp{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); align-self:start}
+.grp h3{margin:10px 14px 10px; font-size:15px; font-weight:800; color:var(--muted); display:flex; justify-content:space-between}
+.grp .core{display:grid}
+.srow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:72px; padding:12px 14px; text-decoration:none; color:inherit; border:0; background:transparent; width:100%; text-align:left; cursor:pointer; font:inherit}
+.srow + .srow{border-top:1px solid var(--line)}
+.srow:hover{background:color-mix(in srgb, var(--surface-2) 50%, transparent)}
+.srow .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.srow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.srow small{display:block; font-size:15px; color:var(--muted); font-weight:600; line-height:1.35; margin-top:2px}
+.srow .end{display:flex; align-items:center; gap:6px; color:var(--muted)}
+.srow.soon .si{color:var(--muted)}
+.mine{display:grid; gap:16px; padding:22px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.mine h2{margin:0; font-size:26px; letter-spacing:-.03em; line-height:1.15}
+.mine p{margin:0; color:var(--on-chip-dark); opacity:.85}
+@container page (min-width:700px){ .mine{grid-template-columns:1fr auto; align-items:center; padding:28px} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+if (!A.me){ A.mount({}); return; }
+var ic = A.ic, esc = A.esc, st = A.st, me = A.me, s = A.sofia();
+var hello = s.h >= 5 && s.h < 12 ? "Добро утро" : s.h >= 12 && s.h < 18 ? "Добър ден" : "Добър вечер";
+/* статус по истинския час в София (същите граници като SC.status) */
+var m = s.h*60 + s.m, status = m < 600 ? ["", "<b>Затворено</b> · отваряме в 10:00"] : m >= 1380 ? ["", "<b>Затворено</b> · отваряме утре в 10:00"] : m < 1260 ? ["ok", "<b>Отворено до 23:00</b> · Доставка до 21:00"] : m < 1350 ? ["warn", "<b>Доставката приключи за днес</b> · Вземане до 22:30"] : ["warn", "<b>Кухнята затвори</b> · Отворено до 23:00"];
+var body = A.mount({section:"dashboard", title:hello + ", " + me.name.split(" ")[0], eyebrow:"Днес · " + A.fmtDate(new Date()), docTitle:"Табло",
+  sub:'<span class="db-st" data-edit-id="admin.dashboard.status"><span class="dot ' + status[0] + '"></span><span>' + status[1] + '</span></span>',
+  actions: A.MOD.site && A.modCan(A.MOD.site) ? '<a class="pill pill-ink pill-lg" href="preview.html#m=site&p=home&d=phone">' + ic("eye",22) + 'Сайтът на живо</a>' : '',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Без бележки"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- today ---------- */
+var outs = (function(){ var so = A.data.get("soldout", {date:"", ids:[]}), ids = so.date === A.todayKey() ? so.ids.slice() : [];
+  SC.items.forEach(function(x){ if (SC.isOut(x) && ids.indexOf(x.id) < 0) ids.push(x.id); }); return ids; })();
+var newNotes = st === "empty" ? 0 : A.notes.count("new");
+var K = [
+  ["orders","Поръчки в работа","receipt","7", A.sample(), "orders.html", true],
+  ["reservations","Резервации днес","calendar-check","12", A.sample(), "reservations.html"],
+  ["notes","Нови бележки","pencil-simple", String(newNotes), newNotes ? "от молива" : "Няма нови", "notes.html"],
+  ["menu","Изчерпани днес","clock", String(outs.length), outs.length ? esc(outs.slice(0,2).map(function(id){ return SC.byId[id].n; }).join(", ")) + (outs.length > 2 ? " и още " + (outs.length - 2) : "") : "Всичко е налично", "menu.html"]
+].filter(function(k){ return A.can(k[0]); });
+function kpis(){ if (st === "loading") return A.skel(2, "Зареждаме таблото …");
+  if (st === "error") return A.error("Не успяхме да заредим числата за днес. Модулите и разделите работят.");
+  if (!K.length) return "";
+  return '<div class="sa-shell sa-rise" data-edit-id="admin.dashboard.today"><div class="kpis">' + K.map(function(k){
+    return '<a class="kpi' + (k[6] ? ' hot' : '') + '" href="' + k[5] + '"><span class="lb">' + ic(k[2],20) + k[1] + '</span><span class="v">' + k[3] + '</span><span class="ft">' + (k[6] && k[4].indexOf("sa-tag") > -1 ? '<span class="sa-tag sample" style="color:inherit; box-shadow:inset 0 0 0 1.5px currentColor">' + ic("info",16) + 'Примерни данни</span>' : k[4]) + '</span></a>'; }).join("") + '</div></div>'; }
+
+/* ---------- my app (персонал) ---------- */
+var app = ["waiter","kitchen","driver"].filter(function(id){ return me.role === id; })[0];
+var mine = app ? '<section class="mine sa-rise" data-edit-id="admin.dashboard.myapp"><div><h2>' + (app === "waiter" ? "Приложението на сервитьора" : app === "kitchen" ? "Екранът на кухнята" : "Приложението на шофьора") + '</h2><p>' + esc(A.role(app).desc) + '</p></div><a class="pill pill-red pill-lg" href="' + A.SEC[app].href + '">' + ic(A.SEC[app].ic,22) + 'Отвори приложението</a></section>' : '';
+
+/* ---------- modules ---------- */
+var mods = A.MODULES.filter(A.modCan);
+function screensN(mm){ return (mm.screens || []).length; }
+function glyph(mm){ var d = mm.id === "watch" ? "watch" : mm.dev || "phone"; return '<span class="g ' + d + '">' + ic(mm.ic, 30) + '</span>'; }
+var DEV = {phone:"Телефон", tablet:"Таблет", desktop:"Компютър"};
+function modCard(mm, i){
+  if (mm.soon) return '<article class="mod soon sa-rise d' + (i%4) + '" data-edit-id="admin.dashboard.module.' + mm.id + '"><div class="vis">' + glyph(mm) + '<span class="cnt">Скоро</span></div><div class="body"><h3>' + esc(mm.n) + '</h3><p>' + esc(mm.what) + '</p><p class="who">За: <span>' + esc(mm.who) + '</span></p></div><p class="note">Дизайнът е в стъпка 5. Дотогава плочката показва какво ще има.</p></article>';
+  var n = screensN(mm);
+  return '<article class="mod sa-rise d' + (i%4) + '" data-edit-id="admin.dashboard.module.' + mm.id + '"><div class="vis">' + glyph(mm) + '<span class="cnt">' + A.plural(n, "екран", "екрана") + '</span><span class="dv">' + (mm.id === "watch" ? "Часовник" : DEV[mm.dev] || "") + '</span></div>' +
+    '<div class="body"><h3>' + esc(mm.n) + '</h3><p>' + esc(mm.what) + '</p><p class="who">За: <span>' + esc(mm.who) + '</span></p></div>' +
+    '<div class="act"><a class="pill pill-line open" href="preview.html#m=' + mm.id + '&p=' + mm.screens[0].k + '&d=' + (mm.dev || "phone") + '" aria-label="Отвори на живо: ' + esc(mm.n) + '"><span>Отвори на живо</span><span class="knob">' + ic("arrow-up-right",20) + '</span></a></div></article>'; }
+
+/* ---------- sections ---------- */
+var busy = (function(){ try{ var b = JSON.parse(localStorage.getItem("sk-busy") || "null"); return !!(b && b.on); }catch(e){ return false; } })();
+var lunchDay = (function(){ var d = SC.menu.lunch.date.split("-"); return A.fmtDate(new Date(+d[0], +d[1]-1, +d[2], 12)); })();
+var ev = SC.events()[0];
+var META = {
+  dashboard:"Тук сте", orders:"Примерни данни", reservations:"Примерни данни",
+  menu:SC.items.length + " ястия · " + A.plural(outs.length, "изчерпано", "изчерпани") + " днес", lunch:"Последно качено: " + lunchDay,
+  offers:A.plural(SC.offers().length, "оферта", "оферти") + " в сайта сега", events:ev ? esc(ev.n) + ", " + A.fmtDate(ev.date, true) : "Няма предстоящи", zones:SC.ZONES.length + " квартала · доставка до 21:00",
+  hall:SC.TABLES.length + " маси (условни за макета)", qr:SC.TABLES.length + " етикета за печат",
+  customers:"Примерни данни", staff:A.ACCOUNTS.length + " пробни акаунта", roles:A.DEFAULT_ROLES.length + " роли",
+  reports:"Основни отчети", audit:A.plural(A.data.get("audit", []).length, "запис", "записа"), finance:"За собственика",
+  notes:newNotes ? A.plural(newNotes, "нова бележка", "нови бележки") : "Няма нови", site:"Модулите на живо", settings:busy ? "Натоварено: около 55 мин" : "Доставка: около 35 мин"
+};
+function groups(){ return '<div class="groups" data-edit-id="admin.dashboard.sections">' + A.GROUPS.map(function(g, gi){ var items = g[1].filter(function(id){ return A.can(id) && id !== "dashboard"; }); if (!items.length) return "";
+  return '<section class="grp sa-rise d' + (gi%4) + '"><h3>' + esc(g[0]) + '</h3><div class="core">' + items.map(function(id){ var sc = A.SEC[id], meta = META[id] || "";
+    var end = sc.soon ? A.soonTag() : (id === "notes" && newNotes ? '<span class="sa-n">' + newNotes + '</span>' : '') + ic("caret-right",20);
+    var inner = '<span class="si">' + ic(sc.ic,22) + '</span><span><b>' + esc(sc.n) + '</b><small>' + (sc.soon ? esc(sc.desc) : meta) + '</small></span><span class="end">' + end + '</span>';
+    return sc.soon ? '<button class="srow soon" type="button" data-sa="soon" data-id="' + id + '">' + inner + '</button>' : '<a class="srow" href="' + sc.href + '">' + inner + '</a>'; }).join("") + '</div></section>'; }).join("") + '</div>'; }
+
+var html = (st === "offline" ? A.offline("Показваме последно зареденото. Числата за днес не се обновяват.") + '<div style="height:16px"></div>' : '') + mine +
+  (K.length || st === "loading" || st === "error" ? (mine ? '<div style="height:16px"></div>' : '') + kpis() : '');
+html += '<div class="sa-sh" id="modules"><h2>Модулите</h2><p>Всеки се отваря на живо в рамка на телефон, таблет или компютър.</p></div>' +
+  (st === "loading" ? A.skel(3, "Зареждаме модулите …") : '<div class="mods">' + mods.map(modCard).join("") + '</div>');
+var gh = groups();
+if (gh.indexOf("srow") > -1) html += '<div class="sa-sh"><h2>Разделите</h2><p>Каквото не е готово, е „Скоро“ с описание.</p></div>' + (st === "loading" ? A.skel(3) : gh);
+body.innerHTML = html;
+if (location.hash.indexOf("modules") > -1){ var t = document.getElementById("modules"); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>На живо | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.sa-app.immersive .sa-page{padding-bottom:0}
+.pv{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1000px){ .pv{grid-template-columns:320px minmax(0,1fr)} }
+/* tools */
+.pv-tools{display:flex; flex-wrap:wrap; gap:12px 10px; align-items:flex-end; padding:14px; border-radius:var(--r-shell); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.pv-tools .grp{display:grid; gap:6px; min-width:0}
+.pv-lb{font-size:14px; font-weight:700; color:var(--muted)}
+.pv-tools .input{min-height:48px}
+.pv-tools .seg{padding:4px; gap:4px; border-radius:999px}
+.pv-tools .seg button, .pv-sh .seg button{min-height:44px; border-radius:999px; font-size:15px; padding:0 6px; white-space:nowrap; min-width:0}
+.pv-steps{display:flex; gap:6px}
+.pv-steps .pill{flex:1; padding:0 12px; font-size:15px}
+.pv-acts{display:flex; flex-wrap:wrap; gap:6px}
+.pv-acts .pill{padding:0 14px; font-size:15px}
+.pv-hint{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:15px; color:var(--muted); line-height:1.4}
+.pv-hint .ic{color:var(--red); margin-top:1px}
+.pv-hint b{color:var(--ink)}
+@container page (min-width:1000px){
+  .pv-tools{flex-direction:column; flex-wrap:nowrap; align-items:stretch; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; gap:16px; padding:18px}
+  .pv-tools .seg{display:grid}
+}
+@container page (max-width:999px){ .pv-hint{display:none} .pv-tools .grp.scr{flex:1 1 260px} .pv-tools .grp.mod{flex:1 1 200px} }
+/* stage */
+.pv-stage{position:relative; min-height:360px; border-radius:var(--r-shell); overflow:hidden; display:grid; place-items:center;
+  background:radial-gradient(var(--line-strong) 1px, transparent 1.4px) 0 0 / 22px 22px, var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.pv-stage.z100{overflow:auto; place-items:start center; overscroll-behavior:contain}
+.pv-fit{position:relative; flex:none; margin:16px}
+.pv-dev{position:absolute; left:0; top:0; transform-origin:0 0; transition:transform var(--t-slow) var(--ease)}
+.pv-dev iframe{display:block; border:0; background:var(--bg)}
+.pv-dev.phone{padding:12px; border-radius:58px; background:var(--chip-dark); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg)}
+.pv-dev.phone iframe{border-radius:46px}
+.pv-dev.tablet{padding:18px; border-radius:42px; background:var(--chip-dark); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg)}
+.pv-dev.tablet iframe{border-radius:24px}
+.pv-dev.desktop{border-radius:16px; background:var(--surface); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg); overflow:hidden}
+.pv-chrome{height:44px; display:flex; align-items:center; gap:14px; padding:0 16px; background:var(--surface); border-bottom:1px solid var(--line)}
+.pv-chrome .dots{display:flex; gap:7px} .pv-chrome .dots i{width:12px; height:12px; border-radius:50%; background:var(--line-strong)}
+.pv-chrome .url{flex:1; max-width:560px; margin:0 auto; min-height:28px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pv-dev.bare{padding:0; border-radius:0; background:var(--bg); box-shadow:none}
+.pv-load{position:absolute; inset:0; display:grid; place-items:center; background:var(--bg); transition:opacity var(--t-slow) var(--ease); pointer-events:none}
+.pv-load.off{opacity:0}
+.pv-load span{display:inline-flex; align-items:center; gap:10px; font-weight:700; color:var(--muted); font-size:18px}
+.pv-load .spin{width:26px; height:26px; border-radius:50%; border:3px solid var(--line-strong); border-top-color:var(--red); animation:pvs .8s linear infinite}
+@keyframes pvs{to{transform:rotate(360deg)}}
+.pv-cap{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 14px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; pointer-events:none}
+.pv-nb{position:absolute; left:12px; right:12px; top:12px; z-index:2; display:flex; align-items:center; gap:10px; padding:8px 8px 8px 16px; border-radius:24px; background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:16px; line-height:1.35}
+.pv-nb .ic{color:var(--red); flex:none}
+.pv-nb .tx{flex:1; min-width:0}
+.pv-nb .pill{flex:none; min-height:44px; padding:0 14px; font-size:15px}
+.pv-nb.warn .ic{color:var(--warn)}
+/* phone: the device is the whole screen, a floating bar below */
+.pv-fbar{display:none}
+@container app (max-width:699px){
+  .sa-app.immersive .sa-top, .sa-app.immersive .sa-bnav{display:none}
+  .sa-app.immersive .sa-page{padding:0}
+  .pv{gap:0; margin-bottom:96px}
+  .pv-tools{display:none}
+  .pv-stage{border-radius:0; box-shadow:none; background:var(--bg); min-height:0}
+  .pv-fit{margin:0}
+  .pv-cap{display:none}
+  .pv-fbar{display:grid; position:absolute; z-index:30; left:8px; right:8px; bottom:10px; height:68px; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+  .pv-fbar a, .pv-fbar button{display:grid; justify-items:center; align-content:center; gap:2px; min-height:48px; border:0; background:transparent; border-radius:999px; font-size:14px; font-weight:700; color:var(--ink); text-decoration:none; cursor:pointer; padding:0}
+  .pv-fbar .ic{color:var(--muted)}
+  .pv-fbar [aria-pressed="true"]{background:var(--ember); color:var(--on-ember)}
+  .pv-fbar [aria-pressed="true"] .ic{color:var(--on-ember)}
+  .pv-nb{top:8px; left:8px; right:8px; flex-wrap:wrap}
+}
+.pv-list{display:grid; gap:4px; margin:6px 0 0}
+.pv-list button{display:flex; align-items:center; gap:12px; min-height:52px; padding:0 14px; border:0; border-radius:18px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; text-align:left; cursor:pointer}
+.pv-list button:hover{background:var(--surface-2)}
+.pv-list button[aria-current="true"]{background:var(--ink); color:var(--bg)}
+.pv-list button small{margin-left:auto; font-size:14px; color:var(--muted); font-weight:700}
+.pv-list button[aria-current="true"] small{color:var(--bg); opacity:.7}
+.pv-sh{display:grid; gap:16px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+window.A_PREVIEW = true;
+var ic = A.ic, esc = A.esc;
+A.liveHash = true;
+if (!A.me){ A.mount({}); return; }
+var H = A.hash;
+var NOTE = H.n ? A.notes.list().filter(function(x){ return x.id === H.n; })[0] : null;
+var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); });
+var mod = (NOTE && A.MOD[NOTE.module]) || A.MOD[H.m] || mods[0];
+if (mod && (mod.soon || !A.modCan(mod))) mod = null;
+var DEV = {phone:[390,844,"Телефон"], tablet:[820,1180,"Таблет"], desktop:[1440,900,"Компютър"]};
+var TIMES = [["now","Сега"],["08:30","08:30 · преди отваряне"],["12:30","12:30 · обед"],["16:30","16:30 · -30% обедно"],["21:30","21:30 · без доставка"],["23:30","23:30 · затворено"]];
+var THEMES = [["system","Авто"],["light","Светла"],["dark","Тъмна"]];
+var ROUTES = {home:"/", menu:"/menu/", category:"/menu/pitsi/", dish:"/menu/pitsi/…/", lunch:"/obedno-menu/", cart:"/kolichka/", tracking:"/porachka/1042/", office:"/obedna-porachka-za-ofisa/", reservation:"/rezervatsia/", events:"/sabitia/", event:"/sabitia/gratska-vecher/", celebration:"/praznik/", offers:"/oferti/", login:"/vhod/", profile:"/profil/", delivery:"/dostavka/", pickup:"/vzemi-ot-myasto/", bertha:"/furna-bertha/", about:"/za-nas/", gallery:"/galeria/", contacts:"/kontakti/", allergens:"/alergeni/", "404":"/404"};
+
+var st = {d:H.d && DEV[H.d] ? H.d : (mod ? mod.dev || "phone" : "phone"), land:H.o === "land" || (!H.o && mod && mod.land), t:H.t || "now", th:H.th || "system", z:H.z === "100" ? "100" : "fit", p:H.p || "", custom:null};
+if (NOTE){ var w = NOTE.viewport.w, h = NOTE.viewport.h; st.d = w < 700 ? "phone" : w < 1100 ? "tablet" : "desktop"; st.custom = [w, h]; st.land = w > h && st.d === "tablet"; }
+function scr(){ if (!mod) return null; var all = (mod.screens || []).concat(mod.states || []); return all.filter(function(x){ return x.k === st.p; })[0] || all[0]; }
+var cur = scr(); if (cur) st.p = cur.k;
+if (NOTE){ var fs = A.screenOf(NOTE.url); st.p = fs && fs.m === mod ? fs.s.k : ""; }
+
+var body = A.mount({section:mod ? (mod.sec || "site") : "site", title:"На живо", barTitle:mod ? mod.n + " на живо" : "На живо", crumb:"Модулите", head:false, wide:true, immersive:true, pencil:false, docTitle:(mod ? mod.n : "Модулите") + " на живо",
+  states:[["","Обичайно"]], protoExtra:'<p>Прегледът сменя часа и темата само в рамката: докато е отворен, пази своите настройки за клиентския сайт и после връща вашите.</p>'});
+if (!body) return;
+if (!mod){ body.innerHTML = '<div class="sa-card">' + A.empty({icon:"lock", title:"Няма модул, който ролята да вижда на живо.", text:"Помолете главния админ за права.", action:'<a class="pill pill-ink" href="dashboard.html">Към таблото</a>'}) + '</div>'; return; }
+
+/* ---------- markup ---------- */
+function optList(){ return '<optgroup label="Екрани">' + mod.screens.map(function(x){ return '<option value="' + x.k + '"' + (x.k === st.p ? ' selected' : '') + '>' + esc(x.n) + '</option>'; }).join("") + '</optgroup>' +
+  (mod.states ? '<optgroup label="Състояния">' + mod.states.map(function(x){ return '<option value="' + x.k + '"' + (x.k === st.p ? ' selected' : '') + '>' + esc(x.n) + '</option>'; }).join("") + '</optgroup>' : '') +
+  (st.p === "" ? '<option value="" selected>Друг екран</option>' : ''); }
+function devSeg(){ return '<div class="seg" role="group" aria-label="Устройство" style="grid-template-columns:repeat(3,minmax(0,1fr))">' + Object.keys(DEV).map(function(k){ return '<button type="button" data-dev="' + k + '" aria-pressed="' + (st.d === k) + '">' + DEV[k][2] + '</button>'; }).join("") + '</div>'; }
+function themeSeg(){ return '<div class="seg" role="group" aria-label="Тема в рамката" style="grid-template-columns:repeat(3,minmax(0,1fr))">' + THEMES.map(function(t){ return '<button type="button" data-th="' + t[0] + '" aria-pressed="' + (st.th === t[0]) + '">' + t[1] + '</button>'; }).join("") + '</div>'; }
+function timeSel(id){ return '<select class="input" id="' + id + '" data-time>' + TIMES.map(function(t){ return '<option value="' + t[0] + '"' + (st.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join("") + '</select>'; }
+function zoomSeg(){ return '<div class="seg" role="group" aria-label="Мащаб" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" data-z="fit" aria-pressed="' + (st.z === "fit") + '">Побери <span class="num" data-pct></span></button><button type="button" data-z="100" aria-pressed="' + (st.z === "100") + '">100%</button></div>'; }
+body.innerHTML = '<div class="pv" data-edit-id="admin.preview">' +
+  '<div class="pv-tools" data-tools>' +
+    '<div class="grp mod"><label class="pv-lb" for="pv-m">Модул</label><select class="input" id="pv-m" data-mod>' + mods.map(function(m){ return '<option value="' + m.id + '"' + (m === mod ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join("") + '</select></div>' +
+    '<div class="grp scr"><label class="pv-lb" for="pv-s">Екран</label><select class="input" id="pv-s" data-scr>' + optList() + '</select>' +
+      '<div class="pv-steps"><button class="pill pill-soft" type="button" data-step="-1">' + ic("caret-left",18) + 'Предишен</button><button class="pill pill-soft" type="button" data-step="1">Следващ' + ic("caret-right",18) + '</button></div></div>' +
+    '<div class="grp"><span class="pv-lb" id="pv-dl">Устройство</span>' + devSeg() + (st.d === "tablet" ? '<button class="pill pill-soft" type="button" data-rot>' + ic("arrow-clockwise",18) + (st.land ? 'Вертикално' : 'Хоризонтално') + '</button>' : '') + '</div>' +
+    (mod.time ? '<div class="grp"><label class="pv-lb" for="pv-t">Час на деня</label>' + timeSel("pv-t") + '</div>' : '') +
+    '<div class="grp"><span class="pv-lb">Тема в рамката</span>' + themeSeg() + '</div>' +
+    '<div class="grp"><span class="pv-lb">Мащаб</span>' + zoomSeg() + '</div>' +
+    '<div class="grp"><span class="pv-lb">Рамката</span><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" data-newtab target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Отвори в нов раздел</a></div></div>' +
+    '<p class="pv-hint">' + ic("pencil-simple",20) + '<span><b>Моливът работи и в рамката.</b> Натиснете „Молив“ и посочете елемент от екрана вдясно.</span></p>' +
+  '</div>' +
+  '<div class="pv-stage" data-stage><div class="pv-fit" data-fit><div class="pv-dev" data-dev-box></div></div><span class="pv-cap" data-cap></span></div>' +
+'</div>';
+var tools = body.querySelector("[data-tools]"), stage = body.querySelector("[data-stage]"), fit = body.querySelector("[data-fit]"), box = body.querySelector("[data-dev-box]"), cap = body.querySelector("[data-cap]");
+/* phone floating bar */
+A.col.insertAdjacentHTML("beforeend", '<nav class="pv-fbar" aria-label="Прегледът"><a href="dashboard.html#modules">' + ic("caret-left",24) + 'Табло</a><button type="button" data-fb="screen">' + ic("list",24) + 'Екран</button><button type="button" data-fb="device">' + ic("sliders-horizontal",24) + 'Устройство</button><button type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",24) + 'Молив</button></nav>');
+var fbar = A.col.querySelector(".pv-fbar");
+
+var frame = null, loadEl = null, phoneBare = false, showNote = !!NOTE;
+function isPhoneUI(){ return A.app.clientWidth < 700; }
+function dims(){ var d = st.custom ? st.custom.slice() : DEV[st.d].slice(0, 2); if (!st.custom && st.d === "tablet" && st.land) d = [d[1], d[0]]; return d; }
+function frameSrc(){ if (NOTE && (showNote || !st.p)) return ".." + NOTE.url; var x = scr(); return mod.dir + (x ? x.f : ""); }
+function addr(){ var x = scr(); if (mod.id === "site" && x && ROUTES[x.k]) return "siracusa · " + ROUTES[x.k]; if (mod.id === "admin") return "siracusa · /admin/" + (x ? x.k.replace("dashboard", "") + (x.k === "dashboard" ? "" : "/") : ""); try{ return frame.contentWindow.location.pathname.replace(/^.*?\/(pages[^/]*)\//, "$1/"); }catch(e){ return ""; } }
+
+/* sc-prefs: the client prototype reads time and theme at load. The preview arms its own prefs right before each load of the frame
+   and restores the viewer's own prefs as soon as the frame has read them. */
+var ORIG = null; try{ ORIG = localStorage.getItem("sc-prefs"); }catch(e){}
+function arm(){ var p = {}; try{ p = JSON.parse(ORIG || "{}") || {}; }catch(e){} p.view = "desktop"; p.theme = st.th; p.time = mod.time ? st.t : (p.time || "now"); try{ localStorage.setItem("sc-prefs", JSON.stringify(p)); }catch(e){} }
+function disarm(){ try{ if (ORIG == null) localStorage.removeItem("sc-prefs"); else localStorage.setItem("sc-prefs", ORIG); }catch(e){} }
+window.addEventListener("pagehide", disarm);
+
+function build(){
+  var d = dims(); phoneBare = isPhoneUI() && st.d === "phone" && !st.custom;
+  box.className = "pv-dev " + (phoneBare ? "bare" : st.d);
+  box.innerHTML = (st.d === "desktop" && !phoneBare ? '<div class="pv-chrome" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="url" data-url></span></div>' : '') +
+    '<div style="position:relative"><iframe title="' + esc(mod.n) + ': ' + esc(scr() ? scr().n : "екран") + '" data-frame></iframe><div class="pv-load"><span><i class="spin"></i>Зареждаме екрана …</span></div></div>';
+  frame = box.querySelector("[data-frame]"); loadEl = box.querySelector(".pv-load");
+  layout();
+  frame.addEventListener("load", onLoad);
+  arm(); frame.src = frameSrc(); }
+function layout(){
+  var sh = A.scroller.clientHeight, top = stage.getBoundingClientRect().top - A.scroller.getBoundingClientRect().top + A.scroller.scrollTop;
+  var phone = isPhoneUI(), bottomGap = phone ? 88 : 16;
+  var h = Math.max(phone ? 300 : 420, sh - top - bottomGap); stage.style.height = h + "px";
+  if (!phone && A.app.clientWidth >= 1100){ tools.style.maxHeight = h + "px"; } else tools.style.maxHeight = "";
+  var d = dims(), w = d[0], hh = d[1];
+  if (phoneBare){ w = stage.clientWidth; hh = h; }
+  frame.style.width = w + "px"; frame.style.height = hh + "px";
+  var chrome = st.d === "desktop" && !phoneBare ? 44 : 0, pad = phoneBare ? 0 : st.d === "phone" ? 12 : st.d === "tablet" ? 18 : 0;
+  var ow = w + pad*2, oh = hh + pad*2 + chrome, margin = phone ? (phoneBare ? 0 : 12) : 32;
+  var sc = st.z === "100" || phoneBare ? 1 : Math.min(1, (stage.clientWidth - margin) / ow, (h - margin) / oh);
+  box.style.transform = sc === 1 ? "none" : "scale(" + sc + ")";
+  fit.style.width = Math.floor(ow * sc) + "px"; fit.style.height = Math.floor(oh * sc) + "px"; fit.style.margin = phoneBare ? "0" : (phone ? "6px" : "16px");
+  stage.classList.toggle("z100", st.z === "100" && !phoneBare);
+  var pct = Math.round(sc * 100) + "%"; document.querySelectorAll("[data-pct]").forEach(function(el){ el.textContent = "· " + pct; });
+  cap.textContent = w + " × " + hh + " · " + pct;
+  st.vp = [w, hh]; }
+
+function onLoad(){ disarm(); var win = frame.contentWindow, doc;
+  try{ doc = frame.contentDocument; }catch(e){ return; }
+  try{ win.addEventListener("pagehide", function(){ arm(); if (loadEl) loadEl.classList.remove("off"); }); }catch(e){}
+  try{ doc.head.insertAdjacentHTML("beforeend", '<style>.pv-bar{display:none!important}</style>'); doc.documentElement.classList.remove("pv-phone");
+    if (st.th !== "system") doc.documentElement.setAttribute("data-theme", st.th); }catch(e){}
+  loadEl && loadEl.classList.add("off");
+  var u = box.querySelector("[data-url]"); if (u) u.textContent = addr();
+  /* sync the screen picker with where the frame is now */
+  try{ var path = win.location.pathname, i = path.indexOf("/pages"), rel = (i > -1 ? path.slice(i) : path) + win.location.hash, f = A.screenOf(rel);
+    if (f && f.m === mod){ st.p = f.s.k; } else if (!(NOTE && st.p === "")) st.p = "";
+    var sel = tools.querySelector("[data-scr]"); sel.innerHTML = optList(); saveHash(); }catch(e){}
+  var nt = tools.querySelector("[data-newtab]"); try{ nt.href = frame.contentWindow.location.href; }catch(e){}
+  if (pen) pen.retarget(win);
+  if (NOTE && showNote){ showNote = false; setTimeout(function(){ var ok = SAPen.show(win, NOTE.selector, NOTE.text); noteBanner(ok); }, 350); } }
+
+/* the note this preview was opened for */
+function noteBanner(ok){ var old = stage.querySelector(".pv-nb"); old && old.remove();
+  stage.insertAdjacentHTML("beforeend", '<div class="pv-nb' + (ok ? '' : ' warn') + '" role="status">' + ic(ok ? "pencil-simple" : "warning", 22) + '<span class="tx">' + (ok ? '<b>Бележка:</b> ' + esc(NOTE.text) : '<b>Елементът го няма на страницата.</b> Може да е променен или да е в друго състояние. Бележката: „' + esc(NOTE.text) + '“') + '</span><a class="pill pill-soft" href="notes.html">Бележките</a><button class="pill pill-line" type="button" data-hide-note>Скрий</button></div>'); }
+stage.addEventListener("click", function(e){ if (e.target.closest("[data-hide-note]")){ stage.querySelector(".pv-nb").remove(); try{ SAPen.hide(frame.contentWindow); }catch(x){} } });
+
+function saveHash(){ var h = {m:mod.id, p:st.p, d:st.d}; if (st.d === "tablet") h.o = st.land ? "land" : "port"; if (mod.time && st.t !== "now") h.t = st.t; if (st.th !== "system") h.th = st.th; if (st.z === "100") h.z = "100"; if (NOTE && st.custom) h.n = NOTE.id; A.setHash(h); }
+function go(p){ st.p = p; NOTE = NOTE && st.custom ? NOTE : null; showNote = false; var old = stage.querySelector(".pv-nb"); old && old.remove(); saveHash(); loadEl.classList.remove("off"); arm(); frame.src = frameSrc(); var x = scr(); frame.title = mod.n + ": " + (x ? x.n : "екран"); }
+function rebuild(){ saveHash(); build(); }
+
+/* ---------- pencil (targets the frame) ---------- */
+var pen = SAPen.mount({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
+  url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } },
+  author:A.who, notesHref:"notes.html", fabPhone:false,
+  onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:A.syncPen});
+A.pen = pen;
+
+/* ---------- controls ---------- */
+function setDev(k){ st.d = k; st.custom = null; if (k === "tablet" && H.o == null) st.land = !!mod.land; rebuildTools(); rebuild(); }
+function rebuildTools(){ var g = tools.querySelector("[data-dev]").closest(".grp"); g.innerHTML = '<span class="pv-lb">Устройство</span>' + devSeg() + (st.d === "tablet" ? '<button class="pill pill-soft" type="button" data-rot>' + ic("arrow-clockwise",18) + (st.land ? 'Вертикално' : 'Хоризонтално') + '</button>' : ''); }
+function setTheme(t){ st.th = t; document.querySelectorAll("[data-th]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.th === t)); }); saveHash(); loadEl.classList.remove("off"); arm(); try{ frame.contentWindow.location.reload(); }catch(e){ frame.src = frameSrc(); } }
+function setTime(t){ st.t = t; document.querySelectorAll("[data-time]").forEach(function(s){ s.value = t; }); saveHash(); loadEl.classList.remove("off"); arm(); try{ frame.contentWindow.location.reload(); }catch(e){ frame.src = frameSrc(); } }
+function step(n){ var all = mod.screens.concat(mod.states || []), i = Math.max(0, all.map(function(x){ return x.k; }).indexOf(st.p)); go(all[(i + n + all.length) % all.length].k); }
+document.addEventListener("click", function(e){ var t = e.target.closest("[data-dev],[data-th],[data-z],[data-reload],[data-rot],[data-step],[data-fb],[data-pick]"); if (!t) return;
+  if (t.dataset.dev){ setDev(t.dataset.dev); document.querySelectorAll("[data-dev]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.dev === st.d)); }); return; }
+  if (t.dataset.th){ setTheme(t.dataset.th); return; }
+  if (t.dataset.z){ st.z = t.dataset.z; document.querySelectorAll("[data-z]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.z === st.z)); }); saveHash(); layout(); return; }
+  if (t.hasAttribute("data-reload")){ loadEl.classList.remove("off"); arm(); try{ frame.contentWindow.location.reload(); }catch(x){ frame.src = frameSrc(); } return; }
+  if (t.hasAttribute("data-rot")){ st.land = !st.land; H.o = st.land ? "land" : "port"; rebuildTools(); rebuild(); return; }
+  if (t.dataset.step){ step(+t.dataset.step); return; }
+  if (t.dataset.pick){ go(t.dataset.pick); var w = t.closest(".sheetwrap"); w && w.querySelector("[data-close]").click(); return; }
+  if (t.dataset.fb === "screen"){ var s = A.sheet({title:mod.n + ": екран", html:'<div class="pv-sh"><div class="field"><label for="pv-m2">Модул</label><select class="input" id="pv-m2" data-mod>' + mods.map(function(m){ return '<option value="' + m.id + '"' + (m === mod ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join("") + '</select></div>' +
+      '<div><span class="label">Екрани</span><div class="pv-list">' + mod.screens.map(li).join("") + '</div></div>' + (mod.states ? '<div><span class="label">Състояния</span><div class="pv-list">' + mod.states.map(li).join("") + '</div></div>' : '') + '</div>'}); return; }
+  if (t.dataset.fb === "device"){ A.sheet({title:"Устройство и изглед", html:'<div class="pv-sh"><div class="field"><span class="label">Устройство</span>' + devSeg() + '</div>' + (mod.time ? '<div class="field"><label for="pv-t2">Час на деня</label>' + timeSel("pv-t2") + '</div>' : '') +
+      '<div class="field"><span class="label">Тема в рамката</span>' + themeSeg() + '</div><div class="field"><span class="label">Мащаб</span>' + zoomSeg() + '</div><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" href="' + esc(tools.querySelector("[data-newtab]").href || frameSrc()) + '" target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Нов раздел</a></div></div>'}); layout(); return; }
+});
+function li(x){ return '<button type="button" data-pick="' + x.k + '"' + (x.k === st.p ? ' aria-current="true"' : '') + '>' + esc(x.n) + '<small>' + esc(x.f.split("#")[0]) + '</small></button>'; }
+document.addEventListener("change", function(e){ var t = e.target;
+  if (t.matches("[data-scr]")){ go(t.value); return; }
+  if (t.matches("[data-time]")){ setTime(t.value); return; }
+  if (t.matches("[data-mod]")){ var m = A.MOD[t.value]; location.hash = "m=" + m.id + "&p=" + m.screens[0].k + "&d=" + (m.dev || "phone"); location.reload(); } });
+var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ var was = phoneBare; if ((isPhoneUI() && st.d === "phone" && !st.custom) !== was) build(); else layout(); }, 120); });
+build();
+})();
+</script>
+</body>
+</html>

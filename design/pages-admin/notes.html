@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Бележки | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.nt-how{display:grid; gap:14px; padding:20px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.nt-how h2{margin:0; font-size:20px; letter-spacing:-.02em}
+.nt-how ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s}
+.nt-how li{display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start; counter-increment:s; color:var(--on-chip-dark)}
+.nt-how li::before{content:counter(s); width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:15px}
+.nt-how code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; padding:2px 8px; border-radius:8px; background:color-mix(in srgb, var(--on-chip-dark) 12%, transparent); overflow-wrap:anywhere}
+@container page (min-width:900px){ .nt-how{grid-template-columns:240px minmax(0,1fr); align-items:start; padding:24px 28px} .nt-how ol{grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px} .nt-how li{grid-template-columns:1fr; gap:10px} }
+.nt-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:28px 0 16px}
+.nt-bar .sa-tabs{flex:1 1 auto}
+.nt-bar .flt{display:flex; gap:10px; flex:1 1 420px}
+.nt-bar .flt > *{flex:1 1 180px; min-width:0}
+@container page (min-width:1100px){ .nt-bar .sa-tabs{flex:0 0 auto} }
+.nt-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .nt-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.nt{display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); transition:transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease)}
+.nt.gone{transform:scale(.98); opacity:0}
+.nt .top{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.nt .when{margin-left:auto; font-size:15px; color:var(--muted); font-weight:600; white-space:nowrap}
+.nt h3{margin:0; font-size:19px; line-height:1.35; letter-spacing:-.015em; font-weight:800; overflow-wrap:anywhere}
+.nt .where{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:15px; color:var(--muted); font-weight:600}
+.nt .where b{color:var(--ink); font-weight:700}
+.nt .sel{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; color:var(--ink); background:var(--surface-2); padding:6px 10px; border-radius:10px; overflow-wrap:anywhere; line-height:1.4}
+.nt blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--red); font-size:16px; overflow-wrap:anywhere}
+.nt blockquote small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.nt .foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--line)}
+.nt .foot .by{flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:var(--muted); font-weight:600}
+.nt .foot .by span{display:inline-flex; align-items:center; gap:6px}
+.nt .acts{display:flex; flex-wrap:wrap; gap:8px; flex:1}
+.nt .acts .pill{padding:0 16px}
+.nt .del{margin-left:auto}
+.nt .del .ic{color:var(--danger)}
+.st-new{background:var(--red); color:var(--on-red)}
+.st-doing{background:var(--ember); color:var(--on-ember)}
+.st-done{color:var(--ok); background:var(--surface-2)}
+@container page (max-width:520px){ .nt .acts .pill{flex:1 1 auto} .nt .del{margin-left:0} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+A.liveHash = true;
+var body = A.mount({section:"notes", title:"Бележки", eyebrow:"Работа по сайта",
+  sub:"Моливът записва какво да се промени, на кой екран и върху кой елемент. Следващата сесия на Claude ги чете и ги изпълнява.",
+  actions:'<button class="pill pill-line" type="button" data-dl>' + ic("export",20) + 'Изтегли NOTES.json</button><button class="pill pill-ink" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",20) + 'Молив</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Празно"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+var STS = [["new","Нови","Нова"],["doing","В работа","В работа"],["done","Готови","Готово"]];
+var f = {s:A.hash.s && /^(new|doing|done)$/.test(A.hash.s) ? A.hash.s : "new", m:A.hash.m || "", q:""};
+function all(){ return st === "empty" ? [] : A.notes.list(); }
+function cnt(s){ return all().filter(function(n){ return n.status === s; }).length; }
+
+body.innerHTML =
+  '<section class="nt-how sa-rise" data-edit-id="admin.notes.how"><h2>Как стигат до Claude</h2><ol>' +
+    '<li><span>Натиснете „Молив“ на който и да е екран, в админа или в прегледа на живо, и посочете елемент.</span></li>' +
+    '<li><span>Напишете какво да се промени. Записват се модулът, адресът, елементът и размерът на екрана.</span></li>' +
+    '<li><span>Следващата сесия чете <code>GET /api/admin/notes?status=new</code> или <code>docs/NOTES.json</code> и започва от „Нови“.</span></li></ol></section>' +
+  (st === "offline" ? '<div style="height:16px"></div>' + A.offline("Показваме последно заредените бележки. Промените се пазят тук и се изпращат, щом връзката се върне.") : '') +
+  '<div class="nt-bar"><div class="sa-tabs" role="tablist" aria-label="Статус" data-tabs></div>' +
+    '<div class="flt"><div><label class="vh" for="nt-m">Модул</label><select class="input" id="nt-m" data-mod></select></div>' +
+    '<div class="sa-field-s"><label class="vh" for="nt-q">Търси в бележките</label>' + ic("magnifying-glass",20) + '<input class="input" id="nt-q" type="search" placeholder="Търси в бележките" autocomplete="off"></div></div></div>' +
+  '<div data-list aria-live="polite"></div>';
+var tabs = body.querySelector("[data-tabs]"), list = body.querySelector("[data-list]"), msel = body.querySelector("[data-mod]"), q = body.querySelector("#nt-q");
+
+function drawTabs(){ tabs.innerHTML = STS.map(function(s){ return '<button type="button" role="tab" data-tab="' + s[0] + '" aria-selected="' + (f.s === s[0]) + '">' + s[1] + '<span class="c">' + cnt(s[0]) + '</span></button>'; }).join(""); }
+function drawMods(){ var have = {}; all().forEach(function(n){ have[n.module] = (have[n.module] || 0) + 1; });
+  msel.innerHTML = '<option value="">Всички модули</option>' + Object.keys(A.MODULE_NAMES).filter(function(k){ return have[k]; }).map(function(k){ return '<option value="' + k + '"' + (f.m === k ? ' selected' : '') + '>' + esc(A.MODULE_NAMES[k]) + ' (' + have[k] + ')</option>'; }).join(""); }
+function pageName(n){ var s = A.screenOf(n.url); return s ? s.s.n : n.url.split("/").pop().split("#")[0]; }
+function card(n){ var s = STS.filter(function(x){ return x[0] === n.status; })[0];
+  var acts = n.status === "new" ? '<button class="pill pill-ink" type="button" data-act="doing">' + ic("play",18) + 'Започни</button>'
+    : n.status === "doing" ? '<button class="pill pill-ink" type="button" data-act="done">' + ic("check",18) + 'Готово</button><button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>'
+    : '<button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>';
+  return '<article class="nt" data-id="' + n.id + '" data-edit-id="admin.notes.card">' +
+    '<div class="top"><span class="sa-tag st-' + n.status + '">' + s[2] + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span><span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
+    '<h3>' + esc(n.text) + '</h3>' +
+    '<div class="where"><b>' + esc(A.MODULE_NAMES[n.module] || n.module) + ' · ' + esc(pageName(n)) + '</b><span>' + esc(n.url) + '</span></div>' +
+    '<div class="sel" title="CSS селектор">' + esc(n.selector || "без селектор") + (n.editId ? '<br>data-edit-id: ' + esc(n.editId) : '') + '</div>' +
+    (n.elementText ? '<blockquote><small>Текстът на елемента</small>„' + esc(n.elementText.length > 220 ? n.elementText.slice(0, 218) + " …" : n.elementText) + '“</blockquote>' : '') +
+    '<div class="foot"><div class="by"><span>' + ic("squares-four",18) + '<span class="num">' + n.viewport.w + ' × ' + n.viewport.h + '</span></span><span>' + ic("user",18) + esc(n.author) + '</span>' + (n.updatedAt !== n.createdAt ? '<span>' + ic("clock",18) + 'Променена ' + esc(A.ago(n.updatedAt)) + '</span>' : '') + '</div>' +
+    '<div class="acts">' + acts + '<a class="pill pill-line" href="preview.html#n=' + n.id + '">' + ic("eye",18) + 'Покажи на страницата</a></div>' +
+    '<button class="pill pill-line del" type="button" data-act="del">' + ic("trash",18) + 'Изтрий</button></div></article>'; }
+function draw(){ drawTabs();
+  if (st === "loading"){ list.innerHTML = A.skel(3, "Зареждаме бележките …"); return; }
+  if (st === "error"){ list.innerHTML = A.error("Не успяхме да заредим бележките. Моливът записва и без това."); return; }
+  var qq = A.norm(f.q), l = all().filter(function(n){ return n.status === f.s && (!f.m || n.module === f.m) && (!qq || A.norm(n.text + " " + n.elementText + " " + n.selector + " " + n.url + " " + pageName(n)).indexOf(qq) > -1); });
+  if (!l.length){ var e = f.q ? {icon:"magnifying-glass", title:"Няма бележки с „" + f.q + "“.", text:"Опитайте с друга дума или изберете всички модули."}
+      : f.s === "new" ? {icon:"pencil-simple", title:"Няма нови бележки. Включете молива и посочете елемент.", text:"Бележките от всички екрани и от прегледа на живо идват тук.", action:'<button class="pill pill-red pill-lg" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",22) + 'Включи молива</button>'}
+      : f.s === "doing" ? {icon:"hourglass", title:"Няма бележки в работа.", text:"„Започни“ на нова бележка я премества тук."}
+      : {icon:"check-circle", title:"Няма готови бележки.", text:"Готовите остават тук, за да се види какво е направено."};
+    list.innerHTML = '<div class="sa-card">' + A.empty(e) + '</div>'; return; }
+  list.innerHTML = '<div class="nt-list">' + l.map(card).join("") + '</div>'; }
+function refresh(){ drawMods(); draw(); A.setBadge("notes", A.notes.count("new")); A.setHash({s:f.s === "new" ? "" : f.s, m:f.m, st:st}); }
+
+tabs.addEventListener("click", function(e){ var b = e.target.closest("[data-tab]"); if (!b) return; f.s = b.dataset.tab; refresh(); var nb = tabs.querySelector('[data-tab="' + f.s + '"]'); nb && nb.focus(); });
+tabs.addEventListener("keydown", function(e){ if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; var i = STS.map(function(s){ return s[0]; }).indexOf(f.s); f.s = STS[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3][0]; refresh(); tabs.querySelector('[data-tab="' + f.s + '"]').focus(); });
+msel.addEventListener("change", function(){ f.m = msel.value; refresh(); });
+q.addEventListener("input", function(){ f.q = q.value.trim(); draw(); });
+var WORD = {doing:"Бележката е в работа", done:"Бележката е готова", new:"Бележката е върната в нови"};
+list.addEventListener("click", function(e){ var b = e.target.closest("[data-act]"); if (!b) return; var c = b.closest("[data-id]"), id = c.dataset.id, a = b.dataset.act;
+  if (st === "offline"){ A.toast("Няма връзка. Промяната ще се изпрати, щом връзката се върне."); }
+  if (a === "del"){ c.classList.add("gone"); setTimeout(function(){ var r = A.notes.remove(id); if (!r) return; A.audit("note.delete", "Изтрита бележка: " + r.note.text.slice(0, 80), id); refresh();
+      A.toast("Бележката е изтрита", {undo:function(){ A.notes.restore(r); A.audit("note.restore", "Върната бележка: " + r.note.text.slice(0, 80), id); refresh(); }}); }, 180); return; }
+  c.classList.add("gone"); setTimeout(function(){ var was = A.notes.status(id, a); A.audit("note.status", WORD[a] + ": " + (A.notes.list().filter(function(n){ return n.id === id; })[0] || {}).text, id); refresh();
+    A.toast(WORD[a], {undo:function(){ A.notes.status(id, was); refresh(); }}); }, 180); });
+body.closest("main").addEventListener("click", function(e){ if (!e.target.closest("[data-dl]")) return;
+  var data = A.notes.list(); A.download("NOTES.json", JSON.stringify(data, null, 2)); A.toast("Изтеглихме NOTES.json · " + A.plural(data.length, "бележка", "бележки")); });
+/* notes written by the pencil on this page show up at once */
+if (A.pen){ var save0 = null; }
+window.addEventListener("storage", function(e){ if (e.key === "sa-notes") refresh(); });
+setInterval(function(){ var n = A.notes.list().length; if (n !== refresh.n){ refresh.n = n; drawMods(); draw(); A.setBadge("notes", A.notes.count("new")); } }, 1000); refresh.n = A.notes.list().length;
+refresh();
+})();
+</script>
+</body>
+</html>

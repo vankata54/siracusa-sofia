@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Вход | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.lg{position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; background:var(--bg); container-type:inline-size; container-name:app}
+.lg-in{min-height:100%; display:grid; grid-template-columns:minmax(0,1fr)}
+.lg-art{display:none}
+.lg-main{display:grid; align-content:center; justify-items:center; padding:28px 16px 40px}
+.lg-box{width:100%; max-width:440px}
+.lg-brand{display:flex; align-items:center; gap:10px; margin:0 0 28px}
+.lg-brand .word{font-size:26px}
+.lg h1{margin:0; font-size:34px; line-height:1.05; letter-spacing:-.045em; font-weight:800}
+.lg .lead{margin:10px 0 24px; font-size:17px}
+.lg-form{display:grid; gap:16px}
+.pw{position:relative}
+.pw .input{padding-right:116px}
+.pw .show{position:absolute; right:4px; top:2px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+.pw .show:hover{background:var(--surface-2)}
+.lg-err{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:18px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger); color:var(--ink); font-weight:600; outline:none}
+.lg-err .ic{color:var(--danger); margin-top:1px}
+.lg-err b{display:block}
+.lg-err .cd{font-variant-numeric:tabular-nums; font-weight:800}
+.lg-forgot{margin:4px 0 0; display:flex; gap:10px; align-items:flex-start; color:var(--muted); font-size:16px}
+.lg-forgot .ic{margin-top:2px}
+.lg-off{margin:0 0 20px}
+.lg-in-as{margin:0 0 20px}
+.lg .sa-proto{margin-top:40px}
+/* desktop: editorial split, the dishes of the real menu on plates */
+@container app (min-width:960px){
+  .lg-in{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}
+  .lg-art{display:grid; position:relative; margin:16px 0 16px 16px; border-radius:36px; background:var(--chip-dark); color:var(--on-chip-dark); overflow:hidden; padding:48px; align-content:space-between; isolation:isolate}
+  .lg-art .word{font-size:30px; color:var(--on-chip-dark)}
+  .lg-art .tagl{display:inline-flex; align-items:center; gap:8px; margin-top:16px; font-size:15px; font-weight:700; color:var(--on-chip-dark); opacity:.85}
+  .lg-art .tagl i{width:8px; height:8px; border-radius:50%; background:var(--ember)}
+  .lg-art h2{margin:0; font-size:52px; line-height:1.02; letter-spacing:-.05em; font-weight:800; max-width:11ch; text-wrap:balance}
+  .lg-art p{margin:16px 0 0; font-size:18px; max-width:38ch; color:var(--on-chip-dark); opacity:.8}
+  .plates{position:absolute; right:-60px; top:50%; width:460px; height:460px; transform:translateY(-58%); z-index:-1; pointer-events:none}
+  .plates .pic{position:absolute; border-radius:50%; box-shadow:var(--shadow-lg)}
+  .plates .p1{width:300px; height:300px; right:40px; top:20px; animation:fl1 9s var(--ease) infinite alternate}
+  .plates .p2{width:190px; height:190px; right:250px; top:250px; animation:fl2 11s var(--ease) infinite alternate}
+  .plates .p3{width:150px; height:150px; right:0; top:300px; animation:fl1 13s var(--ease) infinite alternate-reverse}
+  .lg-main{padding:48px}
+  .lg h1{font-size:44px}
+}
+@keyframes fl1{from{transform:translateY(0) rotate(0)} to{transform:translateY(-12px) rotate(6deg)}}
+@keyframes fl2{from{transform:translateY(0) rotate(0)} to{transform:translateY(10px) rotate(-8deg)}}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+var LOCK_MIN = 15, MAX = 10;
+var L = A.data.get("login", {fails:0, until:0});
+if (st === "locked" && L.until < Date.now()){ L = {fails:MAX, until:Date.now() + LOCK_MIN*60000}; A.data.set("login", L); }
+if (st === "" && L.until && L.until < Date.now()){ L = {fails:0, until:0}; A.data.set("login", L); }
+var offline = st === "offline" || (navigator.onLine === false);
+var next = A.hash.next && /^[a-z-]+\.html/.test(A.hash.next) ? A.hash.next : "dashboard.html";
+document.title = "Вход | Siracusa · Админ";
+
+var d = document.createElement("div"); d.className = "lg";
+d.innerHTML = '<div class="lg-in">' +
+  '<aside class="lg-art" aria-hidden="true"><div><span class="word">Siracusa</span><div class="tagl"><i></i>Админ панел</div></div>' +
+    '<div><h2>Ресторантът на едно място.</h2><p>Менюто, поръчките, залата и сайтът. Всяка роля вижда своето.</p></div>' +
+    '<div class="plates">' + SC.pic("pitsa-margarita", "p1") + SC.pic("kebapcheta", "p2") + SC.pic("shopska-salata", "p3") + '</div></aside>' +
+  '<div class="lg-main"><div class="lg-box">' +
+    '<div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>' +
+    (offline ? '<div class="lg-off">' + A.banner({tone:"warn", icon:"warning-circle", title:"Няма връзка с интернет", text:"Проверете връзката и опитайте пак.", action:'<button class="pill pill-line" type="button" data-sa="retry">' + ic("arrow-clockwise",20) + 'Опитай пак</button>'}) + '</div>' : '') +
+    (A.me && st !== "locked" && st !== "error" ? '<div class="lg-in-as">' + A.banner({tone:"ok", icon:"check-circle", title:"Вече сте влезли като " + A.me.name, text:esc(A.roleName(A.me.role)) + '.', action:'<a class="pill pill-ink" href="dashboard.html">Към таблото</a>'}) + '</div>' : '') +
+    '<h1 data-edit-id="admin.login.title">Вход</h1><p class="lead muted">За собственика, управителя, персонала и агенцията.</p>' +
+    '<form class="lg-form" novalidate data-edit-id="admin.login.form">' +
+      '<div class="field"><label for="u">Потребител</label><input class="input" id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
+      '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" name="password" type="password" autocomplete="current-password" required><button class="show" type="button" data-show aria-controls="p" aria-pressed="false">' + ic("eye",20) + '<span>Покажи</span></button></div></div>' +
+      '<div data-err tabindex="-1" hidden></div>' +
+      '<button class="pill pill-red pill-lg pill-block" type="submit" data-go>' + ic("sign-in",22) + 'Влез</button>' +
+      '<p class="lg-forgot">' + ic("phone",20) + '<span>Забравена парола: обадете се на главния админ.</span></p>' +
+    '</form>' +
+    '<section class="sa-proto" aria-label="Само в прототипа"><h2>' + ic("sliders-horizontal",20) + 'Само в прототипа</h2>' +
+      '<p>Пробни акаунти: <code>admin</code>, <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code>, <code>marketing</code>, всички с парола <code>' + A.PASSWORD + '</code>. Истинските пароли са в <code>.env</code>, хеширани в базата и не са в git; дават се в чата.</p>' +
+      '<p>Влез направо като:</p><div class="row">' + A.ACCOUNTS.map(function(a){ return '<button class="chip" type="button" data-as="' + a[0] + '">' + esc(A.roleName(a[1])) + '</button>'; }).join("") + '</div>' +
+      '<p>Състояние:</p><div class="row">' + [["","Обичайно"],["error","Грешна парола"],["locked","10 грешни опита"],["offline","Без връзка"]].map(function(s){ return '<a class="chip" href="login.html' + (s[0] ? '#st=' + s[0] : '') + '" data-state="' + s[0] + '" aria-pressed="' + (st === s[0]) + '" style="text-decoration:none">' + s[1] + '</a>'; }).join("") + '</div>' +
+      '<div class="row"><button class="chip" type="button" data-unlock>' + ic("arrow-counter-clockwise",18) + 'Нулирай опитите</button><a class="chip" href="index.html" style="text-decoration:none">' + ic("list",18) + 'Всички екрани</a></div></section>' +
+  '</div></div></div>';
+document.body.appendChild(d);
+if (window.SAPen && A.me && A.can("notes")) SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); }});
+
+var f = d.querySelector("form"), u = d.querySelector("#u"), p = d.querySelector("#p"), err = d.querySelector("[data-err]"), go = d.querySelector("[data-go]"), timer = 0;
+function showErr(title, text, focus){ err.hidden = false; err.className = "lg-err"; err.setAttribute("role", "alert"); err.innerHTML = ic("warning",22) + '<div><b>' + esc(title) + '</b>' + (text ? '<span>' + text + '</span>' : '') + '</div>'; if (focus) err.focus({preventScroll:false}); }
+function locked(){ return L.until && L.until > Date.now(); }
+function lockUI(){ if (!locked()){ go.disabled = false; go.innerHTML = ic("sign-in",22) + 'Влез'; clearInterval(timer); if (!err.hidden && err.dataset.k === "lock") { err.hidden = true; } return; }
+  var s = Math.ceil((L.until - Date.now())/1000), mm = Math.floor(s/60), ss = String(s%60).padStart(2,"0");
+  go.disabled = true; go.innerHTML = ic("lock",22) + 'Заключено · ' + mm + ':' + ss;
+  err.dataset.k = "lock"; showErr("Твърде много опити. Опитайте след 15 минути.", 'Остават <span class="cd">' + mm + ':' + ss + '</span>.', false); }
+if (locked()){ lockUI(); timer = setInterval(lockUI, 1000); }
+else if (st === "error"){ u.value = "admin"; showErr("Грешен потребител или парола.", "", false); u.setAttribute("aria-invalid","true"); p.setAttribute("aria-invalid","true"); }
+
+d.querySelector("[data-show]").addEventListener("click", function(){ var b = this, sh = p.type === "password"; p.type = sh ? "text" : "password"; b.setAttribute("aria-pressed", String(sh)); b.querySelector("span").textContent = sh ? "Скрий" : "Покажи"; });
+f.addEventListener("submit", function(e){ e.preventDefault(); if (locked()) return;
+  if (offline){ showErr("Няма връзка с интернет", "Проверете връзката и опитайте пак.", true); return; }
+  var user = u.value.trim().toLowerCase(), ok = A.ACCOUNTS.some(function(a){ return a[0] === user; }) && p.value === A.PASSWORD;
+  if (!user || !p.value){ showErr("Грешен потребител или парола.", "", true); return; }
+  go.disabled = true; go.innerHTML = '<span class="vh" role="status">Проверяваме</span>Проверяваме …';
+  setTimeout(function(){ go.disabled = false; go.innerHTML = ic("sign-in",22) + 'Влез';
+    if (!ok){ L.fails = (L.fails||0) + 1; if (L.fails >= MAX){ L.until = Date.now() + LOCK_MIN*60000; } A.data.set("login", L);
+      A.me = null; A.audit("staff.login_failed", "Неуспешен вход: " + (user || "?"));
+      if (locked()){ lockUI(); clearInterval(timer); timer = setInterval(lockUI, 1000); err.focus(); return; }
+      u.setAttribute("aria-invalid","true"); p.setAttribute("aria-invalid","true"); p.value = "";
+      showErr("Грешен потребител или парола.", MAX - L.fails <= 3 ? "Остават " + A.plural(MAX - L.fails, "опит", "опита") + ", после входът се заключва за 15 минути." : "", true); return; }
+    A.data.set("login", {fails:0, until:0}); A.login(user); A.audit("staff.login", "Вход"); location.href = next; }, 650); });
+[u, p].forEach(function(i){ i.addEventListener("input", function(){ u.removeAttribute("aria-invalid"); p.removeAttribute("aria-invalid"); if (!locked()) err.hidden = true; }); });
+d.addEventListener("click", function(e){ var t = e.target.closest("[data-as],[data-unlock],[data-state]"); if (!t) return;
+  if (t.dataset.as){ A.data.set("login", {fails:0, until:0}); A.login(t.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = next; return; }
+  if (t.hasAttribute("data-unlock")){ A.data.set("login", {fails:0, until:0}); location.href = "login.html"; location.reload(); return; }
+  if (t.dataset.state != null){ e.preventDefault(); if (t.dataset.state !== "locked") A.data.set("login", {fails:0, until:0}); location.hash = t.dataset.state ? "st=" + t.dataset.state : ""; location.reload(); } });
+if (!locked() && st !== "error") setTimeout(function(){ u.focus({preventScroll:true}); }, 60);
+})();
+</script>
+</body>
+</html>
