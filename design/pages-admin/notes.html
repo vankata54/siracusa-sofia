@@ -122,7 +122,6 @@ list.addEventListener("click", function(e){ var b = e.target.closest("[data-act]
 body.closest("main").addEventListener("click", function(e){ if (!e.target.closest("[data-dl]")) return;
   var data = A.notes.list(); A.download("NOTES.json", JSON.stringify(data, null, 2)); A.toast("Изтеглихме NOTES.json · " + A.plural(data.length, "бележка", "бележки")); });
 /* notes written by the pencil on this page show up at once */
-if (A.pen){ var save0 = null; }
 window.addEventListener("storage", function(e){ if (e.key === "sa-notes") refresh(); });
 setInterval(function(){ var n = A.notes.list().length; if (n !== refresh.n){ refresh.n = n; drawMods(); draw(); A.setBadge("notes", A.notes.count("new")); } }, 1000); refresh.n = A.notes.list().length;
 refresh();

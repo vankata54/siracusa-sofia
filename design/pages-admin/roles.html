@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Роли и права | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.rl-q{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:22px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); margin-bottom:16px}
+.rl-q > .ic{color:var(--warn); flex:none; margin-top:2px}
+.rl-q b{display:block}
+.rl-q p{margin:2px 0 0}
+/* matrix (tablet and desktop) */
+.rl-wrap{display:none}
+@container page (min-width:700px){ .rl-wrap{display:block} .rl-ph{display:none} }
+.rl{width:100%; border-collapse:separate; border-spacing:0; font-size:16px}
+.rl th, .rl td{padding:0; border-bottom:1px solid var(--line); text-align:center; vertical-align:middle}
+.rl thead th{position:sticky; top:0; z-index:1; background:var(--surface); padding:16px 6px 12px; vertical-align:bottom; min-width:96px}
+.rl thead th .rn{display:block; font-size:15px; font-weight:800; line-height:1.2; color:var(--ink)}
+.rl thead th .rc{display:block; margin-top:4px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.rl thead th .sa-tag{margin-top:6px; min-height:26px; padding:0 8px}
+.rl thead th:first-child, .rl tbody th{text-align:left; padding-left:18px}
+.rl tbody th{font-weight:700; padding:6px 12px 6px 18px; min-width:220px; position:sticky; left:0; background:var(--surface); z-index:1}
+.rl tbody th .sn{display:flex; align-items:center; gap:10px}
+.rl tbody th .sn .ic{color:var(--muted)}
+.rl tbody th small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-left:32px}
+.rl tbody tr.gh th{padding:20px 18px 8px; font-size:14px; font-weight:800; color:var(--muted); background:var(--surface); border-bottom:1px solid var(--line); position:static}
+.rl td{height:56px}
+.rl td.adm{background:color-mix(in srgb, var(--surface-2) 55%, transparent)}
+.rl tbody tr:last-child th, .rl tbody tr:last-child td{border-bottom:0}
+.rl .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember)}
+.rl thead .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember), inset 0 2px 0 var(--ember)}
+.rl tbody tr:last-child .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember), inset 0 -2px 0 var(--ember)}
+/* phone: one role at a time with switches */
+.rl-ph{display:grid; gap:12px}
+.rl-ph .chips{padding-top:2px; padding-bottom:4px}
+.rl-who{padding:16px 18px}
+.rl-who h2{margin:0; font-size:22px; letter-spacing:-.025em}
+.rl-who p{margin:6px 0 0; color:var(--muted)}
+.rl-who .sa-tag{margin-top:10px}
+.rl-g h3{margin:16px 4px 8px; font-size:14px; font-weight:800; color:var(--muted)}
+.rl-g .sa-card{display:grid}
+.rl-sw{display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 8px 8px 16px}
+.rl-sw + .rl-sw{border-top:1px solid var(--line)}
+.rl-sw .ic{color:var(--muted); flex:none}
+.rl-sw label{flex:1; min-width:0; font-weight:700; cursor:pointer}
+.rl-sw label small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.rl-sw.chg{background:var(--ember-soft)}
+/* descriptions */
+.rl-desc{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:700px){ .rl-desc{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1100px){ .rl-desc{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.rl-desc article{padding:18px; display:grid; gap:8px; align-content:start}
+.rl-desc h3{margin:0; font-size:19px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.rl-desc p{margin:0; color:var(--muted)}
+/* save bar */
+.rl-bar{position:absolute; z-index:25; left:10px; right:10px; bottom:164px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.rl-bar.on{transform:none; opacity:1; pointer-events:auto}
+.rl-bar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
+.rl-bar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.rl-bar .pill{flex:none}
+@container app (min-width:700px){ .rl-bar{left:50%; right:auto; bottom:24px; width:min(620px, calc(100% - 48px)); transform:translate(-50%,160%)} .rl-bar.on{transform:translate(-50%,0)} }
+@container app (max-width:420px){ .rl-bar{flex-wrap:wrap; border-radius:28px; padding:10px} .rl-bar .n{flex:1 1 100%; padding:0 8px 4px} .rl-bar .pill{flex:1} }
+.rl-last{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:15px; font-weight:600; margin:12px 2px 0}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+var body = A.mount({section:"roles", title:"Роли и права", eyebrow:"Хора",
+  sub:"Кой какво вижда. Отметнатият раздел се показва в лентата на ролята. Главният админ вижда всичко и не може да заключи себе си.",
+  states:[["","Обичайно"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+var ROLES = A.roles();
+var saved = {}; ROLES.forEach(function(r){ saved[r.id] = r.sections.slice(); });
+var draft = JSON.parse(JSON.stringify(saved));
+var LOCKED = ["dashboard"]; /* таблото е за всички: без него ролята няма къде да влезе */
+var ROWS = A.GROUPS.map(function(g){ return [g[0], g[1]]; }).concat([["Приложения на персонала", A.APPS]]);
+var phoneRole = A.hash.r && saved[A.hash.r] ? A.hash.r : "manager";
+function has(r, s){ return r === "admin" || LOCKED.indexOf(s) > -1 || draft[r].indexOf(s) > -1; }
+function was(r, s){ return r === "admin" || LOCKED.indexOf(s) > -1 || saved[r].indexOf(s) > -1; }
+function diff(){ var out = []; ROLES.forEach(function(r){ if (r.id === "admin") return; A.ALL.forEach(function(s){ if (has(r.id, s) !== was(r.id, s)) out.push([r.id, s, has(r.id, s)]); }); }); return out; }
+function count(r){ return A.ALL.filter(function(s){ return has(r, s); }).length; }
+function secName(s){ return A.SEC[s].n; }
+
+if (st === "loading"){ body.innerHTML = A.skel(6, "Зареждаме ролите …"); return; }
+if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим ролите. Правата не са променени."); return; }
+
+function head(){ return '<thead><tr><th scope="col"><span class="rn">Раздел</span></th>' + ROLES.map(function(r){
+  return '<th scope="col" class="' + (r.id === "admin" ? 'adm' : '') + (r.id === "manager" ? ' col-mgr' : '') + '"><span class="rn">' + esc(r.n) + '</span>' +
+    (r.id === "admin" ? '<span class="rc">' + ic("lock",14).replace('class="ic"','class="ic" style="display:inline-block;vertical-align:-2px"') + ' винаги всичко</span>' : '<span class="rc" data-cnt="' + r.id + '">' + A.plural(count(r.id), "раздел", "раздела") + '</span>') +
+    (r.id === "manager" ? '<span class="sa-tag ember">Въпрос 7</span>' : '') + '</th>'; }).join("") + '</tr></thead>'; }
+function cell(r, s){ var lock = r === "admin" || LOCKED.indexOf(s) > -1, on = has(r, s), lbl = A.roleName(r) + ": " + secName(s);
+  return '<td class="' + (r === "admin" ? 'adm' : '') + (r === "manager" ? ' col-mgr' : '') + '"><label class="sa-check' + (on !== was(r, s) ? ' chg' : '') + '" title="' + esc(lbl) + '"><input type="checkbox" data-r="' + r + '" data-s="' + s + '"' + (on ? ' checked' : '') + (lock ? ' disabled' : '') + ' aria-label="' + esc(lbl) + (lock ? (r === "admin" ? ", винаги" : ", за всички") : '') + '"><span class="bx">' + (lock && r === "admin" ? ic("lock",16) : ic("check",18)) + '</span></label></td>'; }
+function matrix(){ return '<div class="sa-tablewrap scroll rl-wrap"><table class="rl" aria-label="Роли по раздели">' + head() + '<tbody>' + ROWS.map(function(g){
+  return '<tr class="gh"><th colspan="' + (ROLES.length + 1) + '" scope="colgroup">' + esc(g[0]) + '</th></tr>' + g[1].map(function(s){ var x = A.SEC[s];
+    return '<tr><th scope="row"><span class="sn">' + ic(x.ic,20) + esc(x.n) + (x.soon ? ' ' + A.soonTag() : '') + '</span>' + (s === "dashboard" ? '<small>За всички роли</small>' : s === "settings" ? '<small>Няма го в SECTIONS на ядрото</small>' : '') + '</th>' + ROLES.map(function(r){ return cell(r.id, s); }).join("") + '</tr>'; }).join(""); }).join("") + '</tbody></table></div>'; }
+function phone(){ var r = A.role(phoneRole);
+  return '<div class="rl-ph"><div class="chips" role="tablist" aria-label="Роля">' + ROLES.map(function(x){ return '<button class="chip" type="button" role="tab" data-pr="' + x.id + '" aria-selected="' + (x.id === phoneRole) + '" aria-pressed="' + (x.id === phoneRole) + '">' + esc(x.n) + '</button>'; }).join("") + '</div>' +
+    '<div class="sa-card rl-who"><h2>' + esc(r.n) + '</h2><p>' + esc(r.desc) + '</p>' + (r.id === "admin" ? '<span class="sa-tag">' + ic("lock",16) + 'Винаги всичко</span>' : '<span class="sa-tag" data-cnt="' + r.id + '">' + A.plural(count(r.id), "раздел", "раздела") + '</span>') + (r.id === "manager" ? ' <span class="sa-tag ember">Въпрос 7</span>' : '') + '</div>' +
+    ROWS.map(function(g){ return '<div class="rl-g"><h3>' + esc(g[0]) + '</h3><div class="sa-card">' + g[1].map(function(s){ var x = A.SEC[s], lock = r.id === "admin" || LOCKED.indexOf(s) > -1, on = has(r.id, s), id = "sw-" + r.id + "-" + s;
+      return '<div class="rl-sw' + (on !== was(r.id, s) ? ' chg' : '') + '">' + ic(x.ic,22) + '<label for="' + id + '">' + esc(x.n) + (x.soon ? ' · Скоро' : '') + (lock ? '<small>' + (r.id === "admin" ? 'Винаги' : 'За всички роли') + '</small>' : '') + '</label><span class="sa-switch"><input type="checkbox" role="switch" id="' + id + '" data-r="' + r.id + '" data-s="' + s + '"' + (on ? ' checked' : '') + (lock ? ' disabled' : '') + '><span class="tr"></span></span></div>'; }).join("") + '</div></div>'; }).join("") + '</div>'; }
+function lastSave(){ var e = A.data.get("audit", []).filter(function(x){ return x.action === "role.update"; })[0];
+  return e ? '<p class="rl-last">' + ic("clock",18) + 'Последна промяна: ' + esc(e.who) + ', ' + esc(A.ago(e.at)) + '</p>' : '<p class="rl-last">' + ic("info",18) + 'Правата са по подразбиране (src/core/staff.ts).</p>'; }
+function desc(){ return '<div class="sa-sh"><h2>Ролите</h2><p>Описанията са от мастър промпта, раздел 8.1.</p></div><div class="rl-desc">' + ROLES.map(function(r){
+  return '<article class="sa-card"><h3>' + esc(r.n) + (r.id === "admin" ? ' <span class="sa-tag">' + ic("lock",16) + 'Не се променя</span>' : '') + '</h3><p>' + esc(r.desc) + '</p><span class="sa-tag" style="justify-self:start" ' + (r.id === "admin" ? '' : 'data-cnt="' + r.id + '"') + '>' + (r.id === "admin" ? 'Всички ' + A.ALL.length + ' раздела' : A.plural(count(r.id), "раздел", "раздела")) + '</span></article>'; }).join("") + '</div>'; }
+
+function draw(){ body.innerHTML = (st === "offline" ? A.offline("Показваме последно заредените права. Запазването чака връзка.") + '<div style="height:16px"></div>' : '') +
+  '<div class="rl-q" data-edit-id="admin.roles.question7">' + ic("question",24) + '<div><b>Отворен въпрос към собственика (7): права на управителя</b><p>Какво остава само за собственика? По подразбиране управителят е като собственика без „Финанси и гориво“, „Роли и права“ и „Дневник“.</p></div></div>' +
+  matrix() + phone() + lastSave() + desc(); }
+draw();
+
+/* save bar */
+A.col.insertAdjacentHTML("beforeend", '<div class="rl-bar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази промените</button></div>');
+var bar = A.col.querySelector(".rl-bar");
+function upd(){ var d = diff(); bar.classList.toggle("on", d.length > 0);
+  bar.querySelector("[data-n]").innerHTML = A.plural(d.length, "промяна", "промени") + (st === "offline" ? '<small>Няма връзка: запазването чака</small>' : '<small>Още не са запазени</small>');
+  bar.querySelector("[data-save]").disabled = st === "offline";
+  document.querySelectorAll("[data-cnt]").forEach(function(el){ el.textContent = A.plural(count(el.dataset.cnt), "раздел", "раздела"); });
+  document.querySelectorAll("input[data-r]").forEach(function(i){ var ch = has(i.dataset.r, i.dataset.s) !== was(i.dataset.r, i.dataset.s); var host = i.closest(".sa-check") || i.closest(".rl-sw"); host && host.classList.toggle("chg", ch); i.checked = has(i.dataset.r, i.dataset.s); }); }
+body.addEventListener("change", function(e){ var i = e.target.closest("input[data-r]"); if (!i) return; var r = i.dataset.r, s = i.dataset.s, l = draft[r];
+  if (i.checked){ if (l.indexOf(s) < 0) l.push(s); } else draft[r] = l.filter(function(x){ return x !== s; }); upd(); });
+body.addEventListener("click", function(e){ var c = e.target.closest("[data-pr]"); if (!c) return; phoneRole = c.dataset.pr; A.setHash({r:phoneRole, st:st}); A.liveHash = true; var y = A.scroller.scrollTop; draw(); upd(); A.scroller.scrollTop = y; var nb = body.querySelector('[data-pr="' + phoneRole + '"]'); nb && nb.focus({preventScroll:true}); nb && nb.scrollIntoView({inline:"nearest", block:"nearest"}); });
+bar.querySelector("[data-cancel]").onclick = function(){ draft = JSON.parse(JSON.stringify(saved)); upd(); A.toast("Промените са отменени"); };
+bar.querySelector("[data-save]").onclick = function(){ var d = diff(), prev = JSON.parse(JSON.stringify(saved)), by = {};
+  d.forEach(function(x){ (by[x[0]] = by[x[0]] || []).push((x[2] ? "+ " : "- ") + secName(x[1])); });
+  ROLES.forEach(function(r){ if (draft[r.id].indexOf("dashboard") < 0) draft[r.id].push("dashboard"); });
+  A.setRoles(draft); saved = JSON.parse(JSON.stringify(draft));
+  Object.keys(by).forEach(function(r){ A.audit("role.update", "Права на „" + A.roleName(r) + "“: " + by[r].join(", "), r); });
+  A.refreshSide(); draw(); upd();
+  A.toast("Правата са запазени · " + A.plural(d.length, "промяна", "промени"), {undo:function(){ A.setRoles(prev); saved = prev; draft = JSON.parse(JSON.stringify(prev)); A.audit("role.update", "Върнати правата отпреди промяната", "roles"); A.refreshSide(); draw(); upd(); A.toast("Правата са върнати"); }}); };
+upd();
+})();
+</script>
+</body>
+</html>
