@@ -486,6 +486,10 @@ test("office: pickup after 15:00 is sent with -30% (the core's rule), not 'lunch
   const owe = await page.locator(".o-owe .kv .price").allTextContents();
   expect(owe.length).toBe(2);
   expect(Math.round(owe.reduce((a, t) => a + euros(t), 0) * 100) / 100).toBe(euros(sum));
+  /* "Копирай съобщение за чата": "Обядът е поръчан, готов е веднага" (обядът: masculine; office.review кръг 3) */
+  await page.evaluate(() => { const w = window as unknown as { _clip: string }; w._clip = ""; Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => { w._clip = t; } }, configurable: true }); });
+  await page.locator('[data-act="copydone"]').click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { _clip: string })._clip)).toBe("Обядът е поръчан, готов е веднага. Благодаря!");
   /* the colleague: "Готова е веднага" (the core's "веднага"), and the same amount she owes */
   await g.goto(PATH + "?preview=1&t=15:31#join-" + code);
   await expect(g.locator("h1:visible")).toHaveText("Поръчката е изпратена");

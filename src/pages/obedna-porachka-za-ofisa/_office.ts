@@ -181,8 +181,10 @@ export function start(): void {
   /** the same rounding as the timer (down), no breaks inside "17 ч 7 мин" */
   const leftWords = (sec: number) => { const m = Math.max(0, Math.floor(sec / 60)); if (m >= 90) { const h = Math.floor(m / 60), r = m % 60; return h + "\u00a0ч" + (r ? "\u00a0" + r + "\u00a0мин" : ""); } return m + "\u00a0мин"; };
   /** the order's time in words; for pickup the core says "веднага" (the lunch menu is ready at once) */
-  const atWords = (mode: string, at: string, cap: boolean) => {
-    const t = mode === "pickup" ? (at === "веднага" ? "готова е веднага" : "готова в " + at) : "пристига около " + at;
+  /* masc: after "Обядът е поръчан, ..." the word is "готов" (обядът), else "готова" (поръчката) */
+  const atWords = (mode: string, at: string, cap: boolean, masc = false) => {
+    const g = masc ? "готов" : "готова";
+    const t = mode === "pickup" ? (at === "веднага" ? g + " е веднага" : g + " в " + at) : "пристига около " + at;
     return cap ? t.charAt(0).toUpperCase() + t.slice(1) : t;
   };
   const whereText = (o: { mode: string; zone: string; addr: string }) => (o.mode === "pickup" ? "Вземане от ресторанта" : o.zone || o.addr || "ж.к. Дружба 2");
@@ -988,7 +990,7 @@ export function start(): void {
       case "viber": if (O && !/Android|iPhone|iPad/i.test(navigator.userAgent)) { e.preventDefault(); copy(chatMsg(O, ctx(O))); SC.toast("Съобщението е копирано. Поставете го във Viber."); } return;
       case "sharenative": if (O) { const m = chatMsg(O, ctx(O)); if (navigator.share) navigator.share({ title: "Обяд от Siracusa", text: m }).catch(() => undefined); else { copy(m); SC.toast("Съобщението е копирано. Поставете го в чата."); } } return;
       case "copyowe": if (O) { { const sh = shares(O); copy("Обяд от Siracusa: " + eaters(O).filter((p) => !p.me).map((p) => p.n + " " + fmt(sh.get(p.n) ?? sum(p.picks))).join(", ")); } SC.toast("Копирано. Поставете го в чата."); } return;
-      case "copydone": if (L.sent) { copy("Обядът е поръчан, " + atWords(L.sent.mode, L.sent.at, false) + ". Благодаря!"); SC.toast("Съобщението е копирано"); } return;
+      case "copydone": if (L.sent) { copy("Обядът е поръчан, " + atWords(L.sent.mode, L.sent.at, false, true) + ". Благодаря!"); SC.toast("Съобщението е копирано"); } return;
       case "drop": {
         if (!O) return;
         const who = t.dataset.who || "", p = O.participants.find((x) => x.name === who);
