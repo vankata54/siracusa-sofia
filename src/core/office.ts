@@ -154,7 +154,8 @@ export async function updateOffice(ctx: Ctx, code: string, orgKey: string, patch
   }
   const name = patch.name != null ? String(patch.name).trim().slice(0, 80) : cur.name;
   const pay = patch.pay && PAY_LABEL[patch.pay] ? patch.pay : cur.pay || "cash";
-  o.contact = phone ? { ...cur, name, phone, pay } : null;
+  /* the payment is kept also without a phone (the automatic send still needs the phone: sendDueOffices "no_contact") */
+  o.contact = phone || patch.pay ? { ...cur, name, phone, pay } : null;
   if (o.autoFailed === "no_contact" && phone) delete o.autoFailed; /* the server tries again at the next sweep */
   await ctx.repo.put(COL.office, o);
   emit(ctx, "office.updated", { code: o.code, participants: o.participants.length }, { office: o.code });

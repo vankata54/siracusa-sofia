@@ -20,12 +20,12 @@ import { clockOverride, sofiaYmd } from "../../lib/time.ts";
 import { artSvg } from "../../lib/art.ts";
 import { busyExtra } from "../../lib/status.ts";
 import { ORDER_RULES, type Zone } from "../../lib/consts.ts";
-import { stepperHTML, callBtn, loadingText, previewPanel, pvToggle, PV, BACK, OFFLINE } from "../../lib/ui.ts";
+import { stepperHTML, callBtn, loadingText, previewPanel, pvToggle, stateBox, PV, BACK, OFFLINE, RETRY } from "../../lib/ui.ts";
 import type { Dish } from "../../data/menu.ts";
-import type { OrderLine, Order } from "../../core/types.ts";
+import { PAY_LABEL, type OrderLine, type Order, type PayMethod } from "../../core/types.ts";
 import type { PublicOffice } from "../../core/office.ts";
-/* icons this script draws (sc.ts: x, check, caret-right, phone, question) */
-import "sc-icons:arrow-left,arrow-right,arrow-up-right,calendar-dots,chat-circle-dots,check-circle,clock,copy,credit-card,eye,hand-waving,info,lock,minus,money,pencil-simple,plus,share-network,sliders-horizontal,storefront,timer,trash,truck,users,users-three,wallet,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
+/* icons this script draws (sc.ts: x, check, caret-right, phone, question); stateBox: warning-circle, globe, arrow-clockwise */
+import "sc-icons:arrow-clockwise,arrow-left,arrow-right,arrow-up-right,calendar-dots,chat-circle-dots,check-circle,clock,copy,credit-card,eye,globe,hand-waving,info,lock,minus,money,pencil-simple,plus,share-network,sliders-horizontal,storefront,ticket,timer,trash,truck,users,users-three,wallet,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 /** What index.astro puts in #o-data: the lunch menu of the data (its date) and the prototype's sample colleagues. */
 export interface OfficeData { date: string; dayName: string; items: Dish[]; team: { n: string; picks: Record<string, number> }[] }
@@ -38,7 +38,7 @@ interface Draft { office: string; name: string; addr: string; mode: Mode; deadli
 interface Guest { name: string; picks: Picks; done: boolean; as: string }
 interface Sent { code: string; no: string; key?: string; at: string; total: number; count: number; people: number; owe: [string, number][]; pays: "one" | "each"; mode: Mode; office: string }
 interface Local {
-  draft: Draft; code: string; me: string; phone: string; pay: "cash" | "card"; mine: Picks;
+  draft: Draft; code: string; me: string; phone: string; pay: PayMethod; mine: Picks;
   /** days: the lunch day of each order (from the core); auto: the organizer gave a phone at create (the core sends at the deadline) */
   days: Record<string, string>; auto: Record<string, boolean>; guests: Record<string, Guest>; sent: Sent | null;
 }
@@ -61,6 +61,7 @@ export function start(): void {
 
   const raw = SC.load<Partial<Local>>(KEY, {});
   const L: Local = { ...DEF, ...raw, draft: { ...DEF.draft, ...(raw.draft || {}) }, days: raw.days || {}, auto: raw.auto || {}, guests: raw.guests || {}, mine: raw.mine || {} };
+  if (!PAY_LABEL[L.pay]) L.pay = "cash";
   const save = () => SC.store(KEY, L);
 
   /* simulated states: only in the preview panel (?preview=1) */
@@ -113,6 +114,19 @@ export function start(): void {
   function scrollToEl(el: Element | null) { if (!el) return; const y = el.getBoundingClientRect().top + window.scrollY - 150; window.scrollTo({ top: Math.max(0, y), behavior: SC.reduce ? "auto" : "smooth" }); }
   /** focus at once (the screen reader reads the field with its error first); scrollToEl does the scrolling */
   function focusLater(el: HTMLElement | null) { if (el) el.focus({ preventScroll: true }); }
+  /** the title of the new state gets the focus and comes into view, never <body> (tabindex=-1, as in the cart) */
+  function focusTitle(el: HTMLElement | null) {
+    if (!el) return;
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    el.classList.add("o-ttl");
+    /* a title near the top of the page: the page from the top (the card with its icon is seen whole) */
+    const y = el.getBoundingClientRect().top + window.scrollY;
+    if (y < window.innerHeight * 0.6) window.scrollTo({ top: 0, behavior: SC.reduce ? "auto" : "smooth" });
+    else el.scrollIntoView({ block: "center", behavior: SC.reduce ? "auto" : "smooth" }); /* clear of the sticky header and the toast */
+    el.focus({ preventScroll: true });
+  }
+  /** the payment words of the whole site (PAY_LABEL in the core): "В брой · Карта при получаване · Ваучер" */
+  const PAYS_TEXT = (Object.keys(PAY_LABEL) as PayMethod[]).map((k) => PAY_LABEL[k]).join(" · ");
 
   /* ---------- the plan for a new order: deadline slots every 30 min, 10:30-14:00 (lunch is delivered until 15:00) ---------- */
   function plan() {
@@ -154,7 +168,9 @@ export function start(): void {
     return {
       day, dl, remain, z, mode: o.mode as Mode, sent: o.status !== "open",
       closed: sim.closed || remain <= 0 || o.status !== "open",
-      late: o.status === "open" && ((day === "today" && SC.minutes() >= 900) || day === "past"),
+      /* the core's rule (orders.ts): after 15:00 the lunch menu is not delivered; pickup until 22:30, with -30% */
+      late: o.status === "open" && ((day === "today" && SC.minutes() >= (o.mode === "pickup" ? ORDER_RULES.pickupUntil : 900)) || day === "past"),
+      lunchOff: o.status === "open" && o.mode === "pickup" && day === "today" && SC.state().lunchDiscount,
       early: day === "today" && SC.minutes() < 600,
       eta: dl + etaMin(z, o.mode as Mode, day),
       dayWord: day === "today" ? "днес" : day === "tomorrow" ? "утре" : dateLong(dateOf(td)),
@@ -177,6 +193,14 @@ export function start(): void {
     })).filter((p) => p.me || cnt(p.picks) > 0 || (guestView && p.guest));
   }
   const eaters = (o: OfficeOrder) => people(o).filter((p) => cnt(p.picks) > 0);
+  /** pickup after 15:00: the lunch -30% as the core counts it (lib/pricing.ts: per dish line, the discount rounded to cents) */
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  function lunchPrice(p: Picks) {
+    let sub = 0, disc = 0;
+    Object.keys(p).forEach((k) => { if (!byId[k] || !(p[k] > 0)) return; const tot = r2(byId[k].p * p[k]); sub += tot; disc += Math.round(tot * Math.round(ORDER_RULES.lunchPickupDiscount * 100)) / 100; });
+    return { sub: r2(sub), disc: r2(disc), total: r2(sub - disc) };
+  }
+  const allPicks = (o: OfficeOrder) => { const a: Picks = {}; eaters(o).forEach((x) => Object.keys(x.picks).forEach((k) => { a[k] = (a[k] || 0) + x.picks[k]; })); return a; };
   const total = (o: OfficeOrder) => Math.round(eaters(o).reduce((s, p) => s + sum(p.picks), 0) * 100) / 100;
   const totalCount = (o: OfficeOrder) => eaters(o).reduce((s, p) => s + cnt(p.picks), 0);
 
@@ -199,7 +223,7 @@ export function start(): void {
   }
   /* "Назад": the same word in every flow (site.review-consistency В5); where it goes is in the aria-label */
   const back = (href: string, label: string) => '<a class="link o-back" href="' + href + '" aria-label="' + esc(BACK + ": " + label) + '">' + ic("arrow-left", 20) + BACK + "</a>";
-  function person(p: Person, o: { edit?: boolean; closed?: boolean; guestView?: boolean; fresh?: boolean } = {}) {
+  function person(p: Person, o: { edit?: boolean; closed?: boolean; guestView?: boolean; fresh?: boolean; off?: boolean } = {}) {
     const n = cnt(p.picks);
     const items = Object.keys(p.picks).map((k) => '<li><span class="q">' + p.picks[k] + " ×</span><span>" + esc(byId[k].n) + "</span></li>").join("");
     const tag = p.me ? '<span class="o-tag">' + (o.guestView ? "организатор" : "вие, организатор") + "</span>" : p.guest ? '<span class="o-tag">вие</span>' : "";
@@ -208,9 +232,11 @@ export function start(): void {
     else if (o.edit && !p.me && !o.closed) acts = '<div class="acts"><button class="link mutedl" type="button" data-act="drop" data-who="' + esc(p.n) + '" aria-label="Махни ' + esc(p.n) + ' от поръчката">' + ic("x", 18) + "Махни</button></div>";
     return '<div class="o-person' + (o.fresh ? " new" : "") + '"><span class="o-ava ' + (p.me ? "me" : p.cls || "a3") + '" aria-hidden="true">' + initial(p.n) + "</span>" +
       '<div><div class="nm">' + esc(p.n) + tag + "</div>" + (n ? "<ul>" + items + "</ul>" : '<p class="muted" style="margin:4px 0 0;font-size:15px">' + (p.me && !o.guestView ? "Още не сте избрали" : "Още избира") + "</p>") + acts + "</div>" +
-      '<div class="sum">' + (n ? '<span class="price">' + fmt(sum(p.picks)) + "</span>" : "") + "</div></div>";
+      '<div class="sum">' + (n ? '<span class="price">' + fmt(o.off ? lunchPrice(p.picks).total : sum(p.picks)) + "</span>" : "") + "</div></div>";
   }
   const note = (cls: string, icon: string, html: string, role = "status") => '<div class="o-note ' + cls + '" role="' + role + '">' + ic(icon, 22) + "<div>" + html + "</div></div>";
+  /** an error after an action (create, send, add): a title that gets the focus, one sentence, the actions (decision 12.11, as in the cart) */
+  const errNote = (title: string, text: string, acts = "") => '<div class="o-note bad o-err" role="alert">' + ic("warning-circle", 22) + '<div><b class="o-errh" tabindex="-1" data-errh>' + esc(title) + "</b><p>" + text + "</p>" + (acts ? '<div class="o-acts">' + acts + "</div>" : "") + "</div></div>";
   const skel = (h: number, extra = "") => '<div class="skel" style="height:' + h + "px;" + extra + '"></div>';
 
   /* ======================= view: create form ======================= */
@@ -239,7 +265,7 @@ export function start(): void {
         "</fieldset>" +
         '<div data-formerr></div>' +
         '<div class="o-actions"><button class="pill pill-red pill-lg pill-block" type="submit" data-create-btn>Създай връзка за колегите' + ic("arrow-right", 20) + "</button>" +
-        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане при получаване: В брой · Карта при получаване · Ваучер. Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано.</span></p></div>" +
+        '<p class="o-fine">' + ic("info", 18) + "<span>Плащане при получаване: " + PAYS_TEXT + ". Ако сте дали телефон, в крайния час поръчката тръгва към ресторанта сама. Можете да я изпратите и по-рано.</span></p></div>" +
       "</form></div>" +
       '<aside class="o-aside o-onlydesk" aria-label="Преглед на поканата"><div class="o-preview shell"><div class="core"><span class="label">' + ic("eye", 18) + 'Така ще я видят колегите</span><div data-preview></div></div></div></aside>' +
     "</div>";
@@ -275,7 +301,7 @@ export function start(): void {
   function previewHTML() {
     const c = draftCtx(), d = L.draft, nm = d.name.trim() || "Вие", r = zr(), offName = officeName(d);
     const where = d.mode === "pickup" ? "Вземане от ресторанта" : r.type === "zone" ? r.zone.n : d.addr.trim() || "ж.к. Дружба 2";
-    return '<div class="o-bubble"><span class="who">' + esc(nm) + "</span>Поръчваме обяд от Siracusa. Изберете си до " + clock(c.dl) + (c.day === "tomorrow" ? " утре" : "") + '.<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + "<span>" + esc(shortURL("······")) + "</span></span></div>" +
+    return '<div class="o-bubble"><span class="who">' + esc(nm) + "</span>Поръчваме обяд от Siracusa. Изберете си до " + clock(c.dl) + (c.day === "tomorrow" ? " утре" : "") + '.<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + '<span class="o-lw">' + linkHTML(shortURL("") + "······") /* the dots stay dots (not %C2%B7 from URL) */ + "</span></span></div>" +
       '<div class="o-kv">' +
       (offName ? '<div class="kv"><span>Офис</span><b>' + esc(offName) + "</b></div>" : "") +
       '<div class="kv"><span>' + (d.mode === "pickup" ? "Вземане" : "Доставка до") + "</span><b>" + esc(where) + "</b></div>" +
@@ -308,7 +334,7 @@ export function start(): void {
         '<div class="o-two"><a class="pill pill-line" href="viber://forward?text=' + encodeURIComponent(msg) + '" data-act="viber">' + ic("chat-circle-dots", 20) + 'Във Viber</a><button class="pill pill-line" type="button" data-act="sharenative">' + ic("share-network", 20) + "Друг начин</button></div></div>" +
       (api.demo ? note("warn", "info", "<p><b>Това е демо.</b> Поръчката се пази само в този браузър, затова поканата работи само тук (в нов раздел). На истинския сайт колегите отварят връзката от всеки телефон или компютър.</p>") : "") +
       "</div></div>" +
-      '<div><h2 class="o-h3" style="margin-bottom:12px">Готово съобщение за чата</h2><div class="o-bubble"><span class="who">' + esc(me) + "</span>" + esc(msg.replace(joinURL(o.code), "")).trim() + '<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + "<span>" + esc(shortURL(o.code)) + "</span></span></div>" +
+      '<div><h2 class="o-h3" style="margin-bottom:12px">Готово съобщение за чата</h2><div class="o-bubble"><span class="who">' + esc(me) + "</span>" + esc(msg.replace(joinURL(o.code), "")).trim() + '<br><span class="o-linkchip">' + ic("arrow-up-right", 16) + '<span class="o-lw">' + linkHTML(shortURL(o.code)) + "</span></span></div>" +
         '<button class="link" type="button" data-act="copymsg" style="min-height:48px">' + ic("copy", 18) + "Копирай цялото съобщение</button></div>" +
       orgLinkHTML(o) +
     "</div>" +
@@ -328,8 +354,9 @@ export function start(): void {
 
   /* ======================= view: shared list ======================= */
   function timerHTML(o: OfficeOrder, c: Ctx) {
-    if (c.late) return note("warn", "clock", '<p>Обедното меню вече не се доставя днес (до 15:00). Отворете нова поръчка за утре.</p><button class="pill pill-line" type="button" data-act="restart">Нова поръчка за утре</button>');
-    if (c.closed) return '<div class="o-closed"><span class="o-fi">' + ic("lock", 22) + "</span><div><b>Изборът приключи в " + clock(c.dl) + "</b><span>" + closedText(o) + "</span></div></div>" + autoFailedHTML(o);
+    if (c.late) return note("warn", "clock", "<p>" + (c.mode === "pickup" ? "Кухнята вече не приема поръчки за днес (до 22:30)." : "Обедното меню вече не се доставя днес (до 15:00).") + ' Отворете нова поръчка за утре.</p><button class="pill pill-line" type="button" data-act="restart">Нова поръчка за утре</button>');
+    if (c.closed) return '<div class="o-closed"><span class="o-fi">' + ic("lock", 22) + "</span><div><b>Изборът приключи в " + clock(c.dl) + "</b><span>" + closedText(o) + "</span></div></div>" + autoFailedHTML(o) +
+      (c.lunchOff ? '<div style="margin-top:12px">' + note("", "storefront", "<p>След 15:00 обедното меню е само за вземане от място, с -30%. Сумата в бутона е с отстъпката.</p>") + "</div>" : "");
     return '<div class="o-timer"><div><span class="lbl">Остават за избор</span><span class="o-time" data-left>' + left(c.remain) + '</span></div><div class="o-until"><span class="o-live"><i></i>На живо</span><br>до ' + clock(c.dl) + " " + c.dayWord + "</div></div>" +
       '<div class="o-track" aria-hidden="true"><span data-track style="transform:scaleX(' + trackScale(c) + ')"></span></div>';
   }
@@ -344,10 +371,11 @@ export function start(): void {
   function autoFailedHTML(o: OfficeOrder) {
     const why = o.status === "open" ? o.autoFailed : "";
     if (!why) return "";
-    const txt = why === "no_contact" ? "<b>Поръчката не тръгна сама:</b> при създаването не беше даден телефон. Напишете го отдолу и натиснете „Изпрати на ресторанта“."
+    const btn = ctx(o).lunchOff ? "Поръчай за вземане" : "Изпрати на ресторанта";
+    const txt = why === "no_contact" ? "<b>Поръчката не тръгна сама:</b> при създаването не беше даден телефон. Напишете го отдолу и натиснете „" + btn + "“."
       : why === "empty" ? "<b>Поръчката не тръгна:</b> никой не избра ястие. Добавете ястие или отворете нова поръчка."
       : why === "lunch_stale" ? "<b>Поръчката не тръгна сама:</b> обедното меню за днес още не е качено. Обадете ни се на " + esc(R.phone) + "."
-      : "<b>Поръчката не тръгна сама.</b> Изпратете я с бутона „Изпрати на ресторанта“ или ни се обадете на " + esc(R.phone) + ".";
+      : "<b>Поръчката не тръгна сама.</b> Изпратете я с бутона „" + btn + "“ или ни се обадете на " + esc(R.phone) + ".";
     return '<div style="margin-top:12px">' + note("bad", "warning-circle", "<p>" + txt + "</p>", "alert") + "</div>";
   }
   const trackScale = (c: Ctx) => Math.min(1, Math.max(0, c.remain / (c.day === "today" ? 7200 : 86400))).toFixed(4);
@@ -358,24 +386,26 @@ export function start(): void {
         '<div class="o-state" style="padding:20px 8px 8px"><div class="ill">' + ic("users-three", 36) + '</div><b style="font-size:18px">Още никой не е избрал</b><p class="muted">Пратете връзката в чата на офиса. Тук ще виждате всеки, който добави ястие.</p>' +
         (c.closed ? "" : '<div class="o-actions"><button class="pill pill-red pill-block" type="button" data-act="copylink">' + ic("copy", 20) + "Копирай връзката</button></div>") + "</div>";
     }
-    return all.map((p) => person(p, { edit: true, closed: c.closed, fresh: fresh.has(p.n) })).join("");
+    return all.map((p) => person(p, { edit: true, closed: c.closed, fresh: fresh.has(p.n), off: c.lunchOff })).join("");
   }
   function payBoxHTML(o: OfficeOrder) {
-    const list = eaters(o), T = total(o);
+    const list = eaters(o), off = ctx(o).lunchOff, T = off ? lunchPrice(allPicks(o)).total : total(o);
+    const ps = (p: Person) => (off ? lunchPrice(p.picks).total : sum(p.picks));
     if (!list.length) return "";
-    if (o.payer === "each") return '<div class="shell"><div class="core o-card"><h2 class="o-h3">Кой колко плаща</h2><p class="muted" style="margin:6px 0 4px">Всеки плаща своето при получаване, в брой или с карта.</p>' +
-      '<div class="o-owe">' + list.map((p) => '<div class="kv"><span>' + esc(p.n) + '</span><span class="price">' + fmt(sum(p.picks)) + "</span></div>").join("") + "</div></div></div>";
+    if (o.payer === "each") return '<div class="shell"><div class="core o-card"><h2 class="o-h3">Кой колко плаща</h2><p class="muted" style="margin:6px 0 4px">Всеки плаща своето при получаване: ' + PAYS_TEXT + ".</p>" +
+      '<div class="o-owe">' + list.map((p) => '<div class="kv"><span>' + esc(p.n) + '</span><span class="price">' + fmt(ps(p)) + "</span></div>").join("") + "</div></div></div>";
     const others = list.filter((p) => !p.me);
     return '<div class="shell"><div class="core o-card"><h2 class="o-h3">Плащате вие за всички</h2><p class="muted" style="margin:6px 0 4px">' + fmt(T) + (others.length ? " при получаване. Колегите ви дължат:" : " при получаване.") + "</p>" +
-      (others.length ? '<div class="o-owe">' + others.map((p) => '<div class="kv"><span>' + esc(p.n) + '</span><span class="price">' + fmt(sum(p.picks)) + "</span></div>").join("") + "</div>" +
+      (others.length ? '<div class="o-owe">' + others.map((p) => '<div class="kv"><span>' + esc(p.n) + '</span><span class="price">' + fmt(ps(p)) + "</span></div>").join("") + "</div>" +
         '<button class="link" type="button" data-act="copyowe" style="min-height:48px">' + ic("copy", 18) + "Копирай кой колко дължи</button>" : '<p class="small muted" style="margin:8px 0 0">Още никой от колегите не е избрал.</p>') + "</div></div>";
   }
   function billHTML(o: OfficeOrder, c: Ctx) {
-    const T = total(o), N = totalCount(o);
+    const T = total(o), N = totalCount(o), L30 = c.lunchOff ? lunchPrice(allPicks(o)) : null;
     return '<div class="shell"><div class="core o-card"><h2 class="o-h3" style="margin-bottom:4px">Сметка</h2><div class="o-kv">' +
       '<div class="kv"><span>' + dishes(N) + '</span><span class="price">' + fmt(T) + "</span></div>" +
+      (L30 && L30.disc ? '<div class="kv"><span>Обедно меню -30% (вземане след 15:00)</span><span class="price">-' + fmt(L30.disc) + "</span></div>" : "") +
       '<div class="kv"><span>' + (o.mode === "pickup" ? "Вземане" : "Доставка") + "</span><b>" + feeText(c) + "</b></div></div>" +
-      '<div class="o-tot"><b>Общо</b><span class="price">' + fmt(T) + "</span></div></div></div>";
+      '<div class="o-tot"><b>Общо</b><span class="price">' + fmt(L30 ? L30.total : T) + "</span></div></div></div>";
   }
   function sendState(o: OfficeOrder, c: Ctx) {
     const T = total(o);
@@ -384,10 +414,15 @@ export function start(): void {
     if (!T) return { ok: false, lbl: "Добавете поне едно ястие" };
     if (c.day === "tomorrow" || c.day === "later") return { ok: false, lbl: "Изпраща се " + c.dayWord + " в " + clock(c.dl) };
     if (c.early) return { ok: false, lbl: "Изпращане след 10:00" };
+    /* after 15:00 only pickup, with -30% (decision 12.11: the button is "Поръчай за вземане") */
+    if (c.lunchOff) return { ok: true, lbl: "Поръчай за вземане · " + fmt(lunchPrice(allPicks(o)).total) };
     return { ok: true, lbl: "Изпрати на ресторанта · " + fmt(T) };
   }
+  /** after 429 or "too_big" trying again is refused too: the main action is the call (decision 12.11) */
+  let sendBlock = "";
   function sendBtn(o: OfficeOrder, c: Ctx, cls: string) {
     const s = sendState(o, c);
+    if (sendBlock && s.ok) return callBtn("pill pill-red " + cls, "data-callsend");
     return '<button class="pill pill-red ' + cls + '" type="button" data-act="send"' + (s.ok ? "" : " disabled") + ">" + s.lbl + "</button>";
   }
   /** the truth about the deadline: the core sends by itself only with the phone given at create (L.auto; unknown on another device) */
@@ -401,21 +436,30 @@ export function start(): void {
     const tail = c.day === "tomorrow" || c.day === "later" ? " Дотогава колегите могат да избират." : auto === true ? " Можете да я изпратите и по-рано: тогава списъкът се затваря." : " Можете да я изпратите и по-рано.";
     return '<p class="o-fine">' + ic("info", 18) + "<span>" + first + tail + "</span></p>";
   }
+  /** what api.office.update answered (under the way of paying, or under the phone when everyone pays their own) */
+  const CONTACT_NOTE = '<span class="help o-saved" data-contactnote role="status"></span>';
+  /** "Как плащате": the three ways of the site with the same words as the cart (PAY_LABEL; the core takes all three) */
+  function payHTML(o: OfficeOrder) {
+    const pays: [PayMethod, string, string][] = [["cash", "money", o.mode === "pickup" ? "В ресторанта" : "На шофьора"], ["card", "credit-card", "Visa или Mastercard"], ["voucher", "ticket", "Или подаръчна карта"]];
+    return '<div class="field"><fieldset class="o-choice"><legend class="label">Как плащате</legend>' +
+      pays.map((p) => '<label class="o-opt"><input type="radio" name="opay" value="' + p[0] + '"' + (L.pay === p[0] ? " checked" : "") + '><span class="o-fi">' + ic(p[1], 22) + "</span><span><b>" + PAY_LABEL[p[0]] + '</b><span class="muted">' + p[2] + '</span></span><span class="o-radio">' + ic("check", 16) + "</span></label>").join("") +
+      '<span class="help">При получаване. Без онлайн плащане.</span></fieldset>' + CONTACT_NOTE + "</div>";
+  }
   function viewList(o: OfficeOrder) {
     const c = ctx(o), list = eaters(o), N = totalCount(o);
     const payFields = '<div class="shell"><div class="core o-card" style="display:grid;gap:18px"><h2 class="o-h3">За шофьора</h2>' +
-      '<div class="field"><label for="o-phone">Вашият телефон' + (o.hasContact ? ' <span class="muted" style="font-weight:600">(по желание)</span>' : "") + '</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h"' + (o.hasContact && L.phone.trim() ? " hidden" : "") + ">" + (o.hasContact ? "Телефонът от създаването е при нас. Напишете друг само ако искате да ви търсим на него." : "Обаждаме се само ако има въпрос по поръчката.") + '</span><span class="err" id="o-phone-e" data-err="phone" hidden></span></div>' +
-      (o.payer === "one" ? '<div class="field"><span class="label" id="o-pay-l">Как плащате</span><div class="seg" role="group" aria-labelledby="o-pay-l"><button type="button" data-pay="cash" aria-pressed="' + (L.pay === "cash") + '">' + ic("money", 20) + 'В брой</button><button type="button" data-pay="card" aria-pressed="' + (L.pay === "card") + '">' + ic("credit-card", 20) + 'С карта</button></div><span class="help">При получаване. Без онлайн плащане.</span></div>' : "") +
+      '<div class="field"><label for="o-phone">Вашият телефон' + (o.hasContact ? ' <span class="muted" style="font-weight:600">(по желание)</span>' : "") + '</label><input class="input" id="o-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(L.phone) + '" aria-describedby="o-phone-h o-phone-e"><span class="help" id="o-phone-h"' + (o.hasContact && L.phone.trim() ? " hidden" : "") + ">" + (o.hasContact ? "Телефонът от създаването е при нас. Напишете друг само ако искате да ви търсим на него." : "Обаждаме се само ако има въпрос по поръчката.") + '</span><span class="err" id="o-phone-e" data-err="phone" hidden></span>' + (o.payer === "one" ? "" : CONTACT_NOTE) + "</div>" +
+      (o.payer === "one" ? payHTML(o) : "") +
       "<div data-senderr></div>" +
       '<div class="o-onlydesk o-sendinline" data-sendinline>' + sendBtn(o, c, "pill-lg pill-block") + "</div>" +
       '<div data-sendnote>' + sendNote(o, c) + "</div>" +
-      (orgURL(o.code) && !c.sent ? '<button class="link" type="button" data-act="copyorg" style="min-height:48px">' + ic("lock", 18) + "Копирай връзката за друго устройство</button>" : "") +
+      (orgURL(o.code) && !c.sent ? '<button class="link" type="button" data-act="copyorg" style="min-height:48px">' + ic("lock", 18) + "Копирай връзката за вас</button>" : "") +
     "</div></div>";
     const html = '<section class="sec o-top">' + back("#share", "Назад: връзката за колегите") + stepper(3) +
       '<div class="o-lay"><div class="o-col">' +
         '<div><h1 class="h1" style="font-size:clamp(30px,8cqi,44px)">' + esc(o.office) + '</h1><p class="lead o-sub">' + (o.mode === "pickup" ? "Вземане от ресторанта · готово в " : "Доставка до " + esc(whereText(o)) + " · около ") + clock(c.eta) + "</p></div>" +
         '<div class="shell"><div class="core o-card" data-timer>' + timerHTML(o, c) + "</div></div>" +
-        '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;row-gap:2px"><h2 class="o-h3">Кой какво поръча</h2><span class="muted small" style="font-weight:700" data-count>' + (N ? souls(list.length) + " · " + dishes(N) : "") + '</span></div><div class="o-people" data-people aria-live="polite">' + peopleHTML(o, c, new Set()) + "</div></div></div>" +
+        '<div class="shell"><div class="core o-card" style="padding-bottom:6px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;row-gap:2px"><h2 class="o-h3" id="o-people-h" tabindex="-1">Кой какво поръча</h2><span class="muted small" style="font-weight:700" data-count>' + (N ? souls(list.length) + " · " + dishes(N) : "") + '</span></div><div class="o-people" data-people aria-live="polite">' + peopleHTML(o, c, new Set()) + "</div></div></div>" +
       '</div><aside class="o-aside o-col">' +
         '<div data-bill>' + billHTML(o, c) + "</div>" +
         '<div data-paybox>' + payBoxHTML(o) + "</div>" +
@@ -479,6 +523,8 @@ export function start(): void {
   }
 
   /* ======================= view: invited colleague ======================= */
+  /** after 429 or "full" adding again is refused too: the main action is the call (decision 12.11) */
+  let guestBlock = "";
   function guestOf(code: string): Guest { return (L.guests[code] = L.guests[code] || { name: "", picks: {}, done: false, as: "" }); }
   function viewInvalid() {
     return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("warning-circle", 40) + '</div><h1 class="h2">Тази връзка не работи</h1><p class="muted">Може поръчката вече да е изпратена или връзката да е непълна. Помолете колегата за нова връзка или поръчайте сами.</p>' +
@@ -514,9 +560,9 @@ export function start(): void {
       '<div data-joinerr></div>' +
       pickerHTML(gp, c.day) + "</div>" +
       '<aside class="o-aside o-col o-onlydesk"><div class="shell"><div class="core o-card"><h2 class="o-h3">Вашият избор</h2><div data-mine>' + minePicks(gp) + "</div>" +
-        '<button class="pill pill-red pill-lg pill-block" type="button" data-act="guestsave" data-savebtn' + saveDis(gp) + ' style="margin-top:16px">' + saveLbl(gp, "Добави към поръчката") + "</button>" +
-        '<p class="o-fine" style="margin-top:12px">' + ic("info", 18) + "<span>" + (o.payer === "one" ? esc(org) + " плаща за всички. После си уреждате сметката." : "Плащате своето при получаване, в брой или с карта.") + "</span></p></div></div></aside></div></section>";
-    bar('<button class="pill pill-red" type="button" data-act="guestsave" data-savebtn' + saveDis(gp) + ">" + saveLbl(gp, "Добави към поръчката") + "</button>");
+        (guestBlock ? '<div style="margin-top:16px">' + callBtn("pill pill-red pill-lg pill-block") + "</div>" : '<button class="pill pill-red pill-lg pill-block" type="button" data-act="guestsave" data-savebtn' + saveDis(gp) + ' style="margin-top:16px">' + saveLbl(gp, "Добави към поръчката") + "</button>") +
+        '<p class="o-fine" style="margin-top:12px">' + ic("info", 18) + "<span>" + (o.payer === "one" ? esc(org) + " плаща за всички. После си уреждате сметката." : "Плащате своето при получаване: " + PAYS_TEXT + ".") + "</span></p></div></div></aside></div></section>";
+    bar(guestBlock ? callBtn("pill pill-red") : '<button class="pill pill-red" type="button" data-act="guestsave" data-savebtn' + saveDis(gp) + ">" + saveLbl(gp, "Добави към поръчката") + "</button>");
     return html;
   }
 
@@ -555,9 +601,19 @@ export function start(): void {
       '</div><div class="o-col o-onlydesk">' + skel(260, "border-radius:28px") + '</div></div><span class="vh" role="status">' + loadingText("поръчката") + "</span></section>";
     return '<section class="sec o-top" aria-busy="true">' + stepper(v === "share" ? 2 : 3) + '<div class="o-lay"><div class="o-col">' + skel(150, "border-radius:28px") + skel(72) + skel(72) + skel(72) + '</div><div class="o-col">' + skel(220, "border-radius:28px") + '</div></div><span class="vh" role="status">' + loadingText("поръчката") + "</span></section>";
   }
+  /** "Няма връзка с интернет" only offline; 5xx "Не успяхме да заредим поръчката" (stateBox, lib/ui.ts); 429: the call is the main action */
   function viewError() {
-    return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("warning-circle", 40) + '</div><h1 class="h2">' + (loadErr && loadErr.code === "throttled" ? "Твърде много опити" : loadErr && loadErr.code !== "offline" && loadErr.code !== "server" && (loadErr.status || 0) < 500 ? "Не успяхме да отворим поръчката" : OFFLINE) + '</h1><p class="muted">' + esc(loadErr ? loadErr.message : "Нещо се обърка. Опитайте пак.") + "</p>" +
-      '<div class="o-actions"><button class="pill pill-red pill-lg pill-block" type="button" data-act="retry">Опитай пак</button>' + callBtn("pill pill-line pill-block") + "</div></div></div></section>";
+    const e = loadErr, code = e ? e.code : "server", other4xx = !!e && code !== "offline" && code !== "server" && e.status >= 400 && e.status < 500;
+    const box = code === "throttled"
+      ? '<div class="empty sc-state" role="alert"><span class="ill">' + ic("warning-circle", 44) + '</span><h1 class="h3">Твърде много опити</h1><p class="muted">Опитайте след 10 минути или ни се обадете.</p><div class="acts">' + callBtn("pill pill-red") + "</div></div>"
+      : stateBox({ kind: code === "offline" ? "offline" : "error", what: "поръчката", h: "h1", retry: 'data-act="retry"', ...(other4xx ? { text: esc(e!.message) } : {}) });
+    return '<section class="sec o-top"><div class="o-errview">' + box + "</div></section>";
+  }
+  /** this browser opened the list without the organizer key (the core: isOrg false): the core's words, no send button */
+  function viewNotOrg(o: OfficeOrder) {
+    return '<section class="sec o-top"><div class="shell" style="max-width:560px;margin:0 auto"><div class="core o-state"><div class="ill warn">' + ic("lock", 40) + '</div><h1 class="h2">Отворете връзката за организатора</h1>' +
+      '<p class="muted">Тази връзка не е на организатора на поръчката. Отворете „Връзка само за вас“ на устройството, на което създадохте поръчката: оттам виждате списъка и я изпращате.</p>' +
+      '<div class="o-actions"><a class="pill pill-red pill-lg pill-block" href="#join-' + esc(o.code) + '">Вижте поканата</a>' + callBtn("pill pill-line pill-block") + "</div></div></div></section>";
   }
 
   /* ======================= prototype panel (only ?preview=1) ======================= */
@@ -595,8 +651,13 @@ export function start(): void {
   const codeFor = (rt: Route) => (rt.v === "join" || rt.v === "org" ? rt.code || "" : rt.v === "share" || rt.v === "list" || rt.v === "mine" ? L.code : "");
 
   let lastV: string | null = null, tick: ReturnType<typeof setInterval> | undefined, poll: ReturnType<typeof setInterval> | undefined;
-  function render(keepScroll = false) {
+  /** the title of the new view gets the focus once it is drawn (after the loading skeleton, if there is one) */
+  let focusNext = false;
+  function render(keepScroll = false, focus = false) {
     const rt = route();
+    const changed = lastV !== null && lastV !== rt.v;
+    if (changed) { sendBlock = ""; guestBlock = ""; }
+    if (changed || focus) focusNext = true;
     clearInterval(tick); bar(null);
     const isStart = rt.v === "start";
     startEl.hidden = !isStart; viewEl.hidden = isStart;
@@ -613,14 +674,16 @@ export function start(): void {
       else if (!O || O.code !== code) html = viewInvalid();
       else if (rt.v === "join") html = viewJoin(O);
       else if (O.status !== "open" && isMine(O)) { ensureSent(O); html = viewSent(); }
+      else if (!isMine(O)) html = viewNotOrg(O);
       else if (rt.v === "share") html = viewShare(O);
       else if (rt.v === "mine") html = viewMine(O);
       else html = viewList(O);
       viewEl.innerHTML = html;
     }
     protoEl.innerHTML = protoPanel(rt.v);
-    if (!keepScroll && lastV !== null && lastV !== rt.v) window.scrollTo(0, 0);
+    if (!keepScroll && changed) window.scrollTo(0, 0);
     lastV = rt.v;
+    if (focusNext && !(sim.loading || loading)) { focusNext = false; focusTitle(isStart ? createEl.querySelector<HTMLElement>("#o-create-h") : viewEl.querySelector<HTMLElement>("h1")); }
     if (rt.v === "list" || rt.v === "join" || rt.v === "share") tick = setInterval(liveTick, 1000);
     SC.reveal();
   }
@@ -731,7 +794,6 @@ export function start(): void {
       case "deadline": return "Крайният час мина и списъкът е затворен. Обадете се на организатора.";
       case "not_lunch": return "В общата поръчка са само ястия от обедното меню.";
       case "lunch_stale": return "Обедното меню за днес още не е качено. Поръчки приемаме, щом го качим.";
-      case "forbidden": return "Само организаторът може да изпрати поръчката. Отворете я от неговата връзка.";
       case "too_early": return "Поръчката е за друг ден. Изпраща се в деня на обяда.";
       case "offline": return OFFLINE + ". Проверете връзката и опитайте пак.";
       case "too_many": return "До " + MAX_PORTIONS + " порции на човек. Махнете някое ястие и опитайте пак.";
@@ -742,6 +804,55 @@ export function start(): void {
     }
   }
   const offlineErr = () => new ApiError("offline", OFFLINE + ". Проверете връзката и опитайте пак.", 0);
+  /** the error note of an action (decision 12.11, the cart): "Няма връзка с интернет" only offline, "Не успяхме да …" on 5xx,
+      the call as the main action on 429, "full" and "too_big"; "запазен" only where nothing is lost (offline, 5xx) */
+  function actErr(err: unknown, what: "create" | "send" | "add"): string {
+    const e = err instanceof ApiError ? err : null, code = e ? e.code : "server";
+    const retry = what === "create" ? '<button class="pill pill-red" type="submit">' + ic("arrow-clockwise", 20) + RETRY + "</button>"
+      : '<button class="pill pill-red" type="button" data-act="' + (what === "send" ? "send" : "guestsave") + '">' + ic("arrow-clockwise", 20) + RETRY + "</button>";
+    const kept = what === "send" ? "Списъкът е запазен, нищо не е изпратено." : what === "add" ? "Изборът ви е запазен в този браузър." : "Данните във формата са запазени.";
+    const verb = what === "send" ? "изпратим поръчката" : what === "add" ? "добавим избора ви" : "отворим поръчката";
+    if (code === "offline") return errNote(OFFLINE, kept + " Проверете връзката и опитайте пак.", retry + callBtn("pill pill-line"));
+    if (code === "throttled") return errNote("Твърде много опити", "Опитайте след 10 минути или ни се обадете.", callBtn("pill pill-red"));
+    if (code === "full") return errNote("Поръчката е пълна", "В една обща поръчка са до " + ORDER_RULES.officeMaxPeople + " души. Поръчайте си сами или ни се обадете.", callBtn("pill pill-red") + '<a class="pill pill-line" href="' + SC.url.lunch() + '">Поръчай си сам</a>');
+    if (code === "too_big") return errNote("Голяма поръчка: обадете ни се", "Общата поръчка надхвърля " + fmt(ORDER_RULES.maxTotal) + ". За по-голяма поръчка се обадете: ще я приготвим навреме.", callBtn("pill pill-red"));
+    if (!e || code === "server" || e.status >= 500) return errNote("Не успяхме да " + verb, kept + " Опитайте пак след малко или ни се обадете.", retry + callBtn("pill pill-line"));
+    return errNote(what === "send" ? "Поръчката не е изпратена" : what === "add" ? "Изборът не е добавен" : "Поръчката не е отворена", esc(errText(e)), callBtn("pill pill-line"));
+  }
+  /** the error in its box: the title gets the focus and comes into view */
+  function showErr(box: Element | null, html: string) { if (!box) return false; box.innerHTML = html; focusTitle(box.querySelector<HTMLElement>("[data-errh]")); return true; }
+
+  /* ---------- the organizer's phone and way of paying, chosen later: to the core (api.office.update), for the automatic send ---------- */
+  let contactSeq = 0;
+  const contactNote = (txt: string) => { const el = main.querySelector("[data-contactnote]"); if (el) el.textContent = txt; };
+  async function saveContact(what: "phone" | "pay") {
+    if (!O || !isMine(O) || O.status !== "open") return;
+    const raw = L.phone.trim(), phone = raw ? normPhone(raw) : "";
+    if (what === "phone") {
+      if (!raw) return; /* empty: the phone from the creation stays with the core */
+      if (!phone) { setErr("phone", "Проверете номера: 10 цифри, например 0888 12 34 56."); return; }
+    }
+    /* the core keeps the way of paying only with a phone (contact); without one it goes with the send */
+    if (!phone && !O.hasContact) { contactNote(""); return; }
+    const code = O.code, seq = ++contactSeq, pay: PayMethod = O.payer === "one" ? L.pay : "cash";
+    try {
+      if (sim.offline) throw offlineErr();
+      const r = (await api.office.update(code, null, { name: orgOf(O), pay, ...(phone ? { phone } : {}) })) as OfficeOrder;
+      if (seq !== contactSeq || !O || O.code !== code) return;
+      O = r; L.auto[code] = !!r.hasContact; save();
+      const c = ctx(O);
+      contactNote(what === "pay" ? "Запазено: " + PAY_LABEL[pay] + "." : c.closed ? "Запазено. Поръчката тръгва към ресторанта до минута." : "Запазено. В крайния час поръчката тръгва сама с този телефон.");
+      updList(O, new Set());
+      if (c.closed) setTimeout(refresh, 4000);
+    } catch (err) {
+      if (seq !== contactSeq) return;
+      const e = err instanceof ApiError ? err : null;
+      if (e && e.fields && e.fields.phone) { setErr("phone", e.fields.phone); return; }
+      if (e && e.code === "closed") { contactNote(e.message); await fetchO(code, true); render(true); return; }
+      contactNote(e && e.code === "offline" ? OFFLINE + ". Запазихме го в този браузър. Изпратете поръчката с бутона, когато връзката се върне."
+        : e && e.code === "forbidden" ? e.message : "Не успяхме да го запазим. Изпратете поръчката с бутона.");
+    }
+  }
 
   main.addEventListener("input", (e) => {
     const t = e.target as HTMLInputElement, d = L.draft;
@@ -752,7 +863,12 @@ export function start(): void {
     else if (t.id === "o-cphone") { L.phone = t.value; save(); setErr("cphone"); }
     else if (t.id === "o-gname") { const rt = route(); guestOf(rt.code || "").name = t.value; save(); setErr("gname"); }
   });
-  main.addEventListener("change", (e) => { const t = e.target as HTMLInputElement; if (t.name === "pays") { L.draft.pays = t.value === "each" ? "each" : "one"; save(); updEta(); } });
+  main.addEventListener("change", (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.name === "pays") { L.draft.pays = t.value === "each" ? "each" : "one"; save(); updEta(); }
+    else if (t.name === "opay") { L.pay = PAY_LABEL[t.value as PayMethod] ? (t.value as PayMethod) : "cash"; save(); void saveContact("pay"); }
+    else if (t.id === "o-phone") void saveContact("phone");
+  });
 
   main.addEventListener("submit", async (e) => {
     const f = e.target as HTMLElement;
@@ -796,9 +912,8 @@ export function start(): void {
         Object.entries(err.fields).forEach(([k, v]) => { const key = map[k]; if (key) { setErr(key, v); first = first || ids[key]; } });
         if (first) { const el = document.getElementById(first); scrollToEl(el); focusLater((el && el.matches("[role=group]") ? el.querySelector<HTMLElement>("button:not([disabled])") : el) || el); return; }
       }
-      const msg = err instanceof ApiError ? err.message : "Нещо се обърка. Опитайте пак.";
-      /* one message: under the button (a toast would cover it on a phone), the toast only without the box */
-      if (box) box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + "</p>", "alert"); else SC.toast(msg);
+      /* one message: under the button (a toast would cover it on a phone), its title gets the focus */
+      if (!showErr(box, actErr(err, "create"))) SC.toast(err instanceof ApiError ? err.message : "Нещо се обърка. Опитайте пак.");
     }
   });
 
@@ -808,7 +923,6 @@ export function start(): void {
     const act = t.dataset.act;
     if (t.dataset.slot) { L.draft.deadline = +t.dataset.slot; save(); main.querySelectorAll("[data-slot]").forEach((b) => b.setAttribute("aria-pressed", String(b === t))); updEta(); return; }
     if (t.dataset.zone) { const n = t.dataset.zone; L.draft.addr = (/Дружба/.test(n) ? "ж.к. " : "") + n + ", "; save(); setErr("addr"); updAddr(false); const inp = document.getElementById("o-addr") as HTMLInputElement | null; if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } return; }
-    if (t.dataset.pay) { L.pay = t.dataset.pay === "card" ? "card" : "cash"; save(); main.querySelectorAll("[data-pay]").forEach((b) => b.setAttribute("aria-pressed", String(b === t))); return; }
     if (t.dataset.jump) { scrollToEl(document.getElementById(t.dataset.jump)); return; }
     if (t.dataset.q && t.dataset.id) {
       const id = t.dataset.id, picks = pickTarget(), q = (picks[id] || 0) + +t.dataset.q;
@@ -841,7 +955,8 @@ export function start(): void {
         const old = p.lines, code = O.code;
         try {
           O = (await api.office.join(code, { name: who, lines: [] })) as OfficeOrder; updList(O, new Set());
-          SC.toast(who + " е махнат(а) от поръчката", async () => { try { O = (await api.office.join(code, { name: who, lines: old })) as OfficeOrder; updList(O, new Set([who])); } catch (err) { SC.toast(err instanceof ApiError ? err.message : "Не успяхме. Опитайте пак."); } });
+          focusTitle(main.querySelector<HTMLElement>("#o-people-h")); /* the button is gone: the focus never falls to <body> */
+          SC.toast(who + " е махнат(а) от поръчката", async () => { try { O = (await api.office.join(code, { name: who, lines: old })) as OfficeOrder; updList(O, new Set([who])); focusTitle(main.querySelector<HTMLElement>("#o-people-h")); } catch (err) { SC.toast(err instanceof ApiError ? err.message : "Не успяхме. Опитайте пак."); } });
         } catch (err) { SC.toast(err instanceof ApiError ? err.message : "Не успяхме. Опитайте пак."); }
         return;
       }
@@ -874,17 +989,20 @@ export function start(): void {
           /* a colleague renames their own entry by its pid (the core); the organizer's browser writes by name: clear the old one */
           if (g.as && g.as !== name && api.office.orgKey(O.code)) await api.office.join(O.code, { name: g.as, lines: [] });
           O = (await api.office.join(O.code, { name, lines: linesOf(g.picks) })) as OfficeOrder;
-          g.as = name; g.name = name; g.done = true; save(); render();
+          g.as = name; g.name = name; g.done = true; save(); render(false, true);
         } catch (err) {
           busyBtns("[data-savebtn]", false);
           if (err instanceof ApiError && (err.code === "closed" || err.code === "not_found" || err.code === "deadline")) { SC.toast(errText(err)); await fetchO(O.code, true); render(true); return; }
           if (err instanceof ApiError && err.code === "name_taken") { setErr("gname", (err.fields && err.fields.name) || err.message); const gi = document.getElementById("o-gname"); scrollToEl(gi); focusLater(gi); return; }
-          const msg = errText(err);
-          if (box) { box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + " Изборът ви е запазен.</p>", "alert"); scrollToEl(box); } else SC.toast(msg);
+          if (err instanceof ApiError && (err.code === "throttled" || err.code === "full")) {
+            guestBlock = err.code;
+            document.querySelectorAll<HTMLElement>('[data-act="guestsave"][data-savebtn]').forEach((b) => { b.outerHTML = callBtn(b.className); });
+          }
+          if (!showErr(box, actErr(err, "add"))) SC.toast(errText(err));
         }
         return;
       }
-      case "guestedit": if (O) { guestOf(O.code).done = false; save(); render(); } return;
+      case "guestedit": if (O) { guestOf(O.code).done = false; save(); render(false, true); } return;
       case "restart": e.preventDefault(); L.code = ""; L.me = ""; L.mine = {}; L.sent = null; O = null; Ocode = ""; save(); sim.closed = false; if (location.hash && location.hash !== "#o-create") location.hash = "o-create"; else go(); return;
       case "retry": loadErr = null; Ocode = ""; go(true); return;
       case "team": {
@@ -914,6 +1032,7 @@ export function start(): void {
       const p = document.getElementById("o-phone"); scrollToEl(p); focusLater(p); return;
     }
     const o = O, me = orgOf(o), list = eaters(o);
+    contactSeq++; /* the phone goes with the send: a late answer of api.office.update does not matter any more */
     busyBtns('[data-act="send"]', true);
     const lines = list.map((p) => p.n + ": " + Object.keys(p.picks).map((k) => p.picks[k] + " × " + byId[k].n).join(", ") + " (" + fmt(sum(p.picks)) + ")").join("; ");
     const noteText = "Обща поръчка за офиса „" + o.office + "“, " + souls(list.length) + ". " + (o.payer === "each" ? "Всеки плаща своето. " : "Плаща " + me + " за всички. ") + lines;
@@ -934,11 +1053,8 @@ export function start(): void {
       const e = err instanceof ApiError ? err : null;
       if (e && e.fields && e.fields.phone) { setErr("phone", e.fields.phone); const p = document.getElementById("o-phone"); scrollToEl(p); focusLater(p); return; }
       if (e && e.code === "closed") { SC.toast(e.message); await fetchO(o.code, true); render(true); return; } /* already sent: the sent screen */
-      const msg = e ? (e.code === "offline" ? OFFLINE + ". Поръчката ви е запазена, опитайте пак." : errText(e)) : "Нещо се обърка. Опитайте пак.";
-      const retry = !e || e.code === "offline" || (e.status || 0) >= 500;
-      const box = main.querySelector("[data-senderr]");
-      if (box) { box.innerHTML = note("bad", "warning-circle", "<p>" + esc(msg) + "</p>" + (retry ? '<button class="pill pill-line" type="button" data-act="send">Опитай пак</button>' : ""), "alert"); scrollToEl(box); }
-      else SC.toast(e && e.code === "offline" ? OFFLINE + ". Опитайте пак." : msg);
+      if (e && (e.code === "throttled" || e.code === "too_big")) { sendBlock = e.code; if (O) updList(O, new Set()); } /* the send buttons become the call */
+      if (!showErr(main.querySelector("[data-senderr]"), actErr(err, "send"))) SC.toast(errText(err));
     }
     void btn;
   }
