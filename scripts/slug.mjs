@@ -1,9 +1,9 @@
 // The address (slug) of a dish from its Bulgarian name (decision 12.11.2026, variant 1): the same transliteration as the
 // ids in design/data/menu.js (Обтекаемата система, "ъ" -> "a", "щ" -> "sht"), whole words only, up to SLUG_MAX
-// characters, unique. The id stays as it is (carts, orders, ratings, the database); only the address changes.
+// characters (72), unique. The id stays as it is (carts, orders, ratings, the database); only the address changes.
 // Used by scripts/gen-menu.mjs (writes `slug` into src/data/menu.json) and tests/unit/slug.test.ts.
 
-export const SLUG_MAX = 70;
+export const SLUG_MAX = 72; // 72 (decision 14.11.2026): "…-sushen-domat-tryufel" keeps its last word; no other address changes
 
 const T = {
   а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n",

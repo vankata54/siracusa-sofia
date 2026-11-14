@@ -9,7 +9,7 @@ import { items, cats, inCat, lunch } from "../../lib/data.ts";
 import { art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
-import { status } from "../../lib/status.ts";
+import { status, NEUTRAL_HOUR } from "../../lib/status.ts";
 import { endCta, lunchLinkText } from "./_cta.ts";
 
 const R = RESTAURANT;
@@ -119,14 +119,14 @@ export const FAQ: [string, string, string | null][] = [
 ];
 
 export function visitHTML(): string {
-  /* the live row is drawn with the build hour (like the header status) and refreshed in the browser at once */
-  const s = status();
+  /* the live row: an empty place of the daytime size in the HTML (never the hour of the build), the browser fills it at once */
+  const s = status(NEUTRAL_HOUR);
   return '<section class="sec" aria-labelledby="ab-faq-h"><div class="ab-visit">' +
     "<div>" + faqHead("ab-faq-h") + '<div class="ab-faq">' + FAQ.map((q, i) =>
       "<details" + (i === 0 ? " open" : "") + "><summary>" + q[0] + '<span class="tw" aria-hidden="true">' + ic("caret-down", 18) + '</span></summary><div class="a">' + q[1] + "</div></details>").join("") + "</div></div>" +
     '<div><div class="sec-h"><h2 class="h2" id="ab-visit-h">Елате при нас</h2></div>' +
       '<div class="shell"><div class="core">' +
-        '<div class="ab-live" role="status" data-ab-live><span class="dot ' + s.cls + '"></span><span>' + s.html + "</span></div>" +
+        '<div class="ab-live" role="status" data-ab-live data-pending><span class="dot ' + s.cls + '"></span><span>' + s.html + "</span></div>" +
         '<ul class="ab-info">' +
           '<li><span class="ico">' + ic("map-pin", 20) + "</span><span><small>Адрес</small><b>" + esc(addrStreet).replace("бл. ", "бл.&nbsp;") + '</b><span class="sub">' + esc(addrCity) + "</span></span></li>" +
           '<li><span class="ico">' + ic("clock", 20) + "</span><span><small>Работно време</small><b>Всеки ден " + hours + '</b><span class="sub">Кухнята до ' + R.kitchen + " · доставка до " + R.delivery + "</span></span></li>" +

@@ -279,9 +279,9 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
 }
 
 /* ---------- change by the customer: pre-orders only ("за утре", or "за днес" made before 10:00) ----------
-   [ЛИПСВА: до кога клиентът може да променя поръчка за утре] The default from docs/OPEN-QUESTIONS.md ("до 1 час преди
-   часа") is the safest rule that the tracking page already promises: only while the order is "Приета" (the kitchen has
-   not started), only with the tracking key, and at the latest CHANGE_BEFORE_MIN minutes before the old AND the new time.
+   The rule (decision of 14.11.2026, Поли): until 1 hour before the time of the order (the kitchen starts 20 min before
+   it), only while the order is "Приета" (the kitchen has not started), only with the tracking key, and at the latest
+   CHANGE_BEFORE_MIN minutes before the old AND the new time.
    Everything is checked again as for a new order (menu, zone, slots, limits, lunch); the price comes from the menu.
    A discount code or the profile bonus the order already used stays with it (it is not used a second time). */
 export const CHANGE_BEFORE_MIN = 60;

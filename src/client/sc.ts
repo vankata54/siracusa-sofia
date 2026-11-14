@@ -235,7 +235,7 @@ function reveal(root?: Element) {
 /* ---------- live status (every minute) ---------- */
 function tick() {
   const st = T.status(), box = document.querySelector<HTMLElement>("[data-status]");
-  if (box) { const html = statusHTML(); if (box.innerHTML !== html) box.innerHTML = html; }
+  if (box) { const html = statusHTML(); if (box.innerHTML !== html) box.innerHTML = html; box.removeAttribute("data-pending"); }
   document.dispatchEvent(new CustomEvent("sc:tick", { detail: { state: T.state(), status: st } }));
 }
 /* "Натоварено" and the minutes: one source, the kitchen settings in the core (server: GET /api/status; demo: the local

@@ -47,3 +47,15 @@ test("the shared runtime is at most 30 000 B; robots.txt and sitemap.xml; noinde
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   }
 });
+
+test("status row: the HTML has an empty place of the same size (never the hour of the build), the browser fills it", async ({ page, request }) => {
+  const html = await (await request.get("/menu/")).text();
+  expect(html).toMatch(/<div class="status" data-status data-pending>/);
+  expect(html).not.toMatch(/Доставката приключи|Кухнята затвори|Затворено/);
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  await page.goto("/menu/");
+  const st = page.locator("[data-status]");
+  await expect(st).not.toHaveAttribute("data-pending", /.*/);
+  await expect(st).toContainText(/Отворено|Затворено|Доставката|Кухнята/);
+  await expect(st.locator("span").last()).toBeVisible();
+});

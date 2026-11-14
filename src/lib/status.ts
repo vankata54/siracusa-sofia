@@ -5,6 +5,10 @@ import { minutes, type ClockInput } from "./time.ts";
 
 export interface State { open: boolean; kitchen: boolean; delivery: boolean; lunch: boolean; lunchDiscount: boolean; breakfast: boolean; m: number }
 
+/** the hour the static HTML is drawn for, where a part depends on the hour and the browser redraws it at once (such a part
+    is always [data-pending]: invisible until then, decision 14.11.2026) */
+export const NEUTRAL_HOUR = "12:30";
+
 export function state(o?: ClockInput): State {
   const m = minutes(o);
   return {

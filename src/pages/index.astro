@@ -5,11 +5,14 @@
 import Base from "../layouts/Base.astro";
 import { miss, mapSlot, callBtn } from "../lib/ui.ts";
 import { url, ic, art, dishCard, byId, isOut, inCat, lunchIsToday, offers, events, state, eta, lastSaturday, ZONES, RESTAURANT } from "../lib/index.ts";
+import { NEUTRAL_HOUR } from "../lib/status.ts";
 import { MENU } from "../data/menu.ts";
 import { popErrHTML, goHTML, lunchTileText, etaInner, slideHTML, dotHTML, firstOfferKey, eventsHTML, deliveryNote, restaurantLd } from "./_home.ts";
 
 const R = RESTAURANT, MENU_LUNCH_DATE = MENU.lunch.date;
-const st = state(), et = eta(), lunchToday = lunchIsToday(), ls = lastSaturday();
+/* the hour parts (Поръчай, обедно, доставка сега, бележката, първият слайд) are drawn for a neutral daytime hour and stay
+   invisible ([data-pending]) until the browser sets them for the real hour: never the hour of the build (14.11.2026) */
+const st = state(NEUTRAL_HOUR), et = eta(NEUTRAL_HOUR), lunchToday = lunchIsToday(), ls = lastSaturday();
 
 /* ---------- offers: the first slide has 4 variants by the hour; the browser picks one ---------- */
 const lunchDay = new Date(MENU_LUNCH_DATE + "T12:00:00");
@@ -59,12 +62,12 @@ const jsonld = restaurantLd(Astro.site);
     </div>
     <div class="acts">
       <div class="offline" role="status" data-offline hidden><Fragment set:html={ic("warning", 22)} /><div><b>Няма връзка с интернет</b><p>Менюто се вижда. Поръчката ще изпратите, щом връзката се върне.</p><button class="link" type="button" data-retry>Опитай пак<Fragment set:html={ic("caret-right", 18)} /></button></div></div>
-      <Fragment set:html={goHTML(st)} />
+      <Fragment set:html={goHTML(st).replace("data-go", "data-go data-pending")} />
       <div class="tiles">
         <a class="tile" href={url.reservation()}><span class="ti" set:html={ic("calendar-check", 22)}></span><span><b>Резервирай маса</b><small>Салон и градина</small></span></a>
-        <a class="tile" href={url.lunch()}><span class="ti" set:html={ic("bowl-food", 22)}></span><span data-lunchtile set:html={lunchTileText(st, lunchToday)}></span></a>
+        <a class="tile" href={url.lunch()}><span class="ti" set:html={ic("bowl-food", 22)}></span><span data-lunchtile data-pending set:html={lunchTileText(st, lunchToday)}></span></a>
       </div>
-      <a class="eta" href={url.page("delivery")} data-eta set:html={etaInner(st, et)}></a>
+      <a class="eta" href={url.page("delivery")} data-eta data-pending set:html={etaInner(st, et)}></a>
     </div>
   </section>
 
@@ -453,6 +456,7 @@ const jsonld = restaurantLd(Astro.site);
     $("[data-eta]").innerHTML = etaInner(st, eta);
     const dn = $("[data-dnote]"), note = deliveryNote(st);
     dn.innerHTML = note; dn.hidden = !note;
+    main.querySelectorAll("[data-lunchtile], [data-eta]").forEach((el) => el.removeAttribute("data-pending")); /* the real hour is set */
     if (demo !== "loading") { $("[data-evs]").innerHTML = eventsHTML(SC.events(), SC.lastSaturday().days); SC.reveal(); }
     promoSetup(st, lt);
   }

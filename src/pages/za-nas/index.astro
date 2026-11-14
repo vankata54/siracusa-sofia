@@ -198,6 +198,7 @@ const description = "Квартален ресторант в Дружба 2, С
     if (live) {
       const html = '<span class="dot ' + s.cls + '"></span><span>' + s.html + "</span>";
       if (live.innerHTML !== html) live.innerHTML = html;
+      live.removeAttribute("data-pending");
     }
     const c = endCta(SC.state());
     if (endText && endText.textContent !== c.text) endText.textContent = c.text;

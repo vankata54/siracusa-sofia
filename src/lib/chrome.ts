@@ -6,6 +6,7 @@ import "sc-icons:caret-right,check,phone,x"; /* the icons of this module in one 
 import { RESTAURANT } from "./consts.ts";
 import { esc } from "./format.ts";
 import { statusHTML } from "./chrome-core.ts";
+import { NEUTRAL_HOUR } from "./status.ts";
 import { url, type PageKey } from "./routes.ts";
 import type { ClockInput } from "./time.ts";
 
@@ -39,7 +40,11 @@ export function header(o: HeaderOpts = {}): string {
   const row1 = o.back
     ? '<header class="top back"><a class="hb" href="' + o.back.href + '">' + ic("arrow-left", 20) + esc(o.back.label || "Назад") + '</a><span class="ttl">' + esc(o.title || "") + '</span><div class="hact">' + (o.share ? '<button class="hb" type="button" data-share>' + ic("share-network", 20) + "Сподели</button>" : "") + "</div></header>" + full(" desk")
     : full("");
-  const row2 = o.status === false && o.cart === false ? "" : '<div class="row2" role="region" aria-label="Работно време и количка">' + (o.status === false ? "" : '<div class="status" data-status>' + statusHTML(o.clock) + "</div>") + (o.cart === false ? "" : cartBtn) + "</div>";
+  /* the status depends on the hour: in the static HTML it would be the hour of the build ("Доставката приключи за днес"
+     from a build after 21:00). Without a given clock the server draws an empty place of the same size (the daytime status,
+     invisible: [data-pending]) and the browser fills it at once (src/client/sc.ts tick); decision 14.11.2026 */
+  const pending = statusHTML(NEUTRAL_HOUR);
+  const row2 = o.status === false && o.cart === false ? "" : '<div class="row2" role="region" aria-label="Работно време и количка">' + (o.status === false ? "" : o.clock != null ? '<div class="status" data-status>' + statusHTML(o.clock) + "</div>" : '<div class="status" data-status data-pending>' + pending + "</div>") + (o.cart === false ? "" : cartBtn) + "</div>";
   return '<div class="sentinel" data-sent></div>' + row1 + row2;
 }
 

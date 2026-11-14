@@ -7,7 +7,8 @@ import { items } from "../../src/lib/data.ts";
 import { url } from "../../src/lib/routes.ts";
 import { createApp } from "../../server/app.ts";
 
-/* Dish addresses (decision 12.11.2026, variant 1): the id stays, the cut ids get a slug of whole words up to 70 characters. */
+/* Dish addresses (decision 12.11.2026, variant 1): the id stays, the cut ids get a slug of whole words up to 72 characters
+   (70 on 12.11, 72 since 14.11: only the bruschetta gets its last word "трюфел", no other address changes). */
 describe("dish slug", () => {
   it("transliterates like the ids of the menu", () => {
     expect(translit("Пица Дяволо")).toBe("pitsa-dyavolo");
@@ -18,8 +19,10 @@ describe("dish slug", () => {
   });
   it("whole words only, never over the limit", () => {
     const name = "Брускети със семена, прошуто Крудо, филаделфия мус, сушен домат, трюфел";
-    const s = slugify(name);
-    expect(s.length).toBeLessThanOrEqual(SLUG_MAX);
+    /* 71 characters: whole at 72, cut between words at 70 */
+    expect(slugify(name)).toBe("brusketi-sas-semena-proshuto-krudo-filadelfiya-mus-sushen-domat-tryufel");
+    expect(slugify(name).length).toBeLessThanOrEqual(SLUG_MAX);
+    const s = slugify(name, 70);
     expect(translit(name).startsWith(s + "-")).toBe(true); /* cut before a "-", i.e. between words */
     expect(s).toBe("brusketi-sas-semena-proshuto-krudo-filadelfiya-mus-sushen-domat");
     expect(slugify("Пица Дяволо")).toBe("pitsa-dyavolo");
@@ -44,6 +47,9 @@ describe("dish slug", () => {
       expect(translit(x.n)).toBe(x.id);
       expect(url.dish(x)).toBe("/menu/" + x.cat + "/" + x.id + "/");
     }
+    /* 72 instead of 70 changes the bruschetta only (14.11.2026) */
+    const a70 = assignSlugs(items, 70), a72 = assignSlugs(items, 72);
+    expect(items.filter((x) => a70.get(x.id) !== a72.get(x.id)).map((x) => x.id)).toEqual(["brusketi-sas-semena-proshuto-krudo-filadelfiya-m"]);
     const all = items.map((x) => x.cat + "/" + (x.slug || x.id));
     expect(new Set(all).size).toBe(all.length);
     expect(items.find((x) => x.id === "pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vi")!.slug).toBe("pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vishni");
