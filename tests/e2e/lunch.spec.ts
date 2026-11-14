@@ -32,7 +32,9 @@ test("lunch: SEO, every dish in the server HTML, JSON-LD", async ({ request }) =
   expect(html).toMatch(/Обедно меню<\/span><span class="vh">: <\/span><span class="dt">Меню за/);
   expect(html).toContain("2\u00a0ное"); /* week: short dates as on the site */
   expect(html).toMatch(/data-id="l-supa-topcheta" data-p="2.4"/);
-  expect(html).not.toMatch(/днес/i); /* the build does not know today's date */
+  /* the build does not know today's date: the lunch content never says "днес". Only <main>: the status row above it is drawn
+     with the clock of the build and corrected in the browser ("Доставката приключи за днес" when built after 21:00) */
+  expect(html.slice(html.indexOf("<main"), html.indexOf("</main>"))).not.toMatch(/днес/i);
   expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
   expect(html).toContain("[ЛИПСВА: меню за вторник]");
