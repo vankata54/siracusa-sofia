@@ -124,7 +124,11 @@
 .seg-st button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 .form{display:grid; gap:14px}
 .form .two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@container app (max-width:440px){ .form .two{grid-template-columns:1fr} }
+.form input[type=date]{min-height:52px}
 .form .err{font-size:14px; color:var(--danger); font-weight:700}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
 </style>
 </head>
 <body>
@@ -319,17 +323,17 @@ function newRes(){ var f = {date:day < TODAY ? TODAY : day, time:"", people:2, t
     '<div class="two"><div class="field"><label for="nr-d">Ден</label><input class="input" id="nr-d" type="date" min="' + TODAY + '" max="' + addD(TODAY, 92) + '" value="' + f.date + '"></div>' +
     '<div class="field"><label for="nr-t">Час</label><select class="input" id="nr-t"><option value="">Изберете</option>' + SLOTS.map(function(x){ return '<option>' + x + '</option>'; }).join("") + '</select></div></div>' +
     '<div class="two"><div class="field"><label for="nr-p">Хора</label><input class="input" id="nr-p" type="number" inputmode="numeric" min="1" max="60" value="2"></div>' +
-    '<div class="field"><label for="nr-tb">Маса</label><select class="input" id="nr-tb"><option value="">Без маса (чакащи)</option></select></div></div>' +
+    '<div class="field"><label for="nr-tb">Маса</label><select class="input" id="nr-tb"><option value="">Първо изберете час</option></select></div></div>' +
     '<div class="field"><label for="nr-n">Име</label><input class="input" id="nr-n" autocomplete="off"></div>' +
     '<div class="field"><label for="nr-ph">Телефон</label><input class="input" id="nr-ph" type="tel" inputmode="tel" placeholder="0888 12 34 56" autocomplete="off"></div>' +
     '<div class="field"><label for="nr-o">Повод (по желание)</label><select class="input" id="nr-o"><option value="">Няма</option>' + OCC.map(function(o){ return '<option>' + o + '</option>'; }).join("") + '</select></div>' +
     '<div class="field"><label for="nr-no">Бележка (по желание)</label><textarea class="input" id="nr-no" rows="2"></textarea></div>' +
     '<p class="muted" style="margin:0;font-size:15px">Съгласие за оферти се дава само от госта в сайта; тук не се отбелязва.</p><p class="err" data-ferr role="alert" hidden></p></form>',
-    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Запази резервацията</button>', focus:"#nr-t"});
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Запази</button>', focus:"#nr-t"});
   var B = s.body; function $(sel){ return B.querySelector(sel); }
   function fillTables(){ var d = $("#nr-d").value, t = $("#nr-t").value, p = +$("#nr-p").value || 1, cur = $("#nr-tb").value;
     var free = t ? TABLES.filter(function(x){ return x.seats >= p && takenAt(d, t).indexOf(x.id) < 0; }) : [];
-    $("#nr-tb").innerHTML = '<option value="">' + (t ? (free.length ? 'Без маса (чакащи)' : 'Няма свободна: в чакащите') : 'Първо изберете час') + '</option>' + free.map(function(x){ return '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>Маса ' + x.n + ' · ' + ZN[x.zone] + ', ' + x.seats + ' места</option>'; }).join(""); }
+    $("#nr-tb").innerHTML = '<option value="">' + (t ? (free.length ? 'Чакащи (без маса)' : 'Няма свободна: чакащи') : 'Първо изберете час') + '</option>' + free.map(function(x){ return '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>Маса ' + x.n + ' · ' + ZN[x.zone] + ', ' + x.seats + ' места</option>'; }).join(""); }
   ["#nr-d","#nr-t","#nr-p"].forEach(function(k){ $(k).addEventListener("change", fillTables); });
   function err(el, msg){ var fld = el.closest(".field"), e = fld.querySelector(".err"); if (!e){ e = document.createElement("span"); e.className = "err"; fld.appendChild(e); } e.textContent = msg || ""; e.hidden = !msg; el.setAttribute("aria-invalid", msg ? "true" : "false"); }
   s.foot.querySelector("[data-x]").onclick = s.close;

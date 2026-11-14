@@ -102,6 +102,8 @@
 .hl-savebar .pill{flex:none}
 @container app (min-width:700px){ .hl-savebar{left:50%; right:auto; bottom:92px; width:min(620px, calc(100% - 48px)); transform:translate(-50%,160%)} .hl-savebar.on{transform:translate(-50%,0)} }
 @container app (max-width:420px){ .hl-savebar{flex-wrap:wrap; border-radius:28px; padding:10px} .hl-savebar .n{flex:1 1 100%; padding:0 8px 4px} .hl-savebar .pill{flex:1} }
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
 </style>
 </head>
 <body>

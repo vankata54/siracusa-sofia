@@ -67,6 +67,8 @@
 .st-savebar .pill{flex:none}
 @container app (min-width:700px){ .st-savebar{left:50%; right:auto; bottom:92px; width:min(620px, calc(100% - 48px)); transform:translate(-50%,160%)} .st-savebar.on{transform:translate(-50%,0)} }
 @container app (max-width:420px){ .st-savebar{flex-wrap:wrap; border-radius:28px; padding:10px} .st-savebar .n{flex:1 1 100%; padding:0 8px 4px} .st-savebar .pill{flex:1} }
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
 </style>
 </head>
 <body>

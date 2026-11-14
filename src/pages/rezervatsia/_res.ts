@@ -292,9 +292,9 @@ export function start(): void {
   };
   function shape(t: Table, cx: number, cy: number): string {
     let s = "";
-    if (t.shape === "round") s += '<rect class="ch" x="' + (cx - 40) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><rect class="ch" x="' + (cx + 30) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><circle class="top" cx="' + cx + '" cy="' + cy + '" r="25"/>';
-    else if (t.shape === "square") s += '<rect class="ch" x="' + (cx - 12) + '" y="' + (cy - 38) + '" width="24" height="9" rx="4"/><rect class="ch" x="' + (cx - 12) + '" y="' + (cy + 29) + '" width="24" height="9" rx="4"/><rect class="ch" x="' + (cx - 38) + '" y="' + (cy - 12) + '" width="9" height="24" rx="4"/><rect class="ch" x="' + (cx + 29) + '" y="' + (cy - 12) + '" width="9" height="24" rx="4"/><rect class="top" x="' + (cx - 25) + '" y="' + (cy - 25) + '" width="50" height="50" rx="11"/>';
-    else { for (let i = 0; i < 3; i++) { const x = cx - 28 + i * 20; s += '<rect class="ch" x="' + x + '" y="' + (cy - 35) + '" width="16" height="9" rx="4"/><rect class="ch" x="' + x + '" y="' + (cy + 26) + '" width="16" height="9" rx="4"/>'; } s += '<rect class="top" x="' + (cx - 35) + '" y="' + (cy - 22) + '" width="70" height="44" rx="11"/>'; }
+    if (t.shape === "round") s += '<rect class="ch" x="' + (cx - 40) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><rect class="ch" x="' + (cx + 30) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><circle class="tt" cx="' + cx + '" cy="' + cy + '" r="25"/>';
+    else if (t.shape === "square") s += '<rect class="ch" x="' + (cx - 12) + '" y="' + (cy - 38) + '" width="24" height="9" rx="4"/><rect class="ch" x="' + (cx - 12) + '" y="' + (cy + 29) + '" width="24" height="9" rx="4"/><rect class="ch" x="' + (cx - 38) + '" y="' + (cy - 12) + '" width="9" height="24" rx="4"/><rect class="ch" x="' + (cx + 29) + '" y="' + (cy - 12) + '" width="9" height="24" rx="4"/><rect class="tt" x="' + (cx - 25) + '" y="' + (cy - 25) + '" width="50" height="50" rx="11"/>';
+    else { for (let i = 0; i < 3; i++) { const x = cx - 28 + i * 20; s += '<rect class="ch" x="' + x + '" y="' + (cy - 35) + '" width="16" height="9" rx="4"/><rect class="ch" x="' + x + '" y="' + (cy + 26) + '" width="16" height="9" rx="4"/>'; } s += '<rect class="tt" x="' + (cx - 35) + '" y="' + (cy - 22) + '" width="70" height="44" rx="11"/>'; }
     return s;
   }
   function hatch(t: Table, cx: number, cy: number): string {
