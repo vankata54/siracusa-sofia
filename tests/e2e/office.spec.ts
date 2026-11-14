@@ -312,9 +312,10 @@ test("office: errors when adding: a title with the focus, the call as the main a
   await expect(title).toBeFocused();
   await expect(page.locator(".o-err")).not.toContainText("запазен");
   await expect(page.locator(".o-err a.pill-red")).toHaveText(CALL_TXT);
-  /* adding again is refused too: the save buttons became the call */
-  await expect(page.locator("[data-act=guestsave][data-savebtn]")).toHaveCount(0);
-  await expect(page.locator(isPhone(page) ? ".o-bar a.pill-red" : ".o-aside a.pill-red").first()).toHaveText(CALL_TXT);
+  /* adding again is refused too: the save buttons stay off with the reason, one red call on the screen (in the note) */
+  await expect(guestBtn(page)).toBeDisabled();
+  await expect(guestBtn(page)).toHaveText("Поръчката е пълна");
+  await expect(page.locator("a.pill-red[href^='tel:']:visible")).toHaveCount(1);
 
   /* 429 and too_big (a fresh view) */
   for (const [st, err, t] of [[429, "throttled", "Твърде много опити"], [422, "too_big", "Голяма поръчка: обадете ни се"]] as const) {
@@ -371,7 +372,10 @@ test("office: errors when sending: a title with the focus, 429 and too_big give 
   await expect(title).toBeFocused();
   await expect(page.locator(".o-err [data-act=send]")).toHaveCount(0);
   await expect(page.locator(".o-err a.pill-red")).toHaveText(CALL_TXT);
-  await expect(page.locator(isPhone(page) ? ".o-bar a.pill-red" : "[data-sendinline] a.pill-red")).toHaveText(CALL_TXT);
+  /* the send button stays off with the reason: one red call on the screen (the note's), also at 1440 */
+  await expect(sendBtnOf(page)).toBeDisabled();
+  await expect(sendBtnOf(page)).toHaveText("Опитайте след 10 минути");
+  await expect(page.locator("a.pill-red[href^='tel:']:visible")).toHaveCount(1);
 
   /* too_big (a fresh view) */
   await page.reload();
@@ -404,7 +408,8 @@ test("office: the phone and the way of paying chosen later go to the core (api.o
   await open(page);
   await create(page);
   await page.goto(PATH + "?preview=1&t=09:30#list");
-  await expect(page.locator("[data-sendnote]")).toContainText("Поръчката не тръгва сама");
+  /* without a phone: the note says the phone below makes it leave by itself (Кръг 2, Д2) */
+  await expect(page.locator("[data-sendnote]")).toContainText("Напишете телефона си по-горе и поръчката тръгва сама");
   /* the words: "В брой / Карта при получаване / Ваучер", as the note under the form */
   await expect(page.locator("[data-view] .o-choice .o-opt b")).toHaveText(["В брой", "Карта при получаване", "Ваучер"]);
   expect(await page.locator("[data-view]").textContent()).not.toContain("С карта");
@@ -442,26 +447,75 @@ test("office: without the organizer key the list says the core's words, without 
   await expect(page.locator("[data-act=send]")).toHaveCount(0);
 });
 
-test("office: pickup after 15:00 is sent with -30% (the core's rule), not 'lunch is over'", async ({ page }) => {
-  test.setTimeout(60_000);
+const euros = (t: string) => +t.replace(/[^\d,]/g, "").replace(",", ".");
+test("office: pickup after 15:00 is sent with -30% (the core's rule), not 'lunch is over'; every person's sum with -30%", async ({ page, browser }) => {
+  test.setTimeout(90_000);
   await open(page, "12:00");
   const code = await create(page, { pickup: true });
   await page.goto(PATH + "?preview=1&t=12:00#join-" + code);
   await page.fill("#o-gname", "Николай");
   await page.locator(".o-item:not(.out) .plus").first().click();
+  await page.locator(".o-item:not(.out) [data-q='1']").first().click();
+  await page.locator(".o-item:not(.out) [data-q='1']").first().click();
   await guestBtn(page).click();
   await expect(page.locator("h1:visible")).toHaveText("Готово, Николай!");
+  /* Петя in her own browser */
+  const { c: c1, p: g } = await other(browser, page);
+  await g.goto(PATH + "?preview=1&t=12:00#join-" + code);
+  await g.fill("#o-gname", "Петя");
+  await g.locator(".o-item:not(.out) .plus").nth(1).click();
+  await guestBtn(g).click();
+  await expect(g.locator("h1:visible")).toHaveText("Готово, Петя!");
   await page.goto(PATH + "?preview=1&t=15:30#list");
   await expect(page.locator("main")).not.toContainText("Обедното меню вече не се доставя");
+  /* the hour in the title is past: no time before the send */
+  await expect(page.locator("[data-view] .o-sub").first()).toHaveText("Вземане от ресторанта");
   const send = sendBtnOf(page);
   await expect(send).toBeEnabled();
   await expect(send).toHaveText(/^Поръчай за вземане · \d+,\d{2} €$/);
   await expect(page.locator("[data-bill]")).toContainText("-30%");
   const sum = /(\d+,\d{2} €)/.exec((await send.textContent()) || "")![1];
   await page.fill("#o-phone", "0888 12 34 56");
+  /* the persons in the list add up to the total with -30% */
+  const rows = await page.locator("[data-people] .o-person .sum .price").allTextContents();
+  expect(Math.round(rows.reduce((a, t) => a + euros(t), 0) * 100) / 100).toBe(euros(sum));
   await send.click();
   await expect(page.locator("h1:visible")).toHaveText("Поръчката е изпратена");
   await expect(page.locator(".o-sentmeta")).toContainText(sum);
+  /* "Колегите ви дължат": with -30%, adding up to the order's total (the organizer chose nothing) */
+  const owe = await page.locator(".o-owe .kv .price").allTextContents();
+  expect(owe.length).toBe(2);
+  expect(Math.round(owe.reduce((a, t) => a + euros(t), 0) * 100) / 100).toBe(euros(sum));
+  /* the colleague: "Готова е веднага" (the core's "веднага"), and the same amount she owes */
+  await g.goto(PATH + "?preview=1&t=15:31#join-" + code);
+  await expect(g.locator("h1:visible")).toHaveText("Поръчката е изпратена");
+  await expect(g.locator(".o-state")).toContainText("Готова е веднага.");
+  await expect(g.locator(".o-state")).not.toContainText("Готова в веднага");
+  await expect(g.locator(".o-tot .price")).toHaveText(owe[1]);
+  await expect(g.locator(".o-mine")).toContainText("-30%");
+  await c1.close();
+});
+
+/* Кръг 2, блокираща 1: the first press of "Изпрати" right after the phone counts, even when the answer of
+   api.office.update comes while the finger is on the button (the bar is updated in place, not drawn again) */
+test("office: the first press of send right after typing the phone sends (a live update does not swallow it)", async ({ page }) => {
+  test.setTimeout(60_000);
+  await open(page);
+  const code = await create(page);
+  await page.goto(PATH + "?preview=1&t=09:30#join-" + code);
+  await page.fill("#o-gname", "Николай");
+  await page.locator(".o-item:not(.out) .plus").first().click();
+  await guestBtn(page).click();
+  await expect(page.locator("h1:visible")).toHaveText("Готово, Николай!");
+  await page.goto(PATH + "?preview=1&t=10:45#list");
+  const calls: string[] = [];
+  /* the answer of update comes 150 ms later: in the middle of a 400 ms press */
+  await page.route(/\/api\/office\/\d+\/update$/, async (r) => { calls.push("update"); await new Promise((f) => setTimeout(f, 150)); await r.continue(); });
+  page.on("request", (r) => { if (/\/submit$/.test(r.url())) calls.push("submit"); });
+  await page.fill("#o-phone", "0888 12 34 56");
+  await sendBtnOf(page).click({ delay: 400 });
+  await expect(page.locator("h1:visible")).toHaveText("Поръчката е изпратена");
+  expect(calls).toEqual(["update", "submit"]);
 });
 
 test("office: the code in the chat chip is whole at 360", async ({ page }) => {

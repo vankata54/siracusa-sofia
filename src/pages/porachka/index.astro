@@ -254,6 +254,7 @@ const skeleton =
   .hnote{padding:0 26px 16px}
   .tl{padding:22px 26px 16px}
   .acts{grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))} /* never narrower than the longest label ("Обади се · 0894 36 55 77"): a button that does not fit goes to the next row (tracking.review кр. 3) */
+  .acts > .pill:nth-child(3):last-child{grid-column:1 / -1} /* the third button alone on its row takes the whole row (кр. 4) */
 }
 @container app (min-width:900px){
   .trk-s{padding-top:40px}
