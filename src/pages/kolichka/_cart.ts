@@ -135,7 +135,7 @@ export function start(): void {
 
   function etaText(I: Info): { big: string; small: string } {
     if (!I.n) return { big: "", small: "" };
-    if (I.conflict === "delivery") return { big: "Само за вземане от място", small: "Обедното меню след\u00a015:00 не\u00a0се\u00a0доставя" }; /* "не се доставя" stays together on the second line */
+    if (I.conflict === "delivery") return { big: "Само за вземане от\u00a0място", small: "Обедното меню след\u00a015:00 не\u00a0се\u00a0доставя" }; /* "не се доставя" stays together on the second line */
     if (I.closed) return { big: I.m < 600 ? "Днес, от 10:30" : "Утре, от 10:30", small: "Изберете час в следващата стъпка" };
     if (I.sched) {
       if (D.slot && D.slot !== "asap") return { big: (I.sched === "утре" ? "Утре" : "Днес") + " в " + D.slot, small: I.mode === "delivery" ? "Доставка в този час" : "Готова за вземане" };
@@ -178,7 +178,8 @@ export function start(): void {
     if (step === 1 && I.stale.length) h += note("warn", "warning-circle", "Обедното меню за днес още не е качено",
       "Обедните ястия в количката са от менюто за " + lunchDay() + " и не се броят в поръчката. Махнете ги, а другото остава.",
       '<button class="pill pill-line" type="button" data-act="rmlunch">' + ic("trash", 20) + "Махни обедните ястия</button>");
-    if (step === 1 && I.n === 0 && I.outN) h += note("warn", "warning-circle", "Всичко в количката е изчерпано днес", "Изчерпаните ястия остават в количката с „Изчерпано днес“, но не влизат в поръчката. Сменете ги с подобни или изберете друго от менюто.");
+    /* only when nothing else is there: with an old lunch dish too the note above says what to do */
+    if (step === 1 && I.n === 0 && I.outN && !I.stale.length) h += note("warn", "warning-circle", "Всичко в количката е изчерпано днес", "Изчерпаните ястия остават в количката с „Изчерпано днес“, но не влизат в поръчката. Сменете ги с подобни или изберете друго от менюто.");
     return h;
   }
 

@@ -109,6 +109,20 @@ test("cart: only old lunch dishes before 10:00 -> no 'Кухнята отвар�
   await expect(cta(page)).toContainText("Махни обедните ястия");
 });
 
+test("cart: a sold-out dish with an old lunch dish -> only the lunch note, never 'Всичко ... е изчерпано' (cart.review кръг 2)", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-13T10:30:00Z")); /* 12:30 Sofia, the lunch menu in the data is old */
+  await page.addInitScript(([c]) => {
+    if (sessionStorage.getItem("ck-init")) return;
+    sessionStorage.setItem("ck-init", "1");
+    localStorage.setItem("sc-cookie", '"min"'); localStorage.removeItem("sc-checkout");
+    localStorage.setItem("sc-cart", JSON.stringify(c));
+  }, [{ mode: "pickup", lines: [CART.lines[1], { key: "pleskavitsa", id: "pleskavitsa", q: 1, mods: [], extra: 0 }] }]);
+  await page.goto("/kolichka/");
+  await expect(page.locator(".note.warn").first()).toContainText("Обедното меню за днес още не е качено");
+  await expect(page.locator(".ck-main")).not.toContainText("Всичко в количката е изчерпано днес");
+  await expect(cta(page)).toContainText("Махни обедните ястия");
+});
+
 test("cart: no free pickup slots -> the one text 'Поръчки за вземане до 22:30' (decision 12.11, round 3)", async ({ request }) => {
   /* the state is not reachable on the clock (there is always 23:00 until 22:30, then it is "за утре"): check the page script */
   const html = await (await request.get("/kolichka/")).text();
