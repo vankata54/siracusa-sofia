@@ -90,6 +90,7 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '.fab svg{color:var(--ember)} .fab:active{transform:scale(.96)}' +
   '.fab[aria-pressed="true"]{background:var(--ember); color:var(--on-ember)} .fab[aria-pressed="true"] svg{color:var(--on-ember)}' +
   '@container pen (max-width:699px){ .fab{right:12px; bottom:var(--fab-bp, 96px)} :host([data-nofab-phone]) .fab{display:none} }' +
+  ':host([data-sheet]) .fab{display:none}' + /* a sheet of the admin is open: the round button must not cover its buttons */
   '.bar{position:absolute; top:10px; left:50%; transform:translate(-50%,-140%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; max-width:calc(100% - 24px); min-height:60px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transition:transform var(--t-slow, 320ms) var(--ease, ease), opacity var(--t-slow, 320ms) var(--ease, ease); font-size:16px; line-height:1.3}' +
   '.bar.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}' +
   '.bar .t{min-width:0} .bar .t b{font-weight:800} .bar .t span{font-weight:600}' +

@@ -241,12 +241,13 @@ A.toast = function(text, o){ o = o || {}; var col = A.col || document.body, t = 
 /* A.sheet({title, html, foot, onClose}) -> {el, body, foot, close} */
 A.sheet = function(o){ var ov = A.ov || document.body, w = document.createElement("div"), id = "sa" + Math.random().toString(36).slice(2, 8); w.className = "sheetwrap";
   w.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle"></div><div class="sheet-h"><h2 id="' + id + '">' + esc(o.title || "") + '</h2><button class="hb" type="button" data-close>' + ic("x", 20) + 'Затвори</button></div><div class="body">' + (o.html || "") + '</div>' + (o.foot ? '<div class="sa-sfoot">' + o.foot + '</div>' : '') + '</div>';
-  ov.appendChild(w); var prev = document.activeElement, bg = [A.side, A.col && A.col.querySelector(".sa-scroller"), A.col && A.col.querySelector(".sa-top"), A.bnav].filter(Boolean);
+  ov.appendChild(w); var penHost = document.querySelector("sa-pen-ui"); penHost && penHost.setAttribute("data-sheet", ""); /* hide the round „Молив“ while a sheet is open */
+  var prev = document.activeElement, bg = [A.side, A.col && A.col.querySelector(".sa-scroller"), A.col && A.col.querySelector(".sa-top"), A.bnav].filter(Boolean);
   bg.forEach(function(el){ el.inert = true; });
   w.addEventListener("keydown", function(e){ if (e.key !== "Tab") return; var f = Array.prototype.filter.call(w.querySelectorAll(".sheet button:not([disabled]), .sheet a[href], .sheet input:not([disabled]), .sheet textarea, .sheet select"), function(el){ return el.offsetParent !== null; });
     if (!f.length) return; var a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a){ e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z){ e.preventDefault(); a.focus(); } });
   var closed = false;
-  function close(){ if (closed) return; closed = true; if (document.querySelectorAll(".sa-ov .sheetwrap.on").length <= 1) bg.forEach(function(el){ el.inert = false; }); w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 340); o.onClose && o.onClose(); prev && prev.focus && prev.focus({preventScroll:true}); }
+  function close(){ if (closed) return; closed = true; if (document.querySelectorAll(".sa-ov .sheetwrap.on").length <= 1){ bg.forEach(function(el){ el.inert = false; }); penHost && penHost.removeAttribute("data-sheet"); } w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 340); o.onClose && o.onClose(); prev && prev.focus && prev.focus({preventScroll:true}); }
   w.querySelector(".scrim").onclick = close; w.querySelector("[data-close]").onclick = close;
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ w.classList.add("on"); var f = o.focus ? w.querySelector(o.focus) : w.querySelector("[data-close]"); f && f.focus({preventScroll:true}); }); });
   return {el:w, body:w.querySelector(".body"), foot:w.querySelector(".sa-sfoot"), close:close}; };
