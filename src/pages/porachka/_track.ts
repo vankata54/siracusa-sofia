@@ -7,11 +7,12 @@
 import { SC } from "../../client/sc.ts";
 import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
-import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes } from "../../lib/time.ts";
+import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes, clockOverride } from "../../lib/time.ts";
+import { pickupSlots } from "../../lib/slots.ts";
 import { ORDER_RULES } from "../../lib/consts.ts";
-import { callBtn, stateBox, skeleton, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
+import { callBtn, stateBox, skeleton, loadingText, hourTitle, hourLine, CALL, pvChip, pvToggle, previewPanel, PV } from "../../lib/ui.ts";
 import type { Order, OrderLine, OrderStatus } from "../../core/types.ts";
-import "sc-icons:arrow-clockwise,arrow-left,arrow-right,arrow-up-right,bell,bell-ringing,calendar-check,check-circle,chef-hat,clock,copy,fork-knife,globe,google-logo,hourglass,house,info,map-pin,moped,paper-plane-right,pencil-simple,receipt,seal-percent,share-network,shopping-bag,sliders-horizontal,storefront,thumbs-down,thumbs-up,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
+import "sc-icons:arrow-clockwise,arrow-left,arrow-right,arrow-up-right,bell,bell-ringing,calendar-check,check-circle,chef-hat,clock,copy,fork-knife,globe,google-logo,hourglass,house,info,map-pin,moped,paper-plane-right,pencil-simple,plus,receipt,seal-percent,share-network,shopping-bag,sliders-horizontal,storefront,thumbs-down,thumbs-up,user,warning-circle"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 type Dish = SCMenu["items"][number];
 /* preview tokens after the number (#1042-sample-delivered); anything else right after the number is the order key */
@@ -55,7 +56,10 @@ export function startTracking(main: HTMLElement) {
     offline: navigator.onLine === false,
     updated: SC.minutes(),
     rating: null as Rated | null, choice: null as "yes" | "no" | null, fb: "", fbErr: "", sending: false,
-    notify: null as string | null, ch: "push",
+    /** push: "on" = the server sends (Web Push), "local" = the page tells while it is open */
+    notify: null as string | null, push: "local" as "on" | "local", ch: "push",
+    /** the live stream (SSE) dropped: the page says so until it is back ("stream.lost" / "stream.back") */
+    lost: false,
     first: true,
     welcome: false, bday: false, bd: { d: "", m: "" },
     sim: { k: null as number | null, late: !!P.late, sched: !!P.tomorrow, sample: false },
@@ -87,8 +91,8 @@ export function startTracking(main: HTMLElement) {
   /* ---------- per-order memory in this browser (rating answer and chosen notifications) ---------- */
   const memKey = () => "sc-track-" + S.no;
   let welcomed = false;
-  function loadMem() { const m = SC.load<{ rating?: Rated; notify?: string | null; welcomed?: boolean }>(memKey(), {}); S.rating = m.rating || null; S.choice = S.rating ? (S.rating.happy ? "yes" : "no") : null; S.notify = m.notify || null; welcomed = !!m.welcomed; }
-  function saveMem() { SC.store(memKey(), { rating: S.rating, notify: S.notify, welcomed }); }
+  function loadMem() { const m = SC.load<{ rating?: Rated; notify?: string | null; push?: "on" | "local"; welcomed?: boolean }>(memKey(), {}); S.rating = m.rating || null; S.choice = S.rating ? (S.rating.happy ? "yes" : "no") : null; S.notify = m.notify || null; S.push = m.push === "on" ? "on" : "local"; welcomed = !!m.welcomed; }
+  function saveMem() { SC.store(memKey(), { rating: S.rating, notify: S.notify, push: S.push, welcomed }); }
 
   /* ---------- the order model ---------- */
   const o = () => S.o as Order;
@@ -143,6 +147,29 @@ export function startTracking(main: HTMLElement) {
       : { acc: 0, cook: Math.max(1, T - 18), ready: T };
   }
   const stepAt = (id: string) => placed() + Math.min(offs()[id] ?? 0, elapsed());
+  /* the real hour of each step: the core keeps when every status was reached (order.times, ISO). On the Sofia clock;
+     in preview / the demo with ?t= the moment is moved onto the page clock (placed() + minutes since the order), so it
+     never mixes "12:30" with the real hour. Without a time (orders before 13.11.2026, simulated steps): spread as before. */
+  const STATUS_OF: Record<Stage["id"], OrderStatus> = { acc: "accepted", cook: "cooking", ready: "ready", way: "on_way", done: "delivered" };
+  function atOf(iso: string | undefined): number | null {
+    const t = iso ? Date.parse(iso) : NaN;
+    if (isNaN(t)) return null;
+    if (clockOverride()) return placed() + (t - (o().ts || t)) / 60000;
+    const n = sofiaNow(new Date(t)); return n.h * 60 + n.m;
+  }
+  /** delivered / picked up: the one hour for the hero ("Доставена в") and the last step of the timeline */
+  function doneAt(): number {
+    const x = o(), real = S.sim.k == null && !S.sim.sample;
+    const t = real ? (atOf(x.times && x.times[isD() ? "delivered" : "picked_up"]) ?? atOf(x.updatedAt)) : null;
+    return t ?? (isD() ? stepAt("done") : SC.minutes());
+  }
+  /** the hour a step was reached (timeline, "Готова от") */
+  function stageAt(id: Stage["id"]): number {
+    if (id === "acc") return placed();
+    if (id === "done") return doneAt();
+    const x = o(), t = S.sim.sample ? null : atOf(x.times && x.times[STATUS_OF[id]]);
+    return t ?? stepAt(id);
+  }
   /** the promised hour on the shop clock: the order's "at" (the cart shows the same), else start + promised minutes */
   function promised(): number {
     const sc = schedInfo(); if (sc) return sc.at;
@@ -191,7 +218,7 @@ export function startTracking(main: HTMLElement) {
     return '<div class="tlw"><span class="track" aria-hidden="true"><span class="fill" data-fill></span></span><ol class="tl n' + a.length + '" aria-label="Етапи на поръчката">' +
       a.map((s, i) => {
         const st = done || i < K ? "done" : i === K ? "now" : "next";
-        const tm = st === "done" ? clock(s.id === "acc" ? placed() : stepAt(s.id)) : st === "now" ? (sc && s.id === "acc" ? clock(placed()) : "Сега") : "";
+        const tm = st === "done" ? clock(stageAt(s.id)) : st === "now" ? (sc && s.id === "acc" ? clock(placed()) : "Сега") : "";
         return '<li class="' + st + '"' + (st === "now" ? ' aria-current="step"' : "") + '><span class="dot">' + (st === "done" ? ic("check", 16) : "") + '</span><span class="nm">' + s.nm + '</span><span class="tm">' + (tm || "&nbsp;") + '</span><span class="vh">' + (st === "done" ? "готово" : st === "now" ? (tm === "Сега" ? "" : "сега") : "предстои") + "</span></li>";
       }).join("") + "</ol></div>";
   }
@@ -200,9 +227,8 @@ export function startTracking(main: HTMLElement) {
     let label: string, big: string, say: string, sub: string, note = "", late = 0;
     const badgeIc = done ? "check" : sc && c.id === "acc" ? "calendar-check" : c.ic;
     if (done) {
-      const doneAt = S.sim.k != null ? SC.minutes() : (() => { const t = Date.parse(o().updatedAt); if (isNaN(t)) return SC.minutes(); const n = sofiaNow(new Date(t)); return n.h * 60 + n.m; })();
       label = D ? "Доставена в" : "Взехте я в";
-      big = '<span class="enum clock"><b>' + clock(doneAt) + "</b></span>";
+      big = '<span class="enum clock"><b>' + clock(doneAt()) + "</b></span>";
       say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас.";
     } else if (sc && sc.left > 45 && !(!D && c.id === "ready")) {
       /* pre-order: "Приета за <ден, час>" (docs/OPEN-QUESTIONS.md); the minutes count only in the last 45 min */
@@ -211,7 +237,7 @@ export function startTracking(main: HTMLElement) {
       say = c.id === "acc" ? (D ? "Ще я доставим за този час" : "Ще е готова за този час") : c.id === "cook" ? cookSay() : c.id === "ready" ? "Поръчката е готова" : "Шофьорът е на път към вас";
       sub = c.id === "acc" && sc.left > 60 ? "Можете да я промените до " + clock(sc.at - 60) + " (1 час преди часа)." : "Вече я подготвяме. За промяна се обадете на " + esc(R.phone) + ".";
     } else if (!D && c.id === "ready") {
-      label = "Готова от"; big = '<span class="enum clock"><b>' + clock(stepAt("ready")) + "</b></span>";
+      label = "Готова от"; big = '<span class="enum clock"><b>' + clock(stageAt("ready")) + "</b></span>";
       say = "Поръчката ви е готова"; sub = "Чакаме ви в ресторанта до " + R.close + ".";
     } else {
       const r = remaining(), pr = promised(), now = SC.minutes();
@@ -253,7 +279,8 @@ export function startTracking(main: HTMLElement) {
     const title = D ? "Да ви кажем, когато е близо?" : "Да ви кажем, когато е готова?";
     const text = D ? "Ще получите съобщение, когато поръчката тръгне и когато е на 10 мин от вас." : "Ще получите съобщение, щом поръчката е готова за вземане.";
     if (S.notify) {
-      const where = S.notify === "push" ? "Ще получите известие на този телефон." : S.notify === "sms" ? "Ще ви пишем по SMS на номера от поръчката." : "Ще ви пишем във Viber на номера от поръчката.";
+      /* "on": Web Push from the server (also with the page closed); "local": no push server here (e.g. the demo), the page tells while it is open */
+      const where = S.notify === "push" ? (S.push === "on" ? "Ще получите известие на този телефон." : "Ще ви кажем тук, докато страницата е отворена.") : S.notify === "sms" ? "Ще ви пишем по SMS на номера от поръчката." : "Ще ви пишем във Viber на номера от поръчката.";
       const miss = S.notify === "push" ? "" : '<span class="missing small">[ЛИПСВА: доставчик на ' + (S.notify === "sms" ? "SMS" : "Viber") + " съобщения]</span>";
       return '<div class="shell"><div class="core cpad cgap"><div class="okline">' + ic("check-circle", 26) + "<div><b>Известията са включени</b><span>" + where + "</span>" + miss + '</div></div><button class="link change" type="button" data-notify-off>Изключи известията</button></div></div>';
     }
@@ -355,6 +382,8 @@ export function startTracking(main: HTMLElement) {
     liveBox.innerHTML = S.offline ? '<span class="live off"><i></i></span><span><b>Без връзка</b> · последно в ' + clock(S.updated) + "</span>"
       : cancelled() ? '<span class="live off"><i></i></span><span><b>Отказана</b> · поръчка № ' + esc(S.no) + "</span>"
       : finished() ? '<span class="live"><i class="still"></i></span><span><b>' + (isD() ? "Доставена" : "Взета") + "</b> · поръчка № " + esc(S.no) + "</span>"
+      /* the stream dropped (Wi-Fi / 4G switch, a proxy): no "На живо" until it is back and the order is read again */
+      : S.lost ? '<span class="live off"><i></i></span><span><b>Свързваме се отново…</b> · последно в ' + clock(S.updated) + "</span>"
       : '<span class="live"><i></i></span><span><b>На живо</b> · обновено в ' + clock(S.updated) + "</span>";
   }
 
@@ -363,11 +392,14 @@ export function startTracking(main: HTMLElement) {
     return '<div class="trk-title"><h1 class="vh">Проследяване на поръчка</h1><span class="skel" style="width:220px;height:32px"></span></div>' + skeleton('<div class="trk-l"><div class="shell"><div class="core sk">' +
       '<span class="skel" style="width:100%;height:40px;border-radius:999px"></span><span class="skel" style="width:196px;height:196px;border-radius:50%"></span><span class="skel" style="width:52%;height:18px"></span><span class="skel" style="width:46%;height:64px"></span><span class="skel" style="width:70%;height:24px"></span></div>' +
       '<div class="skrow">' + [1, 2, 3, 4, 5].map(() => '<span class="skel" style="width:28px;height:28px;border-radius:50%"></span>').join("") + '</div></div><span class="skel" style="height:56px;border-radius:999px"></span></div>' +
-      '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div>', "поръчката", 'class="trk"');
+      '<div class="trk-r"><div class="shell"><div class="core cpad cgap"><span class="skel" style="width:60%;height:24px"></span><span class="skel" style="height:56px"></span><span class="skel" style="height:56px"></span></div></div></div>', "", 'class="trk"') +
+      /* the live region is in the page first and gets its words a moment later (render): a region inserted together with
+         its text is often not read out */
+      '<span class="vh" role="status" data-skst></span>';
   }
   function stateHTML(kind: View) {
     const call = callBtn("pill pill-red pill-lg pill-block");
-    if (kind === "notfound") return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h1 class="h2">Не намираме поръчка № ' + esc(S.no) + "</h1><p>Може връзката да е непълна. Обадете ни се и ще ви кажем докъде е поръчката.</p>" +
+    if (kind === "notfound") return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h1 class="h2" tabindex="-1">Не намираме поръчка № ' + esc(S.no) + "</h1><p>Може връзката да е непълна. Обадете ни се и ще ви кажем докъде е поръчката.</p>" +
       '<div class="acts">' + call + '<button class="pill pill-line pill-lg pill-block" type="button" data-retry>' + ic("arrow-clockwise", 20) + "Опитай пак</button></div></div></div>";
     /* the shared state box (lib/ui.ts): same title words and buttons as on every page */
     if (kind === "error") return '<div class="shell"><div class="core">' + stateBox(S.offline
@@ -379,22 +411,85 @@ export function startTracking(main: HTMLElement) {
       '<div class="acts"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + (closed ? "Поръчай за утре" : "Към менюто") + "</a></div></div></div>";
   }
   function cancelledHTML() {
-    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2">Поръчката е отказана</h2><p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p><div class="acts">' + callBtn("pill pill-red pill-lg pill-block") + "</div></div></div>";
+    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2" tabindex="-1">Поръчката е отказана</h2><p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p><div class="acts">' + callBtn("pill pill-red pill-lg pill-block") + "</div></div></div>";
   }
 
-  /* ---------- render ---------- */
+  /* ---------- render ----------
+     The page is drawn in regions (<div data-reg> with display:contents, no change to the layout). A render replaces only
+     the regions whose HTML changed, so the minute tick and a live update (SSE) touch the hero and the timeline, never the
+     complaint field or the birthday select (tracking.review.md, Блокиращи 1). A soft render (tick, live update, reload)
+     also leaves a region alone while the focus is in a field inside it (text, caret, an open select). When a replaced
+     region had the focus, it goes back to the same control (id / data-* / href) with its selection; when that control is
+     gone, to the heading of what is on screen now, never to <body>. */
   let lastFill = 0;
-  function render() {
-    let html: string;
-    if (S.view === "loading") html = skeletonHTML() + protoHTML();
-    else if (S.view !== "order" || !S.o) html = '<div class="trk"><div class="trk-l">' + stateHTML(S.view) + '</div><div class="trk-r">' + protoHTML() + "</div></div>";
-    else if (cancelled()) html = titleHTML() + '<div class="trk"><div class="trk-l">' + cancelledHTML() + '</div><div class="trk-r">' + orderHTML() + protoHTML() + "</div></div>";
-    else html = titleHTML() + '<div class="trk"><div class="trk-l">' + offlineHTML() + heroHTML() + actsHTML() + '</div><div class="trk-r">' + rateHTML() + (S.welcome ? welcomeCardsHTML() : "") + notifyHTML() + orderHTML() + protoHTML() + "</div></div>";
-    main.innerHTML = '<section class="sec trk-s">' + html + "</section>";
+  let shown: { sig: string; reg: Record<string, string> } = { sig: "", reg: {} };
+  function layout(): { sig: string; frame: string; reg: Record<string, string> } {
+    if (S.view === "loading") return { sig: "loading", frame: "@all", reg: { all: skeletonHTML() + protoHTML() } };
+    if (S.view !== "order" || !S.o) return { sig: S.view, frame: "@all", reg: { all: '<div class="trk"><div class="trk-l">' + stateHTML(S.view) + '</div><div class="trk-r">' + protoHTML() + "</div></div>" } };
+    if (cancelled()) return { sig: "cancelled", frame: '@title<div class="trk"><div class="trk-l">@x</div><div class="trk-r">@order@proto</div></div>', reg: { title: titleHTML(), x: cancelledHTML(), order: orderHTML(), proto: protoHTML() } };
+    return { sig: "order", frame: '@title<div class="trk"><div class="trk-l">@off@hero@acts</div><div class="trk-r">@rate@welcome@notify@order@proto</div></div>',
+      reg: { title: titleHTML(), off: offlineHTML(), hero: heroHTML(), acts: actsHTML(), rate: rateHTML(), welcome: S.welcome ? welcomeCardsHTML() : "", notify: notifyHTML(), order: orderHTML(), proto: protoHTML() } };
+  }
+  /** where the focus is, to find the same control again after a redraw */
+  function focusMark(): { el: HTMLElement; sel: string; i: number; s: number | null; e: number | null } | null {
+    const el = document.activeElement as HTMLElement | null;
+    if (!el || !main.contains(el) || el === main) return null;
+    const q = (v: string) => (window.CSS && CSS.escape ? CSS.escape(v) : v.replace(/["\\]/g, "\\$&"));
+    let sel = el.id ? "#" + q(el.id) : "";
+    if (!sel) { const data = Array.from(el.attributes).filter((a) => a.name.startsWith("data-")).map((a) => "[" + a.name + (a.value ? '="' + q(a.value) + '"' : "") + "]").join(""); if (data) sel = el.tagName.toLowerCase() + data; }
+    if (!sel && el.getAttribute("href")) sel = el.tagName.toLowerCase() + '[href="' + q(el.getAttribute("href")!) + '"]';
+    if (!sel && /^H[1-3]$/.test(el.tagName)) sel = el.tagName.toLowerCase();
+    let i = 0; try { i = sel ? Math.max(0, Array.from(main.querySelectorAll(sel)).indexOf(el)) : 0; } catch { sel = ""; }
+    const tf = el as HTMLInputElement;
+    const txt = el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && /^(text|search|tel|email|url|number)$/.test(el.type));
+    return { el, sel, i, s: txt ? tf.selectionStart : null, e: txt ? tf.selectionEnd : null };
+  }
+  /** the heading of what is on screen (an error / a cancelled order first, else the page title) */
+  function focusHead() {
+    const h = main.querySelector<HTMLElement>(".state h1, .state h2, .sc-state h1") || main.querySelector<HTMLElement>("h1");
+    if (!h) return;
+    if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1");
+    h.focus({ preventScroll: true });
+  }
+  function refocus(m: NonNullable<ReturnType<typeof focusMark>>) {
+    if (m.el.isConnected && main.contains(m.el)) return; /* its region stayed */
+    let el: HTMLElement | null = null;
+    if (m.sel) { try { const all = Array.from(main.querySelectorAll<HTMLElement>(m.sel)); el = all[Math.min(m.i, all.length - 1)] || null; } catch { el = null; } }
+    if (el && /^H[1-6]$/.test(el.tagName)) { focusHead(); return; }
+    if (el && !(el as HTMLButtonElement).disabled && el.getClientRects().length) {
+      el.focus({ preventScroll: true });
+      if (m.s != null && (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) { try { el.setSelectionRange(m.s, m.e ?? m.s); } catch { /* not a text field */ } }
+      return;
+    }
+    focusHead();
+  }
+  /** a field the visitor is in (typing, an open select): a soft render does not touch its region */
+  const busyField = () => { const a = document.activeElement; return a instanceof HTMLTextAreaElement || a instanceof HTMLSelectElement || (a instanceof HTMLInputElement && a.type !== "button") ? a : null; };
+  function render(opts: { soft?: boolean } = {}) {
+    const L = layout(), mark = focusMark();
+    let heroNew = false;
+    if (L.sig !== shown.sig || !main.querySelector("[data-reg]")) {
+      main.innerHTML = '<section class="sec trk-s">' + L.frame.replace(/@(\w+)/g, (_, k: string) => '<div data-reg="' + k + '">' + (L.reg[k] || "") + "</div>") + "</section>";
+      shown = { sig: L.sig, reg: { ...L.reg } }; heroNew = true;
+    } else {
+      const field = opts.soft ? busyField() : null;
+      for (const k of Object.keys(L.reg)) {
+        if (L.reg[k] === shown.reg[k]) continue;
+        const box = main.querySelector<HTMLElement>('[data-reg="' + k + '"]');
+        if (!box) continue;
+        if (field && box.contains(field)) continue; /* later, when the visitor has left the field */
+        box.innerHTML = L.reg[k]; shown.reg[k] = L.reg[k];
+        if (k === "hero") heroNew = true;
+      }
+    }
+    if (S.view === "loading") setTimeout(() => { const st = main.querySelector("[data-skst]"); if (st && !st.textContent) st.textContent = loadingText("поръчката"); }, 120);
     if (S.view === "order" && S.o) S.first = false;
     liveUpdate();
-    placeTrack();
+    if (heroNew) placeTrack();
+    if (mark) refocus(mark);
   }
+  /** a region changed in the page (a button set to "Включваме..."): draw it again on the next render */
+  const dirty = (k: string) => { shown.reg[k] = "\u0000"; };
   /* the track runs from the first dot to the last; the fill grows to the current dot (transform only) */
   function placeTrack() {
     const tl = main.querySelector<HTMLElement>(".tlw"); if (!tl) return;
@@ -412,6 +507,7 @@ export function startTracking(main: HTMLElement) {
 
   function stepText() {
     const c = cur(), D = isD();
+    if (cancelled()) return "Поръчката е отказана";
     if (finished()) return D ? "Поръчката е доставена" : "Добър апетит!";
     return c.id === "cook" ? cookSay() : c.id === "ready" ? (D ? "Поръчката е готова" : "Поръчката ви е готова") : c.id === "way" ? "Поръчката тръгна към вас" : "Получихме поръчката ви";
   }
@@ -423,10 +519,11 @@ export function startTracking(main: HTMLElement) {
   function announce() {
     const t = stepText();
     SC.toast(t);
-    if (S.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") {
+    /* only without Web Push: with it ("on") the notification comes from the server, a second one here would be double */
+    if (S.notify === "push" && S.push !== "on" && document.hidden && "Notification" in window && Notification.permission === "granted") {
       try { new Notification("Поръчка № " + S.no + " · Siracusa", { body: t, tag: "sc-order-" + S.no }); } catch { /* not allowed here */ }
     }
-    if (finished()) setTimeout(focusRate, 450);
+    if (finished() && !cancelled()) setTimeout(focusRate, 450);
   }
 
   /* ---------- data ---------- */
@@ -445,28 +542,40 @@ export function startTracking(main: HTMLElement) {
   function fromSaved(): Order | null {
     return saved && String(saved.no) === S.no && Array.isArray(saved.lines) ? saved : null;
   }
-  let loading = false, again = false;
+  let loading = false, again = false, retryT = 0;
+  /** a failed read with the browser online (the server does not answer, a weak network): "online" never comes, so try
+      again by itself every 15 s while the error / the "Без връзка" note is on screen */
+  function retryLater() {
+    clearTimeout(retryT);
+    retryT = window.setTimeout(() => { retryT = 0; if ((S.view === "error" || S.offline) && !P.offline && !S.sim.sample) load({ quiet: true }); }, 15000);
+  }
+  /** the order as the API gives it, kept on screen and in this browser's copy from the cart */
+  function takeOrder(x: Order) {
+    if (x.key && !S.key) S.key = x.key;
+    S.o = Object.assign({}, S.o || fromSaved() || {}, x) as Order;
+    if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x));
+  }
   async function load(opts: { quiet?: boolean } = {}) {
     if (!S.no) { S.view = "none"; render(); return; }
     if (S.sim.sample) return;
     if (loading) { again = true; return; }
     loading = true;
-    const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false;
+    const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false, wasCancelled = S.o ? cancelled() : false;
     try {
       const x = (await api.orders.get(trackId())) as Order | null;
       if (!x) throw new ApiError("not_found", "Няма такава поръчка.", 404);
-      if (x.key && !S.key) S.key = x.key;
-      S.o = Object.assign({}, S.o || fromSaved() || {}, x) as Order;
-      if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x));
+      takeOrder(x);
+      clearTimeout(retryT);
       S.offline = !!P.offline; S.updated = SC.minutes(); S.view = "order";
-      render(); syncAddress();
-      if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished)) announce();
+      render({ soft: true }); syncAddress();
+      if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished || cancelled() !== wasCancelled)) announce();
     } catch (e) {
       const err = e as ApiError;
       if (err && err.code === "not_found") { S.o = null; S.view = "notfound"; }
       else if (S.o) S.offline = true;
       else { S.offline = err?.code === "offline" || navigator.onLine === false; S.view = "error"; }
-      render();
+      if (!(err && err.code === "not_found")) retryLater();
+      render({ soft: true });
     } finally { loading = false; if (again) { again = false; load({ quiet: true }); } }
   }
 
@@ -478,6 +587,72 @@ export function startTracking(main: HTMLElement) {
     if (e && e.code === "not_finished") { SC.toast("Ще можете да оцените поръчката, след като е " + (S.o && isD() ? "доставена." : "взета.")); if (!S.sim.sample) { S.sim.k = null; load({ quiet: true }); } return; }
     if (e && e.code === "not_found") { SC.toast("Не намираме поръчка № " + S.no + ". Обадете ни се на " + R.phone + "."); return; }
     SC.toast(e && e.code !== "offline" ? e.message : other);
+  }
+
+  /* ---------- "Промени": a pre-order gets a new hour online (api.orders.change, core/orders.ts changeOrder); dishes, address
+     and payment stay by phone. The hours: the cart's rule (lib/slots.ts pickupSlots with sched: delivery until 20:45, pickup
+     until 23:00), and for an order for today not the ones less than 1 hour from now (CHANGE_BEFORE_MIN). ---------- */
+  const CHANGE_BEFORE = 60;
+  function changeSlots(): number[] {
+    const sc = schedInfo(); if (!sc) return [];
+    const all = pickupSlots({ earliest: 0, mode: o().mode }, undefined, true);
+    return sc.tomorrow ? all : all.filter((t) => t >= SC.minutes() + CHANGE_BEFORE);
+  }
+  function openChange() {
+    const sc = schedInfo(); if (!sc) return;
+    const cur0 = sc.at, phone = '<p style="margin:0">' + (o().sched ? "Ястия, адрес или плащане" : "Час, ястия или адрес") + ": промени приемаме по телефона до <b>" + clock(sc.at - 60) + "</b>, 1 час преди часа на поръчката.</p>" +
+      callBtn("pill pill-line pill-lg pill-block") + '<p class="small muted" style="margin:0">Кажете номера на поръчката: № ' + esc(S.no) + ".</p>";
+    /* online only for a pre-order (sched "утре" / "днес"); a pickup today for a chosen hour stays by phone (the core: not_changeable) */
+    const slots = o().sched ? changeSlots() : [];
+    if (!slots.length) { SC.sheet({ title: "Промяна на поръчката", html: '<div class="chg">' + phone + "</div>" }); return; }
+    let pick = cur0, all = false;
+    const lim = 12;
+    const slotsHTML = () => {
+      const i = Math.max(0, slots.indexOf(cur0)), from = all ? 0 : Math.max(0, Math.min(i - 4, slots.length - lim)), list = all ? slots : slots.slice(from, from + lim);
+      return '<div class="slots" role="group" aria-labelledby="chg-h">' + list.map((t) => {
+        const v = clock(t), on = t === pick, now = t === cur0;
+        return '<button class="slot" type="button" data-slot="' + v + '" aria-pressed="' + on + '">' + (on ? '<span class="row" style="gap:5px">' + ic("check", 16) + v + "</span>" : v) + (now ? " <small>сега</small>" : "") + "</button>";
+      }).join("") + "</div>" + (!all && list.length < slots.length ? '<button class="pill pill-soft pill-block" type="button" data-allslots>Всички часове (' + clock(slots[0]) + " - " + clock(slots[slots.length - 1]) + ")</button>" : "");
+    };
+    const day = (sc.tomorrow ? "утре, " : "днес, ") + SC.dateLong(sc.date);
+    const sh = SC.sheet({ title: "Промяна на поръчката", html: '<div class="chg">' +
+      '<div class="chg-time" data-chg><h3 class="h3" id="chg-h">Нов час</h3><p class="muted" style="margin:0">Сега: ' + esc(day) + " · " + clock(cur0) + ". " + (isD() ? "Доставяме до " + clock(ORDER_RULES.preorderDeliveryUntil) + "." : "Готова най-късно в " + clock(ORDER_RULES.pickupReadyUntil) + ".") + "</p>" +
+      '<div data-chg-slots>' + slotsHTML() + '</div><div data-chg-err></div><button class="pill pill-red pill-lg pill-block" type="button" data-chg-save>' + ic("check", 20) + "Запази новия час</button></div>" +
+      '<hr class="chg-hr">' + phone + "</div>" });
+    const box = sh.el, err = (title: string, text: string) => {
+      const e = box.querySelector<HTMLElement>("[data-chg-err]")!;
+      e.innerHTML = '<div class="sc-note chg-err" role="alert" tabindex="-1">' + ic("warning-circle", 22) + "<div><b>" + esc(title) + "</b><span>" + esc(text) + "</span></div></div>";
+      e.querySelector<HTMLElement>(".chg-err")!.focus();
+    };
+    const drawSlots = (focus?: string) => {
+      box.querySelector("[data-chg-slots]")!.innerHTML = slotsHTML();
+      if (focus) box.querySelector<HTMLElement>('[data-slot="' + focus + '"]')?.focus();
+    };
+    let busy = false;
+    box.addEventListener("click", async (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("button"); if (!b) return;
+      if (b.dataset.slot) { const v = toMin(b.dataset.slot); if (v != null) { pick = v; drawSlots(b.dataset.slot); box.querySelector("[data-chg-err]")!.innerHTML = ""; } return; }
+      if (b.hasAttribute("data-allslots")) { all = true; drawSlots(clock(pick)); return; }
+      if (!b.hasAttribute("data-chg-save") || busy) return;
+      if (pick === cur0) { err("Изберете нов час", "Поръчката вече е за " + clock(cur0) + "."); return; }
+      busy = true; const save = b as HTMLButtonElement, html0 = save.innerHTML;
+      save.disabled = true; save.innerHTML = ic("hourglass", 20) + "Запазваме...";
+      try {
+        const x = (await api.orders.change(trackId(), { slot: clock(pick) })) as unknown as Order;
+        takeOrder(x); S.sim.k = null; S.updated = SC.minutes();
+        render(); sh.close(); SC.toast("Часът е сменен");
+      } catch (er) {
+        const a = er instanceof ApiError ? er : null;
+        save.disabled = false; save.innerHTML = html0;
+        if (a && (a.code === "too_late" || a.code === "not_changeable" || a.code === "not_found")) {
+          /* no longer changeable online: no hours, only the phone; the page shows the order as it is now */
+          box.querySelector("[data-chg]")!.querySelectorAll("[data-chg-slots], [data-chg-save]").forEach((n) => n.remove());
+          err("Часът не може да се смени онлайн", a.code === "not_found" ? "Не намираме поръчка № " + S.no + ". Обадете ни се на " + R.phone + "." : a.message);
+          void load({ quiet: true });
+        } else if (a && a.fields && a.fields.slot) err("Изберете друг час", a.fields.slot);
+        else err("Не успяхме да сменим часа", a && a.code !== "offline" && a.code !== "server" ? a.message : a && a.code === "offline" ? "Няма връзка. Проверете интернета и опитайте пак." : "Опитайте пак след малко или ни се обадете.");
+      } finally { busy = false; }
+    });
   }
 
   /* ---------- interactions ---------- */
@@ -507,16 +682,13 @@ export function startTracking(main: HTMLElement) {
       if (navigator.onLine === false && !P.offline) { SC.toast("Още няма връзка"); return; }
       const wasOff = S.offline; S.offline = false;
       if (S.view === "order" && S.o && P.offline) { S.updated = SC.minutes(); render(); SC.toast("Връзката се върна"); return; }
-      S.view = S.o ? "order" : "loading"; render(); await load(); if (wasOff && !S.offline) SC.toast("Връзката се върна"); return;
+      S.view = S.o ? "order" : "loading"; render(); await load();
+      /* the button is gone with the redraw: the focus goes to the heading of what is on screen now (also when it is the
+         same error again), so a screen reader reads it (decision 12.11, error after an action) */
+      if (S.view !== "order" || !main.contains(document.activeElement) || document.activeElement === main) focusHead();
+      if (wasOff && !S.offline) SC.toast("Връзката се върна"); return;
     }
-    if (t.hasAttribute("data-change")) {
-      const sc = schedInfo(); if (!sc) return;
-      SC.sheet({ title: "Промяна на поръчката", html:
-        '<div style="display:grid;gap:14px"><p style="margin:0">Час, ястия или адрес: промени приемаме по телефона до <b>' + clock(sc.at - 60) + "</b>, 1 час преди часа на поръчката.</p>" +
-        callBtn("pill pill-red pill-lg pill-block") +
-        '<p class="small muted" style="margin:0">Кажете номера на поръчката: № ' + esc(S.no) + ".</p></div>" });
-      return;
-    }
+    if (t.hasAttribute("data-change")) { openChange(); return; }
     if (t.hasAttribute("data-bday")) {
       S.bday = !S.bday; render(); main.querySelector<HTMLElement>("[data-bday]")?.focus({ preventScroll: true });
       saveBday(); return;
@@ -524,15 +696,28 @@ export function startTracking(main: HTMLElement) {
     if (ds.ch) { S.ch = ds.ch; render(); const b = main.querySelector<HTMLElement>('[data-ch="' + S.ch + '"]'); b && b.focus({ preventScroll: true }); return; }
     if (t.hasAttribute("data-notify")) {
       const btn = t as HTMLButtonElement; btn.disabled = true; btn.innerHTML = ic("hourglass", 20) + "Включваме...";
+      dirty("notify"); /* the button changed in place: the next render draws it again */
       if (S.ch === "push") {
-        if (!("Notification" in window)) { btn.disabled = false; render(); SC.toast("Този браузър не показва известия"); return; }
-        let perm: NotificationPermission = Notification.permission;
-        try { if (perm === "default") perm = await Notification.requestPermission(); } catch { /* old API */ }
-        if (perm !== "granted") { render(); SC.toast("Известията са спрени в браузъра"); return; }
+        if (!("Notification" in window)) { render(); SC.toast("Този браузър не показва известия"); return; }
+        /* Web Push: loaded only now (not in the page's first JS). "on" = the server sends, "local" = no push server
+           (the demo, an old browser): the page tells while it is open; "denied" = the browser said no */
+        let r: "on" | "local" | "denied" = "denied";
+        try { const m = await import("../../client/push.ts"); r = await m.pushOrder(trackId()); } catch { r = Notification.permission === "granted" ? "local" : "denied"; }
+        if (r === "denied") { render(); SC.toast("Известията са спрени в браузъра"); return; }
+        S.push = r;
       }
-      S.notify = S.ch; saveMem(); render(); SC.toast("Известията са включени"); return;
+      S.notify = S.ch; saveMem(); render(); SC.toast("Известията са включени");
+      main.querySelector<HTMLElement>("[data-notify-off]")?.focus({ preventScroll: true });
+      return;
     }
-    if (t.hasAttribute("data-notify-off")) { S.notify = null; saveMem(); render(); return; }
+    if (t.hasAttribute("data-notify-off")) {
+      const was = S.notify, wasPush = S.push;
+      S.notify = null; S.push = "local"; saveMem(); render();
+      main.querySelector<HTMLElement>("[data-notify]")?.focus({ preventScroll: true });
+      /* the order forgets this browser's push subscription (the server stops sending) */
+      if (was === "push" && wasPush === "on") { try { const m = await import("../../client/push.ts"); await m.pushOff(trackId()); } catch { /* nothing to undo */ } }
+      return;
+    }
     if (ds.rate) {
       const happy = ds.rate === "yes";
       S.choice = happy ? "yes" : "no";
@@ -592,17 +777,33 @@ export function startTracking(main: HTMLElement) {
     const ta = e.target as HTMLTextAreaElement;
     if (ta.id === "fb") { S.fb = ta.value; if (S.fbErr && S.fb.trim().length >= 3) { S.fbErr = ""; ta.removeAttribute("aria-invalid"); main.querySelector("#fbe")?.remove(); } }
   });
-  window.addEventListener("offline", () => { S.offline = true; if (S.view === "order") render(); });
-  window.addEventListener("online", () => { if (S.offline) { S.offline = false; load({ quiet: true }).then(() => { if (!S.offline) SC.toast("Връзката се върна"); }); } });
+  window.addEventListener("offline", () => { S.offline = true; if (S.view === "order") render({ soft: true }); });
+  /* back online: read the order again (a status may have changed meanwhile, also when the page did not notice it was offline) */
+  window.addEventListener("online", () => {
+    const was = S.offline; S.offline = false;
+    if (S.sim.sample || P.offline || (!S.o && S.view !== "error")) return;
+    load({ quiet: true }).then(() => { if (was && !S.offline) SC.toast("Връзката се върна"); });
+  });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && S.view === "order" && !S.sim.sample) load({ quiet: true }); });
-  /* the minutes count down with the clock */
-  document.addEventListener("sc:tick", () => { if (S.view === "order" && S.o && !S.offline) { S.updated = SC.minutes(); render(); } });
-  /* live: the kitchen / driver changed the status */
-  api.on("order.status", (d) => {
-    const x = d as { no: string | number; status: OrderStatus };
+  /* the minutes count down with the clock: only the regions that depend on the hour change (hero, timeline, "Промени");
+     "обновено в" moves only while the live stream is up (otherwise it would claim news that never came) */
+  document.addEventListener("sc:tick", () => {
+    if (S.view !== "order" || !S.o || S.offline) return;
+    if (!S.lost) S.updated = SC.minutes();
+    if (finished() || cancelled()) { liveUpdate(); return; }
+    render({ soft: true });
+  });
+  /* live: the kitchen / driver changed the status; the guest changed the hour in another tab */
+  const onLive = (d: unknown) => {
+    const x = d as { no: string | number };
     if (!S.o || String(x.no) !== S.no || S.sim.sample) return;
     S.sim.k = null; load({ quiet: true });
-  });
+  };
+  api.on("order.status", onLive);
+  api.on("order.changed", onLive);
+  /* the stream dropped / is back (src/client/api.ts): say so, and read again what may have been missed meanwhile */
+  api.on("stream.lost", () => { S.lost = true; liveUpdate(); });
+  api.on("stream.back", () => { S.lost = false; if (S.o && !S.sim.sample && S.view === "order") load({ quiet: true }); else liveUpdate(); });
 
   /* ---------- start ---------- */
   /* keep the number and the key in the address, so a reload and "Сподели" work (not over the preview tokens) */
