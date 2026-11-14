@@ -328,6 +328,7 @@ test("login: 429 on \"Изпрати нов код\" after a dead code: the red 
   }
   await paste(page, wrongOf(code)); /* the 6th: too many tries, the code is dead */
   await expect(page.locator("#otp-err")).toContainText("поискайте нов код");
+  await expect(page.locator("[data-demo-code]")).toHaveCount(0); /* the dead code is not offered again (login.review кръг 2) */
   await page.getByRole("button", { name: "Изпрати нов код" }).click();
   const al = page.locator(".alert");
   await expect(al.locator("[data-alerth]")).toHaveText("Не успяхме да изпратим нов код");

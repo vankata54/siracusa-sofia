@@ -267,6 +267,8 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
   let dead = false;
   function needNew(msg: string) {
     dead = true;
+    /* the dead code is not offered again ("Попълни кода" would send it once more), only a new code or the call */
+    demo = ""; slot.innerHTML = "";
     er.textContent = msg; er.hidden = false; fs.setAttribute("aria-invalid", "true");
     ins.forEach((x) => { x.value = ""; x.disabled = true; }); sync(); btn.disabled = true;
     if (S.left > 0) { rs.focus(); return; }
