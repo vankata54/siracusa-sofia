@@ -22,11 +22,12 @@
 .nt-bar .flt{display:flex; gap:10px; flex:1 1 420px}
 .nt-bar .flt > *{flex:1 1 180px; min-width:0}
 @container page (min-width:1100px){ .nt-bar .sa-tabs{flex:0 0 auto} }
+@container page (max-width:560px){ .nt-bar .sa-tabs{flex:1 1 100%} .nt-bar .flt{flex-wrap:wrap} .nt-bar .flt > *{flex:1 1 100%} }
 .nt-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
 @container page (min-width:900px){ .nt-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .nt{display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); transition:transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease)}
 .nt.gone{transform:scale(.98); opacity:0}
-.nt .top{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.nt .nt-top{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
 .nt .when{margin-left:auto; font-size:15px; color:var(--muted); font-weight:600; white-space:nowrap}
 .nt h3{margin:0; font-size:19px; line-height:1.35; letter-spacing:-.015em; font-weight:800; overflow-wrap:anywhere}
 .nt .where{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:15px; color:var(--muted); font-weight:600}
@@ -34,9 +35,9 @@
 .nt .sel{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; color:var(--ink); background:var(--surface-2); padding:6px 10px; border-radius:10px; overflow-wrap:anywhere; line-height:1.4}
 .nt blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--red); font-size:16px; overflow-wrap:anywhere}
 .nt blockquote small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
-.nt .foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--line)}
-.nt .foot .by{flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:var(--muted); font-weight:600}
-.nt .foot .by span{display:inline-flex; align-items:center; gap:6px}
+.nt .nt-foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--line)}
+.nt .nt-foot .by{flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:var(--muted); font-weight:600}
+.nt .nt-foot .by span{display:inline-flex; align-items:center; gap:6px}
 .nt .acts{display:flex; flex-wrap:wrap; gap:8px; flex:1}
 .nt .acts .pill{padding:0 16px}
 .nt .del{margin-left:auto}
@@ -59,7 +60,7 @@ var ic = A.ic, esc = A.esc, st = A.st;
 A.liveHash = true;
 var body = A.mount({section:"notes", title:"Бележки", eyebrow:"Работа по сайта",
   sub:"Моливът записва какво да се промени, на кой екран и върху кой елемент. Следващата сесия на Claude ги чете и ги изпълнява.",
-  actions:'<button class="pill pill-line" type="button" data-dl>' + ic("export",20) + 'Изтегли NOTES.json</button><button class="pill pill-ink" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",20) + 'Молив</button>',
+  actions:'<button class="pill pill-line" type="button" data-dl>' + ic("export",20) + 'Изтегли NOTES.json</button>',
   states:[["","Обичайно"],["loading","Зареждане"],["empty","Празно"],["error","Грешка"],["offline","Без връзка"]]});
 if (!body) return;
 var STS = [["new","Нови","Нова"],["doing","В работа","В работа"],["done","Готови","Готово"]];
@@ -88,12 +89,12 @@ function card(n){ var s = STS.filter(function(x){ return x[0] === n.status; })[0
     : n.status === "doing" ? '<button class="pill pill-ink" type="button" data-act="done">' + ic("check",18) + 'Готово</button><button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>'
     : '<button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>';
   return '<article class="nt" data-id="' + n.id + '" data-edit-id="admin.notes.card">' +
-    '<div class="top"><span class="sa-tag st-' + n.status + '">' + s[2] + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span><span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
+    '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + s[2] + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span><span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
     '<h3>' + esc(n.text) + '</h3>' +
     '<div class="where"><b>' + esc(A.MODULE_NAMES[n.module] || n.module) + ' · ' + esc(pageName(n)) + '</b><span>' + esc(n.url) + '</span></div>' +
     '<div class="sel" title="CSS селектор">' + esc(n.selector || "без селектор") + (n.editId ? '<br>data-edit-id: ' + esc(n.editId) : '') + '</div>' +
     (n.elementText ? '<blockquote><small>Текстът на елемента</small>„' + esc(n.elementText.length > 220 ? n.elementText.slice(0, 218) + " …" : n.elementText) + '“</blockquote>' : '') +
-    '<div class="foot"><div class="by"><span>' + ic("squares-four",18) + '<span class="num">' + n.viewport.w + ' × ' + n.viewport.h + '</span></span><span>' + ic("user",18) + esc(n.author) + '</span>' + (n.updatedAt !== n.createdAt ? '<span>' + ic("clock",18) + 'Променена ' + esc(A.ago(n.updatedAt)) + '</span>' : '') + '</div>' +
+    '<div class="nt-foot"><div class="by"><span>' + ic("squares-four",18) + '<span class="num">' + n.viewport.w + ' × ' + n.viewport.h + '</span></span><span>' + ic("user",18) + esc(n.author) + '</span>' + (n.updatedAt !== n.createdAt ? '<span>' + ic("clock",18) + 'Променена ' + esc(A.ago(n.updatedAt)) + '</span>' : '') + '</div>' +
     '<div class="acts">' + acts + '<a class="pill pill-line" href="preview.html#n=' + n.id + '">' + ic("eye",18) + 'Покажи на страницата</a></div>' +
     '<button class="pill pill-line del" type="button" data-act="del">' + ic("trash",18) + 'Изтрий</button></div></article>'; }
 function draw(){ drawTabs();

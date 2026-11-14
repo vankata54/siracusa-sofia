@@ -119,7 +119,7 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '.quote p.none{color:var(--muted); font-weight:600; font-style:italic}' +
   'label{display:block; font-weight:700; font-size:15px; margin:0 0 6px}' +
   'textarea{display:block; width:100%; min-height:132px; padding:14px 16px; border:0; border-radius:16px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font:inherit; font-size:16px; line-height:1.45; resize:vertical; outline:none}' +
-  'textarea:focus{box-shadow:inset 0 0 0 2px var(--red)} textarea[aria-invalid="true"]{box-shadow:inset 0 0 0 2px var(--danger)} textarea::placeholder{color:var(--muted)}' +
+  'textarea:focus{box-shadow:inset 0 0 0 2px var(--red)} textarea:focus-visible{outline:none} textarea[aria-invalid="true"]{box-shadow:inset 0 0 0 2px var(--danger)} textarea::placeholder{color:var(--muted)}' +
   '.err{margin:6px 0 0; font-size:14px; font-weight:700; color:var(--danger)}' +
   '.help{margin:6px 0 0; font-size:14px; color:var(--muted)}' +
   'details{margin-top:16px; border-radius:16px; background:var(--surface-2); padding:0 14px}' +

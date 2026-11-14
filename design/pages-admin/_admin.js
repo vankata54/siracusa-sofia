@@ -10,6 +10,8 @@
 var A = window.A = {};
 var ic = SC.ic, esc = SC.esc;
 A.ic = ic; A.esc = esc; A.fmt = SC.fmt;
+/* inside the frame of preview.html: the pencil belongs to the preview, not to the framed page */
+A.inPreview = (function(){ try{ return window.parent !== window && !!window.parent.A_PREVIEW; }catch(e){ return false; } })();
 
 /* ---------- storage: всичко с префикс sa- ---------- */
 var P = "sa-";
@@ -153,11 +155,11 @@ A.notes = {
 A.SEED_NOTES = function(){ var t = Date.now(), iso = function(min){ return new Date(t - min * 60000).toISOString(); };
   function N(id, mod, url, sel, txt, el, w, h, st, min, upd){ return {id:id, module:mod, url:url, selector:sel, editId:null, text:txt, elementText:el, viewport:{w:w, h:h}, screenshot:null, author:"Примерна бележка", status:st, createdAt:iso(min), updatedAt:iso(upd == null ? min : upd)}; }
   return [
-    N("n7k2q9a1","site","/pages/home.html",".hero-ttl","Заглавието да е на два реда на телефон, без да се реже.","Пица на пещ и скара на дървени въглища",390,844,"new",12),
-    N("n3m8x2b4","kitchen","/pages-kuhnya/queue.html#s=skara",".kq > article:nth-of-type(1) .kdone","Бутонът „Готово“ да е по-високо, до таймера.","Готово",1280,800,"new",48),
-    N("n5c1v7d3","admin","/pages-admin/dashboard.html","[data-edit-id=\"admin.dashboard.today\"]","Броят на изчерпаните да води направо към менюто с филтър.","Днес",1440,900,"new",95),
-    N("n9p4r6e8","waiter","/pages-servitor/tables.html",".st-top","Името на сервитьора да е по-голямо.","Залата",390,844,"doing",60*26,60*3),
-    N("n2h6t1f5","site","/pages/menu.html","#main h1","Да пише само „Меню“.","Меню",1440,900,"done",60*50,60*30)
+    N("n7k2q9a1","site","/pages/home.html","#hero-h","Заглавието да е на два реда на телефон.","Пица на пещ и скара на дървени въглища",390,844,"new",12),
+    N("n3m8x2b4","kitchen","/pages-kuhnya/queue.html#s=skara","button[aria-label=\"Готово, Маса 12. Задръжте 1 секунда\"]","Бутонът „Готово“ да е по-високо, до таймера.","Готово задръжте 1 сек.",1280,800,"new",48),
+    N("n5c1v7d3","admin","/pages-admin/dashboard.html","a.kpi:nth-of-type(4)","Броят на изчерпаните да води направо към менюто с филтър.","Изчерпани днес 1 Плескавица",1440,900,"new",95),
+    N("n9p4r6e8","waiter","/pages-servitor/tables.html","div.tt > b","Заглавието на екрана да е по-голямо.","Залата",390,844,"doing",60*26,60*3),
+    N("n2h6t1f5","site","/pages/menu.html","#mh1","Под заглавието да има ред с часовете на кухнята.","Меню",1440,900,"done",60*50,60*30)
   ]; };
 
 /* ---------- modules (за таблото и прегледа; екраните са от index.html на всеки модул) ---------- */
@@ -280,7 +282,7 @@ function sideHTML(cur){
       (A.APPS.some(function(id){ return A.can(id) && A.me.role !== "admin" && A.me.role !== "owner" && A.me.role !== "manager"; }) ? '<div class="sa-g"><h2>Приложение</h2>' + A.APPS.filter(function(id){ return A.can(id); }).map(function(id){ var s = A.SEC[id];
         return '<a class="sa-i" href="' + s.href + '" title="' + esc(s.n) + '">' + ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + ': приложението</span><span class="sh">' + esc(s.short) + '</span></a>'; }).join("") + '</div>' : '') + '</nav>' +
     '<div class="sa-sidefoot"><button class="sa-i sa-collapse" type="button" data-sa="side" aria-expanded="' + (A.prefs.side !== "mini") + '">' + ic(A.prefs.side === "mini" ? "caret-right" : "caret-left", 22) + '<span class="lb">Свий лентата</span><span class="sh">Разгъни</span></button></div>'; }
-function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = THEMES.filter(function(t){ return t[0] === A.prefs.theme; })[0] || THEMES[0], pen = A.can("notes") && o.pencil !== false;
+function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = THEMES.filter(function(t){ return t[0] === A.prefs.theme; })[0] || THEMES[0], pen = A.can("notes") && (o.pencil !== false || o.penButton) && !A.inPreview;
   return '<header class="sa-top">' +
     '<div class="sa-crumb"><small class="sa-only-td">' + esc(o.crumb || g || "Админ") + '</small><b>' + esc(o.barTitle || (s && s.n) || o.title || "") + '</b></div>' +
     '<div class="sa-search sa-only-d" role="search"><label class="vh" for="sa-q">Търси раздел</label>' + ic("magnifying-glass", 20) + '<input id="sa-q" type="search" placeholder="Търси раздел" autocomplete="off" aria-controls="sa-sres" aria-expanded="false"><span class="k" aria-hidden="true">/</span><div class="sa-sres" id="sa-sres" role="listbox" hidden></div></div>' +
@@ -319,8 +321,7 @@ A.mount = function(o){ o = o || {};
   document.body.appendChild(app);
   A.app = app; A.side = app.querySelector(".sa-side"); A.col = app.querySelector(".sa-col"); A.scroller = app.querySelector(".sa-scroller"); A.ov = app.querySelector(".sa-ov"); A.bnav = app.querySelector(".sa-bnav");
   bindSearch();
-  var inPreview = false; try{ inPreview = window.parent !== window && !!window.parent.A_PREVIEW; }catch(e){}
-  if (window.SAPen && A.can("notes") && o.pencil !== false && !inPreview) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:syncPen, fabBottom:o.fabBottom});
+  if (window.SAPen && A.can("notes") && o.pencil !== false && !A.inPreview) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:syncPen, fabBottom:o.fabBottom});
   return allowed ? app.querySelector("[data-body]") : null; };
 function syncPen(on){ document.querySelectorAll('[data-sa="pen"]').forEach(function(b){ b.setAttribute("aria-pressed", String(!!on)); }); }
 A.syncPen = syncPen;

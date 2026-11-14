@@ -119,6 +119,8 @@ function draw(){ body.innerHTML = (st === "offline" ? A.offline("Показва�
   '<div class="rl-q" data-edit-id="admin.roles.question7">' + ic("question",24) + '<div><b>Отворен въпрос към собственика (7): права на управителя</b><p>Какво остава само за собственика? По подразбиране управителят е като собственика без „Финанси и гориво“, „Роли и права“ и „Дневник“.</p></div></div>' +
   matrix() + phone() + lastSave() + desc(); }
 draw();
+function chipIntoView(){ var c = body.querySelector('[data-pr][aria-selected="true"]'); if (c && c.parentElement) c.parentElement.scrollLeft = Math.max(0, c.offsetLeft - c.parentElement.offsetLeft - 16); }
+chipIntoView();
 
 /* save bar */
 A.col.insertAdjacentHTML("beforeend", '<div class="rl-bar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази промените</button></div>');
@@ -130,7 +132,7 @@ function upd(){ var d = diff(); bar.classList.toggle("on", d.length > 0);
   document.querySelectorAll("input[data-r]").forEach(function(i){ var ch = has(i.dataset.r, i.dataset.s) !== was(i.dataset.r, i.dataset.s); var host = i.closest(".sa-check") || i.closest(".rl-sw"); host && host.classList.toggle("chg", ch); i.checked = has(i.dataset.r, i.dataset.s); }); }
 body.addEventListener("change", function(e){ var i = e.target.closest("input[data-r]"); if (!i) return; var r = i.dataset.r, s = i.dataset.s, l = draft[r];
   if (i.checked){ if (l.indexOf(s) < 0) l.push(s); } else draft[r] = l.filter(function(x){ return x !== s; }); upd(); });
-body.addEventListener("click", function(e){ var c = e.target.closest("[data-pr]"); if (!c) return; phoneRole = c.dataset.pr; A.setHash({r:phoneRole, st:st}); A.liveHash = true; var y = A.scroller.scrollTop; draw(); upd(); A.scroller.scrollTop = y; var nb = body.querySelector('[data-pr="' + phoneRole + '"]'); nb && nb.focus({preventScroll:true}); nb && nb.scrollIntoView({inline:"nearest", block:"nearest"}); });
+body.addEventListener("click", function(e){ var c = e.target.closest("[data-pr]"); if (!c) return; phoneRole = c.dataset.pr; A.setHash({r:phoneRole, st:st}); A.liveHash = true; var y = A.scroller.scrollTop; draw(); upd(); A.scroller.scrollTop = y; var nb = body.querySelector('[data-pr="' + phoneRole + '"]'); chipIntoView(); nb && nb.focus({preventScroll:true}); });
 bar.querySelector("[data-cancel]").onclick = function(){ draft = JSON.parse(JSON.stringify(saved)); upd(); A.toast("Промените са отменени"); };
 bar.querySelector("[data-save]").onclick = function(){ var d = diff(), prev = JSON.parse(JSON.stringify(saved)), by = {};
   d.forEach(function(x){ (by[x[0]] = by[x[0]] || []).push((x[2] ? "+ " : "- ") + secName(x[1])); });

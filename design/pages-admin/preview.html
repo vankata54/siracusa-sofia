@@ -31,7 +31,8 @@
   .pv-tools{flex-direction:column; flex-wrap:nowrap; align-items:stretch; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; gap:16px; padding:18px}
   .pv-tools .seg{display:grid}
 }
-@container page (max-width:999px){ .pv-hint{display:none} .pv-tools .grp.scr{flex:1 1 260px} .pv-tools .grp.mod{flex:1 1 200px} }
+@container page (min-width:1000px){ .pv-tools .grp.nw{display:none} }
+@container page (max-width:999px){ .pv-tools .grp.ww{display:none} .pv-tools .grp.scr, .pv-tools .grp.dv{display:flex; flex-wrap:wrap; gap:6px; align-items:center} .pv-tools .grp .pv-lb{flex:1 1 100%} .pv-tools .grp.scr{flex:2 1 360px} .pv-tools .grp.scr select{flex:1 1 150px; width:auto} .pv-steps{flex:none} .pv-tools .grp.mod{flex:1 1 180px} .pv-hint{display:none} }
 /* stage */
 .pv-stage{position:relative; min-height:360px; border-radius:var(--r-shell); overflow:hidden; display:grid; place-items:center;
   background:radial-gradient(var(--line-strong) 1px, transparent 1.4px) 0 0 / 22px 22px, var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
@@ -113,7 +114,7 @@ function scr(){ if (!mod) return null; var all = (mod.screens || []).concat(mod.
 var cur = scr(); if (cur) st.p = cur.k;
 if (NOTE){ var fs = A.screenOf(NOTE.url); st.p = fs && fs.m === mod ? fs.s.k : ""; }
 
-var body = A.mount({section:mod ? (mod.sec || "site") : "site", title:"На живо", barTitle:mod ? mod.n + " на живо" : "На живо", crumb:"Модулите", head:false, wide:true, immersive:true, pencil:false, docTitle:(mod ? mod.n : "Модулите") + " на живо",
+var body = A.mount({section:mod ? (mod.sec || "site") : "site", title:"На живо", barTitle:mod ? mod.n + " на живо" : "На живо", crumb:"Модулите", head:false, wide:true, immersive:true, pencil:false, penButton:true, docTitle:(mod ? mod.n : "Модулите") + " на живо",
   states:[["","Обичайно"]], protoExtra:'<p>Прегледът сменя часа и темата само в рамката: докато е отворен, пази своите настройки за клиентския сайт и после връща вашите.</p>'});
 if (!body) return;
 if (!mod){ body.innerHTML = '<div class="sa-card">' + A.empty({icon:"lock", title:"Няма модул, който ролята да вижда на живо.", text:"Помолете главния админ за права.", action:'<a class="pill pill-ink" href="dashboard.html">Към таблото</a>'}) + '</div>'; return; }
@@ -131,11 +132,12 @@ body.innerHTML = '<div class="pv" data-edit-id="admin.preview">' +
     '<div class="grp mod"><label class="pv-lb" for="pv-m">Модул</label><select class="input" id="pv-m" data-mod>' + mods.map(function(m){ return '<option value="' + m.id + '"' + (m === mod ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join("") + '</select></div>' +
     '<div class="grp scr"><label class="pv-lb" for="pv-s">Екран</label><select class="input" id="pv-s" data-scr>' + optList() + '</select>' +
       '<div class="pv-steps"><button class="pill pill-soft" type="button" data-step="-1">' + ic("caret-left",18) + 'Предишен</button><button class="pill pill-soft" type="button" data-step="1">Следващ' + ic("caret-right",18) + '</button></div></div>' +
-    '<div class="grp"><span class="pv-lb" id="pv-dl">Устройство</span>' + devSeg() + (st.d === "tablet" ? '<button class="pill pill-soft" type="button" data-rot>' + ic("arrow-clockwise",18) + (st.land ? 'Вертикално' : 'Хоризонтално') + '</button>' : '') + '</div>' +
-    (mod.time ? '<div class="grp"><label class="pv-lb" for="pv-t">Час на деня</label>' + timeSel("pv-t") + '</div>' : '') +
-    '<div class="grp"><span class="pv-lb">Тема в рамката</span>' + themeSeg() + '</div>' +
-    '<div class="grp"><span class="pv-lb">Мащаб</span>' + zoomSeg() + '</div>' +
-    '<div class="grp"><span class="pv-lb">Рамката</span><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" data-newtab target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Отвори в нов раздел</a></div></div>' +
+    '<div class="grp dv"><span class="pv-lb" id="pv-dl">Устройство</span>' + devSeg() + (st.d === "tablet" ? '<button class="pill pill-soft" type="button" data-rot>' + ic("arrow-clockwise",18) + (st.land ? 'Вертикално' : 'Хоризонтално') + '</button>' : '') + '</div>' +
+    '<div class="grp nw"><span class="pv-lb">Час, тема, мащаб</span><button class="pill pill-soft" type="button" data-fb="device">' + ic("sliders-horizontal",18) + 'Изглед</button></div>' +
+    (mod.time ? '<div class="grp ww"><label class="pv-lb" for="pv-t">Час на деня</label>' + timeSel("pv-t") + '</div>' : '') +
+    '<div class="grp ww"><span class="pv-lb">Тема в рамката</span>' + themeSeg() + '</div>' +
+    '<div class="grp ww"><span class="pv-lb">Мащаб</span>' + zoomSeg() + '</div>' +
+    '<div class="grp ww"><span class="pv-lb">Рамката</span><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" data-newtab target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Отвори в нов раздел</a></div></div>' +
     '<p class="pv-hint">' + ic("pencil-simple",20) + '<span><b>Моливът работи и в рамката.</b> Натиснете „Молив“ и посочете елемент от екрана вдясно.</span></p>' +
   '</div>' +
   '<div class="pv-stage" data-stage><div class="pv-fit" data-fit><div class="pv-dev" data-dev-box></div></div><span class="pv-cap" data-cap></span></div>' +

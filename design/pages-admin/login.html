@@ -36,7 +36,7 @@
 /* desktop: editorial split, the dishes of the real menu on plates */
 @container app (min-width:960px){
   .lg-in{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}
-  .lg-art{display:grid; position:relative; margin:16px 0 16px 16px; border-radius:36px; background:var(--chip-dark); color:var(--on-chip-dark); overflow:hidden; padding:48px; align-content:space-between; isolation:isolate}
+  .lg-art{display:grid; position:sticky; top:16px; align-self:start; height:calc(100dvh - 32px); min-height:560px; margin:16px 0 16px 16px; border-radius:36px; background:var(--chip-dark); color:var(--on-chip-dark); overflow:hidden; padding:48px; align-content:space-between; isolation:isolate}
   .lg-art .word{font-size:30px; color:var(--on-chip-dark)}
   .lg-art .tagl{display:inline-flex; align-items:center; gap:8px; margin-top:16px; font-size:15px; font-weight:700; color:var(--on-chip-dark); opacity:.85}
   .lg-art .tagl i{width:8px; height:8px; border-radius:50%; background:var(--ember)}

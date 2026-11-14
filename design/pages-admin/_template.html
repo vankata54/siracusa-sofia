@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Примерен раздел | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+/* Стилове само за страницата, само с токените. Ширини само с @container page (колоната със съдържанието) или app (целия екран). */
+.tp-name{display:flex; align-items:center; gap:12px}
+.tp-name .pic{width:52px; height:52px; border-radius:16px; flex:none}
+</style>
+</head>
+<body>
+<!-- Скелет на раздел за авторите 2 и 3: копирайте файла като <раздел>.html и сменете section, title, sub и съдържанието.
+     Редът на скриптовете е задължителен: icons, menu, sc, _admin.js, _pencil.js, после страницата. -->
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+/* 1) рамка: лента, горна лента, долна лента на телефон, молив, „Само в прототипа“. null = ролята няма права (рамката вече го е нарисувала) */
+var body = A.mount({section:"orders", title:"Примерен раздел", docTitle:"Примерен раздел",
+  sub:"Скелет за авторите 2 и 3: таблица, която на телефон става карти, празно, зареждане, грешка, без връзка, лист и известие с „Отмени“.",
+  actions:'<button class="pill pill-red" type="button" data-new>' + ic("plus",20) + 'Нов ред</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Празно"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* 2) данни: истинските ястия от SC.items; всичко условно е ясно отбелязано */
+var KEY = "example-rows"; /* в localStorage става "sa-example-rows" */
+var rows = A.data.get(KEY, SC.items.slice(0, 5).map(function(x){ return {id:x.id, on:true}; }));
+function save(){ A.data.set(KEY, rows); }
+
+function draw(){
+  if (st === "loading"){ body.innerHTML = A.skel(5, "Зареждаме …"); return; }
+  if (st === "error"){ body.innerHTML = A.error(); return; }
+  var list = st === "empty" ? [] : rows;
+  var html = (st === "offline" ? A.offline() + '<div style="height:16px"></div>' : '') + '<p style="margin:0 0 12px">' + A.sample() + '</p>';
+  if (!list.length){ body.innerHTML = html + '<div class="sa-card">' + A.empty({icon:"receipt", title:"Още няма редове.", text:"Добавете първия с „Нов ред“.", action:'<button class="pill pill-red pill-lg" type="button" data-new>' + ic("plus",22) + 'Нов ред</button>'}) + '</div>'; return; }
+  /* таблица: на телефон всеки ред е карта (td[data-label] става етикет, td[data-main] е заглавието на картата) */
+  html += '<div class="sa-tablewrap scroll"><table class="sa-table"><thead><tr><th>Ястие</th><th>Категория</th><th class="r">Цена</th><th>В сайта</th><th><span class="vh">Действия</span></th></tr></thead><tbody>' +
+    list.map(function(r){ var x = SC.byId[r.id];
+      return '<tr data-id="' + r.id + '"><td data-main><span class="tp-name">' + SC.pic(x) + esc(x.n) + '</span></td><td data-label="Категория">' + esc(SC.catById[x.cat].n) + '</td><td class="r price" data-label="Цена">' + SC.fmt(x.p) + '</td>' +
+        '<td data-label="В сайта"><span class="sa-switch"><input type="checkbox" role="switch" aria-label="В сайта: ' + esc(x.n) + '"' + (r.on ? ' checked' : '') + ' data-on><span class="tr"></span></span></td>' +
+        '<td data-label="Действия"><button class="pill pill-line" type="button" data-del>' + ic("trash",18) + 'Махни</button></td></tr>'; }).join("") + '</tbody></table></div>';
+  body.innerHTML = html; }
+draw();
+
+/* 3) действия: известие с „Отмени“ и ред в дневника */
+body.addEventListener("change", function(e){ var i = e.target.closest("[data-on]"); if (!i) return; var id = i.closest("[data-id]").dataset.id, r = rows.filter(function(x){ return x.id === id; })[0];
+  r.on = i.checked; save(); A.audit("example.toggle", (r.on ? "Включено: " : "Изключено: ") + SC.byId[id].n, id);
+  A.toast(r.on ? "Включено в сайта" : "Скрито от сайта", {undo:function(){ r.on = !r.on; save(); draw(); }}); });
+document.addEventListener("click", function(e){
+  var d = e.target.closest("[data-del]"); if (d){ var id = d.closest("[data-id]").dataset.id, i = rows.map(function(x){ return x.id; }).indexOf(id), gone = rows.splice(i, 1)[0]; save(); draw();
+    A.audit("example.delete", "Махнато: " + SC.byId[id].n, id); A.toast("Махнато: " + SC.byId[id].n, {undo:function(){ rows.splice(i, 0, gone); save(); draw(); }}); return; }
+  if (e.target.closest("[data-new]")){ var s = A.sheet({title:"Нов ред", html:'<div class="field"><label for="tp-q">Ястие</label><select class="input" id="tp-q">' + SC.items.slice(0, 40).map(function(x){ return '<option value="' + x.id + '">' + esc(x.n) + '</option>'; }).join("") + '</select></div>',
+      foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Добави</button>', focus:"#tp-q"});
+    s.foot.querySelector("[data-x]").onclick = s.close;
+    s.foot.querySelector("[data-ok]").onclick = function(){ var id = s.body.querySelector("#tp-q").value; rows.unshift({id:id, on:true}); save(); s.close(); draw(); A.audit("example.add", "Добавено: " + SC.byId[id].n, id); A.toast("Добавено: " + SC.byId[id].n); }; }
+});
+})();
+</script>
+</body>
+</html>
