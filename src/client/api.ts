@@ -171,7 +171,9 @@ export const api = {
   push: {
     key: async (): Promise<string> => {
       if (DEMO) throw new ApiError("push_unavailable", "Известията в браузъра още не работят. Ще видите статуса тук.", 503);
-      return (await http<{ key: string }>("GET", "push/key")).key;
+      const k = (await http<{ key: string | null }>("GET", "push/key")).key;
+      if (!k) throw new ApiError("push_unavailable", "Известията в браузъра още не работят. Ще видите статуса тук.", 503);
+      return k;
     },
     subscribe: async (no: string | number, sub: unknown): Promise<{ ok: true }> => {
       if (DEMO) throw new ApiError("push_unavailable", "Известията в браузъра още не работят. Ще видите статуса тук.", 503);

@@ -169,7 +169,8 @@ export function createApp(opts: AppOpts) {
     return c.json(await counted([undo], async () => publicOrder(await coreFor(c).orders.change(c.req.param("id"), b), true)));
   });
   /* Web Push for one order (core/push.ts): the public key for the browser, subscribe / unsubscribe with the tracking key */
-  app.get("/api/push/key", (c) => (opts.vapid || opts.pushSender ? c.json({ key: opts.vapid ? opts.vapid.publicKey : "test" }) : c.json({ error: "push_unavailable", message: PUSH_MSG.unavailable }, 503)));
+  /* without the keys: 200 {key: null} (an expected answer, no error in the console); the page keeps its own notification */
+  app.get("/api/push/key", (c) => c.json({ key: opts.vapid ? opts.vapid.publicKey : opts.pushSender ? "test" : null }));
   app.post("/api/push/subscribe", async (c) => {
     const b = await body(c);
     const undo = limit("push:" + ip(c), 20, 10, TRY_LATER(10));

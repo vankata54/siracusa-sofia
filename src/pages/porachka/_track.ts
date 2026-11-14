@@ -698,12 +698,13 @@ export function startTracking(main: HTMLElement) {
       const btn = t as HTMLButtonElement; btn.disabled = true; btn.innerHTML = ic("hourglass", 20) + "Включваме...";
       dirty("notify"); /* the button changed in place: the next render draws it again */
       if (S.ch === "push") {
-        if (!("Notification" in window)) { render(); SC.toast("Този браузър не показва известия"); return; }
+        const back = () => main.querySelector<HTMLElement>("[data-notify]")?.focus({ preventScroll: true }); /* never <body> (tracking.review кръг 2) */
+        if (!("Notification" in window)) { render(); back(); SC.toast("Този браузър не показва известия"); return; }
         /* Web Push: loaded only now (not in the page's first JS). "on" = the server sends, "local" = no push server
            (the demo, an old browser): the page tells while it is open; "denied" = the browser said no */
         let r: "on" | "local" | "denied" = "denied";
         try { const m = await import("../../client/push.ts"); r = await m.pushOrder(trackId()); } catch { r = Notification.permission === "granted" ? "local" : "denied"; }
-        if (r === "denied") { render(); SC.toast("Известията са спрени в браузъра"); return; }
+        if (r === "denied") { render(); back(); SC.toast("Известията са спрени в браузъра"); return; }
         S.push = r;
       }
       S.notify = S.ch; saveMem(); render(); SC.toast("Известията са включени");

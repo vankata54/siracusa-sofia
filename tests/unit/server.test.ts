@@ -227,6 +227,8 @@ describe("server API (in-memory SQLite)", async () => {
     expect(await t.core.ctx.repo.list("push_subs")).toEqual([]);
     /* without keys push is off */
     const off = createApp({ dbFile: ":memory:", distDir: "dist", timers: false });
-    expect((await off.app.request("/api/push/key")).status).toBe(503);
+    const k = await off.app.request("/api/push/key");
+    expect(k.status).toBe(200);
+    expect(await k.json()).toEqual({ key: null });
   });
 });

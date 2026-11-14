@@ -424,7 +424,8 @@ test("tracking: Включи известията without a push server ('local'
   const { staff, set } = await staffCtx(playwright, baseURL);
   await cookies(page);
   await pushStub(page);
-  await page.route("**/api/push/key", (r) => r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "push_unavailable", message: "x" }) }));
+  /* a server without VAPID keys answers {key: null} (200, no error in the console) */
+  await page.route("**/api/push/key", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ key: null }) }));
   await page.goto(trk(o));
   await page.locator("[data-notify]").click();
   await expect(page.locator(".okline")).toContainText("Известията са включени");
@@ -434,7 +435,20 @@ test("tracking: Включи известията without a push server ('local'
   await expect(page.locator(".tl li.now .nm")).toHaveText("Готви се");
   await expect.poll(() => page.evaluate(() => (window as unknown as { _n: number })._n)).toBe(1);
   await staff.dispose();
-  expect(errors.filter((e) => !/503/.test(e))).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("tracking: the browser says no to notifications -> the focus stays on the button, never <body> (tracking.review кръг 2)", async ({ page, request }) => {
+  const o = await makeOrder(request);
+  await cookies(page);
+  await page.addInitScript(() => {
+    class N { static permission = "default"; static async requestPermission() { return "denied"; } }
+    Object.defineProperty(window, "Notification", { value: N, configurable: true });
+  });
+  await page.goto(trk(o));
+  await page.locator("[data-notify]").click();
+  await expect(page.locator(".toast")).toContainText("Известията са спрени в браузъра");
+  await expect(page.locator("[data-notify]")).toBeFocused();
 });
 
 test("tracking: the loading words come into the live region after it is on the page", async ({ page, request }) => {
