@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Персонал | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.sf-sum{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:18px}
+@container page (min-width:760px){ .sf-sum{grid-template-columns:repeat(4, minmax(0,1fr))} }
+.sf-sum div{padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:2px}
+.sf-sum b{font-size:28px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.sf-sum span{font-size:14px; font-weight:700; color:var(--muted)}
+.sf-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.sf-bar .sa-tabs{flex:0 1 auto}
+.sf-bar .sa-field-s{flex:1 1 240px}
+@container page (max-width:560px){ .sf-bar .sa-tabs{flex:1 1 100%} }
+.sf-u{display:flex; align-items:center; gap:12px; min-width:0}
+.sf-u .sa-av{width:44px; height:44px}
+.sf-u .sa-av.off{background:var(--surface-3); color:var(--muted)}
+.sf-u b{display:block}
+.sf-u code{display:block; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; color:var(--muted); font-weight:600}
+.sf-u .me{display:inline-flex; font-size:14px; font-weight:800; color:var(--red); margin-left:8px; white-space:nowrap}
+.sa-table td[data-label="Роля"], .sa-table td[data-label="ПИН"]{white-space:nowrap}
+tr.off td{color:var(--muted)}
+.sf-acts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+.sf-acts .pill{padding:0 14px}
+@container page (max-width:699px){ .sa-table td[data-label="Действия"]{display:block} .sa-table td[data-label="Действия"]::before{display:none} .sf-acts{justify-content:stretch; padding-top:6px} .sf-acts .pill{flex:1 1 auto} }
+.pin{font-variant-numeric:tabular-nums; letter-spacing:.2em; font-weight:800}
+.form{display:grid; gap:14px}
+.form .err{font-size:14px; color:var(--danger); font-weight:700}
+.pw{position:relative}
+.pw .input{padding-right:110px}
+.pw .show{position:absolute; right:6px; top:50%; transform:translateY(-50%); min-height:44px}
+.meter{display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; margin-top:4px}
+.meter i{height:6px; border-radius:3px; background:var(--surface-3)}
+.meter.s1 i:nth-child(-n+1), .meter.s2 i:nth-child(-n+2){background:var(--warn)}
+.meter.s3 i:nth-child(-n+3), .meter.s4 i{background:var(--ok)}
+.genpw{display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:16px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.genpw code{flex:1; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:17px; font-weight:700; overflow-wrap:anywhere}
+.pinin{font-size:28px; letter-spacing:.5em; text-align:center; font-weight:800; font-variant-numeric:tabular-nums}
+.sf-note{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted); margin:0}
+.sf-note .ic{flex:none; margin-top:2px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+A.liveHash = true;
+var body = A.mount({section:"staff", title:"Персонал",
+  sub:"Потребителите на панела и на приложенията: роля, парола (поне 10 знака) и личен 4-цифрен ПИН за сервитьорите, кухнята и шофьорите.",
+  actions:'<button class="pill pill-red" type="button" data-new>' + ic("plus",20) + 'Нов потребител</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Само главният админ"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- потребители (прототип: sa-staff). Паролата никога не се пази тук; в кода: scrypt хеш (src/core/staff.ts) ---------- */
+var DAY = 864e5, NOW = Date.now();
+function ago(d, h){ return new Date(NOW - d * DAY - (h || 0) * 3600e3).toISOString(); }
+function seed(){ var L = A.ACCOUNTS.map(function(a, i){ return {id:"u" + (i + 1), username:a[0], name:a[2], role:a[1], active:true, pin:["waiter","kitchen","driver"].indexOf(a[1]) > -1, lastLogin:ago([0,1,1,0,0,0,3][i], [0,30,26,3,6,4,50][i]), createdAt:ago(40 + i), pwAt:ago(40 + i)}; });
+  L.push({id:"u8", username:"waiter2", name:"Сервитьор 2", role:"waiter", active:true, pin:true, lastLogin:ago(0, 6), createdAt:ago(30), pwAt:ago(30)});
+  L.push({id:"u9", username:"waiter3", name:"Сервитьор 3", role:"waiter", active:false, pin:true, lastLogin:ago(21, 2), createdAt:ago(35), pwAt:ago(35)});
+  L.push({id:"u10", username:"driver2", name:"Шофьор 2", role:"driver", active:true, pin:false, lastLogin:ago(2, 4), createdAt:ago(25), pwAt:ago(25)});
+  return L; }
+var U = A.data.get("staff", null); if (!U){ U = seed(); A.data.set("staff", U); }
+var PINS = A.data.get("staff-pins", {}); /* само в прототипа, за проверката „ПИН-ът вече е зает“; в кода: хеш */
+function save(){ A.data.set("staff", U); A.data.set("staff-pins", PINS); }
+var PIN_ROLES = ["waiter","kitchen","driver"], RANK = {admin:4, owner:3, manager:2};
+function rank(r){ return RANK[r] || 1; }
+function mine(u){ return A.me && u.username === A.me.user; }
+/* кой кого променя (по подразбиране, въпрос към собственика): главният админ всички; иначе само по-ниски роли и себе си (паролата) */
+function canEdit(u){ return A.me.role === "admin" || mine(u) || rank(A.me.role) > rank(u.role); }
+function rolesICanGive(){ return A.DEFAULT_ROLES.filter(function(r){ return A.me.role === "admin" || rank(r.id) < rank(A.me.role); }); }
+
+var flt = A.hash.f === "off" ? "off" : A.hash.f === "all" ? "all" : "on", q = "";
+function list(){ return (st === "empty" ? U.filter(function(u){ return u.role === "admin"; }) : U).filter(function(u){ return (flt === "all" || (flt === "on") === u.active) && (!q || A.norm(u.name + " " + u.username + " " + A.roleName(u.role)).indexOf(A.norm(q)) > -1); })
+  .sort(function(a, b){ return rank(b.role) - rank(a.role) || a.name.localeCompare(b.name, "bg"); }); }
+function pinCell(u){ if (PIN_ROLES.indexOf(u.role) < 0) return '<span class="muted">не трябва</span>'; return u.pin ? '<span class="pin" aria-label="ПИН зададен">••••</span>' : '<span class="sa-tag warn">' + ic("warning-circle",16) + 'Няма ПИН</span>'; }
+
+function draw(){ var y = A.scroller.scrollTop;
+  if (st === "loading"){ body.innerHTML = A.skel(6, "Зареждаме персонала …"); return; }
+  if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим потребителите. Входът на персонала работи както досега."); return; }
+  var all = st === "empty" ? U.filter(function(u){ return u.role === "admin"; }) : U, L = list(), noPin = all.filter(function(u){ return u.active && PIN_ROLES.indexOf(u.role) > -1 && !u.pin; }).length;
+  body.innerHTML = (st === "offline" ? A.offline("Промените по персонала чакат връзката. Входът с ПИН на устройствата работи с последните данни.") + '<div style="height:16px"></div>' : '') +
+    '<div class="sf-sum" data-edit-id="admin.staff.sum"><div><b>' + all.filter(function(u){ return u.active; }).length + '</b><span>активни</span></div><div><b>' + all.filter(function(u){ return !u.active; }).length + '</b><span>неактивни</span></div>' +
+      '<div><b>' + all.filter(function(u){ return u.active && PIN_ROLES.indexOf(u.role) > -1; }).length + '</b><span>в приложенията</span></div><div><b' + (noPin ? ' style="color:var(--warn)"' : '') + '>' + noPin + '</b><span>без ПИН</span></div></div>' +
+    '<p class="sf-note" style="margin-bottom:14px">' + ic("info",20) + '<span>Имената са примерни („Сервитьор 1“): ' + A.missing("списък на персонала с имената и ролите") + '. Пробните акаунти са само в прототипа.</span></p>' +
+    '<div class="sf-bar"><div class="sa-tabs" role="tablist" aria-label="Филтър">' + [["on","Активни"],["off","Неактивни"],["all","Всички"]].map(function(f){ var n = all.filter(function(u){ return f[0] === "all" || (f[0] === "on") === u.active; }).length;
+      return '<button role="tab" type="button" data-f="' + f[0] + '" aria-selected="' + (flt === f[0]) + '">' + f[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div>' +
+      '<div class="sa-field-s"><label class="vh" for="sf-q">Търси</label>' + ic("magnifying-glass",20) + '<input class="input" id="sf-q" type="search" placeholder="Име, потребител или роля" autocomplete="off" value="' + esc(q) + '"></div></div>' +
+    (!L.length ? '<div class="sa-card">' + (st === "empty" ? A.empty({icon:"users-three", title:"Още няма персонал.", text:"Добавете сервитьорите, кухнята и шофьорите. Всеки получава потребител, парола и личен ПИН.", action:'<button class="pill pill-red pill-lg" type="button" data-new>' + ic("plus",22) + 'Нов потребител</button>'}) : A.empty({icon:"magnifying-glass", title:flt === "off" ? "Няма неактивни потребители." : "Няма такъв потребител.", text:"Сменете филтъра или търсенето."})) + '</div>' :
+    '<div class="sa-tablewrap scroll"><table class="sa-table"><thead><tr><th>Потребител</th><th>Роля</th><th>ПИН</th><th>Последен вход</th><th>Активен</th><th><span class="vh">Действия</span></th></tr></thead><tbody>' +
+    L.map(function(u){ var ed = canEdit(u);
+      return '<tr data-u="' + u.id + '"' + (u.active ? '' : ' class="off"') + '><td data-main><span class="sf-u"><span class="sa-av' + (u.active ? '' : ' off') + '" aria-hidden="true">' + esc(A.initials(u.name)) + '</span><span><b>' + esc(u.name) + (mine(u) ? '<span class="me">вие</span>' : '') + '</b><code>' + esc(u.username) + '</code></span></span></td>' +
+        '<td data-label="Роля">' + esc(A.roleName(u.role)) + '</td><td data-label="ПИН">' + pinCell(u) + '</td><td data-label="Последен вход">' + (u.lastLogin ? A.ago(u.lastLogin) : 'никога') + '</td>' +
+        '<td data-label="Активен"><span class="sa-switch"><input type="checkbox" role="switch" data-act="' + u.id + '" aria-label="Активен: ' + esc(u.name) + '"' + (u.active ? ' checked' : '') + (!ed || mine(u) ? ' disabled' : '') + '><span class="tr"></span></span></td>' +
+        '<td data-label="Действия"><span class="sf-acts">' + (ed ? '<button class="pill pill-line" type="button" data-pw="' + u.id + '">' + ic("lock",18) + 'Парола</button>' + (PIN_ROLES.indexOf(u.role) > -1 && !mine(u) ? '<button class="pill pill-line" type="button" data-pin="' + u.id + '">' + ic("dots-nine",18) + 'ПИН' + '</button>' : '') +
+          (!mine(u) ? '<button class="pill pill-soft" type="button" data-edit="' + u.id + '">' + ic("pencil-simple",18) + 'Промени</button>' : '') : '<span class="muted" style="font-size:15px">Само главният админ</span>') + '</span></td></tr>'; }).join("") + '</tbody></table></div>');
+  A.scroller.scrollTop = y; }
+draw();
+function byId(id){ return U.filter(function(u){ return u.id === id; })[0]; }
+function fieldErr(el, msg){ var f = el.closest(".field"), e = f.querySelector(".err"); if (!e){ e = document.createElement("span"); e.className = "err"; e.setAttribute("role", "alert"); f.appendChild(e); } e.textContent = msg || ""; e.hidden = !msg; el.setAttribute("aria-invalid", msg ? "true" : "false"); }
+function strength(p){ var s = 0; if (p.length >= 10) s++; if (p.length >= 14) s++; if (/[a-zа-я]/.test(p) && /[A-ZА-Я]/.test(p)) s++; if (/\d/.test(p) && /[^\w]/.test(p)) s++; return Math.min(4, p.length < 10 ? Math.min(1, s) : s); }
+function genPw(){ var abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", a = new Uint32Array(14), s = ""; crypto.getRandomValues(a); for (var i = 0; i < 14; i++) s += abc[a[i] % abc.length]; return s.slice(0, 4) + "-" + s.slice(4, 9) + "-" + s.slice(9); }
+function pwFields(pre){ return '<div class="field"><label for="' + pre + '1">Нова парола</label><div class="pw"><input class="input" id="' + pre + '1" type="password" autocomplete="new-password" aria-describedby="' + pre + 'h"><button class="pill pill-soft show" type="button" data-showpw="' + pre + '1">Покажи</button></div><div class="meter" aria-hidden="true" data-meter><i></i><i></i><i></i><i></i></div><span class="help" id="' + pre + 'h">Поне 10 знака. Най-добре 3-4 думи или генерирана.</span></div>' +
+  '<div class="field"><label for="' + pre + '2">Повторете паролата</label><input class="input" id="' + pre + '2" type="password" autocomplete="new-password"></div>' +
+  '<button class="pill pill-soft" type="button" data-gen>' + ic("sparkle",18) + 'Генерирай парола</button><div data-genout></div>'; }
+function bindPw(s, pre){ var a = s.body.querySelector("#" + pre + "1"), b = s.body.querySelector("#" + pre + "2"), m = s.body.querySelector("[data-meter]");
+  a.addEventListener("input", function(){ m.className = "meter s" + (a.value ? strength(a.value) : 0); });
+  s.body.addEventListener("click", function(e){ var t = e.target.closest("[data-showpw]"); if (t){ var i = s.body.querySelector("#" + t.dataset.showpw), sh = i.type === "password"; i.type = sh ? "text" : "password"; b.type = i.type; t.textContent = sh ? "Скрий" : "Покажи"; return; }
+    if (e.target.closest("[data-gen]")){ var p = genPw(); a.value = p; b.value = p; a.dispatchEvent(new Event("input")); s.body.querySelector("[data-genout]").innerHTML = '<div class="genpw"><code>' + p + '</code><button class="pill pill-soft" type="button" data-cp>' + ic("copy",18) + 'Копирай</button></div><p class="sf-note" style="margin-top:8px">' + ic("info",18) + '<span>Дайте я на човека лично. След запис не се вижда повече.</span></p>';
+      s.body.querySelector("[data-cp]").onclick = function(){ navigator.clipboard && navigator.clipboard.writeText(p).then(function(){ A.toast("Паролата е копирана"); }); }; } });
+  return function(){ var ok = true; fieldErr(a, ""); fieldErr(b, "");
+    if (a.value.length < 10){ fieldErr(a, "Паролата трябва да е поне 10 знака."); ok = false; a.focus(); }
+    else if (a.value !== b.value){ fieldErr(b, "Двете пароли не съвпадат."); ok = false; b.focus(); }
+    return ok ? a.value : null; }; }
+
+/* ---------- нов потребител ---------- */
+function newUser(){ var roles = rolesICanGive().filter(function(r){ return r.id !== "admin" || A.me.role === "admin"; });
+  var s = A.sheet({title:"Нов потребител", html:'<div class="form">' +
+    '<div class="field"><label for="nu-u">Потребител</label><input class="input" id="nu-u" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="например waiter4"><span class="help">Латиница, цифри, точка, тире; от 3 до 32 знака.</span></div>' +
+    '<div class="field"><label for="nu-n">Име</label><input class="input" id="nu-n" autocomplete="off" placeholder="например Сервитьор 4"></div>' +
+    '<div class="field"><label for="nu-r">Роля</label><select class="input" id="nu-r">' + roles.map(function(r){ return '<option value="' + r.id + '"' + (r.id === "waiter" ? ' selected' : '') + '>' + esc(r.n) + '</option>'; }).join("") + '</select><span class="help" data-rdesc></span></div>' +
+    pwFields("nu-p") + '<div class="field" data-pinf><label for="nu-pin">Личен ПИН (по желание)</label><input class="input pinin" id="nu-pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="····"><span class="help">4 цифри за входа в приложението. Може и после.</span></div></div>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Създай</button>', focus:"#nu-u"});
+  var B = s.body, getPw = bindPw(s, "nu-p"), rsel = B.querySelector("#nu-r");
+  function syncRole(){ var r = A.role(rsel.value); B.querySelector("[data-rdesc]").textContent = r.desc; B.querySelector("[data-pinf]").hidden = PIN_ROLES.indexOf(r.id) < 0; }
+  rsel.addEventListener("change", syncRole); syncRole();
+  s.foot.querySelector("[data-x]").onclick = s.close;
+  s.foot.querySelector("[data-ok]").onclick = function(){ var un = B.querySelector("#nu-u"), nm = B.querySelector("#nu-n"), pin = B.querySelector("#nu-pin"), bad = false, v = un.value.trim().toLowerCase();
+    fieldErr(un, ""); fieldErr(nm, ""); fieldErr(pin, "");
+    if (!/^[a-z0-9._-]{3,32}$/.test(v)){ fieldErr(un, "Латиница, цифри, точка или тире; от 3 до 32 знака."); bad = true; }
+    else if (U.some(function(u){ return u.username === v; })){ fieldErr(un, "Този потребител вече съществува."); bad = true; }
+    if (!nm.value.trim()){ fieldErr(nm, "Напишете име."); bad = true; }
+    var pinErr = PIN_ROLES.indexOf(rsel.value) > -1 && pin.value ? pinProblem(pin.value, null) : ""; if (pinErr){ fieldErr(pin, pinErr); bad = true; }
+    if (bad){ (B.querySelector('[aria-invalid="true"]') || un).focus(); return; }
+    var pw = getPw(); if (!pw) return;
+    var u = {id:"u" + Date.now().toString(36), username:v, name:nm.value.trim(), role:rsel.value, active:true, pin:!!(pin.value && PIN_ROLES.indexOf(rsel.value) > -1), lastLogin:null, createdAt:new Date().toISOString(), pwAt:new Date().toISOString()};
+    if (u.pin) PINS[u.id] = pin.value; U.push(u); save(); s.close(); flt = "on"; draw();
+    A.audit("staff.create", "Нов потребител: " + u.name + " (" + u.username + "), роля „" + A.roleName(u.role) + "“", u.id);
+    A.toast("Създаден: " + u.name + ". Дайте му паролата лично.", {undo:function(){ U = U.filter(function(x){ return x.id !== u.id; }); delete PINS[u.id]; save(); draw(); }}); }; }
+
+/* ---------- парола, ПИН, роля, активен ---------- */
+function setPw(u){ var s = A.sheet({title:"Нова парола: " + u.name, html:'<div class="form"><p class="sf-note">' + ic("lock",18) + '<span>Старата парола спира да работи веднага и ' + (mine(u) ? 'другите ви сесии се затварят.' : u.name + ' трябва да влезе отново.') + ' Паролата се пази само като хеш.</span></p>' + pwFields("pw-p") + '</div>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Смени паролата</button>', focus:"#pw-p1"});
+  var getPw = bindPw(s, "pw-p"); s.foot.querySelector("[data-x]").onclick = s.close;
+  s.foot.querySelector("[data-ok]").onclick = function(){ if (!getPw()) return; u.pwAt = new Date().toISOString(); save(); s.close(); draw(); A.audit("staff.password", "Сменена парола: " + u.name + " (" + u.username + ")", u.id); A.toast("Паролата на " + u.name + " е сменена"); }; }
+function pinProblem(p, selfId){ if (!/^\d{4}$/.test(p)) return "ПИН-ът е точно 4 цифри."; if (/^(\d)\1{3}$/.test(p) || "0123456789".indexOf(p) > -1 || "9876543210".indexOf(p) > -1) return "Твърде лесен ПИН (като 1111 или 1234). Изберете друг.";
+  if (Object.keys(PINS).some(function(k){ return k !== selfId && PINS[k] === p; })) return "Този ПИН вече е на друг човек. Всеки има личен ПИН."; return ""; }
+function setPin(u){ var s = A.sheet({title:(u.pin ? "Смени ПИН: " : "ПИН за ") + u.name, html:'<div class="form"><p class="sf-note">' + ic("info",18) + '<span>С личния ПИН ' + u.name + ' влиза в приложението ' + ({waiter:"на сервитьора", kitchen:"на кухнята", driver:"на шофьора"}[u.role]) + ' на общото устройство. Кажете му го лично.</span></p>' +
+    '<div class="field"><label for="pn">Нов ПИН</label><input class="input pinin" id="pn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="····"></div>' +
+    '<button class="pill pill-soft" type="button" data-rnd>' + ic("sparkle",18) + 'Случаен ПИН</button></div>',
+    foot:(u.pin ? '<button class="pill pill-line pill-lg" type="button" data-rm>Махни ПИН</button>' : '<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button>') + '<button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Запази ПИН</button>', focus:"#pn"});
+  var inp = s.body.querySelector("#pn");
+  inp.addEventListener("input", function(){ inp.value = inp.value.replace(/\D/g, "").slice(0, 4); fieldErr(inp, ""); });
+  s.body.querySelector("[data-rnd]").onclick = function(){ var p; do { p = String(Math.floor(Math.random() * 10000)).padStart(4, "0"); } while (pinProblem(p, u.id)); inp.value = p; fieldErr(inp, ""); };
+  var x = s.foot.querySelector("[data-x]"); if (x) x.onclick = s.close;
+  var rm = s.foot.querySelector("[data-rm]"); if (rm) rm.onclick = function(){ u.pin = false; delete PINS[u.id]; save(); s.close(); draw(); A.audit("staff.pin", "Махнат ПИН: " + u.name, u.id); A.toast("ПИН-ът на " + u.name + " е махнат"); };
+  s.foot.querySelector("[data-ok]").onclick = function(){ var e = pinProblem(inp.value, u.id); if (e){ fieldErr(inp, e); inp.focus(); return; }
+    PINS[u.id] = inp.value; var had = u.pin; u.pin = true; save(); s.close(); draw(); A.audit("staff.pin", (had ? "Сменен" : "Зададен") + " ПИН: " + u.name, u.id); A.toast("ПИН-ът на " + u.name + " е " + (had ? "сменен" : "зададен")); }; }
+function editUser(u){ var roles = rolesICanGive();
+  var s = A.sheet({title:"Роля и име: " + u.name, html:'<div class="form"><div class="field"><label for="eu-n">Име</label><input class="input" id="eu-n" value="' + esc(u.name) + '"></div>' +
+    '<div class="field"><label for="eu-r">Роля</label><select class="input" id="eu-r">' + roles.map(function(r){ return '<option value="' + r.id + '"' + (r.id === u.role ? ' selected' : '') + '>' + esc(r.n) + '</option>'; }).join("") + '</select><span class="help" data-rd></span></div>' +
+    '<p class="sf-note">' + ic("info",18) + '<span>Какво вижда всяка роля се променя в „<a href="roles.html">Роли и права</a>“.</span></p></div>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Запази</button>', focus:"#eu-n"});
+  var sel = s.body.querySelector("#eu-r"); function d(){ s.body.querySelector("[data-rd]").textContent = A.role(sel.value).desc; } sel.addEventListener("change", d); d();
+  s.foot.querySelector("[data-x]").onclick = s.close;
+  s.foot.querySelector("[data-ok]").onclick = function(){ var nm = s.body.querySelector("#eu-n"); if (!nm.value.trim()){ fieldErr(nm, "Напишете име."); nm.focus(); return; }
+    var was = {name:u.name, role:u.role}; u.name = nm.value.trim(); u.role = sel.value; if (PIN_ROLES.indexOf(u.role) < 0){ u.pin = false; delete PINS[u.id]; } save(); s.close(); draw();
+    var ch = []; if (was.name !== u.name) ch.push("име „" + was.name + "“ → „" + u.name + "“"); if (was.role !== u.role) ch.push("роля „" + A.roleName(was.role) + "“ → „" + A.roleName(u.role) + "“");
+    if (ch.length){ A.audit("staff.update", u.username + ": " + ch.join(", "), u.id); A.toast("Запазено: " + u.name, {undo:function(){ u.name = was.name; u.role = was.role; save(); draw(); }}); } }; }
+function toggleActive(u, on, input){
+  if (!on && u.role === "admin" && U.filter(function(x){ return x.role === "admin" && x.active; }).length < 2){ input.checked = true; A.toast("Трябва да остане поне един активен главен админ."); return; }
+  if (on){ u.active = true; save(); draw(); A.audit("staff.activate", "Активиран: " + u.name, u.id); A.toast(u.name + " е активен отново", {undo:function(){ u.active = false; save(); draw(); }}); return; }
+  input.checked = true;
+  A.confirm({title:"Да деактивираме " + u.name + "?", text:"Не може да влиза в панела и в приложенията; отворените сесии се затварят. Историята в дневника остава. Може да го активирате отново.", ok:"Деактивирай", danger:true}, function(){
+    u.active = false; save(); draw(); A.audit("staff.deactivate", "Деактивиран: " + u.name + " (" + u.username + ")", u.id);
+    A.toast(u.name + " е деактивиран", {undo:function(){ u.active = true; save(); draw(); }}); }); }
+
+document.addEventListener("click", function(e){ var t;
+  if (e.target.closest("[data-new]")){ newUser(); return; }
+  if ((t = e.target.closest("[data-pw]"))){ setPw(byId(t.dataset.pw)); return; }
+  if ((t = e.target.closest("[data-pin]"))){ setPin(byId(t.dataset.pin)); return; }
+  if ((t = e.target.closest("[data-edit]"))){ editUser(byId(t.dataset.edit)); return; }
+  if ((t = e.target.closest("[data-f]")) && t.closest(".sf-bar")){ flt = t.dataset.f; A.setHash(Object.assign({}, A.hash, {f:flt === "on" ? "" : flt})); draw(); return; }
+});
+document.addEventListener("change", function(e){ var t = e.target.closest("[data-act]"); if (t) toggleActive(byId(t.dataset.act), t.checked, t); });
+body.addEventListener("input", function(e){ if (e.target.id !== "sf-q") return; q = e.target.value; var pos = e.target.selectionStart; draw(); var i = body.querySelector("#sf-q"); i.focus(); try{ i.setSelectionRange(pos, pos); }catch(x){} });
+})();
+</script>
+</body>
+</html>

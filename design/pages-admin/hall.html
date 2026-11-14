@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Залата и масите | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.hl-warn{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:22px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); margin-bottom:18px}
+.hl-warn > .ic{color:var(--warn); flex:none; margin-top:2px}
+.hl-warn b{display:block}
+.hl-warn p{margin:2px 0 0}
+.hl-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.hl-bar .sa-tabs{flex:0 1 auto}
+.hl-bar .grow{flex:1}
+.hl-garden{display:flex; align-items:center; gap:4px; padding:0 4px 0 16px; min-height:60px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-weight:700}
+@container page (max-width:640px){ .hl-bar .sa-tabs{flex:1 1 100%} .hl-garden{flex:1 1 100%; justify-content:space-between} .hl-bar .grow{display:none} }
+
+.hl-grid{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1060px){ .hl-grid{grid-template-columns:minmax(0,1fr) 360px; align-items:start} .hl-panel{position:sticky; top:96px} }
+.hl-canvas{position:relative; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.hl-canvas .core{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.hl-canvas.closed .core{opacity:.55}
+.hl-help{display:flex; gap:10px; align-items:flex-start; margin:10px 6px 4px; font-size:15px; color:var(--muted)}
+.hl-help .ic{flex:none; margin-top:2px}
+.fp{display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none}
+.fp .grid{fill:var(--line-strong); opacity:.5}
+.fp .floor{fill:var(--surface)}
+.fp .lawn{fill:var(--ok); opacity:.07}
+.fp .bush{fill:var(--ok); opacity:.28}
+.fp .wall{fill:none; stroke:var(--line-strong); stroke-width:4}
+.fp .gap{stroke:var(--surface); stroke-width:9}
+.fp .win{fill:var(--surface); stroke:var(--muted); stroke-width:2}
+.fp .lbl{fill:var(--muted); font-size:22px; font-weight:700; font-family:var(--font)}
+.tb{cursor:grab; outline:none}
+.tb.drag{cursor:grabbing}
+.tb .hit{fill:transparent}
+.tb .ring{fill:none; stroke:var(--red); stroke-width:3; stroke-dasharray:8 6; opacity:0}
+.tb:focus-visible .ring{opacity:1}
+.tb .shp{transform-box:fill-box; transform-origin:center; transition:transform var(--t-base) var(--ease)}
+.tb.drag .shp{transform:scale(1.06)}
+.tb .ch{fill:var(--line-strong)}
+.tb .tt{fill:var(--surface); stroke:var(--ink); stroke-width:3}
+.tb .no{fill:var(--ink); font-family:var(--font); font-size:30px; font-weight:800; text-anchor:middle}
+.tb .lb{fill:var(--muted); font-family:var(--font); font-size:20px; font-weight:700; text-anchor:middle}
+.tb .fi{color:var(--muted)}
+/* телефон: планът е на 0,45 от размера; без надписите под масите, по-едри номера (местата се виждат по столовете) */
+@container page (max-width:620px){ .tb .lb, .tb .fi{display:none} .tb .no{font-size:48px} .fp .lbl{font-size:40px} .fp .jlb, .fp .jpill{display:none} }
+.tb.sel .tt{fill:var(--red); stroke:var(--red)}
+.tb.sel .ch{fill:var(--red); opacity:.45}
+.tb.sel .no{fill:var(--on-red)}
+.tb.sel .lb{fill:var(--red)}
+.tb.sel .ring{opacity:1; stroke-dasharray:none}
+.tb.chg:not(.sel) .tt{stroke:var(--ember); stroke-width:5}
+.tb .hatch{pointer-events:none}
+.fp .hatch-l line{stroke:var(--ink); stroke-width:2; opacity:.28}
+.fp .join{fill:var(--ember-soft); stroke:var(--ember); stroke-width:3; stroke-dasharray:10 7}
+.fp .jlb{fill:var(--ink); font-family:var(--font); font-size:20px; font-weight:800}
+.fp .jpill{fill:var(--ember)}
+
+.hl-panel{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:18px; display:grid; gap:14px}
+.hl-panel h2{margin:0; font-size:24px; letter-spacing:-.03em; display:flex; align-items:center; gap:12px}
+.hl-panel h2 .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-size:22px; flex:none}
+.hl-panel h2 small{display:block; font-size:15px; color:var(--muted); font-weight:700; letter-spacing:0}
+.hl-panel .lab{font-weight:700; font-size:15px; margin:0 0 6px}
+.hl-sw{display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:52px; border-top:1px solid var(--line); padding-top:4px}
+.hl-sw span.t{display:flex; align-items:center; gap:10px; font-weight:700}
+.hl-sw span.t .ic{color:var(--muted)}
+.hl-sw small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.hl-seats{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.hl-seats .counter output{min-width:44px}
+.hl-move{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; max-width:300px}
+.hl-move .pill{padding:0 8px; gap:4px; font-size:15px}
+.hl-join{display:grid; gap:8px}
+.hl-join .row{flex-wrap:wrap; gap:6px}
+.hl-panel .hl-foot{display:flex; flex-wrap:wrap; gap:8px; border-top:1px solid var(--line); padding-top:14px}
+.hl-panel .hl-foot .pill{flex:1 1 auto}
+.hl-panel .del .ic{color:var(--danger)}
+.hl-none{text-align:center; display:grid; gap:10px; justify-items:center; padding:20px 10px; color:var(--muted)}
+.hl-none .ill{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.hl-none b{color:var(--ink); font-size:18px}
+
+.hl-list{display:grid; gap:12px}
+.hl-li{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 10px 10px 12px; border-bottom:1px solid var(--line)}
+.hl-li:last-child{border-bottom:0}
+.hl-li[aria-current="true"]{background:var(--ember-soft)}
+.hl-li .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:20px}
+.hl-li[aria-current="true"] .no{background:var(--ink); color:var(--bg)}
+.hl-li b{display:block}
+.hl-li .ft{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:15px; color:var(--muted); font-weight:600}
+.hl-li .ft span{display:inline-flex; align-items:center; gap:4px}
+@container page (max-width:460px){ .hl-li{grid-template-columns:52px minmax(0,1fr)} .hl-li .pill{grid-column:1 / -1} }
+
+.hl-savebar{position:absolute; z-index:25; left:10px; right:10px; bottom:164px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.hl-savebar.on{transform:none; opacity:1; pointer-events:auto}
+.hl-savebar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
+.hl-savebar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.hl-savebar .pill{flex:none}
+@container app (min-width:700px){ .hl-savebar{left:50%; right:auto; bottom:92px; width:min(620px, calc(100% - 48px)); transform:translate(-50%,160%)} .hl-savebar.on{transform:translate(-50%,0)} }
+@container app (max-width:420px){ .hl-savebar{flex-wrap:wrap; border-radius:28px; padding:10px} .hl-savebar .n{flex:1 1 100%; padding:0 8px 4px} .hl-savebar .pill{flex:1} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st, I = window.SC_ICONS;
+A.liveHash = true;
+var body = A.mount({section:"hall", title:"Залата и масите",
+  sub:"Влачете масите, сменете местата и особеностите, обединете маси за големи групи. Резервацията и QR кодовете четат същия план.",
+  actions:'<button class="pill pill-red" type="button" data-add>' + ic("plus",20) + 'Нова маса</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Празна градина"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- данни: sa-tables (един източник за залата, резервациите и QR), начало от условните SC.TABLES ---------- */
+var WORLD = {salon:{w:800, h:640}, garden:{w:800, h:440}}, ZN = {salon:"Салон", garden:"Градина"};
+function tablesState(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
+  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; }
+function clone(v){ return JSON.parse(JSON.stringify(v)); }
+var saved = tablesState();
+if (st === "empty") saved.tables = saved.tables.filter(function(t){ return t.zone !== "garden"; });
+var W = clone(saved);
+var view = A.hash.v === "list" ? "list" : "plan", zone = A.hash.z === "garden" || st === "empty" ? "garden" : "salon", selId = A.hash.t || null;
+function live(){ return W.tables.filter(function(t){ return !t.off; }); }
+function byId(id){ return W.tables.filter(function(t){ return t.id === id; })[0]; }
+function joinOf(id){ return W.joins.filter(function(j){ return j.ids.indexOf(id) > -1; })[0]; }
+function shapeFor(n){ return n <= 2 ? "round" : n <= 4 ? "square" : "rect"; }
+
+/* ---------- рисуване на маса (световни единици; виж reservation.html) ---------- */
+function dims(t){ var s = shapeFor(t.seats); if (s === "round") return {w:84, h:84, s:s}; if (s === "square") return {w:84, h:84, s:s}; var k = Math.ceil(t.seats / 2); return {w:Math.max(110, 44 * k + 26), h:76, s:s}; }
+function chairs(t, d){ var c = [], i, cw = 30, chh = 13, s = d.s;
+  if (s === "round"){ if (t.seats >= 1) c.push([-d.w / 2 - chh - 6, -cw / 2, chh, cw]); if (t.seats >= 2) c.push([d.w / 2 + 6, -cw / 2, chh, cw]); }
+  else if (s === "square"){ var pos = [[-cw / 2, -d.h / 2 - chh - 6, cw, chh], [-cw / 2, d.h / 2 + 6, cw, chh], [-d.w / 2 - chh - 6, -cw / 2, chh, cw], [d.w / 2 + 6, -cw / 2, chh, cw]]; for (i = 0; i < t.seats; i++) c.push(pos[i]); }
+  else { var top = Math.ceil(t.seats / 2), bot = t.seats - top;
+    for (i = 0; i < top; i++) c.push([-d.w / 2 + (d.w / top) * (i + .5) - cw / 2, -d.h / 2 - chh - 6, cw, chh]);
+    for (i = 0; i < bot; i++) c.push([-d.w / 2 + (d.w / bot) * (i + .5) - cw / 2, d.h / 2 + 6, cw, chh]); }
+  return c.map(function(r){ return '<rect class="ch" x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '" rx="6"/>'; }).join(""); }
+function topShape(d, cls, extra){ return d.s === "round" ? '<circle class="' + cls + '" cx="0" cy="0" r="' + d.w / 2 + '"' + (extra || '') + '/>' : '<rect class="' + cls + '" x="' + (-d.w / 2) + '" y="' + (-d.h / 2) + '" width="' + d.w + '" height="' + d.h + '" rx="16"' + (extra || '') + '/>'; }
+function icon(n, x, y, s){ return '<svg class="fi" x="' + x + '" y="' + y + '" width="' + s + '" height="' + s + '" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">' + (I[n] || '') + '</svg>'; }
+function feats(t){ var f = []; if (t.zone === "salon" && t.window) f.push(["sun", "до прозореца"]); if (t.stroller) f.push(["baby", "детска количка"]); if (t.access) f.push(["wheelchair", "достъпна"]); return f; }
+function aria(t){ var j = joinOf(t.id); return "Маса " + t.n + ", " + t.seats + " места" + (feats(t).length ? ", " + feats(t).map(function(f){ return f[1]; }).join(", ") : "") + (t.walkin === false ? ", само с резервация" : "") + (j ? ", обединена с " + j.ids.filter(function(x){ return x !== t.id; }).map(function(x){ return byId(x).n; }).join(" и ") : "") + ". Стрелките местят масата, Enter отваря настройките"; }
+function changed(t){ var o = saved.tables.filter(function(x){ return x.id === t.id; })[0]; return !o || JSON.stringify(o) !== JSON.stringify(t); }
+function tableSVG(t){ var d = dims(t), f = feats(t).concat(t.walkin === false ? [["lock", "само с резервация"]] : []), yb = d.h / 2 + 46, lab = t.seats + ' ' + (t.seats === 1 ? 'място' : 'места'), lw = lab.length * 10.4, fw = f.length * 26, tw = lw + (f.length ? 8 + fw : 0), x0 = -tw / 2;
+  return '<g class="tb' + (t.id === selId ? ' sel' : '') + (changed(t) ? ' chg' : '') + '" data-t="' + t.id + '" transform="translate(' + t.cx + ' ' + t.cy + ')" role="button" tabindex="0" aria-pressed="' + (t.id === selId) + '" aria-label="' + esc(aria(t)) + '">' +
+    '<rect class="hit" x="' + (-Math.max(d.w, tw) / 2 - 30) + '" y="' + (-d.h / 2 - 32) + '" width="' + (Math.max(d.w, tw) + 60) + '" height="' + (d.h + 92) + '" rx="22"/>' +
+    '<rect class="ring" x="' + (-Math.max(d.w, tw) / 2 - 24) + '" y="' + (-d.h / 2 - 28) + '" width="' + (Math.max(d.w, tw) + 48) + '" height="' + (d.h + 84) + '" rx="22"/>' +
+    '<g class="shp">' + chairs(t, d) + topShape(d, "tt") + (t.walkin === false ? topShape(d, "hatch", ' fill="url(#hl-hatch)"') : '') + '<text class="no" x="0" y="1" dominant-baseline="central">' + t.n + '</text></g>' +
+    '<text class="lb" x="' + (x0 + lw / 2) + '" y="' + yb + '">' + lab + '</text>' +
+    f.map(function(x, i){ return icon(x[0], x0 + lw + 8 + i * 26, yb - 19, 22); }).join("") + '</g>'; }
+function joinSVG(j){ var ts = j.ids.map(byId).filter(function(t){ return t && !t.off && t.zone === zone; }); if (ts.length < 2) return "";
+  var x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9; ts.forEach(function(t){ var d = dims(t); x1 = Math.min(x1, t.cx - d.w / 2 - 40); y1 = Math.min(y1, t.cy - d.h / 2 - 40); x2 = Math.max(x2, t.cx + d.w / 2 + 40); y2 = Math.max(y2, t.cy + d.h / 2 + 62); });
+  var seats = ts.reduce(function(a, t){ return a + t.seats; }, 0), lab = "Обединени · " + seats + " места", lw = lab.length * 10.5 + 28;
+  return '<rect class="join" x="' + x1 + '" y="' + y1 + '" width="' + (x2 - x1) + '" height="' + (y2 - y1) + '" rx="28"/>' +
+    '<rect class="jpill" x="' + (x1 + 18) + '" y="' + (y1 - 17) + '" width="' + lw + '" height="34" rx="17"/><text class="jlb" x="' + (x1 + 32) + '" y="' + (y1 + 7) + '">' + lab + '</text>'; }
+function planSVG(){ var Z = WORLD[zone], h = '', T = live().filter(function(t){ return t.zone === zone; });
+  h += '<svg class="fp" viewBox="0 0 ' + Z.w + ' ' + (Z.h + 52) + '" role="application" aria-label="План: ' + (zone === "salon" ? "салон" : "градина") + '. ' + A.plural(T.length, "маса", "маси") + '. Влачете масите или ги изберете с Tab и ги местете със стрелките." data-plan>';
+  h += '<defs><pattern id="hl-dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle class="grid" cx="10" cy="10" r="1.4"/></pattern>' +
+    '<pattern id="hl-hatch" class="hatch-l" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="10"/></pattern></defs>';
+  h += '<rect class="floor" x="8" y="8" width="' + (Z.w - 16) + '" height="' + (Z.h - 16) + '" rx="26"/>';
+  if (zone === "garden"){ h += '<rect class="lawn" x="8" y="8" width="' + (Z.w - 16) + '" height="' + (Z.h - 16) + '" rx="26"/>'; for (var b = 0; b < 26; b++) h += '<circle class="bush" cx="' + (34 + b * 29) + '" cy="24" r="' + (b % 2 ? 7 : 9) + '"/>'; }
+  h += '<rect x="8" y="8" width="' + (Z.w - 16) + '" height="' + (Z.h - 16) + '" rx="26" fill="url(#hl-dots)"/><rect class="wall" x="8" y="8" width="' + (Z.w - 16) + '" height="' + (Z.h - 16) + '" rx="26"/>';
+  if (zone === "salon"){ for (var c = 0; c < 4; c++){ var wx = 110 + c * 193; h += '<rect class="win" x="' + (wx - 60) + '" y="3" width="120" height="11" rx="3"/>'; }
+    h += '<line class="gap" x1="60" y1="' + (Z.h - 8) + '" x2="170" y2="' + (Z.h - 8) + '"/><line class="gap" x1="630" y1="' + (Z.h - 8) + '" x2="740" y2="' + (Z.h - 8) + '"/>' +
+      '<text class="lbl" x="115" y="' + (Z.h + 26) + '" text-anchor="middle">Вход</text><text class="lbl" x="685" y="' + (Z.h + 26) + '" text-anchor="middle">Градина</text>'; }
+  else h += '<line class="gap" x1="60" y1="' + (Z.h - 8) + '" x2="170" y2="' + (Z.h - 8) + '"/><text class="lbl" x="115" y="' + (Z.h + 26) + '" text-anchor="middle">Салон</text>';
+  h += W.joins.map(joinSVG).join("");
+  /* избраната маса най-отгоре */
+  T.sort(function(a, b){ return (a.id === selId) - (b.id === selId); }).forEach(function(t){ h += tableSVG(t); });
+  return h + '</svg>'; }
+
+/* ---------- панел на избраната маса ---------- */
+function panelHTML(){ var t = selId && byId(selId);
+  if (!t || t.off || t.zone !== zone) return '<aside class="hl-panel" aria-label="Настройки на масата" data-edit-id="admin.hall.panel"><div class="hl-none"><span class="ill">' + ic("chair",32) + '</span><b>Изберете маса</b><span>Докоснете маса на плана или в списъка. Тук сменяте местата, особеностите и обединяването.</span></div></aside>';
+  var j = joinOf(t.id), others = live().filter(function(x){ return x.zone === t.zone && x.id !== t.id && !(j && j.ids.indexOf(x.id) > -1); }).sort(function(a, b){ return dist(a, t) - dist(b, t); }).slice(0, 4);
+  function sw(k, icn, label, help, on, dis){ return '<label class="hl-sw"><span class="t">' + ic(icn,22) + '<span>' + label + (help ? '<small>' + help + '</small>' : '') + '</span></span><span class="sa-switch"><input type="checkbox" role="switch" data-f="' + k + '"' + (on ? ' checked' : '') + (dis ? ' disabled' : '') + '><span class="tr"></span></span></label>'; }
+  return '<aside class="hl-panel" aria-label="Настройки на маса ' + t.n + '" data-edit-id="admin.hall.panel">' +
+    '<h2><span class="no" aria-hidden="true">' + t.n + '</span><span>Маса ' + t.n + '<small>' + ZN[t.zone] + (changed(t) ? ' · с промени' : '') + '</small></span></h2>' +
+    '<div class="hl-seats"><span class="lab" id="hl-sl">Места</span><div class="counter" role="group" aria-labelledby="hl-sl"><button type="button" data-seat="-1" aria-label="Едно място по-малко"' + (t.seats <= 1 ? ' disabled' : '') + '>' + ic("minus",20) + '</button><output aria-live="polite">' + t.seats + '</output><button type="button" data-seat="1" aria-label="Едно място повече"' + (t.seats >= 12 ? ' disabled' : '') + '>' + ic("plus",20) + '</button></div></div>' +
+    '<div>' + (t.zone === "salon" ? sw("window", "sun", "До прозореца", "", t.window) : '') + sw("stroller", "baby", "Място за детска количка", "", t.stroller) + sw("access", "wheelchair", "Достъпна с инвалидна количка", "", t.access) +
+      sw("walkin", "lock", "Само с резервация", "Не се дава на гости без резервация", t.walkin === false) + '</div>' +
+    '<div><p class="lab" id="hl-ml">Премести</p><div class="hl-move" role="group" aria-labelledby="hl-ml">' +
+      '<button class="pill pill-soft" style="grid-area:1/2" type="button" data-mv="0,-1">' + ic("caret-up",18) + 'Нагоре</button>' +
+      '<button class="pill pill-soft" style="grid-area:2/1" type="button" data-mv="-1,0">' + ic("caret-left",18) + 'Наляво</button><button class="pill pill-soft" style="grid-area:2/2" type="button" data-mv="0,1">' + ic("caret-down",18) + 'Надолу</button><button class="pill pill-soft" style="grid-area:2/3" type="button" data-mv="1,0">Надясно' + ic("caret-right",18) + '</button></div></div>' +
+    '<div class="hl-join"><p class="lab" style="margin:0">Обединяване</p>' + (j ? '<p style="margin:0">Обединена с ' + j.ids.filter(function(x){ return x !== t.id; }).map(function(x){ return "маса " + byId(x).n; }).join(" и ") + ' · ' + j.ids.reduce(function(a, x){ return a + byId(x).seats; }, 0) + ' места общо.</p><div class="row"><button class="pill pill-line" type="button" data-split>' + ic("x",18) + 'Раздели масите</button></div>' : '<p class="muted" style="margin:0">За голяма група: най-близките маси в ' + (t.zone === "salon" ? "салона" : "градината") + '.</p>') +
+      (others.length ? '<div class="row">' + others.map(function(o){ return '<button class="chip" type="button" data-join="' + o.id + '">' + ic("plus",16) + 'Маса ' + o.n + ' · ' + o.seats + '</button>'; }).join("") + '</div>' : '') + '</div>' +
+    '<div class="hl-foot"><button class="pill pill-line" type="button" data-qr>' + ic("qr-code",20) + 'QR етикет</button><button class="pill pill-line del" type="button" data-off>' + ic("trash",20) + 'Махни масата</button></div>' +
+  '</aside>'; }
+function dist(a, b){ return Math.hypot(a.cx - b.cx, a.cy - b.cy); }
+function listHTML(){ var T = live().filter(function(t){ return t.zone === zone; }).sort(function(a, b){ return a.n - b.n; });
+  return '<div class="sa-card"><div role="list" aria-label="Масите в ' + (zone === "salon" ? "салона" : "градината") + '">' + T.map(function(t){ var j = joinOf(t.id), f = feats(t);
+    return '<div class="hl-li" role="listitem"' + (t.id === selId ? ' aria-current="true"' : '') + '><span class="no" aria-hidden="true">' + t.n + '</span><span><b>Маса ' + t.n + ' · ' + t.seats + ' ' + (t.seats === 1 ? 'място' : 'места') + '</b><span class="ft">' +
+      (f.length ? f.map(function(x){ return '<span>' + ic(x[0],16) + x[1] + '</span>'; }).join("") : '<span>Без особености</span>') + (t.walkin === false ? '<span>' + ic("lock",16) + 'само с резервация</span>' : '') + (j ? '<span>' + ic("users-three",16) + 'с ' + j.ids.filter(function(x){ return x !== t.id; }).map(function(x){ return byId(x).n; }).join(" и ") + '</span>' : '') + (changed(t) ? '<span style="color:var(--warn)">с промени</span>' : '') + '</span></span>' +
+      '<button class="pill pill-line" type="button" data-pick="' + t.id + '" aria-pressed="' + (t.id === selId) + '">' + ic("sliders-horizontal",18) + 'Настрой маса ' + t.n + '</button></div>'; }).join("") + '</div></div>'; }
+
+function zoneCount(z){ return live().filter(function(t){ return t.zone === z; }).length; }
+function draw(keep){
+  if (st === "loading"){ body.innerHTML = A.skel(4, "Зареждаме плана …"); return; }
+  if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим плана на залата. Резервациите и QR кодовете работят с последния запазен план."); return; }
+  var y = A.scroller.scrollTop, T = live().filter(function(t){ return t.zone === zone; });
+  body.innerHTML = (st === "offline" ? A.offline("Можете да местите маси. Планът се запазва, щом връзката се върне.") + '<div style="height:16px"></div>' : '') +
+    '<div class="hl-warn" role="note">' + ic("warning-circle",24) + '<div><b>Масите и планът са условни</b><p>' + A.missing("истински маси и план") + ' · капацитет ' + A.missing("капацитет") + '. Сборът от местата не е капацитетът.</p></div></div>' +
+    '<div class="hl-bar"><div class="sa-tabs" role="tablist" aria-label="Зона">' + ["salon","garden"].map(function(z){ return '<button role="tab" type="button" data-zone="' + z + '" aria-selected="' + (zone === z) + '">' + ic(z === "salon" ? "chair" : "tree",20) + ZN[z] + '<span class="c">' + zoneCount(z) + '</span></button>'; }).join("") + '</div>' +
+      '<div class="sa-tabs" role="tablist" aria-label="Изглед"><button role="tab" type="button" data-view="plan" aria-selected="' + (view === "plan") + '">' + ic("map-trifold",20) + 'План</button><button role="tab" type="button" data-view="list" aria-selected="' + (view === "list") + '">' + ic("list-bullets",20) + 'Списък</button></div>' +
+      '<span class="grow"></span>' + (zone === "garden" ? '<label class="hl-garden">Градината е отворена<span class="sa-switch"><input type="checkbox" role="switch" data-garden' + (W.garden !== false ? ' checked' : '') + '><span class="tr"></span></span></label>' : '') + '</div>' +
+    (zone === "garden" && W.garden === false ? A.banner({tone:"warn", icon:"tree", title:"Градината е затворена", text:"Масите ѝ не се показват в резервацията на сайта. QR кодовете ѝ продължават да работят."}) + '<div style="height:12px"></div>' : '') +
+    (!T.length ? '<div class="sa-card">' + A.empty({icon:"chair", title:"Няма маси в " + (zone === "salon" ? "салона." : "градината."), text:"Добавете първата с „Нова маса“. Тя се появява в резервацията и получава QR код.", action:'<button class="pill pill-red pill-lg" type="button" data-add>' + ic("plus",22) + 'Нова маса</button>'}) + '</div>' :
+    '<div class="hl-grid"><div>' + (view === "plan" ? '<div class="hl-canvas' + (zone === "garden" && W.garden === false ? ' closed' : '') + '" data-edit-id="admin.hall.plan"><div class="core">' + planSVG() + '</div>' +
+      '<p class="hl-help">' + ic("info",20) + '<span>Влачете масите. С клавиатура: Tab до масата, стрелките я местят (Shift: по-далеч), Enter отваря настройките. Има и „Списък“ и бутони „Премести“.</span></p></div>' : listHTML()) + '</div>' + panelHTML() + '</div>');
+  if (keep !== false) A.scroller.scrollTop = y;
+  syncBar(); }
+
+/* ---------- незапазени промени ---------- */
+A.col.insertAdjacentHTML("beforeend", '<div class="hl-savebar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази плана</button></div>');
+var bar = A.col.querySelector(".hl-savebar");
+function diffs(){ var n = 0; W.tables.forEach(function(t){ if (changed(t)) n++; }); saved.tables.forEach(function(o){ if (!byId(o.id)) n++; });
+  if (JSON.stringify(W.joins) !== JSON.stringify(saved.joins)) n++; if ((W.garden !== false) !== (saved.garden !== false)) n++; return n; }
+function syncBar(){ var n = diffs(); bar.classList.toggle("on", n > 0 && st !== "error" && st !== "loading"); bar.querySelector("[data-n]").innerHTML = n ? (n === 1 ? "1 промяна" : n + " промени") + '<small>' + (st === "offline" ? "Ще се запазят, щом връзката се върне" : "Още не са запазени") + '</small>' : ''; }
+function summary(){ var out = [];
+  W.tables.forEach(function(t){ var o = saved.tables.filter(function(x){ return x.id === t.id; })[0];
+    if (!o) out.push("+ маса " + t.n); else if (t.off && !o.off) out.push("- маса " + t.n);
+    else { var c = []; if (o.cx !== t.cx || o.cy !== t.cy) c.push("място на плана"); if (o.seats !== t.seats) c.push(o.seats + " → " + t.seats + " места"); ["window","stroller","access","walkin"].forEach(function(k){ if (o[k] !== t[k]) c.push({window:"прозорец", stroller:"количка", access:"достъпна", walkin:"само с резервация"}[k]); }); if (c.length) out.push("маса " + t.n + ": " + c.join(", ")); } });
+  if (JSON.stringify(W.joins) !== JSON.stringify(saved.joins)) out.push("обединяване: " + (W.joins.length ? W.joins.map(function(j){ return j.ids.map(function(x){ return byId(x).n; }).join(" + "); }).join("; ") : "няма"));
+  if ((W.garden !== false) !== (saved.garden !== false)) out.push(W.garden === false ? "градината е затворена" : "градината е отворена");
+  return out.join("; "); }
+
+draw(false);
+
+/* ---------- влачене (мишка и докосване), клавиатура ---------- */
+var drag = null, SNAP = 10;
+function svgPt(svg, e){ var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+function clampT(t){ var Z = WORLD[t.zone], d = dims(t); t.cx = Math.round(Math.min(Z.w - d.w / 2 - 40, Math.max(d.w / 2 + 40, t.cx)) / SNAP) * SNAP; t.cy = Math.round(Math.min(Z.h - d.h / 2 - 66, Math.max(d.h / 2 + 46, t.cy)) / SNAP) * SNAP; }
+body.addEventListener("pointerdown", function(e){ var g = e.target.closest(".tb"); if (!g || e.button > 0) return; var svg = g.ownerSVGElement, t = byId(g.dataset.t), p = svgPt(svg, e);
+  drag = {g:g, t:t, svg:svg, dx:p.x - t.cx, dy:p.y - t.cy, x0:t.cx, y0:t.cy, moved:false, id:e.pointerId}; g.setPointerCapture(e.pointerId); });
+body.addEventListener("pointermove", function(e){ if (!drag || e.pointerId !== drag.id) return; var p = svgPt(drag.svg, e), nx = p.x - drag.dx, ny = p.y - drag.dy;
+  if (!drag.moved && Math.hypot(nx - drag.x0, ny - drag.y0) < 6) return; drag.moved = true; drag.g.classList.add("drag");
+  drag.t.cx = nx; drag.t.cy = ny; clampT(drag.t); drag.g.setAttribute("transform", "translate(" + drag.t.cx + " " + drag.t.cy + ")"); });
+function endDrag(e){ if (!drag || (e && e.pointerId !== drag.id)) return; var d = drag; drag = null; d.g.classList.remove("drag");
+  if (d.moved){ selId = d.t.id; draw(); focusT(d.t.id); A.setHash(hashObj()); } else pick(d.t.id, true); }
+body.addEventListener("pointerup", endDrag); body.addEventListener("pointercancel", endDrag);
+body.addEventListener("keydown", function(e){ var g = e.target.closest && e.target.closest(".tb"); if (!g) return; var t = byId(g.dataset.t), step = e.shiftKey ? 50 : SNAP;
+  var mv = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[e.key];
+  if (mv){ e.preventDefault(); t.cx += mv[0] * step; t.cy += mv[1] * step; clampT(t); selId = t.id; draw(); focusT(t.id); return; }
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pick(t.id, true); var p = A.app.querySelector(".hl-panel [data-seat]"); p && p.focus(); } });
+function focusT(id){ var g = body.querySelector('.tb[data-t="' + id + '"]'); g && g.focus({preventScroll:true}); }
+function hashObj(){ return Object.assign({}, A.hash, {z:zone === "salon" ? "" : zone, v:view === "plan" ? "" : view, t:selId || ""}); }
+function pick(id, fromPlan){ selId = id; draw(); A.setHash(hashObj());
+  var p = A.app.querySelector(".hl-panel"), r = p && p.getBoundingClientRect(); if (r && r.top > A.scroller.clientHeight - 120) p.scrollIntoView({behavior:SC.reduce ? "auto" : "smooth", block:"start"}); if (fromPlan) focusT(id); }
+
+/* ---------- действия ---------- */
+function freeSpot(z){ var Z = WORLD[z], best = null; for (var y = 110; y < Z.h - 80; y += 60) for (var x = 110; x < Z.w - 80; x += 60){ var ok = live().filter(function(t){ return t.zone === z; }).every(function(t){ return Math.hypot(t.cx - x, t.cy - y) > 170; }); if (ok && !best) best = [x, y]; } return best || [Z.w / 2, Z.h / 2]; }
+document.addEventListener("click", function(e){ var t;
+  if ((t = e.target.closest("[data-zone]"))){ zone = t.dataset.zone; if (selId && byId(selId) && byId(selId).zone !== zone) selId = null; draw(); A.setHash(hashObj()); return; }
+  if ((t = e.target.closest("[data-view]"))){ view = t.dataset.view; draw(); A.setHash(hashObj()); return; }
+  if ((t = e.target.closest("[data-pick]"))){ pick(t.dataset.pick); return; }
+  if (e.target.closest("[data-add]")){ var n = W.tables.reduce(function(a, x){ return Math.max(a, x.n); }, 0) + 1, sp = freeSpot(zone), nt = {id:"N" + Date.now().toString(36), n:n, zone:zone, seats:4, shape:"square", cx:sp[0], cy:sp[1], window:false, stroller:zone === "garden", access:false, walkin:true};
+    clampT(nt); W.tables.push(nt); selId = nt.id; view = view || "plan"; draw(); A.setHash(hashObj()); A.toast("Нова маса " + n + " в " + (zone === "salon" ? "салона" : "градината") + ". Преместете я на мястото ѝ.", {undo:function(){ W.tables = W.tables.filter(function(x){ return x.id !== nt.id; }); selId = null; draw(); }}); return; }
+  var cur = selId && byId(selId); if (!cur) return;
+  if ((t = e.target.closest("[data-seat]"))){ cur.seats = Math.max(1, Math.min(12, cur.seats + +t.dataset.seat)); cur.shape = shapeFor(cur.seats); clampT(cur); draw(); var b = A.app.querySelector('[data-seat="' + t.dataset.seat + '"]'); b && !b.disabled && b.focus({preventScroll:true}); return; }
+  if ((t = e.target.closest("[data-mv]"))){ var m = t.dataset.mv.split(",").map(Number); cur.cx += m[0] * 20; cur.cy += m[1] * 20; clampT(cur); draw(); var b2 = A.app.querySelector('[data-mv="' + t.dataset.mv + '"]'); b2 && b2.focus({preventScroll:true}); return; }
+  if ((t = e.target.closest("[data-join]"))){ var other = byId(t.dataset.join), j = joinOf(cur.id) || joinOf(other.id);
+    if (j){ [cur.id, other.id].forEach(function(id){ if (j.ids.indexOf(id) < 0) j.ids.push(id); }); } else W.joins.push({ids:[cur.id, other.id]});
+    draw(); A.toast("Маса " + cur.n + " и маса " + other.n + " са обединени", {undo:function(){ var jj = joinOf(other.id); if (jj){ jj.ids = jj.ids.filter(function(x){ return x !== other.id; }); if (jj.ids.length < 2) W.joins.splice(W.joins.indexOf(jj), 1); } draw(); }}); return; }
+  if (e.target.closest("[data-split]")){ var jj = joinOf(cur.id), before = clone(W.joins); W.joins.splice(W.joins.indexOf(jj), 1); draw(); A.toast("Масите са разделени", {undo:function(){ W.joins = before; draw(); }}); return; }
+  if (e.target.closest("[data-qr]")){ location.href = "qr.html#t=" + cur.id; return; }
+  if (e.target.closest("[data-off]")){ A.confirm({title:"Да махнем маса " + cur.n + "?", text:"Масата изчезва от плана и от резервацията. QR етикетът ѝ спира да работи. Бъдещите резервации за нея остават и трябва да получат друга маса.", ok:"Махни масата", danger:true, icon:"trash"}, function(){
+      var was = clone(W); cur.off = true; W.joins = W.joins.map(function(j){ return {ids:j.ids.filter(function(x){ return x !== cur.id; })}; }).filter(function(j){ return j.ids.length > 1; }); selId = null; draw();
+      A.toast("Маса " + cur.n + " е махната (още не е запазено)", {undo:function(){ W = was; selId = cur.id; draw(); }}); }); return; }
+  if (e.target.closest("[data-cancel]")){ W = clone(saved); draw(); A.toast("Промените са отменени"); return; }
+  if (e.target.closest("[data-save]")) return;
+});
+bar.querySelector("[data-save]").addEventListener("click", function(){ var prev = clone(saved), text = summary(); saved = clone(W); A.data.set("tables", saved); draw();
+  A.audit("hall.update", "План на залата: " + text);
+  A.toast("Планът е запазен" + (st === "offline" ? ", изпраща се при връзка" : ""), {undo:function(){ saved = prev; W = clone(prev); A.data.set("tables", prev); draw(); A.audit("hall.update", "План на залата: върнат предишният"); }}); });
+document.addEventListener("change", function(e){ var t = e.target, cur = selId && byId(selId);
+  if (t.matches("[data-garden]")){ W.garden = t.checked; draw(); return; }
+  if (t.matches("[data-f]") && cur){ var k = t.dataset.f; if (k === "walkin") cur.walkin = !t.checked; else cur[k] = t.checked; draw(); var el = A.app.querySelector('[data-f="' + k + '"]'); el && el.focus({preventScroll:true}); } });
+window.addEventListener("beforeunload", function(e){ if (diffs()){ e.preventDefault(); e.returnValue = ""; } });
+})();
+</script>
+</body>
+</html>

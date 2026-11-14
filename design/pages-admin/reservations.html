@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Резервации | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.rs{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1000px){ .rs{grid-template-columns:330px minmax(0,1fr); align-items:start} .rs-side{position:sticky; top:96px} }
+.rs-side{display:grid; gap:12px; min-width:0}
+.rs-main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-content:start}
+/* календар */
+.cal{padding:14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.cal-h{display:flex; align-items:center; gap:4px; margin-bottom:6px}
+.cal-h b{flex:1; font-size:18px; letter-spacing:-.02em; padding-left:6px}
+.cal-h .iconbtn{background:transparent}
+.cal-g{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:2px; text-align:center}
+.cal-g .dw{font-size:14px; font-weight:700; color:var(--muted); padding:4px 0}
+.cal-g button{position:relative; min-height:48px; border:0; border-radius:16px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; font-variant-numeric:tabular-nums; display:grid; place-items:center; padding:0}
+.cal-g button:hover{background:var(--surface-2)}
+.cal-g button.out{color:var(--muted); opacity:.55}
+.cal-g button.today{box-shadow:inset 0 0 0 2px var(--red)}
+.cal-g button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.cal-g button .dots{position:absolute; bottom:5px; left:50%; transform:translateX(-50%); display:flex; gap:2px}
+.cal-g button .dots i{width:5px; height:5px; border-radius:50%; background:var(--red)}
+.cal-g button[aria-pressed="true"] .dots i{background:var(--ember)}
+.cal-g button.past .dots i{background:var(--muted)}
+.cal-foot{display:flex; gap:8px; margin-top:8px}
+.cal-foot .pill{flex:1}
+/* лента с дни (телефон) */
+.days{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:10px 16px 4px; margin:0 -16px; scroll-padding:0 16px}
+.days::-webkit-scrollbar{display:none}
+.days button{flex:none; width:64px; min-height:72px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); cursor:pointer; display:grid; place-items:center; align-content:center; gap:0; font-weight:800; font-size:20px; font-variant-numeric:tabular-nums; position:relative}
+.days button small{font-size:14px; font-weight:700; color:var(--muted)}
+.days button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.days button[aria-pressed="true"] small{color:var(--bg); opacity:.75}
+.days button .n{position:absolute; top:-4px; right:-2px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; display:grid; place-items:center}
+.days button.cal{width:auto; padding:0 16px; font-size:15px; grid-auto-flow:row}
+.cal-wrap{display:none}
+.rs-phone{display:grid; grid-template-columns:minmax(0,1fr); gap:10px}
+@container page (min-width:1000px){ .rs-phone{display:none} .cal-wrap{display:block} }
+/* ден */
+.dayh{display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px 16px}
+.dayh h2{margin:0; font-size:28px; letter-spacing:-.035em; line-height:1.1; flex:1 1 auto}
+.dayh h2 small{display:block; font-size:15px; letter-spacing:0; color:var(--muted); font-weight:700; margin-bottom:4px}
+.kpis{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+@container page (min-width:720px){ .kpis{grid-template-columns:repeat(4, minmax(0,1fr))} }
+.kpi{padding:14px 16px; display:grid; gap:2px; box-shadow:inset -1px -1px 0 var(--line)}
+.kpi b{font-size:30px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.kpi span{font-size:14px; font-weight:700; color:var(--muted)}
+.kpi.hot b{color:var(--red)}
+/* натоварване по час */
+.load{padding:14px 16px 10px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.load-h{display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; align-items:baseline; margin-bottom:10px}
+.load-h b{font-size:16px}
+.load-h small{font-size:14px; color:var(--muted); font-weight:600}
+.bars{display:grid; grid-template-columns:repeat(22, minmax(0,1fr)); gap:3px; align-items:end; height:84px}
+.bars span{display:block; border-radius:4px 4px 2px 2px; background:var(--surface-3); min-height:4px; position:relative}
+.bars span.now{background:var(--red)}
+.bars span.pk{background:var(--ink)}
+.bars-x{display:grid; grid-template-columns:repeat(22, minmax(0,1fr)); gap:3px; margin-top:6px; font-size:14px; color:var(--muted); font-weight:700}
+.bars-x span{grid-column:span 4; white-space:nowrap}
+.bars-x span:last-child{grid-column:span 2; text-align:right}
+/* филтри и списък */
+.rs-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.rs-bar .sa-tabs{flex:1 1 520px}
+.rs-bar .sa-field-s{flex:1 1 220px}
+.hr{display:grid; grid-template-columns:76px minmax(0,1fr); gap:10px; align-items:start}
+.hr > .t{position:sticky; top:84px; padding-top:14px; font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.hr > .t small{display:block; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0}
+@container page (max-width:560px){ .hr{grid-template-columns:minmax(0,1fr)} .hr > .t{position:static; padding:6px 2px 0; display:flex; align-items:baseline; gap:10px} }
+.hr + .hr{margin-top:6px}
+.rlist{display:grid; gap:10px}
+.rsv{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 14px; align-items:center; padding:14px 14px 14px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); position:relative; overflow:hidden}
+.rsv::before{content:""; position:absolute; left:0; top:12px; bottom:12px; width:4px; border-radius:0 4px 4px 0; background:var(--line-strong)}
+.rsv.s-new::before{background:var(--ember)}
+.rsv.s-confirmed::before{background:var(--ink)}
+.rsv.s-seated::before{background:var(--ok)}
+.rsv.s-no_show::before{background:var(--red)}
+.rsv.s-cancelled{opacity:.72}
+.rsv.s-cancelled .who{text-decoration:line-through; text-decoration-color:var(--line-strong)}
+.rsv .who{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px}
+.rsv .who b{font-size:18px; letter-spacing:-.015em}
+.rsv .who .ph{font-size:15px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.rsv .meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.rsv .meta .sa-tag .ic{color:var(--ink)}
+.rsv .note{margin:8px 0 0; font-size:15px; color:var(--muted); display:flex; gap:6px; align-items:flex-start}
+.rsv .note .ic{flex:none; margin-top:2px}
+.rsv .acts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+.rsv .acts .pill{padding:0 14px}
+@container page (max-width:640px){ .rsv{grid-template-columns:minmax(0,1fr)} .rsv .acts{justify-content:stretch} .rsv .acts .pill{flex:1 1 auto} .rsv.compact{grid-template-columns:minmax(0,1fr) auto; align-items:start} .rsv.compact .acts .pill{flex:none} }
+.side-only{display:none} .main-only{display:grid}
+@container page (min-width:1000px){ .side-only{display:grid} .main-only{display:none} }
+.st{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.st-new{background:var(--ember); color:var(--on-ember)}
+.st-confirmed{background:var(--ink); color:var(--bg)}
+.st-seated{background:var(--ok); color:var(--on-ok)}
+.st-no_show{background:var(--red); color:var(--on-red)}
+.st-cancelled{background:var(--surface-2); color:var(--muted)}
+.st-waitlist{box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--ink)}
+.late{color:var(--warn); font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:4px}
+/* странични карти */
+.box{padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:10px}
+.box h3{margin:0; font-size:18px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.box h3 .ic{color:var(--red)}
+.box h3 .c{margin-left:auto; min-width:26px; height:26px; padding:0 7px; border-radius:13px; background:var(--surface-2); font-size:14px; display:grid; place-items:center}
+.box p{margin:0; font-size:15px; color:var(--muted)}
+.bi{display:grid; gap:8px; padding:12px 0 0; border-top:1px solid var(--line)}
+.bi .l1{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline}
+.bi .l1 b{font-size:16px}
+.bi .l1 span{font-size:15px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.bi .row{flex-wrap:wrap; gap:6px}
+.bi .row .pill{flex:1 1 auto; padding:0 14px}
+/* лист */
+.kvs .kv b{font-weight:700; white-space:nowrap}
+.kvs .kv span{color:var(--muted); text-align:right}
+.seg-st{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px}
+.seg-st button{min-height:52px; border:0; border-radius:16px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px}
+.seg-st button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.form{display:grid; gap:14px}
+.form .two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.form .err{font-size:14px; color:var(--danger); font-weight:700}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+A.liveHash = true;
+var body = A.mount({section:"reservations", title:"Резервации",
+  sub:"Денят по часове: кой идва, на коя маса, с какъв повод. Потвърдете новите, отбележете дошлите и неявилите се; два пъти „Неявили се“ предлагат номера за блокиране.",
+  actions:'<button class="pill pill-red" type="button" data-new>' + ic("plus",20) + 'Нова резервация</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Празен ден"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- време (София) ---------- */
+var NOW = A.sofia(), TODAY = A.todayKey(), NOWM = NOW.h * 60 + NOW.m;
+function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
+function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
+function addD(k, n){ var d = parse(k); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
+function fdate(k, short){ return A.fmtDate(parse(k), short); }
+function toM(t){ return +t.slice(0, 2) * 60 + +t.slice(3); }
+function hm(m){ return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
+var SLOTS = []; for (var m0 = 660; m0 <= 1290; m0 += 30) SLOTS.push(hm(m0)); /* 11:00-21:30 през 30 мин (OPEN-QUESTIONS 18) */
+
+/* ---------- маси и настройки (общи с „Залата и масите“ и „Настройки“) ---------- */
+function tablesState(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
+  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; }
+var TABLES = tablesState().tables.filter(function(t){ return !t.off; });
+function tab(id){ return TABLES.filter(function(t){ return t.id === id; })[0]; }
+var SET = A.data.get("settings", {}), DUR = SET.resMinutes || 120, NOSHOW = SET.noShowLimit || 2;
+var ZN = {salon:"Салон", garden:"Градина"};
+
+/* ---------- примерни данни (детерминирани): гости „Клиент N“, телефони частично скрити ---------- */
+function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+function phoneOf(i){ return "08" + ["88","87","89","98","99","95"][i % 6] + String((i * 791 * 37 + 123457) % 1000000).padStart(6, "0"); }
+function fmtPh(p){ return p.slice(0, 4) + " " + p.slice(4, 6) + " " + p.slice(6, 8) + " " + p.slice(8); }
+function maskPh(p){ return p.slice(0, 4) + " ** ** " + p.slice(8); }
+var OCC = ["Рожден ден","Имен ден","Годишнина","Делова среща","Друго"], NOTES = ["Идваме с детска количка.","Маса до прозореца, ако може.","Ще закъснеем с 10 минути.","Един гост е с инвалидна количка."];
+function seed(){ var out = [], id = 1;
+  for (var dd = -30; dd <= 14; dd++){ var day = addD(TODAY, dd), r = rng("res" + day), dow = parse(day).getUTCDay(), n = dd === 0 ? 13 : (dow === 5 || dow === 6 ? 10 : 6) + Math.floor(r() * 4), holds = {};
+    for (var k = 0; k < n; k++){ var lunch = r() < .35, slot = lunch ? 660 + 30 * Math.floor(r() * 6) : 1080 + 30 * Math.floor(r() * 8), t = hm(slot), ppl = [1,2,2,2,3,4,4,4,5,6,8][Math.floor(r() * 11)];
+      var gi = Math.floor(r() * 36), cand = TABLES.filter(function(x){ return x.seats >= ppl && x.seats - ppl <= 2 && (holds[x.id] || []).every(function(h){ return slot + DUR <= h || slot >= h + DUR; }); });
+      var tb = cand.length ? cand[Math.floor(r() * cand.length)] : null, past = dd < 0 || (dd === 0 && slot + 20 < NOWM), status;
+      if (tb) (holds[tb.id] = holds[tb.id] || []).push(slot);
+      if (!tb){ if (dd < 0) continue; status = "waitlist"; }
+      else if (past){ var x = r(); status = x < .06 ? "no_show" : x < .13 ? "cancelled" : "seated"; }
+      else { var y = r(); status = dd === 0 && slot <= NOWM + 15 ? "confirmed" : y < .25 ? "new" : y < .3 ? "cancelled" : "confirmed"; }
+      out.push({id:"r" + (id++), date:day, time:t, people:ppl, table:tb ? tb.id : null, zone:tb ? tb.zone : null, name:"Клиент " + (gi + 1), phone:phoneOf(gi),
+        occasion:r() < .22 ? OCC[Math.floor(r() * 4)] : "", note:r() < .16 ? NOTES[Math.floor(r() * NOTES.length)] : "", marketing:false, status:status, createdAt:new Date(parse(day).getTime() - 864e5 * (1 + Math.floor(r() * 6))).toISOString(), sample:true}); } }
+  /* Клиент 3: едно неявяване (още едно предлага блокиране); Клиент 5: две (чака решение); Клиент 9: блокиран */
+  function force(gi, dd, t, s){ out.push({id:"r" + (id++), date:addD(TODAY, dd), time:t, people:2, table:"S1", zone:"salon", name:"Клиент " + (gi + 1), phone:phoneOf(gi), occasion:"", note:"", marketing:false, status:s, createdAt:new Date().toISOString(), sample:true}); }
+  out = out.filter(function(x){ return [2, 4, 8].indexOf(+x.name.slice(7) - 1) < 0; });
+  force(2, -12, "19:30", "no_show"); force(4, -20, "20:00", "no_show"); force(4, -6, "19:00", "no_show"); force(8, -25, "20:30", "no_show"); force(8, -14, "19:30", "no_show");
+  var lateT = hm(Math.max(660, Math.min(1290, Math.floor((NOWM - 30) / 30) * 30)));
+  out.push({id:"r" + (id++), date:TODAY, time:NOWM > 690 ? lateT : "12:00", people:3, table:"S3", zone:"salon", name:"Клиент 3", phone:phoneOf(2), occasion:"Рожден ден", note:"", marketing:false, status:"confirmed", createdAt:new Date().toISOString(), sample:true});
+  return out.sort(function(a, b){ return (a.date + a.time < b.date + b.time) ? -1 : 1; }); }
+var RES = A.data.get("reservations", null); if (!RES){ RES = seed(); A.data.set("reservations", RES); }
+var BL = A.data.get("blocks", null);
+if (!BL){ BL = {}; BL[phoneOf(4)] = {status:"pending", name:"Клиент 5", count:2, at:new Date(Date.now() - 6 * 864e5).toISOString()}; BL[phoneOf(8)] = {status:"blocked", name:"Клиент 9", count:2, at:new Date(Date.now() - 13 * 864e5).toISOString(), by:"Управител 1"}; A.data.set("blocks", BL); }
+function save(){ A.data.set("reservations", RES); }
+function saveBL(){ A.data.set("blocks", BL); }
+var CAN_BLOCK = A.me.role === "admin" || A.me.role === "owner" || A.me.role === "manager";
+
+/* ---------- изглед ---------- */
+var SN = {"new":"Нова", confirmed:"Потвърдена", seated:"Дошли", no_show:"Неявили се", cancelled:"Отказана", waitlist:"Чака маса"};
+var SI = {"new":"sparkle", confirmed:"check", seated:"check-circle", no_show:"warning-circle", cancelled:"x", waitlist:"hourglass"};
+var day = /^\d{4}-\d{2}-\d{2}$/.test(A.hash.d || "") ? A.hash.d : TODAY, flt = A.hash.f || "", q = "", month = day.slice(0, 7);
+var revealed = {};
+function ofDay(d){ return st === "empty" && d === day ? [] : RES.filter(function(r){ return r.date === d; }); }
+function noShows(phone){ return RES.filter(function(r){ return r.phone === phone && r.status === "no_show"; }).length; }
+function visits(phone){ return RES.filter(function(r){ return r.phone === phone && r.status === "seated"; }).length; }
+function takenAt(d, t, except){ var a = toM(t); return RES.filter(function(r){ return r.date === d && r.table && r.id !== except && ["cancelled","no_show","waitlist"].indexOf(r.status) < 0 && toM(r.time) < a + DUR && a < toM(r.time) + (r.dur || DUR); }).map(function(r){ return r.table; }); }
+function lateBy(r){ if (r.date !== TODAY || r.status !== "confirmed") return 0; var l = NOWM - toM(r.time); return l >= 15 ? l : 0; }
+function stTag(s){ return '<span class="st st-' + s + '">' + ic(SI[s],16) + SN[s] + '</span>'; }
+
+function calHTML(){ var y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1, first = new Date(Date.UTC(y, mo, 1, 10)), off = (first.getUTCDay() + 6) % 7, start = addD(ymd(first), -off), h = '';
+  var dim = new Date(Date.UTC(y, mo + 1, 0, 10)).getUTCDate(), cells = Math.ceil((off + dim) / 7) * 7;
+  for (var i = 0; i < cells; i++){ var k = addD(start, i), L = RES.filter(function(r){ return r.date === k && r.status !== "cancelled"; }).length, inM = k.slice(0, 7) === month;
+    h += '<button type="button" data-day="' + k + '" class="' + (inM ? '' : 'out ') + (k === TODAY ? 'today ' : '') + (k < TODAY ? 'past' : '') + '" aria-pressed="' + (k === day) + '" aria-label="' + fdate(k) + (L ? ', ' + A.plural(L, "резервация", "резервации") : ', няма резервации') + '">' + +k.slice(8) + (L ? '<span class="dots" aria-hidden="true">' + '<i></i>'.repeat(Math.min(3, Math.ceil(L / 4))) + '</span>' : '') + '</button>'; }
+  return '<div class="cal" data-edit-id="admin.reservations.calendar"><div class="cal-h"><b>' + SC.MONTHS[mo].replace(/^./, function(c){ return c.toUpperCase(); }) + ' ' + y + '</b><button class="iconbtn" type="button" data-mon="-1" aria-label="Предишен месец">' + ic("caret-left",22) + '</button><button class="iconbtn" type="button" data-mon="1" aria-label="Следващ месец">' + ic("caret-right",22) + '</button></div>' +
+    '<div class="cal-g" role="group" aria-label="Дни">' + ["пн","вт","ср","чт","пт","сб","нд"].map(function(d){ return '<span class="dw" aria-hidden="true">' + d + '</span>'; }).join("") + h + '</div>' +
+    '<div class="cal-foot"><button class="pill pill-soft" type="button" data-day="' + TODAY + '">Днес</button><button class="pill pill-soft" type="button" data-day="' + addD(TODAY, 1) + '">Утре</button></div></div>'; }
+function daysHTML(){ var h = ''; for (var i = -1; i <= 6; i++){ var k = addD(day < TODAY ? day : TODAY, i), L = RES.filter(function(r){ return r.date === k && r.status !== "cancelled"; }).length, s = A.sofia(parse(k));
+    h += '<button type="button" data-day="' + k + '" aria-pressed="' + (k === day) + '" aria-label="' + fdate(k) + ', ' + A.plural(L, "резервация", "резервации") + '"><small>' + (k === TODAY ? 'днес' : A.DAYS[s.dow]) + '</small>' + s.d + (L ? '<span class="n" aria-hidden="true">' + L + '</span>' : '') + '</button>'; }
+  return '<div class="days" role="group" aria-label="Ден">' + h + '<button class="cal" type="button" data-calsheet>' + ic("calendar-blank",22) + 'Календар</button></div>'; }
+function waitHTML(sfx){ sfx = sfx || ''; var W = ofDay(day).filter(function(r){ return r.status === "waitlist"; });
+  return '<section class="box" aria-labelledby="wl-h' + sfx + '" data-edit-id="admin.reservations.waitlist"><h3 id="wl-h' + sfx + '">' + ic("hourglass",20) + 'Чакащи<span class="c">' + W.length + '</span></h3>' +
+    (W.length ? '<p>Няма свободна маса за техния час. Щом се освободи, дайте им маса и им се обадете.</p>' + W.map(function(r){ return '<div class="bi"><div class="l1"><b>' + esc(r.name) + '</b><span>' + r.time + ' · ' + A.plural(r.people, "човек", "души") + '</span></div><div class="row"><button class="pill pill-red" type="button" data-seat-wl="' + r.id + '">' + ic("chair",18) + 'Дай маса</button><button class="pill pill-line" type="button" data-open="' + r.id + '">Детайли</button></div></div>'; }).join("")
+      : '<p>Никой не чака за ' + (day === TODAY ? 'днес' : fdate(day)) + '.</p>') + '</section>'; }
+function blockHTML(sfx){ sfx = sfx || ''; var keys = Object.keys(BL), pend = keys.filter(function(k){ return BL[k].status === "pending"; }), blk = keys.filter(function(k){ return BL[k].status === "blocked"; });
+  function item(k){ var b = BL[k];
+    return '<div class="bi"><div class="l1"><b>' + esc(b.name || "Без име") + '</b><span>' + maskPh(k) + '</span><span>' + (b.manual ? 'добавен ръчно' : A.plural(b.count || noShows(k), "неявяване", "неявявания")) + '</span></div>' +
+      (b.status === "pending" ? '<div class="row"><button class="pill pill-red" type="button" data-bl="block" data-ph="' + k + '"' + (CAN_BLOCK ? '' : ' disabled') + '>' + ic("lock",18) + 'Блокирай</button><button class="pill pill-line" type="button" data-bl="dismiss" data-ph="' + k + '"' + (CAN_BLOCK ? '' : ' disabled') + '>Не блокирай</button></div>'
+        : '<p>Блокиран ' + A.ago(b.at) + (b.by ? ' от ' + esc(b.by) : '') + '. Не може да резервира онлайн и да прави профил.</p><div class="row"><button class="pill pill-line" type="button" data-bl="unblock" data-ph="' + k + '"' + (CAN_BLOCK ? '' : ' disabled') + '>' + ic("arrow-counter-clockwise",18) + 'Отблокирай</button></div>') + '</div>'; }
+  return '<section class="box" aria-labelledby="bl-h' + sfx + '" data-edit-id="admin.reservations.blocks"><h3 id="bl-h' + sfx + '">' + ic("lock",20) + 'Блокиране<span class="c">' + (pend.length + blk.length) + '</span></h3>' +
+    '<p>След ' + A.plural(NOSHOW, "неявяване", "неявявания") + ' номерът чака решение. Блокира и отблокира управителят (или собственикът и главният админ).</p>' +
+    (!CAN_BLOCK ? '<p style="color:var(--ink);display:flex;gap:8px;align-items:flex-start">' + ic("info",18) + '<span>Ролята „' + esc(A.roleName(A.me.role)) + '“ само вижда списъка.</span></p>' : '') +
+    (pend.length ? '<p style="color:var(--ink);font-weight:800;margin-top:4px">Чакат решение</p>' + pend.map(item).join("") : '') +
+    (blk.length ? '<p style="color:var(--ink);font-weight:800;margin-top:4px">Блокирани</p>' + blk.map(item).join("") : '') +
+    (!pend.length && !blk.length ? '<p>Няма блокирани номера.</p>' : '') +
+    '<button class="pill pill-soft" type="button" data-bladd' + (CAN_BLOCK ? '' : ' disabled') + '>' + ic("plus",18) + 'Добави номер ръчно</button></section>'; }
+
+function rowHTML(r){ var t = r.table && tab(r.table), late = lateBy(r), acts = '';
+  if (r.status === "new") acts = '<button class="pill pill-red" type="button" data-st="confirmed" data-id="' + r.id + '">' + ic("check",18) + 'Потвърди</button>';
+  else if (r.status === "confirmed" && (r.date < TODAY || (r.date === TODAY && toM(r.time) - 30 <= NOWM))) acts = '<button class="pill pill-ink" type="button" data-st="seated" data-id="' + r.id + '">' + ic("check-circle",18) + 'Дошли</button><button class="pill pill-line" type="button" data-st="no_show" data-id="' + r.id + '">Неявили се</button>';
+  else if (r.status === "waitlist") acts = '<button class="pill pill-red" type="button" data-seat-wl="' + r.id + '">' + ic("chair",18) + 'Дай маса</button>';
+  var compact = acts.indexOf("data-st=") < 0 && acts.indexOf("data-seat-wl") < 0;
+  acts += '<button class="pill pill-soft" type="button" data-open="' + r.id + '" aria-label="Още за ' + esc(r.name) + ', ' + r.time + '">' + ic("dots-three",20) + 'Още</button>';
+  return '<article class="rsv s-' + r.status + (compact ? ' compact' : '') + '" data-rv="' + r.id + '"><div><div class="who"><b>' + esc(r.name) + '</b><span class="ph">' + (revealed[r.id] ? fmtPh(r.phone) : maskPh(r.phone)) + '</span>' + stTag(r.status) + (late ? '<span class="late">' + ic("clock",16) + 'Закъснява ' + late + ' мин</span>' : '') + (BL[r.phone] ? '<span class="late">' + ic("lock",16) + (BL[r.phone].status === "blocked" ? 'Блокиран номер' : 'Чака блокиране') + '</span>' : '') + '</div>' +
+    '<div class="meta"><span class="sa-tag">' + ic("users",16) + A.plural(r.people, "човек", "души") + '</span><span class="sa-tag">' + ic(t ? (t.zone === "garden" ? "tree" : "chair") : "hourglass",16) + (t ? 'Маса ' + t.n + ' · ' + ZN[t.zone] : 'Без маса') + '</span>' + (r.occasion ? '<span class="sa-tag ember">' + ic("cake",16) + esc(r.occasion) + '</span>' : '') + '</div>' +
+    (r.note ? '<p class="note">' + ic("note",18) + '<span>' + esc(r.note) + '</span></p>' : '') + '</div><div class="acts">' + acts + '</div></article>'; }
+
+function loadHTML(L){ var cnt = SLOTS.map(function(s){ var a = toM(s); return L.filter(function(r){ return ["cancelled","no_show","waitlist"].indexOf(r.status) < 0 && toM(r.time) <= a && a < toM(r.time) + DUR; }).reduce(function(x, r){ return x + r.people; }, 0); }), mx = Math.max.apply(null, cnt.concat([1])), pk = cnt.indexOf(mx);
+  return '<div class="load" data-edit-id="admin.reservations.load"><div class="load-h"><b>Хора в залата по час</b><small>Спрямо най-натоварения час (' + SLOTS[pk] + ', ' + A.plural(mx, "човек", "души") + '). Капацитет: ' + A.missing("капацитет") + '</small></div>' +
+    '<div class="bars" role="img" aria-label="' + esc(SLOTS.map(function(s, i){ return s + ": " + cnt[i]; }).join(", ")) + '">' + cnt.map(function(c, i){ var nowS = day === TODAY && toM(SLOTS[i]) <= NOWM && NOWM < toM(SLOTS[i]) + 30;
+      return '<span class="' + (nowS ? 'now' : i === pk && c ? 'pk' : '') + '" style="height:' + Math.max(5, Math.round(c / mx * 100)) + '%" title="' + SLOTS[i] + ' · ' + c + '"></span>'; }).join("") + '</div>' +
+    '<div class="bars-x" aria-hidden="true"><span>11:00</span><span>13:00</span><span>15:00</span><span>17:00</span><span>19:00</span><span>21:30</span></div></div>'; }
+
+function draw(){ var y = A.scroller.scrollTop;
+  if (st === "loading"){ body.innerHTML = A.skel(5, "Зареждаме резервациите …"); return; }
+  if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим резервациите. Новите резервации от сайта се пазят и ще се появят тук."); return; }
+  var L = ofDay(day), live = L.filter(function(r){ return r.status !== "cancelled" && r.status !== "waitlist"; }), FL = [["","Всички"],["new","Нови"],["confirmed","Потвърдени"],["seated","Дошли"],["no_show","Неявили се"],["cancelled","Отказани"]];
+  var qd = q.replace(/\D/g, ""), shown = L.filter(function(r){ return r.status !== "waitlist" && (!flt || r.status === flt) && (!q || A.norm(r.name + " " + (r.occasion || "")).indexOf(A.norm(q)) > -1 || (qd.length >= 2 && r.phone.indexOf(qd) > -1)); });
+  var hours = {}; shown.forEach(function(r){ (hours[r.time.slice(0, 2)] = hours[r.time.slice(0, 2)] || []).push(r); });
+  var title = (day === TODAY ? 'Днес' : day === addD(TODAY, 1) ? 'Утре' : day === addD(TODAY, -1) ? 'Вчера' : '');
+  body.innerHTML = (st === "offline" ? A.offline("Показваме последно заредените резервации. Промените се пазят тук и се изпращат, щом връзката се върне.") + '<div style="height:16px"></div>' : '') +
+  '<div class="rs"><aside class="rs-side"><div class="cal-wrap">' + calHTML() + '</div><div class="side-only" style="gap:12px">' + waitHTML("s") + blockHTML("s") + '</div></aside>' +
+  '<div class="rs-main">' +
+    '<div class="rs-phone">' + daysHTML() + '</div>' +
+    '<div class="dayh"><h2><small>' + (title ? title + ' · ' : '') + A.sample() + '</small>' + fdate(day) + '</h2></div>' +
+    '<div class="kpis" data-edit-id="admin.reservations.kpis"><div class="kpi"><b>' + live.length + '</b><span>резервации</span></div><div class="kpi"><b>' + live.reduce(function(a, r){ return a + r.people; }, 0) + '</b><span>души</span></div>' +
+      '<div class="kpi' + (L.filter(function(r){ return r.status === "new"; }).length ? ' hot' : '') + '"><b>' + L.filter(function(r){ return r.status === "new"; }).length + '</b><span>чакат потвърждение</span></div><div class="kpi"><b>' + L.filter(function(r){ return r.status === "no_show"; }).length + '</b><span>неявили се</span></div></div>' +
+    (L.length ? loadHTML(L) : '') +
+    '<div class="rs-bar"><div class="sa-tabs" role="tablist" aria-label="Статус">' + FL.map(function(f){ var n = L.filter(function(r){ return r.status !== "waitlist" && (!f[0] || r.status === f[0]); }).length;
+      return '<button role="tab" type="button" data-flt="' + f[0] + '" aria-selected="' + (flt === f[0]) + '">' + f[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div>' +
+      '<div class="sa-field-s"><label class="vh" for="rs-q">Търси по име или телефон</label>' + ic("magnifying-glass",20) + '<input class="input" id="rs-q" type="search" placeholder="Име или последни цифри" autocomplete="off" value="' + esc(q) + '"></div></div>' +
+    '<div data-list aria-live="polite">' + (!L.length ? '<div class="sa-card">' + A.empty({icon:"calendar-check", title:"Няма резервации за " + (day === TODAY ? "днес." : fdate(day) + "."), text:"Резервациите от сайта и по телефона идват тук.", action:'<button class="pill pill-red pill-lg" type="button" data-new>' + ic("plus",22) + 'Нова резервация</button>'}) + '</div>'
+      : !shown.length ? '<div class="sa-card">' + A.empty({icon:"magnifying-glass", title:"Нищо не отговаря на филтъра.", text:"Махнете търсенето или изберете „Всички“."}) + '</div>'
+      : Object.keys(hours).sort().map(function(h){ var G = hours[h]; return '<div class="hr"><div class="t">' + h + ':00<small>' + A.plural(G.reduce(function(a, r){ return a + (r.status === "cancelled" ? 0 : r.people); }, 0), "човек", "души") + '</small></div><div class="rlist">' + G.map(rowHTML).join("") + '</div></div>'; }).join("")) + '</div>' +
+    '<div class="main-only sa-grid c2">' + waitHTML() + blockHTML() + '</div>' +
+  '</div></div>';
+  A.scroller.scrollTop = y; var dsel = body.querySelector('.days [aria-pressed="true"]'); dsel && dsel.scrollIntoView({block:"nearest", inline:"center"}); }
+draw();
+function hashSync(){ A.setHash(Object.assign({}, A.hash, {d:day === TODAY ? "" : day, f:flt})); }
+function byId(id){ return RES.filter(function(r){ return r.id === id; })[0]; }
+
+/* ---------- смяна на статус (с „Отмени“ и ред в дневника); неявяване → блокиране ---------- */
+function setStatus(r, s, quiet){ var was = r.status, blWas = JSON.stringify(BL); r.status = s; r.updatedAt = new Date().toISOString(); save();
+  A.audit("reservation.status", "Резервация " + r.name + ", " + fdate(r.date, true) + " " + r.time + ": " + SN[was] + " → " + SN[s], r.id);
+  var extra = "";
+  if (s === "no_show"){ var n = noShows(r.phone); if (n >= NOSHOW && !BL[r.phone]){ BL[r.phone] = {status:"pending", name:r.name, count:n, at:new Date().toISOString()}; saveBL(); extra = ". " + A.plural(n, "неявяване", "неявявания") + ": номерът чака решение за блокиране"; } }
+  draw(); if (quiet) return;
+  A.toast(r.name + ": " + SN[s] + extra, {undo:function(){ r.status = was; save(); BL = JSON.parse(blWas); saveBL(); draw(); A.audit("reservation.status", "Резервация " + r.name + ": върнато „" + SN[was] + "“", r.id); }}); }
+
+function openRes(r){ var t = r.table && tab(r.table), n = noShows(r.phone), v = visits(r.phone), free = TABLES.filter(function(x){ return x.seats >= r.people && takenAt(r.date, r.time, r.id).indexOf(x.id) < 0; });
+  var s = A.sheet({title:r.name + " · " + r.time, html:
+    '<p style="margin:0 0 10px">' + stTag(r.status) + ' <span class="sa-tag sample">' + ic("info",16) + 'Примерни данни</span></p>' +
+    '<div class="kvs">' +
+      '<div class="kv"><b>Ден и час</b><span>' + fdate(r.date) + ', ' + r.time + ' (масата се пази ' + DUR + ' мин)</span></div>' +
+      '<div class="kv"><b>Телефон</b><span data-phv>' + (revealed[r.id] ? '<a href="tel:' + r.phone + '">' + fmtPh(r.phone) + '</a>' : maskPh(r.phone) + ' <button class="link" type="button" data-reveal="' + r.id + '">Покажи</button>') + '</span></div>' +
+      '<div class="kv"><b>Хора</b><span>' + A.plural(r.people, "човек", "души") + '</span></div>' +
+      '<div class="kv"><b>Маса</b><span>' + (t ? 'Маса ' + t.n + ' · ' + ZN[t.zone] + ', ' + t.seats + ' места' : 'Без маса') + '</span></div>' +
+      '<div class="kv"><b>Повод</b><span>' + (r.occasion ? esc(r.occasion) : 'Няма') + '</span></div>' +
+      '<div class="kv"><b>Бележка</b><span>' + (r.note ? esc(r.note) : 'Няма') + '</span></div>' +
+      '<div class="kv"><b>Оферти по имейл</b><span>' + (r.marketing ? 'Да, отметнато от госта' : 'Не') + '</span></div>' +
+      '<div class="kv"><b>Досега</b><span>' + A.plural(v, "посещение", "посещения") + ', ' + A.plural(n, "неявяване", "неявявания") + '</span></div>' +
+    '</div>' +
+    '<p class="label" style="margin:16px 0 8px">Статус</p><div class="seg-st" role="group" aria-label="Статус">' + ["new","confirmed","seated","no_show","cancelled","waitlist"].map(function(k){ return '<button type="button" data-sst="' + k + '" aria-pressed="' + (r.status === k) + '">' + ic(SI[k],18) + SN[k] + '</button>'; }).join("") + '</div>' +
+    '<div class="field" style="margin-top:16px"><label for="rs-tb">Смени маса</label><select class="input" id="rs-tb"><option value="">' + (t ? 'Остава маса ' + t.n : 'Изберете маса') + '</option>' + free.filter(function(x){ return !t || x.id !== t.id; }).map(function(x){ return '<option value="' + x.id + '">Маса ' + x.n + ' · ' + ZN[x.zone] + ', ' + x.seats + ' места</option>'; }).join("") + '</select><span class="help">Само свободните в ' + r.time + ' за ' + A.plural(r.people, "човек", "души") + '.</span></div>',
+    foot:'<a class="pill pill-line pill-lg" href="tel:' + r.phone + '">' + ic("phone",22) + 'Обади се</a><button class="pill pill-red pill-lg" type="button" data-done>' + ic("check",22) + 'Готово</button>'});
+  s.body.addEventListener("click", function(e){ var b = e.target.closest("[data-sst]"); if (b){ s.body.querySelectorAll("[data-sst]").forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); }); setStatus(r, b.dataset.sst); var tg = s.body.querySelector(".st"); if (tg) tg.outerHTML = stTag(r.status); return; }
+    if (e.target.closest("[data-reveal]")){ revealed[r.id] = true; A.audit("customer.phone.view", "Видян телефон: " + r.name, r.id); s.body.querySelector("[data-phv]").innerHTML = '<a href="tel:' + r.phone + '">' + fmtPh(r.phone) + '</a>'; draw(); } });
+  s.foot.querySelector("[data-done]").onclick = function(){ var v2 = s.body.querySelector("#rs-tb").value; if (v2){ var nt = tab(v2), old = r.table; r.table = nt.id; r.zone = nt.zone; if (r.status === "waitlist") r.status = "confirmed"; save(); draw();
+      A.audit("reservation.table", "Резервация " + r.name + ", " + r.time + ": маса " + (old ? tab(old).n : "няма") + " → " + nt.n, r.id); A.toast(r.name + ": маса " + nt.n, {undo:function(){ r.table = old; r.zone = old ? tab(old).zone : null; save(); draw(); }}); } s.close(); }; }
+
+function seatWaitlist(r){ var free = TABLES.filter(function(x){ return x.seats >= r.people && takenAt(r.date, r.time, r.id).indexOf(x.id) < 0; });
+  var s = A.sheet({title:"Маса за " + r.name, html:'<p>' + fdate(r.date) + ', ' + r.time + ' · ' + A.plural(r.people, "човек", "души") + '</p>' +
+    (free.length ? '<div class="field"><label for="wl-t">Свободна маса</label><select class="input" id="wl-t">' + free.map(function(x){ return '<option value="' + x.id + '">Маса ' + x.n + ' · ' + ZN[x.zone] + ', ' + x.seats + ' места</option>'; }).join("") + '</select></div><p class="muted" style="margin:12px 0 0">Обадете се на клиента. Известие по SMS: ' + A.missing("доставчик за SMS") + '.</p>'
+      : A.banner({tone:"warn", icon:"warning-circle", title:"Още няма свободна маса", text:"В " + r.time + " всички маси за " + A.plural(r.people, "човек", "души") + " са заети. Обединете маси в „Залата и масите“ или изчакайте отказ."})),
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button>' + (free.length ? '<button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Дай масата</button>' : ''), focus:free.length ? "#wl-t" : null});
+  s.foot.querySelector("[data-x]").onclick = s.close;
+  var ok = s.foot.querySelector("[data-ok]"); if (ok) ok.onclick = function(){ var nt = tab(s.body.querySelector("#wl-t").value); r.table = nt.id; r.zone = nt.zone; s.close(); setStatus(r, "confirmed", true);
+    A.audit("reservation.table", "От чакащите: " + r.name + " получи маса " + nt.n, r.id); A.toast(r.name + " получи маса " + nt.n + ". Обадете се на клиента.", {undo:function(){ r.table = null; r.zone = null; r.status = "waitlist"; save(); draw(); }}); }; }
+
+/* ---------- нова резервация (правилата на ядрото: 11:00-21:30, до 92 дни, маса по местата, блокиран номер) ---------- */
+function newRes(){ var f = {date:day < TODAY ? TODAY : day, time:"", people:2, table:"", name:"", phone:"", occasion:"", note:""};
+  var s = A.sheet({title:"Нова резервация", html:'<form class="form" novalidate data-nf>' +
+    '<div class="two"><div class="field"><label for="nr-d">Ден</label><input class="input" id="nr-d" type="date" min="' + TODAY + '" max="' + addD(TODAY, 92) + '" value="' + f.date + '"></div>' +
+    '<div class="field"><label for="nr-t">Час</label><select class="input" id="nr-t"><option value="">Изберете</option>' + SLOTS.map(function(x){ return '<option>' + x + '</option>'; }).join("") + '</select></div></div>' +
+    '<div class="two"><div class="field"><label for="nr-p">Хора</label><input class="input" id="nr-p" type="number" inputmode="numeric" min="1" max="60" value="2"></div>' +
+    '<div class="field"><label for="nr-tb">Маса</label><select class="input" id="nr-tb"><option value="">Без маса (чакащи)</option></select></div></div>' +
+    '<div class="field"><label for="nr-n">Име</label><input class="input" id="nr-n" autocomplete="off"></div>' +
+    '<div class="field"><label for="nr-ph">Телефон</label><input class="input" id="nr-ph" type="tel" inputmode="tel" placeholder="0888 12 34 56" autocomplete="off"></div>' +
+    '<div class="field"><label for="nr-o">Повод (по желание)</label><select class="input" id="nr-o"><option value="">Няма</option>' + OCC.map(function(o){ return '<option>' + o + '</option>'; }).join("") + '</select></div>' +
+    '<div class="field"><label for="nr-no">Бележка (по желание)</label><textarea class="input" id="nr-no" rows="2"></textarea></div>' +
+    '<p class="muted" style="margin:0;font-size:15px">Съгласие за оферти се дава само от госта в сайта; тук не се отбелязва.</p><p class="err" data-ferr role="alert" hidden></p></form>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + 'Запази резервацията</button>', focus:"#nr-t"});
+  var B = s.body; function $(sel){ return B.querySelector(sel); }
+  function fillTables(){ var d = $("#nr-d").value, t = $("#nr-t").value, p = +$("#nr-p").value || 1, cur = $("#nr-tb").value;
+    var free = t ? TABLES.filter(function(x){ return x.seats >= p && takenAt(d, t).indexOf(x.id) < 0; }) : [];
+    $("#nr-tb").innerHTML = '<option value="">' + (t ? (free.length ? 'Без маса (чакащи)' : 'Няма свободна: в чакащите') : 'Първо изберете час') + '</option>' + free.map(function(x){ return '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>Маса ' + x.n + ' · ' + ZN[x.zone] + ', ' + x.seats + ' места</option>'; }).join(""); }
+  ["#nr-d","#nr-t","#nr-p"].forEach(function(k){ $(k).addEventListener("change", fillTables); });
+  function err(el, msg){ var fld = el.closest(".field"), e = fld.querySelector(".err"); if (!e){ e = document.createElement("span"); e.className = "err"; fld.appendChild(e); } e.textContent = msg || ""; e.hidden = !msg; el.setAttribute("aria-invalid", msg ? "true" : "false"); }
+  s.foot.querySelector("[data-x]").onclick = s.close;
+  s.foot.querySelector("[data-ok]").onclick = function(){ var d = $("#nr-d").value, t = $("#nr-t").value, p = +$("#nr-p").value, nm = $("#nr-n").value.trim(), ph = $("#nr-ph").value.replace(/\D/g, "").replace(/^359/, "0"), bad = null;
+    function chk(el, cond, msg){ err(el, cond ? "" : msg); if (!cond && !bad) bad = el; }
+    chk($("#nr-d"), d && d >= TODAY && d <= addD(TODAY, 92), "Изберете дата от днес до 3 месеца напред.");
+    chk($("#nr-t"), t && !(d === TODAY && toM(t) <= NOWM), t ? "Този час вече мина. Изберете по-късен." : "Изберете час между 11:00 и 21:30.");
+    chk($("#nr-p"), Number.isInteger(p) && p >= 1 && p <= 60, "Изберете брой хора.");
+    chk($("#nr-n"), nm, "Напишете името на госта.");
+    chk($("#nr-ph"), /^0\d{9}$/.test(ph), "Телефонът трябва да е 10 цифри, например 0888 12 34 56.");
+    if (!bad && BL[ph] && BL[ph].status === "blocked"){ err($("#nr-ph"), "Този номер е блокиран за резервации. Отблокирайте го в „Блокиране“, ако управителят реши."); bad = $("#nr-ph"); }
+    if (bad){ bad.focus(); return; }
+    var tb = $("#nr-tb").value, nt = tb && tab(tb), r = {id:"r" + Date.now().toString(36), date:d, time:t, people:p, table:nt ? nt.id : null, zone:nt ? nt.zone : null, name:nm, phone:ph, occasion:$("#nr-o").value, note:$("#nr-no").value.trim(), marketing:false, status:nt ? "confirmed" : "waitlist", createdAt:new Date().toISOString()};
+    RES.push(r); RES.sort(function(a, b){ return (a.date + a.time < b.date + b.time) ? -1 : 1; }); save(); s.close(); day = d; month = d.slice(0, 7); hashSync(); draw();
+    A.audit("reservation.create", "Нова резервация: " + nm + ", " + fdate(d, true) + " " + t + ", " + A.plural(p, "човек", "души") + (nt ? ", маса " + nt.n : ", в чакащите"), r.id);
+    A.toast("Резервацията е записана: " + fdate(d, true) + ", " + t, {undo:function(){ RES = RES.filter(function(x){ return x.id !== r.id; }); save(); draw(); }}); }; }
+
+/* ---------- блокиране ---------- */
+function blockAct(act, ph){ var was = JSON.stringify(BL), b = BL[ph], who = b.name || maskPh(ph);
+  if (act === "block"){ b.status = "blocked"; b.at = new Date().toISOString(); b.by = A.me.name; A.audit("customer.block", "Блокиран номер " + maskPh(ph) + " (" + who + ")", ph); }
+  else if (act === "dismiss"){ delete BL[ph]; A.audit("customer.block", "Не е блокиран: " + maskPh(ph) + " (" + who + ")", ph); }
+  else { delete BL[ph]; A.audit("customer.unblock", "Отблокиран номер " + maskPh(ph) + " (" + who + ")", ph); }
+  saveBL(); draw(); A.toast(act === "block" ? who + " е блокиран" : act === "dismiss" ? who + " не е блокиран" : who + " е отблокиран", {undo:function(){ BL = JSON.parse(was); saveBL(); draw(); }}); }
+function addBlock(){ var s = A.sheet({title:"Добави номер за блокиране", html:'<div class="form"><div class="field"><label for="ba-p">Телефон</label><input class="input" id="ba-p" type="tel" inputmode="tel" placeholder="0888 12 34 56"></div><div class="field"><label for="ba-r">Причина</label><input class="input" id="ba-r" placeholder="Например: неявяване без обаждане"></div><p class="muted" style="margin:0;font-size:15px">Блокираният номер не може да резервира онлайн и да прави профил. Списъкът се описва в политиката за поверителност (срок на пазене: ' + A.missing("срок") + ').</p></div>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("lock",22) + 'Блокирай</button>', focus:"#ba-p"});
+  s.foot.querySelector("[data-x]").onclick = s.close;
+  s.foot.querySelector("[data-ok]").onclick = function(){ var el = s.body.querySelector("#ba-p"), ph = el.value.replace(/\D/g, "").replace(/^359/, "0"), f = el.closest(".field"), e = f.querySelector(".err");
+    if (!/^0\d{9}$/.test(ph)){ if (!e){ e = document.createElement("span"); e.className = "err"; f.appendChild(e); } e.textContent = "Телефонът трябва да е 10 цифри, например 0888 12 34 56."; el.setAttribute("aria-invalid", "true"); el.focus(); return; }
+    var g = RES.filter(function(r){ return r.phone === ph; })[0]; BL[ph] = {status:"blocked", name:g ? g.name : "", count:noShows(ph), at:new Date().toISOString(), by:A.me.name, manual:true, reason:s.body.querySelector("#ba-r").value.trim()}; saveBL(); s.close(); draw();
+    A.audit("customer.block", "Блокиран ръчно: " + maskPh(ph), ph); A.toast("Номерът " + maskPh(ph) + " е блокиран", {undo:function(){ delete BL[ph]; saveBL(); draw(); }}); }; }
+
+/* ---------- събития ---------- */
+document.addEventListener("click", function(e){ var t;
+  if ((t = e.target.closest("[data-day]"))){ day = t.dataset.day; month = day.slice(0, 7); hashSync(); draw(); if (t.closest(".sheet")){ var w = t.closest(".sheetwrap"); w && w.querySelector("[data-close]").click(); } return; }
+  if ((t = e.target.closest("[data-mon]"))){ var y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1 + +t.dataset.mon; var d = new Date(Date.UTC(y, mo, 1, 10)); month = ymd(d).slice(0, 7); var inSheet = t.closest(".sheet"); if (inSheet){ inSheet.querySelector(".body").innerHTML = calHTML(); } else draw(); return; }
+  if (e.target.closest("[data-calsheet]")){ A.sheet({title:"Изберете ден", html:calHTML()}); return; }
+  if ((t = e.target.closest("[data-flt]"))){ flt = t.dataset.flt; hashSync(); draw(); var b = body.querySelector('[data-flt="' + flt + '"]'); b && b.focus({preventScroll:true}); return; }
+  if ((t = e.target.closest("[data-st]"))){ setStatus(byId(t.dataset.id), t.dataset.st); return; }
+  if ((t = e.target.closest("[data-open]"))){ openRes(byId(t.dataset.open)); return; }
+  if ((t = e.target.closest("[data-seat-wl]"))){ seatWaitlist(byId(t.dataset.seatWl)); return; }
+  if ((t = e.target.closest("[data-bl]"))){ if (!t.disabled) blockAct(t.dataset.bl, t.dataset.ph); return; }
+  if (e.target.closest("[data-bladd]")){ addBlock(); return; }
+  if (e.target.closest("[data-new]")){ newRes(); return; }
+});
+body.addEventListener("input", function(e){ if (e.target.id !== "rs-q") return; q = e.target.value; var pos = e.target.selectionStart; draw(); var i = body.querySelector("#rs-q"); i.focus(); try{ i.setSelectionRange(pos, pos); }catch(x){} });
+})();
+</script>
+</body>
+</html>

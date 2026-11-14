@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Отчети | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+.rp-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px}
+.rp-bar .sa-tabs{flex:0 1 auto}
+.rp-bar .cmp{display:flex; align-items:center; gap:4px; min-height:60px; padding:0 4px 0 16px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-weight:700}
+@container page (max-width:720px){ .rp-bar .sa-tabs{flex:1 1 100%} .rp-bar .cmp{flex:1 1 100%; justify-content:space-between} }
+.rp-custom{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:12px}
+.rp-custom .field{flex:1 1 160px; max-width:220px}
+.rp-meta{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin:0 0 16px; color:var(--muted); font-weight:600; font-size:15px}
+.rp-meta b{color:var(--ink)}
+.kp{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden; margin-bottom:16px}
+@container page (min-width:900px){ .kp{grid-template-columns:repeat(5, minmax(0,1fr))} }
+@container page (max-width:899px){ .kp > div:last-child{grid-column:1 / -1} }
+.kp > div{padding:16px 18px; display:grid; gap:4px; box-shadow:inset -1px -1px 0 var(--line); min-width:0}
+.kp .l{font-size:14px; font-weight:700; color:var(--muted)}
+.kp b{font-size:30px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap}
+@container page (max-width:420px){ .kp b{font-size:24px} }
+.dl{display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+.dl.up{color:var(--ok)} .dl.down{color:var(--danger)} .dl.flat{color:var(--muted)}
+.dl small{font-size:14px; font-weight:600; color:var(--muted)}
+@container page (max-width:600px){ .dl small{display:none} }
+.rp-g{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .rp-g.two{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} }
+.ch{padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; min-width:0; align-content:start}
+.ch > header{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 12px}
+.ch h2{margin:0; font-size:20px; letter-spacing:-.025em}
+.ch h2 small{display:block; font-size:14px; letter-spacing:0; color:var(--muted); font-weight:700; margin-top:2px}
+.ch .tg{min-height:44px; font-size:15px; padding:0 14px}
+/* колонна графика: SVG за плота, текстът в HTML */
+.plot{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 8px}
+.plot .ya{display:grid; align-content:space-between; text-align:right; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; height:180px; margin-top:-8px; padding-bottom:0}
+.plot .ya span{line-height:16px}
+.plot svg{display:block; width:100%; height:180px; overflow:visible}
+.plot .grid line{stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke}
+.plot .base{stroke:var(--line-strong); stroke-width:1.5; vector-effect:non-scaling-stroke}
+.plot .bar{fill:var(--ink); transition:opacity var(--t-fast) var(--ease)}
+.plot .bar.hi{fill:var(--red)}
+.plot .bar.ns{fill:var(--red)}
+.plot .bar.prev{fill:var(--surface-3)}
+.plot:hover .bar{opacity:.55}
+.plot .bar.on{opacity:1 !important}
+.plot .xa{grid-column:2; position:relative; height:22px; font-size:14px; color:var(--muted); font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums}
+.plot .xa span{position:absolute; top:0; white-space:nowrap}
+.tip{position:absolute; z-index:3; pointer-events:none; padding:8px 12px; border-radius:14px; background:var(--ink); color:var(--bg); font-size:15px; font-weight:700; line-height:1.3; white-space:nowrap; transform:translate(-50%, calc(-100% - 10px)); box-shadow:var(--shadow-lg)}
+.tip small{display:block; font-size:14px; font-weight:600; opacity:.8}
+.lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.lgd li{display:inline-flex; align-items:center; gap:6px}
+.lgd i{width:12px; height:12px; border-radius:3px; background:var(--ink)}
+.lgd i.r{background:var(--red)} .lgd i.p{background:var(--surface-3)}
+/* хоризонтални ленти */
+.rp-hb{display:grid; gap:12px}
+.rp-hb .r{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:baseline}
+.rp-hb .r .n{font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rp-hb .r .v{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.rp-hb .r .v small{font-weight:600; color:var(--muted); font-size:14px; margin-left:6px}
+.rp-hb .r .tr{grid-column:1 / -1; height:10px; border-radius:5px; background:var(--surface-2); overflow:hidden}
+.rp-hb .r .tr i{display:block; height:100%; border-radius:5px; background:var(--ink); transform-origin:left; animation:grow 700ms var(--ease) both}
+.rp-hb .r:first-child .tr i{background:var(--red)}
+@keyframes grow{from{transform:scaleX(0)} to{transform:none}}
+.rp-top{display:grid; gap:2px}
+.rp-top .r{display:grid; grid-template-columns:28px 44px minmax(0,1fr) auto; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--line)}
+.rp-top .r:first-child{border-top:0}
+.rp-top .k{font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right}
+.rp-top .pic{width:44px; height:44px; border-radius:14px}
+.rp-top .n{min-width:0}
+.rp-top .n b{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:16px; line-height:1.3}
+.rp-top .n .tr{height:6px; border-radius:3px; background:var(--surface-2); margin-top:6px; overflow:hidden}
+.rp-top .n .tr i{display:block; height:100%; background:var(--ember); border-radius:3px}
+.rp-top .v{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.rp-top .v small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.tbl-alt{font-size:15px}
+.tbl-alt .sa-table{font-size:15px}
+.cost{display:grid; gap:10px; justify-items:start}
+.cost .ill{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.rp-soon{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 18px; border-radius:22px; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted); font-weight:600}
+.rp-soon b{color:var(--ink)}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+A.liveHash = true;
+var body = A.mount({section:"reports", title:"Отчети",
+  sub:"Поръчки, оборот и среден бон за избрания период, по канал и по час, най-поръчваните ястия, резервации и неявили се. Сравнение с предишния период.",
+  actions:'<button class="pill pill-line" type="button" data-csv>' + ic("export",20) + 'Изтегли CSV</button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Няма данни"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- време ---------- */
+var TODAY = A.todayKey();
+function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
+function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
+function addD(k, n){ var d = parse(k); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
+function span(a, b){ return Math.round((parse(b) - parse(a)) / 864e5) + 1; }
+function fd(k, short){ return A.fmtDate(parse(k), short); }
+
+/* ---------- примерни данни по ден (детерминирани): истинските ястия и цени, примерни бройки ---------- */
+function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+var POOL = SC.items.filter(function(x){ return ["dobavki","sosove","hlebcheta"].indexOf(x.cat) < 0 && !x.per100; });
+var POP = POOL.map(function(x, i){ var r = rng("pop" + x.id)(); return Math.pow(r, 3) + (x.t.indexOf("hit") > -1 ? .6 : 0); }), POPS = POP.reduce(function(a, b){ return a + b; }, 0);
+function pick(r){ var t = r() * POPS; for (var i = 0; i < POOL.length; i++){ t -= POP[i]; if (t <= 0) return POOL[i]; } return POOL[0]; }
+var CH = [["Доставка","truck",.42],["Вземане","storefront",.23],["Маса","chair",.30],["Офис","briefcase",.05]];
+var cache = {};
+function dayData(k){ if (cache[k]) return cache[k]; var r = rng("day" + k), dow = parse(k).getUTCDay(), n = Math.round((dow === 5 || dow === 6 ? 58 : dow === 0 ? 50 : 40) * (.85 + r() * .3));
+  var d = {k:k, orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, dish:{}, res:0, ns:0};
+  if (k > TODAY){ cache[k] = d; return d; }
+  var nowH = A.sofia().h; if (k === TODAY) n = Math.round(n * Math.max(0, Math.min(1, (nowH - 10) / 12)));
+  for (var i = 0; i < n; i++){ var x = r(), c = x < .42 ? 0 : x < .65 ? 1 : x < .95 ? 2 : 3, hh = r() < .45 ? 11 + Math.floor(r() * 4) : r() < .14 ? 15 + Math.floor(r() * 2) : 17 + Math.floor(r() * (c === 0 ? 4 : 6));
+    if (k === TODAY && hh > nowH) hh = Math.max(10, nowH); var lines = 1 + Math.floor(r() * (c === 2 ? 5 : 3)), tot = 0;
+    for (var j = 0; j < lines; j++){ var it = pick(r), q = r() < .2 ? 2 : 1; tot += it.p * q; d.dish[it.id] = (d.dish[it.id] || 0) + q; }
+    d.orders++; d.rev += tot; d.ch[c].o++; d.ch[c].rev += tot; d.hour[hh] = (d.hour[hh] || 0) + 1; }
+  d.res = k === TODAY ? 0 : Math.round((dow === 5 || dow === 6 ? 11 : 6) * (.8 + r() * .4)); d.ns = d.res && r() < .35 ? 1 : 0;
+  cache[k] = d; return d; }
+function agg(a, b){ var o = {orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, dish:{}, res:0, ns:0, days:[]};
+  if (st === "empty") { for (var k0 = a; k0 <= b; k0 = addD(k0, 1)) o.days.push({k:k0, orders:0, rev:0, res:0, ns:0, hour:{}}); return o; }
+  for (var k = a; k <= b; k = addD(k, 1)){ var d = dayData(k); o.days.push(d); o.orders += d.orders; o.rev += d.rev; o.res += d.res; o.ns += d.ns;
+    d.ch.forEach(function(c, i){ o.ch[i].o += c.o; o.ch[i].rev += c.rev; }); Object.keys(d.hour).forEach(function(h){ o.hour[h] = (o.hour[h] || 0) + d.hour[h]; }); Object.keys(d.dish).forEach(function(id){ o.dish[id] = (o.dish[id] || 0) + d.dish[id]; }); }
+  return o; }
+
+/* ---------- период ---------- */
+var P = [["today","Днес"],["yday","Вчера"],["7","7 дни"],["30","30 дни"],["month","Месец"],["custom","Период"]];
+var per = A.hash.p && P.some(function(p){ return p[0] === A.hash.p; }) ? A.hash.p : "7", cmp = A.hash.c !== "0", cust = {a:addD(TODAY, -13), b:TODAY}, showTbl = {};
+function range(){ if (per === "today") return [TODAY, TODAY]; if (per === "yday") return [addD(TODAY, -1), addD(TODAY, -1)]; if (per === "7") return [addD(TODAY, -6), TODAY]; if (per === "30") return [addD(TODAY, -29), TODAY];
+  if (per === "month") return [TODAY.slice(0, 8) + "01", TODAY]; return [cust.a, cust.b]; }
+function prevRange(a, b){ var n = span(a, b); if (per === "month"){ var d = parse(a); d.setUTCMonth(d.getUTCMonth() - 1); var pa = ymd(d); return [pa, addD(pa, n - 1)]; } return [addD(a, -n), addD(a, -1)]; }
+function pct(cur, prev){ if (!prev) return null; return Math.round((cur - prev) / prev * 100); }
+function delta(cur, prev, inv){ var p = pct(cur, prev); if (p == null || !cmp) return ''; var up = p > 0, cls = p === 0 ? "flat" : (up !== !!inv ? "up" : "down");
+  return '<span class="dl ' + cls + '">' + ic(p === 0 ? "minus" : up ? "caret-up" : "caret-down", 16) + (p > 0 ? "+" : "") + p + '%<small>спрямо преди</small></span>'; }
+function eur0(v){ return Math.round(v).toLocaleString("bg-BG").replace(/\s/g, " ") + " €"; }
+
+/* ---------- графики ---------- */
+function colChart(id, items, o){ o = o || {}; var mx = Math.max.apply(null, items.map(function(x){ return (x.v || 0) + (x.v2 || 0); }).concat([1])), nice = niceMax(mx), n = items.length, W = n * 10, gap = n > 20 ? 1.6 : 2.6;
+  var svg = '<svg viewBox="0 0 ' + W + ' 100" preserveAspectRatio="none" aria-hidden="true"><g class="grid">' + [0, .5, 1].map(function(f){ return '<line x1="0" x2="' + W + '" y1="' + (100 - f * 100) + '" y2="' + (100 - f * 100) + '"/>'; }).join("") + '</g>' +
+    items.map(function(x, i){ var h = (x.v || 0) / nice * 100, h2 = (x.v2 || 0) / nice * 100, xx = i * 10 + gap / 2, w = 10 - gap;
+      return '<rect class="bar' + (x.hi ? ' hi' : '') + '" data-i="' + i + '" x="' + xx + '" y="' + (100 - h) + '" width="' + w + '" height="' + Math.max(h, x.v ? .8 : 0) + '"/>' + (h2 ? '<rect class="bar ns" data-i="' + i + '" x="' + xx + '" y="' + (100 - h - h2) + '" width="' + w + '" height="' + h2 + '"/>' : ''); }).join("") +
+    '<line class="base" x1="0" x2="' + W + '" y1="100" y2="100"/></svg>';
+  var step = Math.ceil(n / (o.xn || 7)), idx = []; for (var k = 0; k < n; k += step) idx.push(k);
+  if (idx[idx.length - 1] !== n - 1){ if (n - 1 - idx[idx.length - 1] < step * .7 && idx.length > 1) idx[idx.length - 1] = n - 1; else idx.push(n - 1); }
+  return '<div class="plot" data-plot="' + id + '"><div class="ya" aria-hidden="true"><span>' + (o.fmt || String)(nice) + '</span><span>' + (o.fmt || String)(nice / 2) + '</span><span>0</span></div>' + svg +
+    '<div class="xa" aria-hidden="true">' + idx.map(function(i, j){ var tr = n === 1 ? "-50%" : j === 0 && i === 0 ? "0" : i === n - 1 ? "-100%" : "-50%", left = n === 1 ? 50 : i === 0 ? 0 : i === n - 1 ? 100 : (i + .5) / n * 100;
+      return '<span style="left:' + left + '%;transform:translateX(' + tr + ')">' + esc(items[i].l) + '</span>'; }).join("") + '</div></div>'; }
+function niceMax(v){ var p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+var CHARTS = {};
+function chartCard(id, title, sub, inner, table, extra){ CHARTS[id] = table;
+  return '<section class="ch" aria-labelledby="h-' + id + '" data-edit-id="admin.reports.' + id + '"><header><h2 id="h-' + id + '">' + title + (sub ? '<small>' + sub + '</small>' : '') + '</h2><button class="pill pill-soft tg" type="button" data-tbl="' + id + '" aria-pressed="' + !!showTbl[id] + '">' + ic(showTbl[id] ? "chart-bar" : "list-bullets", 18) + (showTbl[id] ? 'Графика' : 'Таблица') + '</button></header>' +
+    (showTbl[id] ? tableHTML(table) : inner) + (extra || '') + '</section>'; }
+function tableHTML(t){ return '<div class="tbl-alt"><table class="sa-table"><thead><tr>' + t.head.map(function(h, i){ return '<th' + (i ? ' class="r"' : '') + '>' + esc(h) + '</th>'; }).join("") + '</tr></thead><tbody>' +
+  t.rows.map(function(r){ return '<tr>' + r.map(function(c, i){ return '<td' + (i ? ' class="r" data-label="' + esc(t.head[i]) + '"' : ' data-main') + '>' + esc(c) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>'; }
+
+function draw(){ var y = A.scroller.scrollTop;
+  if (st === "loading"){ body.innerHTML = A.skel(5, "Смятаме отчета …"); return; }
+  if (st === "error"){ body.innerHTML = A.error("Не успяхме да сметнем отчета. Поръчките и оборотът са запазени; опитайте пак."); return; }
+  var R = range(), cur = agg(R[0], R[1]), PR = prevRange(R[0], R[1]), prev = agg(PR[0], PR[1]), one = R[0] === R[1];
+  var avg = cur.orders ? cur.rev / cur.orders : 0, pavg = prev.orders ? prev.rev / prev.orders : 0, nsr = cur.res ? Math.round(cur.ns / cur.res * 100) : 0;
+  /* по ден или по час */
+  var main = one ? hours(cur).map(function(h){ return {l:h[0] + ":00", v:h[1], t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; })
+    : cur.days.map(function(d){ return {l:fd(d.k, true).replace(/^.., /, ""), v:Math.round(d.rev), t:fd(d.k), tv:SC.fmt(d.rev) + " · " + A.plural(d.orders, "поръчка", "поръчки"), hi:d.k === TODAY}; });
+  var hrs = hours(cur), pk = hrs.reduce(function(a, h){ return h[1] > a[1] ? h : a; }, ["", 0]);
+  var top = Object.keys(cur.dish).map(function(id){ return {x:SC.byId[id], q:cur.dish[id]}; }).sort(function(a, b){ return b.q - a.q; }).slice(0, 8), tq = top.length ? top[0].q : 1;
+  var chMax = Math.max.apply(null, cur.ch.map(function(c){ return c.rev; }).concat([1]));
+  body.innerHTML = (st === "offline" ? A.offline("Показваме последно сметнатия отчет. Числата се обновяват, щом връзката се върне.") + '<div style="height:16px"></div>' : '') +
+    '<div class="rp-bar"><div class="sa-tabs" role="tablist" aria-label="Период">' + P.map(function(p){ return '<button role="tab" type="button" data-per="' + p[0] + '" aria-selected="' + (per === p[0]) + '">' + p[1] + '</button>'; }).join("") + '</div>' +
+      '<label class="cmp">Сравни с предишния<span class="sa-switch"><input type="checkbox" role="switch" data-cmp' + (cmp ? ' checked' : '') + '><span class="tr"></span></span></label></div>' +
+    (per === "custom" ? '<div class="rp-custom"><div class="field"><label for="rp-a">От</label><input class="input" id="rp-a" type="date" max="' + TODAY + '" value="' + cust.a + '" data-ca></div><div class="field"><label for="rp-b">До</label><input class="input" id="rp-b" type="date" max="' + TODAY + '" value="' + cust.b + '" data-cb></div><p class="muted" style="margin:0 0 12px;font-size:15px">До 92 дни.</p></div>' : '') +
+    '<p class="rp-meta"><span><b>' + (one ? fd(R[0]) : fd(R[0], true) + ' - ' + fd(R[1], true)) + '</b>' + (cmp ? ' · спрямо ' + (PR[0] === PR[1] ? fd(PR[0], true) : fd(PR[0], true) + ' - ' + fd(PR[1], true)) : '') + '</span>' + A.sample("Примерни числа, истински ястия и цени") + '</p>' +
+    (!cur.orders && !cur.res ? '<div class="sa-card">' + A.empty({icon:"chart-bar", title:"Няма поръчки за този период.", text:per === "today" ? "Поръчките за днес ще се появят тук от 10:00." : "Изберете друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'}) + '</div>' :
+    '<div class="kp" data-edit-id="admin.reports.kpi">' +
+      '<div><span class="l">Поръчки</span><b>' + cur.orders + '</b>' + delta(cur.orders, prev.orders) + '</div>' +
+      '<div><span class="l">Оборот</span><b>' + eur0(cur.rev) + '</b>' + delta(cur.rev, prev.rev) + '</div>' +
+      '<div><span class="l">Среден бон</span><b>' + SC.fmt(avg) + '</b>' + delta(avg, pavg) + '</div>' +
+      '<div><span class="l">Резервации</span><b>' + cur.res + '</b>' + delta(cur.res, prev.res) + '</div>' +
+      '<div><span class="l">Неявили се</span><b>' + cur.ns + (cur.res ? ' <span style="font-size:18px;color:var(--muted)">· ' + nsr + '%</span>' : '') + '</b>' + delta(cur.ns, prev.ns, true) + '</div></div>' +
+    '<div class="rp-g two">' +
+      chartCard("main", one ? "Поръчки по час" : "Оборот по ден", one ? fd(R[0]) : "Днес е в червено", colChart("main", main, {fmt:one ? String : eur0, xn:one ? 7 : 6}),
+        {head:one ? ["Час","Поръчки"] : ["Ден","Оборот","Поръчки"], rows:one ? hrs.map(function(h){ return [h[0] + ":00", h[1]]; }) : cur.days.map(function(d){ return [fd(d.k, true), SC.fmt(d.rev), d.orders]; })}) +
+      chartCard("ch", "По канал", "Оборот и дял", '<div class="rp-hb">' + cur.ch.map(function(c, i){ return {c:c, i:i}; }).sort(function(a, b){ return b.c.rev - a.c.rev; }).map(function(z){ var c = z.c, sh = cur.rev ? Math.round(c.rev / cur.rev * 100) : 0;
+          return '<div class="r"><span class="n">' + ic(CH[z.i][1], 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + CH[z.i][0] + '</span><span class="v">' + eur0(c.rev) + '<small>' + sh + '% · ' + c.o + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.rev / chMax * 100) + '%"></i></span></div>'; }).join("") + '</div>',
+        {head:["Канал","Оборот","Дял","Поръчки"], rows:cur.ch.map(function(c, i){ return [CH[i][0], SC.fmt(c.rev), (cur.rev ? Math.round(c.rev / cur.rev * 100) : 0) + "%", c.o]; })}, '<p class="muted" style="margin:0;font-size:15px">Телефонните поръчки влизат през сервитьора като „Маса“ или „Вземане“.</p>') +
+    '</div><div style="height:16px"></div><div class="rp-g two">' +
+      chartCard("top", "Най-поръчвани ястия", "Истински ястия, примерни бройки", '<div class="rp-top">' + top.map(function(t, i){ return '<div class="r"><span class="k">' + (i + 1) + '</span>' + SC.pic(t.x) + '<span class="n"><b>' + esc(t.x.n) + '</b><span class="tr" aria-hidden="true"><i style="width:' + (t.q / tq * 100) + '%"></i></span></span><span class="v">' + t.q + '<small>' + eur0(t.q * t.x.p) + '</small></span></div>'; }).join("") + '</div>',
+        {head:["Ястие","Бройки","Оборот"], rows:top.map(function(t){ return [t.x.n, t.q, SC.fmt(t.q * t.x.p)]; })}) +
+      '<div style="display:grid;gap:16px;align-content:start">' +
+      chartCard("hour", "Поръчки по час", pk[1] ? "Най-натоварено: " + pk[0] + ":00" : "", colChart("hour", hrs.map(function(h){ return {l:h[0], v:h[1], hi:h[0] === pk[0], t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; }), {xn:7}),
+        {head:["Час","Поръчки"], rows:hrs.map(function(h){ return [h[0] + ":00", h[1]]; })}) +
+      chartCard("res", "Резервации и неявили се", "", one ? '<div class="rp-hb"><div class="r"><span class="n">Резервации</span><span class="v">' + cur.res + '</span></div><div class="r"><span class="n">Неявили се</span><span class="v">' + cur.ns + '</span></div></div>' :
+        colChart("res", cur.days.map(function(d){ return {l:fd(d.k, true).replace(/^.., /, ""), v:d.res - d.ns, v2:d.ns, t:fd(d.k), tv:A.plural(d.res, "резервация", "резервации") + (d.ns ? ", " + d.ns + " неявили се" : "")}; }), {xn:6}) + '<ul class="lgd"><li><i></i>Дошли и предстоящи</li><li><i class="r"></i>Неявили се</li></ul>',
+        {head:["Ден","Резервации","Неявили се"], rows:cur.days.map(function(d){ return [fd(d.k, true), d.res, d.ns]; })}) +
+      '</div></div>' +
+    '<div style="height:16px"></div><section class="ch cost" data-edit-id="admin.reports.cost"><span class="ill">' + ic("scales",30) + '</span><h2>Печалба по ястие</h2><p class="muted" style="margin:0">Матрицата „популярност срещу печалба“ и марж на ястие искат себестойност: ' + A.missing("себестойност на ястията") + '. Щом се въведе в менюто, отчетът се появява тук.</p></section>' +
+    '<div style="height:16px"></div><div class="rp-soon">' + A.soonTag() + '<span><b>Отчети по имейл</b> всеки понеделник в 6:00 и на 1-во число (PDF), известие при отклонение.</span></div>');
+  A.scroller.scrollTop = y; bindTips(main, hrs, cur); }
+function hours(o){ var out = []; for (var h = 10; h <= 22; h++) out.push([String(h).padStart(2, "0"), o.hour[h] || 0]); return out; }
+
+/* ---------- подсказка при посочване ---------- */
+function bindTips(main, hrs, cur){ var sets = {main:main, hour:hrs.map(function(h){ return {t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; }), res:cur.days.map(function(d){ return {t:fd(d.k), tv:A.plural(d.res, "резервация", "резервации") + (d.ns ? ", " + d.ns + " неявили се" : "")}; })};
+  body.querySelectorAll("[data-plot]").forEach(function(pl){ var data = sets[pl.dataset.plot]; if (!data) return; var tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; pl.appendChild(tip);
+    pl.addEventListener("pointermove", function(e){ var svg = pl.querySelector("svg"), r = svg.getBoundingClientRect(), i = Math.floor((e.clientX - r.left) / r.width * data.length); if (i < 0 || i >= data.length){ tip.hidden = true; return; }
+      pl.querySelectorAll(".bar").forEach(function(b){ b.classList.toggle("on", +b.dataset.i === i); });
+      var pr = pl.getBoundingClientRect(); tip.hidden = false; tip.innerHTML = esc(data[i].tv) + '<small>' + esc(data[i].t) + '</small>'; tip.style.left = Math.max(70, Math.min(pr.width - 70, r.left - pr.left + (i + .5) / data.length * r.width)) + "px"; tip.style.top = "0px"; });
+    pl.addEventListener("pointerleave", function(){ tip.hidden = true; pl.querySelectorAll(".bar.on").forEach(function(b){ b.classList.remove("on"); }); }); }); }
+draw();
+function hashSync(){ A.setHash(Object.assign({}, A.hash, {p:per === "7" ? "" : per, c:cmp ? "" : "0"})); }
+document.addEventListener("click", function(e){ var t;
+  if ((t = e.target.closest("[data-per]"))){ per = t.dataset.per; hashSync(); draw(); var b = body.querySelector('[role="tab"][data-per="' + per + '"]'); b && b.focus({preventScroll:true}); return; }
+  if ((t = e.target.closest("[data-tbl]"))){ showTbl[t.dataset.tbl] = !showTbl[t.dataset.tbl]; draw(); var b2 = body.querySelector('[data-tbl="' + t.dataset.tbl + '"]'); b2 && b2.focus({preventScroll:true}); return; }
+  if (e.target.closest("[data-csv]")){ var R = range(), o = agg(R[0], R[1]), rows = [["Ден","Поръчки","Оборот €","Среден бон €","Доставка","Вземане","Маса","Офис","Резервации","Неявили се"]].concat(o.days.map(function(d){ return [d.k, d.orders, d.rev.toFixed(2).replace(".", ","), (d.orders ? d.rev / d.orders : 0).toFixed(2).replace(".", ","), d.ch ? d.ch[0].o : 0, d.ch ? d.ch[1].o : 0, d.ch ? d.ch[2].o : 0, d.ch ? d.ch[3].o : 0, d.res, d.ns]; }));
+    A.download("siracusa-otchet-" + R[0] + "-" + R[1] + ".csv", "﻿# Примерни данни\n" + rows.map(function(r){ return r.join(";"); }).join("\n"), "text/csv"); A.toast("Отчетът е изтеглен (CSV)"); return; }
+});
+document.addEventListener("change", function(e){ var t = e.target;
+  if (t.matches("[data-cmp]")){ cmp = t.checked; hashSync(); draw(); return; }
+  if (t.matches("[data-ca]") || t.matches("[data-cb]")){ var a = body.querySelector("[data-ca]").value, b = body.querySelector("[data-cb]").value; if (!a || !b) return;
+    if (a > b){ var x = a; a = b; b = x; } if (span(a, b) > 92) a = addD(b, -91); cust = {a:a, b:b > TODAY ? TODAY : b}; draw(); }
+});
+})();
+</script>
+</body>
+</html>

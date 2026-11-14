@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>QR генератор | Siracusa · Админ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_admin.css">
+<style>
+/* Етикетът е „хартия“: винаги светъл с тъмен код (и в тъмна тема), само с токените: в тъмна тема фонът е --ink, а кодът --bg. */
+.qrl{--lab-bg:var(--surface); --lab-ink:var(--ink); --lab-mute:var(--muted)}
+:root[data-theme="dark"] .qrl{--lab-bg:var(--ink); --lab-ink:var(--bg); --lab-mute:var(--surface-3)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .qrl{--lab-bg:var(--ink); --lab-ink:var(--bg); --lab-mute:var(--surface-3)} }
+.qrl svg{display:block; width:100%; height:auto}
+.qrl .bg{fill:var(--lab-bg)}
+.qrl .ink{fill:var(--lab-ink)}
+.qrl .mute{fill:var(--lab-mute)}
+.qrl .rule{stroke:var(--lab-mute); stroke-width:2; opacity:.5}
+.qrl text{font-family:var(--font); font-feature-settings:"locl" 0}
+.qrl .mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+
+.qr-top{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .qr-top{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); align-items:start} .qr-prev{position:sticky; top:96px} }
+.qr-prev{display:grid; gap:12px}
+.qr-stage{padding:28px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); display:grid; place-items:center; position:relative; overflow:hidden}
+.qr-stage::before{content:""; position:absolute; inset:0; background:radial-gradient(70% 60% at 50% 40%, var(--surface-3), transparent 70%); opacity:.7}
+.qr-stage .qrl{position:relative; width:100%; max-width:560px; border-radius:18px; box-shadow:var(--shadow-lg); transform:rotate(-1.2deg); transition:transform var(--t-slow) var(--ease)}
+.qr-stage:hover .qrl{transform:none}
+@container page (max-width:520px){ .qr-stage{padding:16px} .qr-stage .qrl{transform:none} }
+.qr-pick{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.qr-pick .input{flex:1 1 220px; min-width:0}
+.qr-tech{display:flex; flex-wrap:wrap; gap:6px}
+.qr-url{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 14px; border-radius:18px; background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.qr-url code{flex:1 1 220px; min-width:0; word-break:break-all; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; overflow-wrap:anywhere}
+.qr-acts{display:flex; flex-wrap:wrap; gap:8px}
+.qr-acts .pill{flex:1 1 auto}
+.qr-note{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted); margin:0}
+.qr-note .ic{flex:none; margin-top:2px}
+
+.qr-list{display:grid; gap:12px}
+.qr-zone{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.qr-zone > header{display:flex; align-items:center; gap:10px; padding:10px 10px 10px 18px; border-bottom:1px solid var(--line)}
+.qr-zone > header h3{margin:0; flex:1; font-size:18px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.qr-zone > header h3 .ic{color:var(--red)}
+.qr-zone > header small{font-size:14px; color:var(--muted); font-weight:700}
+.qr-row{display:grid; grid-template-columns:48px minmax(0,1fr); gap:4px; align-items:center; padding:4px 8px 4px 6px; border-bottom:1px solid var(--line)}
+.qr-row:last-child{border-bottom:0}
+.qr-row[aria-current="true"]{background:var(--ember-soft)}
+.qr-show{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:64px; padding:6px 6px 6px 4px; border:0; border-radius:18px; background:transparent; color:inherit; text-align:left; cursor:pointer; min-width:0}
+.qr-show:hover{background:color-mix(in srgb, var(--surface-2) 55%, transparent)}
+.qr-show .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:20px; font-variant-numeric:tabular-nums}
+.qr-row[aria-current="true"] .no{background:var(--ink); color:var(--bg)}
+.qr-show .tx{min-width:0; display:grid}
+.qr-show .tx b{font-size:16px}
+.qr-show .tx code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; color:var(--muted); font-weight:600; overflow-wrap:anywhere}
+.qr-show .qr-go{display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:700; color:var(--muted)}
+.qr-row[aria-current="true"] .qr-go{color:var(--ink)}
+@container page (max-width:520px){ .qr-show .qr-go .w{display:none} }
+.qr-row .tag-new{font-size:14px; font-weight:800; color:var(--ok)}
+
+.qr-sheets{display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr))}
+.qr-a4{aspect-ratio:210/297; border-radius:10px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:5%; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(4,1fr); gap:3%}
+.qr-a4 .cell{border-radius:4px; box-shadow:inset 0 0 0 1px var(--line); display:grid; grid-template-columns:1fr 1fr; align-items:center; padding:8%; gap:6%}
+.qr-a4 .cell.vac{box-shadow:inset 0 0 0 1px var(--line); background:repeating-linear-gradient(45deg, transparent 0 6px, var(--surface-2) 6px 7px)}
+.qr-a4 .cell b{font-size:14px; line-height:1; font-variant-numeric:tabular-nums}
+.qr-a4 .cell i{display:block; aspect-ratio:1; border-radius:2px; background:var(--ink); opacity:.85; mask:var(--qrm); -webkit-mask:var(--qrm)}
+.qr-a4cap{font-size:14px; color:var(--muted); font-weight:700; text-align:center; margin-top:8px}
+.qr-bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px}
+.qr-bar .grow{flex:1 1 auto}
+@container page (max-width:520px){ .qr-bar .grow{flex:1 1 100%} .qr-bar .pill{flex:1} }
+
+/* печат: A4, 8 етикета на лист (2 × 4), линии за рязане */
+#qr-print{display:none}
+@media print{
+  @page{size:A4; margin:0}
+  html, body{height:auto !important; overflow:visible !important; background:var(--surface) !important}
+  body > *:not(#qr-print){display:none !important}
+  #qr-print{display:block}
+  #qr-print .pg{width:210mm; height:297mm; display:grid; grid-template-columns:105mm 105mm; grid-template-rows:repeat(4, 74.25mm); break-after:page; page-break-after:always}
+  #qr-print .pg:last-child{break-after:auto; page-break-after:auto}
+  #qr-print .qrl{outline:0.2mm dashed var(--line-strong); outline-offset:-0.1mm}
+  #qr-print .qrl svg{width:105mm; height:74.25mm}
+  #qr-print .qrl .bg{fill:var(--surface)}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="_admin.js"></script>
+<script src="_pencil.js"></script>
+<script>
+/*QR-START*/
+/* Малък QR енкодер (ISO/IEC 18004): байтов режим, версии 1-10, корекция L/M/Q/H, маската с най-малко наказателни точки.
+   QR.make(text, "Q") -> {size, version, ecl, mask, get(x, y)} ; QR.svgPath(q, quiet) -> "M..." */
+var QR = (function(){
+  var ECC = {L:[0,7,10,15,20,26,18,20,24,30,18], M:[0,10,16,26,18,24,16,18,22,22,26], Q:[0,13,22,18,26,18,24,18,22,20,24], H:[0,17,28,22,16,22,28,26,26,24,28]};
+  var BLK = {L:[0,1,1,1,1,1,2,2,2,2,4], M:[0,1,1,1,2,2,4,4,4,5,5], Q:[0,1,1,2,2,4,4,6,6,8,8], H:[0,1,1,2,4,4,4,5,6,8,8]};
+  var FMT = {L:1, M:0, Q:3, H:2};
+  function rawModules(v){ var r = (16 * v + 128) * v + 64; if (v >= 2){ var n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; } return r; }
+  function dataCw(v, e){ return Math.floor(rawModules(v) / 8) - ECC[e][v] * BLK[e][v]; }
+  function gmul(x, y){ var z = 0; for (var i = 7; i >= 0; i--){ z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z & 255; }
+  function rsDiv(deg){ var r = []; for (var i = 0; i < deg - 1; i++) r.push(0); r.push(1); var root = 1;
+    for (i = 0; i < deg; i++){ for (var j = 0; j < r.length; j++){ r[j] = gmul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; } root = gmul(root, 2); } return r; }
+  function rsRem(data, div){ var r = div.map(function(){ return 0; });
+    data.forEach(function(b){ var f = b ^ r.shift(); r.push(0); div.forEach(function(c, i){ r[i] ^= gmul(c, f); }); }); return r; }
+  function utf8(s){ var out = [], b = unescape(encodeURIComponent(s)); for (var i = 0; i < b.length; i++) out.push(b.charCodeAt(i)); return out; }
+  function alignPos(v, size){ if (v === 1) return []; var n = Math.floor(v / 7) + 2, step = Math.ceil((v * 4 + 4) / (n * 2 - 2)) * 2, r = [6];
+    for (var p = size - 7; r.length < n; p -= step) r.splice(1, 0, p); return r; }
+  function make(text, ecl){ ecl = ecl || "M"; var bytes = utf8(text), v, cap;
+    for (v = 1; v <= 10; v++){ cap = dataCw(v, ecl) * 8; if (4 + (v < 10 ? 8 : 16) + bytes.length * 8 <= cap) break; }
+    if (v > 10) throw new Error("QR: текстът е твърде дълъг");
+    /* битове: режим 0100, брой, данни, край, допълване */
+    var bits = []; function put(val, len){ for (var i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); }
+    put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(function(b){ put(b, 8); });
+    put(0, Math.min(4, cap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+    for (var pad = 0xEC; bits.length < cap; pad ^= 0xEC ^ 0x11) put(pad, 8);
+    var data = []; for (var i = 0; i < bits.length; i += 8){ var x = 0; for (var k = 0; k < 8; k++) x = (x << 1) | bits[i + k]; data.push(x); }
+    /* блокове и Рийд-Соломон, после преплитане */
+    var nb = BLK[ecl][v], ecLen = ECC[ecl][v], raw = Math.floor(rawModules(v) / 8), nShort = nb - raw % nb, shortLen = Math.floor(raw / nb), div = rsDiv(ecLen), blocks = [];
+    for (i = 0, k = 0; i < nb; i++){ var len = shortLen - ecLen + (i < nShort ? 0 : 1), dat = data.slice(k, k + len); k += len;
+      var ecc = rsRem(dat, div); if (i < nShort) dat.push(-1); blocks.push(dat.concat(ecc)); }
+    var cw = []; for (i = 0; i < blocks[0].length; i++) blocks.forEach(function(b, j){ if (i !== shortLen - ecLen || j >= nShort) cw.push(b[i]); });
+    /* матрицата */
+    var size = v * 4 + 17, m = [], fn = [];
+    for (i = 0; i < size; i++){ m.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+    function set(x, y, d){ m[y][x] = d; fn[y][x] = true; }
+    for (i = 0; i < size; i++){ set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+    function finder(cx, cy){ for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++){ var d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy; if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4); } }
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    var ap = alignPos(v, size);
+    ap.forEach(function(a, ai){ ap.forEach(function(b, bi){ if ((ai === 0 && bi === 0) || (ai === 0 && bi === ap.length - 1) || (ai === ap.length - 1 && bi === 0)) return;
+      for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(a + dx, b + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }); });
+    function format(mask){ var d = FMT[ecl] << 3 | mask, r = d; for (var i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537); var b = ((d << 10) | r) ^ 0x5412;
+      function bit(i){ return ((b >>> i) & 1) !== 0; }
+      for (i = 0; i <= 5; i++) set(8, i, bit(i)); set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8)); for (i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+      for (i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i)); for (i = 8; i < 15; i++) set(8, size - 15 + i, bit(i)); set(8, size - 8, true); }
+    format(0);
+    if (v >= 7){ var r = v; for (i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25); var vb = v << 12 | r;
+      for (i = 0; i < 18; i++){ var bt = ((vb >>> i) & 1) !== 0, a = size - 11 + i % 3, b2 = Math.floor(i / 3); set(a, b2, bt); set(b2, a, bt); } }
+    /* данните в зигзаг */
+    var bi = 0, total = cw.length * 8;
+    for (var right = size - 1; right >= 1; right -= 2){ if (right === 6) right = 5;
+      for (var vert = 0; vert < size; vert++) for (var j = 0; j < 2; j++){ var x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - vert : vert;
+        if (!fn[y][x] && bi < total){ m[y][x] = ((cw[bi >>> 3] >>> (7 - (bi & 7))) & 1) !== 0; bi++; } } }
+    function applyMask(mask){ for (var y = 0; y < size; y++) for (var x = 0; x < size; x++){ if (fn[y][x]) continue; var inv;
+      switch (mask){ case 0: inv = (x + y) % 2 === 0; break; case 1: inv = y % 2 === 0; break; case 2: inv = x % 3 === 0; break; case 3: inv = (x + y) % 3 === 0; break;
+        case 4: inv = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break; case 5: inv = x * y % 2 + x * y % 3 === 0; break;
+        case 6: inv = (x * y % 2 + x * y % 3) % 2 === 0; break; default: inv = ((x + y) % 2 + x * y % 3) % 2 === 0; }
+      if (inv) m[y][x] = !m[y][x]; } }
+    function penalty(){ var p = 0, x, y, run, dark = 0;
+      function line(get){ var s = 0; for (var a = 0; a < size; a++){ var row = []; for (var b = 0; b < size; b++) row.push(get(a, b));
+        run = 1; for (b = 1; b <= size; b++){ if (b < size && row[b] === row[b - 1]) run++; else { if (run >= 5) s += 3 + run - 5; run = 1; } }
+        var str = row.map(function(c){ return c ? "1" : "0"; }).join(""), pats = ["10111010000", "00001011101"];
+        pats.forEach(function(pt){ var i = str.indexOf(pt); while (i > -1){ s += 40; i = str.indexOf(pt, i + 1); } }); } return s; }
+      p += line(function(a, b){ return m[a][b]; }) + line(function(a, b){ return m[b][a]; });
+      for (y = 0; y < size - 1; y++) for (x = 0; x < size - 1; x++){ var c = m[y][x]; if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) p += 3; }
+      for (y = 0; y < size; y++) for (x = 0; x < size; x++) if (m[y][x]) dark++;
+      p += Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size)) * 10; return p; }
+    var best = 0, bestP = Infinity;
+    for (var mk = 0; mk < 8; mk++){ applyMask(mk); format(mk); var pp = penalty(); if (pp < bestP){ bestP = pp; best = mk; } applyMask(mk); }
+    applyMask(best); format(best);
+    return {size:size, version:v, ecl:ecl, mask:best, get:function(x, y){ return x >= 0 && y >= 0 && x < size && y < size && m[y][x]; }}; }
+  /* SVG път: всеки тъмен модул като квадрат 1×1, с бяло поле от quiet модула */
+  function svgPath(q, quiet){ quiet = quiet == null ? 4 : quiet; var d = "";
+    for (var y = 0; y < q.size; y++) for (var x = 0; x < q.size; x++) if (q.get(x, y)) d += "M" + (x + quiet) + " " + (y + quiet) + "h1v1h-1z"; return d; }
+  return {make:make, svgPath:svgPath};
+})();
+/*QR-END*/
+</script>
+<script>
+(function(){
+var ic = A.ic, esc = A.esc, st = A.st;
+A.liveHash = true;
+var body = A.mount({section:"qr", title:"QR генератор",
+  sub:"Етикет с QR код за всяка маса. Кодът води към „/masa/код/“: гостът вижда масата и менюто без вход. Кодът е случаен, за да не се отгатне друга маса.",
+  actions:'<button class="pill pill-red" type="button" data-print>' + ic("qr-code",20) + '<span data-printlbl>Печат</span></button>',
+  states:[["","Обичайно"],["loading","Зареждане"],["empty","Няма маси"],["error","Грешка"],["offline","Без връзка"]]});
+if (!body) return;
+
+/* ---------- масите: един източник с „Залата и масите“ (sa-tables), иначе условните SC.TABLES ---------- */
+function tablesState(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
+  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; }
+var T = (st === "empty" ? [] : tablesState().tables.filter(function(t){ return !t.off; })).slice().sort(function(a, b){ return a.n - b.n; });
+var ZN = {salon:"Салон", garden:"Градина"};
+
+/* ---------- кодовете (sa-qr): случайни, 8 знака без лесни за бъркане (0/o, 1/l/i) ---------- */
+var ABC = "23456789abcdefghjkmnpqrstuvwxyz";
+function newCode(){ var s = "", a = new Uint32Array(8); try{ crypto.getRandomValues(a); }catch(e){ for (var i = 0; i < 8; i++) a[i] = Math.floor(Math.random() * 1e9); } for (var j = 0; j < 8; j++) s += ABC[a[j] % ABC.length]; return s; }
+var Q = A.data.get("qr", {base:"https://siracusa-sofia.com", codes:{}, printed:{}});
+var dirty = false; T.forEach(function(t){ if (!Q.codes[t.id]){ Q.codes[t.id] = newCode(); dirty = true; } });
+function save(){ A.data.set("qr", Q); }
+if (dirty && st !== "empty") save();
+function url(t){ return Q.base.replace(/\/+$/, "") + "/masa/" + Q.codes[t.id] + "/"; }
+function shortUrl(t){ return url(t).replace(/^https?:\/\//, "").replace(/\/$/, ""); }
+
+/* ---------- етикетът: SVG 105 × 74,25 мм (×10), един и същ на екрана, в печата и в изтеглянето ---------- */
+var qcache = {};
+function qrOf(t){ var u = url(t); if (!qcache[u]) qcache[u] = QR.make(u, "Q"); return qcache[u]; }
+function labelSVG(t, opt){ opt = opt || {}; var q = qrOf(t), n = q.size + 8, S = 430, x0 = 1050 - 64 - S, y0 = 70;
+  var big = String(t.n).length > 1 ? 250 : 270;
+  return '<svg viewBox="0 0 1050 742" role="img" aria-label="Етикет: Маса ' + t.n + ', ' + ZN[t.zone] + '. QR код към ' + esc(shortUrl(t)) + '"' + (opt.inline ? ' xmlns="http://www.w3.org/2000/svg"' : '') + '>' +
+    '<rect class="bg" x="0" y="0" width="1050" height="742" rx="' + (opt.print ? 0 : 36) + '"' + (opt.inline ? ' fill="' + opt.bg + '"' : '') + '/>' +
+    '<text class="ink" x="70" y="138" font-size="66" font-weight="800" letter-spacing="-3"' + (opt.inline ? ' fill="' + opt.ink + '" font-family="Manrope, sans-serif"' : '') + '>Siracusa</text>' +
+    '<text class="mute" x="72" y="186" font-size="30" font-weight="700"' + (opt.inline ? ' fill="' + opt.mute + '" font-family="Manrope, sans-serif"' : '') + '>Bar &amp; Grill</text>' +
+    '<line class="rule" x1="70" y1="236" x2="' + (x0 - 40) + '" y2="236"' + (opt.inline ? ' stroke="' + opt.mute + '" stroke-width="2"' : '') + '/>' +
+    '<text class="mute" x="70" y="318" font-size="40" font-weight="700"' + (opt.inline ? ' fill="' + opt.mute + '" font-family="Manrope, sans-serif"' : '') + '>Маса</text>' +
+    '<text class="ink" x="58" y="' + (318 + big - 22) + '" font-size="' + big + '" font-weight="800" letter-spacing="-12"' + (opt.inline ? ' fill="' + opt.ink + '" font-family="Manrope, sans-serif"' : '') + '>' + t.n + '</text>' +
+    '<text class="ink" x="72" y="' + (318 + big + 46) + '" font-size="40" font-weight="700"' + (opt.inline ? ' fill="' + opt.ink + '" font-family="Manrope, sans-serif"' : '') + '>' + ZN[t.zone] + '</text>' +
+    '<text class="ink" x="70" y="684" font-size="36" font-weight="800"' + (opt.inline ? ' fill="' + opt.ink + '" font-family="Manrope, sans-serif"' : '') + '>Сканирайте за меню и повикване</text>' +
+    '<svg x="' + x0 + '" y="' + y0 + '" width="' + S + '" height="' + S + '" viewBox="0 0 ' + n + ' ' + n + '" shape-rendering="crispEdges">' +
+      '<rect class="bg" width="' + n + '" height="' + n + '"' + (opt.inline ? ' fill="' + opt.bg + '"' : '') + '/><path class="ink" d="' + QR.svgPath(q, 4) + '"' + (opt.inline ? ' fill="' + opt.ink + '"' : '') + '/></svg>' +
+    '<text class="mute mono" x="' + (x0 + S / 2) + '" y="' + (y0 + S + 34) + '" font-size="25" font-weight="600" text-anchor="middle"' + (opt.inline ? ' fill="' + opt.mute + '" font-family="monospace"' : '') + '>' + esc(shortUrl(t)) + '</text>' +
+  '</svg>'; }
+
+/* ---------- състояние на екрана ---------- */
+var sel = {}; T.forEach(function(t){ sel[t.id] = true; });
+var cur = T.filter(function(t){ return t.id === A.hash.t; })[0] || T.filter(function(t){ return t.n === 12; })[0] || T[0];
+var fresh = {}; /* кодове, сменени в тази сесия: „нов, отпечатайте“ */
+function selected(){ return T.filter(function(t){ return sel[t.id]; }); }
+function pagesOf(list){ var p = []; for (var i = 0; i < list.length; i += 8) p.push(list.slice(i, i + 8)); return p; }
+
+function draw(){
+  if (st === "loading"){ body.innerHTML = A.skel(4, "Зареждаме масите …"); return; }
+  if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим масите и кодовете. Отпечатаните етикети продължават да работят."); return; }
+  if (!T.length){ body.innerHTML = '<div class="sa-card">' + A.empty({icon:"qr-code", title:"Още няма маси.", text:"Добавете масите в „Залата и масите“. Всяка нова маса получава свой код тук.", action:'<a class="pill pill-red pill-lg" href="hall.html">' + ic("chair",22) + 'Към залата и масите</a>'}) + '</div>'; return; }
+  var q = qrOf(cur), sl = selected(), pg = pagesOf(sl);
+  body.innerHTML = (st === "offline" ? A.offline("Етикетите се рисуват и печатат и без връзка. Нов код се записва, щом връзката се върне.") + '<div style="height:16px"></div>' : '') +
+  '<div class="qr-top">' +
+    '<section class="qr-prev" data-edit-id="admin.qr.preview" aria-labelledby="qr-ph"><h2 class="vh" id="qr-ph">Преглед на етикета</h2>' +
+      '<div class="qr-pick"><label class="vh" for="qr-t">Маса</label><select class="input" id="qr-t" data-pick>' + T.map(function(t){ return '<option value="' + t.id + '"' + (t.id === cur.id ? ' selected' : '') + '>Маса ' + t.n + ' · ' + ZN[t.zone] + '</option>'; }).join("") + '</select>' +
+        '<button class="pill pill-line" type="button" data-step="-1">' + ic("caret-left",20) + 'Предишна</button><button class="pill pill-line" type="button" data-step="1">Следваща' + ic("caret-right",20) + '</button></div>' +
+      '<div class="qr-stage"><div class="qrl" data-label>' + labelSVG(cur) + '</div></div>' +
+      '<div class="qr-url">' + ic("globe",20) + '<code data-url>' + esc(url(cur)) + '</code><button class="pill pill-soft" type="button" data-copy>' + ic("copy",20) + 'Копирай</button></div>' +
+      '<div class="qr-tech" aria-label="Технически данни на кода"><span class="sa-tag">' + ic("qr-code",16) + 'Версия ' + q.version + ' · ' + q.size + ' × ' + q.size + ' модула</span><span class="sa-tag">' + ic("shield-check",16) + 'Корекция Q: чете се и с 25% повреда</span><span class="sa-tag">Маска ' + q.mask + '</span></div>' +
+      '<div class="qr-acts"><a class="pill pill-line" href="../pages-masa/welcome.html" target="_blank" rel="noopener">' + ic("arrow-up-right",20) + 'Отвори като гост</a><button class="pill pill-line" type="button" data-svg>' + ic("export",20) + 'Изтегли SVG</button><button class="pill pill-line" type="button" data-regen="' + cur.id + '">' + ic("arrow-clockwise",20) + 'Нов код</button></div>' +
+      '<p class="qr-note">' + ic("info",20) + '<span>Логото: ' + A.missing("ново лого") + '. Дотогава етикетът е с текстовия знак „Siracusa“. Масите са условни: ' + A.missing("истински маси и план") + '.</span></p>' +
+    '</section>' +
+    '<section aria-labelledby="qr-lh" data-edit-id="admin.qr.list">' +
+      '<div class="qr-bar"><h2 class="vh" id="qr-lh">Маси за печат</h2><span class="grow" style="font-weight:800" aria-live="polite" data-cnt>' + selCount() + '</span>' +
+        '<button class="pill pill-soft" type="button" data-all>' + ic("check",20) + 'Всички</button><button class="pill pill-soft" type="button" data-none>' + ic("x",20) + 'Нито една</button></div>' +
+      '<div class="qr-list">' + ["salon","garden"].map(function(z){ var L = T.filter(function(t){ return t.zone === z; }); if (!L.length) return "";
+        return '<div class="qr-zone"><header><h3>' + ic(z === "salon" ? "chair" : "tree",20) + ZN[z] + '</h3><small>' + A.plural(L.length, "маса", "маси") + '</small>' +
+          '<button class="pill pill-soft" type="button" data-zsel="' + z + '">Избери ' + (z === "salon" ? "салона" : "градината") + '</button></header>' +
+          L.map(function(t){ return '<div class="qr-row"' + (t.id === cur.id ? ' aria-current="true"' : '') + '>' +
+            '<label class="sa-check"><input type="checkbox" data-sel="' + t.id + '"' + (sel[t.id] ? ' checked' : '') + ' aria-label="Маса ' + t.n + ' за печат"><span class="bx">' + ic("check",18) + '</span></label>' +
+            '<button class="qr-show" type="button" data-show="' + t.id + '"' + (t.id === cur.id ? ' aria-pressed="true"' : ' aria-pressed="false"') + '><span class="no" aria-hidden="true">' + t.n + '</span><span class="tx"><b>Маса ' + t.n + '</b><code>/masa/' + esc(Q.codes[t.id]) + '/</code>' + (fresh[t.id] ? '<span class="tag-new">Нов код: отпечатайте етикета</span>' : '') + '</span>' +
+            '<span class="qr-go">' + ic(t.id === cur.id ? "check" : "eye",20) + '<span class="w">' + (t.id === cur.id ? 'На екрана' : 'Покажи') + '</span></span></button></div>'; }).join("") + '</div>'; }).join("") + '</div>' +
+    '</section>' +
+  '</div>' +
+  '<div class="sa-sh"><h2>Листове за печат</h2><p>A4, 8 етикета на лист (2 × 4, по 105 × 74 мм), с линии за рязане.</p></div>' +
+  (sl.length ? '<div class="qr-sheets">' + pg.map(function(p, i){ return '<div><div class="qr-a4" aria-hidden="true">' + [0,1,2,3,4,5,6,7].map(function(k){ var t = p[k];
+      return t ? '<div class="cell"><b>' + t.n + '</b><i style="--qrm:url(\'data:image/svg+xml,' + encodeURIComponent(miniQR(t)) + '\') center/contain no-repeat"></i></div>' : '<div class="cell vac"></div>'; }).join("") + '</div>' +
+      '<p class="qr-a4cap">Лист ' + (i + 1) + ' от ' + pg.length + ' · маси ' + p.map(function(t){ return t.n; }).join(", ") + '</p></div>'; }).join("") + '</div>'
+    : '<div class="sa-card">' + A.empty({icon:"qr-code", title:"Не сте избрали маси за печат.", text:"Отметнете масите в списъка или натиснете „Всички“."}) + '</div>');
+  syncPrint(); }
+function miniQR(t){ var q = qrOf(t), n = q.size + 8; return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" shape-rendering="crispEdges"><path d="' + QR.svgPath(q, 4) + '"/></svg>'; }
+function selCount(){ var n = selected().length, p = Math.ceil(n / 8); return n ? A.plural(n, "етикет", "етикета") + ' · ' + A.plural(p, "лист", "листа") + ' A4' : 'Няма избрани маси'; }
+function syncPrint(){ var n = selected().length, b = A.app.querySelector("[data-printlbl]"); if (b) b.textContent = n ? "Печат · " + A.plural(n, "етикет", "етикета") : "Печат";
+  var pb = A.app.querySelector("[data-print]"); if (pb) pb.disabled = !n || !T.length || st === "error" || st === "loading"; }
+draw();
+
+/* ---------- печат: само токените; за печата темата е светла ---------- */
+function buildPrint(){ var old = document.getElementById("qr-print"); if (old) old.remove();
+  var div = document.createElement("div"); div.id = "qr-print"; div.setAttribute("aria-hidden", "true");
+  div.innerHTML = pagesOf(selected()).map(function(p){ return '<div class="pg">' + p.map(function(t){ return '<div class="qrl">' + labelSVG(t, {print:true}) + '</div>'; }).join("") + '</div>'; }).join("");
+  document.body.appendChild(div); }
+var themeBefore = null;
+window.addEventListener("beforeprint", function(){ buildPrint(); themeBefore = document.documentElement.getAttribute("data-theme"); document.documentElement.setAttribute("data-theme", "light"); });
+window.addEventListener("afterprint", function(){ if (themeBefore) document.documentElement.setAttribute("data-theme", themeBefore); else document.documentElement.removeAttribute("data-theme"); });
+
+function setCur(id){ cur = T.filter(function(t){ return t.id === id; })[0] || cur; A.setHash(Object.assign({}, A.hash, {t:cur.id})); var y = A.scroller.scrollTop; draw(); A.scroller.scrollTop = y; }
+function regen(id){ var t = T.filter(function(x){ return x.id === id; })[0], old = Q.codes[id];
+  A.confirm({title:"Нов код за маса " + t.n + "?", text:"Старият етикет на маса " + t.n + " спира да работи веднага: гостите ще видят „Този код вече не работи“ и ще повикат сервитьора. Отпечатайте новия етикет и го сменете на масата.", ok:"Смени кода", danger:true, icon:"arrow-clockwise"}, function(){
+    Q.codes[id] = newCode(); fresh[id] = true; save(); draw();
+    A.audit("qr.regenerate", "Нов QR код за „Маса " + t.n + "“: /masa/" + old + "/ → /masa/" + Q.codes[id] + "/", id);
+    A.toast("Нов код за маса " + t.n + ". Старият етикет вече не работи.", {undo:function(){ Q.codes[id] = old; delete fresh[id]; save(); draw(); A.audit("qr.regenerate", "Върнат старият QR код за „Маса " + t.n + "“", id); }}); }); }
+
+document.addEventListener("change", function(e){ var t = e.target;
+  if (t.matches("[data-pick]")){ setCur(t.value); return; }
+  if (t.matches("[data-sel]")){ sel[t.dataset.sel] = t.checked; var c = A.app.querySelector("[data-cnt]"); if (c) c.textContent = selCount(); var y = A.scroller.scrollTop; draw(); A.scroller.scrollTop = y; var el = A.app.querySelector('[data-sel="' + t.dataset.sel + '"]'); el && el.focus({preventScroll:true}); }
+});
+document.addEventListener("click", function(e){ var t;
+  if (e.target.closest(".sa-check")) return;
+  if ((t = e.target.closest("[data-show]"))){ setCur(t.dataset.show);
+    /* на телефон прегледът е над списъка: показваме го */
+    var pv = A.app.querySelector(".qr-stage"), r = pv && pv.getBoundingClientRect(); if (r && (r.bottom < 80 || r.top > A.scroller.clientHeight)) pv.scrollIntoView({behavior:SC.reduce ? "auto" : "smooth", block:"center"}); return; }
+  if ((t = e.target.closest("[data-step]"))){ var i = T.indexOf(cur) + +t.dataset.step; setCur(T[(i + T.length) % T.length].id); return; }
+  if ((t = e.target.closest("[data-regen]"))){ regen(t.dataset.regen); return; }
+  if (e.target.closest("[data-all]") || e.target.closest("[data-none]")){ var on = !!e.target.closest("[data-all]"); T.forEach(function(x){ sel[x.id] = on; }); draw(); return; }
+  if ((t = e.target.closest("[data-zsel]"))){ T.forEach(function(x){ sel[x.id] = x.zone === t.dataset.zsel; }); draw(); A.toast("Избрани: " + (t.dataset.zsel === "salon" ? "салонът" : "градината")); return; }
+  if (e.target.closest("[data-copy]")){ var u = url(cur); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function(){ A.toast("Адресът е копиран"); }, function(){ A.toast("Копирайте адреса ръчно: " + u); }); return; }
+  if (e.target.closest("[data-svg]")){
+    /* стойностите на токените се четат от етикета на страницата: файлът носи същите цветове */
+    var lab = A.app.querySelector("[data-label]");
+    var svg = labelSVG(cur, {inline:true, bg:resolve("--lab-bg", lab), ink:resolve("--lab-ink", lab), mute:resolve("--lab-mute", lab)});
+    A.download("siracusa-masa-" + cur.n + ".svg", '<?xml version="1.0" encoding="UTF-8"?>\n' + svg, "image/svg+xml"); A.toast("Изтеглен етикет: Маса " + cur.n); return; }
+  if (e.target.closest("[data-print]")){ if (!selected().length) return; A.audit("qr.print", "Печат на QR етикети: " + A.plural(selected().length, "маса", "маси") + " (" + selected().map(function(x){ return x.n; }).join(", ") + ")");
+    buildPrint(); window.print(); return; }
+});
+function resolve(v, el){ var p = document.createElement("span"); p.style.color = "var(" + v + ")"; el.appendChild(p); var c = getComputedStyle(p).color; p.remove(); return c; }
+})();
+</script>
+</body>
+</html>
