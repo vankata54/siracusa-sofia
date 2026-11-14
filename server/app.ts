@@ -222,7 +222,8 @@ export function createApp(opts: AppOpts) {
   const limit = (key: string, max: number, minutes: number, msg: string): (() => void) => {
     if (opts.previewApi) return () => {};
     const now = Date.now(), list = (hits.get(key) || []).filter((t) => t > now - minutes * 60_000);
-    if (list.length >= max) { hits.set(key, list); throw new CoreError("throttled", msg, 429); }
+    /* retryIn: the seconds until the oldest hit leaves the window (the page locks its button exactly that long) */
+    if (list.length >= max) { hits.set(key, list); throw Object.assign(new CoreError("throttled", msg, 429), { retryIn: Math.max(1, Math.ceil((list[0] + minutes * 60_000 - now) / 1000)) }); }
     list.push(now); hits.set(key, list);
     return () => { const i = list.lastIndexOf(now); if (i > -1) list.splice(i, 1); };
   };
@@ -242,7 +243,7 @@ export function createApp(opts: AppOpts) {
   });
   app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "", c.req.query("except") || undefined, c.req.query("k") || undefined)));
   app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
-  app.post("/api/reservations/:id/cancel", async (c) => c.json(await core.reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
+  app.post("/api/reservations/:id/cancel", async (c) => c.json(await coreFor(c).reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
   app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(await core.reservations.list()); });
   app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
   app.post("/api/celebrations", async (c) => { limit("celeb-ip:" + ip(c), 5, 10, TRY_LATER(10)); return c.json(await core.celebrations.create(await body(c)), 201); });

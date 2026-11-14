@@ -121,7 +121,11 @@ describe("server API (in-memory SQLite)", async () => {
     for (let i = 0; i < 6; i++) last = (await post("/api/reservations", res("0888555444"), "1.1.1." + i)).status;
     expect(last).toBe(429);
     const r = await post("/api/reservations", res("0888555444"), "1.1.2.1");
-    expect(await r.json()).toMatchObject({ error: "throttled" });
+    const rj = await r.json();
+    expect(rj).toMatchObject({ error: "throttled" });
+    /* the seconds until the limit is over (the phone limit: 60 min), so the page locks its button exactly that long */
+    expect(rj.retryIn).toBeGreaterThan(3500);
+    expect(rj.retryIn).toBeLessThanOrEqual(3600);
     for (let i = 0; i < 11; i++) last = (await post("/api/reservations", res("08887770" + String(i).padStart(2, "0")), "2.2.2.2")).status;
     expect(last).toBe(429);
     for (let i = 0; i < 11; i++) last = (await post("/api/subscribe", { email: "a" + i + "@b.bg", consent: true }, "3.3.3.3")).status;

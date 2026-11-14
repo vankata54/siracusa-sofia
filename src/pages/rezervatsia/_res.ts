@@ -12,9 +12,9 @@ import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
 import { TABLES } from "../../lib/tables.ts";
 import type { Reservation } from "../../client/api-types.ts";
-import { callBtn, stepperHTML, pvChip, pvToggle, previewPanel, PV, BACK, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
+import { callBtn, stepperHTML, pvToggle, previewPanel, PV, BACK, MKT_TITLE, MKT_SUB, OFFLINE } from "../../lib/ui.ts";
 /* the icons this script draws in one module (sc.ts has x, check, caret-right, phone, question; scripts/icon-groups.mjs) */
-import "sc-icons:arrow-left,arrow-right,arrow-up-right,baby,bell,briefcase,cake,calendar-blank,calendar-check,caret-down,caret-left,chair,chat-circle-dots,clock,confetti,fork-knife,gift,heart,image,info,list-bullets,lock,map-pin,map-trifold,mask-happy,minus,pencil-simple,plus,sliders-horizontal,sun,thermometer,timer,tree,users,users-three,wallet,warning,warning-circle,wheelchair";
+import "sc-icons:arrow-left,arrow-right,arrow-up-right,baby,bell,briefcase,cake,calendar-blank,calendar-check,caret-down,caret-left,chair,chat-circle-dots,clock,confetti,fork-knife,gift,heart,image,info,list-bullets,lock,map-pin,map-trifold,mask-happy,minus,pencil-simple,plus,sliders-horizontal,sun,thermometer,tree,users,users-three,wallet,warning,warning-circle,wheelchair";
 
 type Zone = "salon" | "garden";
 type View = "flow" | "done" | "manage";
@@ -26,7 +26,6 @@ interface Draft { name: string; phone: string; email: string; occ: string; note:
 export function start(): void {
   const { ic, esc } = SC;
   const R = SC.RESTAURANT;
-  const TEL = "tel:" + R.phoneIntl;
   const MONTHS = SC.MONTHS, MON = SC.MON, DAYS = SC.DAYS;
   const main = SC.mount();
   const flowEl = document.querySelector<HTMLElement>("[data-flow]")!;
@@ -120,9 +119,9 @@ export function start(): void {
   /* ---------- state ---------- */
   const st = {
     view: "flow" as View, step: 1, date: null as Date | null, month: MIN_M, slot: null as number | null, period: "eve", n: 2, zone: "salon" as Zone,
-    sel: null as string | null, hold: 0, expired: false, list: false, need: {} as Record<string, boolean>,
+    sel: null as string | null, list: false, need: {} as Record<string, boolean>,
     f: { name: "", phone: "", email: "", occ: "", note: "", consent: false } as Draft, err: {} as Record<string, string>,
-    busy: false, fail: null as null | "offline" | "error", failText: null as string | null, failCall: false, blocked: false, msg: null as string | null, released: null as string | null,
+    busy: false, fail: null as null | "offline" | "error", failText: null as string | null, throttleUntil: 0, blocked: false, msg: null as string | null, released: null as string | null,
     anim: true, changing: null as Booking | null, booking: null as Booking | null,
     manage: null as null | { b: Booking; late: boolean; cancelled: boolean; was?: boolean; past?: boolean; busy?: boolean; err?: string }, confirmCancel: false, mload: false,
     proto: { offline: false, fail: false, eventFull: false }, protoOpen: false,
@@ -150,12 +149,19 @@ export function start(): void {
     if (!quiet) { try { history.replaceState(null, "", "#" + ymd(d)); } catch { /* ignore */ } }
   }
   function fromHash(): boolean {
-    const h = decodeURIComponent((location.hash || "").slice(1));
+    let h = (location.hash || "").slice(1);
+    try { h = decodeURIComponent(h); } catch { /* a broken %-sequence: read as it is */ }
     if (h === "manage") { openManage(false); return true; }
     if (h === "manage-late" && SC.preview) { openManage(true); return true; }
-    const link = /^r-([0-9a-f]+)-([0-9a-f]+)$/i.exec(h); /* the link in the SMS: #r-<id>-<key> */
-    if (link) { openLink(link[1], link[2]); return true; }
+    /* the link in the SMS: #r-<id>-<key>. Copied from an SMS it often ends with a dot, a bracket or a quote: those go */
+    if (/^r-/i.test(h)) h = h.replace(/[^0-9a-z]+$/i, "");
+    const link = /^r-([0-9a-f]+)-([0-9a-f]+)$/i.exec(h);
+    if (link) {
+      if ("#" + h !== location.hash) { try { history.replaceState(null, "", "#" + h); } catch { /* ignore */ } }
+      openLink(link[1], link[2]); return true;
+    }
     if (/^r-[0-9a-f]+-?$/i.test(h)) { st.msg = "Връзката е непълна: липсва краят ѝ. Отворете цялата връзка от SMS-а или се обадете на " + R.phone + "."; return false; }
+    if (/^r-/i.test(h)) { st.msg = "Връзката е повредена. Отворете я пак от SMS-а или се обадете на " + R.phone + "."; return false; }
     const d = parseYmd(h); if (!h) return false;
     if (!d) { st.msg = "Не разпознахме датата в адреса. Изберете ден от календара."; return false; }
     if (d < TODAY) { st.msg = "Датата " + d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : "") + " вече мина. Изберете друг ден."; return false; }
@@ -166,7 +172,8 @@ export function start(): void {
     return true;
   }
 
-  /* ---------- selection & hold (10 min, on this page) ---------- */
+  /* ---------- selection: the core keeps a table only for a real booking, so the page promises no hold. A table another
+     guest books meanwhile comes back as 409 "taken" on sending, and step 2 offers another one. ---------- */
   const tById = (id: string) => TABLES.filter((t) => t.id === id)[0];
   function selInfo(): SelInfo | null {
     if (!st.sel) return null;
@@ -183,26 +190,18 @@ export function start(): void {
     return f;
   }
   function featShort(t: Table): string[] { const f: string[] = []; if (t.window) f.push("до прозореца"); if (t.stroller) f.push("детска количка"); if (t.access) f.push("достъпна"); return f; }
-  function pick(id: string): void {
-    st.sel = id; st.hold = Date.now() + 600000; st.expired = false; st.released = null;
-    const s = selInfo()!; SC.haptic(); SC.toast(s.label + " е задържана за вас за 10 минути"); render();
-  }
+  /* the choice itself is quiet: the table turns red and the card under the plan says it (aria-live), no toast */
+  function pick(id: string): void { st.sel = id; st.released = null; SC.haptic(); render(); }
   function releaseIfNeeded(): void {
-    if (st.sel) { const s = selInfo()!; st.released = s.label + " е освободена, защото сменихте " + (st.step === 1 ? "деня, часа или броя хора" : "избора") + "."; st.sel = null; st.hold = 0; st.expired = false; }
+    if (st.sel) { const s = selInfo()!; st.released = s.label + " вече не е избрана, защото сменихте деня, часа или броя хора."; st.sel = null; }
   }
-  const holdLeft = () => Math.max(0, Math.ceil((st.hold - Date.now()) / 1000));
-  const holdTxt = () => { const s = holdLeft(); return Math.floor(s / 60) + ":" + pad(s % 60); };
-  function holdChip(): string {
-    if (!st.sel || st.expired) return "";
-    return '<p class="hold' + (holdLeft() < 60 ? " urgent" : "") + '" data-holdchip>' + ic("timer", 20) + '<span>Масата е задържана за <b data-hold>' + holdTxt() + "</b> мин</span></p>";
-  }
-  setInterval(() => {
-    if (!st.sel || st.expired || st.view !== "flow") return;
-    if (holdLeft() <= 0) { st.expired = true; render(); return; }
-    const t = holdTxt();
-    document.querySelectorAll("[data-hold]").forEach((el) => { el.textContent = t; });
-    document.querySelectorAll("[data-holdchip]").forEach((el) => el.classList.toggle("urgent", holdLeft() < 60));
-  }, 1000);
+  /* 429: the limits of the core (10 per IP in 10 min, 5 per phone in an hour, DECISIONS 12.11). While one lasts the main
+     action is the phone and nothing is sent again; the server gives no time, so the longest window (1 hour) counts. */
+  const throttled = () => st.throttleUntil > Date.now();
+  const throttle = (sec?: number) => { st.throttleUntil = Date.now() + (sec && sec > 0 ? sec * 1000 : 3600_000); };
+  /* a phone number in a sentence never breaks between lines (.nw); the text is escaped first */
+  const nwTel = (txt: string) => esc(txt).replace(/\+?\d{3,4}(?: \d{2,3}){2,3}/g, (x) => '<span class="nw">' + x + "</span>");
+  const PH = '<span class="nw">' + R.phone + "</span>";
 
   /* ---------- validation ---------- */
   function validate(): Record<string, string> {
@@ -274,7 +273,7 @@ export function start(): void {
   /* an error under a step-1 question (own check or fields.date / time / people from the core) */
   const qErr = (k: string) => (st.err[k] ? '<p class="err qerr" role="alert" id="e-' + k + '">' + esc(st.err[k]) + "</p>" : "");
   function step1(): string {
-    return '<div class="s1"><div class="q" id="q-day"><h2 class="qh" tabindex="-1" data-h>Кой ден?</h2>' + (st.msg ? '<p class="note" role="alert" style="margin:0 0 12px">' + ic("info", 20) + "<span>" + esc(st.msg) + "</span></p>" : "") + cal() + qErr("date") + "</div>" +
+    return '<div class="s1"><div class="q" id="q-day"><h2 class="qh" tabindex="-1" data-h>Кой ден?</h2>' + (st.msg ? '<p class="note" role="alert" style="margin:0 0 12px">' + ic("info", 20) + "<span>" + nwTel(st.msg) + "</span></p>" : "") + cal() + qErr("date") + "</div>" +
       '<div class="qcol"><div class="q" id="q-time"><h2 class="qh">В колко часа?</h2>' + times() + qErr("slot") + '</div><div class="q" id="q-ppl">' + people() + qErr("people") + "</div></div></div>";
   }
 
@@ -282,8 +281,15 @@ export function start(): void {
   const needOk = (t: Table) => { const n = st.need; return (!n.access || t.access) && (!n.stroller || t.stroller) && (!n.window || t.window); };
   function tState(t: Table): string { if (st.sel === t.id) return "sel"; if (isTaken(t, st.date!, st.slot!)) return "taken"; if (!suits(t, st.n) || !needOk(t)) return "unfit"; return "free"; }
   const tLabel = (t: Table, s: string) => (s === "taken" ? "заета" : s === "sel" ? "избрана" : t.seats + " места");
-  /* the name starts with the visible text (number + label under it), then the details (axe "Label in Name") */
-  const tAria = (t: Table, s: string) => t.n + " " + tLabel(t, s) + ". " + (s === "free" ? "Свободна маса за " + t.seats : s === "sel" ? "Маса за " + t.seats : s === "taken" ? "Маса за " + t.seats : "Не е подходяща за " + ppl(st.n)) + (featShort(t).length ? ", " + featShort(t).join(", ") : "");
+  /* the name starts with "Маса" and holds the visible text in order (number, then the word under it), so a screen reader
+     says "Маса 1, 2 места" and axe "Label in Name" still finds "1 2 места" (punctuation is ignored there) */
+  const tAria = (t: Table, s: string) => {
+    const fs = featShort(t).length ? ", " + featShort(t).join(", ") : "";
+    if (s === "free") return "Маса " + t.n + ", " + tLabel(t, s) + ". Свободна" + fs;
+    if (s === "sel") return "Маса " + t.n + ", избрана. За " + ppl(t.seats) + fs;
+    if (s === "taken") return "Маса " + t.n + ", заета. За " + ppl(t.seats);
+    return "Маса " + t.n + ", " + tLabel(t, s) + ". Не е подходяща за " + ppl(st.n);
+  };
   function shape(t: Table, cx: number, cy: number): string {
     let s = "";
     if (t.shape === "round") s += '<rect class="ch" x="' + (cx - 40) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><rect class="ch" x="' + (cx + 30) + '" y="' + (cy - 11) + '" width="10" height="22" rx="4"/><circle class="top" cx="' + cx + '" cy="' + cy + '" r="25"/>';
@@ -337,8 +343,6 @@ export function start(): void {
   function selCard(): string {
     const s = selInfo(); if (!s) return "";
     let body = '<div class="selrow"><span class="tno on" aria-hidden="true">' + (s.joined ? ic("users-three", 24) : s.t!.n) + "</span><div><b>" + s.label + " · " + s.seats + " места · " + zoneName(s.zone) + "</b><p>" + (s.joined ? "Ще подредим масите преди да дойдете." : (featShort(s.t!).length ? cap(featShort(s.t!).join(" · ")) : "Друга маса? Докоснете я на картата.")) + "</p></div></div>";
-    if (st.expired) body += '<div class="alert warn" role="alert">' + ic("timer", 22) + "<div><b>Задържането изтече</b><p>" + s.label + ' още е свободна. Задръжте я пак, за да не я вземе друг.</p><div class="acts"><button class="pill pill-red" type="button" data-rehold data-fk="rh">' + ic("timer", 20) + "Задръж я пак за 10 мин</button></div></div></div>";
-    else body += holdChip();
     return '<div class="shell selc" aria-live="polite"><div class="core">' + body + "</div></div>";
   }
 
@@ -391,9 +395,8 @@ export function start(): void {
   function step3(): string {
     const s = selInfo()!;
     let h = '<div class="rc"><div class="shell"><div class="core"><span class="li">' + ic("calendar-blank", 20) + fShort(st.date!) + " · " + hm(st.slot!) + '</span><span class="li">' + ic("users", 20) + ppl(st.n) + '</span><span class="li">' + ic("chair", 20) + s.label + " · " + zoneName(s.zone) + "</span>" +
-      (st.expired ? "" : holdChip()) + '<div class="acts"><button class="link" type="button" data-go="1" data-fk="rc1">Промени часа</button><button class="link" type="button" data-go="2" data-fk="rc2">Смени масата</button></div></div></div></div>';
-    if (st.expired) h += '<div class="alert warn" role="alert" style="margin-top:14px">' + ic("timer", 22) + "<div><b>Задържането изтече</b><p>" + s.label + ' още е свободна. Задръжте я пак и довършете резервацията.</p><div class="acts"><button class="pill pill-red" type="button" data-rehold data-fk="rh">' + ic("timer", 20) + "Задръж я пак за 10 мин</button></div></div></div>";
-    if (st.blocked) return h + '<div class="alert" role="alert" data-blocked style="margin-top:20px">' + ic("phone", 22) + '<div><b tabindex="-1" data-h>Тази резервация ще уредим по телефона</b><p>За номера ' + esc(st.f.phone) + " не можем да потвърдим резервация онлайн. Обадете ни се на " + R.phone + ' и ще намерим маса заедно.</p><div class="acts"><button class="pill pill-line" type="button" data-unblock data-fk="ub">' + ic("pencil-simple", 20) + "Поправи номера</button></div></div></div>";
+      '<div class="acts"><button class="link" type="button" data-go="1" data-fk="rc1">Промени часа</button><button class="link" type="button" data-go="2" data-fk="rc2">Смени масата</button></div></div></div></div>';
+    if (st.blocked) return h + '<div class="alert" role="alert" data-blocked style="margin-top:20px">' + ic("phone", 22) + '<div><b tabindex="-1" data-h>Тази резервация ще уредим по телефона</b><p>За номера <span class="nw">' + esc(st.f.phone) + "</span> не можем да потвърдим резервация онлайн. Обадете ни се на " + PH + ' и ще намерим маса заедно.</p><div class="acts"><button class="pill pill-line" type="button" data-unblock data-fk="ub">' + ic("pencil-simple", 20) + "Поправи номера</button></div></div></div>";
     h += '<h2 class="h2" style="margin-top:26px" tabindex="-1" data-h>Вашите данни</h2><form class="form" novalidate data-form>';
     h += '<div class="two">' + field("name", "Име", false, inp("name", "text", 'autocomplete="name" autocapitalize="words"'), "На това име е масата.") +
       field("phone", "Телефон", false, inp("phone", "tel", 'autocomplete="tel" inputmode="tel" placeholder="0888 12 34 56"'), "Тук идва потвърждението по SMS или Viber.") + "</div>";
@@ -402,16 +405,18 @@ export function start(): void {
       (st.f.occ === "Рожден ден" || st.f.occ === "Имен ден" ? '<span class="help">Искате торта или украса?</span><a class="link" href="' + SC.url.page("celebration") + '">Празник при нас' + ic("caret-right", 18) + "</a>" : "") + "</div>";
     h += '<div class="field"><label for="f-note">Бележка <span class="opt">(по желание)</span></label><textarea class="input" id="f-note" data-f="note" data-fk="fnote" rows="3" placeholder="Например: идваме с бебе в количка">' + esc(st.f.note) + "</textarea></div>";
     h += '<div class="consent"><label class="check"><input type="checkbox" data-consent data-fk="cs"' + (st.f.consent ? " checked" : "") + '><span><b>' + MKT_TITLE + '</b><span class="muted">' + MKT_SUB + "</span></span></label></div>";
-    if (st.fail) h += '<div class="alert bad" role="alert">' + ic(st.fail === "offline" ? "warning-circle" : "warning", 22) + '<div><b tabindex="-1" data-failh>' + (st.fail === "offline" ? "Няма връзка с интернет" : "Не успяхме да запазим резервацията") + "</b><p>" + (st.fail === "offline" ? "Данните ви са запазени тук и масата остава задържана. Проверете интернета и опитайте пак." : (st.failText ? esc(st.failText) : "Масата остава задържана за вас. Опитайте пак след малко или ни се обадете на " + R.phone + ".")) + '</p><div class="acts">' +
-      /* too many tries (429): another try is refused too, so the action is the phone */
-      (st.failCall ? callBtn("pill pill-red") : '<button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-clockwise", 20) + "Опитай пак</button>") + "</div></div></div>";
+    /* too many tries (429): the notice stays while the limit lasts (also after "Назад"), the phone is the main action
+       below (bar / summary), so here it is the outlined one: one red action on the screen */
+    const thr = throttled(), fail = thr ? "error" : st.fail;
+    if (fail) h += '<div class="alert bad" role="alert">' + ic(fail === "offline" ? "warning-circle" : "warning", 22) + '<div><b tabindex="-1" data-failh>' + (fail === "offline" ? OFFLINE : "Не успяхме да запазим резервацията") + "</b><p>" + (fail === "offline" ? "Данните ви са запазени тук. Проверете интернета и опитайте пак." : (st.failText ? nwTel(st.failText) : "Опитайте пак след малко или ни се обадете на " + PH + ".")) + '</p><div class="acts">' +
+      (thr ? callBtn("pill pill-line") : '<button class="pill pill-red" type="button" data-act="next" data-fk="retry">' + ic("arrow-clockwise", 20) + "Опитай пак</button>") + "</div></div></div>";
     h += '<p class="rules">' + ic("info", 20) + "<span>Без депозит. Промяна или отказ от връзката в SMS-а: до 2 часа преди резервация след 17:00 и до 1 час преди през деня.</span></p>";
     h += '<button type="submit" class="vh" tabindex="-1">Резервирай</button></form>';
     return h;
   }
 
   /* ---------- CTA (phone bar + desktop summary) ---------- */
-  function cta(): { t: string; s: string; rehold?: boolean; tel?: boolean } {
+  function cta(): { t: string; s: string; tel?: boolean } {
     const s = selInfo();
     if (st.step === 1) {
       if (!st.date) return { t: "Избери ден", s: "Докоснете ден" };
@@ -420,17 +425,16 @@ export function start(): void {
     }
     if (st.step === 2) {
       if (!s) return { t: st.n > 6 ? "Избери зона" : "Избери маса", s: st.n > 6 ? "Салон или градина" : "Докоснете маса" };
-      if (st.expired) return { t: "Задръж " + s.label.toLowerCase() + " пак", s: "Задържането изтече", rehold: true };
-      return { t: "Попълни данните", s: s.short + ' · <span data-hold>' + holdTxt() + "</span> мин" };
+      return { t: "Попълни данните", s: s.short + " · " + zoneName(s.zone) };
     }
-    if (st.blocked) return { t: "Обади се", s: R.phone, tel: true };
-    if (st.expired && s) return { t: "Задръж " + s.label.toLowerCase() + " пак", s: "Задържането изтече", rehold: true };
+    /* a blocked number or 429: the main action is the phone (DECISIONS 12.11), never another request */
+    if (st.blocked || throttled()) return { t: "Обади се", s: R.phone, tel: true };
     return { t: "Резервирай маса за " + (st.n === 1 ? "един" : st.n), s: fTiny(st.date!) + " · " + hm(st.slot!) };
   }
   function ctaBtn(cls = ""): string {
     const c = cta(), solo = st.step === 1;
-    if (c.tel) return '<a class="pill pill-red cta ' + cls + '" href="' + TEL + '"><span class="ct"><b>' + ic("phone", 20).replace('class="ic"', 'class="ic" style="display:inline;vertical-align:-4px;margin-right:6px"') + c.t + "</b><small>" + c.s + "</small></span></a>";
-    return '<button class="pill pill-red cta ' + cls + (solo ? " solo" : "") + '" type="button" data-act="' + (c.rehold ? "rehold" : "next") + '"' + (st.busy ? ' aria-busy="true"' : "") + '><span class="ct"><b>' + c.t + "</b><small>" + (st.busy ? "Запазваме масата..." : c.s) + "</small></span>" + (st.busy ? '<span class="spin" aria-hidden="true"></span>' : (solo || cls === "wide" ? '<span class="knob">' + ic("arrow-right", 22) + "</span>" : "")) + "</button>";
+    if (c.tel) return callBtn("pill pill-red cta call " + cls);
+    return '<button class="pill pill-red cta ' + cls + (solo ? " solo" : "") + '" type="button" data-act="next"' + (st.busy ? ' aria-busy="true"' : "") + '><span class="ct"><b>' + c.t + "</b><small>" + (st.busy ? "Запазваме масата..." : c.s) + "</small></span>" + (st.busy ? '<span class="spin" aria-hidden="true"></span>' : (solo || cls === "wide" ? '<span class="knob">' + ic("arrow-right", 22) + "</span>" : "")) + "</button>";
   }
   function renderBar(): void {
     if (st.view !== "flow") { bar.hidden = true; SC.ov.classList.remove("rfocus"); return; }
@@ -442,14 +446,14 @@ export function start(): void {
     const kv = (k: string, v: string | null | false | undefined) => '<div class="kv"><span>' + k + "</span>" + (v ? "<b>" + v + "</b>" : '<b class="no">избирате</b>') + "</div>";
     return '<aside class="aside" aria-label="Вашата резервация"><div class="shell sum"><div class="core"><h2>Вашата резервация</h2>' +
       kv("Ден", st.date && fShort(st.date)) + kv("Час", st.slot != null && hm(st.slot)) + kv("Хора", ppl(st.n)) + kv("Маса", s && (s.label + " · " + zoneName(s.zone))) +
-      (st.sel && !st.expired ? holdChip() : "") + ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back" aria-label="' + BACK + ": " + STEP_N[st.step - 2] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") +
-      '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + '<a class="link" href="tel:' + R.phoneIntl + '">Обади се · <span class="nw">' + R.phone + "</span></a></li></ul></aside>";
+      ctaBtn("wide") + (st.step > 1 ? '<button class="link back flow-back" type="button" data-act="back" aria-label="' + BACK + ": " + STEP_N[st.step - 2] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") +
+      '</div></div><ul class="trust"><li>' + ic("wallet", 20) + "Без депозит</li><li>" + ic("chat-circle-dots", 20) + "Потвърждение по SMS или Viber</li><li>" + ic("phone", 20) + '<a class="link" href="tel:' + R.phoneIntl + '">Обади се · ' + PH + "</a></li></ul></aside>";
   }
 
   /* ---------- success, manage ---------- */
   function kvRows(b: Booking): string {
-    return '<div class="kv"><span>Кога</span><b>' + cap(fLong(b.date)) + ", " + hm(b.slot) + '</b></div><div class="kv"><span>Колко души</span><b>' + ppl(b.n) + '</b></div><div class="kv"><span>Маса</span><b>' + esc(b.selLabel) + "</b></div>" +
-      (b.name ? '<div class="kv"><span>На името на</span><b>' + esc(b.name) + "</b></div>" : "") + (b.phone ? '<div class="kv"><span>Телефон</span><b>' + esc(b.phone) + "</b></div>" : "") +
+    return '<div class="kv"><span>Кога</span><b>' + fShort(b.date) + ", " + hm(b.slot) + '</b></div><div class="kv"><span>Колко души</span><b>' + ppl(b.n) + '</b></div><div class="kv"><span>Маса</span><b>' + esc(b.selLabel) + "</b></div>" +
+      (b.name ? '<div class="kv"><span>На името на</span><b>' + esc(b.name) + "</b></div>" : "") + (b.phone ? '<div class="kv"><span>Телефон</span><b class="nw">' + esc(b.phone) + "</b></div>" : "") +
       (b.occ ? '<div class="kv"><span>Повод</span><b>' + esc(b.occ) + "</b></div>" : "") + (b.note ? '<div class="kv"><span>Бележка</span><b>' + esc(b.note) + "</b></div>" : "");
   }
   function calTimes(b: Booking) {
@@ -477,7 +481,7 @@ export function start(): void {
       (ev ? '<div class="evnote" style="margin-top:16px"><span class="evic">' + ic("mask-happy", 22) + "</span><div><b>Този ден е " + EV.n + "</b><p>Започва в " + EV.time + ". " + esc(EV.text) + '</p><a class="link" href="' + SC.url.event(EV.id) + '">За събитието' + ic("caret-right", 18) + "</a></div></div>" : "") +
       '<h2 class="h3" style="margin-top:36px">Какво следва</h2><ol class="nexts">' +
       '<li><span class="ni">' + ic("bell", 22) + "</span><span><b>Напомняме ви ден преди и 3 часа преди</b><p>По SMS или Viber, на същия номер.</p></span></li>" +
-      '<li><span class="ni">' + ic("pencil-simple", 22) + "</span><span><b>Промяна или отказ от връзката в SMS-а</b><p>Или от „Промени или откажи“ по-долу. До 2 часа преди резервация след 17:00 и до 1 час преди през деня. По-късно: на " + R.phone + ".</p></span></li>" +
+      '<li><span class="ni">' + ic("pencil-simple", 22) + "</span><span><b>Промяна или отказ от връзката в SMS-а</b><p>Или от „Промени или откажи“ по-долу. До 2 часа преди резервация след 17:00 и до 1 час преди през деня. По-късно: на " + PH + ".</p></span></li>" +
       '<li><span class="ni">' + ic("wallet", 22) + "</span><span><b>Без депозит</b><p>Плащате само това, което поръчате.</p></span></li></ol>" +
       '<div class="row" style="flex-wrap:wrap;gap:8px 20px;margin-top:20px"><button class="link" type="button" data-manage="ok" data-fk="mg">' + ic("pencil-simple", 20) + 'Промени или откажи</button><a class="link" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + 'Разгледай менюто</a><button class="link" type="button" data-new data-fk="nw">' + ic("plus", 20) + "Нова резервация</button></div></div></section>";
   }
@@ -555,9 +559,9 @@ export function start(): void {
       '<div class="acts"><button class="pill pill-red" type="button" data-new data-fk="nw">' + ic("calendar-blank", 20) + "Резервирай нова маса</button></div></div></div>";
     else if (M.late) h += '<div class="alert warn">' + ic("lock", 22) + "<div><b>Онлайн промяна вече не е възможна</b>" + (b.fake ? '<p class="small">(Преглед: представете си, че сега е 18:10.)</p>' : "") + "<p>До резервацията остават " + (left >= 60 ? Math.floor(left / 60) + " ч" + (left % 60 ? " " + (left % 60) + " мин" : "") : left + " мин") + ". Онлайн промяна и отказ има до " + rule + ', за да успеем да подготвим масата или да я предложим на други гости.</p><p style="color:var(--ink);font-weight:700">Обадете ни се и ще помогнем.</p><div class="acts">' + callBtnR("") + "</div></div></div>";
     else if (!b.id && !SC.preview) h += '<div class="mng"><p class="rules">' + ic("info", 20) + "<span>Тази резервация не намираме онлайн. Промяна и отказ: по телефона, до " + rule + ".</span></p>" + callBtnR("pill-lg pill-block") + "</div>";
-    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><h2 id="cfh" class="cfh" tabindex="-1" data-fk="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</h2><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + esc(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
+    else if (st.confirmCancel) h += '<div class="confirm" role="alertdialog" aria-labelledby="cfh"><h2 id="cfh" class="cfh" tabindex="-1" data-fk="cfh">Да откажем ли резервацията за ' + fShort(b.date) + ", " + hm(b.slot) + "?</h2><p>" + (b.status === "waitlist" ? "Ще ви махнем от списъка на чакащите." : "Масата ще се освободи за други гости.") + "</p>" + (M.err ? '<p class="err" role="alert">' + nwTel(M.err) + "</p>" : "") + '<div class="acts"><button class="pill pill-line pill-lg" type="button" data-cancel="yes" data-fk="cy"' + (M.busy ? ' aria-busy="true" disabled' : "") + ">" + ic("x", 20) + 'Да, откажи резервацията</button><button class="pill pill-red pill-lg" type="button" data-cancel="no" data-fk="cn">Не, запази я</button></div></div>';
     else h += '<div class="mng"><button class="pill pill-red pill-lg pill-block" type="button" data-change data-fk="ch">' + ic("pencil-simple", 22) + '<span>Промени деня, часа или масата</span></button><button class="pill pill-line pill-lg pill-block" type="button" data-cancel="ask" data-fk="ca">' + ic("x", 22) + "<span>Откажи резервацията</span></button>" +
-      '<p class="rules">' + ic("info", 20) + "<span>Можете да промените или откажете тук или от връзката в SMS-а до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ". По-късно: на " + R.phone + ".</span></p></div>";
+      '<p class="rules">' + ic("info", 20) + "<span>Можете да промените или откажете тук или от връзката в SMS-а до " + (lim === 120 ? "2 часа преди (резервация след 17:00)" : "1 час преди (резервация през деня)") + ". По-късно: на " + PH + ".</span></p></div>";
     return h + "</div></div></section>";
   }
 
@@ -569,7 +573,7 @@ export function start(): void {
     const a = (k: string) => 'data-proto="' + k + '" data-fk="x' + k + '"';
     /* the shared panel (lib/ui.ts): the same title, sentence and switch words as on every page */
     return previewPanel(pvToggle(PV.offline, p.offline, a("offline")) + pvToggle(PV.error + " при запазване", p.fail, a("fail")) + pvToggle(EV.n + ": пълно 19:00 - 20:30", p.eventFull, a("event")) +
-      b("group", "Голяма група: 8 души") + b("expire", "Задържането изтича след 5 сек.") + b("blocked", "Блокиран номер 0888 00 00 00") + b("manage", "Промяна или отказ: навреме") + b("late", "Промяна или отказ: по-малко от 2 ч / 1 ч"), { id: "r-pv" });
+      b("group", "Голяма група: 8 души") + b("blocked", "Блокиран номер 0888 00 00 00") + b("manage", "Промяна или отказ: навреме") + b("late", "Промяна или отказ: по-малко от 2 ч / 1 ч"), { id: "r-pv" });
   }
 
   /* ---------- render ---------- */
@@ -631,16 +635,16 @@ export function start(): void {
     }
     if (st.step === 2) {
       if (!st.sel) { SC.toast(st.n > 6 ? "Изберете салон или градина" : "Докоснете свободна маса на картата"); scrollToEl(main.querySelector(".mapbox, .tlist, .grp")); return; }
-      if (st.expired) { rehold(); return; }
       go(3); return;
     }
-    if (st.expired) { rehold(); return; }
+    /* 429 still lasts (Enter in a field, the hidden submit): no request, the notice and the phone are in sight */
+    if (throttled()) { render(); const fh = main.querySelector<HTMLElement>("[data-failh]"); scrollToEl(fh && fh.closest(".alert")); fh?.focus({ preventScroll: true }); return; }
     st.err = validate();
     if (Object.keys(st.err).length) { st.fail = null; render(); const first = main.querySelector<HTMLElement>('[aria-invalid="true"]'); if (first) { scrollToEl(first); first.focus({ preventScroll: true }); } return; }
     submit();
   }
   async function submit(): Promise<void> {
-    st.busy = true; st.fail = null; st.failText = null; st.failCall = false; render();
+    st.busy = true; st.fail = null; st.failText = null; render();
     const s = selInfo()!, f = st.f, d = st.date!, m = st.slot!;
     /* the error: in sight, the focus on its title (never on <body>), and no toast over it */
     const done1 = (fail: "offline" | "error") => {
@@ -668,7 +672,7 @@ export function start(): void {
       if (e instanceof ApiError) {
         if (e.code === "blocked") { st.blocked = true; render(); const bc = main.querySelector("[data-blocked]"); scrollToEl(bc); bc?.querySelector<HTMLElement>("[data-h]")?.focus({ preventScroll: true }); return; }
         if (e.code === "taken") { /* someone else was faster: back to the plan with fresh data */
-          st.released = (s.label) + " току-що беше заета от друг гост. Изберете друга маса."; st.sel = null; st.hold = 0; st.step = 2; st.anim = true;
+          st.released = (s.label) + " току-що беше заета от друг гост. Изберете друга маса."; st.sel = null; st.step = 2; st.anim = true;
           taken.delete(key(d, m)); takenErr = false; loadTaken(d, [m], true).then(() => render()); render(); toTop(true); return;
         }
         if (e.code === "invalid" && e.fields && (e.fields.date || e.fields.time || e.fields.people || e.fields.table)) {
@@ -687,13 +691,12 @@ export function start(): void {
           Object.keys(e.fields).forEach((k) => { if (map[k]) fe[map[k]] = e.fields![k]; });
           if (Object.keys(fe).length) { st.err = fe; render(); const first = main.querySelector<HTMLElement>('[aria-invalid="true"]'); if (first) { scrollToEl(first); first.focus({ preventScroll: true }); } return; }
         }
-        if (e.code === "too_late" || e.code === "throttled") { st.failText = e.message; st.failCall = e.code === "throttled"; done1("error"); return; }
+        if (e.code === "too_late" || e.code === "throttled") { st.failText = e.message; if (e.code === "throttled") throttle(e.retryIn); done1("error"); return; }
         done1(e.code === "offline" ? "offline" : "error"); return;
       }
       done1("error");
     }
   }
-  function rehold(): void { st.hold = Date.now() + 600000; st.expired = false; SC.toast(selInfo()!.label + " е задържана пак за 10 минути"); render(); }
   function back(): void { if (st.step > 1) go(st.step - 1); }
 
   /* a complete, valid selection for the preview shortcuts */
@@ -701,31 +704,45 @@ export function start(): void {
     if (!st.date || !bookable(st.date)) setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1));
     await loadTaken(st.date!, openSlots(st.date!));
     if (st.slot == null || slotFull(st.date!, st.slot, st.n)) { const o = openSlots(st.date!).filter((m) => !slotFull(st.date!, m, st.n)); st.slot = o.filter((m) => m >= 1140)[0] ?? o[0]; st.period = periodOf(st.slot).id; }
-    if (!st.sel) { const t = freeTables("salon", st.date!, st.slot!, st.n)[0] || freeTables("garden", st.date!, st.slot!, st.n)[0]; if (t) { st.sel = t.id; st.zone = t.zone; st.hold = Date.now() + 600000; st.expired = false; } }
+    if (!st.sel) { const t = freeTables("salon", st.date!, st.slot!, st.n)[0] || freeTables("garden", st.date!, st.slot!, st.n)[0]; if (t) { st.sel = t.id; st.zone = t.zone; } }
     if (withData) { if (!st.f.name) st.f.name = "Примерен гост"; if (!st.f.phone) st.f.phone = "0888 12 34 56"; }
   }
 
   /* ---------- sheets ---------- */
   let cur: { close: () => void } | null = null;
   function tableSheet(t: Table): void {
+    if (cur) { cur.close(); cur = null; } /* one sheet at a time, also when the plan is drawn again under a tap */
     cur = SC.sheet({
       title: "Маса " + t.n, html: '<div class="ts"><div class="ts-top"><span class="tno on" aria-hidden="true">' + t.n + "</span><div><b>" + t.seats + " места · " + zoneName(t.zone) + "</b><p>Свободна в " + hm(st.slot!) + ", " + fShort(st.date!) + "</p></div></div>" +
         '<ul class="feats">' + feats(t).map((f) => "<li>" + ic(f.i, 22) + f.n + "</li>").join("") + "</ul>" +
         '<div class="phs">' + ic("image", 24) + '<span class="missing small">[ЛИПСВА: снимка на мястото от новата фотосесия]</span></div>' +
-        '<button class="pill pill-red pill-lg pill-block" type="button" data-pick="' + t.id + '">' + ic("check", 22) + 'Избери тази маса</button><p class="muted small center" style="margin:0">Задържаме я за вас 10 минути, докато попълните данните.</p></div>',
+        '<button class="pill pill-red pill-lg pill-block" type="button" data-pick="' + t.id + '">' + ic("check", 22) + 'Избери тази маса</button><p class="muted small center" style="margin:0">Ще я запазим, щом изпратите данните.</p></div>',
     });
   }
   /** the 4 free hours closest to m (a tie goes to the earlier hour), from the whole day's occupancy */
   const nearSlots = (d: Date, m: number) => openSlots(d).filter((x) => x !== m && known(d, x) && !slotFull(d, x, st.n))
     .sort((a, b) => Math.abs(a - m) - Math.abs(b - m) || a - b).slice(0, 4).sort((a, b) => a - b);
   const nearHtml = (list: number[]) => (list.length ? '<p class="label" style="margin-top:4px">Или изберете свободен час:</p><div class="chips">' + list.map((x) => '<button class="chip" type="button" data-wlslot="' + x + '">' + hm(x) + "</button>").join("") + "</div>" : "");
+  /* the waitlist sheet. Errors as in step 3 (DECISIONS 12.11): a notice with a title above the main button, the focus on
+     that title (never on <body>: the button is never disabled, the busy state is a flag), a field error tied to its
+     input (aria-describedby); 429: the main action is "Обади се · 0894 36 55 77" and nothing is sent again */
+  let wlBusy = false;
+  function wlAct(m: number, fail?: { title: string; text: string }): string {
+    const thr = throttled();
+    const f = fail || (thr ? { title: "Не успяхме да ви запишем", text: st.failText || "Твърде много заявки за кратко време. Обадете ни се на " + R.phone + "." } : null);
+    return (f ? '<div class="alert bad" role="alert" data-wlfail>' + ic("warning", 22) + '<div><b tabindex="-1" data-wlfailh>' + esc(f.title) + "</b><p>" + nwTel(f.text) + "</p></div></div>" : "") +
+      (thr ? callBtn("pill pill-red pill-lg pill-block")
+        : '<button class="pill pill-red pill-lg pill-block" type="button" data-wlgo="' + m + '">' + ic("bell", 22) + "Запиши ме в списъка на чакащите</button>");
+  }
   function waitSheet(m: number): void {
     const d = st.date!, all = openSlots(d);
     const whole = all.every((x) => known(d, x));
+    wlBusy = false;
+    if (cur) { cur.close(); cur = null; }
     const html = '<div class="wl" data-wl><p>В ' + hm(m) + " на " + fShort(d) + " няма свободна маса за " + ppl(st.n) + ". Запишете се и ще ви пишем по SMS или Viber, ако се освободи.</p>" +
-      '<div class="field"><label for="wl-name">Име</label><input class="input" id="wl-name" autocomplete="name" value="' + esc(st.f.name) + '"><span class="err" data-wlnerr hidden></span></div>' +
-      '<div class="field"><label for="wl-phone">Телефон</label><input class="input" id="wl-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(st.f.phone) + '"><span class="err" data-wlerr hidden></span></div>' +
-      '<button class="pill pill-red pill-lg pill-block" type="button" data-wlgo="' + m + '">' + ic("bell", 22) + "Запиши ме в списъка на чакащите</button>" +
+      '<div class="field"><label for="wl-name">Име</label><input class="input" id="wl-name" autocomplete="name" value="' + esc(st.f.name) + '"><span class="err" id="wl-nerr" hidden></span></div>' +
+      '<div class="field"><label for="wl-phone">Телефон</label><input class="input" id="wl-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0888 12 34 56" value="' + esc(st.f.phone) + '"><span class="err" id="wl-perr" hidden></span></div>' +
+      '<div class="wlact" data-wlact>' + wlAct(m) + "</div>" +
       '<div data-wlnear>' + (whole ? nearHtml(nearSlots(d, m)) : "") + "</div></div>";
     cur = SC.sheet({ title: "Пълно в " + hm(m), html });
     /* the closest free hours need the whole day (only the visible part of the day is loaded) */
@@ -734,36 +751,54 @@ export function start(): void {
       box.innerHTML = nearHtml(nearSlots(d, m));
     });
   }
+  /** a field error under its input, read with it (aria-describedby); "" clears it */
+  function wlFieldErr(inp: HTMLInputElement, err: HTMLElement, msg: string): void {
+    err.hidden = !msg; err.textContent = msg;
+    if (msg) { inp.setAttribute("aria-invalid", "true"); inp.setAttribute("aria-describedby", err.id); }
+    else { inp.removeAttribute("aria-invalid"); inp.removeAttribute("aria-describedby"); }
+  }
   async function joinWaitlist(btn: HTMLElement, m: number): Promise<void> {
-    const box = btn.closest<HTMLElement>("[data-wl]")!;
+    if (wlBusy) return;
+    const box = btn.closest<HTMLElement>("[data-wl]")!, act = box.querySelector<HTMLElement>("[data-wlact]")!;
     const nIn = box.querySelector<HTMLInputElement>("#wl-name")!, pIn = box.querySelector<HTMLInputElement>("#wl-phone")!;
-    const nErr = box.querySelector<HTMLElement>("[data-wlnerr]")!, pErr = box.querySelector<HTMLElement>("[data-wlerr]")!;
-    const nm = nIn.value.trim(), ph = pIn.value.trim();
-    nErr.hidden = !!nm; nErr.textContent = nm ? "" : "Напишете името си, за да знаем кого търсим."; nm ? nIn.removeAttribute("aria-invalid") : nIn.setAttribute("aria-invalid", "true");
-    const phOk = !!normPhone(ph);
-    pErr.hidden = phOk; pErr.textContent = phOk ? "" : ph ? "Проверете номера. Например: 0888 12 34 56" : "Напишете телефон, за да ви пишем, щом се освободи маса.";
-    phOk ? pIn.removeAttribute("aria-invalid") : pIn.setAttribute("aria-invalid", "true");
+    const nErr = box.querySelector<HTMLElement>("#wl-nerr")!, pErr = box.querySelector<HTMLElement>("#wl-perr")!;
+    /* the notice with its title above the button, the focus on the title */
+    const showFail = (title: string, text: string) => { act.innerHTML = wlAct(m, { title, text }); act.querySelector<HTMLElement>("[data-wlfailh]")?.focus({ preventScroll: true }); };
+    if (throttled()) { showFail("Не успяхме да ви запишем", st.failText || ""); return; }
+    const nm = nIn.value.trim(), ph = pIn.value.trim(), phOk = !!normPhone(ph);
+    wlFieldErr(nIn, nErr, nm ? "" : "Напишете името си, за да знаем кого търсим.");
+    wlFieldErr(pIn, pErr, phOk ? "" : ph ? "Проверете номера. Например: 0888 12 34 56" : "Напишете телефон, за да ви пишем, щом се освободи маса.");
     if (!nm) { nIn.focus(); return; }
     if (!phOk) { pIn.focus(); return; }
     st.f.name = nm; st.f.phone = ph;
-    btn.setAttribute("aria-busy", "true"); (btn as HTMLButtonElement).disabled = true;
+    act.querySelector("[data-wlfail]")?.remove();
+    if (navigator.onLine === false) { showFail(OFFLINE, "Проверете връзката и опитайте пак."); return; }
+    wlBusy = true; btn.setAttribute("aria-busy", "true");
     try {
       await api.reservations.create({ date: ymd(st.date!), time: hm(m), people: st.n, table: null, name: nm, phone: ph, waitlist: true });
-      box.innerHTML = '<div class="okm" aria-hidden="true">' + ic("check", 36) + '</div><p class="center" style="font-size:20px;font-weight:800;letter-spacing:-.02em" tabindex="-1" data-wlok>Записахме ви в списъка на чакащите</p><p class="center muted">Ако се освободи маса за ' + ppl(st.n) + " в " + hm(m) + " на " + fShort(st.date!) + ", ще ви пишем на " + esc(fmtPhone(ph)) + ". Не е нужно да правите нищо друго.</p>";
+      box.innerHTML = '<div class="okm" aria-hidden="true">' + ic("check", 36) + '</div><p class="center" style="font-size:20px;font-weight:800;letter-spacing:-.02em" tabindex="-1" data-wlok>Записахме ви в списъка на чакащите</p><p class="center muted">Ако се освободи маса за ' + ppl(st.n) + " в " + hm(m) + " на " + fShort(st.date!) + ', ще ви пишем на <span class="nw">' + esc(fmtPhone(ph)) + "</span>. Не е нужно да правите нищо друго.</p>";
       box.querySelector<HTMLElement>("[data-wlok]")?.focus({ preventScroll: true });
     } catch (e) {
-      btn.removeAttribute("aria-busy"); (btn as HTMLButtonElement).disabled = false;
-      if (e instanceof ApiError && e.code === "blocked") {
-        box.innerHTML = '<div class="alert" role="alert">' + ic("phone", 22) + '<div><b>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts">' + callBtn("pill pill-red") + "</div></div></div>";
+      btn.removeAttribute("aria-busy");
+      const code = e instanceof ApiError ? e.code : "error";
+      if (code === "blocked") {
+        box.innerHTML = '<div class="alert" role="alert">' + ic("phone", 22) + '<div><b tabindex="-1" data-wlfailh>Ще ви помогнем по телефона</b><p>За този номер не можем да запишем онлайн. Обадете ни се и ще намерим решение.</p><div class="acts">' + callBtn("pill pill-red") + "</div></div></div>";
+        box.querySelector<HTMLElement>("[data-wlfailh]")?.focus({ preventScroll: true });
         return;
       }
-      pErr.hidden = false; pErr.textContent = e instanceof ApiError && e.code === "offline" ? "Няма връзка. Проверете интернета и опитайте пак." : e instanceof ApiError && e.code === "throttled" ? e.message : "Не успяхме да ви запишем. Опитайте пак или се обадете на " + R.phone + ".";
-    }
+      if (code === "invalid" && e instanceof ApiError && e.fields && (e.fields.name || e.fields.phone)) {
+        wlFieldErr(nIn, nErr, e.fields.name || ""); wlFieldErr(pIn, pErr, e.fields.phone || "");
+        (e.fields.name ? nIn : pIn).focus(); return;
+      }
+      if (code === "throttled") { st.failText = (e as ApiError).message; throttle((e as ApiError).retryIn); showFail("Не успяхме да ви запишем", st.failText); return; }
+      if (code === "offline") { showFail(OFFLINE, "Проверете връзката и опитайте пак."); return; }
+      showFail("Не успяхме да ви запишем", e instanceof ApiError && e.status > 0 && e.status < 500 && e.message ? e.message : "Опитайте пак след малко или се обадете на " + R.phone + ".");
+    } finally { wlBusy = false; }
   }
 
   /* ---------- events ---------- */
   document.addEventListener("click", (e) => {
-    const t = (e.target as HTMLElement).closest<HTMLElement>("[data-day],[data-mon],[data-period],[data-slot],[data-full],[data-ppl],[data-go],[data-act],[data-zone],[data-t],[data-pick],[data-need],[data-list],[data-rehold],[data-occ],[data-unblock],[data-ics],[data-new],[data-manage],[data-change],[data-cancel],[data-proto],[data-waitlist],[data-wlgo],[data-wlslot],[data-retake]");
+    const t = (e.target as HTMLElement).closest<HTMLElement>("[data-day],[data-mon],[data-period],[data-slot],[data-full],[data-ppl],[data-go],[data-act],[data-zone],[data-t],[data-pick],[data-need],[data-list],[data-occ],[data-unblock],[data-ics],[data-new],[data-manage],[data-change],[data-cancel],[data-proto],[data-waitlist],[data-wlgo],[data-wlslot],[data-retake]");
     if (!t) return;
     const ds = t.dataset;
     if (ds.day) { setDate(parseYmd(ds.day)!); st.msg = null; delete st.err.date; delete st.err.slot; render(); return; }
@@ -783,12 +818,12 @@ export function start(): void {
       render(); return;
     }
     if (ds.go) { const g = +ds.go; if (g < st.step) go(g); else if (g === 2 && st.step === 3) go(2); return; }
-    if (ds.act) { if (ds.act === "next") next(); else if (ds.act === "back") back(); else if (ds.act === "rehold") rehold(); return; }
+    if (ds.act) { if (ds.act === "next") next(); else if (ds.act === "back") back(); return; }
     if (ds.zone) { st.zone = ds.zone as Zone; render(); return; }
     if (ds.t) {
       const tb = tById(ds.t), s = tState(tb);
       if (s === "free") tableSheet(tb);
-      else if (s === "sel") SC.toast("Маса " + tb.n + " вече е ваша. Задържана за " + holdTxt() + " мин");
+      else if (s === "sel") SC.toast("Маса " + tb.n + " е избрана. Друга маса? Докоснете я.");
       else if (s === "taken") SC.toast("Маса " + tb.n + " е заета в " + hm(st.slot!) + ". Изберете маса с червен контур.");
       else if (!suits(tb, st.n)) SC.toast("Маса " + tb.n + " е за " + tb.seats + ". За " + ppl(st.n) + " изберете маса с " + sizesFor(st.n).join(" или ") + " места.");
       else SC.toast("Маса " + tb.n + " не отговаря на избраното в „Нужно ви е“.");
@@ -796,9 +831,17 @@ export function start(): void {
     }
     if (ds.pick) { if (cur) { cur.close(); cur = null; } pick(ds.pick); return; }
     if (ds.need) { st.need[ds.need] = !st.need[ds.need]; render(); return; }
-    if (t.hasAttribute("data-list")) { st.list = !st.list; render(); return; }
+    if (t.hasAttribute("data-list")) {
+      /* the toggle sits under the view: after the switch the new view starts in sight and the focus goes to its first
+         table (the first "Избери" in the list, the first table on the plan), not to the toggle far below */
+      st.list = !st.list; render();
+      const view = main.querySelector<HTMLElement>(st.list ? ".s2 .tlist" : ".s2 .mapbox");
+      scrollToEl(view);
+      const first = view && (view.querySelector<HTMLElement>(st.list ? "[data-pick]" : ".tbl.free, .tbl.sel") || view.querySelector<HTMLElement>(st.list ? "h3" : ".tbl"));
+      if (first) { if (!first.hasAttribute("tabindex") && first.tagName === "H3") first.setAttribute("tabindex", "-1"); first.focus({ preventScroll: true }); }
+      return;
+    }
     if (t.hasAttribute("data-retake")) { if (st.date && st.slot != null) { takenErr = false; render(); loadTaken(st.date, [st.slot], true).then(() => render()); } return; }
-    if (t.hasAttribute("data-rehold")) { rehold(); return; }
     if (ds.occ) { st.f.occ = st.f.occ === ds.occ ? "" : ds.occ; render(); return; }
     if (t.hasAttribute("data-unblock")) { st.blocked = false; st.f.phone = ""; st.err = {}; render(); const pi = document.getElementById("f-phone"); if (pi) { scrollToEl(pi); pi.focus({ preventScroll: true }); } return; }
     if (t.hasAttribute("data-ics")) { icsFile(st.booking!); SC.toast("Файлът за календара е изтеглен"); return; }
@@ -834,12 +877,11 @@ export function start(): void {
       st.date = null; setDate(ls); st.slot = null; st.period = "eve"; st.n = 4; st.released = null; st.anim = true; render(); toTop();
       SC.toast(st.proto.eventFull ? "Симулация: вечерта е пълна 19:00 - 20:30" : "Вечерта отново има свободни маси"); return;
     }
-    if (k === "group") { st.view = "flow"; releaseIfNeeded(); st.released = null; st.n = 8; st.step = 1; await ready(false); st.sel = null; st.hold = 0; go(2); return; }
-    if (k === "expire") { st.view = "flow"; await ready(false); if (st.step < 2) st.step = 2; st.hold = Date.now() + 5000; st.expired = false; st.anim = true; render(); toTop(); SC.toast("Задържането ще изтече след 5 секунди"); return; }
+    if (k === "group") { st.view = "flow"; releaseIfNeeded(); st.released = null; st.n = 8; st.step = 1; await ready(false); st.sel = null; go(2); return; }
     if (k === "blocked") {
       st.view = "flow"; await ready(true);
       /* after "Голяма група: 8 души" no single table suits: the joined tables, as step 2 offers them (no step 3 without a table) */
-      if (!st.sel) { if (st.n > 6) { st.sel = "J-salon"; st.zone = "salon"; st.hold = Date.now() + 600000; st.expired = false; } else { st.n = 2; await ready(true); } }
+      if (!st.sel) { if (st.n > 6) { st.sel = "J-salon"; st.zone = "salon"; } else { st.n = 2; await ready(true); } }
       st.f.phone = "0888 00 00 00"; st.blocked = false; st.err = {}; st.step = 3; st.anim = true; render(); toTop(); SC.toast("Натиснете „Резервирай“, за да видите съобщението"); return; }
     if (k === "manage" || k === "late") { openManage(k === "late"); if (k === "manage" && st.view !== "manage") { const b0: Booking = { date: addDays(TODAY, 1), slot: 1170, n: 4, selLabel: "Маса 5 · Салон", phone: "0888 12 34 56" }; st.manage = { b: b0, late: false, cancelled: false }; st.view = "manage"; } render(); toTop(); return; }
   }
@@ -866,7 +908,13 @@ export function start(): void {
   /* the hour passes: today's slots close (step 1 only, so nothing typed is lost) */
   document.addEventListener("sc:tick", () => { if (st.view === "flow" && st.step === 1 && st.date && same(st.date, TODAY)) { if (!bookable(TODAY)) { st.date = null; setDate(addDays(TODAY, 1), true); } else if (st.slot != null && !slotOpen(st.date, st.slot)) st.slot = null; render(); } });
   /* a booking made in another tab or by the staff frees / takes a table: refresh what is shown */
-  api.on("reservation.created", (d) => { const x = d as { date?: string; time?: string }; if (x && x.date && x.time) { const k = x.date + "|" + x.time; if (taken.has(k)) { taken.delete(k); if (st.view === "flow" && st.step < 3) render(); } } });
+  /* the cache key is date|time|except and a booking covers several hours: ask again for every hour of that day shown
+     so far (the old answer stays on screen until the new one comes, so the plan does not blink) */
+  api.on("reservation.created", (d) => {
+    const x = d as { date?: string }, day = x && x.date ? parseYmd(x.date) : null; if (!day) return;
+    const mins: number[] = []; taken.forEach((_v, k) => { const p = k.split("|"); if (p[0] === x.date && p[2] === exc()) mins.push(toMin(p[1])); });
+    if (mins.length) loadTaken(day, mins, true).then(() => { if (st.view === "flow" && st.step < 3) render(); });
+  });
 
   /* ---------- start ---------- */
   if (!fromHash() && st.view === "flow") setDate(bookable(TODAY) ? TODAY : addDays(TODAY, 1), true);

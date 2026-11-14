@@ -5,7 +5,7 @@ import { test, expect, type Page } from "@playwright/test";
 function watch(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", (m) => { if (m.type() === "error" && !/status of (403|409|422)/.test(m.text())) errors.push(m.text()); });
+  page.on("console", (m) => { if (m.type() === "error" && !/status of (403|409|422|429|500)/.test(m.text())) errors.push(m.text()); });
   return errors;
 }
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -30,11 +30,19 @@ async function toStep2(page: Page, date: string, slot = "19:30") {
   await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 2 от 3");
   await expect(page.locator(".fp")).toBeVisible();
 }
+/** picks the first free table; the choice is quiet (no toast) and promises no hold (the core keeps no table before booking) */
 async function pickFree(page: Page) {
   await page.locator(".tbl.free").first().click();
-  await page.locator(".sheet [data-pick]").click();
-  await expect(page.locator(".selc .hold")).toContainText("задържана");
+  /* the open sheet (a closing one may still be on its way out) */
+  await expect(page.locator(".sheetwrap.on .sheet .ts")).toHaveCount(1);
+  await expect(page.locator(".sheetwrap.on .sheet .ts")).toContainText("Ще я запазим, щом изпратите данните.");
+  await page.locator(".sheetwrap.on .sheet [data-pick]").click();
+  await expect(page.locator(".tbl.sel")).toHaveAttribute("aria-label", /^Маса \d+, избрана\. За \d души/);
+  await expect(page.locator(".selc")).toBeVisible();
+  await expect(page.locator(".toast.on")).toHaveCount(0);
 }
+/** no word anywhere on the page promises that the table is held */
+const noHold = async (page: Page) => expect(await page.evaluate(() => /задърж/i.test(document.body.innerText))).toBe(false);
 
 test("reservation: SEO, one h1, calendar with event dot, no overflow", async ({ page }) => {
   const errors = watch(page);
@@ -57,8 +65,11 @@ test("reservation: full flow day -> table -> details -> success (consent unticke
   const date = future(info.project.name === "phone" ? 9 : 12);
   await toStep2(page, date);
   await pickFree(page);
+  await noHold(page);
+  await expect(next(page)).toContainText("Попълни данните");
   await next(page).click();
   await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 3 от 3");
+  await noHold(page);
   await expect(page.locator("[data-consent]")).not.toBeChecked();
   await next(page).click(); /* empty form -> errors */
   await expect(page.locator("#e-name")).toBeVisible();
@@ -69,6 +80,11 @@ test("reservation: full flow day -> table -> details -> success (consent unticke
   await expect(page.locator("h1:visible")).toHaveText("Масата е запазена");
   await expect(page.locator("[data-ics]")).toBeVisible();
   await expect(page.locator("h1:visible")).toHaveCount(1);
+  /* "Маршрут" and "Обади се · 0894 36 55 77": each on one line (on a phone one under the other, full width) */
+  const two = await page.locator(".dside .two .pill").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; }));
+  expect(two).toHaveLength(2);
+  for (const b of two) expect(b.h).toBeLessThan(56);
+  if (isPhone(page)) expect(two[0].w).toBe(two[1].w);
   if (isPhone(page)) await page.screenshot({ path: "test-results/res-done-390.png", fullPage: false });
   expect(errors).toEqual([]);
 });
@@ -82,7 +98,17 @@ test("reservation: table taken through the API shows as taken", async ({ page, r
   await page.locator(".slot", { hasText: "13:00" }).click();
   await next(page).click();
   await expect(page.locator('.tbl[data-t="S1"]')).toHaveClass(/taken/);
+  /* the screen-reader name starts with "Маса" and holds the visible "1" and "заета" in order */
+  await expect(page.locator('.tbl[data-t="S1"]')).toHaveAttribute("aria-label", "Маса 1, заета. За 2 души");
+  await expect(page.locator('.tbl[data-t="S6"]')).toHaveAttribute("aria-label", "Маса 6, 6 места. Не е подходяща за 2 души");
+  await expect(page.locator('.tbl[data-t="S2"]')).toHaveAttribute("aria-label", /^Маса 2, 2 места\. Свободна/);
+  /* "Предпочитам списък": the list starts in sight, the focus on its first "Избери" (not on the toggle far below) */
   await page.locator("[data-list]").click();
+  await expect(page.locator(".s2 .tlist [data-pick]").first()).toBeFocused();
+  /* the page scrolls (smoothly) to the top of the list */
+  const top = () => page.locator(".s2 .tlist").first().evaluate((e) => Math.round(e.getBoundingClientRect().top));
+  await expect.poll(top).toBeGreaterThanOrEqual(0);
+  await expect.poll(top).toBeLessThan(400);
   await expect(page.locator(".trow.taken").first()).toContainText("Заета в 13:00");
   if (!isPhone(page)) await page.screenshot({ path: "test-results/res-list-1440.png" });
 });
@@ -97,6 +123,9 @@ test("reservation: blocked number gets a polite message", async ({ page }, info)
   await next(page).click();
   await expect(page.locator("[data-blocked]")).toContainText("Тази резервация ще уредим по телефона");
   await expect(page.locator(".rabar a.cta, .aside a.cta").first()).toHaveAttribute("href", /^tel:/);
+  await expect(isPhone(page) ? page.locator(".rabar a.cta") : page.locator(".aside a.cta")).toHaveText("Обади се · 0894 36 55 77");
+  /* the numbers in the sentence never break between lines */
+  await expect(page.locator("[data-blocked] .nw")).toHaveText(["0888 000 000", "0894 36 55 77"]);
 });
 
 test("reservation: event date from the address preselects 19:00", async ({ page }) => {
@@ -124,6 +153,79 @@ test("reservation: full hour -> waitlist (preview), large group joins tables", a
   await page.keyboard.press("Escape");
   await page.locator('[data-proto="group"]').click();
   await expect(page.locator(".grp")).toContainText("За 8 души ще съединим маси");
+  /* the preview panel has no "hold expires" switch any more */
+  await expect(page.locator('[data-proto="expire"]')).toHaveCount(0);
+});
+
+test("reservation: waitlist errors: a notice with a title (focus there), field errors read with the field, 429 -> the phone", async ({ page }) => {
+  const errors = watch(page);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await open(page);
+  await page.locator('[data-proto="event"]').click();
+  await page.locator(".slot.full", { hasText: "19:00" }).click();
+  await expect(page.locator(".sheet [data-wlgo]")).toBeVisible();
+  /* the main button keeps its words on one line on a 360 phone */
+  expect(await page.locator(".sheet [data-wlgo]").evaluate((e) => e.getBoundingClientRect().height)).toBeLessThan(60);
+  const focus = () => page.evaluate(() => { const a = document.activeElement as HTMLElement; return a.tagName + ":" + (a.textContent || "").trim(); });
+  await page.fill("#wl-name", "");
+  await page.fill("#wl-phone", "123");
+  await page.locator("[data-wlgo]").click();
+  await expect(page.locator("#wl-name")).toBeFocused();
+  await expect(page.locator("#wl-name")).toHaveAttribute("aria-describedby", "wl-nerr");
+  await expect(page.locator("#wl-phone")).toHaveAttribute("aria-describedby", "wl-perr");
+  await expect(page.locator("#wl-perr")).toHaveText("Проверете номера. Например: 0888 12 34 56");
+  await page.fill("#wl-name", "Чакащ");
+  await page.fill("#wl-phone", "0888 22 33 44");
+  let mode = 500, posts = 0;
+  const T429 = "За този телефон вече има няколко заявки за резервация. Обадете ни се на 0894 36 55 77 и ще помогнем.";
+  await page.route("**/api/reservations", (r) => {
+    if (r.request().method() !== "POST") return r.continue();
+    posts++;
+    if (mode === 0) return r.abort("internetdisconnected");
+    return r.fulfill({ status: mode, contentType: "application/json", body: JSON.stringify(mode === 429 ? { error: "throttled", message: T429 } : mode === 403 ? { error: "blocked", message: "x" } : { error: "server", message: "boom" }) });
+  });
+  /* 500: the notice above the button, the focus on its title, the button stays "Запиши ме" */
+  await page.locator("[data-wlgo]").click();
+  await expect(page.locator("[data-wlfailh]")).toBeFocused();
+  await expect(page.locator("[data-wlfail]")).toContainText("Не успяхме да ви запишем");
+  await expect(page.locator("#wl-phone")).not.toHaveAttribute("aria-describedby", /./);
+  await expect(page.locator(".sheet [data-wlgo]")).toBeVisible();
+  /* no connection */
+  mode = 0;
+  await page.locator("[data-wlgo]").click();
+  await expect(page.locator("[data-wlfailh]")).toBeFocused();
+  await expect(page.locator("[data-wlfailh]")).toHaveText("Няма връзка с интернет");
+  /* 429: the server's text, the main action is the phone, nothing is sent again (also from the sheet opened anew) */
+  mode = 429;
+  await page.locator("[data-wlgo]").click();
+  await expect(page.locator("[data-wlfailh]")).toBeFocused();
+  await expect(page.locator("[data-wlfail]")).toContainText(T429);
+  await expect(page.locator("[data-wlfail] .nw")).toHaveText("0894 36 55 77");
+  await expect(page.locator(".sheet [data-wlgo]")).toHaveCount(0);
+  await expect(page.locator(".sheet a.pill-red")).toHaveAttribute("href", /^tel:/);
+  await expect(page.locator(".sheet a.pill-red")).toHaveText("Обади се · 0894 36 55 77");
+  expect(await focus()).not.toMatch(/^BODY/);
+  const sent = posts;
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".sheetwrap")).toHaveCount(0);
+  await page.locator(".slot.full", { hasText: "19:30" }).click();
+  await expect(page.locator(".sheet a.pill-red")).toHaveAttribute("href", /^tel:/);
+  await expect(page.locator(".sheet [data-wlfail]")).toContainText(T429);
+  await expect(page.locator(".sheet [data-wlgo]")).toHaveCount(0);
+  expect(posts).toBe(sent);
+  expect(errors.filter((e) => !/ERR_INTERNET_DISCONNECTED/.test(e))).toEqual([]); /* the mocked lost connection */
+});
+
+test("reservation: waitlist with a blocked number: the focus on \"Ще ви помогнем по телефона\"", async ({ page }) => {
+  await open(page);
+  await page.route("**/api/reservations", (r) => r.request().method() === "POST" ? r.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "blocked", message: "x" }) }) : r.continue());
+  await page.locator('[data-proto="event"]').click();
+  await page.locator(".slot.full", { hasText: "19:00" }).click();
+  await page.fill("#wl-name", "Чакащ");
+  await page.fill("#wl-phone", "0888 22 33 44");
+  await page.locator("[data-wlgo]").click();
+  await expect(page.locator("[data-wlfailh]")).toBeFocused();
+  await expect(page.locator("[data-wlfailh]")).toHaveText("Ще ви помогнем по телефона");
 });
 
 test("reservation: manage late is locked (under 2 h / 1 h)", async ({ page }) => {
@@ -149,7 +251,11 @@ test("reservation: link from the SMS (#r-<id>-<key>) opens the booking, fits 360
   expect(over).toBe(0);
   const small = await page.evaluate(() => [...document.querySelectorAll("[data-rview] a, [data-rview] button")].filter((e) => { const h = e.getBoundingClientRect().height; return h > 0 && h < 48; }).length);
   expect(small).toBe(0);
+  /* one form of the date (BRIEF 8: "чт, 3 декември") in the card and in the question */
+  const when = (await page.locator("[data-rview] .dcard .kv").first().locator("b").innerText()).trim();
+  expect(when).toMatch(/^(пн|вт|ср|чт|пт|сб|нд), \d+ [а-я]+, \d\d:\d\d$/);
   await page.locator("[data-cancel=ask]").click();
+  await expect(page.locator("#cfh")).toHaveText("Да откажем ли резервацията за " + when + "?");
   await page.locator("[data-cancel=yes]").click();
   await expect(page.locator("h1:visible")).toHaveText("Резервацията е отказана");
   const after = await request.get("/api/reservations/" + b.id + "?k=" + b.key);
@@ -261,9 +367,25 @@ test("reservation: change: the own booking is left out only with its key; a tabl
   expect(errors).toEqual([]);
 });
 
-test("reservation: a link without its key says it is incomplete", async ({ page }) => {
+test("reservation: a link without its key says it is incomplete; a broken one says so", async ({ page }) => {
   await open(page, "r-deadbeef");
   await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Връзката е непълна");
+  await page.evaluate(() => { location.hash = "r-xyz-qq"; });
+  await expect(page.locator("[data-flow] .note[role=alert]")).toContainText("Връзката е повредена");
+  await expect(page.locator("[data-flow] .note[role=alert] .nw")).toHaveText("0894 36 55 77");
+});
+
+test("reservation: the SMS link with a dot or a bracket at the end (copied from the SMS) still opens", async ({ page, request }, info) => {
+  const r = await request.post("/api/reservations", { data: { date: future(info.project.name === "phone" ? 38 : 39), time: "13:00", people: 2, name: "Точка", phone: "0888 76 54 32" } });
+  expect(r.status()).toBe(201);
+  const b = await r.json();
+  await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
+  for (const tail of [".", ").", "%E2%80%9C"]) {
+    await page.goto("/rezervatsia/#r-" + b.id + "-" + b.key + tail);
+    await expect(page.locator("h1:visible")).toHaveText("Вашата резервация");
+    await expect(page.locator("[data-rview] .dcard")).toContainText("Точка");
+    expect(await page.evaluate(() => location.hash)).toBe("#r-" + b.id + "-" + b.key);
+  }
 });
 
 test("reservation: focus goes to the heading of each step and screen (not <body>)", async ({ page, request }, info) => {
@@ -291,10 +413,12 @@ test("reservation: focus goes to the heading of each step and screen (not <body>
   expect(errors).toEqual([]);
 });
 
-test("reservation: 429 throttled shows the server's text", async ({ page }, info) => {
+test("reservation: 429 throttled: the server's text, the main action is the phone, no second request", async ({ page }, info) => {
+  const errors = watch(page);
   const msg = "За този телефон вече има няколко заявки. Обадете ни се на 0894 36 55 77.";
-  await page.route("**/api/reservations", (r) => r.request().method() === "POST"
-    ? r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "throttled", message: msg }) }) : r.continue());
+  let posts = 0;
+  await page.route("**/api/reservations", (r) => { if (r.request().method() !== "POST") return r.continue(); posts++;
+    return r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "throttled", message: msg }) }); });
   await toStep2(page, future(info.project.name === "phone" ? 36 : 37));
   await pickFree(page);
   await next(page).click();
@@ -302,6 +426,59 @@ test("reservation: 429 throttled shows the server's text", async ({ page }, info
   await page.fill("#f-phone", "0888 12 34 56");
   await next(page).click();
   await expect(page.locator(".alert.bad")).toContainText(msg);
+  await expect(page.locator("[data-failh]")).toBeFocused();
+  await expect(page.locator(".alert.bad p .nw")).toHaveText("0894 36 55 77");
+  expect(posts).toBe(1);
+  /* the main action in the bar (phone) or the summary (desktop) is the phone, as with a blocked number */
+  const main = isPhone(page) ? page.locator(".rabar .cta") : page.locator(".aside .cta");
+  await expect(main).toHaveAttribute("href", /^tel:/);
+  await expect(main).toHaveText("Обади се · 0894 36 55 77");
+  await expect(page.locator(".rabar [data-act=next], .aside [data-act=next]")).toHaveCount(0);
+  /* one red action on the screen: the phone in the notice is the outlined one */
+  await expect(page.locator(".alert.bad a.pill-line")).toHaveAttribute("href", /^tel:/);
+  /* Enter in a field does not send again; the focus goes back to the notice */
+  await page.locator("#f-name").press("Enter");
+  await expect(page.locator("[data-failh]")).toBeFocused();
+  /* "Назад" and forward again: the notice and the phone stay while the limit lasts */
+  await page.locator(isPhone(page) ? ".rabar [data-act=back]" : ".aside [data-act=back]").click();
+  await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 2 от 3");
+  await next(page).click();
+  await expect(page.locator(".alert.bad")).toContainText(msg);
+  await expect(main).toHaveAttribute("href", /^tel:/);
+  expect(posts).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+test("reservation: the table taken by another guest meanwhile (409): back to the plan, another table is offered", async ({ page, request }, info) => {
+  const errors = watch(page);
+  /* a day with few taken tables at 20:30 (every run keeps two; the e2e base stays between runs) */
+  let date = "";
+  for (let k = 42; k < 90 && !date; k += 2) {
+    const d = future(k + (info.project.name === "phone" ? 0 : 1));
+    if ((await (await request.get("/api/reservations/taken?date=" + d + "&time=20:30")).json()).length < 4) date = d;
+  }
+  if (!date) throw new Error("no free day");
+  await toStep2(page, date, "20:30");
+  await pickFree(page);
+  const id = await page.locator(".tbl.sel").getAttribute("data-t");
+  await next(page).click();
+  await page.fill("#f-name", "Бавен Гост");
+  await page.fill("#f-phone", "0888 12 34 99");
+  /* the page holds nothing: another guest books the same table before we send */
+  const other = await request.post("/api/reservations", { data: { date, time: "20:30", people: 2, table: id, name: "Бърз Гост", phone: "0888 12 34 98" } });
+  expect(other.status()).toBe(201);
+  await next(page).click();
+  await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 2 от 3");
+  await expect(page.locator("[data-flow] .note[role=status]")).toContainText("току-що беше заета от друг гост. Изберете друга маса.");
+  await expect(page.locator('.tbl[data-t="' + id + '"]')).toHaveClass(/taken/);
+  await expect(page.locator(".tbl.free").first()).toBeVisible();
+  await expect(next(page)).toContainText("Избери маса");
+  /* another table, and the booking goes through */
+  await pickFree(page);
+  await next(page).click();
+  await next(page).click();
+  await expect(page.locator("h1:visible")).toHaveText("Масата е запазена");
+  expect(errors).toEqual([]);
 });
 
 test("reservation preview: 'Голяма група' then 'Блокиран номер' goes to step 3 with joined tables, no error", async ({ page }) => {

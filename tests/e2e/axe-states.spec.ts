@@ -26,7 +26,7 @@ function future(days: number): string {
 }
 const isPhone = (page: Page) => (page.viewportSize()?.width || 0) < 900;
 
-test("axe: reservation floor plan (step 2) and a full hour, the name starts with the visible text", async ({ page }) => {
+test("axe: reservation floor plan (step 2) and a full hour, the name starts with \"Маса\" and holds the visible text", async ({ page }) => {
   await noCookie(page);
   await page.goto("/rezervatsia/?preview=1&t=12:30#" + future(11));
   await expect(page.locator("[data-flow] .cal")).toBeVisible();
@@ -36,10 +36,11 @@ test("axe: reservation floor plan (step 2) and a full hour, the name starts with
   /* every table, in both zones: free, taken, unfit; then one selected */
   expect(await axe(page, ".fp")).toEqual([]);
   const t = page.locator(".tbl.free").first();
-  await expect(t).toHaveAttribute("aria-label", /^\d+ \d места\. Свободна маса за \d/);
+  await expect(t).toHaveAttribute("aria-label", /^Маса \d+, \d места\. Свободна/);
+  await expect(page.locator(".tbl.unfit").first()).toHaveAttribute("aria-label", /^Маса \d+, \d места\. Не е подходяща за 2 души$/);
   await t.click();
   await page.locator(".sheet [data-pick]").click();
-  await expect(page.locator(".tbl.sel")).toHaveAttribute("aria-label", /^\d+ избрана\. Маса за \d/);
+  await expect(page.locator(".tbl.sel")).toHaveAttribute("aria-label", /^Маса \d+, избрана\. За \d души/);
   expect(await axe(page, ".fp")).toEqual([]);
   await page.locator('.zseg [data-zone="garden"]').click();
   await expect(page.locator(".fp .lawn")).toHaveCount(1);
