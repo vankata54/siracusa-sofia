@@ -18,7 +18,9 @@ export default defineConfig({
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
-    command: `npm run gen && npx astro build --outDir ${dist} && PORT=${port} DIST_DIR=${dist} DB_FILE=data/e2e-${port}.db SC_PREVIEW_API=1 SMS_DEMO=1 node --experimental-strip-types --no-warnings server/index.ts`,
+    /* a fresh test database for every run: profiles and orders of earlier runs would collide with the random test numbers
+       (a known number skips the "Как да ви наричаме?" step) */
+    command: `rm -f data/e2e-${port}.db data/e2e-${port}.db-wal data/e2e-${port}.db-shm && npm run gen && npx astro build --outDir ${dist} && PORT=${port} DIST_DIR=${dist} DB_FILE=data/e2e-${port}.db SC_PREVIEW_API=1 SMS_DEMO=1 node --experimental-strip-types --no-warnings server/index.ts`,
     url: "http://localhost:" + port + "/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
