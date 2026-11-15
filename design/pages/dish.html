@@ -186,8 +186,11 @@ details.nutr .kv span:first-child{font-weight:600}
 (function(){
 "use strict";
 var esc = SC.esc, ic = SC.ic, fmt = SC.fmt;
-/* Categories where "Добави" makes sense (pizza toppings, cheese, prosciutto...). Owner to confirm (see review). */
-var ADDON_CATS = ["pitsi","burgeri","pasta-i-rizoto","salati","zakuski"];
+/* „Добави“ (платени добавки): по подразбиране само пици и бургери (DECISIONS 12.11 и 15.11). Админът го сменя по категория
+   или по ястие в „Меню“ (sa-menu-opts: {addon:{cats:[...], dishes:{<id>:true|false}}}); ястието печели над категорията. */
+var ADDON_OPTS = (function(){ try{ var o = JSON.parse(localStorage.getItem("sa-menu-opts") || "null"); if (o && o.addon) return o.addon; }catch(e){} return null; })();
+var ADDON_CATS = ADDON_OPTS && ADDON_OPTS.cats ? ADDON_OPTS.cats : ["pitsi","burgeri"];
+var ADDON_DISH = ADDON_OPTS && ADDON_OPTS.dishes ? ADDON_OPTS.dishes : {};
 var ADDONS = SC.inCat("dobavki").slice().sort(function(a,b){ return b.p-a.p; });
 var ICON_OF = {}; SC.ALLERGENS.forEach(function(a){ ICON_OF[a[0]] = a[2]; });
 
@@ -202,7 +205,7 @@ function catOf(d){ if (d.cat==="obedno") return {id:"obedno", n:"Обедно м
   var c = SC.catById[d.cat] || {id:d.cat, n:"Меню"}; return {id:c.id, n:c.n, href:"category.html#"+c.id, back:"menu.html#"+c.id}; }
 function compList(d){ return d.comp ? d.comp.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : []; }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
-function canAdd(d){ return ADDON_CATS.indexOf(d.cat)>-1; }
+function canAdd(d){ return d.id in ADDON_DISH ? !!ADDON_DISH[d.id] : ADDON_CATS.indexOf(d.cat)>-1; }
 function hasMods(d){ return !SC.isOut(d) && (compList(d).length>0 || canAdd(d)); }
 function extra(){ return ADDONS.filter(function(a){ return add[a.id]; }).reduce(function(s,a){ return s+a.p; },0); }
 function modsList(){ var m = [];

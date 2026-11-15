@@ -31,8 +31,8 @@ export const ORDER_RULES = {
   maxQty: 50,
   /** max different lines in one order */
   maxLines: 40,
-  /** categories whose dishes take add-ons from the "dobavki" category (owner to confirm, docs/OPEN-QUESTIONS.md) */
-  addonCats: ["pitsi", "burgeri", "pasta-i-rizoto", "salati", "zakuski"],
+  /** categories whose dishes take add-ons from the "dobavki" category: pizzas and burgers (DECISIONS 12.11 and 15.11, OPEN-QUESTIONS 10); in the admin code this list comes from the menu settings */
+  addonCats: ["pitsi", "burgeri"],
   /** add-ons come only from this category */
   addonCat: "dobavki",
   /** pickup: the traditional menu is ready 20 min after ordering (lunch at once) */
