@@ -34,6 +34,7 @@ server.listen(0, '127.0.0.1', async () => {
       const p = await ctx.newPage();
       p.on('pageerror', e => errors.push(tag + ': ' + e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(tag + ': ' + m.text()); });
       const sess = opt.session || 'admin';
+      await p.addInitScript(() => { window.__errs = []; window.addEventListener('error', e => { window.__errs.push(e.message || String(e)); }); });
       await p.addInitScript(([theme, sess, name, keep]) => { try {
         if (window.top !== window) return; if (sessionStorage.getItem('sa-shot')) return; sessionStorage.setItem('sa-shot', '1');
         if (!keep) localStorage.clear();
@@ -43,6 +44,8 @@ server.listen(0, '127.0.0.1', async () => {
       await p.goto(base + file + (hash ? '#' + hash : '')); await p.waitForTimeout(+(opt.wait || 1300));
       if (opt.eval) { await p.evaluate(opt.eval).catch(e => errors.push(tag + ' eval: ' + e.message)); await p.waitForTimeout(500); }
       if (opt.click) { for (const sel of opt.click.split('|')) { await p.click(sel, { timeout: 4000 }).catch(() => errors.push(tag + ' click failed: ' + sel)); await p.waitForTimeout(650); } }
+      const jsErr = await p.evaluate(() => (window.__errs || []).slice()); jsErr.forEach(m => errors.push(tag + ' window.onerror: ' + m));
+      if (await p.evaluate(() => !document.querySelector('.sa-app, .lg, .ix, .device'))) errors.push(tag + ': празна страница (нищо не е нарисувано)');
       const chk = await p.evaluate(() => { const r = { hs: [], small: [] }; const de = document.documentElement;
         if (de.scrollWidth > de.clientWidth + 1) r.hs.push('document ' + de.scrollWidth + '>' + de.clientWidth);
         document.querySelectorAll('[data-scroller], .sa-scroller').forEach(s => { if (s.scrollWidth > s.clientWidth + 1) r.hs.push('scroller ' + s.scrollWidth + '>' + s.clientWidth); });

@@ -52,13 +52,14 @@ function showBar(){ if (!bar){ bar = document.createElement("div"); bar.classNam
     document.body.appendChild(bar); bar.addEventListener("click", function(e){ var b = e.target.closest("[data-sg]"); if (!b) return; if (b.dataset.sg === "pick" && cand) choose(cand); else stop(null); }); }
   bar.innerHTML = barHTML(); }
 function onMove(e){ if (e.pointerType === "touch" || e.target.closest(".sg-ui")) return; lastTouch = false; var el = resolve(e.target); if (el !== cand){ cand = el; draw(el); showBar(); } }
-function onDown(e){ if (e.target.closest(".sg-ui")) return; lastTouch = e.pointerType === "touch"; e.stopPropagation(); if (!lastTouch) e.preventDefault(); }
+function onDown(e){ if (e.target.closest(".sg-ui")) return; if (e.pointerType) lastTouch = e.pointerType === "touch"; e.stopPropagation(); if (!lastTouch) e.preventDefault(); }
 function onClick(e){ if (e.target.closest(".sg-ui")) return; e.preventDefault(); e.stopImmediatePropagation(); var el = resolve(e.target); if (!el) return;
   if (lastTouch && !(cand && (cand === el || cand.contains(el)))){ cand = el; draw(el); showBar(); return; } choose(el); }
+function onTouch(e){ if (!e.target.closest(".sg-ui")) lastTouch = true; }
 function onKey(e){ if (e.key === "Escape"){ e.preventDefault(); stop(null); } }
 function startPick(done){ pickDone = done; cand = null; showBar();
-  document.addEventListener("pointermove", onMove, true); document.addEventListener("pointerdown", onDown, true); document.addEventListener("mousedown", onDown, true); document.addEventListener("click", onClick, true); document.addEventListener("keydown", onKey, true); }
-function stop(res){ document.removeEventListener("pointermove", onMove, true); document.removeEventListener("pointerdown", onDown, true); document.removeEventListener("mousedown", onDown, true); document.removeEventListener("click", onClick, true); document.removeEventListener("keydown", onKey, true);
+  document.addEventListener("pointermove", onMove, true); document.addEventListener("pointerdown", onDown, true); document.addEventListener("mousedown", onDown, true); document.addEventListener("click", onClick, true); document.addEventListener("keydown", onKey, true); document.addEventListener("touchstart", onTouch, {capture:true, passive:true}); }
+function stop(res){ document.removeEventListener("pointermove", onMove, true); document.removeEventListener("pointerdown", onDown, true); document.removeEventListener("mousedown", onDown, true); document.removeEventListener("click", onClick, true); document.removeEventListener("keydown", onKey, true); document.removeEventListener("touchstart", onTouch, {capture:true});
   if (bar){ bar.remove(); bar = null; } draw(null); var d = pickDone; pickDone = null; d && d(res); }
 function choose(el){ var ed = el.closest("[data-edit-id]"); stop({selector:selectorFor(el), editId:ed ? ed.getAttribute("data-edit-id") : null, text:textOf(el).slice(0, 500), kind:kindOf(el)}); }
 
@@ -79,6 +80,7 @@ function sheet(){ var r = recent();
       '<div data-place>' + placeHTML() + '</div>' +
       '<button class="pill pill-red pill-lg pill-block" type="submit">' + ic("paper-plane-right", 22) + 'Изпрати препоръката</button>' +
       '<p class="muted small" style="margin:0;text-align:center">До ' + LIMIT + ' препоръки на час от едно устройство.</p></form>'});
+  s.el.style.zIndex = "85"; /* над банера за бисквитки */
   var f = s.el.querySelector("[data-sgform]"), ta = f.querySelector("#sg-t"), er = f.querySelector("#sg-e");
   ta.value = draft; setTimeout(function(){ ta.focus({preventScroll:true}); }, 360);
   ta.addEventListener("input", function(){ draft = ta.value; er.hidden = true; ta.removeAttribute("aria-invalid"); });
