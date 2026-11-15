@@ -37,6 +37,24 @@
 .kpi.hot .lb .ic{color:inherit}
 @container page (max-width:420px){ .kpi{min-height:150px; padding:16px} .kpi .v{font-size:44px} }
 
+.db-wait{margin-bottom:8px}
+.waits{display:grid; gap:8px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .waits{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.wt{display:flex; align-items:center; gap:14px; min-height:76px; padding:12px 12px 12px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; transition:transform var(--t-base) var(--ease)}
+.wt:hover{transform:translateY(-2px)}
+.wt .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.wt .tx{flex:1; min-width:0; display:grid; gap:2px}
+.wt b{display:flex; align-items:center; gap:8px; font-size:17px; line-height:1.25}
+.wt b .sa-n{min-width:28px; height:28px; border-radius:14px; font-size:15px}
+.wt small{font-size:15px; color:var(--muted); font-weight:600}
+.wt .wgo{flex:none; min-height:48px; padding:0 14px 0 18px; font-size:16px; gap:4px}
+@container page (max-width:420px){ .wt{flex-wrap:wrap} .wt .wgo{width:100%; justify-content:center} }
+.wt-ok{display:flex; align-items:center; gap:12px; min-height:64px; padding:12px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line); font-size:17px}
+.wt-ok .ic{color:var(--ok); flex:none}
+.db-today{margin-top:28px}
+.kpi .sum{font-size:40px; letter-spacing:-.04em; white-space:nowrap}
+@container page (max-width:520px){ .kpi .sum{font-size:30px} }
+@container page (min-width:900px){ .db-today{margin-top:36px} }
 /* modules */
 .mods{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
 @container page (min-width:620px){ .mods{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -130,16 +148,29 @@ var SAMPLE = '<span class="sa-tag sample">' + ic("info",16) + '<span class="lg">
 var K = [
   ["orders","Поръчки в работа","receipt", inWork, inWork ? SAMPLE : (kitchenOpen ? "Няма поръчки в работа" : "Кухнята не работи сега"), "orders.html"],
   ["reservations","Резервации днес","calendar-check", resToday, SAMPLE, "reservations.html"],
-  ["notes","Нови бележки","pencil-simple", newNotes, newNotes ? "от молива" : "Няма нови", "notes.html", newNotes > 0],
   ["menu","Изчерпани днес","clock", outs.length, outs.length ? esc(outs.slice(0,2).map(function(id){ return SC.byId[id].n; }).join(", ")) + (outs.length > 2 ? " и още " + (outs.length - 2) : "") : "Всичко е налично", "menu.html#f=out", outs.length > 0]
 ].filter(function(k){ return A.can(k[0]); });
 /* обърната е само плочката, която иска действие сега: изчерпани днес (и нови бележки, ако няма изчерпани) */
-var hotDone = false; K.forEach(function(k){ k[7] = false; }); [3,2].forEach(function(i){ var k = K.filter(function(x){ return x[0] === (i === 3 ? "menu" : "notes"); })[0]; if (k && k[6] && !hotDone){ k[7] = true; hotDone = true; } });
+K.forEach(function(k){ k[7] = k[0] === "menu" && k[6]; });
+/* оборотът днес: само собственик и главен админ (решение 15.11, „Админът, допълнения“ 5) */
+if (me.role === "admin" || me.role === "owner"){ var sales = A.todaySales(); K.unshift(["dashboard","Днес","wallet", '<span class="sum">' + SC.fmt(sales.sum) + '</span>', "от " + A.plural(sales.n, "поръчка", "поръчки") + " · " + SAMPLE, "reports.html#p=today"]); }
 function kpis(){ if (st === "loading") return A.skel(2, "Зареждаме таблото …");
   if (st === "error") return A.error("Не успяхме да заредим числата за днес. Модулите и разделите работят.");
   if (!K.length) return "";
   return '<div class="sa-shell sa-rise" data-edit-id="admin.dashboard.today"><div class="kpis n' + K.length + '">' + K.map(function(k){
     return '<a class="kpi' + (k[7] ? ' hot' : '') + '" href="' + k[5] + '"><span class="lb">' + ic(k[2],20) + k[1] + '</span><span class="v">' + k[3] + '</span><span class="ft">' + k[4] + '</span></a>'; }).join("") + '</div></div>'; }
+
+/* ---------- „Чака те“ (решение 15.11, „Админът, допълнения“ 3): само каквото ролята вижда, всяко с бутон направо към действието ---------- */
+function waitHTML(){ if (st === "loading" || st === "error") return "";
+  var nw = A.notesWaiting(), CANB = ["admin","owner","manager"].indexOf(me.role) > -1, W = [
+    ["orders", A.can("orders"), A.orders().filter(function(o){ return o.status === "accepted"; }).length, "receipt", "Поръчки за приемане", "Нови, още не са започнати", "orders.html#s=accepted", "Приеми", "orders"],
+    ["res", A.can("reservations"), A.reservationsToday().filter(function(r){ return r.status === "new"; }).length, "calendar-check", "Резервации за потвърждаване", "Днес, чакат потвърждение", "reservations.html#f=new", "Потвърди"],
+    ["notes", A.can("notes") || nw.n > 0, st === "empty" ? 0 : nw.n, "pencil-simple", A.isMainAdmin() ? "Бележки за одобрение" : "Вашите препоръки", nw.title || "", A.isMainAdmin() ? "notes.html#s=" + (nw.newN ? "new" : "review") : "notes.html", A.isMainAdmin() ? "Прегледай" : "Виж"],
+    ["noshow", A.can("reservations") && CANB, A.blocksPending(), "warning-circle", "Неявили се за решение", "Две неявявания: блокиране или не", "reservations.html#f=no_show", "Реши"]
+  ].filter(function(x){ return x[1] && x[2] > 0; });
+  return '<section class="db-wait sa-rise" data-edit-id="admin.dashboard.waiting" aria-labelledby="db-wait-h"><div class="sa-sh" style="margin-top:0"><h2 id="db-wait-h">Чака те</h2>' + (W.length ? '<p>' + A.plural(W.reduce(function(a0, x){ return a0 + x[2]; }, 0), "нещо", "неща") + ' за действие</p>' : '') + '</div>' +
+    (W.length ? '<div class="waits">' + W.map(function(x){ return '<a class="wt" href="' + x[6] + '"' + (x[8] ? ' data-fresh="' + x[8] + '"' : '') + '><span class="si">' + ic(x[3], 22) + '</span><span class="tx"><b><span class="sa-n">' + x[2] + '</span>' + esc(x[4]) + '</b>' + (x[5] ? '<small>' + esc(x[5]) + '</small>' : '') + '</span><span class="wgo pill pill-ink">' + esc(x[7]) + ic("caret-right", 18) + '</span></a>'; }).join("") + '</div>'
+      : '<div class="wt-ok">' + ic("check-circle", 24) + '<span><b>Нищо не чака.</b> Всичко е наред.</span></div>') + '</section>'; }
 
 /* ---------- my app (персонал) ---------- */
 var app = ["waiter","kitchen","driver"].filter(function(id){ return me.role === id; })[0];
@@ -176,13 +207,16 @@ function groups(){ return '<div class="groups" data-edit-id="admin.dashboard.sec
     var inner = '<span class="si">' + ic(sc.ic,22) + '</span><span><b>' + esc(sc.n) + '</b><small>' + (sc.soon ? esc(sc.desc) : meta) + '</small></span><span class="end">' + end + '</span>';
     return sc.soon ? '<button class="srow soon" type="button" data-sa="soon" data-id="' + id + '">' + inner + '</button>' : '<a class="srow" href="' + sc.href + '">' + inner + '</a>'; }).join("") + '</div></section>'; }).join("") + '</div>'; }
 
-var html = (st === "offline" ? A.offline("Показваме последно зареденото. Числата за днес не се обновяват.") + '<div style="height:16px"></div>' : '') + mine +
-  (K.length || st === "loading" || st === "error" ? (mine ? '<div style="height:16px"></div>' : '') + kpis() : '');
+var html = (st === "offline" ? A.offline("Показваме последно зареденото. Числата за днес не се обновяват.") + '<div style="height:16px"></div>' : '') + mine + waitHTML() +
+  (K.length || st === "loading" || st === "error" ? '<div class="sa-sh db-today"><h2>Днес</h2></div>' + kpis() : '');
 html += '<div class="sa-sh" id="modules"><h2>Модулите</h2><p>Всеки се отваря на живо в рамка на телефон, таблет или компютър.</p></div>' +
   (st === "loading" ? A.skel(3, "Зареждаме модулите …") : '<div class="mods">' + mods.map(modCard).join("") + '</div>');
 var gh = groups();
 if (gh.indexOf("srow") > -1) html += '<div class="sa-sh"><h2>Разделите</h2><p>Каквото не е готово, е „Скоро“ с описание.</p></div>' + (st === "loading" ? A.skel(3) : gh);
 body.innerHTML = html;
+A.markFresh();
+/* нова онлайн поръчка, докато таблото е отворено: „Чака те“ се обновява сам */
+A.onNewOrder = function(){ var w = body.querySelector(".db-wait"); if (w){ var tmp = document.createElement("div"); tmp.innerHTML = waitHTML(); w.replaceWith(tmp.firstElementChild); A.markFresh(); } };
 if (location.hash.indexOf("modules") > -1){ var t = document.getElementById("modules"); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); }
 })();
 </script>

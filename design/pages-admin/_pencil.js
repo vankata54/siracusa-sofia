@@ -100,11 +100,15 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '*{box-sizing:border-box} svg{flex:none; display:block}' +
   'button{font:inherit; color:inherit; cursor:pointer}' +
   ':focus-visible{outline:3px solid var(--red); outline-offset:2px}' +
-  '.fab{position:absolute; right:16px; bottom:var(--fab-b, 24px); pointer-events:auto; display:inline-flex; align-items:center; gap:10px; min-height:56px; padding:0 22px 0 18px; border:0; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:800; font-size:16px; box-shadow:var(--shadow-lg); transition:transform var(--t-fast, 120ms) var(--ease, ease), background-color var(--t-base, 200ms) var(--ease, ease)}' +
+  '.fab{position:absolute; right:16px; bottom:var(--fab-b, 24px); pointer-events:auto; display:grid; place-items:center; width:56px; height:56px; padding:0; border:0; border-radius:50%; background:var(--ink); color:var(--bg); box-shadow:var(--shadow-lg); transition:transform var(--t-fast, 120ms) var(--ease, ease), background-color var(--t-base, 200ms) var(--ease, ease), bottom var(--t-slow, 320ms) var(--ease, ease)}' +
+  /* подсказката: при посочване и при фокус (кръгъл бутон без текст, решение 15.11) */
+  '.tip{position:absolute; right:84px; bottom:calc(var(--fab-b, 24px) + 10px); padding:8px 12px; border-radius:12px; background:var(--ink); color:var(--bg); font-weight:700; font-size:14px; white-space:nowrap; box-shadow:var(--shadow); opacity:0; transform:translateX(6px); pointer-events:none; transition:opacity var(--t-fast, 120ms) var(--ease, ease), transform var(--t-fast, 120ms) var(--ease, ease)}' +
+  '.fab:hover + .tip, .fab:focus-visible + .tip{opacity:1; transform:none}' +
   '.fab svg{color:var(--ember)} .fab:active{transform:scale(.96)}' +
   '.fab[aria-pressed="true"]{background:var(--ember); color:var(--on-ember)} .fab[aria-pressed="true"] svg{color:var(--on-ember)}' +
-  '@container pen (max-width:699px){ .fab{right:12px; bottom:var(--fab-bp, 96px)} :host([data-nofab-phone]) .fab{display:none} }' +
-  ':host([data-sheet]) .fab{display:none}' + /* a sheet of the admin is open: the round button must not cover its buttons */
+  '@container pen (max-width:699px){ .fab{right:12px; bottom:var(--fab-bp, 96px)} .tip{right:80px; bottom:calc(var(--fab-bp, 96px) + 10px)} :host([data-nofab-phone]) .fab, :host([data-nofab-phone]) .tip{display:none}' +
+  ' :host([data-up]) .fab{bottom:calc(var(--fab-bp, 96px) + 72px)} :host([data-up]) .tip{bottom:calc(var(--fab-bp, 96px) + 82px)} }' +
+  ':host([data-sheet]) .fab, :host([data-sheet]) .tip{display:none}' + /* a sheet of the admin is open: the round button must not cover its buttons */
   '.bar{position:absolute; top:var(--bar-t, 10px); left:50%; transform:translate(-50%,-140%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; max-width:calc(100% - 24px); min-height:60px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transition:transform var(--t-slow, 320ms) var(--ease, ease), opacity var(--t-slow, 320ms) var(--ease, ease); font-size:16px; line-height:1.3}' +
   '.bar.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}' +
   '.bar .t{min-width:0} .bar .t b{font-weight:800} .bar .t span{font-weight:600}' +
@@ -199,7 +203,7 @@ SAPen.mount = function(o){ o = o || {};
   if (o.toastBottom) host.style.setProperty("--toast-bp", o.toastBottom + "px");
   if (o.fabBottom){ host.style.setProperty("--fab-bp", o.fabBottom[0] + "px"); host.style.setProperty("--fab-b", o.fabBottom[1] + "px"); }
   root.innerHTML = '<style>' + UI_CSS + '</style>' +
-    (o.fab === false ? '' : '<button class="fab" type="button" aria-pressed="false" data-fab>' + svg("pencil-simple", 22) + '<span>Молив</span></button>') +
+    (o.fab === false ? '' : '<button class="fab" type="button" aria-pressed="false" aria-label="Молив" data-fab>' + svg("pencil-simple", 26) + '</button><span class="tip" aria-hidden="true">' + (o.recommend ? 'Молив: препоръка' : 'Молив: бележка за промяна') + '</span>') +
     '<div class="bar" role="status" aria-live="polite"><div class="t"></div><div class="acts"><button class="bb main" type="button" data-pick hidden>Бележка за това</button><button class="bb" type="button" data-up hidden>' + svg("caret-up", 18) + 'Разшири</button><button class="bb" type="button" data-down hidden>' + svg("caret-down", 18) + 'Стесни</button><button class="bb" type="button" data-offb>' + svg("x", 18) + 'Изключи</button></div></div>' +
     '<div class="sw"></div><div class="toast" role="status" aria-live="polite"></div>';
   udoc.body.appendChild(host);
@@ -297,13 +301,13 @@ SAPen.mount = function(o){ o = o || {};
     requestAnimationFrame(function(){ toastEl.classList.add("on"); }); clearTimeout(tt); tt = setTimeout(function(){ toastEl.classList.remove("on"); }, 5200); }
 
   function pathOf(win){ var p = win.location.pathname, i = p.indexOf("/design/"); if (i > -1) p = p.slice(i + 7); return p + win.location.hash; }
-  function setOn(v){ on = !!v; if (on && lastType === "mouse" && ui.matchMedia && ui.matchMedia("(hover: none)").matches) lastType = "touch"; /* телефон: без „Esc за изход“ */ if (fab){ fab.setAttribute("aria-pressed", String(on)); fab.innerHTML = on ? svg("x", 22) + '<span>Изключи</span>' : svg("pencil-simple", 22) + '<span>Молив</span>'; fab.setAttribute("aria-label", on ? "Изключи молива" : "Молив: посочете елемент и напишете какво да се промени"); }
+  function setOn(v){ on = !!v; if (on && lastType === "mouse" && ui.matchMedia && ui.matchMedia("(hover: none)").matches) lastType = "touch"; /* телефон: без „Esc за изход“ */ if (fab){ fab.setAttribute("aria-pressed", String(on)); fab.innerHTML = on ? svg("x", 26) : svg("pencil-simple", 26); fab.setAttribute("aria-label", on ? "Изключи молива" : "Молив"); fab.title = ""; var tp = root.querySelector(".tip"); if (tp) tp.textContent = on ? "Изключи молива" : (REC ? "Молив: препоръка" : "Молив: бележка за промяна"); }
     bar.classList.toggle("on", on); if (on){ attach(getTarget()); barText(); } else { cand = null; stack = []; if (tw && tw.__saPenLayer) tw.__saPenLayer.clear(); }
     o.onToggle && o.onToggle(on); }
   function off(){ setOn(false); }
   root.addEventListener("keydown", function(e){ if (e.key === "Escape" && on && !sheetOpen){ e.preventDefault(); e.stopPropagation(); off(); if (fab && fab.offsetParent) fab.focus(); } });
   root.addEventListener("pointerdown", function(e){ if (e.pointerType) lastType = e.pointerType; }, true);
-  if (fab){ fab.addEventListener("click", function(){ setOn(!on); }); fab.setAttribute("aria-label", "Молив: посочете елемент и напишете какво да се промени"); }
+  if (fab){ fab.addEventListener("click", function(){ setOn(!on); }); fab.setAttribute("aria-label", "Молив"); }
   bar.querySelector("[data-offb]").onclick = off;
   bar.querySelector("[data-pick]").onclick = function(){ openSheet(); };
   bar.querySelector("[data-up]").onclick = widen; bar.querySelector("[data-down]").onclick = narrow;

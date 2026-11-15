@@ -284,7 +284,9 @@ A.initials = function(name){ var p = String(name || "?").replace(/[^\p{L}\p{N} ]
 var toastT;
 /* известието е винаги над лентата „Запази“ / „Публикувай“, и когато лентата се появи след него */
 /* известието стои над видимата лента „Запази“, колкото и висока да е тя (на 390 може да е на два реда) */
-function toastUp(){ var col = A.col || document.body, t = col.querySelector(".sa-toast"); if (!t) return; var bar = document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on");
+/* лентата „Запази“ на телефон вдига и кръглия „Молив“ (атрибут data-up на sa-pen-ui) */
+function penUp(){ var ph = document.querySelector("sa-pen-ui"); if (!ph) return; if (document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on")) ph.setAttribute("data-up", ""); else ph.removeAttribute("data-up"); }
+function toastUp(){ penUp(); var col = A.col || document.body, t = col.querySelector(".sa-toast"); if (!t) return; var bar = document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on");
   t.classList.toggle("up", !!bar);
   /* от разположението (bottom + височина), не от getBoundingClientRect: лентата влиза с transform и по време на анимацията е още долу */
   if (bar){ var cs = getComputedStyle(bar), bb = parseFloat(cs.bottom); t.style.bottom = (cs.position === "fixed" || isNaN(bb) ? Math.max(28, Math.round(col.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 12)) : Math.round(bb + bar.offsetHeight + 12)) + "px"; } else t.style.bottom = ""; }
@@ -356,17 +358,62 @@ A.maskPhone = function(p){ var f = A.fmtPhone(p); return f.length === 13 ? f.sli
 
 A.badges = {};
 /* броят на всеки раздел, сметнат на всяка страница от общите ключове */
-A.computeBadges = function(){ var b = A.badges;
-  /* главният админ: нови и за преглед (чакат него); другите с „Бележки“: нови */
-  b.notes = !A.can("notes") ? 0 : A.notes.count("new") + (A.isMainAdmin() ? A.notes.count("review") : 0);
-  A.badgeTitles = {notes:A.isMainAdmin() ? A.plural(A.notes.count("new"), "нова", "нови") + ", " + A.notes.count("review") + " за преглед" : ""};
+/* „Бележки“: само това, което чака действие от този човек (решение 15.11, „Админът, допълнения“ 2).
+   Главният админ: нови (за одобрение) и „за преглед“. Другите: техните препоръки с нов статус след последното отваряне на „Бележки“ / „Моите препоръки“. */
+A.notesWaiting = function(){ if (!A.me) return {n:0, title:""};
+  if (A.isMainAdmin()){ var nw = A.notes.count("new"), rv = A.notes.count("review"), parts = [];
+    if (nw) parts.push(nw + (nw === 1 ? " чака одобрение" : " чакат одобрение")); if (rv) parts.push(rv + " за преглед");
+    return {n:nw + rv, newN:nw, reviewN:rv, title:parts.join(", ")}; }
+  var seen = get("notes-seen-" + A.me.user, ""), ch = A.notes.mine().filter(function(n){ return n.status !== "new" && (!seen || n.updatedAt > seen); }).length;
+  return {n:ch, title:ch ? A.plural(ch, "ваша препоръка е", "ваши препоръки са") + " с нов статус" : ""}; };
+A.notesSeen = function(){ if (A.me) set("notes-seen-" + A.me.user, A.now().toISOString()); };
+A.blocksPending = function(){ var bl = get("blocks", {}) || {}; return Object.keys(bl).filter(function(k){ return bl[k] && bl[k].status === "pending"; }).length; };
+A.computeBadges = function(){ var b = A.badges, w = A.notesWaiting();
+  b.notes = w.n;
+  A.badgeTitles = {notes:w.title, orders:"Нови поръчки за приемане", reservations:"Резервации за потвърждаване днес"};
   b.orders = A.orders().filter(function(o){ return o.status === "accepted"; }).length;
   b.customers = listOf(get("feedback", [])).filter(function(f){ return f.status === "new"; }).length;
   b.offers = listOf(get("feedback-iq", [])).filter(function(q){ return q.st === "new" || q.status === "new"; }).length;
   b.reservations = A.reservations().filter(function(r){ return r.date === A.todayKey() && r.status === "new"; }).length;
   return b; };
-A.setBadge = function(id, n){ A.badges[id] = n; document.querySelectorAll('[data-badge="' + id + '"]').forEach(function(el){ el.textContent = n; el.hidden = !n; }); };
+A.setBadge = function(id, n){ A.badges[id] = n; var t = (A.badgeTitles || {})[id]; document.querySelectorAll('[data-badge="' + id + '"]').forEach(function(el){ el.textContent = n; el.hidden = !n; if (t) el.title = t; }); };
 function badge(id){ var n = A.badges[id], t = (A.badgeTitles || {})[id]; return '<span class="sa-n" data-badge="' + id + '"' + (n ? '' : ' hidden') + (t ? ' title="' + esc(t) + '"' : '') + ' aria-hidden="true">' + (n || 0) + '</span>'; }
+
+/* ---------- нова онлайн поръчка: звук и мигаща значка (решение 15.11, „Админът, допълнения“ 4) ----------
+   Ключът „Звук“ е в горната лента и се помни на устройството (localStorage "sa-sound": "on" | "off", по подразбиране "on").
+   Браузърът пуска звук само след първо докосване: дотогава ключът казва „Звук: докоснете“. В прототипа: „Само в прототипа“ → „Симулирай нова онлайн поръчка“. */
+A.soundOn = function(){ try{ return localStorage.getItem("sa-sound") !== "off"; }catch(e){ return true; } };
+A.audioReady = false;
+var AC = null;
+function unlock(){ if (A.audioReady) return; try{ var C = window.AudioContext || window.webkitAudioContext; AC = AC || new C(); if (AC.resume) AC.resume(); A.audioReady = true; }catch(e){} syncSound(); }
+document.addEventListener("pointerdown", unlock, {capture:true}); document.addEventListener("keydown", unlock, {capture:true});
+A.chime = function(){ if (!A.soundOn() || !A.audioReady || !AC) return; try{ var t0 = AC.currentTime; [[880, 0], [1320, .18]].forEach(function(f){ var o = AC.createOscillator(), g = AC.createGain(); o.type = "sine"; o.frequency.value = f[0];
+  g.gain.setValueAtTime(0.0001, t0 + f[1]); g.gain.exponentialRampToValueAtTime(0.25, t0 + f[1] + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + f[1] + .32); o.connect(g); g.connect(AC.destination); o.start(t0 + f[1]); o.stop(t0 + f[1] + .35); }); }catch(e){} };
+function soundLabel(){ return !A.soundOn() ? ["Звук изкл.", "bell"] : A.audioReady ? ["Звук вкл.", "bell-ringing"] : ["Звук: докоснете", "bell"]; }
+function syncSound(){ var l = soundLabel(); document.querySelectorAll('[data-sa="sound"]').forEach(function(b){ b.setAttribute("aria-pressed", String(A.soundOn())); b.innerHTML = ic(l[1], 20) + '<span class="lg">' + l[0] + '</span><span class="sm">Звук</span>'; b.setAttribute("aria-label", l[0] + (A.soundOn() && !A.audioReady ? ": звукът тръгва след първото докосване на екрана" : "") + ". Смени"); b.classList.toggle("wait", A.soundOn() && !A.audioReady); }); }
+A.syncSound = syncSound;
+/* новите поръчки: значката на „Поръчки“ мига 2 минути (спокойно; при „намалено движение“ само цвят и дума „Нова“) */
+var ALERT_MS = 120000;
+function alertOn(){ var a0 = get("order-alert", null); return a0 && Date.now() - a0.at < ALERT_MS ? a0 : null; }
+function markFresh(){ var on = !!alertOn(); document.querySelectorAll('[data-badge="orders"], [data-fresh="orders"]').forEach(function(el){ el.classList.toggle("fresh", on); }); }
+A.markFresh = markFresh;
+var known = null;
+function watchOrders(){ if (!A.can("orders")) return; known = {}; A.orders().forEach(function(o){ known[o.no] = 1; }); markFresh();
+  setInterval(function(){ var fresh = A.orders().filter(function(o){ return !known[o.no]; }); fresh.forEach(function(o){ known[o.no] = 1; });
+    var nw = fresh.filter(function(o){ return o.status === "accepted" && o.channel !== "table"; });
+    if (nw.length){ var o = nw[nw.length - 1]; set("order-alert", {no:o.no, at:Date.now()}); A.chime(); A.computeBadges(); A.setBadge("orders", A.badges.orders); markFresh();
+      A.toast("Нова онлайн поръчка № " + o.no, {action:{label:"Виж", href:"orders.html#n=" + o.no}, ms:6000}); A.onNewOrder && A.onNewOrder(o); }
+    else markFresh(); }, 1500); }
+/* прототипът: нова онлайн поръчка с истински ястия, примерен клиент */
+A.simulateOrder = function(){ var d = get("orders", null); if (!d || !d.list) d = {at:A.hm(A.now()), list:listOf(d)};
+  var no = String(Math.max.apply(null, [1041].concat(d.list.map(function(o){ return +o.no || 0; }))) + 1), pool = SC.items.filter(function(x){ return !SC.isOut(x) && x.p; }), r = +no;
+  var lines = [{id:pool[(r * 7) % pool.length].id, q:1, mods:[]}, {id:pool[(r * 13 + 5) % pool.length].id, q:2, mods:[]}], t = A.now();
+  var o = {no:no, ts:t.getTime(), placedAt:A.hm(t), channel:"delivery", mode:"delivery", lines:lines, pay:"cash", name:"Клиент " + (r - 1041), phone:"0888 00 " + String(r % 100).padStart(2, "0") + " " + String(r % 97).padStart(2, "0"), zone:"Дружба 2", addr:"[ЛИПСВА: адрес, примерна поръчка]", status:"accepted", times:{accepted:t.toISOString()}, sample:true};
+  if (A.seed && A.seed.sums) Object.assign(o, A.seed.sums(o)); else o.total = lines.reduce(function(a0, l){ return a0 + SC.byId[l.id].p * l.q; }, 0);
+  d.list.push(o); set("orders", d); A.audit("order.new", "Нова онлайн поръчка № " + no + " (симулация)", no); return o; };
+/* оборот днес (собственик и главен админ): без отказаните */
+A.todaySales = function(){ var t = A.todayKey(), l = A.orders().filter(function(o){ return o.status !== "cancelled" && A.todayKey(new Date(o.ts)) === t; });
+  var sum = l.reduce(function(a0, o){ var v = typeof o.total === "number" ? o.total : (A.seed && A.seed.sums ? A.seed.sums(o).total : 0); return a0 + (v || 0); }, 0); return {sum:Math.round(sum * 100) / 100, n:l.length}; };
 
 /* ---------- chrome ---------- */
 function sideHTML(cur){
@@ -386,6 +433,7 @@ function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = TH
     '<div class="sa-search sa-only-d" role="search"><label class="vh" for="sa-q">Търсене: раздели, ястия, поръчки, резервации</label>' + ic("magnifying-glass", 20) + '<input id="sa-q" type="search" placeholder="Търси навсякъде" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sa-sres" aria-expanded="false"><span class="k" aria-hidden="true">/</span><button class="sa-clear" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button><div class="sa-sres" id="sa-sres" role="listbox" aria-label="Резултати" hidden></div></div>' +
     '<button class="sa-tb sa-only-t" type="button" data-sa="sections">' + ic("magnifying-glass", 20) + 'Търси</button>' +
     (pen ? '<button class="sa-tb" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + 'Молив</button>' : '') +
+    (A.can("orders") ? '<button class="sa-tb sa-snd" type="button" data-sa="sound" aria-pressed="' + A.soundOn() + '"></button>' : '') +
     '<button class="sa-tb sa-only-d" type="button" data-sa="theme" aria-label="Тема: ' + th[1] + '. Смени">' + ic(th[2], 20) + 'Тема: ' + th[1] + '</button>' +
     
     '<button class="sa-me" type="button" data-sa="profile" aria-label="Профил: ' + esc(A.me.name) + ', ' + esc(A.roleName(A.me.role)) + '"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><span class="who sa-only-d"><b>' + esc(A.me.name) + '</b><small>' + esc(A.roleName(A.me.role)) + '</small></span></button>' +
@@ -401,6 +449,7 @@ function protoHTML(o){ var role = A.me ? A.me.role : "";
     '<p>Час на прототипа (днешната дата; смяната пресъздава примерните поръчки и резервации):</p><div class="row">' + A.TIMES.map(function(t){ return '<button class="chip" type="button" data-sa="ptime" data-v="' + t + '" aria-pressed="' + (A.protoTime === t) + '">' + t + '</button>'; }).join("") + '</div>' +
     '<p>Виж като (сменя ролята на влезлия, за да се види какво вижда всяка роля):</p><div class="row">' + A.DEFAULT_ROLES.map(function(r){ return '<button class="chip" type="button" data-sa="viewas" data-v="' + r.id + '" aria-pressed="' + (role === r.id) + '">' + esc(r.n) + '</button>'; }).join("") + '</div>' +
     '<p>Пробни акаунти: <code>admin</code>, <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code>, <code>marketing</code>, всички с парола <code>' + A.PASSWORD + '</code>. Само в прототипа; истинските пароли са в <code>.env</code> и не са в git.</p>' +
+    (A.can("orders") ? '<div class="row"><button class="chip" type="button" data-sa="simorder">' + ic("bell-ringing", 18) + 'Симулирай нова онлайн поръчка</button></div>' : '') +
     '<div class="row"><button class="chip" type="button" data-sa="reset">' + ic("arrow-counter-clockwise", 18) + 'Върни данните в начало</button><a class="chip" href="index.html" style="text-decoration:none">' + ic("list", 18) + 'Всички екрани</a></div>' +
     (o.protoExtra || '') + '</section>'; }
 
@@ -422,7 +471,7 @@ A.mount = function(o){ o = o || {};
     bnavHTML(o.section) + '<div class="sa-ov"></div>';
   document.body.appendChild(app);
   A.app = app; A.side = app.querySelector(".sa-side"); A.col = app.querySelector(".sa-col"); A.scroller = app.querySelector(".sa-scroller"); A.ov = app.querySelector(".sa-ov"); A.bnav = app.querySelector(".sa-bnav");
-  bindSearch(); watchTabs();
+  bindSearch(); watchTabs(); syncSound(); watchOrders();
   try{ new MutationObserver(toastUp).observe(A.col, {subtree:true, attributes:true, attributeFilter:["class"]}); }catch(e){}
   if (window.SAPen && A.me && o.pencil !== false && !A.inPreview) A.pen = A.mountPen({module:"admin"});
   return allowed ? app.querySelector("[data-body]") : null; };
@@ -434,7 +483,7 @@ function watchTabs(){ var q = 0; function run(){ if (q) return; q = requestAnima
   try{ new MutationObserver(run).observe(A.scroller, {childList:true, subtree:true}); }catch(e){} window.addEventListener("resize", run); run(); }
 /* моливът за всяка роля (решение 15.11): с „Бележки“ пише бележки, без тях пише препоръки (само предлага, нищо не променя) */
 A.mountPen = function(x){ var rec = !A.can("notes");
-  return SAPen.mount(Object.assign({author:A.who, now:A.now, fabPhone:false, barTop:[8, 88], recommend:rec, notesHref:"notes.html",
+  return SAPen.mount(Object.assign({author:A.who, now:A.now, barTop:[8, 88], recommend:rec, notesHref:"notes.html",
     onSave:function(n){ n.source = {type:"staff", role:A.me.role, user:A.me.user}; A.notes.add(n); A.audit("note.create", (rec ? "Нова препоръка: " : "Нова бележка: ") + n.text.slice(0, 80), n.id); A.computeBadges(); A.setBadge("notes", A.badges.notes); },
     onToggle:syncPen}, x)); };
 function syncPen(on){ document.querySelectorAll('[data-sa="pen"]').forEach(function(b){ b.setAttribute("aria-pressed", String(!!on)); }); }
@@ -556,6 +605,8 @@ document.addEventListener("click", function(e){ var ask = e.target.closest("[dat
   if (a === "pen"){ if (A.pen) A.pen.toggle(); return; }
   if (a === "soon"){ e.preventDefault(); soonSheet(t.dataset.id); return; }
   if (a === "viewas"){ A.viewAs(t.dataset.v); return; }
+  if (a === "sound"){ try{ localStorage.setItem("sa-sound", A.soundOn() ? "off" : "on"); }catch(x){} unlock(); syncSound(); if (A.soundOn()) A.chime(); A.toast(A.soundOn() ? "Звукът за нови поръчки е включен" : "Звукът за нови поръчки е изключен"); return; }
+  if (a === "simorder"){ var so = A.simulateOrder(); A.toast("Симулирахме онлайн поръчка № " + so.no + ". След миг идва като нова."); return; }
   if (a === "ptime"){ A.setProtoTime(t.dataset.v); location.reload(); return; }
   if (a === "reset"){ A.data.reset(); A.toast("Данните са върнати в начало"); setTimeout(function(){ location.reload(); }, 700); return; }
   if (a === "state"){ e.preventDefault(); location.hash = t.getAttribute("href").slice(1); location.reload(); return; }

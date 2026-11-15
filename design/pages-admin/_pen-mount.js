@@ -36,12 +36,12 @@ function mount(o){ o = o || {};
     /* широк екран: известието горе, ако бутонът е горе или в слот на модула (иначе стои над „Готово“ на картите в кухнята) */
     toastTop:o.toastTop || 84, /* под горната лента на модула и под лентата в жар */ toastWideTop:function(){ return o.toastWide === "top" || (o.toastWide !== "bottom" && (wplace === "top" || btn.parentElement !== document.body)); },
     onSave:function(n){ n.source = {type:"staff", role:ses.role, user:ses.user}; var l = load("sa-notes", null); if (!Array.isArray(l)) l = []; l.unshift(n); store("sa-notes", l); },
-    onToggle:function(on){ btn.setAttribute("aria-pressed", String(on)); btn.innerHTML = on ? icon("x", 20) + '<span>Изключи</span>' : icon("pencil-simple", 20) + '<span>Молив</span>';
+    onToggle:function(on){ btn.setAttribute("aria-pressed", String(on)); btn.innerHTML = on ? icon("x", 22) + '<span>Изключи</span>' : icon("pencil-simple", 22) + '<span>Молив</span>'; btn.title = on ? "Изключи молива" : (rec ? "Молив: препоръка" : "Молив: бележка");
       btn.style.background = on ? "var(--ember)" : "var(--glass)"; btn.style.color = on ? "var(--on-ember)" : "var(--ink)"; }});
   /* own button: 48 px, icon and word, tokens only */
   var btn = document.createElement("button"); btn.type = "button"; btn.className = "sa-pen-btn"; btn.setAttribute("aria-pressed", "false");
-  btn.setAttribute("aria-label", rec ? "Молив: препоръка към админа" : "Молив: бележка към админа");
-  btn.innerHTML = icon("pencil-simple", 20) + '<span>Молив</span>';
+  btn.setAttribute("aria-label", "Молив");
+  btn.innerHTML = icon("pencil-simple", 22) + '<span>Молив</span>'; btn.title = rec ? "Молив: препоръка" : "Молив: бележка";
   var st = document.createElement("style");
   var place = o.place === "top" ? "top" : "bottom", side = o.side === "left" ? "left" : "right", top = +(o.top != null ? o.top : 10), bottom = +(o.bottom != null ? o.bottom : 96), wide = +(o.wideBottom != null ? o.wideBottom : 24),
     wplace = o.widePlace === "top" ? "top" : "bottom", wtop = +(o.wideTop != null ? o.wideTop : 16), wside = o.wideSide === "left" ? "left" : "right";
@@ -49,10 +49,15 @@ function mount(o){ o = o || {};
     ".sa-pen-btn:active{transform:scale(.96)} .sa-pen-btn:focus-visible{outline:3px solid var(--red); outline-offset:2px}" +
     ".sa-pen-btn svg{color:var(--red)} .sa-pen-btn[aria-pressed=\"true\"] svg{color:inherit}" +
     "@media (min-width:700px){ .sa-pen-btn{top:" + (wplace === "top" ? wtop + "px" : "auto") + "; bottom:" + (wplace === "top" ? "auto" : wide + "px") + "; " + (wside === "left" ? "left:24px; right:auto" : "right:24px; left:auto") + "; min-height:52px; padding:0 20px 0 16px; font-size:16px} }"; /* ширината на прозореца: скриптът е извън контейнерите на модулите */
+  /* плаващ (не в слот): кръгла икона 56 px без текст, aria-label „Молив“ и подсказка (решение 15.11) */
+  st.textContent += ".sa-pen-btn:not(.in-slot){width:56px; height:56px; min-width:56px; padding:0; justify-content:center; border-radius:50%} .sa-pen-btn:not(.in-slot) span{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}";
   st.textContent += ".sa-pen-btn.in-slot{position:static; top:auto; bottom:auto; left:auto; right:auto; box-shadow:inset 0 0 0 1px var(--line-strong)}";
   document.head.appendChild(st);
   /* слот: модулът дава място (елемент или селектор), бутонът е в потока, не плаващ */
   if (slotEl){ btn.classList.add("in-slot"); slotEl.appendChild(btn); } else document.body.appendChild(btn);
+  /* модулите, които сами местят бутона в своя слот, получават същото оформление */
+  function slotted(){ btn.classList.toggle("in-slot", btn.parentElement !== document.body); }
+  requestAnimationFrame(slotted); setTimeout(slotted, 600);
   btn.addEventListener("click", function(){ pen.toggle(); });
   pen.button = btn; return pen; }
 

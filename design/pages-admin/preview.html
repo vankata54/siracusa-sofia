@@ -229,7 +229,7 @@ function rebuild(){ saveHash(); build(); }
 
 /* ---------- pencil (targets the frame) ---------- */
 var pen = A.mountPen({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
-  url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } }, toastBottom:96});
+  url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } }, toastBottom:96, fabPhone:false /* на телефон „Молив“ е в плаващата лента на прегледа */});
 A.pen = pen;
 
 /* ---------- controls ---------- */

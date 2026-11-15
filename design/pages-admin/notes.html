@@ -11,12 +11,20 @@
 <link rel="stylesheet" href="_admin.css">
 <style>
 .nt-how{display:grid; gap:14px; padding:20px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.nt-how{display:block; padding:0; overflow:hidden}
+.nt-how summary{display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; min-height:56px; padding:8px 20px; cursor:pointer; list-style:none; font-weight:800; font-size:17px}
+.nt-how summary::-webkit-details-marker{display:none}
+.nt-how summary span{display:inline-flex; align-items:center; gap:10px} .nt-how summary .ic{color:var(--ember)}
+.nt-how summary small{font-size:15px; font-weight:600; opacity:.8}
+.nt-how summary::after{content:"+"; margin-left:auto; font-size:22px; font-weight:800}
+.nt-how[open] summary::after{content:"-"}
+.nt-how[open] ol{padding:4px 20px 20px}
 .nt-how h2{margin:0; font-size:20px; letter-spacing:-.02em; align-self:start; line-height:32px}
 .nt-how ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s; align-items:start}
 .nt-how li{display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start; align-content:start; counter-increment:s; color:var(--on-chip-dark)}
 .nt-how li::before{content:counter(s); width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:15px}
 .nt-how code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; padding:2px 8px; border-radius:8px; background:color-mix(in srgb, var(--on-chip-dark) 12%, transparent); overflow-wrap:anywhere}
-@container page (min-width:900px){ .nt-how{grid-template-columns:240px minmax(0,1fr); align-items:start; padding:24px 28px} .nt-how ol{grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px} .nt-how li{grid-template-columns:1fr; gap:10px} }
+@container page (min-width:900px){ .nt-how[open] ol{padding:4px 28px 24px} .nt-how ol{grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px} .nt-how li{grid-template-columns:1fr; gap:10px} }
 .nt-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:28px 0 16px}
 .nt-bar .sa-tabs{flex:1 1 auto}
 .nt-bar .flt{display:flex; gap:10px; flex:1 1 420px}
@@ -112,10 +120,11 @@ function tick(){ var now = A.now().getTime(), moved = 0;
     A.audit("note.status", "За преглед (симулация): " + n.text.slice(0, 80), n.id); moved++; } });
   if (moved){ refresh(); A.toast(moved === 1 ? "Бележка е готова за преглед" : moved + " бележки са готови за преглед"); } }
 
-var how = FULL ? '<section class="nt-how sa-rise" data-edit-id="admin.notes.how"><h2>Как стигат до Claude</h2><ol>' +
+/* сгънато по подразбиране, един ред „Как работи?“ (решение 15.11, „Админът, допълнения“ 6) */
+var how = FULL ? '<details class="nt-how sa-rise" data-edit-id="admin.notes.how"><summary><span>' + ic("info",20) + 'Как работи?</span><small>Как бележките стигат до Claude</small></summary><ol>' +
     '<li><span>Всеки пише с молива (в админа и в прегледа на живо); гостите пишат с „Предложи подобрение“ на сайта.</span></li>' +
     '<li><span>Главният админ одобрява. „Одобри и изпълни“ пуска изпълнението; тук то е симулирано.</span></li>' +
-    '<li><span>Следващата сесия чете одобрените: <code>GET /api/admin/notes?status=approved</code> или <code>docs/NOTES.json</code>. Автоматичното пускане на Claude е в етап E.</span></li></ol></section>' : '';
+    '<li><span>Следващата сесия чете одобрените: <code>GET /api/admin/notes?status=approved</code> или <code>docs/NOTES.json</code>. Автоматичното пускане на Claude е в етап E.</span></li></ol></details>' : '';
 body.innerHTML = how +
   (FULL && !MAIN ? '<div class="nt-ro">' + ic("lock",22) + '<span>Само главният админ одобрява, пуска изпълнение и публикува. Вие виждате всички бележки и техния ход.</span></div>' : '') +
   (st === "offline" ? '<div style="height:16px"></div>' + A.offline("Показваме последно заредените бележки. Промените се пазят тук и се изпращат, щом връзката се върне.") : '') +
@@ -192,6 +201,7 @@ body.closest("main").addEventListener("click", function(e){ if (!e.target.closes
 window.addEventListener("storage", function(e){ if (e.key === "sa-notes") refresh(); });
 setInterval(function(){ tick(); var n = A.notes.list().length; if (n !== refresh.n){ refresh.n = n; refresh(); } }, 1000); refresh.n = A.notes.list().length;
 tick(); refresh();
+if (!MAIN){ A.notesSeen(); setTimeout(function(){ A.computeBadges(); A.setBadge("notes", A.badges.notes); }, 50); }
 })();
 </script>
 </body>
