@@ -55,6 +55,7 @@
 .kpi .sum{font-size:40px; letter-spacing:-.04em; white-space:nowrap}
 @container page (max-width:520px){ .kpi .sum{font-size:30px} }
 @container page (min-width:900px){ .db-today{margin-top:36px} }
+.no-rise .sa-rise{animation:none}
 /* modules */
 .mods{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
 @container page (min-width:620px){ .mods{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -141,6 +142,8 @@ var body = A.mount({section:"dashboard", title:hello + ", " + (staffApp || me.ro
 if (!body) return;
 
 /* ---------- today: същите ключове като разделите (sa-orders, sa-reservations, sa-soldout, бележките) ---------- */
+/* всичко на таблото се смята тук, от общите ключове; draw() се вика наново при нова поръчка */
+function draw(){
 var outs = A.soldOutToday();
 var inWork = A.ordersInWork().length, resToday = A.reservationsToday().length, kitchenOpen = A.minutes() >= 600 && A.minutes() < 1350;
 var newNotes = st === "empty" ? 0 : A.notes.count("new");
@@ -215,8 +218,10 @@ var gh = groups();
 if (gh.indexOf("srow") > -1) html += '<div class="sa-sh"><h2>Разделите</h2><p>Каквото не е готово, е „Скоро“ с описание.</p></div>' + (st === "loading" ? A.skel(3) : gh);
 body.innerHTML = html;
 A.markFresh();
-/* нова онлайн поръчка, докато таблото е отворено: „Чака те“ се обновява сам */
-A.onNewOrder = function(){ var w = body.querySelector(".db-wait"); if (w){ var tmp = document.createElement("div"); tmp.innerHTML = waitHTML(); w.replaceWith(tmp.firstElementChild); A.markFresh(); } };
+}
+draw();
+/* нова онлайн поръчка, докато таблото е отворено: всички числа („Чака те“, „Днес“, „в работа“, значките) от едно място, наново */
+A.onNewOrder = function(){ var y = A.scroller.scrollTop; body.classList.add("no-rise"); draw(); A.scroller.scrollTop = y; };
 if (location.hash.indexOf("modules") > -1){ var t = document.getElementById("modules"); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); }
 })();
 </script>

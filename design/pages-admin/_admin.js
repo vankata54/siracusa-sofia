@@ -285,7 +285,9 @@ var toastT;
 /* известието е винаги над лентата „Запази“ / „Публикувай“, и когато лентата се появи след него */
 /* известието стои над видимата лента „Запази“, колкото и висока да е тя (на 390 може да е на два реда) */
 /* лентата „Запази“ на телефон вдига и кръглия „Молив“ (атрибут data-up на sa-pen-ui) */
-function penUp(){ var ph = document.querySelector("sa-pen-ui"); if (!ph) return; if (document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on")) ph.setAttribute("data-up", ""); else ph.removeAttribute("data-up"); }
+function penUp(){ var ph = document.querySelector("sa-pen-ui"); if (!ph) return; if (document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on")) ph.setAttribute("data-up", ""); else ph.removeAttribute("data-up");
+  /* докато известието е отворено, кръглият „Молив“ на телефон се скрива: „Отмени“ и „Виж“ никога не са под него */
+  if (document.querySelector(".sa-toast.on")) ph.setAttribute("data-toast", ""); else ph.removeAttribute("data-toast"); }
 function toastUp(){ penUp(); var col = A.col || document.body, t = col.querySelector(".sa-toast"); if (!t) return; var bar = document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on");
   t.classList.toggle("up", !!bar);
   /* от разположението (bottom + височина), не от getBoundingClientRect: лентата влиза с transform и по време на анимацията е още долу */
@@ -376,6 +378,8 @@ A.computeBadges = function(){ var b = A.badges, w = A.notesWaiting();
   b.offers = listOf(get("feedback-iq", [])).filter(function(q){ return q.st === "new" || q.status === "new"; }).length;
   b.reservations = A.reservations().filter(function(r){ return r.date === A.todayKey() && r.status === "new"; }).length;
   return b; };
+/* всички значки наново, от общите ключове (след нова поръчка, запис и т.н.) */
+A.refreshBadges = function(){ A.computeBadges(); Object.keys(A.badges).forEach(function(k){ A.setBadge(k, A.badges[k]); }); };
 A.setBadge = function(id, n){ A.badges[id] = n; var t = (A.badgeTitles || {})[id]; document.querySelectorAll('[data-badge="' + id + '"]').forEach(function(el){ el.textContent = n; el.hidden = !n; if (t) el.title = t; }); };
 function badge(id){ var n = A.badges[id], t = (A.badgeTitles || {})[id]; return '<span class="sa-n" data-badge="' + id + '"' + (n ? '' : ' hidden') + (t ? ' title="' + esc(t) + '"' : '') + ' aria-hidden="true">' + (n || 0) + '</span>'; }
 
@@ -401,7 +405,7 @@ var known = null;
 function watchOrders(){ if (!A.can("orders")) return; known = {}; A.orders().forEach(function(o){ known[o.no] = 1; }); markFresh();
   setInterval(function(){ var fresh = A.orders().filter(function(o){ return !known[o.no]; }); fresh.forEach(function(o){ known[o.no] = 1; });
     var nw = fresh.filter(function(o){ return o.status === "accepted" && o.channel !== "table"; });
-    if (nw.length){ var o = nw[nw.length - 1]; set("order-alert", {no:o.no, at:Date.now()}); A.chime(); A.computeBadges(); A.setBadge("orders", A.badges.orders); markFresh();
+    if (nw.length){ var o = nw[nw.length - 1]; set("order-alert", {no:o.no, at:Date.now()}); A.chime(); A.refreshBadges(); markFresh();
       A.toast("Нова онлайн поръчка № " + o.no, {action:{label:"Виж", href:"orders.html#n=" + o.no}, ms:6000}); A.onNewOrder && A.onNewOrder(o); }
     else markFresh(); }, 1500); }
 /* прототипът: нова онлайн поръчка с истински ястия, примерен клиент */
