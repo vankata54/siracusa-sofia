@@ -58,6 +58,13 @@ body{background:var(--bg)}
 .knew{display:inline-flex; align-items:center; gap:10px; min-height:52px; padding:0 8px 0 18px; border:0; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:18px; cursor:pointer; animation:knew 520ms var(--ease) both}
 .knew .go2{display:inline-flex; align-items:center; gap:4px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:15px}
 @keyframes knew{from{transform:translateY(-10px); opacity:0}to{transform:none; opacity:1}}
+/* нова поръчка: спокойно мигане (ореол в жар, 2,4 сек.), докато поръчката не се отвори („Виж“), не започне или не се отметне ред.
+   При „намалено движение“ не мига: остават цветът (жар) и думата „Нова“. */
+.knew{animation:knew 520ms var(--ease) both, kglow 1.2s ease-in-out 520ms infinite alternate}
+@keyframes kglow{from{box-shadow:0 0 0 0 var(--ember-soft)}to{box-shadow:0 0 0 8px var(--ember-soft)}}
+.tk.isnew .tag.new{animation:ktag 1.2s ease-in-out infinite alternate}
+@keyframes ktag{from{opacity:1}to{opacity:.6}}
+@media (prefers-reduced-motion: reduce){ .knew,.tk.isnew,.tk.isnew .tag.new{animation:none} }
 
 /* offline banner replaces the strip content */
 .koff{flex:1; display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:12px 12px 12px 18px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 3px var(--danger)}
@@ -168,19 +175,21 @@ body{background:var(--bg)}
 .kempty p{font-size:20px; color:var(--muted); margin:8px 0 0}
 
 /* ---------- toast with 10 s "Върни" ---------- */
-.kstripw{position:relative; display:flex; align-items:flex-end; min-width:0}
-.kstripw > .kstrip{flex:1; min-width:0}
-/* Търси и Молив: в реда на бутоните под горната лента, вдясно, в потока (не застъпват картите, броячите и известието) */
-.ktools{flex:none; display:flex; align-items:center; gap:10px; padding:10px 16px 0 0}
-.kstrip + .ktools{margin-left:-6px}
+.kstripw{position:relative; min-width:0}
+/* Търси и Молив: вдясно на реда с броячите (K.placeTools го центрира по броячите; броячите и известието с „Върни“ оставят място за него).
+   Така не застъпват картите, бутоните „По-късно“, „Звук“, „Натоварено“, „Нова“ и лентата „Няма връзка“, и лентата не пораства. */
+.ktools{position:absolute; right:16px; top:36px; transform:translateY(-50%); z-index:31; display:flex; align-items:center; gap:10px}
+.kstrip > .kcount{padding-right:var(--toolsw, 0px)}
+@container app (max-width:899px){ .kstrip > .kcount{flex-wrap:wrap; white-space:normal; row-gap:4px} .kstrip > .kcount > span{white-space:nowrap} }
 .kpenslot{display:contents}
 .ktools .sa-pen-btn{position:static; display:inline-flex; align-items:center; gap:8px; min-height:52px; height:52px; padding:0 18px; border:0; border-radius:999px; background:var(--surface-2) !important; color:var(--ink) !important; font:inherit; font-weight:800; font-size:16px; line-height:1; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; cursor:pointer; white-space:nowrap}
+.ktools .sa-pen-btn.in-slot{box-shadow:none}
 .ktools .sa-pen-btn svg{width:22px; height:22px; color:var(--red)}
 .ktools .sa-pen-btn[aria-pressed="true"]{background:var(--ember) !important; color:var(--on-ember) !important}
 .ktools .sa-pen-btn[aria-pressed="true"] svg{color:var(--on-ember)}
 .ktools .kpill .ic{color:var(--red)}
 /* таблет вертикално: двата бутона стават „икона над дума“, за да стоят на един ред с „По-късно“, „Звук“ и „Натоварено“ */
-@container app (max-width:899px){ .ktools{gap:4px; padding-right:12px}
+@container app (max-width:899px){ .ktools{gap:4px; right:12px}
   .ktools .kpill,.ktools .sa-pen-btn{display:grid; justify-items:center; align-content:center; gap:3px; min-width:60px; height:56px; min-height:56px; padding:0 8px; border-radius:18px; font-size:14px; line-height:1} }
 .ktoasts{position:absolute; left:16px; top:36px; width:600px; transform:translateY(-50%); z-index:30; display:grid; pointer-events:none}
 .kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:10px; min-height:52px; height:52px; width:100%; padding:4px 4px 4px 16px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}

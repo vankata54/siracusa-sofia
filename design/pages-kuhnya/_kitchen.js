@@ -134,7 +134,8 @@ K.newOrder = function(){ var n = K.now();
   var pick = {topla:["spageti-boloneze","rizoto-s-gorski-gabi-i-tryufel-pasta"], skara:["svinski-vrat","kebapcheta"], pesht:["pitsa-kuatro-formadzhi","pitsa-vegetariana"], studeni:["kapreze-s-burata-i-avokado","salata-sirakuza"]}[K.secId];
   var pool = SC.items.filter(function(x){ return K.sec.cats.indexOf(x.cat) > -1 && !K.isOut(x.id); });
   pick = pick.map(function(id, i){ return K.isOut(id) ? pool[i].id : id; }); /* изчерпаното не може да се поръча */
-  var o = O("table", 20, K.hm(n), "", [[2, pick[0]], [1, pick[1], {no:["лук"]}], [1, K.secId === "skara" ? "parzheni-kartofi" : "kebapcheta"]], {zone:"Градина", isNew:true});
+  /* онлайн поръчка от сайта (доставка): звук и спокойно мигаща значка „Нова“ (решение 15.11, „Админът, допълнения“, т. 4) */
+  var o = O("delivery", 1048, K.hm(n), "", [[2, pick[0]], [1, pick[1], {no:["лук"]}], [1, K.secId === "skara" ? "parzheni-kartofi" : "kebapcheta"]], {isNew:true, web:true});
   var b = K.busy(); if (b.on){ o.due += K.BUSY_MIN*60; o.busy = true; }
   return o; };
 
@@ -175,7 +176,7 @@ K.ticket = function(o, idx){
   var meta = o.sched ? '<span class="tag sched">' + ic("calendar-check",16) + 'за ' + K.hm(o.forAt) + '</span><span>приета <b>' + K.hm(o.at) + '</b></span>'
     : '<span>пристигна <b>' + K.hm(o.at) + '</b></span><span>срок <b>' + K.hm(o.due) + '</b></span>';
   if (o.driver) meta += '<span>шофьор <b>' + o.driver + '</b></span>';
-  if (o.isNew) meta = '<span class="tag new">' + ic("bell-ringing",16) + 'Нова</span>' + meta;
+  if (o.isNew) meta = '<span class="tag new">' + ic("bell-ringing",16) + 'Нова' + (o.web ? ' · от сайта' : '') + '</span>' + meta;
   if (started) meta += '<span class="tag cook">' + ic("flame",16) + 'готви се от ' + started + '</span>';
   if (o.busy) meta += '<span class="tag busy">+' + K.BUSY_MIN + ' мин</span>';
   var h = '<article class="tk ' + K.stateOf(o) + (o.isNew ? " isnew" : "") + '" data-o="' + idx + '" aria-label="' + esc(K.srcText(o)) + '">' +
@@ -215,8 +216,12 @@ K.toast = function(html, undo, secs){ secs = secs || 10; var layer = document.qu
 
 /* известието заема мястото на броячите (те не са бутони); бутоните, „Нова поръчка“ и лентата „Няма връзка“ остават открити */
 K.placeToast = function(){ var layer = document.querySelector(".ktoasts"), w = document.querySelector(".kstripw"), kc = K.strip && K.strip.querySelector(".kcount");
-  if (!layer || !w || !kc) return; var r = kc.getBoundingClientRect(), wr = w.getBoundingClientRect();
-  layer.style.left = (r.left - wr.left) + "px"; layer.style.top = (r.top - wr.top + r.height/2) + "px"; layer.style.width = Math.max(r.width, 280) + "px"; };
+  if (!layer || !w || !kc) return; var r = kc.getBoundingClientRect(), wr = w.getBoundingClientRect(), tw = K.toolsW || 0;
+  layer.style.left = (r.left - wr.left) + "px"; layer.style.top = (r.top - wr.top + r.height/2) + "px"; layer.style.width = Math.max(r.width - tw, 280) + "px"; };
+/* „Търси“ и „Молив“ стоят вдясно на реда с броячите (той се прерисува от всеки екран, затова се следи) */
+K.placeTools = function(){ var w = document.querySelector(".kstripw"), t = w && w.querySelector(".ktools"), kc = K.strip && K.strip.querySelector(".kcount"); if (!t) return;
+  K.toolsW = t.offsetWidth + 20; w.style.setProperty("--toolsw", K.toolsW + "px");
+  if (!kc){ t.style.top = "36px"; return; } var r = kc.getBoundingClientRect(), wr = w.getBoundingClientRect(); t.style.top = (r.top - wr.top + r.height/2) + "px"; };
 
 /* ---------- soft beep for new orders (only after a tap, browsers block sound before that) ---------- */
 K.beep = function(){ if (!K.sound() || !K.audioReady) return; try{ var A = window.AudioContext || window.webkitAudioContext; var c = K._ac || (K._ac = new A());
@@ -250,6 +255,8 @@ K.mount = function(opt){
   if (off) K.strip.innerHTML = K.offlineHTML(opt.page);
   d.querySelector("[data-kfind]").addEventListener("click", function(){ K.openFind(); });
   mountPen(d, opt);
+  try{ new MutationObserver(function(){ K.placeTools(); }).observe(K.strip, {childList:true}); }catch(e){}
+  window.addEventListener("resize", K.placeTools); setTimeout(K.placeTools, 0); if (document.fonts && document.fonts.ready) document.fonts.ready.then(K.placeTools);
   return d.querySelector("main"); };
 
 /* ---------- pencil for recommendations (решение 15.11): only for a signed-in kitchen member ----------
@@ -257,8 +264,9 @@ K.mount = function(opt){
    The button is moved into the row of the buttons under the top bar (next to „Търси“), in the flow:
    it never covers „Започни“ / „Готово“ on the cards, the counters, the toast or „Нова поръчка“. */
 function mountPen(d, opt){ if (!window.SAPenMount || opt.page === "login" || opt.page === "index") return;
-  K.pen = SAPenMount.mount({module:"kuhnya"});
-  var slot = d.querySelector("[data-penslot]"); if (K.pen && K.pen.button && slot) slot.appendChild(K.pen.button); }
+  var slot = d.querySelector("[data-penslot]");
+  K.pen = SAPenMount.mount({module:"kuhnya", slot:slot}); /* слот: бутонът е в потока, с икона и дума */
+  if (K.pen && K.pen.button && slot && K.pen.button.parentElement !== slot) slot.appendChild(K.pen.button); setTimeout(K.placeTools, 0); }
 K.signIn = function(sec){ try{ localStorage.setItem("sa-session", JSON.stringify({user:"kitchen", name:sec === "all" ? "Главен готвач" : "Кухня · " + (K.shortSec[sec] || "Скара"), role:"kitchen"})); }catch(e){} };
 K.signedIn = function(){ try{ var s = JSON.parse(localStorage.getItem("sa-session") || "null"); return !!(s && s.role); }catch(e){ return false; } };
 /* the search: loaded on first use (_find.js + ../ds/search.js for the dish names) */

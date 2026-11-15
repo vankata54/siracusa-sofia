@@ -42,7 +42,7 @@ function strip(){
   var qn = document.querySelector("[data-qn]"); if (qn) qn.textContent = c.n;
   var snd = !K.sound() ? '<button class="kpill" type="button" data-sound aria-pressed="false">' + ic("bell",22) + 'Звук изкл.</button>'
     : K.audioReady ? '<button class="kpill" type="button" data-sound aria-pressed="true">' + ic("bell-ringing",22) + 'Звук вкл.</button>'
-    : '<button class="kpill" type="button" data-sound data-unlock>' + ic("bell",22) + 'Включи звука</button>';
+    : '<button class="kpill" type="button" data-sound data-unlock title="Браузърът пуска звук след първото докосване на екрана">' + ic("bell",22) + 'Включи звука</button>';
   K.strip.innerHTML = (offline ? K.offlineHTML("queue") : '') +
     '<div class="kcount"><span>Чакат <b>' + c.n + '</b></span>' + (c.late ? '<span class="sep"></span><span class="late">' + ic("warning",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px;color:var(--danger)"') + ' Закъсняват <b>' + c.late + '</b></span>' : '') +
       (c.soon ? '<span class="sep"></span><span>Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
@@ -54,8 +54,10 @@ function strip(){
     snd +
     '<a class="kpill' + (b.on ? " on" : "") + '" href="' + K.link("busy") + '">' + ic("hourglass",22) + (b.on ? 'Натоварено +' + K.BUSY_MIN + ' мин <span class="sub">от ' + b.at + '</span>' : 'Натоварено: изкл.') + '</a>');
   var ng = K.strip.querySelector("[data-newgo]");
-  if (ng) ng.addEventListener("click", function(){ var q = main.querySelector("[data-q]"), card = q && q.querySelector('[data-o="' + orders.indexOf(newO) + '"]');
-    if (card) q.scrollTo({left:card.offsetLeft - 16, behavior:SC.reduce ? "auto" : "smooth"}); newO = null; strip(); });
+  /* „Виж“ отваря поръчката: значката спира да мига и изчезва (както и при „Започни“ или отметнат ред) */
+  if (ng) ng.addEventListener("click", function(){ var i = orders.indexOf(newO); seenNew(newO); render();
+    var q = main.querySelector("[data-q]"), card = q && q.querySelector('[data-o="' + i + '"]');
+    if (card) q.scrollTo({left:card.offsetLeft - 16, behavior:SC.reduce ? "auto" : "smooth"}); });
   var lb = K.strip.querySelector("[data-later]"); if (lb) lb.addEventListener("click", function(){ laterOpen = !laterOpen; strip(); });
   var sb = K.strip.querySelector("[data-sound]");
   if (sb) sb.addEventListener("click", function(){
@@ -84,7 +86,7 @@ function bind(){
       var l = o.lines[+btn.getAttribute("data-ln")], was = l.o.st === "done", t = Date.now();
       if (l.tapAt && t - l.tapAt < 800) return; /* мокра ръка: второто докосване до 0,8 сек. не отменя */
       var prev = K.mine(o).map(function(x){ return x.o.st; });
-      l.tapAt = t; l.o.st = was ? "" : "done";
+      l.tapAt = t; l.o.st = was ? "" : "done"; if (o.isNew) seenNew(o);
       if (!was && !K.active(o)){ finish(o, card, prev); return; } /* последният ред: картата излиза от опашката, с „Върни“ */
       render();
       var name = l.q + ' × ' + esc(SC.byId[l.id].n);
@@ -92,7 +94,7 @@ function bind(){
       else K.toast('<b>Върнато: ' + name + '</b><small>' + esc(K.srcText(o)) + ' · пак е за готвене</small>', function(){ l.o.st = "done"; l.tapAt = 0; render(); });
     }); });
     var st = card.querySelector("[data-start]");
-    if (st) st.addEventListener("click", function(){ o.startedBy = o.startedBy || {}; o.startedBy[K.secId] = K.hm(K.now()); o.isNew = false; render(); });
+    if (st) st.addEventListener("click", function(){ o.startedBy = o.startedBy || {}; o.startedBy[K.secId] = K.hm(K.now()); seenNew(o); render(); });
     K.hold(card.querySelector("[data-done]"), function(){ finish(o, card); });
   });
 }
@@ -140,6 +142,7 @@ setInterval(function(){
 }, 1000);
 
 /* new order: takes its FIFO place (the end for a fresh one), with a banner that scrolls to it */
+function seenNew(o){ if (!o) return; o.isNew = false; if (newO === o){ newO = null; strip(); } }
 function arriveO(o){ newO = o; orders.push(o); orders.sort(function(a, b){ return K.key(a) - K.key(b); }); render(); K.beep(); }
 function arrive(){ arriveO(K.newOrder()); }
 render();
