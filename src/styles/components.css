@@ -138,12 +138,13 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .top{position:sticky; top:8px; z-index:20; margin:8px 8px 0; display:flex; align-items:center; justify-content:space-between; gap:2px; height:60px; padding:0 6px 0 18px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .top.back{padding-left:6px}
 .word{font-weight:800; font-size:22px; letter-spacing:-.05em; line-height:1; text-decoration:none; white-space:nowrap}
-.top a.word{min-height:48px; display:inline-flex; align-items:center}
+.top a.word{min-height:48px; display:inline-flex; align-items:center; margin-right:6px} /* + the bar gap: at least 8 px to the buttons (Поли 15.11) */
 .top .ttl{flex:1; min-width:0; font-weight:800; font-size:17px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px}
 .hact{display:flex; align-items:center}
 .hb{display:inline-flex; align-items:center; gap:6px; min-height:48px; min-width:48px; justify-content:center; padding:0 10px; border:0; background:transparent; border-radius:999px; font-weight:700; font-size:16px; cursor:pointer; white-space:nowrap; text-decoration:none; transition:transform var(--t-fast) var(--ease)}
 .hb:active{transform:scale(.95)}
-.hb.call{background:var(--ink); color:var(--bg); padding:0 14px}
+/* "Обади се": only the phone icon, name in aria-label, a 48 px circle (decision 15.11) */
+.hb.call{background:var(--ink); color:var(--bg); width:48px; padding:0}
 .hb.glass{background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); padding:0 16px}
 .dnav{display:none}
 /* pages with "Назад": the back bar on the phone, the full bar on the computer (lib/chrome.ts header()); "Профил" in the bar only on the computer */
@@ -168,7 +169,7 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
 /* full section links only where they fit; between 900 and 1180 the header keeps the compact phone layout */
 @container app (min-width:1180px){ .dnav{display:flex; gap:2px; margin:0 auto} }
-@container app (max-width:370px){ .word{font-size:20px} .hb{padding:0 7px} .hb.call{padding:0 11px} .top{padding-left:14px} }
+@container app (max-width:370px){ .word{font-size:20px} .hb{padding:0 7px} .hb.call{padding:0} .top{padding-left:14px} }
 @container app (min-width:900px){
   .top{top:14px; margin:14px max(24px, calc((100% - 1240px)/2)) 0; height:68px; padding:0 8px 0 26px}
   .dnav a{min-height:48px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; font-weight:700; text-decoration:none; font-size:15px}
@@ -178,14 +179,14 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 }
 
 /* ---------- bottom nav ---------- */
-.nav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; height:68px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--nav-glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.nav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; transition:translate var(--t-slow) var(--ease); height:68px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--nav-glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .nav a{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; text-decoration:none; font-size:14px; font-weight:600; color:var(--nav-ink); min-height:48px; border-radius:999px}
 .nav a[aria-current="page"]{color:var(--ink)}
 .nav a[aria-current="page"] .ic{color:var(--red)}
 @container app (min-width:900px){ .nav{display:none} }
 
 /* ---------- floating action bar (above nav) ---------- */
-.abar{position:absolute; left:10px; right:10px; bottom:90px; z-index:29; display:flex; gap:8px; align-items:center; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.abar{position:absolute; left:10px; right:10px; bottom:90px; z-index:29; transition:translate var(--t-slow) var(--ease); display:flex; gap:8px; align-items:center; padding:6px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .abar .pill{flex:1; min-height:52px; font-size:17px}
 .abar.nonav{bottom:12px}
 .abar[hidden]{display:none}
@@ -195,10 +196,18 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .aifab{position:absolute; right:12px; bottom:92px; z-index:31; min-height:52px; display:inline-flex; align-items:center; gap:8px; padding:0 18px 0 14px; border:0; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:16px; cursor:pointer; box-shadow:0 10px 24px -8px rgba(0,0,0,.45); transition:transform var(--t-fast) var(--ease)}
 .aifab:active{transform:scale(.96)}
 /* collapses to a round button after the first scroll so it never sits on top of page actions */
-@container app (max-width:899px){ .aifab{transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)} .aifab.away{transform:translateY(24px) scale(.9); opacity:0; pointer-events:none} .aifab.mini{width:52px; padding:0; justify-content:center} .aifab.mini .lbl{display:none} }
+@container app (max-width:899px){ .aifab{transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease), translate var(--t-slow) var(--ease)} .aifab.away{transform:translateY(24px) scale(.9); opacity:0; pointer-events:none} .aifab.mini{width:52px; padding:0; justify-content:center} .aifab.mini .lbl{display:none} }
 .aifab.up{bottom:160px}
 .aifab.nonav{bottom:14px}
 .aifab.nonav.up{bottom:84px}
+/* the floating bars never stay on a link or button (Поли 15.11; src/client/sc.ts): scrolling down, the bottom nav slides
+   away and the action bar and the assistant go down in its place (back on scroll up, near the top, when the
+   nav has the focus); the assistant fades out while a link, button or field of the page is under it (.dodge) */
+@container app (max-width:899px){
+  .navaway:has(.nav):not(:has(.nav :focus)) .nav{translate:0 calc(100% + 16px)}
+  .navaway:has(.nav):not(:has(.nav :focus)) :is(.abar, .aifab):not(.nonav){translate:0 78px}
+  .aifab.dodge:not(:focus){opacity:0; pointer-events:none}
+}
 @container app (min-width:900px){ .aifab{bottom:24px; right:24px} .aifab.up{bottom:96px} }
 
 /* ---------- sheets ---------- */

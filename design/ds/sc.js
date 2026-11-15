@@ -303,7 +303,7 @@ function header(o){ var st = SC.status();
   var row1 = o.back
     ? '<header class="top back"><a class="hb" href="'+o.back.href+'">'+SC.ic("arrow-left",20)+SC.esc(o.back.label||"Назад")+'</a><span class="ttl">'+SC.esc(o.title||"")+'</span><div class="hact">'+(o.share?'<button class="hb" type="button" data-share>'+SC.ic("export",20)+'Сподели</button>':'')+'</div></header>'
     : '<header class="top"><a class="word" href="home.html" title="Заместител до новото лого">Siracusa</a><nav class="dnav" aria-label="Раздели">'+DNAV.map(function(d){ return '<a href="'+d[2]+'"'+(o.nav===d[0]?' aria-current="page"':'')+'>'+d[1]+'</a>'; }).join("")+'</nav><div class="hact">'+
-      '<a class="hb call" href="tel:+359894365577" aria-label="Обади се на 0894 36 55 77">'+SC.ic("phone",20)+'Обади се</a><button class="hb" type="button" data-lang aria-label="Смени езика на английски">BG</button><button class="hb more" type="button" data-more>'+SC.ic("list",20)+'Още</button></div></header>';
+      '<a class="hb call" href="tel:+359894365577" aria-label="Обади се">'+SC.ic("phone",20)+'</a><button class="hb" type="button" data-lang aria-label="Смени езика на английски">BG</button><button class="hb more" type="button" data-more>'+SC.ic("list",20)+'Още</button></div></header>';
   var row2 = (o.status===false && o.cart===false) ? '' : '<div class="row2">'+(o.status===false?'':'<div class="status"><span class="dot '+st.cls+'"></span><span>'+st.html+'</span></div>')+(o.cart===false?'':cartBtn)+'</div>';
   return '<div class="sentinel" data-sent></div>'+row1+row2; }
 function bottomNav(active){ return '<nav class="nav" aria-label="Основна навигация">'+NAV.map(function(n){ return '<a href="'+n[3]+'"'+(active===n[0]?' aria-current="page"':'')+'>'+SC.ic(n[2],24)+n[1]+'</a>'; }).join("")+'</nav>'; }
@@ -353,6 +353,16 @@ SC.mount = function(o){ o = o || {};
   var showNav = o.bottomNav !== false;
   ov.insertAdjacentHTML("beforeend", (showNav ? bottomNav(o.nav) : "") + (o.ai===false ? "" : '<button class="aifab'+(o.actionBar?" up":"")+(showNav?"":" nonav")+'" type="button" data-ai aria-label="Асистент">'+SC.ic("sparkle",20)+'<span class="lbl">Асистент</span></button>') + cookieBanner());
   if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); if (f){ f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t=setTimeout(function(){ f.classList.add("mini"); }, 2600); } }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
+  /* плаващите ленти не стоят върху връзка или бутон (Поли 15.11; CSS .navaway и .dodge в sc.css): при скрол надолу
+     долната навигация се скрива; където скролът спре, асистентът избледнява, докато под него има връзка, бутон или поле */
+  var fab=ov.querySelector(".aifab"), lastY=0, rest;
+  var dodge=function(){ if (!fab) return; var r=fab.getBoundingClientRect(), on=false;
+    for (var x=r.left-8; x<r.right+9; x+=12) for (var y=r.top-8; y<r.bottom+9; y+=12) on = on || [].some.call(document.elementsFromPoint(x,y), function(e){ return e.matches("main :is(a[href],button,input,select,textarea,[tabindex],summary)"); });
+    fab.classList.toggle("dodge", on); };
+  var pressed=false; /* лентите не мърдат под пръста и докато се пише в поле (браузърът сам превърта полето) */
+  ["pointerdown","pointerup","pointercancel"].forEach(function(t){ addEventListener(t, function(){ pressed = t==="pointerdown"; }, {passive:true, capture:true}); });
+  scroller.addEventListener("scroll", function(){ var y=scroller.scrollTop, a=document.activeElement, typing=!!a && a.matches("input:not([type=checkbox]):not([type=radio]), textarea, select, [contenteditable]"); if (!pressed && !typing) device.classList.toggle("navaway", y>lastY && y>80); lastY=y; clearTimeout(rest); rest=setTimeout(dodge,150); }, {passive:true});
+  document.addEventListener("transitionend", dodge, true);
   updateCartUI(false);
   if (o.ai !== false) setTimeout(function(){ loadAI(); }, 1200);
   document.title = (o.docTitle || o.title || "Siracusa") + (o.docTitle||o.title ? " | Siracusa Bar & Grill" : " Bar & Grill");

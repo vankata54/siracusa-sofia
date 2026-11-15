@@ -13,7 +13,12 @@ test("home opens without console errors; + adds to the cart; assistant loads laz
   await expect(page.locator("[data-cnt]").first()).toHaveText("1");
   const line = await page.evaluate(() => JSON.parse(localStorage.getItem("sc-cart") || "{}").lines[0]);
   expect(line.p).toBeGreaterThan(0);
-  await page.evaluate(() => window.scrollTo(0, 600));
+  /* on the phone the assistant fades out where a link or button is under it (Поли 15.11): scroll on to a free place */
+  for (let y = 600; y < 4000; y += 120) {
+    await page.evaluate((y) => window.scrollTo(0, y), y);
+    await page.waitForTimeout(500);
+    if (await page.locator("[data-ai]").evaluate((f) => getComputedStyle(f).pointerEvents !== "none" && getComputedStyle(f).opacity === "1")) break;
+  }
   await page.locator("[data-ai]").click();
   await expect(page.locator("[data-aimsgs]")).toBeVisible();
   await page.locator('[data-aiq="group"]').click();

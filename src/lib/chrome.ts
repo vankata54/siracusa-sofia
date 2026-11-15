@@ -32,9 +32,9 @@ export interface HeaderOpts {
 
 export function header(o: HeaderOpts = {}): string {
   const cartBtn = '<a class="cartbtn" href="' + url.cart() + '" data-cartnav aria-label="Количка">' + ic("shopping-bag", 24) + '<span class="cnt" data-cnt hidden>0</span></a>';
-  /* the full bar: logo, sections (from 1180 px), "Обади се", BG, "Профил" (computer; the phone has it in the bottom nav), "Още" */
+  /* the full bar: logo, sections (from 1180 px), "Обади се" (only the phone icon, decision 15.11), BG, "Профил" (computer; the phone has it in the bottom nav), "Още" */
   const full = (cls: string) => '<header class="top' + cls + '"><a class="word" href="' + url.home() + '" title="Заместител до новото лого">Siracusa</a><nav class="dnav" aria-label="Раздели">' + DNAV.map((d) => '<a href="' + url.page(d[2]) + '"' + (o.nav === d[0] ? ' aria-current="page"' : "") + ">" + d[1] + "</a>").join("") + '</nav><div class="hact">' +
-      '<a class="hb call" href="tel:' + RESTAURANT.phoneIntl + '" aria-label="Обади се на ' + RESTAURANT.phone + '">' + ic("phone", 20) + 'Обади се</a><button class="hb" type="button" data-lang>BG<span class="vh">, смени езика на английски</span></button><a class="hb prof" href="' + url.page("profile") + '"' + (o.nav === "profile" ? ' aria-current="page"' : "") + ">" + ic("user", 20) + 'Профил</a><button class="hb more" type="button" data-more>' + ic("list", 20) + "Още</button></div></header>";
+      '<a class="hb call" href="tel:' + RESTAURANT.phoneIntl + '" aria-label="Обади се">' + ic("phone", 20) + '</a><button class="hb" type="button" data-lang>BG<span class="vh">, смени езика на английски</span></button><a class="hb prof" href="' + url.page("profile") + '"' + (o.nav === "profile" ? ' aria-current="page"' : "") + ">" + ic("user", 20) + 'Профил</a><button class="hb more" type="button" data-more>' + ic("list", 20) + "Още</button></div></header>";
   /* pages with "Назад" (dish, event, cart): the back bar on the phone; the computer keeps the full bar (the way back is the
      breadcrumb in <main>, or the flow's own "Назад"); "Сподели" stays in the back bar on the phone and goes to the full bar */
   const row1 = o.back

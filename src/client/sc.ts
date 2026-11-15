@@ -279,6 +279,10 @@ if (sent && "IntersectionObserver" in window) new IntersectionObserver((es) => {
   }
 }, { rootMargin: "40px 0px 0px 0px" }).observe(sent);
 
+/* ---------- the floating bars never stay on a link or button of the page (Поли 15.11) ----------
+   the bottom nav slides away while scrolling down, the assistant steps aside: src/client/sc-bars.ts, from the first scroll */
+addEventListener("scroll", () => { import("./sc-bars.ts").catch(() => { /* not loaded: the bars just stay */ }); }, { once: true, passive: true });
+
 /* ---------- the focused element never stays under the floating bars (.nav, .abar, assistant, cookie banner) ----------
    scroll-padding covers the usual heights; this covers the rest (a page bar that lifts the assistant, a full cart). */
 document.addEventListener("focusin", (e) => {
