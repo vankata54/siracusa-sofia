@@ -94,6 +94,7 @@
 .ln-fav small{grid-column:1; font-size:14px; color:var(--muted); font-weight:600}
 .ln-fav .pill{grid-row:1 / span 2; grid-column:2; min-height:48px; padding:0 14px; font-size:15px}
 .ln-pin{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.ln-set{color:var(--ink)} .ln-set .ic{color:var(--ok)}
 .ln-pin .code{font-size:30px; font-weight:800; letter-spacing:.3em; font-variant-numeric:tabular-nums; min-width:5ch}
 .ln-log{display:grid; gap:0; margin:0; padding:0; list-style:none}
 .ln-log li{display:grid; gap:2px; padding:10px 0; border-top:1px solid var(--line); font-size:15px}
@@ -245,7 +246,7 @@ function favs(){ return '<section class="ln-card" aria-labelledby="h-fav" data-e
   ((L.favs || []).length ? L.favs.map(function(f){ return '<div class="ln-fav"><b>' + esc(f.n) + '</b><small>' + A.plural(f.ids.length, "ястие", "ястия") + (f.real ? ' · от сайта' : '') + '</small><button class="pill pill-line" type="button" data-usefav="' + f.id + '" aria-label="Сложи „' + esc(f.n) + '“ ' + vd(cur) + '">' + ic("arrow-right",18) + vd(cur, true) + '</button></div>'; }).join("") : '<p class="muted">Запазете ден като любим, за да го ползвате пак с едно натискане.</p>') + '</section>'; }
 function pinCard(){ if (!boss) return '<section class="ln-card" data-edit-id="admin.lunch.pin"><h3>' + ic("lock",22) + 'Отключено с ПИН</h3><p class="muted">Промените се записват в дневника с вашето име и „с ПИН“.</p><button class="pill pill-line" type="button" data-lock>' + ic("lock",20) + 'Заключи</button></section>';
   return '<section class="ln-card" aria-labelledby="h-pin" data-edit-id="admin.lunch.pin"><h3 id="h-pin">' + ic("lock",22) + 'ПИН за персонала</h3><p class="muted">Друг служител отваря графика с ПИН от 4 цифри. ПИН-ът се вижда само веднъж, когато го зададете; после само се сменя.</p>' +
-    '<div class="ln-pin"><span class="sa-tag ok">' + ic("check",16) + 'ПИН е зададен</span><button class="pill pill-ink" type="button" data-setpin>' + ic("pencil-simple",20) + 'Смени ПИН</button></div></section>'; }
+    '<div class="ln-pin"><span class="sa-tag ln-set">' + ic("check",16) + 'ПИН е зададен</span><button class="pill pill-ink" type="button" data-setpin>' + ic("pencil-simple",20) + 'Смени ПИН</button></div></section>'; }
 function logCard(){ var l = A.data.get("audit", []).filter(function(e){ return /^lunch\./.test(e.action); }).slice(0, 5);
   return '<section class="ln-card" aria-labelledby="h-log" data-edit-id="admin.lunch.log"><h3 id="h-log">' + ic("list-bullets",22) + 'Дневник</h3>' +
     (l.length ? '<ul class="ln-log">' + l.map(function(e){ return '<li><span>' + esc(e.text) + '</span><small>' + esc(e.who) + ' · ' + esc(A.ago(e.at)) + '</small></li>'; }).join("") + '</ul>' : '<p class="muted">Всяка промяна в графика се записва тук: кой, кога и какво.</p>') +

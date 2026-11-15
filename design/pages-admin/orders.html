@@ -173,7 +173,7 @@ function cardHTML(o){ var s = sums(o), nx = nextOf(o), lt = late(o), items = o.l
 
 function barHTML(){ var a = all();
   return '<div class="or-bar" data-edit-id="admin.orders.filters"><div class="row1"><div class="sa-tabs" role="tablist" aria-label="Статус">' + TABS.map(function(t){ var n = a.filter(tabTest(t[0])).length;
-      return '<button type="button" role="tab" aria-selected="' + (view.t === t[0]) + '" data-tab="' + t[0] + '" aria-controls="or-list">' + t[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div><div class="or-sel"><label class="vh" for="or-st">Статус</label><select class="input" id="or-st">' + TABS.map(function(t){ return '<option value="' + t[0] + '"' + (view.t === t[0] ? ' selected' : '') + '>Статус: ' + t[1] + ' (' + a.filter(tabTest(t[0])).length + ')</option>'; }).join("") + '</select></div></div>' +
+      return '<button type="button" role="tab" aria-selected="' + (view.t === t[0]) + '" data-tab="' + t[0] + '" aria-controls="or-list">' + t[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div><div class="or-sel"><label class="vh" for="or-st">Статус</label><select class="input" id="or-st">' + TABS.map(function(t){ return '<option value="' + t[0] + '"' + (view.t === t[0] ? ' selected' : '') + '>' + t[1] + ' (' + a.filter(tabTest(t[0])).length + ')</option>'; }).join("") + '</select></div></div>' +
     '<div class="row2"><div class="or-ch" role="group" aria-label="Канал"><button class="chip" type="button" data-ch="" aria-pressed="' + (!view.ch) + '">Всички канали</button>' + Object.keys(CH).map(function(k){ var n = a.filter(function(o){ return o.channel === k && tabTest(view.t)(o); }).length;
       return '<button class="chip" type="button" data-ch="' + k + '" aria-pressed="' + (view.ch === k) + '">' + ic(CH[k][1],18) + CH[k][0] + ' <span class="n">' + n + '</span></button>'; }).join("") + '</div>' +
     '<div class="sa-field-s"><label class="vh" for="or-q">Търси поръчка</label>' + ic("magnifying-glass",20) + '<input class="input" id="or-q" type="search" placeholder="№, телефон или адрес" autocomplete="off" value="' + esc(view.q) + '"></div></div></div>'; }
@@ -181,7 +181,10 @@ function barHTML(){ var a = all();
 var wide = function(){ return body.getBoundingClientRect().width >= 1080; };
 function listHTML(){ var l = shown();
   if (!l.length){ if (view.q || view.ch) return '<div class="sa-card">' + A.empty({icon:"magnifying-glass", title:"Няма поръчка с този избор.", text:view.q ? "Търсете по № (например 1047), последните цифри на телефона или квартала." : "", action:'<button class="pill pill-line pill-lg" type="button" data-clear>' + ic("x",20) + 'Покажи всички</button>'}) + '</div>';
-    return '<div class="sa-card">' + A.empty({icon:view.t === "work" ? "check-circle" : "receipt", title:view.t === "work" ? "Няма поръчки в работа." : "Няма поръчки със статус „" + TABS.filter(function(x){ return x[0] === view.t; })[0][1] + "“.", text:view.t === "work" && !kitchenOpen() ? "Кухнята приема поръчки от 10:00 до 22:30. Днешните са в „Доставена“ и „Отказана“." : view.t === "work" ? "Новата поръчка идва тук сама, с лента в жар и звук на таблета на кухнята." : ""}) + '</div>'; }
+    var tn = TABS.filter(function(x){ return x[0] === view.t; })[0][1], m0 = A.sofia(now()), mm = m0.h * 60 + m0.m, open = kitchenOpen();
+    var et = view.t === "work" ? (open ? "Новата поръчка идва тук сама, с лента в жар." : mm < 600 ? "Кухнята приема поръчки от 10:00." : "Кухнята приема поръчки до 22:30. Днешните приключени са в „Доставена“.")
+      : view.t === "done" ? "Тук идват доставените, взетите и сервираните поръчки за днес." : view.t === "cancelled" ? "Днес няма отказани поръчки." : "";
+    return '<div class="sa-card">' + A.empty({icon:view.t === "work" ? "check-circle" : view.t === "cancelled" ? "check-circle" : "receipt", title:view.t === "work" ? "Няма поръчки в работа." : view.t === "cancelled" ? "Няма отказани поръчки." : "Няма поръчки със статус „" + tn + "“.", text:et}) + '</div>'; }
   if (view.t === "work" && wide()){ return '<div class="or-board">' + ["accepted","cooking","ready","on_way"].map(function(k){ var c = l.filter(function(o){ return o.status === k; });
     return '<section class="or-colm" aria-labelledby="col-' + k + '"><div class="or-colh"><h2 id="col-' + k + '"><span class="dot c-' + k + '"></span>' + LABEL[k] + '</h2><span class="n">' + c.length + '</span></div>' + (c.length ? c.map(cardHTML).join("") : '<p class="or-none">Няма</p>') + '</section>'; }).join("") + '</div>'; }
   return '<div class="or-grid">' + l.map(cardHTML).join("") + '</div>'; }
@@ -208,6 +211,7 @@ function arrive(){ if (!kitchenOpen() || D.list.some(function(o){ return o.arriv
   var m = A.sofia(now()); m = m.h * 60 + m.m; var dl = m < 1260, no = String(D.list.reduce(function(a, o){ return Math.max(a, +o.no); }, 1041) + 1), k = +no - 1041;
   var o = {no:no, arrived:true, ts:now().getTime(), channel:dl ? "delivery" : "pickup", mode:dl ? "delivery" : "pickup", status:"accepted", lines:[L("pitsa-kaprichoza"), L("salata-tsezar-s-beybi-kalmari"), L("sufle")], pay:"cash", name:"Клиент " + k, phone:"0888 00 00 " + String(k).padStart(2, "0"), times:{accepted:now().toISOString()}};
   if (dl){ o.zone = "Дружба 2"; o.addr = "Дружба 2, бл. 118, вх. В"; }
+  o.placedAt = A.hm(now()); if (A.seed && A.seed.sums) Object.assign(o, A.seed.sums(o));
   D.list.push(o); save(); fresh[o.no] = 1; banner = o; draw(true); A.audit("order.new", "Нова поръчка № " + no + " (примерна)", no); }
 if (st === "new") arrive(); else if (!st) setTimeout(arrive, 8000);
 setInterval(function(){ if (!document.querySelector(".sa-ov .sheetwrap.on") && st !== "loading" && st !== "error") drawList(); }, 30000);
