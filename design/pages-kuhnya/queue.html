@@ -29,7 +29,7 @@ document.addEventListener("pointerdown", function(e){ lastTouch = Date.now();
   if (laterOpen && !e.target.closest(".klater")){ laterOpen = false; strip(); } }, {capture:true});
 K.onAudio = function(){ /* сменя само бутона „Звук“: лентата не се прерисува, затова първото щракване (напр. „Виж“) стига до целта си */
   var sb = K.strip.querySelector("[data-unlock]");
-  if (sb){ sb.removeAttribute("data-unlock"); sb.setAttribute("aria-pressed", "true"); sb.innerHTML = ic("bell-ringing",22) + 'Звук вкл.'; }
+  if (sb){ sb.removeAttribute("data-unlock"); if (K.downTarget && sb.contains(K.downTarget)) sb.setAttribute("data-juston", ""); /* натиснат е самият бутон: кликът само потвърждава „вкл.“ */ sb.setAttribute("aria-pressed", "true"); sb.innerHTML = ic("bell-ringing",22) + 'Звук вкл.'; }
   if (!orders.length) setTimeout(render, 0); };
 
 function counts(){
@@ -61,8 +61,8 @@ function strip(){
   var lb = K.strip.querySelector("[data-later]"); if (lb) lb.addEventListener("click", function(){ laterOpen = !laterOpen; strip(); });
   var sb = K.strip.querySelector("[data-sound]");
   if (sb) sb.addEventListener("click", function(){
-    /* докосването на „Звук: докоснете“ само отключва (pointerdown вече го е направил): не изключва звука в същото движение */
-    if (sb.hasAttribute("data-unlock") || Date.now() - (K.unlockedAt || 0) < 500){ K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
+    /* бутонът прави това, което казва: „Звук: докоснете“ → вкл. (pointerdown вече е отключил и го е отбелязал data-juston), „Звук изкл.“ → вкл., „Звук вкл.“ → изкл. */
+    if (sb.hasAttribute("data-unlock") || sb.hasAttribute("data-juston")){ sb.removeAttribute("data-juston"); K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
     strip(); });
   K.placeToast();
 }

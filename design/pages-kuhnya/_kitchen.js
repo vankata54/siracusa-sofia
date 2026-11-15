@@ -74,9 +74,9 @@ K.sound = function(){ return load("sound", true); };
 /* „отключено“ не се пази между зарежданията (браузърът иска докосване при всяко зареждане); помни се само изборът вкл./изкл. (sk-sound) */
 K.audioReady = false;
 K.unlock = function(){ try{ var A = window.AudioContext || window.webkitAudioContext; K._ac = K._ac || new A(); if (K._ac.resume) K._ac.resume(); }catch(e){}
-  var was = K.audioReady; K.audioReady = true; if (!was) K.unlockedAt = Date.now(); if (!was && K.onAudio) K.onAudio(); };
-document.addEventListener("pointerdown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
-document.addEventListener("keydown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
+  var was = K.audioReady; K.audioReady = true; if (!was && K.onAudio) K.onAudio(); };
+document.addEventListener("pointerdown", function(e){ K.downTarget = e.target; if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
+document.addEventListener("keydown", function(e){ K.downTarget = e.target; if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
 
 /* ---------- mock orders (УСЛОВНИ). Line: [qty, itemId, {no:[], add:[], nt:"", w:"", st:"done"}] ---------- */
 function O(kind, num, at, due, lines, extra){ var o = {kind:kind, num:num, at:K.s(at), due:K.s(at) + K.NORM*60, lines:lines.map(function(l){ return {q:l[0], id:l[1], o:l[2]||{}}; })};
