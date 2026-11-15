@@ -294,6 +294,7 @@ function redrawDay(){ var b = body.querySelector(".ln-board"); if (!b) return dr
 function setPubBar(){ if (!pubBar){ pubBar = document.createElement("div"); pubBar.className = "ln-pub"; pubBar.setAttribute("data-edit-id", "admin.lunch.pubbar"); A.col.appendChild(pubBar); }
   var w = week(), n = w.filter(function(d){ var s = status(d).k; return s === "draft" || s === "bad"; }).length;
   pubBar.hidden = !unlocked || !n || st === "loading" || st === "error";
+  pubBar.setAttribute("data-pbar", ""); pubBar.classList.toggle("on", !pubBar.hidden);
   pubBar.innerHTML = '<span class="tx">' + (n === 1 ? '1 ден чака публикуване' : n + ' дни чакат публикуване') + '</span><button class="pill pill-red" type="button" data-publish>' + ic("paper-plane-right",20) + 'Публикувай</button>'; }
 draw();
 
