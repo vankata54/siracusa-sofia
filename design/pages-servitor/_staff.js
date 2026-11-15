@@ -33,8 +33,27 @@ ST.ZONE = {salon:"Салон", garden:"Градина"};
 ST.MINE = load("st-mine", null) || [3,4,7,12,14,16];
 ST.setMine = function(a){ store("st-mine", a); };
 
+/* reservations for today (УСЛОВНИ за макета: имената са „Клиент N“, телефонът е примерен) */
+ST.SLOTS = []; for (var m0 = 660; m0 <= 1290; m0 += 30) ST.SLOTS.push(m0); /* 11:00-21:30 през 30 мин, като на сайта (допускане на прототипа) */
+ST.hm = function(m){ return (m/60<10?"0":"")+Math.floor(m/60)+":"+(m%60<10?"0":"")+(m%60); };
+ST.dayKey = function(d){ return d.getFullYear()+"-"+(d.getMonth()<9?"0":"")+(d.getMonth()+1)+"-"+(d.getDate()<10?"0":"")+d.getDate(); };
+ST.DAY = ["нд","пн","вт","ср","чт","пт","сб"];
+ST.dayText = function(key){ var p = key.split("-"), d = new Date(+p[0], +p[1]-1, +p[2]); return ST.DAY[d.getDay()]+", "+d.getDate()+" "+SC.MONTHS[d.getMonth()]; };
+function seedRes(kind){ if (kind === "empty") return [];
+  var now = new Date(), m = now.getHours()*60 + now.getMinutes(), day = ST.dayKey(now);
+  var free = ST.SLOTS.filter(function(x){ return x > m + 45; });
+  if (free.length < 3){ var t = new Date(now.getTime() + 864e5); day = ST.dayKey(t); free = ST.SLOTS.filter(function(x){ return x >= 1110; }); }
+  return [[free[0],6,4,"Клиент 1",""],[free[1],10,6,"Клиент 2","Рожден ден, торта от тях"],[free[2],19,2,"Клиент 3","Маса в градината"]].map(function(r, i){
+    return {id:"r"+(i+1), day:day, at:r[0], t:r[1], n:r[2], name:r[3], phone:"0888 12 34 5"+(i+6), note:r[4], by:i===1?"сайт":"телефон"}; }); }
+ST.resOn = function(day){ return (ST.db.res||[]).filter(function(r){ return r.day === day; }).sort(function(a,b){ return a.at - b.at; }); };
+ST.resAll = function(){ return (ST.db.res||[]).slice().sort(function(a,b){ return a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at; }); };
+/* a table is free for a booking when it is not booked within 2 hours of that time */
+ST.tableFreeAt = function(n, day, at){ return !(ST.db.res||[]).some(function(r){ return r.t === n && r.day === day && Math.abs(r.at - at) < 120; }); };
+ST.addRes = function(r){ ST.db.res = ST.db.res || []; r.id = "r"+Date.now().toString(36); r.by = "сервитьор"; ST.db.res.push(r); ST.save(); return r; };
+ST.delRes = function(id){ ST.db.res = (ST.db.res||[]).filter(function(r){ return r.id !== id; }); ST.save(); };
+
 function seed(kind){ var now = Date.now(), S = 1000;
-  var db = {v:4, kind:kind, shiftStart: now - 2*3600*S - 14*60*S, tables:{}, calls:[], orders:[], paid:{}, seq:2186, outbox:[]};
+  var db = {v:5, kind:kind, shiftStart: now - 2*3600*S - 14*60*S, tables:{}, calls:[], orders:[], paid:{}, seq:2186, outbox:[], res:seedRes(kind)};
   SC.TABLES.forEach(function(t){ db.tables[t.n] = {owner: ST.MINE.indexOf(t.n)>-1 ? "me" : "other", st:"free", since:now}; });
   function seat(n, min, st){ db.tables[n].st = st||"seated"; db.tables[n].since = now - min*60*S; }
   function order(n, agoMin, src, bill, lines, pending){ db.seq++; db.orders.push({id:String(db.seq), t:n, at:now - agoMin*60*S, src:src, bill:bill||"", pending:!!pending, lines:lines.map(function(l){ return {id:l[0], q:l[1], st:l[2]||"acc", note:l[3]||"", readyAt: l[2]==="ready" ? now - (l[4]||60)*S : null}; })}); }
@@ -67,9 +86,9 @@ function seed(kind){ var now = Date.now(), S = 1000;
   return db; }
 var KEY = "st-db-" + ST.state;
 ST.db = load(KEY, null);
-if (!ST.db || ST.db.v !== 4) ST.db = seed(ST.state);
+if (!ST.db || ST.db.v !== 5) ST.db = seed(ST.state);
 ST.save = function(){ store(KEY, ST.db); ST.emit(); };
-ST.reset = function(){ try{ Object.keys(localStorage).forEach(function(k){ if (/^st-(db|cart|mine)/.test(k)) localStorage.removeItem(k); }); }catch(e){} };
+ST.reset = function(){ try{ Object.keys(localStorage).forEach(function(k){ if (/^st-(db|draft|cart|mine)/.test(k)) localStorage.removeItem(k); }); }catch(e){} };
 SC.TABLES.forEach(function(t){ if (ST.db.tables[t.n]) ST.db.tables[t.n].owner = ST.MINE.indexOf(t.n)>-1 ? "me" : "other"; });
 var subs = []; ST.on = function(fn){ subs.push(fn); }; ST.emit = function(){ subs.forEach(function(f){ f(); }); updateBadges(); };
 
@@ -171,29 +190,45 @@ function nav(cur){ var c = counts();
   var tabs = [["tables","tables.html","squares-four","Маси"],["calls","calls.html","bell-ringing","Повиквания","calls"],["ready","ready.html","chef-hat","Готови","ready"],["order","order.html","plus","Поръчка"]];
   return '<nav class="st-nav'+(ST.offline?' stale':'')+'" aria-label="Приложение на сервитьора">'+tabs.map(function(t){ var n = t[4] ? c[t[4]] : 0;
     return '<a href="'+t[1]+'" data-label="'+(t[0]==="order"?"Нова поръчка":t[3])+'"'+(t[0]==="order"?' aria-label="Нова поръчка"':'')+''+(cur===t[0]?' aria-current="page"':'')+'>'+ic(t[2],26)+'<span class="lb">'+t[3]+'</span>'+(t[4]?'<span class="cnt'+(t[4]==="ready"?" ember":"")+'" data-cnt="'+t[4]+'"'+(n?'':' hidden')+'>'+n+'</span>':'')+'</a>'; }).join("")+'</nav>'; }
+function tools(o){ /* compact icon + word buttons on the right: Търси, Молив (only with a signed-in staff member), Смяна */
+  return '<div class="st-tools">'+(o.find ? '<button class="st-tb" type="button" data-act="find" aria-label="Търси: маси, поръчки, изчерпано, резервации, ястия">'+ic("magnifying-glass",22)+'<span>Търси</span></button>' : '')+
+    '<span class="st-penslot" data-penslot></span>'+
+    '<button class="st-tb st-me'+(ST.offline?' off':'')+'" type="button" data-act="menu" aria-label="Смяна и настройки, '+(ST.offline?'няма връзка':'свързано')+'"><span class="tbi">'+ic("user",22)+'<span class="dot"></span></span><span>Смяна</span></button></div>'; }
 function topbar(o){ var since = ST.clock(ST.db.shiftStart);
   if (o.bare) return '<header class="st-top"><div class="tt"><b class="st-word">Siracusa</b><span>Персонал</span></div>'+(o.right||'')+'</header>';
   var left = o.back ? '<a class="st-back" href="'+o.back.href+'">'+ic("caret-left",22)+esc(o.back.label)+'</a>' : '';
-  return '<header class="st-top'+(o.back?' back':'')+'">'+left+'<div class="tt"><b>'+esc(o.title)+'</b><span>'+esc(o.sub || (ST.ME+" · на смяна от "+since))+'</span></div>'+
-    '<button class="st-me'+(ST.offline?' off':'')+'" type="button" data-act="menu" aria-label="Смяна и настройки, '+(ST.offline?'няма връзка':'свързано')+'"><span class="dot"></span>Смяна</button></header>'+
+  return '<header class="st-top'+(o.back?' back':'')+'">'+left+'<div class="tt"><b>'+esc(o.title)+'</b><span>'+esc(o.sub || (ST.ME+" · от "+since))+'</span></div>'+tools(o)+'</header>'+
     (ST.offline ? '<div class="st-net" role="status">'+ic("warning",22)+'<span>Няма връзка. Поръчките се пазят тук.</span><button type="button" data-act="retry">Опитай пак</button></div>' : ''); }
 
 /* ST.mount({page, title, sub, back:{href,label}, nav:"tables"|"calls"|"ready"|"order"|null, bar:true}) -> <main> */
 ST.mount = function(o){ o = o || {};
+  if (o.find === undefined) o.find = !!o.nav && !o.homeFind; /* the home screen (Залата) has the search field in the page */
   document.body.classList.add("st");
   var app = document.createElement("div"); app.className = "st-app" + (o.nav===null ? " nonav" : "") + (o.bar ? " withbar" : ""); app.dataset.page = o.page||"";
   app.innerHTML = topbar(o) + '<main id="main"></main>' + (o.proto===false ? '' : protoPanel());
   document.body.appendChild(app);
   if (o.nav !== null) document.body.insertAdjacentHTML("beforeend", nav(o.nav));
   document.title = o.title + " | Siracusa · Персонал";
-  ST.app = app; return app.querySelector("main"); };
+  ST.app = app; mountPen(o); return app.querySelector("main"); };
+
+/* ---------- pencil for recommendations (решение 15.11): only for a signed-in staff member ----------
+   ../pages-admin/_pen-mount.js (data-auto="false") reads "sa-session" and writes to "sa-notes" with the source;
+   its button is moved into the top bar (in the flow): it never covers the bottom bar, the action bar or the toasts. */
+function mountPen(o){ if (o.bare || o.page === "index" || !window.SAPenMount) return;
+  ST.pen = SAPenMount.mount({module:"servitor", bottom:o.bar ? 100 : 96});
+  var slot = ST.app.querySelector("[data-penslot]"); if (ST.pen && ST.pen.button && slot) slot.appendChild(ST.pen.button); }
+/* the prototype's staff session (same key as the admin): set by the PIN login, removed at the end of the shift */
+ST.SESSION = {user:"waiter", name:"Сервитьор 1", role:"waiter"};
+ST.signIn = function(name){ store("sa-session", {user:name === ST.OTHER ? "waiter2" : "waiter", name:name || ST.ME, role:"waiter"}); };
+ST.signOut = function(){ try{ localStorage.removeItem("sa-session"); }catch(e){} };
+ST.signedIn = function(){ var s = load("sa-session", null); return !!(s && s.role); };
 
 /* ---------- shift / settings sheet ---------- */
 function themeSeg(){ var t = ST.prefs.theme; return '<div class="st-seg" role="group" aria-label="Тема">'+[["system","Авто"],["light","Светла"],["dark","Тъмна"],["hour","По часа"]].map(function(x){ return '<button type="button" data-act="theme" data-v="'+x[0]+'" aria-pressed="'+(t===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'; }
 ST.themeSeg = themeSeg;
 function menuSheet(){ var mine = ST.MINE.join(", ");
   ST.sheet({title:"Смяна", html:
-    '<div class="kvs"><div class="kv"><span class="muted">Сервитьор</span><b>'+ST.ME+'</b></div><div class="kv"><span class="muted">На смяна от</span><b class="tnum">'+ST.clock(ST.db.shiftStart)+'</b></div><div class="kv"><span class="muted">Моите маси</span><b>'+mine+'</b></div><div class="kv"><span class="muted">Връзка</span><b>'+(ST.offline?'Няма връзка':'Свързано')+'</b></div></div>'+
+    '<div class="kvs"><div class="kv"><span class="muted">Сервитьор</span><b>'+ST.ME+'</b></div><div class="kv"><span class="muted">На смяна от</span><b class="tnum">'+ST.clock(ST.db.shiftStart)+'</b></div><div class="kv"><span class="muted">Моите маси</span><b>'+mine+'</b></div><p class="small muted" style="margin:6px 0 0">Избрах ги при вход. Управителят може да ги промени.</p><div class="kv"><span class="muted">Връзка</span><b>'+(ST.offline?'Няма връзка':'Свързано')+'</b></div></div>'+
     '<p class="st-cap" style="margin-top:18px">Тема</p>'+themeSeg()+'<p class="small muted" style="margin:8px 0 0">„По часа“ е тъмна от 18:00 до 07:00, защото вечер салонът е тъмен. <span class="prop">'+ic("sparkle",14)+'Предложение</span></p>'+
     '<p class="st-cap" style="margin-top:18px">Известия</p><div class="kvs"><div class="kv"><span>Вибрация за повикване</span><b>2 дълги</b></div><div class="kv"><span>Вибрация за готово ястие</span><b>3 кратки</b></div><div class="kv"><span>Смарт часовник</span><a class="link" href="watch.html">Виж екрана'+ic("caret-right",18)+'</a></div></div>',
     foot:'<a class="pill pill-line pill-lg pill-block" href="login.html#end">'+ic("sign-out",22)+'Приключи смяната</a>'}); }
@@ -201,6 +236,7 @@ function menuSheet(){ var mine = ST.MINE.join(", ");
 /* ---------- prototype panel ---------- */
 function protoPanel(){ return '<section class="proto" aria-label="Само в прототипа"><h2>Само в прототипа</h2><p>Състояние на смяната (данните са условни за макета):</p><div class="row">'+
   ST.STATES.map(function(s){ return '<button class="chip" type="button" data-act="state" data-v="'+s[0]+'" aria-pressed="'+(ST.state===s[0])+'">'+s[1]+'</button>'; }).join("")+'</div><p>Тема:</p>'+themeSeg()+
+  '<p>Влязъл служител (за молива):</p><div class="row"><button class="chip" type="button" data-act="sess" data-v="1" aria-pressed="'+ST.signedIn()+'">'+ic("pencil-simple",18)+'Сервитьор 1, с молив</button><button class="chip" type="button" data-act="sess" data-v="0" aria-pressed="'+!ST.signedIn()+'">Никой, без молив</button></div>'+
   '<div class="row"><button class="chip" type="button" data-act="reset">'+ic("arrow-counter-clockwise",18)+'Върни данните в начало</button><a class="chip" href="index.html" style="text-decoration:none">'+ic("list",18)+'Всички екрани</a></div></section>'; }
 
 /* ---------- global delegation (data-act only; SC's own data-* handlers are not used here) ---------- */
@@ -209,8 +245,16 @@ document.addEventListener("click", function(e){ var t = e.target.closest("[data-
   if (a==="theme"){ ST.prefs.theme = t.dataset.v; savePrefs(); applyTheme(); document.querySelectorAll('[data-act="theme"]').forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.v===ST.prefs.theme); }); return; }
   if (a==="state"){ ST.prefs.state = t.dataset.v; savePrefs(); var h = location.hash.replace(/(^#|&)s=[a-z]+/,""); location.hash = h; location.reload(); return; }
   if (a==="reset"){ ST.reset(); location.reload(); return; }
+  if (a==="sess"){ if (t.dataset.v==="1") ST.signIn(ST.ME); else ST.signOut(); location.reload(); return; }
+  if (a==="find"){ ST.openFind(); return; }
   if (a==="retry"){ t.disabled = true; t.textContent = "Проверяваме…"; setTimeout(function(){ t.disabled = false; t.textContent = "Опитай пак"; ST.toast("Още няма връзка. Опитваме сами на всеки 10 сек."); }, 900); return; }
 });
+
+/* ---------- the staff search (one field, by role): loaded on first use (../ds/search.js + _find.js) ---------- */
+function loadScript(src, cb){ var el = document.createElement("script"); el.src = src; el.onload = cb; el.onerror = function(){ ST.toast("Търсенето не се зареди. Опитай пак."); }; document.head.appendChild(el); }
+ST.openFind = function(q){ if (ST.find){ ST.find(q); return; }
+  var go = function(){ loadScript("_find.js", function(){ ST.find && ST.find(q); }); };
+  if (window.SCSearch) go(); else loadScript("../ds/search.js", go); };
 
 /* ---------- search (Latin or Cyrillic, forgiving) ---------- */
 var TR = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya"};

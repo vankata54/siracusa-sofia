@@ -318,28 +318,88 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
   .rv-on .rv{transform:none; opacity:1}
 }
 
-/* ---------- AI assistant panel ---------- */
+/* ---------- AI assistant = smart search (ds/ai.js, decision 15.11): one field, instant results from the shared search core ---------- */
+/* one clear button in every search field: the browser's own is hidden */
+input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration,input[type="search"]::-webkit-search-results-button{-webkit-appearance:none; appearance:none; display:none}
+input[type="search"]::-ms-clear,input[type="search"]::-ms-reveal{display:none; width:0; height:0}
 .aisheetwrap .sheet{height:86%}
-.aisheetwrap .body{display:flex; flex-direction:column; gap:8px}
-.aimsgs{flex:1; min-height:0; overflow-y:auto; padding:4px 2px}
-.msg{max-width:90%; padding:12px 14px; border-radius:22px; margin:8px 0; font-size:16px; line-height:1.4}
-.msg p{margin:0 0 8px} .msg p:last-child{margin-bottom:0}
-.msg.bot{background:var(--surface-2); border-bottom-left-radius:8px}
-.msg.me{background:var(--ink); color:var(--bg); margin-left:auto; border-bottom-right-radius:8px}
-.typing{display:inline-flex; gap:5px}
+.aisheetwrap .body{display:flex; flex-direction:column; gap:10px; overflow:hidden}
+.aq{flex:none; display:grid; gap:6px; margin:0}
+.aq label{font-weight:700; font-size:15px}
+.aqbox{position:relative}
+.aqbox > .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.aqbox input{width:100%; min-height:56px; padding:0 58px 0 48px; border:0; border-radius:var(--r-pill); background:var(--bg); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
+.aqbox input::placeholder{color:var(--muted)}
+.aqbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.aqclr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.aqres{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; margin:0 -18px; padding:4px 18px 16px; scrollbar-width:thin}
+.aqres > :first-child{margin-top:0}
+.agh{margin:18px 0 8px; display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:15px; font-weight:800; letter-spacing:-.01em}
+.agh .n{color:var(--muted); font-weight:600; font-size:14px; font-variant-numeric:tabular-nums}
+.asugg{display:flex; flex-wrap:wrap; gap:8px}
+.asugg .chip{white-space:normal; text-align:left; line-height:1.25; padding:6px 16px 6px 12px; box-shadow:none; background:var(--surface-2)}
+.asugg .chip .ic{color:var(--muted)}
+.asugg .chip.wish .ic{color:var(--ink)}
+.anow{display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:var(--r-core); background:var(--surface-2); font-size:15px; color:var(--muted); line-height:1.35}
+.anow b{color:var(--ink)}
+.anow .dot{width:10px; height:10px; border-radius:50%; flex:none; background:var(--off)}
+.anow .dot.ok{background:var(--ok)} .anow .dot.warn{background:var(--warn)}
+/* chips next to the recognized words: „глутен ✕“ ↔ „без глутен“ (also used by menu, allergens and the table menu) */
+.qchips{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.qchips .ql{font-size:14px; font-weight:700; color:var(--muted)}
+.qchip{min-height:48px; padding:0 12px 0 16px; gap:6px}
+.qchip[aria-pressed="true"]{padding:0 16px 0 12px}
+/* dish rows: by name on top, then the band „Съдържат ...“, then by composition */
+.arows{display:grid}
+.arow{display:grid; grid-template-columns:52px minmax(0,1fr) auto 48px; gap:12px; align-items:center; padding:8px 0}
+.arow + .arow{border-top:1px solid var(--line)}
+.arow .open{display:contents; color:inherit; text-decoration:none}
+.arow .pic{width:52px; height:52px; border-radius:16px}
+.arow .nm{display:block; font-weight:700; line-height:1.25}
+.arow .mt{display:block; font-size:14px; font-weight:600; color:var(--muted); line-height:1.3}
+.arow .mt.out{color:var(--warn)}
+.arow .price{font-size:16px}
+.arow .sp{width:48px; height:48px}
+.sband{display:flex; align-items:center; gap:8px; margin:16px 0 6px; min-height:44px; padding:6px 16px 6px 12px; border-radius:var(--r-pill); background:var(--surface-2); font-size:15px; font-weight:800; letter-spacing:-.01em}
+.sband .ic{color:var(--muted)}
+.sband .n{margin-left:auto; color:var(--muted); font-weight:600; font-size:14px; font-variant-numeric:tabular-nums}
+.aunk{margin-top:20px; padding:14px 16px 6px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.aunk .uh{display:flex; gap:10px; align-items:flex-start}
+.aunk .uh .ic{margin-top:2px; color:var(--warn)}
+.aunk .uh b{display:block; line-height:1.3}
+.aunk .uh span{display:block; font-size:15px; color:var(--muted)}
+.amore{margin-top:2px}
+/* answers from the real data: hours, delivery, events, offers, contacts */
+.ainfo{margin-top:12px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2)}
+.ainfo h3{display:flex; align-items:center; gap:8px; margin:0 0 4px; font-size:16px; font-weight:800; letter-spacing:-.01em}
+.ainfo h3 .ic{color:var(--muted)}
+.ainfo p{margin:0 0 6px}
+.ainfo p:last-child{margin-bottom:0}
+.ainfo .sub{font-size:15px; color:var(--muted)}
+.ainfo .acts{display:flex; flex-wrap:wrap; gap:4px 16px}
+.ainfo .zl{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0}
+.ainfo .zl span{display:inline-flex; align-items:center; min-height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--surface); font-size:14px; font-weight:700}
+.ainfo .zl span small{margin-left:6px; color:var(--muted); font-size:14px; font-weight:600}
+/* "Попитай AI": a wish (people, price, „без ...“) gets a suggestion made only from the real menu; marked as an example until stage E */
+.awish{margin-top:2px; padding:14px 16px; border-radius:var(--r-core); background:var(--ember-soft); box-shadow:inset 0 0 0 1px var(--line)}
+.awish b{display:block; line-height:1.3}
+.awish p{margin:2px 0 10px; font-size:15px; color:var(--muted)}
+.awish .pill{width:100%}
+.aiex{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line-strong); font-size:14px; font-weight:700; color:var(--ink)}
+.aians{margin-top:12px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2)}
+.aians .hd{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; font-weight:800}
+.aians .hd > .ic{color:var(--ink)}
+.aians p{margin:0 0 8px}
+.aians .pill{margin-top:8px}
+.aians .fine{font-size:14px; color:var(--muted)}
+.typing{display:inline-flex; gap:5px; padding:6px 0}
 .typing span{width:8px; height:8px; border-radius:50%; background:var(--muted); animation:tdot 900ms ease-in-out infinite}
 .typing span:nth-child(2){animation-delay:150ms} .typing span:nth-child(3){animation-delay:300ms}
 @keyframes tdot{0%,100%{transform:translateY(0); opacity:.4}50%{transform:translateY(-4px); opacity:1}}
 .prow{display:grid; grid-template-columns:52px 1fr auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line)}
 .prow .pic{width:52px; height:52px; border-radius:16px}
 .prow small{display:block; font-size:14px; font-weight:700; color:var(--red)}
-.prow b{display:block; line-height:1.25; font-size:15px}
+.prow b{display:block; line-height:1.25; font-size:16px}
 .prow em{display:block; font-style:normal; font-size:14px; color:var(--muted)}
 .ailist{margin:0 0 8px; padding-left:18px}
-.aichip{flex:0 0 78%; white-space:normal; text-align:left; min-height:48px; padding:10px 14px; border-radius:20px; line-height:1.3; font-size:15px}
-.aiform{display:flex; gap:8px; padding:6px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); flex:none}
-.aiform:focus-within{box-shadow:inset 0 0 0 2px var(--red)}
-.aiform input{flex:1; min-width:0; border:0; background:transparent; padding:0 12px; min-height:48px; font-size:16px; color:var(--ink); outline:none}
-.aiform input::placeholder{color:var(--muted)}
-.aiform .pill{width:48px; padding:0}
 .aifine{margin:0; font-size:14px; color:var(--muted); text-align:center; flex:none}

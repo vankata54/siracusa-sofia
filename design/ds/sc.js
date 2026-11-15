@@ -75,6 +75,22 @@ SC.ALLERGENS = [
   ["lupin","Лупина","flower"],["molluscs","Мекотели","fish-simple"]];
 SC.allergenName = function(k){ var a = SC.ALLERGENS.filter(function(x){ return x[0]===k; })[0]; return a ? a[1] : k; };
 
+/* ---------- търсене на ястия: общото ядро (ds/search.js, строи се от src/lib/search.ts; решение 15.11) ----------
+   Страницата зарежда ../ds/search.js преди sc.js; асистентът го зарежда сам. Думите на категорията и съществителното
+   ѝ („пица“, „бургер“) също са думи от името, както в src/lib/filters.ts (searchable). */
+var NOUN1 = {supi:"супа", salati:"салата", "studeni-predyastia":"предястие", "topli-predyastia":"предястие", pitsi:"пица", garnituri:"гарнитура", sosove:"сос", burgeri:"бургер", dobavki:"добавка", deserti:"десерт", zakuski:"закуска"};
+var SX = {};
+SC.searchable = function(x){ var s = SX[x.id]; if (!s || s.src !== x){ var c = SC.catById[x.cat];
+  s = SX[x.id] = {id:x.id, n:x.n, comp:x.comp || "", al:x.al || [], t:x.t || [], kw:(c ? c.n : "")+" "+(NOUN1[x.cat] || "")+" "+(x.group || ""), src:x}; } return s; };
+/* {query, band, name, comp, rest, unknown, chips}: горе по име, под лентата „Съдържат ...“ по състав, „без ...“ в rest, без състав в unknown */
+SC.searchGroups = function(list, q){ var S = window.SCSearch; if (!S) return null;
+  var r = S.searchDishes(list.map(SC.searchable), q), back = function(a){ return a.map(function(z){ return z.src; }); };
+  return {query:r.query, band:r.band, name:back(r.name), comp:back(r.comp), rest:back(r.rest), unknown:back(r.unknown), chips:S.chips(q)}; };
+/* чиповете до разпознатите думи: „глутен ✕“ ↔ „без глутен“ (натискането обръща думата в полето чрез SCSearch.toggle) */
+SC.searchChipsHTML = function(chips){ if (!chips || !chips.length) return "";
+  return '<div class="qchips" role="group" aria-label="Как разбрахме търсенето"><span class="ql">Търсим:</span>'+chips.map(function(c){ var l = SC.esc(c.label);
+    return '<button class="chip qchip" type="button" data-qtoggle="'+SC.esc(c.word)+'" aria-pressed="'+c.without+'" aria-label="'+(c.without ? "без "+l+", покажи и с "+l : l+", покажи без "+l)+'">'+(c.without ? SC.ic("check",18)+"без "+l : l+SC.ic("x",18))+'</button>'; }).join("")+'</div>'; };
+
 /* Filters for the menu ("менюта като филтри"). Data-driven: a filter is shown only if at least one item matches. */
 SC.FILTERS = [
   {id:"veg", n:"Вегетарианско", icon:"leaf", test:function(x){ return x.t.indexOf("veg")>-1; }},
@@ -299,28 +315,13 @@ SC.footer = function(){ var R=SC.RESTAURANT;
     '<p class="legal">© '+new Date().getFullYear()+' Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p>'+
     '<p style="margin:0"><button class="pill pill-line" type="button" data-suggest>'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button></p></footer>'; };
 function morePanel(){ return '<div class="stack" style="gap:2px">'+SC.PAGES.map(function(p){ return '<a class="kv" href="'+p[0]+'" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">'+p[1]+SC.ic("caret-right",18)+'</a>'; }).join("")+'</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'0894 36 55 77</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div><button class="pill pill-line pill-block" type="button" data-suggest style="margin-top:8px">'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button>'; }
-/* AI assistant: prototype answers the scripted examples, always from the real menu data */
-function aiPanelHTML(){ return '<div class="aimsgs" data-aimsgs aria-live="polite"><div class="msg bot">Здравейте! Кажете ми за колко души поръчвате и какво обича всеки. Предлагам само ястия от нашето меню.</div></div>'+
-  '<div class="chips aichips" style="margin:0;padding:2px 0"><button class="chip aichip" type="button" data-aiq="group">Ние сме четирима: един е вегетарианец и не яде лук, един иска месо, един обича сиренца</button><button class="chip aichip" type="button" data-aiq="lunch">Какво има в обедното меню днес?</button><button class="chip aichip" type="button" data-aiq="allergen">Кое е без глутен?</button></div>'+
-  '<form class="aiform" data-aiform><label class="vh" for="aiq">Вашият въпрос</label><input id="aiq" type="text" placeholder="Напишете какво търсите" autocomplete="off"><button class="pill pill-red" type="submit" aria-label="Изпрати">'+SC.ic("paper-plane-right",20)+'</button></form><p class="aifine">Отговаря само от менюто. Алергените проверявайте и на страницата на ястието.</p>'; }
-function aiPlan(){ var I2=M.items.filter(function(x){ return !SC.isOut(x); });
-  var veg=I2.filter(function(x){ return x.t.indexOf("veg")>-1 && x.course==="main" && x.noOnion; }).sort(function(a,b){ return b.p-a.p; })[0];
-  var meat=I2.filter(function(x){ return x.cat==="skara-bertha"; }).sort(function(a,b){ return b.p-a.p; })[0];
-  var cheese=I2.filter(function(x){ return /сиренца|формаджи/i.test(x.n); }).sort(function(a,b){ return a.p-b.p; })[0];
-  return [["Вегетарианец, без лук",veg,"Без лук и без месо по състава."],["Иска месо",meat,"Най-поръчваното от скарата Bertha."],["Обича сиренца",cheese,"Хрупкави, с домашно сладко от боровинки."]].filter(function(z){ return z[1]; }); }
-function aiReply(kind){
-  if (kind==="group"){ var plan=aiPlan(), ids=[], tot=0;
-    var rows=plan.map(function(z){ var x=z[1]; ids.push(x.id); tot+=x.p; return '<div class="prow"><span class="pic">'+SC.art(x)+'</span><span><small>'+z[0]+'</small><b>'+SC.esc(x.n)+'</b><em>'+z[2]+'</em></span><span class="price">'+SC.fmt(x.p)+'</span></div>'; }).join("");
-    return '<p>Ето предложение за трима от вас:</p>'+rows+'<p>А четвъртият какво обича? Кажете ми и ще допълня.</p><button class="pill pill-red pill-block" type="button" data-aiadd="'+ids.join(",")+'" style="margin-top:6px">Добави всичко · '+SC.fmt(tot)+'</button>'; }
-  if (kind==="lunch"){ var L=M.lunch.items.filter(function(x){ return x.p; }); var pick=[L[0],L[7],L[12],L[16]].filter(Boolean);
-    return '<p>Обедното меню за днес, до 15:00:</p><ul class="ailist">'+pick.map(function(x){ return '<li>'+SC.esc(x.n)+' · '+SC.fmt(x.p)+'</li>'; }).join("")+'</ul><p><a class="link" href="lunch.html">Цялото обедно меню'+SC.ic("caret-right",16)+'</a></p>'; }
-  if (kind==="allergen"){ var g=M.items.filter(function(x){ return x.comp && x.al.indexOf("gluten")<0 && x.course==="main"; }).slice(0,4);
-    return '<p>По състава без глутен изглеждат:</p><ul class="ailist">'+g.map(function(x){ return '<li><a href="dish.html#'+x.id+'">'+SC.esc(x.n)+'</a></li>'; }).join("")+'</ul><p class="muted small">Това е предварително, от състава. Кухнята още потвърждава алергените.</p>'; }
-  return '<p>В прототипа отговарям само на примерите отгоре. Истинският асистент ще отговаря за менюто, алергените, часовете и доставката.</p>'; }
-SC.aiAsk = function(text, kind){ var box=device.querySelector("[data-aimsgs]"); if (!box) return;
-  box.insertAdjacentHTML("beforeend",'<div class="msg me">'+SC.esc(text)+'</div><div class="msg bot typing" data-typing><span></span><span></span><span></span></div>'); box.scrollTop=box.scrollHeight;
-  setTimeout(function(){ var t=box.querySelector("[data-typing]"); if (t){ t.outerHTML='<div class="msg bot">'+aiReply(kind)+'</div>'; box.scrollTop=box.scrollHeight; } }, reduce?50:700); };
-function openAI(){ var s = SC.sheet({title:"Асистент", html:aiPanelHTML()}); s.el.classList.add("aisheetwrap"); setTimeout(function(){ var i=s.el.querySelector("#aiq"); i && i.focus({preventScroll:true}); }, 60); }
+/* Асистентът = умната търсачка (решение 15.11): ds/ai.js и ds/search.js се зареждат при първото отваряне. */
+function openAI(q){ var need = [], done = 0; if (!window.SCSearch) need.push("../ds/search.js"); if (!window.SCAI) need.push("../ds/ai.js");
+  var go = function(){ window.SCAI && SCAI.open(q || ""); };
+  if (!need.length) return go();
+  need.forEach(function(src){ var sc = document.createElement("script"); sc.src = src; sc.onload = function(){ if (++done === need.length) go(); };
+    sc.onerror = function(){ SC.toast("Асистентът не се зареди. Опитайте пак или ни се обадете: "+SC.RESTAURANT.phone); }; document.head.appendChild(sc); }); }
+SC.openAI = openAI;
 function cookieBanner(){ if (load("sc-cookie", null)) return "";
   return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите.</p><div class="btns"><button class="pill pill-line" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>'; }
 function previewBar(){ if (window.innerWidth <= 700) return "";
@@ -359,8 +360,7 @@ document.addEventListener("click", function(e){
   if (t.matches("a[data-noop]")){ e.preventDefault(); SC.toast("Правната страница се прави отделно."); return; }
   if (t.dataset.pv){ prefs[t.dataset.pv] = t.dataset.v; savePrefs(); location.reload(); return; }
   if (t.dataset.add){ e.preventDefault(); SC.cart.add(t.dataset.add, 1); SC.fly(t, t.dataset.add); SC.haptic(); SC.flash(t, SC.ic("check",22)); SC.toast("Добавено ✓"); return; }
-  if (t.hasAttribute("data-ai")){ openAI(); return; }
-  if (t.dataset.aiq){ SC.aiAsk(t.textContent, t.dataset.aiq); return; }
+  if (t.hasAttribute("data-ai")){ openAI(t.dataset.aiq || ""); return; }
   if (t.dataset.aiadd){ t.dataset.aiadd.split(",").forEach(function(k,i){ SC.cart.add(k,1); setTimeout(function(){ SC.fly(t,k); }, i*120); }); SC.flash(t, SC.ic("check",22)+"Добавено в количката", 1600); return; }
   /* „Предложи подобрение“: ds/suggest.js се зарежда чак при първото натискане */
   if (t.hasAttribute("data-suggest")){ var go=function(){ window.SCSuggest && SCSuggest.open(); }; if (window.SCSuggest) go(); else { var sg=document.createElement("script"); sg.src="../ds/suggest.js"; sg.onload=go; document.head.appendChild(sg); } return; }
@@ -371,7 +371,5 @@ document.addEventListener("click", function(e){
   if (t.hasAttribute("data-cookie-settings")){ e.preventDefault(); localStorage.removeItem("sc-cookie"); location.reload(); return; }
 });
 document.addEventListener("change", function(e){ if (e.target.matches("[data-pvtime]")){ prefs.time=e.target.value; savePrefs(); location.reload(); } });
-document.addEventListener("submit", function(e){ var af = e.target.closest("[data-aiform]"); if (!af) return; e.preventDefault(); var inp=af.querySelector("input"), v=inp.value.trim(); if (!v) return; inp.value="";
-  SC.aiAsk(v, /четир|вегетари|лук|сирен|месо|души|трима|двама/i.test(v)?"group":/обед/i.test(v)?"lunch":/глутен|алерг/i.test(v)?"allergen":"other"); });
 document.addEventListener("keydown", function(e){ if (e.key==="Escape"){ var w=document.querySelectorAll(".sheetwrap.on"); if (w.length){ var last=w[w.length-1]; var b=last.querySelector("[data-close]"); b && b.click(); } } });
 })();
