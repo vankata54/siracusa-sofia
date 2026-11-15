@@ -353,13 +353,14 @@ A.badges = {};
 A.computeBadges = function(){ var b = A.badges;
   /* главният админ: нови и за преглед (чакат него); другите с „Бележки“: нови */
   b.notes = !A.can("notes") ? 0 : A.notes.count("new") + (A.isMainAdmin() ? A.notes.count("review") : 0);
+  A.badgeTitles = {notes:A.isMainAdmin() ? A.plural(A.notes.count("new"), "нова", "нови") + ", " + A.notes.count("review") + " за преглед" : ""};
   b.orders = A.orders().filter(function(o){ return o.status === "accepted"; }).length;
   b.customers = listOf(get("feedback", [])).filter(function(f){ return f.status === "new"; }).length;
   b.offers = listOf(get("feedback-iq", [])).filter(function(q){ return q.st === "new" || q.status === "new"; }).length;
   b.reservations = A.reservations().filter(function(r){ return r.date === A.todayKey() && r.status === "new"; }).length;
   return b; };
 A.setBadge = function(id, n){ A.badges[id] = n; document.querySelectorAll('[data-badge="' + id + '"]').forEach(function(el){ el.textContent = n; el.hidden = !n; }); };
-function badge(id){ var n = A.badges[id]; return '<span class="sa-n" data-badge="' + id + '"' + (n ? '' : ' hidden') + ' aria-hidden="true">' + (n || 0) + '</span>'; }
+function badge(id){ var n = A.badges[id], t = (A.badgeTitles || {})[id]; return '<span class="sa-n" data-badge="' + id + '"' + (n ? '' : ' hidden') + (t ? ' title="' + esc(t) + '"' : '') + ' aria-hidden="true">' + (n || 0) + '</span>'; }
 
 /* ---------- chrome ---------- */
 function sideHTML(cur){

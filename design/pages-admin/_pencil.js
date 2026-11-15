@@ -291,7 +291,7 @@ SAPen.mount = function(o){ o = o || {};
     requestAnimationFrame(function(){ toastEl.classList.add("on"); }); clearTimeout(tt); tt = setTimeout(function(){ toastEl.classList.remove("on"); }, 5200); }
 
   function pathOf(win){ var p = win.location.pathname, i = p.indexOf("/design/"); if (i > -1) p = p.slice(i + 7); return p + win.location.hash; }
-  function setOn(v){ on = !!v; if (fab){ fab.setAttribute("aria-pressed", String(on)); fab.innerHTML = on ? svg("x", 22) + '<span>Изключи</span>' : svg("pencil-simple", 22) + '<span>Молив</span>'; fab.setAttribute("aria-label", on ? "Изключи молива" : "Молив: посочете елемент и напишете какво да се промени"); }
+  function setOn(v){ on = !!v; if (on && lastType === "mouse" && ui.matchMedia && ui.matchMedia("(hover: none)").matches) lastType = "touch"; /* телефон: без „Esc за изход“ */ if (fab){ fab.setAttribute("aria-pressed", String(on)); fab.innerHTML = on ? svg("x", 22) + '<span>Изключи</span>' : svg("pencil-simple", 22) + '<span>Молив</span>'; fab.setAttribute("aria-label", on ? "Изключи молива" : "Молив: посочете елемент и напишете какво да се промени"); }
     bar.classList.toggle("on", on); if (on){ attach(getTarget()); barText(); } else { cand = null; stack = []; if (tw && tw.__saPenLayer) tw.__saPenLayer.clear(); }
     o.onToggle && o.onToggle(on); }
   function off(){ setOn(false); }

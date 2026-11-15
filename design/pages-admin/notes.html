@@ -11,9 +11,9 @@
 <link rel="stylesheet" href="_admin.css">
 <style>
 .nt-how{display:grid; gap:14px; padding:20px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
-.nt-how h2{margin:0; font-size:20px; letter-spacing:-.02em}
-.nt-how ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s}
-.nt-how li{display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start; counter-increment:s; color:var(--on-chip-dark)}
+.nt-how h2{margin:0; font-size:20px; letter-spacing:-.02em; align-self:start; line-height:32px}
+.nt-how ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s; align-items:start}
+.nt-how li{display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start; align-content:start; counter-increment:s; color:var(--on-chip-dark)}
 .nt-how li::before{content:counter(s); width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:15px}
 .nt-how code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; padding:2px 8px; border-radius:8px; background:color-mix(in srgb, var(--on-chip-dark) 12%, transparent); overflow-wrap:anywhere}
 @container page (min-width:900px){ .nt-how{grid-template-columns:240px minmax(0,1fr); align-items:start; padding:24px 28px} .nt-how ol{grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px} .nt-how li{grid-template-columns:1fr; gap:10px} }
@@ -97,7 +97,7 @@ var STS = A.NOTE_STATUSES, STEP = {new:0, approved:1, doing:2, review:3, publish
 var ICO = {new:"sparkle", approved:"check", doing:"hourglass", review:"eye", published:"check-circle", rejected:"x"};
 var RUN_MS = 3500;
 function all(){ return st === "empty" ? [] : FULL ? A.notes.list() : A.notes.mine(); }
-function firstTab(){ if (A.hash.s != null && (A.hash.s === "" || STS.some(function(x){ return x[0] === A.hash.s; }))) return A.hash.s; if (!FULL) return ""; return MAIN && A.notes.count("review") && !A.notes.count("new") ? "review" : "new"; }
+function firstTab(){ if (A.hash.s && (STS.some(function(x){ return x[0] === A.hash.s; }))) return A.hash.s; if (!FULL){ var mine = A.notes.mine(), hit = STS.filter(function(x){ return mine.some(function(n){ return n.status === x[0]; }); })[0]; return hit ? hit[0] : "new"; } return MAIN && A.notes.count("review") && !A.notes.count("new") ? "review" : "new"; }
 var first = firstTab();
 var f = {s:first, m:A.hash.m || "", src:A.hash.src || "", q:""};
 function cnt(s0){ return all().filter(function(n){ return n.status === s0; }).length; }
@@ -121,7 +121,7 @@ body.innerHTML = how +
     '<div class="sa-field-s"><label class="vh" for="nt-q">Търси в бележките</label>' + ic("magnifying-glass",20) + '<input class="input" id="nt-q" type="search" placeholder="Търси в бележките" autocomplete="off"></div></div>' : '') + '</div>' +
   '<div data-list id="nt-list" role="tabpanel" aria-live="polite"></div>';
 var tabs = body.querySelector("[data-tabs]"), list = body.querySelector("[data-list]"), msel = body.querySelector("[data-mod]"), ssel = body.querySelector("[data-src]"), q = body.querySelector("#nt-q");
-var TABS = FULL ? STS : [["","Всички","Всички"]].concat(STS);
+var TABS = STS;
 function drawTabs(){ tabs.innerHTML = TABS.map(function(s0){ var n = s0[0] ? cnt(s0[0]) : all().length; return '<button type="button" role="tab" data-tab="' + s0[0] + '" aria-selected="' + (f.s === s0[0]) + '" tabindex="' + (f.s === s0[0] ? 0 : -1) + '" aria-controls="nt-list">' + s0[1] + '<span class="c">' + n + '</span></button>'; }).join(""); }
 function drawFilters(){ if (!FULL) return; var mods = {}, srcs = {};
   all().forEach(function(n){ mods[n.module] = (mods[n.module] || 0) + 1; var so = A.noteSource(n); srcs[so.key] = srcs[so.key] || {n:0, label:so.key === "client" ? "Клиент от сайта" : A.roleName(so.key)}; srcs[so.key].n++; });
