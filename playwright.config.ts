@@ -14,8 +14,9 @@ export default defineConfig({
   timeout: 30_000,
   use: { baseURL: "http://localhost:" + port, ...(exe ? { launchOptions: { executablePath: exe } } : {}) },
   projects: [
-    { name: "phone", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
-    { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
+    /* a test for one layout only is tagged @phone or @desktop in its title and runs only there (no skips) */
+    { name: "phone", grepInvert: /@desktop/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
+    { name: "desktop", grepInvert: /@phone/, use: { viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
     /* a fresh test database for every run: profiles and orders of earlier runs would collide with the random test numbers

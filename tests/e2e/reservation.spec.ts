@@ -280,8 +280,7 @@ test("reservation: a new #date on an open page updates the message (year for ano
   await expect(page.locator("[data-flow] .note[role=alert]")).toHaveCount(0);
 });
 
-test("reservation: chips in \"Нужно ви е\" show that they slide on a phone", async ({ page }, info) => {
-  test.skip(info.project.name !== "phone");
+test("reservation: chips in \"Нужно ви е\" show that they slide on a phone @phone", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await toStep2(page, future(11));
   await expect(page.locator("[data-morehint]")).toBeVisible();

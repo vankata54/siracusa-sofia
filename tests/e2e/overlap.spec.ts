@@ -94,9 +94,9 @@ function verdict(steps: Probe[]) {
 }
 
 for (const size of SIZES) {
-  test.describe(size.width + " px", () => {
+  /* @phone: runs only in the phone project (playwright.config.ts, grepInvert), not skipped in the other */
+  test.describe(size.width + " px @phone", () => {
     test.use({ viewport: size, isMobile: true, hasTouch: true });
-    test.beforeEach(({}, info) => { test.skip(info.project.name !== "phone", "phone sizes only"); });
 
     for (const path of PAGES) {
       test("floating elements never cover a link or button: " + path, async ({ page }) => {
@@ -149,8 +149,7 @@ async function topBar(page: Page) {
   expect(axe.violations.map((v) => v.id + ": " + v.nodes.map((n) => n.target.join(" ")).join(", "))).toEqual([]);
 }
 
-test("top bar on the computer: the logo at least 8 px from the buttons; „Обади се“ is a 48 px phone icon", async ({ page }, info) => {
-  test.skip(info.project.name !== "desktop", "1440 only");
+test("top bar on the computer: the logo at least 8 px from the buttons; „Обади се“ is a 48 px phone icon @desktop", async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
   await page.goto("/");
   await topBar(page);

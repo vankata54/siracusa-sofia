@@ -127,8 +127,7 @@ test("dish: a cut id has a new address of whole words; the old one answers 301; 
   expect(map).not.toContain(OLD);
 });
 
-test("dish: keyboard - the focused element is never under the bar, the sheet keeps the focus", async ({ page }) => {
-  test.skip(!isPhone(page), "phone layout (floating bar)");
+test("dish: keyboard - the focused element is never under the bar, the sheet keeps the focus @phone", async ({ page }) => {
   const errors = watch(page);
   await open(page, PIZZA);
   const hidden: string[] = [];
