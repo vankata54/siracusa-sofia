@@ -13,7 +13,8 @@
 .rp-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px}
 .rp-bar .sa-tabs{flex:0 1 auto}
 .rp-bar .cmp{display:flex; align-items:center; gap:4px; min-height:60px; padding:0 4px 0 16px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-weight:700}
-@container page (max-width:720px){ .rp-bar .sa-tabs{flex:1 1 100%} .rp-bar .cmp{flex:1 1 100%; justify-content:space-between} }
+.rp-psel{display:none; flex:1 1 100%}
+@container page (max-width:720px){ .rp-bar .sa-tabs{display:none} .rp-psel{display:block} .rp-bar .cmp{flex:1 1 100%; justify-content:space-between} }
 .rp-custom{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:12px}
 .rp-custom .field{flex:1 1 160px; max-width:220px}
 .rp-meta{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin:0 0 16px; color:var(--muted); font-weight:600; font-size:15px}
@@ -35,7 +36,7 @@
 .ch > header{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 12px}
 .ch h2{margin:0; font-size:20px; letter-spacing:-.025em}
 .ch h2 small{display:block; font-size:14px; letter-spacing:0; color:var(--muted); font-weight:700; margin-top:2px}
-.ch .tg{min-height:44px; font-size:15px; padding:0 14px}
+.ch .tg{min-height:48px; font-size:15px; padding:0 14px}
 /* колонна графика: SVG за плота, текстът в HTML */
 .plot{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 8px}
 .plot .ya{display:grid; align-content:space-between; text-align:right; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; height:180px; margin-top:-8px; padding-bottom:0}
@@ -93,6 +94,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -105,7 +108,7 @@ var body = A.mount({section:"reports", title:"Отчети",
 if (!body) return;
 
 /* ---------- време ---------- */
-var TODAY = A.todayKey();
+var now = A.now || function(){ return new Date(); }, TODAY = A.seed.today(); /* часът на прототипа */
 function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
 function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
 function addD(k, n){ var d = parse(k); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
@@ -122,7 +125,7 @@ var cache = {};
 function dayData(k){ if (cache[k]) return cache[k]; var r = rng("day" + k), dow = parse(k).getUTCDay(), n = Math.round((dow === 5 || dow === 6 ? 58 : dow === 0 ? 50 : 40) * (.85 + r() * .3));
   var d = {k:k, orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, dish:{}, res:0, ns:0};
   if (k > TODAY){ cache[k] = d; return d; }
-  var nowH = A.sofia().h; if (k === TODAY) n = Math.round(n * Math.max(0, Math.min(1, (nowH - 10) / 12)));
+  var nowH = A.sofia(now()).h; if (k === TODAY) n = Math.round(n * Math.max(0, Math.min(1, (nowH - 10) / 12)));
   for (var i = 0; i < n; i++){ var x = r(), c = x < .42 ? 0 : x < .65 ? 1 : x < .95 ? 2 : 3, hh = r() < .45 ? 11 + Math.floor(r() * 4) : r() < .14 ? 15 + Math.floor(r() * 2) : 17 + Math.floor(r() * (c === 0 ? 4 : 6));
     if (k === TODAY && hh > nowH) hh = Math.max(10, nowH); var lines = 1 + Math.floor(r() * (c === 2 ? 5 : 3)), tot = 0;
     for (var j = 0; j < lines; j++){ var it = pick(r), q = r() < .2 ? 2 : 1; tot += it.p * q; d.dish[it.id] = (d.dish[it.id] || 0) + q; }
@@ -178,27 +181,28 @@ function draw(){ var y = A.scroller.scrollTop;
   var chMax = Math.max.apply(null, cur.ch.map(function(c){ return c.rev; }).concat([1]));
   body.innerHTML = (st === "offline" ? A.offline("Показваме последно сметнатия отчет. Числата се обновяват, щом връзката се върне.") + '<div style="height:16px"></div>' : '') +
     '<div class="rp-bar"><div class="sa-tabs" role="tablist" aria-label="Период">' + P.map(function(p){ return '<button role="tab" type="button" data-per="' + p[0] + '" aria-selected="' + (per === p[0]) + '">' + p[1] + '</button>'; }).join("") + '</div>' +
+      '<div class="rp-psel"><label class="vh" for="rp-p">Период</label><select class="input" id="rp-p" data-psel>' + P.map(function(p){ return '<option value="' + p[0] + '"' + (per === p[0] ? ' selected' : '') + '>' + p[1] + '</option>'; }).join("") + '</select></div>' +
       '<label class="cmp">Сравни с предишния<span class="sa-switch"><input type="checkbox" role="switch" data-cmp' + (cmp ? ' checked' : '') + '><span class="tr"></span></span></label></div>' +
     (per === "custom" ? '<div class="rp-custom"><div class="field"><label for="rp-a">От</label><input class="input" id="rp-a" type="date" max="' + TODAY + '" value="' + cust.a + '" data-ca></div><div class="field"><label for="rp-b">До</label><input class="input" id="rp-b" type="date" max="' + TODAY + '" value="' + cust.b + '" data-cb></div><p class="muted" style="margin:0 0 12px;font-size:15px">До 92 дни.</p></div>' : '') +
     '<p class="rp-meta"><span><b>' + (one ? fd(R[0]) : fd(R[0], true) + ' - ' + fd(R[1], true)) + '</b>' + (cmp ? ' · спрямо ' + (PR[0] === PR[1] ? fd(PR[0], true) : fd(PR[0], true) + ' - ' + fd(PR[1], true)) : '') + '</span>' + A.sample("Примерни числа, истински ястия и цени") + '</p>' +
     (!cur.orders && !cur.res ? '<div class="sa-card">' + A.empty({icon:"chart-bar", title:"Няма поръчки за този период.", text:per === "today" ? "Поръчките за днес ще се появят тук от 10:00." : "Изберете друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'}) + '</div>' :
     '<div class="kp" data-edit-id="admin.reports.kpi">' +
       '<div><span class="l">Поръчки</span><b>' + cur.orders + '</b>' + delta(cur.orders, prev.orders) + '</div>' +
-      '<div><span class="l">Оборот</span><b>' + eur0(cur.rev) + '</b>' + delta(cur.rev, prev.rev) + '</div>' +
+      '<div><span class="l">Оборот</span><b>' + SC.fmt(cur.rev) + '</b>' + delta(cur.rev, prev.rev) + '</div>' +
       '<div><span class="l">Среден бон</span><b>' + SC.fmt(avg) + '</b>' + delta(avg, pavg) + '</div>' +
       '<div><span class="l">Резервации</span><b>' + cur.res + '</b>' + delta(cur.res, prev.res) + '</div>' +
-      '<div><span class="l">Неявили се</span><b>' + cur.ns + (cur.res ? ' <span style="font-size:18px;color:var(--muted)">· ' + nsr + '%</span>' : '') + '</b>' + delta(cur.ns, prev.ns, true) + '</div></div>' +
+      '<div><span class="l">Неявили се</span><b>' + cur.ns + (cur.res ? ' <span style="font-size:18px;color:var(--muted)">(' + nsr + '%)</span>' : '') + '</b>' + delta(cur.ns, prev.ns, true) + '</div></div>' +
     '<div class="rp-g two">' +
-      chartCard("main", one ? "Поръчки по час" : "Оборот по ден", one ? fd(R[0]) : "Днес е в червено", colChart("main", main, {fmt:one ? String : eur0, xn:one ? 7 : 6}),
+      chartCard("main", one ? "Поръчки по час" : "Оборот по ден", one ? fd(R[0]) : (R[1] === TODAY && dayData(TODAY).rev > 0 ? "Днес (до " + A.hm(now()) + ") е в червено" : ""), colChart("main", main, {fmt:one ? String : eur0, xn:one ? 7 : 6}),
         {head:one ? ["Час","Поръчки"] : ["Ден","Оборот","Поръчки"], rows:one ? hrs.map(function(h){ return [h[0] + ":00", h[1]]; }) : cur.days.map(function(d){ return [fd(d.k, true), SC.fmt(d.rev), d.orders]; })}) +
       chartCard("ch", "По канал", "Оборот и дял", '<div class="rp-hb">' + cur.ch.map(function(c, i){ return {c:c, i:i}; }).sort(function(a, b){ return b.c.rev - a.c.rev; }).map(function(z){ var c = z.c, sh = cur.rev ? Math.round(c.rev / cur.rev * 100) : 0;
-          return '<div class="r"><span class="n">' + ic(CH[z.i][1], 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + CH[z.i][0] + '</span><span class="v">' + eur0(c.rev) + '<small>' + sh + '% · ' + c.o + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.rev / chMax * 100) + '%"></i></span></div>'; }).join("") + '</div>',
+          return '<div class="r"><span class="n">' + ic(CH[z.i][1], 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + CH[z.i][0] + '</span><span class="v">' + SC.fmt(c.rev) + '<small>' + sh + '% · ' + c.o + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.rev / chMax * 100) + '%"></i></span></div>'; }).join("") + '</div>',
         {head:["Канал","Оборот","Дял","Поръчки"], rows:cur.ch.map(function(c, i){ return [CH[i][0], SC.fmt(c.rev), (cur.rev ? Math.round(c.rev / cur.rev * 100) : 0) + "%", c.o]; })}, '<p class="muted" style="margin:0;font-size:15px">Телефонните поръчки влизат през сервитьора като „Маса“ или „Вземане“.</p>') +
     '</div><div style="height:16px"></div><div class="rp-g two">' +
       chartCard("top", "Най-поръчвани ястия", "Истински ястия, примерни бройки", '<div class="rp-top">' + top.map(function(t, i){ return '<div class="r"><span class="k">' + (i + 1) + '</span>' + SC.pic(t.x) + '<span class="n"><b>' + esc(t.x.n) + '</b><span class="tr" aria-hidden="true"><i style="width:' + (t.q / tq * 100) + '%"></i></span></span><span class="v">' + t.q + '<small>' + eur0(t.q * t.x.p) + '</small></span></div>'; }).join("") + '</div>',
         {head:["Ястие","Бройки","Оборот"], rows:top.map(function(t){ return [t.x.n, t.q, SC.fmt(t.q * t.x.p)]; })}) +
       '<div style="display:grid;gap:16px;align-content:start">' +
-      chartCard("hour", "Поръчки по час", pk[1] ? "Най-натоварено: " + pk[0] + ":00" : "", colChart("hour", hrs.map(function(h){ return {l:h[0], v:h[1], hi:h[0] === pk[0], t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; }), {xn:7}),
+      chartCard("hour", "Поръчки по час", pk[1] ? "Най-натоварено: " + pk[0] + ":00" : "", colChart("hour", hrs.map(function(h){ return {l:h[0] + ":00", v:h[1], hi:h[0] === pk[0], t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; }), {xn:7}),
         {head:["Час","Поръчки"], rows:hrs.map(function(h){ return [h[0] + ":00", h[1]]; })}) +
       chartCard("res", "Резервации и неявили се", "", one ? '<div class="rp-hb"><div class="r"><span class="n">Резервации</span><span class="v">' + cur.res + '</span></div><div class="r"><span class="n">Неявили се</span><span class="v">' + cur.ns + '</span></div></div>' :
         colChart("res", cur.days.map(function(d){ return {l:fd(d.k, true).replace(/^.., /, ""), v:d.res - d.ns, v2:d.ns, t:fd(d.k), tv:A.plural(d.res, "резервация", "резервации") + (d.ns ? ", " + d.ns + " неявили се" : "")}; }), {xn:6}) + '<ul class="lgd"><li><i></i>Дошли и предстоящи</li><li><i class="r"></i>Неявили се</li></ul>',
@@ -225,6 +229,7 @@ document.addEventListener("click", function(e){ var t;
     A.download("siracusa-otchet-" + R[0] + "-" + R[1] + ".csv", "﻿# Примерни данни\n" + rows.map(function(r){ return r.join(";"); }).join("\n"), "text/csv"); A.toast("Отчетът е изтеглен (CSV)"); return; }
 });
 document.addEventListener("change", function(e){ var t = e.target;
+  if (t.matches("[data-psel]")){ per = t.value; hashSync(); draw(); var ps = body.querySelector("[data-psel]"); ps && ps.focus({preventScroll:true}); return; }
   if (t.matches("[data-cmp]")){ cmp = t.checked; hashSync(); draw(); return; }
   if (t.matches("[data-ca]") || t.matches("[data-cb]")){ var a = body.querySelector("[data-ca]").value, b = body.querySelector("[data-cb]").value; if (!a || !b) return;
     if (a > b){ var x = a; a = b; b = x; } if (span(a, b) > 92) a = addD(b, -91); cust = {a:a, b:b > TODAY ? TODAY : b}; draw(); }

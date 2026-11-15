@@ -32,9 +32,16 @@
 @container page (max-width:520px){ .qr-stage{padding:16px} .qr-stage .qrl{transform:none} }
 .qr-pick{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .qr-pick .input{flex:1 1 220px; min-width:0}
-.qr-tech{display:flex; flex-wrap:wrap; gap:6px}
+.qr-ok{display:flex; gap:10px; align-items:flex-start; margin:0; font-weight:600}
+.qr-ok .ic{flex:none; color:var(--ok); margin-top:2px}
+.qr-det{border-radius:18px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.qr-det summary{display:flex; align-items:center; gap:8px; min-height:48px; padding:0 16px; font-weight:700; cursor:pointer; list-style:none}
+.qr-det summary::-webkit-details-marker{display:none}
+.qr-det summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.qr-det[open] summary .ic{transform:rotate(180deg)}
+.qr-det p{margin:0; padding:0 16px 14px; color:var(--muted); font-size:15px}
 .qr-url{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 14px; border-radius:18px; background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
-.qr-url code{flex:1 1 220px; min-width:0; word-break:break-all; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; overflow-wrap:anywhere}
+.qr-url code{flex:1 1 220px; min-width:0; overflow-wrap:normal; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; overflow-wrap:anywhere}
 .qr-acts{display:flex; flex-wrap:wrap; gap:8px}
 .qr-acts .pill{flex:1 1 auto}
 .qr-note{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted); margin:0}
@@ -58,7 +65,6 @@
 .qr-show .tx code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; color:var(--muted); font-weight:600; overflow-wrap:anywhere}
 .qr-show .qr-go{display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:700; color:var(--muted)}
 .qr-row[aria-current="true"] .qr-go{color:var(--ink)}
-@container page (max-width:520px){ .qr-show .qr-go .w{display:none} }
 .qr-row .tag-new{font-size:14px; font-weight:800; color:var(--ok)}
 
 .qr-sheets{display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr))}
@@ -94,6 +100,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 /*QR-START*/
@@ -185,8 +193,7 @@ var body = A.mount({section:"qr", title:"QR генератор",
 if (!body) return;
 
 /* ---------- масите: един източник с „Залата и масите“ (sa-tables), иначе условните SC.TABLES ---------- */
-function tablesState(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
-  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; }
+var tablesState = A.seed.tables; /* един източник: _seed-res.js */
 var T = (st === "empty" ? [] : tablesState().tables.filter(function(t){ return !t.off; })).slice().sort(function(a, b){ return a.n - b.n; });
 var ZN = {salon:"Салон", garden:"Градина"};
 
@@ -237,9 +244,10 @@ function draw(){
       '<div class="qr-pick"><label class="vh" for="qr-t">Маса</label><select class="input" id="qr-t" data-pick>' + T.map(function(t){ return '<option value="' + t.id + '"' + (t.id === cur.id ? ' selected' : '') + '>Маса ' + t.n + ' · ' + ZN[t.zone] + '</option>'; }).join("") + '</select>' +
         '<button class="pill pill-line" type="button" data-step="-1">' + ic("caret-left",20) + 'Предишна</button><button class="pill pill-line" type="button" data-step="1">Следваща' + ic("caret-right",20) + '</button></div>' +
       '<div class="qr-stage"><div class="qrl" data-label>' + labelSVG(cur) + '</div></div>' +
-      '<div class="qr-url">' + ic("globe",20) + '<code data-url>' + esc(url(cur)) + '</code><button class="pill pill-soft" type="button" data-copy>' + ic("copy",20) + 'Копирай</button></div>' +
-      '<div class="qr-tech" aria-label="Технически данни на кода"><span class="sa-tag">' + ic("qr-code",16) + 'Версия ' + q.version + ' · ' + q.size + ' × ' + q.size + ' модула</span><span class="sa-tag">' + ic("shield-check",16) + 'Корекция Q: чете се и с 25% повреда</span><span class="sa-tag">Маска ' + q.mask + '</span></div>' +
-      '<div class="qr-acts"><a class="pill pill-line" href="../pages-masa/welcome.html" target="_blank" rel="noopener">' + ic("arrow-up-right",20) + 'Отвори като гост</a><button class="pill pill-line" type="button" data-svg>' + ic("export",20) + 'Изтегли SVG</button><button class="pill pill-line" type="button" data-regen="' + cur.id + '">' + ic("arrow-clockwise",20) + 'Нов код</button></div>' +
+      '<div class="qr-url">' + ic("globe",20) + '<code data-url>' + esc(url(cur)).replace("/masa/", "<wbr>/masa/") + '</code><button class="pill pill-soft" type="button" data-copy>' + ic("copy",20) + 'Копирай</button></div>' +
+      '<p class="qr-ok">' + ic("shield-check",20) + '<span>Чете се и с надраскан или леко скъсан етикет.</span></p>' +
+      '<div class="qr-acts"><a class="pill pill-line" href="../pages-masa/welcome.html" target="_blank" rel="noopener">' + ic("arrow-up-right",20) + 'Как го вижда гостът (пример)</a><button class="pill pill-line" type="button" data-svg>' + ic("export",20) + 'Изтегли SVG</button><button class="pill pill-line" type="button" data-regen="' + cur.id + '">' + ic("arrow-clockwise",20) + 'Нов код</button></div>' +
+      '<details class="qr-det"><summary>' + ic("caret-down",20) + 'Технически данни</summary><p>Версия ' + q.version + ', ' + q.size + ' × ' + q.size + ' модула, корекция на грешки Q (до 25%), маска ' + q.mask + ', поле 4 модула. Кодът е случаен, 8 знака.</p></details>' +
       '<p class="qr-note">' + ic("info",20) + '<span>Логото: ' + A.missing("ново лого") + '. Дотогава етикетът е с текстовия знак „Siracusa“. Масите са условни: ' + A.missing("истински маси и план") + '.</span></p>' +
     '</section>' +
     '<section aria-labelledby="qr-lh" data-edit-id="admin.qr.list">' +

@@ -11,7 +11,8 @@
 <link rel="stylesheet" href="_admin.css">
 <style>
 .cu-gdpr{display:grid; gap:12px; padding:18px 20px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow); margin-bottom:22px}
-.cu-gdpr summary{list-style:none; cursor:pointer; min-height:28px}
+.cu-gdpr summary{list-style:none; cursor:pointer; min-height:48px; display:flex; align-items:center}
+.cu-gdpr summary h2{flex:1}
 .cu-gdpr summary::-webkit-details-marker{display:none}
 .cu-gdpr h2{margin:0; font-size:19px; letter-spacing:-.02em; display:flex; align-items:center; gap:10px}
 .cu-gdpr h2 .more{margin-left:auto; display:grid; place-items:center; transition:transform var(--t-base) var(--ease)}
@@ -25,6 +26,7 @@
 .cu-top{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
 .cu-top .sa-tabs{flex:1 1 auto}
 @container page (min-width:1000px){ .cu-top .sa-tabs{flex:0 0 auto} }
+@container page (max-width:620px){ .cu-top .sa-tabs{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); flex:1 1 100%; border-radius:28px} .cu-top .sa-tabs button{white-space:normal; text-align:center; line-height:1.15; padding:4px 6px; font-size:15px; min-height:56px; border-radius:22px; flex-wrap:wrap; gap:4px} .cu-top .sa-tabs button .ic{display:none} }
 .cu-flt{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
 .cu-flt .sa-field-s{flex:1 1 260px}
 .cu-flt .chips{flex:1 1 100%; margin:0; padding:2px 0}
@@ -38,8 +40,11 @@
 @container page (max-width:699px){ .cu-tags{justify-content:flex-end} }
 .sa-table tbody tr[data-c]{cursor:pointer}
 .sa-table .ph{font-variant-numeric:tabular-nums; white-space:nowrap}
-.cu-open{min-height:44px}
-.tg-mk{color:var(--ok)}
+.ph-only, .cu-name small.ph-only, .ph-l{display:none}
+@container page (max-width:699px){ .ph-l{display:inline} .dt-l{display:none} .ph-only{display:revert} .cu-name small.ph-only{display:block} .sa-table td.ph-only{display:flex} .sa-table td.dt-only{display:none} .sa-table td.cu-act{display:block; padding-top:8px} .sa-table td.cu-act::before{display:none} .cu-act .cu-open{width:100%} }
+.cu-open{min-height:48px}
+.tg-mk{color:var(--ink)}
+.tg-mk .ic{color:var(--ok)}
 .tg-bl{background:var(--red); color:var(--on-red)}
 /* обратна връзка */
 .fb-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
@@ -76,6 +81,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -89,11 +96,10 @@ if (!body) return;
 
 /* ---------- примерни данни: „Клиент N“, телефоните от резервациите, истинските ястия и цени ---------- */
 function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-function phoneOf(i){ return "08" + ["88","87","89","98","99","95"][i % 6] + String((i * 791 * 37 + 123457) % 1000000).padStart(6, "0"); }
-function fmtPh(p){ return p.slice(0, 4) + " " + p.slice(4, 6) + " " + p.slice(6, 8) + " " + p.slice(8); }
-function maskPh(p){ return p.slice(0, 4) + " ** ** " + p.slice(8); }
+var phoneOf = A.seed.phoneOf, fmtPh = A.seed.fmtPhone, maskPh = A.seed.maskPhone; /* _seed-res.js */
+var now = A.now || function(){ return new Date(); };
 function maskMail(m){ var a = m.split("@"); return a[0][0] + "***@" + a[1]; }
-var DAY = 864e5, NOW = Date.now(), CH = ["Доставка","Вземане","Маса","Офис"];
+var DAY = 864e5, NOW = now().getTime(), CH = ["Доставка","Вземане","Маса","Офис"];
 var MAIN = SC.items.filter(function(x){ return ["pitsi","skara-bertha","osnovni-yastia","burgeri","pasta-i-rizoto"].indexOf(x.cat) > -1 && !x.per100; }), SIDE = SC.items.filter(function(x){ return ["salati","deserti","garnituri"].indexOf(x.cat) > -1; });
 function seed(){ var out = [];
   for (var i = 0; i < 36; i++){ var r = rng("cu" + i), since = NOW - Math.floor(r() * r() * 300 + 3) * DAY, n = Math.floor(r() * 9), orders = [];
@@ -104,21 +110,14 @@ function seed(){ var out = [];
     out.push({id:"c" + (i + 1), name:"Клиент " + (i + 1), phone:phoneOf(i), email:r() < .55 ? "klient" + (i + 1) + "@primer.bg" : "", since:new Date(since).toISOString(), consent:{marketing:mk, birthday:bd && true, bday:bd ? (1 + Math.floor(r() * 28)) + "." + (1 + Math.floor(r() * 12)) : ""}, orders:orders, bonusUsed:n > 0 && r() < .7, sample:true}); }
   return out; }
 var CU = A.data.get("customers", null); if (!CU){ CU = seed(); A.data.set("customers", CU); }
-var BL = A.data.get("blocks", null);
-if (!BL){ BL = {}; BL[phoneOf(4)] = {status:"pending", name:"Клиент 5", count:2, at:new Date(NOW - 6 * DAY).toISOString()}; BL[phoneOf(8)] = {status:"blocked", name:"Клиент 9", count:2, at:new Date(NOW - 13 * DAY).toISOString(), by:"Управител 1"}; A.data.set("blocks", BL); }
+var BL = A.data.get("blocks", {}); /* _seed-res.js */
 var RES = A.data.get("reservations", []);
-function fbSeed(){ var t = function(h){ return new Date(NOW - h * 3600e3).toISOString(); };
-  return [
-    {id:"f1", topic:"rating", name:"Клиент 12", contact:phoneOf(11), orderNo:"1047", message:"Примерен отговор на „Как да подобрим обслужването?“ след оценка „Не“.", status:"new", createdAt:t(3)},
-    {id:"f2", topic:"contact", name:"Гост без профил", contact:"gost@primer.bg", message:"Примерно съобщение от формата „Пишете ни“ на страницата „Контакти“.", status:"new", createdAt:t(20)},
-    {id:"f3", topic:"voucher", name:"Клиент 7", contact:phoneOf(6), message:"Примерно запитване за подаръчен ваучер (сума и валидност се уточняват по телефона).", status:"new", createdAt:t(28)},
-    {id:"f4", topic:"birthday", name:"Гост без профил", contact:"0877 ** ** 41", message:"Примерно запитване за рожден ден: брой гости и дата се уточняват по телефона.", status:"new", createdAt:t(50)},
-    {id:"f5", topic:"contact", name:"Клиент 21", contact:phoneOf(20), message:"Примерно съобщение от формата „Пишете ни“.", status:"done", createdAt:t(24 * 5)},
-    {id:"f6", topic:"rating", name:"Клиент 30", contact:phoneOf(29), orderNo:"1031", message:"Примерен отговор на „Как да подобрим обслужването?“.", status:"done", createdAt:t(24 * 9)}]; }
-var FB = A.data.get("feedback", null); if (!FB){ FB = fbSeed(); A.data.set("feedback", FB); }
+var FB = A.seed.feedback(); /* _seed-res.js */
+var IQ = (A.seed.inquiries ? A.seed.inquiries() : A.data.get("feedback-iq", [])) || []; /* запитванията: един източник с „Оферти и ваучери“ (_seed-orders.js) */
+function saveIQ(){ A.data.set("feedback-iq", IQ); }
 function save(){ A.data.set("customers", CU); } function saveFB(){ A.data.set("feedback", FB); } function saveBL(){ A.data.set("blocks", BL); }
 var CAN_BLOCK = A.me.role === "admin" || A.me.role === "owner" || A.me.role === "manager";
-var TP = {rating:["Оценка „Не“","smiley-meh"], contact:["Пишете ни","envelope-simple"], voucher:["Ваучер","gift"], birthday:["Рожден ден","cake"]};
+var TP = {rating:["Оценка „Не“","smiley-meh"], contact:["Пишете ни","envelope-simple"]};
 
 /* ---------- помощни ---------- */
 function total(o){ return o.lines.reduce(function(a, l){ var x = SC.byId[l[1]]; return a + (x ? x.p * l[0] : 0); }, 0); }
@@ -133,7 +132,8 @@ function list(){ if (st === "empty") return []; var qd = q.replace(/\D/g, "");
   return CU.filter(function(c){ return (!flt || (flt === "mk" && c.consent.marketing) || (flt === "bd" && c.consent.birthday) || (flt === "bl" && BL[c.phone]) || (flt === "new" && NOW - new Date(c.since) < 30 * DAY)) &&
     (!q || A.norm(c.name + " " + (c.email || "")).indexOf(A.norm(q)) > -1 || (qd.length >= 2 && c.phone.indexOf(qd) > -1)); })
     .sort(function(a, b){ var x = a.orders[0] ? a.orders[0].at : a.since, y = b.orders[0] ? b.orders[0].at : b.since; return x < y ? 1 : -1; }); }
-function fbOf(kind){ return (st === "empty" ? [] : FB).filter(function(f){ return kind === "requests" ? (f.topic === "voucher" || f.topic === "birthday") : (f.topic === "rating" || f.topic === "contact"); }); }
+function fbOf(kind){ return st === "empty" ? [] : kind === "requests" ? IQ : FB.filter(function(f){ return f.topic === "rating" || f.topic === "contact"; }); }
+function iqNew(){ return (st === "empty" ? [] : IQ).filter(function(q){ return q.st === "new"; }).length; }
 function consentTags(c){ return (c.consent.marketing ? '<span class="sa-tag tg-mk">' + ic("check",16) + 'Оферти</span>' : '') + (c.consent.birthday ? '<span class="sa-tag">' + ic("cake",16) + 'Рожден ден</span>' : '') +
   (BL[c.phone] ? '<span class="sa-tag ' + (blk(c) ? 'tg-bl' : 'warn') + '">' + ic("lock",16) + (blk(c) ? 'Блокиран' : 'Чака блокиране') + '</span>' : '') + (!c.consent.marketing && !c.consent.birthday && !BL[c.phone] ? '<span class="sa-tag">Без съгласия</span>' : ''); }
 
@@ -143,11 +143,19 @@ function profilesHTML(){ var L = list(), F = [["","Всички",CU.length],["mk
     '<p style="margin:0 0 12px">' + A.sample() + '</p>' +
     (!L.length ? '<div class="sa-card">' + (st === "empty" ? A.empty({icon:"users", title:"Още няма профили.", text:"Профил се прави с телефон и SMS код в сайта или на масата. Ще се появят тук."}) : A.empty({icon:"magnifying-glass", title:"Няма клиент с това търсене.", text:"Пробвайте с последните цифри на телефона или махнете филтъра."})) + '</div>' :
     '<div class="sa-tablewrap scroll"><table class="sa-table"><thead><tr><th>Клиент</th><th>Телефон</th><th class="r">Поръчки</th><th>Последна</th><th class="r">Общо</th><th>Съгласия и статус</th><th><span class="vh">Действия</span></th></tr></thead><tbody>' +
-    L.map(function(c){ return '<tr data-c="' + c.id + '"><td data-main><span class="cu-name"><span class="cu-av' + (blk(c) ? ' bl' : '') + '" aria-hidden="true">' + c.name.replace(/\D/g, "") + '</span><span><b>' + esc(c.name) + '</b><small>профил от ' + dShort(c.since) + '</small></span></span></td>' +
-      '<td class="ph" data-label="Телефон">' + (revealed[c.id] ? fmtPh(c.phone) : maskPh(c.phone)) + '</td><td class="r" data-label="Поръчки">' + c.orders.length + '</td><td data-label="Последна">' + (c.orders[0] ? dShort(c.orders[0].at) : '<span class="muted">няма</span>') + '</td>' +
-      '<td class="r price" data-label="Общо">' + SC.fmt(spent(c)) + '</td><td data-label="Съгласия"><span class="cu-tags">' + consentTags(c) + '</span></td>' +
-      '<td data-label="Профил"><button class="pill pill-line cu-open" type="button" data-open="' + c.id + '">Отвори' + ic("caret-right",18) + '</button></td></tr>'; }).join("") + '</tbody></table></div>'); }
-function fbHTML(kind){ var L = fbOf(kind), nw = L.filter(function(f){ return f.status === "new"; }), dn = L.filter(function(f){ return f.status !== "new"; });
+    L.map(function(c){ return '<tr data-c="' + c.id + '"><td data-main><span class="cu-name"><span class="cu-av' + (blk(c) ? ' bl' : '') + '" aria-hidden="true">' + c.name.replace(/\D/g, "") + '</span><span><b>' + esc(c.name) + '</b><small>профил от ' + dShort(c.since) + '</small><small class="ph-only">' + (revealed[c.id] ? fmtPh(c.phone) : maskPh(c.phone)) + '</small></span></span></td>' +
+      '<td class="ph dt-only" data-label="Телефон">' + (revealed[c.id] ? fmtPh(c.phone) : maskPh(c.phone)) + '</td><td class="r dt-only" data-label="Поръчки">' + c.orders.length + '</td><td class="ph-only" data-label="Поръчки">' + c.orders.length + ' · ' + SC.fmt(spent(c)) + '</td><td class="dt-only" data-label="Последна">' + (c.orders[0] ? dShort(c.orders[0].at) : '<span class="muted">няма</span>') + '</td>' +
+      '<td class="r price dt-only" data-label="Общо">' + SC.fmt(spent(c)) + '</td><td data-label="Съгласия"><span class="cu-tags">' + consentTags(c) + '</span></td>' +
+      '<td class="cu-act" data-label="Профил"><button class="pill pill-line cu-open" type="button" data-open="' + c.id + '" aria-label="Отвори профила: ' + esc(c.name) + '"><span class="dt-l">Отвори</span><span class="ph-l">Отвори профила</span>' + ic("caret-right",18) + '</button></td></tr>'; }).join("") + '</tbody></table></div>'); }
+function iqHTML(){ var L = fbOf("requests").slice().sort(function(a, b){ var o = {new:0, call:1, done:2}; return (o[a.st] - o[b.st]) || (b.at < a.at ? -1 : 1); });
+  if (!L.length) return '<div class="sa-card">' + A.empty({icon:"gift", title:"Няма запитвания.", text:"Запитванията за ваучер и рожден ден от сайта идват тук и в „Оферти и ваучери“."}) + '</div>';
+  return '<p style="margin:0 0 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' + A.sample("Примерни запитвания") + '<a class="link" href="offers.html#t=iq">Същите са в „Оферти и ваучери“' + ic("caret-right",18) + '</a></p><div class="fb-list">' + L.map(function(q){ var v = q.topic === "voucher";
+    return '<article class="fb' + (q.st === "done" ? ' done' : '') + '"><div class="tp"><span class="sa-tag ' + (q.st === "new" ? 'new' : q.st === "call" ? '' : 'ok') + '">' + (q.st === "new" ? 'Ново' : q.st === "call" ? ic("phone",16) + 'Обадихме се' : ic("check",16) + 'Готово') + '</span><span class="sa-tag">' + ic(v ? "gift" : "cake",16) + (v ? 'Ваучер' : 'Рожден ден') + '</span><span class="when">' + A.ago(q.at) + '</span></div>' +
+      '<h3 style="margin:0;font-size:18px">' + (v ? 'Ваучер за ' + SC.fmt(q.sum || 0) : 'Подарък за рожден ден') + '</h3>' + (q.note ? '<blockquote>' + esc(q.note) + '</blockquote>' : '') +
+      '<div class="who"><b>' + esc(q.name) + '</b><span>' + esc(String(q.tel || "").slice(0, 4) + ' ** ** ' + String(q.tel || "").slice(-2)) + '</span></div>' +
+      '<div class="acts">' + (q.st === "new" ? '<button class="pill pill-ink" type="button" data-iq="call" data-id="' + q.id + '">' + ic("phone",18) + 'Обадихме се</button>' : '') + (q.st !== "done" ? '<button class="pill pill-line" type="button" data-iq="done" data-id="' + q.id + '">' + ic("check",18) + 'Готово</button>' : '<button class="pill pill-line" type="button" data-iq="new" data-id="' + q.id + '">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>') +
+        '<a class="pill pill-line" href="tel:' + esc(String(q.tel || "").replace(/\s/g, "")) + '">' + ic("phone",18) + 'Обади се</a></div></article>'; }).join("") + '</div>'; }
+function fbHTML(kind){ if (kind === "requests") return iqHTML(); var L = fbOf(kind), nw = L.filter(function(f){ return f.status === "new"; }), dn = L.filter(function(f){ return f.status !== "new"; });
   if (!L.length) return '<div class="sa-card">' + A.empty({icon:kind === "requests" ? "gift" : "chat-circle-dots", title:kind === "requests" ? "Няма запитвания." : "Няма обратна връзка.", text:kind === "requests" ? "Запитванията за ваучер и рожден ден от сайта идват тук." : "Съобщенията от „Пишете ни“ и отговорите след оценка „Не“ идват тук. Стигат само до управителя."}) + '</div>';
   function card(f){ var t = TP[f.topic], ph = /^\d{10}$/.test(f.contact);
     return '<article class="fb' + (f.status === "new" ? '' : ' done') + '"><div class="tp"><span class="sa-tag' + (f.topic === "rating" ? ' warn' : '') + '">' + ic(t[1],16) + t[0] + '</span>' + (f.status === "new" ? '<span class="sa-tag new">Ново</span>' : '<span class="sa-tag ok">' + ic("check",16) + 'Прегледано</span>') + (f.orderNo ? '<span class="sa-tag">№ ' + f.orderNo + '</span>' : '') + '<span class="when">' + A.ago(f.createdAt) + '</span></div>' +
@@ -162,7 +170,7 @@ function gdprOpen(){ return gdprState == null ? A.scroller.clientWidth >= 900 : 
 function draw(){ var y = A.scroller.scrollTop; var gd = body.querySelector(".cu-gdpr"); if (gd) gdprState = gd.open;
   if (st === "loading"){ body.innerHTML = A.skel(6, "Зареждаме клиентите …"); return; }
   if (st === "error"){ body.innerHTML = A.error("Не успяхме да заредим клиентите. Профилите и съгласията са в безопасност; опитайте пак."); return; }
-  var nF = fbOf("feedback").filter(function(f){ return f.status === "new"; }).length, nR = fbOf("requests").filter(function(f){ return f.status === "new"; }).length;
+  var nF = fbOf("feedback").filter(function(f){ return f.status === "new"; }).length, nR = iqNew();
   body.innerHTML = (st === "offline" ? A.offline("Показваме последно заредените профили. Изтегляне и изтриване чакат връзката.") + '<div style="height:16px"></div>' : '') +
     '<details class="cu-gdpr" data-edit-id="admin.customers.gdpr"' + (gdprOpen() ? ' open' : '') + '><summary><h2>' + ic("shield-check",22) + 'Лични данни<span class="more">' + ic("caret-down",20) + '</span></h2></summary><ul>' +
       '<li>' + ic("lock",18) + '<span>Телефонът е скрит; „Покажи“ се записва в дневника.</span></li>' +
@@ -173,7 +181,7 @@ function draw(){ var y = A.scroller.scrollTop; var gd = body.querySelector(".cu-
       '<button role="tab" type="button" data-tab="feedback" aria-selected="' + (tab === "feedback") + '">' + ic("chat-circle-dots",20) + 'Обратна връзка' + (nF ? '<span class="c">' + nF + '</span>' : '') + '</button>' +
       '<button role="tab" type="button" data-tab="requests" aria-selected="' + (tab === "requests") + '">' + ic("gift",20) + 'Запитвания' + (nR ? '<span class="c">' + nR + '</span>' : '') + '</button></div></div>' +
     '<div data-panel>' + (tab === "profiles" ? profilesHTML() : fbHTML(tab)) + '</div>';
-  A.scroller.scrollTop = y; A.setBadge("customers", nF + nR); }
+  A.scroller.scrollTop = y; A.setBadge("customers", nF); A.setBadge("offers", nR); }
 draw();
 function hashSync(){ A.setHash(Object.assign({}, A.hash, {tab:tab === "profiles" ? "" : tab, f:flt})); }
 function byId(id){ return CU.filter(function(c){ return c.id === id; })[0]; }
@@ -199,14 +207,14 @@ function openC(c){ var R = resOf(c), b = BL[c.phone], ns = Math.max(R.filter(fun
       '<div class="row">' + (b && b.status === "blocked" ? '<button class="pill pill-line" type="button" data-unblock' + (CAN_BLOCK ? '' : ' disabled') + '>' + ic("arrow-counter-clockwise",20) + 'Отблокирай</button>' : '<button class="pill pill-line" type="button" data-block' + (CAN_BLOCK ? '' : ' disabled') + '>' + ic("lock",20) + 'Блокирай</button>') + '</div></div>' +
     '<div class="cp-danger"><b>По искане на клиента (GDPR)</b><div class="row"><button class="pill pill-line" type="button" data-export>' + ic("export",20) + 'Изтегли данните</button><button class="pill pill-dline" type="button" data-del>' + ic("trash",20) + 'Изтрий профила</button></div></div>'});
   s.body.addEventListener("click", function(e){
-    if (e.target.closest("[data-reveal]")){ revealed[c.id] = true; A.audit("customer.phone.view", "Видян телефон: " + c.name, c.id); s.body.querySelector("[data-phv]").innerHTML = '<a href="tel:' + c.phone + '">' + fmtPh(c.phone) + '</a>'; draw(); return; }
-    if (e.target.closest("[data-export]")){ var data = {exportedAt:new Date().toISOString(), sample:true, profile:{name:c.name, phone:c.phone, email:c.email || null, since:c.since, consent:c.consent}, orders:c.orders.map(function(o){ return {no:o.no, at:o.at, channel:o.ch, lines:o.lines.map(function(l){ return {qty:l[0], dish:SC.byId[l[1]].n, price:SC.byId[l[1]].p}; }), total:Math.round(total(o) * 100) / 100}; }), reservations:R};
+    if (e.target.closest("[data-reveal]")){ revealed[c.id] = true; A.audit("customer.phone_view", "Видян телефон: " + c.name, c.id); s.body.querySelector("[data-phv]").innerHTML = '<a href="tel:' + c.phone + '">' + fmtPh(c.phone) + '</a>'; draw(); return; }
+    if (e.target.closest("[data-export]")){ var data = {exportedAt:now().toISOString(), sample:true, profile:{name:c.name, phone:c.phone, email:c.email || null, since:c.since, consent:c.consent}, orders:c.orders.map(function(o){ return {no:o.no, at:o.at, channel:o.ch, lines:o.lines.map(function(l){ return {qty:l[0], dish:SC.byId[l[1]].n, price:SC.byId[l[1]].p}; }), total:Math.round(total(o) * 100) / 100}; }), reservations:R};
       A.download("siracusa-klient-" + c.id + ".json", JSON.stringify(data, null, 2)); A.audit("customer.export", "Изтеглени данните на " + c.name + " (GDPR)", c.id); A.toast("Данните на " + c.name + " са изтеглени"); return; }
     if (e.target.closest("[data-del]")){ A.confirm({title:"Да изтрием профила на " + c.name + "?", text:"Изтриват се профилът, имейлът, съгласията, любимите и адресите. Поръчките остават за касовия отчет, без връзка с профила. Бонусът -10% не се дава отново на този номер.", ok:"Изтрий профила", danger:true, icon:"trash"}, function(){
       var i = CU.indexOf(c); CU.splice(i, 1); save(); s.close(); draw(); A.audit("customer.delete", "Изтрит профил: " + c.name + " (GDPR)", c.id);
-      A.toast("Профилът на " + c.name + " е изтрит", {undo:function(){ CU.splice(i, 0, c); save(); draw(); A.audit("customer.delete", "Върнат профил: " + c.name, c.id); }}); }); return; }
+      A.toast("Профилът на " + c.name + " е изтрит", {undo:function(){ CU.splice(i, 0, c); save(); draw(); A.audit("customer.restore", "Върнат профил: " + c.name, c.id); }}); }); return; }
     if (e.target.closest("[data-block]") || e.target.closest("[data-unblock]")){ var was = JSON.stringify(BL), on = !!e.target.closest("[data-block]");
-      if (on) BL[c.phone] = {status:"blocked", name:c.name, count:ns, at:new Date().toISOString(), by:A.me.name, manual:true}; else delete BL[c.phone];
+      if (on) BL[c.phone] = {status:"blocked", name:c.name, count:ns, at:now().toISOString(), by:A.me.name, manual:true}; else delete BL[c.phone];
       saveBL(); s.close(); draw(); A.audit(on ? "customer.block" : "customer.unblock", (on ? "Блокиран: " : "Отблокиран: ") + c.name + " " + maskPh(c.phone), c.phone);
       A.toast(c.name + (on ? " е блокиран" : " е отблокиран"), {undo:function(){ BL = JSON.parse(was); saveBL(); draw(); }}); return; } }); }
 
@@ -216,6 +224,9 @@ document.addEventListener("click", function(e){ var t;
   if ((t = e.target.closest("[data-f]")) && t.closest(".cu-flt")){ flt = t.dataset.f; hashSync(); draw(); return; }
   if ((t = e.target.closest("[data-open]"))){ openC(byId(t.dataset.open)); return; }
   if ((t = e.target.closest("tr[data-c]")) && !e.target.closest("button")){ openC(byId(t.dataset.c)); return; }
+  if ((t = e.target.closest("[data-iq]"))){ var q = IQ.filter(function(x){ return x.id === t.dataset.id; })[0], was2 = q.st; q.st = t.dataset.iq; saveIQ(); draw();
+    var lab = {call:"Обадихме се", done:"Готово", "new":"Върнато в нови"}[q.st]; A.audit("feedback.status", lab + ": " + (q.topic === "voucher" ? "ваучер, " : "рожден ден, ") + q.name, q.id);
+    A.toast(lab + ": " + q.name, {undo:function(){ q.st = was2; saveIQ(); draw(); }}); return; }
   if ((t = e.target.closest("[data-fbdone]")) || (t = e.target.closest("[data-fbnew]"))){ var id = t.dataset.fbdone || t.dataset.fbnew, f = FB.filter(function(x){ return x.id === id; })[0], was = f.status;
     f.status = t.dataset.fbdone ? "done" : "new"; saveFB(); draw(); A.audit("feedback.status", TP[f.topic][0] + " от " + f.name + ": " + (f.status === "done" ? "прегледано" : "върнато в нови"), id);
     A.toast(f.status === "done" ? "Отбелязано като прегледано" : "Върнато в нови", {undo:function(){ f.status = was; saveFB(); draw(); }}); return; }

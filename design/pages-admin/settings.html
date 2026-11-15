@@ -16,6 +16,8 @@
 @container page (min-width:1000px){ .stg-nav{display:grid; gap:2px} }
 .stg-nav a{display:flex; align-items:center; gap:10px; min-height:48px; padding:0 14px; border-radius:999px; text-decoration:none; color:var(--ink); font-weight:700}
 .stg-nav a:hover{background:var(--surface-2)}
+.stg-nav a[aria-current="true"]{background:var(--ink); color:var(--bg)}
+.stg-nav a[aria-current="true"] .ic{color:var(--ember)}
 .stg-nav a .ic{color:var(--muted)}
 .stg-main{display:grid; gap:16px; min-width:0}
 .card{padding:20px; display:grid; gap:16px; scroll-margin-top:96px}
@@ -25,7 +27,7 @@
 .card > header p{margin:4px 0 0; color:var(--muted); font-size:16px}
 .row-s{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 16px; align-items:center; padding-top:14px; border-top:1px solid var(--line)}
 .row-s .l b{display:block; font-size:17px}
-.row-s .l span{display:block; color:var(--muted); font-size:15px; margin-top:2px}
+.row-s .l > span:not(.tags){display:block; color:var(--muted); font-size:15px; margin-top:2px}
 .row-s .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
 @container page (max-width:520px){ .row-s{grid-template-columns:minmax(0,1fr)} .row-s > :last-child{justify-self:start} }
 .chg-dot{display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--ember); margin-left:8px; vertical-align:middle}
@@ -33,6 +35,7 @@
 .busy{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px 16px; align-items:center; padding:18px; border-radius:20px; background:var(--surface-2)}
 .busy.on{background:var(--ember); color:var(--on-ember)}
 .busy b{font-size:20px; letter-spacing:-.02em; display:flex; align-items:center; gap:10px}
+.busy > span > span{display:block}
 .busy span{font-size:15px; font-weight:600; opacity:.85}
 .busy .sa-switch input:checked + .tr{background:var(--ink)}
 .prev{display:grid; gap:8px; min-width:0}
@@ -60,7 +63,7 @@
 @container page (max-width:520px){ .oq div{grid-template-columns:minmax(0,1fr)} .oq b{text-align:left} }
 .err{font-size:14px; color:var(--danger); font-weight:700; grid-column:1 / -1}
 .days-in{width:120px; text-align:center; font-weight:800}
-.st-savebar{position:absolute; z-index:25; left:10px; right:10px; bottom:164px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.st-savebar{position:absolute; z-index:25; left:10px; right:10px; bottom:88px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
 .st-savebar.on{transform:none; opacity:1; pointer-events:auto}
 .st-savebar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
 .st-savebar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
@@ -76,21 +79,24 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
 var ic = A.ic, esc = A.esc, st = A.st;
 A.liveHash = true;
 var body = A.mount({section:"settings", title:"Настройки", eyebrow:"Работа по сайта",
-  sub:"Числата, които сайтът, кухнята и резервацията четат от едно място: „Натоварено“ и минутите, колко се пази масата, цената на празник. Промяната важи веднага навсякъде.",
+  sub:"Числата, които сайтът, кухнята и резервацията четат от едно място: „Натоварено“ и минутите, колко време е масата на гостите, цената на празник. В системата промяната важи веднага навсякъде.",
   states:[["","Обичайно"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"],["busy","Натоварено"]]});
 if (!body) return;
 
 /* ---------- настройките (като src/core/settings.ts + полетата, които още ги няма в ядрото) ---------- */
-var DEF = {kitchen:{busy:false, etaMin:35, etaBusyMin:55, busyAt:null}, resMinutes:120, celebrationPrice:"offer", earlyDays:null, noShowLimit:2, callCooldown:3, callManager:5};
+var now = A.now || function(){ return new Date(); };
+var DEF = A.seed.SETTINGS; /* _seed-res.js: един източник */
 function clone(v){ return JSON.parse(JSON.stringify(v)); }
 function load(){ var s = A.data.get("settings", {}); var o = Object.assign(clone(DEF), s); o.kitchen = Object.assign(clone(DEF.kitchen), s.kitchen || {}); return o; }
-var saved = load(); if (st === "busy" && !saved.kitchen.busy){ saved.kitchen.busy = true; saved.kitchen.busyAt = new Date(Date.now() - 38 * 60e3).toISOString(); }
+var saved = load(); if (st === "busy" && !saved.kitchen.busy){ saved.kitchen.busy = true; saved.kitchen.busyAt = new Date(now().getTime() - 38 * 60e3).toISOString(); }
 var W = clone(saved), errs = {};
 var CORE_NEW = ["noShowLimit","callCooldown","callManager"]; /* искане към шефа: да влязат в Settings */
 
@@ -110,7 +116,7 @@ function draw(){ var y = A.scroller.scrollTop;
   '<div class="stg-main">' +
   /* кухнята */
   '<section class="sa-card card" id="s-kitchen" data-edit-id="admin.settings.kitchen" aria-labelledby="h-k"><header><span class="ill">' + ic("chef-hat",24) + '</span><div><h2 id="h-k">Кухнята и времето до клиента</h2><p>Един източник за сайта, кухнята и админа. Минутите са около времето за доставка.</p></div></header>' +
-    '<label class="busy' + (k.busy ? ' on' : '') + '"><span><b>' + ic("hourglass",24) + (k.busy ? 'Натоварено' : 'Обичаен режим') + ch("kitchen.busy") + '</b><span>' + (k.busy ? (k.busyAt ? 'Включено ' + A.ago(k.busyAt) + '. ' : '') + 'Новите поръчки са с +' + (k.etaBusyMin - k.etaMin) + ' мин.' : 'Обикновено го включва кухнята от таблета. Тук се включва и изключва, ако е нужно.') + '</span></span>' +
+    '<label class="busy' + (k.busy ? ' on' : '') + '"><span><b>' + ic("hourglass",24) + 'Натоварено' + ch("kitchen.busy") + '</b><span>' + (k.busy ? 'Сега: включено' + (k.busyAt ? ' от ' + A.hm(new Date(k.busyAt)) : '') + ' · около ' + k.etaBusyMin + ' мин. Новите поръчки са с +' + (k.etaBusyMin - k.etaMin) + ' мин.' : 'Сега: обичаен режим · около ' + k.etaMin + ' мин.') + '</span><span>Обикновено го включва кухнята от таблета.</span></span>' +
       '<span class="sa-switch"><input type="checkbox" role="switch" data-busy aria-label="Натоварено"' + (k.busy ? ' checked' : '') + '><span class="tr"></span></span></label>' +
     '<div class="row-s"><div class="l"><b>Обичайно време' + ch("kitchen.etaMin") + '</b><span>Какво виждат гостите в сайта и в количката.</span></div>' + counter("etaMin", k.etaMin, 5, 240, 5, "мин", "Обичайно време") + (errs.etaMin ? '<p class="err" role="alert">' + errs.etaMin + '</p>' : '') + '</div>' +
     '<div class="row-s"><div class="l"><b>При „Натоварено“' + ch("kitchen.etaBusyMin") + '</b><span>Поне колкото обичайното. По подразбиране +20 мин.</span></div>' + counter("etaBusyMin", k.etaBusyMin, 5, 240, 5, "мин", "Време при натоварване") + (errs.etaBusyMin ? '<p class="err" role="alert">' + errs.etaBusyMin + '</p>' : '') + '</div>' +
@@ -119,7 +125,7 @@ function draw(){ var y = A.scroller.scrollTop;
     '<p class="muted" style="margin:0;font-size:15px">Минутите по квартали (Дружба 2: около 25 мин и т.н.) засега са отделни числа в „Зони за доставка“. ' + q("от общата проверка") + '</p></section>' +
   /* резервации */
   '<section class="sa-card card" id="s-res" data-edit-id="admin.settings.reservations" aria-labelledby="h-r"><header><span class="ill">' + ic("calendar-check",24) + '</span><div><h2 id="h-r">Резервации</h2><p>Колко време масата е заета и кога номерът отива за блокиране.</p></div></header>' +
-    '<div class="row-s"><div class="l"><b>Колко време се пази масата' + ch("resMinutes") + '</b><span>След толкова минути масата е свободна за следващите гости.</span><span class="tags">' + q("18а") + '</span></div>' + counter("resMinutes", W.resMinutes, 30, 360, 30, "мин", "Колко време се пази масата") + (errs.resMinutes ? '<p class="err" role="alert">' + errs.resMinutes + '</p>' : '') + '</div>' +
+    '<div class="row-s"><div class="l"><b>Колко време е масата на гостите' + ch("resMinutes") + '</b><span>Продължителност на резервацията: после масата е свободна за следващите гости.</span><span class="tags">' + q("18а") + '</span></div>' + counter("resMinutes", W.resMinutes, 30, 360, 30, "мин", "Колко време е масата на гостите") + (errs.resMinutes ? '<p class="err" role="alert">' + errs.resMinutes + '</p>' : '') + '</div>' +
     '<div class="row-s"><div class="l"><b>Блокиране след неявявания' + ch("noShowLimit") + '</b><span>Номерът чака решение на управителя; той блокира и отблокира.</span><span class="tags">' + q(8) + newCore() + '</span></div>' + counter("noShowLimit", W.noShowLimit, 1, 5, 1, W.noShowLimit === 1 ? "път" : "пъти", "Блокиране след неявявания") + '</div>' +
     '<div class="row-s"><div class="l"><b>Часове за резервация</b><span>11:00 - 21:30 през 30 мин, до 92 дни напред. Масата е за броя места.</span><span class="tags">' + q(18) + '<span class="sa-tag">В ядрото</span></span></div><span></span></div></section>' +
   /* празник */
@@ -142,12 +148,12 @@ function draw(){ var y = A.scroller.scrollTop;
     '<div class="oq">' + [["2","Депозит за резервации и празници","Няма"],["7","Права на управителя","Като собственика без финанси, роли и дневник"],["16","Ваучери: валидност; комбинират ли се отстъпките","Не се комбинират; валидност " + A.missing("срок")],["17а","Горна граница на една онлайн поръчка","60 порции и 500 €"],["23","„Изчерпано днес“","Нулира се в полунощ по София"],["Кухня 15","Кой включва „Натоварено“","Всяка секция, с напомняне след 60 мин"]]
       .map(function(x){ return '<div><p><small>Въпрос ' + x[0] + '</small>' + x[1] + '</p><b>' + x[2] + '</b></div>'; }).join("") + '</div></section>' +
   '</div></div>';
-  A.scroller.scrollTop = y; syncBar(); }
+  A.scroller.scrollTop = y; syncBar(); markNav(); }
 
 /* ---------- лента за запис ---------- */
-A.col.insertAdjacentHTML("beforeend", '<div class="st-savebar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази</button></div>');
+A.col.insertAdjacentHTML("beforeend", '<div class="st-savebar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Откажи промените</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази</button></div>');
 var bar = A.col.querySelector(".st-savebar");
-var LABEL = {"kitchen.busy":"„Натоварено“", "kitchen.etaMin":"обичайно време", "kitchen.etaBusyMin":"време при натоварване", resMinutes:"задържане на маса", noShowLimit:"блокиране след", celebrationPrice:"цена на празник", earlyDays:"ранна резервация", callCooldown:"между повиквания", callManager:"към управителя"};
+var LABEL = {"kitchen.busy":"„Натоварено“", "kitchen.etaMin":"обичайно време", "kitchen.etaBusyMin":"време при натоварване", resMinutes:"продължителност на резервацията", noShowLimit:"блокиране след", celebrationPrice:"цена на празник", earlyDays:"ранна резервация", callCooldown:"между повиквания", callManager:"към управителя"};
 function fmtV(k, v){ if (k === "kitchen.busy") return v ? "включено" : "изключено"; if (k === "celebrationPrice") return v === "offer" ? "само оферта" : "ориентировъчна"; if (k === "earlyDays") return v == null ? "изключено" : v + " дни"; if (k === "noShowLimit") return v + " пъти"; return v + " мин"; }
 function get(o, k){ return k.split(".").reduce(function(x, p){ return x[p]; }, o); }
 function diffs(){ return Object.keys(LABEL).filter(function(k){ return !eq(get(saved, k), get(W, k)); }); }
@@ -160,6 +166,11 @@ function validate(){ errs = {}; var k = W.kitchen;
   else if (W.earlyDays !== null && !(Number.isInteger(W.earlyDays) && W.earlyDays >= 1 && W.earlyDays <= 365)) errs.earlyDays = "Дните са цяло число от 1 до 365.";
   return !Object.keys(errs).length; }
 draw();
+/* лява навигация: текущата част по скрола */
+function markNav(){ var secs = body.querySelectorAll(".stg-main > section"), cur = null; secs.forEach(function(sc){ if (sc.getBoundingClientRect().top < 200) cur = sc.id; }); if (!cur && secs[0]) cur = secs[0].id;
+  body.querySelectorAll(".stg-nav a").forEach(function(a){ if (a.getAttribute("href") === "#" + cur) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); }); }
+A.scroller.addEventListener("scroll", markNav, {passive:true}); markNav();
+body.addEventListener("click", function(e){ var a = e.target.closest(".stg-nav a"); if (!a) return; e.preventDefault(); var t = body.querySelector(a.getAttribute("href")); t && t.scrollIntoView({behavior:SC.reduce ? "auto" : "smooth", block:"start"}); });
 
 document.addEventListener("click", function(e){ var t;
   if ((t = e.target.closest("[data-inc]"))){ var key = t.dataset.inc, d = +t.dataset.d, map = {etaMin:["kitchen","etaMin",5,240], etaBusyMin:["kitchen","etaBusyMin",5,240], resMinutes:[null,"resMinutes",30,360], noShowLimit:[null,"noShowLimit",1,5], callCooldown:[null,"callCooldown",1,15], callManager:[null,"callManager",2,30]}[key];
@@ -171,10 +182,10 @@ document.addEventListener("click", function(e){ var t;
   if (e.target.closest("[data-save]")){ if (!validate()){ draw(); var el = body.querySelector(".err"); el && el.scrollIntoView({block:"center"}); return; }
     var d = diffs(), text = d.map(function(k){ return LABEL[k] + ": " + fmtV(k, get(saved, k)) + " → " + fmtV(k, get(W, k)); }).join("; "), prev = clone(saved);
     saved = clone(W); A.data.set("settings", saved); draw(); A.audit("settings.update", text.charAt(0).toUpperCase() + text.slice(1), "main");
-    A.toast("Настройките са запазени. Сайтът и кухнята ги виждат веднага.", {undo:function(){ saved = prev; W = clone(prev); A.data.set("settings", prev); draw(); A.audit("settings.update", "Върнати предишните настройки", "main"); }}); return; }
+    A.toast("Настройките са запазени. В системата сайтът и кухнята ще ги четат оттук.", {undo:function(){ saved = prev; W = clone(prev); A.data.set("settings", prev); draw(); A.audit("settings.update", "Върнати предишните настройки", "main"); }}); return; }
 });
 document.addEventListener("change", function(e){ var t = e.target;
-  if (t.matches("[data-busy]")){ W.kitchen.busy = t.checked; W.kitchen.busyAt = t.checked ? new Date().toISOString() : null; draw(); body.querySelector("[data-busy]").focus({preventScroll:true}); return; }
+  if (t.matches("[data-busy]")){ W.kitchen.busy = t.checked; W.kitchen.busyAt = t.checked ? now().toISOString() : null; draw(); body.querySelector("[data-busy]").focus({preventScroll:true}); return; }
   if (t.matches("[data-early]")){ W.earlyDays = t.checked ? (saved.earlyDays || 0) : null; validate(); /* 0 = включено, но без число: не измисляме дни */ draw(); var ed = body.querySelector("#ed"); if (ed){ ed.value = W.earlyDays || ""; ed.focus(); } return; }
   if (t.id === "ed"){ W.earlyDays = t.value === "" ? 0 : +t.value; validate(); draw(); }
 });

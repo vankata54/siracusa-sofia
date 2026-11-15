@@ -25,6 +25,10 @@
 .hl-canvas{position:relative; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
 .hl-canvas .core{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
 .hl-canvas.closed .core{opacity:.55}
+.hl-lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 10px; padding:0 4px; list-style:none; font-size:15px; font-weight:600; color:var(--muted)}
+.hl-lgd li{display:inline-flex; align-items:center; gap:6px}
+.hl-lgd .ic{color:var(--ink)}
+.hl-lgd .sw{width:18px; height:14px; border-radius:5px; background:var(--ember-soft); box-shadow:inset 0 0 0 2px var(--ember)}
 .hl-help{display:flex; gap:10px; align-items:flex-start; margin:10px 6px 4px; font-size:15px; color:var(--muted)}
 .hl-help .ic{flex:none; margin-top:2px}
 .fp{display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none}
@@ -62,12 +66,13 @@
 .fp .jlb{fill:var(--ink); font-family:var(--font); font-size:20px; font-weight:800}
 .fp .jpill{fill:var(--ember)}
 
-.hl-panel{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:18px; display:grid; gap:14px}
+.hl-panel{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:18px 18px 22px; display:grid; gap:14px}
+@container page (min-width:1060px){ .hl-panel{margin-bottom:88px} }
 .hl-panel h2{margin:0; font-size:24px; letter-spacing:-.03em; display:flex; align-items:center; gap:12px}
 .hl-panel h2 .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-size:22px; flex:none}
 .hl-panel h2 small{display:block; font-size:15px; color:var(--muted); font-weight:700; letter-spacing:0}
 .hl-panel .lab{font-weight:700; font-size:15px; margin:0 0 6px}
-.hl-sw{display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:52px; border-top:1px solid var(--line); padding-top:4px}
+.hl-sw{display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:56px; border-top:1px solid var(--line); padding:12px 0}
 .hl-sw span.t{display:flex; align-items:center; gap:10px; font-weight:700}
 .hl-sw span.t .ic{color:var(--muted)}
 .hl-sw small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
@@ -95,7 +100,7 @@
 .hl-li .ft span{display:inline-flex; align-items:center; gap:4px}
 @container page (max-width:460px){ .hl-li{grid-template-columns:52px minmax(0,1fr)} .hl-li .pill{grid-column:1 / -1} }
 
-.hl-savebar{position:absolute; z-index:25; left:10px; right:10px; bottom:164px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.hl-savebar{position:absolute; z-index:25; left:10px; right:10px; bottom:88px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
 .hl-savebar.on{transform:none; opacity:1; pointer-events:auto}
 .hl-savebar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
 .hl-savebar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
@@ -111,6 +116,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -124,13 +131,12 @@ if (!body) return;
 
 /* ---------- данни: sa-tables (един източник за залата, резервациите и QR), начало от условните SC.TABLES ---------- */
 var WORLD = {salon:{w:800, h:640}, garden:{w:800, h:440}}, ZN = {salon:"Салон", garden:"Градина"};
-function tablesState(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
-  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; }
+var tablesState = A.seed.tables; /* един източник: _seed-res.js */
 function clone(v){ return JSON.parse(JSON.stringify(v)); }
 var saved = tablesState();
 if (st === "empty") saved.tables = saved.tables.filter(function(t){ return t.zone !== "garden"; });
 var W = clone(saved);
-var view = A.hash.v === "list" ? "list" : "plan", zone = A.hash.z === "garden" || st === "empty" ? "garden" : "salon", selId = A.hash.t || null;
+var view = A.hash.v === "list" ? "list" : A.hash.v === "plan" ? "plan" : (A.scroller && A.scroller.clientWidth < 620 ? "list" : "plan"), zone = A.hash.z === "garden" || st === "empty" ? "garden" : "salon", selId = A.hash.t || null;
 function live(){ return W.tables.filter(function(t){ return !t.off; }); }
 function byId(id){ return W.tables.filter(function(t){ return t.id === id; })[0]; }
 function joinOf(id){ return W.joins.filter(function(j){ return j.ids.indexOf(id) > -1; })[0]; }
@@ -214,13 +220,13 @@ function draw(keep){
       '<span class="grow"></span>' + (zone === "garden" ? '<label class="hl-garden">Градината е отворена<span class="sa-switch"><input type="checkbox" role="switch" data-garden' + (W.garden !== false ? ' checked' : '') + '><span class="tr"></span></span></label>' : '') + '</div>' +
     (zone === "garden" && W.garden === false ? A.banner({tone:"warn", icon:"tree", title:"Градината е затворена", text:"Масите ѝ не се показват в резервацията на сайта. QR кодовете ѝ продължават да работят."}) + '<div style="height:12px"></div>' : '') +
     (!T.length ? '<div class="sa-card">' + A.empty({icon:"chair", title:"Няма маси в " + (zone === "salon" ? "салона." : "градината."), text:"Добавете първата с „Нова маса“. Тя се появява в резервацията и получава QR код.", action:'<button class="pill pill-red pill-lg" type="button" data-add>' + ic("plus",22) + 'Нова маса</button>'}) + '</div>' :
-    '<div class="hl-grid"><div>' + (view === "plan" ? '<div class="hl-canvas' + (zone === "garden" && W.garden === false ? ' closed' : '') + '" data-edit-id="admin.hall.plan"><div class="core">' + planSVG() + '</div>' +
+    '<div class="hl-grid"><div>' + (view === "plan" ? '<ul class="hl-lgd" aria-label="Знаците на плана">' + [["sun","до прозореца"],["baby","място за детска количка"],["wheelchair","достъпна с инвалидна количка"],["lock","само с резервация"]].map(function(x){ return '<li>' + ic(x[0],20) + x[1] + '</li>'; }).join("") + '<li><span class="sw j" aria-hidden="true"></span>обединени</li></ul><div class="hl-canvas' + (zone === "garden" && W.garden === false ? ' closed' : '') + '" data-edit-id="admin.hall.plan"><div class="core">' + planSVG() + '</div>' +
       '<p class="hl-help">' + ic("info",20) + '<span>Влачете масите. С клавиатура: Tab до масата, стрелките я местят (Shift: по-далеч), Enter отваря настройките. Има и „Списък“ и бутони „Премести“.</span></p></div>' : listHTML()) + '</div>' + panelHTML() + '</div>');
   if (keep !== false) A.scroller.scrollTop = y;
   syncBar(); }
 
 /* ---------- незапазени промени ---------- */
-A.col.insertAdjacentHTML("beforeend", '<div class="hl-savebar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази плана</button></div>');
+A.col.insertAdjacentHTML("beforeend", '<div class="hl-savebar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Откажи промените</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази плана</button></div>');
 var bar = A.col.querySelector(".hl-savebar");
 function diffs(){ var n = 0; W.tables.forEach(function(t){ if (changed(t)) n++; }); saved.tables.forEach(function(o){ if (!byId(o.id)) n++; });
   if (JSON.stringify(W.joins) !== JSON.stringify(saved.joins)) n++; if ((W.garden !== false) !== (saved.garden !== false)) n++; return n; }
@@ -252,7 +258,7 @@ body.addEventListener("keydown", function(e){ var g = e.target.closest && e.targ
   if (mv){ e.preventDefault(); t.cx += mv[0] * step; t.cy += mv[1] * step; clampT(t); selId = t.id; draw(); focusT(t.id); return; }
   if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pick(t.id, true); var p = A.app.querySelector(".hl-panel [data-seat]"); p && p.focus(); } });
 function focusT(id){ var g = body.querySelector('.tb[data-t="' + id + '"]'); g && g.focus({preventScroll:true}); }
-function hashObj(){ return Object.assign({}, A.hash, {z:zone === "salon" ? "" : zone, v:view === "plan" ? "" : view, t:selId || ""}); }
+function hashObj(){ return Object.assign({}, A.hash, {z:zone === "salon" ? "" : zone, v:view, t:selId || ""}); }
 function pick(id, fromPlan){ selId = id; draw(); A.setHash(hashObj());
   var p = A.app.querySelector(".hl-panel"), r = p && p.getBoundingClientRect(); if (r && r.top > A.scroller.clientHeight - 120) p.scrollIntoView({behavior:SC.reduce ? "auto" : "smooth", block:"start"}); if (fromPlan) focusT(id); }
 
