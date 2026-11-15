@@ -107,7 +107,7 @@ var NOTE = H.n ? A.notes.list().filter(function(x){ return x.id === H.n; })[0] :
 /* екраните на самия админ: само разделите, които ролята вижда */
 var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); }).map(function(m){ if (m.id !== "admin") return m; var c = Object.assign({}, m); c.screens = m.screens.filter(function(x){ return x.k === "login" || !A.SEC[x.k] || A.can(x.k); }); return c; });
 var MODS = {}; mods.forEach(function(m){ MODS[m.id] = m; });
-var CANPEN = A.can("notes");
+var CANPEN = !!A.me; /* моливът е за всички роли (решение 15.11): без „Бележки“ пише препоръки */
 var want = (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
 if (denied && NOTE) NOTE = null;
 var DEV = {phone:[390,844,"Телефон"], tablet:[820,1180,"Таблет"], desktop:[1440,900,"Компютър"]};
@@ -228,10 +228,8 @@ function go(p){ st.p = p; NOTE = NOTE && st.custom ? NOTE : null; showNote = fal
 function rebuild(){ saveHash(); build(); }
 
 /* ---------- pencil (targets the frame) ---------- */
-var pen = !CANPEN ? null : SAPen.mount({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
-  url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } },
-  author:A.who, notesHref:"notes.html", fabPhone:false, barTop:[8, 88], now:A.now, toastBottom:96,
-  onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:A.syncPen});
+var pen = A.mountPen({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
+  url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } }, toastBottom:96});
 A.pen = pen;
 
 /* ---------- controls ---------- */

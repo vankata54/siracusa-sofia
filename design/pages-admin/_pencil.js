@@ -186,7 +186,7 @@ SAPen.selectorFor = selectorFor; SAPen.describe = describe;
 
 /* ---------- mount ---------- */
 SAPen.mount = function(o){ o = o || {};
-  var ui = window, udoc = document, backTo = null, on = false, sheetOpen = false, lastType = "mouse", cand = null, stack = [], saved = 0, tw = null;
+  var REC = !!o.recommend, ui = window, udoc = document, backTo = null, on = false, sheetOpen = false, lastType = "mouse", cand = null, stack = [], saved = 0, tw = null;
   var getTarget = o.target || function(){ return window; };
   var host = udoc.createElement("sa-pen-ui"), root = host.attachShadow({mode:"open"});
   if (o.fabPhone === false) host.setAttribute("data-nofab-phone", "");
@@ -204,8 +204,8 @@ SAPen.mount = function(o){ o = o || {};
 
   function barText(){ var touch = lastType === "touch", t;
     if (cand && touch) t = '<b>Оградено:</b> <span>' + esc(describe(cand)) + '. Докоснете пак или „Бележка за това“.</span>';
-    else if (touch) t = '<b>Моливът е включен</b> <span>· Докоснете елемент</span>';
-    else t = '<b>Моливът е включен</b> <span>· Изберете елемент · Esc за изход</span>';
+    else if (touch) t = '<b>' + (REC ? 'Препоръка' : 'Моливът е включен') + '</b> <span>· Докоснете елемент</span>';
+    else t = '<b>' + (REC ? 'Препоръка' : 'Моливът е включен') + '</b> <span>· Изберете елемент · Esc за изход</span>';
     if (saved) t += ' <span>· Записани: ' + saved + '</span>';
     bar.querySelector(".t").innerHTML = t;
     bar.querySelector("[data-pick]").hidden = !(cand && (touch || lastType === "key"));
@@ -265,12 +265,12 @@ SAPen.mount = function(o){ o = o || {};
     var etxt = textOf(el), edit = el.closest("[data-edit-id]"), sel = selectorFor(el), A = ui.A, mname = A && A.MODULE_NAMES ? A.MODULE_NAMES[mod] || mod : mod;
     var sc = A && A.screenOf ? A.screenOf(url) : null, page = sc ? sc.s.n : url.split("/").pop().split("#")[0];
     sw.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pen-h">' +
-      '<div class="handle"></div><div class="sh"><h2 id="pen-h">Какво да се промени?</h2><button class="x" type="button" data-x>' + svg("x", 20) + 'Затвори</button></div>' +
+      '<div class="handle"></div><div class="sh"><h2 id="pen-h">' + (REC ? 'Какво да подобрим?' : 'Какво да се промени?') + '</h2><button class="x" type="button" data-x>' + svg("x", 20) + 'Затвори</button></div>' +
       '<div class="body"><div class="meta"><span class="tag">' + svg("squares-four", 16) + esc(mname) + '</span><span class="tag">' + esc(page) + '</span><span class="tag">' + vp.w + ' × ' + vp.h + '</span></div>' +
       '<figure class="quote"><small>' + esc(kindOf(el)) + '</small>' + (etxt ? '<p>„' + esc(etxt.length > 280 ? etxt.slice(0, 278) + " …" : etxt) + '“</p>' : '<p class="none">Елемент без текст</p>') + '</figure>' +
-      '<label for="pen-t">Бележка</label><textarea id="pen-t" placeholder="Например: по-голям текст, друга дума, махнете това" aria-describedby="pen-help"></textarea><p class="err" id="pen-err" hidden>Напишете какво да се промени.</p><p class="help" id="pen-help">Записва се с адреса, елемента и размера на екрана. Ctrl + Enter записва.</p>' +
+      (REC ? '<p class="help" style="margin:0 0 12px">Препоръката отива при главния админ. Тя не променя нищо, докато той не я одобри.</p>' : '') + '<label for="pen-t">' + (REC ? 'Препоръка' : 'Бележка') + '</label><textarea id="pen-t" placeholder="Например: по-голям текст, друга дума, махнете това" aria-describedby="pen-help"></textarea><p class="err" id="pen-err" hidden>Напишете какво да се промени.</p><p class="help" id="pen-help">Записва се с адреса, елемента и размера на екрана. Ctrl + Enter записва.</p>' +
       '<details><summary>Технически данни</summary><dl><dt>Адрес</dt><dd>' + esc(url) + '</dd><dt>CSS селектор</dt><dd>' + esc(sel) + '</dd><dt>data-edit-id</dt><dd>' + (edit ? esc(edit.getAttribute("data-edit-id")) : "няма") + '</dd></dl></details></div>' +
-      '<div class="foot"><button class="pill line" type="button" data-x>Откажи</button><button class="pill red" type="button" data-save>' + svg("check", 22) + 'Запази бележката</button></div></div>';
+      '<div class="foot"><button class="pill line" type="button" data-x>Откажи</button><button class="pill red" type="button" data-save>' + svg("check", 22) + (REC ? 'Изпрати препоръката' : 'Запази бележката') + '</button></div></div>';
     var ta = sw.querySelector("textarea"), err = sw.querySelector(".err");
     function close(){ sheetOpen = false; sw.classList.remove("on"); setTimeout(function(){ if (!sheetOpen) sw.innerHTML = ""; }, 340); if (cand && on) setCand(cand, true);
       try{ if (tw !== ui) tw.frameElement.focus(); var el2 = cand; if (el2 && el2.isConnected && (el2.tabIndex >= 0 || /^(A|BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el2.tagName))) el2.focus({preventScroll:true}); else if (fab && fab.offsetParent) fab.focus({preventScroll:true}); else if (backTo && backTo.focus) backTo.focus({preventScroll:true}); }catch(x){} }
@@ -278,7 +278,7 @@ SAPen.mount = function(o){ o = o || {};
       var now = (o.now ? o.now() : new Date()).toISOString(), author = val(o.author) || "?";
       var note = {id:rid(), module:mod, url:url, selector:sel, editId:edit ? edit.getAttribute("data-edit-id") : null, text:text.slice(0, 4000), elementText:etxt.slice(0, 500), viewport:{w:Math.round(vp.w), h:Math.round(vp.h)}, screenshot:null, author:author, status:"new", createdAt:now, updatedAt:now};
       if (o.onSave) o.onSave(note); else { try{ var l = JSON.parse(localStorage.getItem("sa-notes") || "[]"); l.unshift(note); localStorage.setItem("sa-notes", JSON.stringify(l)); }catch(x){} }
-      saved++; close(); toast("Бележката е записана", o.notesHref ? {label:"Виж бележките", href:o.notesHref} : null); barText(); }
+      saved++; close(); toast(REC ? "Препоръката е изпратена" : "Бележката е записана", o.notesHref ? {label:REC ? "Моите препоръки" : "Виж бележките", href:o.notesHref} : null); barText(); }
     sw.querySelectorAll("[data-x]").forEach(function(b){ b.onclick = close; }); sw.querySelector(".scrim").onclick = close; sw.querySelector("[data-save]").onclick = save;
     ta.addEventListener("input", function(){ if (ta.value.trim()){ err.hidden = true; ta.removeAttribute("aria-invalid"); } });
     sw.addEventListener("keydown", function(e){ if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); close(); return; }

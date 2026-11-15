@@ -274,8 +274,9 @@ SC.footer = function(){ var R=SC.RESTAURANT;
     '<div><h3>Поръчай</h3><a href="menu.html">Меню</a><a href="lunch.html">Обедно меню</a><a href="delivery.html">Доставка</a><a href="pickup.html">Вземи от място</a><a href="office.html">За офиса</a></div>'+
     '<div><h3>Елате при нас</h3><a href="reservation.html">Резервирай маса</a><a href="events.html">Събития и поводи</a><a href="celebration.html">Празник при нас</a><a href="bertha.html">Фурната Bertha</a><a href="gallery.html">Галерия</a></div>'+
     '<div><h3>Информация</h3><a href="about.html">За нас</a><a href="contacts.html">Контакти</a><a href="allergens.html">Алергени</a><a href="#" data-noop>Общи условия</a><a href="#" data-noop>Поверителност</a><a href="#" data-cookie-settings>Бисквитки</a></div></div>'+
-    '<p class="legal">© '+new Date().getFullYear()+' Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p></footer>'; };
-function morePanel(){ return '<div class="stack" style="gap:2px">'+SC.PAGES.map(function(p){ return '<a class="kv" href="'+p[0]+'" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">'+p[1]+SC.ic("caret-right",18)+'</a>'; }).join("")+'</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'0894 36 55 77</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div>'; }
+    '<p class="legal">© '+new Date().getFullYear()+' Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p>'+
+    '<p style="margin:0"><button class="pill pill-line" type="button" data-suggest>'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button></p></footer>'; };
+function morePanel(){ return '<div class="stack" style="gap:2px">'+SC.PAGES.map(function(p){ return '<a class="kv" href="'+p[0]+'" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">'+p[1]+SC.ic("caret-right",18)+'</a>'; }).join("")+'</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'0894 36 55 77</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div><button class="pill pill-line pill-block" type="button" data-suggest style="margin-top:8px">'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button>'; }
 /* AI assistant: prototype answers the scripted examples, always from the real menu data */
 function aiPanelHTML(){ return '<div class="aimsgs" data-aimsgs aria-live="polite"><div class="msg bot">Здравейте! Кажете ми за колко души поръчвате и какво обича всеки. Предлагам само ястия от нашето меню.</div></div>'+
   '<div class="chips aichips" style="margin:0;padding:2px 0"><button class="chip aichip" type="button" data-aiq="group">Ние сме четирима: един е вегетарианец и не яде лук, един иска месо, един обича сиренца</button><button class="chip aichip" type="button" data-aiq="lunch">Какво има в обедното меню днес?</button><button class="chip aichip" type="button" data-aiq="allergen">Кое е без глутен?</button></div>'+
@@ -337,6 +338,8 @@ document.addEventListener("click", function(e){
   if (t.hasAttribute("data-ai")){ openAI(); return; }
   if (t.dataset.aiq){ SC.aiAsk(t.textContent, t.dataset.aiq); return; }
   if (t.dataset.aiadd){ t.dataset.aiadd.split(",").forEach(function(k,i){ SC.cart.add(k,1); setTimeout(function(){ SC.fly(t,k); }, i*120); }); SC.flash(t, SC.ic("check",22)+"Добавено в количката", 1600); return; }
+  /* „Предложи подобрение“: ds/suggest.js се зарежда чак при първото натискане */
+  if (t.hasAttribute("data-suggest")){ var go=function(){ window.SCSuggest && SCSuggest.open(); }; if (window.SCSuggest) go(); else { var sg=document.createElement("script"); sg.src="../ds/suggest.js"; sg.onload=go; document.head.appendChild(sg); } return; }
   if (t.hasAttribute("data-more")){ SC.sheet({title:"Още", html:morePanel()}); return; }
   if (t.hasAttribute("data-lang")){ SC.toast("Английската версия идва след българската."); return; }
   if (t.hasAttribute("data-share")){ SC.toast("Връзката е копирана"); try{ navigator.clipboard.writeText(location.href).catch(function(){}); }catch(x){} return; }
