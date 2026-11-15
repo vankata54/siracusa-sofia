@@ -58,13 +58,7 @@
 .rl-desc h3{margin:0; font-size:19px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
 .rl-desc p{margin:0; color:var(--muted)}
 /* save bar */
-.rl-bar{position:absolute; z-index:25; left:10px; right:10px; bottom:164px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(160%); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
-.rl-bar.on{transform:none; opacity:1; pointer-events:auto}
-.rl-bar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
-.rl-bar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
-.rl-bar .pill{flex:none}
-@container app (min-width:700px){ .rl-bar{left:50%; right:auto; bottom:24px; width:min(620px, calc(100% - 48px)); transform:translate(-50%,160%)} .rl-bar.on{transform:translate(-50%,0)} }
-@container app (max-width:420px){ .rl-bar{flex-wrap:wrap; border-radius:28px; padding:10px} .rl-bar .n{flex:1 1 100%; padding:0 8px 4px} .rl-bar .pill{flex:1} }
+.rl-ph .chip[aria-selected="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
 .rl-last{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:15px; font-weight:600; margin:12px 2px 0}
 </style>
 </head>
@@ -73,6 +67,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -104,9 +100,9 @@ function cell(r, s){ var lock = r === "admin" || LOCKED.indexOf(s) > -1, on = ha
   return '<td class="' + (r === "admin" ? 'adm' : '') + (r === "manager" ? ' col-mgr' : '') + '"><label class="sa-check' + (on !== was(r, s) ? ' chg' : '') + '" title="' + esc(lbl) + '"><input type="checkbox" data-r="' + r + '" data-s="' + s + '"' + (on ? ' checked' : '') + (lock ? ' disabled' : '') + ' aria-label="' + esc(lbl) + (lock ? (r === "admin" ? ", винаги" : ", за всички") : '') + '"><span class="bx">' + (lock && r === "admin" ? ic("lock",16) : ic("check",18)) + '</span></label></td>'; }
 function matrix(){ return '<div class="sa-tablewrap scroll rl-wrap"><table class="rl" aria-label="Роли по раздели">' + head() + '<tbody>' + ROWS.map(function(g){
   return '<tr class="gh"><th colspan="' + (ROLES.length + 1) + '" scope="colgroup">' + esc(g[0]) + '</th></tr>' + g[1].map(function(s){ var x = A.SEC[s];
-    return '<tr><th scope="row"><span class="sn">' + ic(x.ic,20) + esc(x.n) + (x.soon ? ' ' + A.soonTag() : '') + '</span>' + (s === "dashboard" ? '<small>За всички роли</small>' : s === "settings" ? '<small>Няма го в SECTIONS на ядрото</small>' : '') + '</th>' + ROLES.map(function(r){ return cell(r.id, s); }).join("") + '</tr>'; }).join(""); }).join("") + '</tbody></table></div>'; }
+    return '<tr><th scope="row"><span class="sn">' + ic(x.ic,20) + esc(x.n) + (x.soon ? ' ' + A.soonTag() : '') + '</span>' + (s === "dashboard" ? '<small>За всички роли</small>' : s === "settings" ? '<small>Нов раздел</small>' : '') + '</th>' + ROLES.map(function(r){ return cell(r.id, s); }).join("") + '</tr>'; }).join(""); }).join("") + '</tbody></table></div>'; }
 function phone(){ var r = A.role(phoneRole);
-  return '<div class="rl-ph"><div class="chips" role="tablist" aria-label="Роля">' + ROLES.map(function(x){ return '<button class="chip" type="button" role="tab" data-pr="' + x.id + '" aria-selected="' + (x.id === phoneRole) + '" aria-pressed="' + (x.id === phoneRole) + '">' + esc(x.n) + '</button>'; }).join("") + '</div>' +
+  return '<div class="rl-ph"><div class="chips" role="tablist" aria-label="Роля">' + ROLES.map(function(x){ return '<button class="chip" type="button" role="tab" data-pr="' + x.id + '" aria-selected="' + (x.id === phoneRole) + '" tabindex="' + (x.id === phoneRole ? 0 : -1) + '">' + esc(x.n) + '</button>'; }).join("") + '</div>' +
     '<div class="sa-card rl-who"><h2>' + esc(r.n) + '</h2><p>' + esc(r.desc) + '</p>' + (r.id === "admin" ? '<span class="sa-tag">' + ic("lock",16) + 'Винаги всичко</span>' : '<span class="sa-tag" data-cnt="' + r.id + '">' + A.plural(count(r.id), "раздел", "раздела") + '</span>') + (r.id === "manager" ? ' <span class="sa-tag ember">Въпрос 7</span>' : '') + '</div>' +
     ROWS.map(function(g){ return '<div class="rl-g"><h3>' + esc(g[0]) + '</h3><div class="sa-card">' + g[1].map(function(s){ var x = A.SEC[s], lock = r.id === "admin" || LOCKED.indexOf(s) > -1, on = has(r.id, s), id = "sw-" + r.id + "-" + s;
       return '<div class="rl-sw' + (on !== was(r.id, s) ? ' chg' : '') + '">' + ic(x.ic,22) + '<label for="' + id + '">' + esc(x.n) + (x.soon ? ' · Скоро' : '') + (lock ? '<small>' + (r.id === "admin" ? 'Винаги' : 'За всички роли') + '</small>' : '') + '</label><span class="sa-switch"><input type="checkbox" role="switch" id="' + id + '" data-r="' + r.id + '" data-s="' + s + '"' + (on ? ' checked' : '') + (lock ? ' disabled' : '') + '><span class="tr"></span></span></div>'; }).join("") + '</div></div>'; }).join("") + '</div>'; }
@@ -119,21 +115,31 @@ function draw(){ body.innerHTML = (st === "offline" ? A.offline("Показва�
   '<div class="rl-q" data-edit-id="admin.roles.question7">' + ic("question",24) + '<div><b>Отворен въпрос към собственика (7): права на управителя</b><p>Какво остава само за собственика? По подразбиране управителят е като собственика без „Финанси и гориво“, „Роли и права“ и „Дневник“.</p></div></div>' +
   matrix() + phone() + lastSave() + desc(); }
 draw();
-function chipIntoView(){ var c = body.querySelector('[data-pr][aria-selected="true"]'); if (c && c.parentElement) c.parentElement.scrollLeft = Math.max(0, c.offsetLeft - c.parentElement.offsetLeft - 16); }
+function chipIntoView(){ var c = body.querySelector('[data-pr][aria-selected="true"]'); if (!c) return; var p = c.parentElement; p.scrollLeft += c.getBoundingClientRect().left - p.getBoundingClientRect().left - 16; }
 chipIntoView();
 
 /* save bar */
-A.col.insertAdjacentHTML("beforeend", '<div class="rl-bar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel>Отмени</button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + 'Запази промените</button></div>');
+A.col.insertAdjacentHTML("beforeend", '<div class="sa-pbar rl-bar" role="region" aria-label="Незапазени промени"><span class="n" data-n aria-live="polite"></span><button class="pill pill-line" type="button" data-cancel><span class="lg">Откажи промените</span><span class="sm">Откажи</span></button><button class="pill pill-red" type="button" data-save>' + ic("check",20) + '<span class="lg">Запази промените</span><span class="sm">Запази</span></button></div>');
 var bar = A.col.querySelector(".rl-bar");
 function upd(){ var d = diff(); bar.classList.toggle("on", d.length > 0);
-  bar.querySelector("[data-n]").innerHTML = A.plural(d.length, "промяна", "промени") + (st === "offline" ? '<small>Няма връзка: запазването чака</small>' : '<small>Още не са запазени</small>');
+  bar.querySelector("[data-n]").innerHTML = A.plural(d.length, "промяна", "промени") + (st === "offline" ? '<small>Няма връзка: запазването чака</small>' : '<small class="lg">Още не са запазени</small>');
   bar.querySelector("[data-save]").disabled = st === "offline";
   document.querySelectorAll("[data-cnt]").forEach(function(el){ el.textContent = A.plural(count(el.dataset.cnt), "раздел", "раздела"); });
   document.querySelectorAll("input[data-r]").forEach(function(i){ var ch = has(i.dataset.r, i.dataset.s) !== was(i.dataset.r, i.dataset.s); var host = i.closest(".sa-check") || i.closest(".rl-sw"); host && host.classList.toggle("chg", ch); i.checked = has(i.dataset.r, i.dataset.s); }); }
 body.addEventListener("change", function(e){ var i = e.target.closest("input[data-r]"); if (!i) return; var r = i.dataset.r, s = i.dataset.s, l = draft[r];
   if (i.checked){ if (l.indexOf(s) < 0) l.push(s); } else draft[r] = l.filter(function(x){ return x !== s; }); upd(); });
 body.addEventListener("click", function(e){ var c = e.target.closest("[data-pr]"); if (!c) return; phoneRole = c.dataset.pr; A.setHash({r:phoneRole, st:st}); A.liveHash = true; var y = A.scroller.scrollTop; draw(); upd(); A.scroller.scrollTop = y; var nb = body.querySelector('[data-pr="' + phoneRole + '"]'); chipIntoView(); nb && nb.focus({preventScroll:true}); });
-bar.querySelector("[data-cancel]").onclick = function(){ draft = JSON.parse(JSON.stringify(saved)); upd(); A.toast("Промените са отменени"); };
+bar.querySelector("[data-cancel]").onclick = function(){ draft = JSON.parse(JSON.stringify(saved)); upd(); A.toast("Промените са отказани"); };
+/* незапазени промени: питаме, преди да се смени страницата */
+window.addEventListener("beforeunload", function(e){ if (diff().length){ e.preventDefault(); e.returnValue = ""; } });
+document.addEventListener("click", function(e){ var a = e.target.closest("a[href]"); if (!a || !diff().length || a.target === "_blank" || a.getAttribute("href").charAt(0) === "#") return; e.preventDefault(); var n = diff().length, href = a.getAttribute("href");
+  var sh = A.sheet({title:"Незапазени промени", html:'<p style="margin:0">Имате ' + A.plural(n, "незапазена промяна", "незапазени промени") + ' в правата. Да ги запазим, преди да продължите?</p>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-leave>Не запазвай</button><button class="pill pill-red pill-lg" type="button" data-keep>' + ic("check",22) + 'Запази и продължи</button>'});
+  sh.foot.querySelector("[data-leave]").onclick = function(){ draft = JSON.parse(JSON.stringify(saved)); location.href = href; };
+  sh.foot.querySelector("[data-keep]").onclick = function(){ bar.querySelector("[data-save]").click(); setTimeout(function(){ location.href = href; }, 400); }; }, true);
+/* стрелки между ролите (табове) */
+body.addEventListener("keydown", function(e){ var c = e.target.closest("[data-pr]"); if (!c || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return; e.preventDefault(); var ids = ROLES.map(function(r){ return r.id; }), i = ids.indexOf(phoneRole);
+  var nb = body.querySelector('[data-pr="' + ids[(i + (e.key === "ArrowRight" ? 1 : ids.length - 1)) % ids.length] + '"]'); nb && nb.click(); });
 bar.querySelector("[data-save]").onclick = function(){ var d = diff(), prev = JSON.parse(JSON.stringify(saved)), by = {};
   d.forEach(function(x){ (by[x[0]] = by[x[0]] || []).push((x[2] ? "+ " : "- ") + secName(x[1])); });
   ROLES.forEach(function(r){ if (draft[r.id].indexOf("dashboard") < 0) draft[r.id].push("dashboard"); });

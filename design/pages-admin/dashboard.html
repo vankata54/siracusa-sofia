@@ -18,7 +18,10 @@
 
 /* today: one shell, four cores */
 .kpis{display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr))}
-@container page (min-width:900px){ .kpis{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.kpis.n1{grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))} }
+.kpi .sm{display:none}
+@container page (max-width:520px){ .kpi .lg{display:none} .kpi .sm{display:inline} }
 .kpi{min-width:0; display:grid; align-content:space-between; gap:14px; min-height:168px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; transition:transform var(--t-base) var(--ease)}
 .kpi:hover{transform:translateY(-2px)}
 .kpi:active{transform:scale(.98)}
@@ -29,6 +32,7 @@
 .kpi .sa-tag{white-space:normal; text-align:left}
 .kpi.hot{background:var(--ink); color:var(--bg)}
 .kpi.hot .lb, .kpi.hot .ft{color:var(--bg); opacity:.85}
+.kpi.hot .sa-tag{color:inherit; box-shadow:inset 0 0 0 1.5px currentColor}
 .kpi.hot .lb .ic{color:inherit}
 @container page (max-width:420px){ .kpi{min-height:150px; padding:16px} .kpi .v{font-size:44px} }
 
@@ -48,6 +52,14 @@
 .mod .act{padding:10px 8px 8px}
 .mod .open{width:100%; justify-content:space-between; padding:0 6px 0 20px; min-height:56px; font-size:17px}
 .mod .open .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-slow) var(--ease)}
+.mod .open .sm{display:none}
+@container page (max-width:619px){
+  .mods{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .mod .vis{height:96px} .mod .g{transform:scale(.72)} .mod:hover .g{transform:scale(.72)} .mod .vis .dv{display:none}
+  .mod .body{padding:12px 10px 4px; gap:4px} .mod h3{font-size:18px} .mod .body p:not(.who){display:none} .mod .who{font-size:14px}
+  .mod .act{padding:8px 4px 4px} .mod .open{padding:0 4px 0 14px; min-height:52px; font-size:16px} .mod .open .lg{display:none} .mod .open .sm{display:inline} .mod .open .knob{width:40px; height:40px}
+  .mod.soon .note{display:none}
+}
 .mod .open:hover .knob{transform:translate(2px,-2px) scale(1.05)}
 .mod.soon .vis{background:transparent; box-shadow:inset 0 0 0 2px var(--line-strong); box-shadow:none; border:2px dashed var(--line-strong)}
 .mod.soon .note{padding:10px 14px 14px; font-size:15px; color:var(--muted); font-weight:600}
@@ -68,7 +80,7 @@
 /* sections: bento of groups */
 .groups{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
 @container page (min-width:700px){ .groups{grid-template-columns:repeat(2,minmax(0,1fr))} }
-@container page (min-width:1100px){ .groups{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@container page (min-width:1100px){ .groups{grid-template-columns:repeat(3,minmax(0,1fr))} .groups > .grp:last-child:nth-child(3n+1){grid-column:1/-1} .groups > .grp:last-child:nth-child(3n+1) .core{grid-template-columns:repeat(3,minmax(0,1fr))} .groups > .grp:last-child:nth-child(3n+1) .srow + .srow{border-top:0; border-left:1px solid var(--line)} }
 .grp{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); align-self:start}
 .grp h3{margin:10px 14px 10px; font-size:15px; font-weight:800; color:var(--muted); display:flex; justify-content:space-between}
 .grp .core{display:grid}
@@ -91,39 +103,45 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
 if (!A.me){ A.mount({}); return; }
 var ic = A.ic, esc = A.esc, st = A.st, me = A.me, s = A.sofia();
 var hello = s.h >= 5 && s.h < 12 ? "Добро утро" : s.h >= 12 && s.h < 18 ? "Добър ден" : "Добър вечер";
-/* статус по истинския час в София (същите граници като SC.status) */
-var m = s.h*60 + s.m, status = m < 600 ? ["", "<b>Затворено</b> · отваряме в 10:00"] : m >= 1380 ? ["", "<b>Затворено</b> · отваряме утре в 10:00"] : m < 1260 ? ["ok", "<b>Отворено до 23:00</b> · Доставка до 21:00"] : m < 1350 ? ["warn", "<b>Доставката приключи за днес</b> · Вземане до 22:30"] : ["warn", "<b>Кухнята затвори</b> · Отворено до 23:00"];
-var body = A.mount({section:"dashboard", title:hello + ", " + me.name.split(" ")[0], eyebrow:"Днес · " + A.fmtDate(new Date()), docTitle:"Табло",
+var staffApp = ["waiter","kitchen","driver"].indexOf(me.role) > -1;
+/* статус по часа на прототипа (A.now(), по подразбиране 19:42) */
+var status = A.status();
+var body = A.mount({section:"dashboard", title:hello + ", " + (staffApp || me.role === "kitchen" ? me.name : me.name.split(" ")[0]), eyebrow:"Днес · " + A.fmtDate(A.now()) + " · " + A.hm(A.now()), docTitle:"Табло",
   sub:'<span class="db-st" data-edit-id="admin.dashboard.status"><span class="dot ' + status[0] + '"></span><span>' + status[1] + '</span></span>',
   actions: A.MOD.site && A.modCan(A.MOD.site) ? '<a class="pill pill-ink pill-lg" href="preview.html#m=site&p=home&d=phone">' + ic("eye",22) + 'Сайтът на живо</a>' : '',
   states:[["","Обичайно"],["loading","Зареждане"],["empty","Без бележки"],["error","Грешка"],["offline","Без връзка"]]});
 if (!body) return;
 
-/* ---------- today ---------- */
-var outs = (function(){ var so = A.data.get("soldout", {date:"", ids:[]}), ids = so.date === A.todayKey() ? so.ids.slice() : [];
-  SC.items.forEach(function(x){ if (SC.isOut(x) && ids.indexOf(x.id) < 0) ids.push(x.id); }); return ids; })();
+/* ---------- today: същите ключове като разделите (sa-orders, sa-reservations, sa-soldout, бележките) ---------- */
+var outs = A.soldOutToday();
+var inWork = A.ordersInWork().length, resToday = A.reservationsToday().length, kitchenOpen = A.minutes() >= 600 && A.minutes() < 1350;
 var newNotes = st === "empty" ? 0 : A.notes.count("new");
+var SAMPLE = '<span class="sa-tag sample">' + ic("info",16) + '<span class="lg">Примерни данни</span><span class="sm">Примерно</span></span>';
 var K = [
-  ["orders","Поръчки в работа","receipt","7", A.sample(), "orders.html", true],
-  ["reservations","Резервации днес","calendar-check","12", A.sample(), "reservations.html"],
-  ["notes","Нови бележки","pencil-simple", String(newNotes), newNotes ? "от молива" : "Няма нови", "notes.html"],
-  ["menu","Изчерпани днес","clock", String(outs.length), outs.length ? esc(outs.slice(0,2).map(function(id){ return SC.byId[id].n; }).join(", ")) + (outs.length > 2 ? " и още " + (outs.length - 2) : "") : "Всичко е налично", "menu.html"]
+  ["orders","Поръчки в работа","receipt", inWork, inWork ? SAMPLE : (kitchenOpen ? "Няма поръчки в работа" : "Кухнята не работи сега"), "orders.html"],
+  ["reservations","Резервации днес","calendar-check", resToday, SAMPLE, "reservations.html"],
+  ["notes","Нови бележки","pencil-simple", newNotes, newNotes ? "от молива" : "Няма нови", "notes.html", newNotes > 0],
+  ["menu","Изчерпани днес","clock", outs.length, outs.length ? esc(outs.slice(0,2).map(function(id){ return SC.byId[id].n; }).join(", ")) + (outs.length > 2 ? " и още " + (outs.length - 2) : "") : "Всичко е налично", "menu.html#f=out", outs.length > 0]
 ].filter(function(k){ return A.can(k[0]); });
+/* обърната е само плочката, която иска действие сега: изчерпани днес (и нови бележки, ако няма изчерпани) */
+var hotDone = false; K.forEach(function(k){ k[7] = false; }); [3,2].forEach(function(i){ var k = K.filter(function(x){ return x[0] === (i === 3 ? "menu" : "notes"); })[0]; if (k && k[6] && !hotDone){ k[7] = true; hotDone = true; } });
 function kpis(){ if (st === "loading") return A.skel(2, "Зареждаме таблото …");
   if (st === "error") return A.error("Не успяхме да заредим числата за днес. Модулите и разделите работят.");
   if (!K.length) return "";
-  return '<div class="sa-shell sa-rise" data-edit-id="admin.dashboard.today"><div class="kpis">' + K.map(function(k){
-    return '<a class="kpi' + (k[6] ? ' hot' : '') + '" href="' + k[5] + '"><span class="lb">' + ic(k[2],20) + k[1] + '</span><span class="v">' + k[3] + '</span><span class="ft">' + (k[6] && k[4].indexOf("sa-tag") > -1 ? '<span class="sa-tag sample" style="color:inherit; box-shadow:inset 0 0 0 1.5px currentColor">' + ic("info",16) + 'Примерни данни</span>' : k[4]) + '</span></a>'; }).join("") + '</div></div>'; }
+  return '<div class="sa-shell sa-rise" data-edit-id="admin.dashboard.today"><div class="kpis n' + K.length + '">' + K.map(function(k){
+    return '<a class="kpi' + (k[7] ? ' hot' : '') + '" href="' + k[5] + '"><span class="lb">' + ic(k[2],20) + k[1] + '</span><span class="v">' + k[3] + '</span><span class="ft">' + k[4] + '</span></a>'; }).join("") + '</div></div>'; }
 
 /* ---------- my app (персонал) ---------- */
 var app = ["waiter","kitchen","driver"].filter(function(id){ return me.role === id; })[0];
-var mine = app ? '<section class="mine sa-rise" data-edit-id="admin.dashboard.myapp"><div><h2>' + (app === "waiter" ? "Приложението на сервитьора" : app === "kitchen" ? "Екранът на кухнята" : "Приложението на шофьора") + '</h2><p>' + esc(A.role(app).desc) + '</p></div><a class="pill pill-red pill-lg" href="' + A.SEC[app].href + '">' + ic(A.SEC[app].ic,22) + 'Отвори приложението</a></section>' : '';
+var mine = app ? '<section class="mine sa-rise" data-edit-id="admin.dashboard.myapp"><div><h2>' + (app === "waiter" ? "Приложението на сервитьора" : app === "kitchen" ? "Екранът на кухнята" : "Приложението на шофьора") + '</h2><p>' + ({waiter:"Повикванията, масите, поръчките и сметките.", kitchen:"Опашката на вашата секция, изчерпано днес и „Натоварено“.", driver:"Вашите доставки, маршрутът, горивото и краят на смяната."})[app] + '</p></div><a class="pill pill-red pill-lg" href="' + A.SEC[app].href + '">' + ic(A.SEC[app].ic,22) + 'Отвори приложението</a></section>' : '';
 
 /* ---------- modules ---------- */
 var mods = A.MODULES.filter(A.modCan);
@@ -131,24 +149,24 @@ function screensN(mm){ return (mm.screens || []).length; }
 function glyph(mm){ var d = mm.id === "watch" ? "watch" : mm.dev || "phone"; return '<span class="g ' + d + '">' + ic(mm.ic, 30) + '</span>'; }
 var DEV = {phone:"Телефон", tablet:"Таблет", desktop:"Компютър"};
 function modCard(mm, i){
-  if (mm.soon) return '<article class="mod soon sa-rise d' + (i%4) + '" data-edit-id="admin.dashboard.module.' + mm.id + '"><div class="vis">' + glyph(mm) + '<span class="cnt">Скоро</span></div><div class="body"><h3>' + esc(mm.n) + '</h3><p>' + esc(mm.what) + '</p><p class="who">За: <span>' + esc(mm.who) + '</span></p></div><p class="note">Дизайнът е в стъпка 5. Дотогава плочката показва какво ще има.</p></article>';
+  if (mm.soon) return '<article class="mod soon sa-rise d' + (i%4) + '" data-edit-id="admin.dashboard.module.' + mm.id + '"><div class="vis">' + glyph(mm) + '<span class="cnt">Скоро</span></div><div class="body"><h3>' + esc(mm.n) + '</h3><p>' + esc(mm.what) + '</p><p class="who">За: <span>' + esc(mm.who) + '</span></p></div><p class="note">Скоро. Тук ще виждате ' + esc(mm.what.charAt(0).toLowerCase() + mm.what.slice(1)) + '</p></article>';
   var n = screensN(mm);
   return '<article class="mod sa-rise d' + (i%4) + '" data-edit-id="admin.dashboard.module.' + mm.id + '"><div class="vis">' + glyph(mm) + '<span class="cnt">' + A.plural(n, "екран", "екрана") + '</span><span class="dv">' + (mm.id === "watch" ? "Часовник" : DEV[mm.dev] || "") + '</span></div>' +
     '<div class="body"><h3>' + esc(mm.n) + '</h3><p>' + esc(mm.what) + '</p><p class="who">За: <span>' + esc(mm.who) + '</span></p></div>' +
-    '<div class="act"><a class="pill pill-line open" href="preview.html#m=' + mm.id + '&p=' + mm.screens[0].k + '&d=' + (mm.dev || "phone") + '" aria-label="Отвори на живо: ' + esc(mm.n) + '"><span>Отвори на живо</span><span class="knob">' + ic("arrow-up-right",20) + '</span></a></div></article>'; }
+    '<div class="act"><a class="pill pill-line open" href="preview.html#m=' + mm.id + '&p=' + mm.screens[0].k + '&d=' + (mm.dev || "phone") + '" aria-label="Отвори на живо: ' + esc(mm.n) + '"><span class="lg">Отвори на живо</span><span class="sm">На живо</span><span class="knob">' + ic("arrow-up-right",20) + '</span></a></div></article>'; }
 
 /* ---------- sections ---------- */
-var busy = (function(){ try{ var b = JSON.parse(localStorage.getItem("sk-busy") || "null"); return !!(b && b.on); }catch(e){ return false; } })();
+var KS = A.settings().kitchen, busy = !!KS.busy;
 var lunchDay = (function(){ var d = SC.menu.lunch.date.split("-"); return A.fmtDate(new Date(+d[0], +d[1]-1, +d[2], 12)); })();
 var ev = SC.events()[0];
 var META = {
-  dashboard:"Тук сте", orders:"Примерни данни", reservations:"Примерни данни",
+  dashboard:"Тук сте", orders:A.plural(inWork, "в работа", "в работа") + " · примерни", reservations:A.plural(resToday, "днес", "днес") + " · примерни",
   menu:SC.items.length + " ястия · " + A.plural(outs.length, "изчерпано", "изчерпани") + " днес", lunch:"Последно качено: " + lunchDay,
   offers:A.plural(SC.offers().length, "оферта", "оферти") + " в сайта сега", events:ev ? esc(ev.n) + ", " + A.fmtDate(ev.date, true) : "Няма предстоящи", zones:SC.ZONES.length + " квартала · доставка до 21:00",
-  hall:SC.TABLES.length + " маси (условни за макета)", qr:SC.TABLES.length + " етикета за печат",
+  hall:A.tables().length + " маси (условни за макета)", qr:A.tables().length + " етикета за печат",
   customers:"Примерни данни", staff:A.ACCOUNTS.length + " пробни акаунта", roles:A.DEFAULT_ROLES.length + " роли",
   reports:"Основни отчети", audit:A.plural(A.data.get("audit", []).length, "запис", "записа"), finance:"За собственика",
-  notes:newNotes ? A.plural(newNotes, "нова бележка", "нови бележки") : "Няма нови", site:"Модулите на живо", settings:busy ? "Натоварено: около 55 мин" : "Доставка: около 35 мин"
+  notes:newNotes ? A.plural(newNotes, "нова бележка", "нови бележки") : "Няма нови", site:"Модулите на живо", settings:busy ? "Натоварено: около " + KS.etaBusyMin + " мин" : "Доставка: около " + KS.etaMin + " мин"
 };
 function groups(){ return '<div class="groups" data-edit-id="admin.dashboard.sections">' + A.GROUPS.map(function(g, gi){ var items = g[1].filter(function(id){ return A.can(id) && id !== "dashboard"; }); if (!items.length) return "";
   return '<section class="grp sa-rise d' + (gi%4) + '"><h3>' + esc(g[0]) + '</h3><div class="core">' + items.map(function(id){ var sc = A.SEC[id], meta = META[id] || "";

@@ -38,9 +38,9 @@
 .nt .nt-foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--line)}
 .nt .nt-foot .by{flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:var(--muted); font-weight:600}
 .nt .nt-foot .by span{display:inline-flex; align-items:center; gap:6px}
-.nt .acts{display:flex; flex-wrap:wrap; gap:8px; flex:1}
+.nt .acts{display:flex; flex-wrap:wrap; gap:8px; flex:1 1 100%; align-items:center}
 .nt .acts .pill{padding:0 16px}
-.nt .del{margin-left:auto}
+.nt .del{margin-left:auto; padding:0 14px}
 .nt .del .ic{color:var(--danger)}
 .st-new{background:var(--red); color:var(--on-red)}
 .st-doing{background:var(--ember); color:var(--on-ember)}
@@ -53,13 +53,15 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
 var ic = A.ic, esc = A.esc, st = A.st;
 A.liveHash = true;
 var body = A.mount({section:"notes", title:"Бележки", eyebrow:"Работа по сайта",
-  sub:"Моливът записва какво да се промени, на кой екран и върху кой елемент. Следващата сесия на Claude ги чете и ги изпълнява.",
+  sub:"Моливът записва какво да се промени, на кой екран и върху кой елемент. Следващата сесия на Claude чете новите и ги изпълнява. „Изтегли NOTES.json“ дава само новите, без примерните.",
   actions:'<button class="pill pill-line" type="button" data-dl>' + ic("export",20) + 'Изтегли NOTES.json</button>',
   states:[["","Обичайно"],["loading","Зареждане"],["empty","Празно"],["error","Грешка"],["offline","Без връзка"]]});
 if (!body) return;
@@ -77,10 +79,10 @@ body.innerHTML =
   '<div class="nt-bar"><div class="sa-tabs" role="tablist" aria-label="Статус" data-tabs></div>' +
     '<div class="flt"><div><label class="vh" for="nt-m">Модул</label><select class="input" id="nt-m" data-mod></select></div>' +
     '<div class="sa-field-s"><label class="vh" for="nt-q">Търси в бележките</label>' + ic("magnifying-glass",20) + '<input class="input" id="nt-q" type="search" placeholder="Търси в бележките" autocomplete="off"></div></div></div>' +
-  '<div data-list aria-live="polite"></div>';
+  '<div data-list id="nt-list" role="tabpanel" aria-live="polite"></div>';
 var tabs = body.querySelector("[data-tabs]"), list = body.querySelector("[data-list]"), msel = body.querySelector("[data-mod]"), q = body.querySelector("#nt-q");
 
-function drawTabs(){ tabs.innerHTML = STS.map(function(s){ return '<button type="button" role="tab" data-tab="' + s[0] + '" aria-selected="' + (f.s === s[0]) + '">' + s[1] + '<span class="c">' + cnt(s[0]) + '</span></button>'; }).join(""); }
+function drawTabs(){ tabs.innerHTML = STS.map(function(s){ return '<button type="button" role="tab" data-tab="' + s[0] + '" aria-selected="' + (f.s === s[0]) + '" tabindex="' + (f.s === s[0] ? 0 : -1) + '" aria-controls="nt-list">' + s[1] + '<span class="c">' + cnt(s[0]) + '</span></button>'; }).join(""); }
 function drawMods(){ var have = {}; all().forEach(function(n){ have[n.module] = (have[n.module] || 0) + 1; });
   msel.innerHTML = '<option value="">Всички модули</option>' + Object.keys(A.MODULE_NAMES).filter(function(k){ return have[k]; }).map(function(k){ return '<option value="' + k + '"' + (f.m === k ? ' selected' : '') + '>' + esc(A.MODULE_NAMES[k]) + ' (' + have[k] + ')</option>'; }).join(""); }
 function pageName(n){ var s = A.screenOf(n.url); return s ? s.s.n : n.url.split("/").pop().split("#")[0]; }
@@ -89,14 +91,14 @@ function card(n){ var s = STS.filter(function(x){ return x[0] === n.status; })[0
     : n.status === "doing" ? '<button class="pill pill-ink" type="button" data-act="done">' + ic("check",18) + 'Готово</button><button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>'
     : '<button class="pill pill-soft" type="button" data-act="new">' + ic("arrow-counter-clockwise",18) + 'Върни в нови</button>';
   return '<article class="nt" data-id="' + n.id + '" data-edit-id="admin.notes.card">' +
-    '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + s[2] + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span><span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
+    '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + s[2] + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span>' + (A.notes.isSample(n) ? '<span class="sa-tag sample">Примерна</span>' : '') + '<span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
     '<h3>' + esc(n.text) + '</h3>' +
     '<div class="where"><b>' + esc(A.MODULE_NAMES[n.module] || n.module) + ' · ' + esc(pageName(n)) + '</b><span>' + esc(n.url) + '</span></div>' +
     '<div class="sel" title="CSS селектор">' + esc(n.selector || "без селектор") + (n.editId ? '<br>data-edit-id: ' + esc(n.editId) : '') + '</div>' +
     (n.elementText ? '<blockquote><small>Текстът на елемента</small>„' + esc(n.elementText.length > 220 ? n.elementText.slice(0, 218) + " …" : n.elementText) + '“</blockquote>' : '') +
     '<div class="nt-foot"><div class="by"><span>' + ic("squares-four",18) + '<span class="num">' + n.viewport.w + ' × ' + n.viewport.h + '</span></span><span>' + ic("user",18) + esc(n.author) + '</span>' + (n.updatedAt !== n.createdAt ? '<span>' + ic("clock",18) + 'Променена ' + esc(A.ago(n.updatedAt)) + '</span>' : '') + '</div>' +
-    '<div class="acts">' + acts + '<a class="pill pill-line" href="preview.html#n=' + n.id + '">' + ic("eye",18) + 'Покажи на страницата</a></div>' +
-    '<button class="pill pill-line del" type="button" data-act="del">' + ic("trash",18) + 'Изтрий</button></div></article>'; }
+    '<div class="acts">' + acts + '<a class="pill pill-line" href="preview.html#n=' + n.id + '">' + ic("eye",18) + 'Покажи на страницата</a>' +
+    '<button class="pill pill-soft del" type="button" data-act="del">' + ic("trash",18) + 'Изтрий</button></div></div></article>'; }
 function draw(){ drawTabs();
   if (st === "loading"){ list.innerHTML = A.skel(3, "Зареждаме бележките …"); return; }
   if (st === "error"){ list.innerHTML = A.error("Не успяхме да заредим бележките. Моливът записва и без това."); return; }
@@ -114,14 +116,15 @@ tabs.addEventListener("keydown", function(e){ if (e.key !== "ArrowRight" && e.ke
 msel.addEventListener("change", function(){ f.m = msel.value; refresh(); });
 q.addEventListener("input", function(){ f.q = q.value.trim(); draw(); });
 var WORD = {doing:"Бележката е в работа", done:"Бележката е готова", new:"Бележката е върната в нови"};
-list.addEventListener("click", function(e){ var b = e.target.closest("[data-act]"); if (!b) return; var c = b.closest("[data-id]"), id = c.dataset.id, a = b.dataset.act;
-  if (st === "offline"){ A.toast("Няма връзка. Промяната ще се изпрати, щом връзката се върне."); }
+list.addEventListener("click", function(e){ var b = e.target.closest("[data-act]"); if (!b) return; var c = b.closest("[data-id]"), id = c.dataset.id, a = b.dataset.act, off = st === "offline" ? ". Ще се изпрати, щом връзката се върне." : "";
   if (a === "del"){ c.classList.add("gone"); setTimeout(function(){ var r = A.notes.remove(id); if (!r) return; A.audit("note.delete", "Изтрита бележка: " + r.note.text.slice(0, 80), id); refresh();
-      A.toast("Бележката е изтрита", {undo:function(){ A.notes.restore(r); A.audit("note.restore", "Върната бележка: " + r.note.text.slice(0, 80), id); refresh(); }}); }, 180); return; }
-  c.classList.add("gone"); setTimeout(function(){ var was = A.notes.status(id, a); A.audit("note.status", WORD[a] + ": " + (A.notes.list().filter(function(n){ return n.id === id; })[0] || {}).text, id); refresh();
-    A.toast(WORD[a], {undo:function(){ A.notes.status(id, was); refresh(); }}); }, 180); });
+      A.toast("Бележката е изтрита" + off, {undo:function(){ A.notes.restore(r); A.audit("note.restore", "Върната бележка: " + r.note.text.slice(0, 80), id); refresh(); }}); }, 180); return; }
+  var n0 = A.notes.list().filter(function(n){ return n.id === id; })[0], was = n0.status, upd = n0.updatedAt;
+  c.classList.add("gone"); setTimeout(function(){ A.notes.status(id, a); A.audit("note.status", WORD[a] + ": " + n0.text.slice(0, 80), id); refresh();
+    A.toast(WORD[a] + off, {undo:function(){ A.notes.revert(id, was, upd); A.audit("note.status", "Върнат статус „" + ({new:"Нова", doing:"В работа", done:"Готово"})[was] + "“: " + n0.text.slice(0, 80), id); refresh(); }}); }, 180); });
 body.closest("main").addEventListener("click", function(e){ if (!e.target.closest("[data-dl]")) return;
-  var data = A.notes.list(); A.download("NOTES.json", JSON.stringify(data, null, 2)); A.toast("Изтеглихме NOTES.json · " + A.plural(data.length, "бележка", "бележки")); });
+  var data = A.notes.exportNew(); if (!data.length){ A.toast("Няма нови бележки за изтегляне. Примерните не влизат."); return; }
+  A.download("NOTES.json", JSON.stringify(data, null, 2)); A.toast("Изтеглихме NOTES.json · " + A.plural(data.length, "нова бележка", "нови бележки")); });
 /* notes written by the pencil on this page show up at once */
 window.addEventListener("storage", function(e){ if (e.key === "sa-notes") refresh(); });
 setInterval(function(){ var n = A.notes.list().length; if (n !== refresh.n){ refresh.n = n; drawMods(); draw(); A.setBadge("notes", A.notes.count("new")); } }, 1000); refresh.n = A.notes.list().length;

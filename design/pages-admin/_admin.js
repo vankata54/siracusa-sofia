@@ -37,22 +37,38 @@ A.setHash = function(obj, replace){ var h = Object.keys(obj).filter(function(k){
 /* страниците, които сами следят #, слагат A.liveHash = true; иначе смяна на # презарежда (като в другите модули) */
 window.addEventListener("hashchange", function(){ if (!A.liveHash) location.reload(); });
 
-/* ---------- time & formats (София) ---------- */
+/* ---------- time & formats (София). Часът на прототипа: A.now() ---------- */
 A.DAYS = ["нд","пн","вт","ср","чт","пт","сб"];
-A.sofia = function(d){ d = d || new Date();
+function sofiaParts(d){
   try{ var f = new Intl.DateTimeFormat("en-GB", {timeZone:"Europe/Sofia", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", weekday:"short", hour12:false}).formatToParts(d), o = {};
     f.forEach(function(p){ o[p.type] = p.value; });
     return {y:+o.year, mo:+o.month - 1, d:+o.day, h:+o.hour % 24, m:+o.minute, dow:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday)}; }
-  catch(e){ return {y:d.getFullYear(), mo:d.getMonth(), d:d.getDate(), h:d.getHours(), m:d.getMinutes(), dow:d.getDay()}; } };
-A.todayKey = function(){ var s = A.sofia(); return s.y + "-" + String(s.mo + 1).padStart(2, "0") + "-" + String(s.d).padStart(2, "0"); };
+  catch(e){ return {y:d.getFullYear(), mo:d.getMonth(), d:d.getDate(), h:d.getHours(), m:d.getMinutes(), dow:d.getDay()}; } }
+/* A.now(): истинската дата в София, но в часа на прототипа (по подразбиране 19:42, вечерен пик като в кухнята).
+   Сменя се от панела „Само в прототипа“ (12:30 · 19:42 · 21:30 · 23:30) и стои в sa-prefs.time. Часовникът тече от зареждането. */
+A.TIMES = ["12:30","19:42","21:30","23:30"];
+var _pref0 = get("prefs", {});
+A.protoTime = A.TIMES.indexOf(_pref0.time) > -1 ? _pref0.time : "19:42";
+var OFFSET = (function(){ var r = sofiaParts(new Date()), t = A.protoTime.split(":"); return ((+t[0]) * 60 + (+t[1]) - (r.h * 60 + r.m)) * 60000 - new Date().getSeconds() * 1000; })();
+A.now = function(){ return new Date(Date.now() + OFFSET); };
+A.sofia = function(d){ return sofiaParts(d || A.now()); };
+A.todayKey = function(d){ var s = A.sofia(d); return s.y + "-" + String(s.mo + 1).padStart(2, "0") + "-" + String(s.d).padStart(2, "0"); };
+A.minutes = function(){ var s = A.sofia(); return s.h * 60 + s.m; };
 A.hm = function(d){ var s = A.sofia(d instanceof Date ? d : new Date(d)); return String(s.h).padStart(2, "0") + ":" + String(s.m).padStart(2, "0"); };
 /* „сб, 28 ноември“; short: „сб, 28 ное“ */
 A.fmtDate = function(d, short){ var s = A.sofia(d instanceof Date ? d : new Date(d)); return A.DAYS[s.dow] + ", " + s.d + " " + (short ? SC.MON[s.mo] : SC.MONTHS[s.mo]); };
-/* кога: „преди 5 мин“, „днес в 19:02“, „вчера в 18:40“, „сб, 7 ноември в 12:10“ */
-A.ago = function(iso){ var d = new Date(iso), diff = (Date.now() - d.getTime()) / 60000;
-  if (diff < 1) return "току-що"; if (diff < 60) return "преди " + Math.round(diff) + " мин";
-  var a = A.sofia(d), b = A.sofia(), dayA = Date.UTC(a.y, a.mo, a.d), dayB = Date.UTC(b.y, b.mo, b.d), dd = Math.round((dayB - dayA) / 864e5);
-  if (dd === 0) return "днес в " + A.hm(d); if (dd === 1) return "вчера в " + A.hm(d); return A.fmtDate(d) + " в " + A.hm(d); };
+/* кога: „току-що“, „преди 5 мин“, „преди 1 ч. 40 мин“ (до 24 ч.), „вчера в 18:40“, „сб, 7 ноември в 12:10“ */
+A.ago = function(iso){ var d = new Date(iso), diff = Math.round((A.now().getTime() - d.getTime()) / 60000);
+  if (diff < 1) return "току-що"; if (diff < 60) return "преди " + diff + " мин";
+  if (diff < 1440){ var h = Math.floor(diff / 60), m = diff % 60; return "преди " + h + " ч." + (m ? " " + m + " мин" : ""); }
+  var a = A.sofia(d), b = A.sofia(), dd = Math.round((Date.UTC(b.y, b.mo, b.d) - Date.UTC(a.y, a.mo, a.d)) / 864e5);
+  if (dd === 1) return "вчера в " + A.hm(d); return A.fmtDate(d) + " в " + A.hm(d); };
+/* статусът на ресторанта по часа на прототипа (същите граници като SC.status): [клас, HTML] */
+A.status = function(){ var m = A.minutes();
+  if (m < 600) return ["", "<b>Затворено</b> · отваряме в 10:00"]; if (m >= 1380) return ["", "<b>Затворено</b> · отваряме утре в 10:00"];
+  if (m < 1260) return ["ok", "<b>Отворено до 23:00</b> · Доставка до 21:00"]; if (m < 1350) return ["warn", "<b>Доставката приключи за днес</b> · Вземане до 22:30"];
+  return ["warn", "<b>Кухнята затвори</b> · Отворено до 23:00"]; };
+A.setProtoTime = function(t){ var p = get("prefs", {}); p.time = t; set("prefs", p); del("orders"); del("reservations"); };
 A.plural = SC.plural;
 
 /* ---------- sections (имената са от src/core/staff.ts, SECTIONS) ---------- */
@@ -99,8 +115,8 @@ var ALL = ["dashboard","notes","menu","lunch","zones","offers","events","reserva
 A.ALL = ALL.concat(["settings"]);
 A.DEFAULT_ROLES = [
   {id:"admin", n:"Главен админ", desc:"Всичко; прави директни промени по сайта. Агенцията, която държи и ролята Маркетинг.", sections:A.ALL.slice()},
-  {id:"owner", n:"Собственик", desc:"Всичко, включително финанси, гориво и отчети.", sections:A.ALL.filter(function(s){ return s !== "roles"; })},
-  {id:"manager", n:"Управител", desc:"Почти всичко като собственика: меню, цени, промоции, събития, резервации, персонал, отчети.", sections:A.ALL.filter(function(s){ return ["roles","finance","audit"].indexOf(s) < 0; })},
+  {id:"owner", n:"Собственик", desc:"Всичко, включително финанси, гориво и отчети.", sections:A.ALL.filter(function(s){ return ["roles","notes"].indexOf(s) < 0; })},
+  {id:"manager", n:"Управител", desc:"Почти всичко като собственика: меню, цени, промоции, събития, резервации, персонал, отчети.", sections:A.ALL.filter(function(s){ return ["roles","finance","audit","notes"].indexOf(s) < 0; })},
   {id:"waiter", n:"Сервитьор", desc:"Повиквания, статус на масите, въвеждане на поръчки, потвърждаване на QR поръчки, сметки.", sections:["dashboard","waiter","orders","reservations","site"]},
   {id:"kitchen", n:"Кухня", desc:"Кухненски екран на своята секция с опашката от поръчки.", sections:["dashboard","kitchen"]},
   {id:"driver", n:"Шофьор", desc:"Своите доставки, навигация, статуси, зареждане с гориво, избор на автомобил.", sections:["dashboard","driver"]},
@@ -130,7 +146,7 @@ A.can = function(section, role){ role = role || (A.me && A.me.role); if (!role) 
 
 /* ---------- audit (дневник) ---------- */
 /* A.audit("menu.price", "Цена на „Кебапчета“: 3,50 € → 3,80 €", "kebapcheta") ; ключовете като в ядрото: staff.login, role.update, note.status ... */
-A.audit = function(action, text, target){ var e = {id:Math.random().toString(36).slice(2, 10), at:new Date().toISOString(), who:A.me ? A.me.name : "?", role:A.me ? A.me.role : "", action:action, text:text || action, target:target || null};
+A.audit = function(action, text, target){ var e = {id:Math.random().toString(36).slice(2, 10), at:A.now().toISOString(), who:A.me ? A.me.name : "?", role:A.me ? A.me.role : "", action:action, text:text || action, target:target || null};
   A.data.update("audit", [], function(l){ l.unshift(e); if (l.length > 500) l.length = 500; }); return e; };
 
 /* ---------- prefs (тема, свита лента) ---------- */
@@ -146,17 +162,23 @@ A.notes = {
   list:function(){ return get("notes", A.SEED_NOTES()); },
   save:function(l){ set("notes", l); },
   add:function(n){ var l = A.notes.list(); l.unshift(n); A.notes.save(l); return n; },
-  status:function(id, st){ var l = A.notes.list(), n = l.filter(function(x){ return x.id === id; })[0]; if (!n) return null; var was = n.status; n.status = st; n.updatedAt = new Date().toISOString(); A.notes.save(l); return was; },
+  status:function(id, st){ var l = A.notes.list(), n = l.filter(function(x){ return x.id === id; })[0]; if (!n) return null; var was = n.status; n.status = st; n.updatedAt = A.now().toISOString(); A.notes.save(l); return was; },
+  /* „Отмени“: връща статуса и времето отпреди промяната */
+  revert:function(id, st, upd){ var l = A.notes.list(), n = l.filter(function(x){ return x.id === id; })[0]; if (!n) return; n.status = st; n.updatedAt = upd; A.notes.save(l); },
+  isSample:function(n){ return A.SAMPLE_NOTE_IDS.indexOf(n.id) > -1; },
+  /* износът (като GET /api/admin/notes?status=new): само нови, без примерните, най-новата първа */
+  exportNew:function(){ return A.notes.list().filter(function(n){ return n.status === "new" && !A.notes.isSample(n); }).sort(function(a, b){ return a.createdAt < b.createdAt ? 1 : -1; }); },
   remove:function(id){ var l = A.notes.list(), i = -1; l.forEach(function(x, j){ if (x.id === id) i = j; }); if (i < 0) return null; var g = l.splice(i, 1)[0]; A.notes.save(l); return {note:g, index:i}; },
   restore:function(r){ var l = A.notes.list(); l.splice(Math.min(r.index, l.length), 0, r.note); A.notes.save(l); },
   count:function(st){ return A.notes.list().filter(function(n){ return !st || n.status === st; }).length; }
 };
 /* примерни бележки (автор „Примерна бележка“), за да се виждат картите; „Върни данните в начало“ ги връща */
-A.SEED_NOTES = function(){ var t = Date.now(), iso = function(min){ return new Date(t - min * 60000).toISOString(); };
+A.SAMPLE_NOTE_IDS = ["n7k2q9a1","n3m8x2b4","n5c1v7d3","n9p4r6e8","n2h6t1f5"];
+A.SEED_NOTES = function(){ var t = A.now().getTime(), iso = function(min){ return new Date(t - min * 60000).toISOString(); };
   function N(id, mod, url, sel, txt, el, w, h, st, min, upd){ return {id:id, module:mod, url:url, selector:sel, editId:null, text:txt, elementText:el, viewport:{w:w, h:h}, screenshot:null, author:"Примерна бележка", status:st, createdAt:iso(min), updatedAt:iso(upd == null ? min : upd)}; }
   return [
     N("n7k2q9a1","site","/pages/home.html","#hero-h","Заглавието да е на два реда на телефон.","Пица на пещ и скара на дървени въглища",390,844,"new",12),
-    N("n3m8x2b4","kitchen","/pages-kuhnya/queue.html#s=skara","button[aria-label=\"Готово, Маса 12. Задръжте 1 секунда\"]","Бутонът „Готово“ да е по-високо, до таймера.","Готово задръжте 1 сек.",1280,800,"new",48),
+    N("n3m8x2b4","kitchen","/pages-kuhnya/queue.html#s=skara","button[aria-label=\"Готово, Маса 12. Задръжте 1 секунда\"]","Бутонът „Готово“ да е по-високо, до таймера.","Готово задръжте 1 сек.",1180,820,"new",48),
     N("n5c1v7d3","admin","/pages-admin/dashboard.html","a.kpi:nth-of-type(4)","Броят на изчерпаните да води направо към менюто с филтър.","Изчерпани днес 1 Плескавица",1440,900,"new",95),
     N("n9p4r6e8","waiter","/pages-servitor/tables.html","div.tt > b","Заглавието на екрана да е по-голямо.","Залата",390,844,"doing",60*26,60*3),
     N("n2h6t1f5","site","/pages/menu.html","#mh1","Под заглавието да има ред с часовете на кухнята.","Меню",1440,900,"done",60*50,60*30)
@@ -234,6 +256,7 @@ A.toast = function(text, o){ o = o || {}; var col = A.col || document.body, t = 
   t.innerHTML = '<span class="tx">' + esc(text) + '</span>' + (o.action ? (o.action.href ? '<a href="' + esc(o.action.href) + '">' + esc(o.action.label) + ic("caret-right", 18) + '</a>' : '<button type="button" data-ta>' + esc(o.action.label) + '</button>') : '') + (o.undo ? '<button type="button" data-tu>' + ic("arrow-counter-clockwise", 18) + esc(o.undoLabel || "Отмени") + '</button>' : '');
   var u = t.querySelector("[data-tu]"); if (u) u.onclick = function(){ t.classList.remove("on"); o.undo(); };
   var a = t.querySelector("[data-ta]"); if (a) a.onclick = function(){ t.classList.remove("on"); o.action.fn(); };
+  t.classList.toggle("up", !!document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on"));
   requestAnimationFrame(function(){ t.classList.add("on"); }); clearTimeout(toastT);
   toastT = setTimeout(function(){ t.classList.remove("on"); }, o.ms || (o.undo ? 6000 : 3200)); };
 
@@ -249,7 +272,7 @@ A.sheet = function(o){ var ov = A.ov || document.body, w = document.createElemen
   var closed = false;
   function close(){ if (closed) return; closed = true; if (document.querySelectorAll(".sa-ov .sheetwrap.on").length <= 1){ bg.forEach(function(el){ el.inert = false; }); penHost && penHost.removeAttribute("data-sheet"); } w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 340); o.onClose && o.onClose(); prev && prev.focus && prev.focus({preventScroll:true}); }
   w.querySelector(".scrim").onclick = close; w.querySelector("[data-close]").onclick = close;
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){ w.classList.add("on"); var f = o.focus ? w.querySelector(o.focus) : w.querySelector("[data-close]"); f && f.focus({preventScroll:true}); }); });
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ w.classList.add("on"); var f = o.focus ? w.querySelector(o.focus) : w.querySelector(".sheet-h h2"); if (f && !o.focus) f.setAttribute("tabindex", "-1"); f && f.focus({preventScroll:true}); }); });
   return {el:w, body:w.querySelector(".body"), foot:w.querySelector(".sa-sfoot"), close:close}; };
 /* A.confirm({title, text, ok:"Изтрий", danger:true}, onOk) */
 A.confirm = function(o, onOk){ var s = A.sheet({title:o.title, html:'<p style="margin:0 0 8px">' + (o.text || "") + '</p>',
@@ -268,16 +291,41 @@ A.searchSections = function(q){ var n = norm(q); if (!n) return []; return A.vis
   .sort(function(a, b){ return (norm(b.n).indexOf(n) === 0) - (norm(a.n).indexOf(n) === 0); }); };
 
 /* ---------- badges in the bars ---------- */
+/* ---------- общите данни (един източник за таблото, значките и разделите) ---------- */
+/* Примерните данни идват от _seed-orders.js и _seed-res.js (A.seed.*), заредени след _admin.js. Рамката работи и без тях. */
+function seeded(key, fn){ if (get(key, null) == null && A.seed && typeof A.seed[fn] === "function"){ try{ A.seed[fn](); }catch(e){} } return get(key, null); }
+function listOf(d){ return Array.isArray(d) ? d : d && (d.list || d.items || d.orders || d.reservations) || []; }
+A.FIN = ["delivered","picked_up","served"];
+A.orders = function(){ return listOf(seeded("orders", "orders")); };
+A.ordersInWork = function(){ return A.orders().filter(function(o){ return A.FIN.indexOf(o.status) < 0 && o.status !== "cancelled"; }); };
+A.reservations = function(){ return listOf(seeded("reservations", "reservations")); };
+/* резервации днес, без отказаните и чакащите (като в reservations.html) */
+A.reservationsToday = function(){ var t = A.todayKey(); return A.reservations().filter(function(r){ return r.date === t && ["cancelled","waitlist"].indexOf(r.status) < 0; }); };
+A.settings = function(){ var s = seeded("settings", "settings") || {}; s.kitchen = Object.assign({busy:false, etaMin:35, etaBusyMin:55}, s.kitchen || {}); return s; };
+/* „Изчерпано днес“ по едно правило (като menu.html): sa-soldout {date, ids, back}; back = изчерпано в данните, върнато за днес */
+A.soldOutToday = function(){ var d = get("soldout", null); if (!d || d.date !== A.todayKey()) d = {ids:[], back:[]}; var back = d.back || [], out = (d.ids || []).slice();
+  SC.items.concat(SC.lunch || []).forEach(function(x){ if (SC.isOut(x) && back.indexOf(x.id) < 0 && out.indexOf(x.id) < 0) out.push(x.id); });
+  return out.filter(function(id){ return !!SC.byId[id]; }); };
+A.tables = function(){ var d = get("tables", null); return d && d.tables ? d.tables : SC.TABLES; };
+
 A.badges = {};
+/* броят на всеки раздел, сметнат на всяка страница от общите ключове */
+A.computeBadges = function(){ var b = A.badges;
+  b.notes = A.notes.count("new");
+  b.orders = A.orders().filter(function(o){ return o.status === "accepted"; }).length;
+  b.customers = listOf(get("feedback", [])).filter(function(f){ return f.status === "new"; }).length;
+  b.offers = listOf(get("feedback-iq", [])).filter(function(q){ return q.st === "new" || q.status === "new"; }).length;
+  b.reservations = A.reservations().filter(function(r){ return r.date === A.todayKey() && r.status === "new"; }).length;
+  return b; };
 A.setBadge = function(id, n){ A.badges[id] = n; document.querySelectorAll('[data-badge="' + id + '"]').forEach(function(el){ el.textContent = n; el.hidden = !n; }); };
 function badge(id){ var n = A.badges[id]; return '<span class="sa-n" data-badge="' + id + '"' + (n ? '' : ' hidden') + ' aria-hidden="true">' + (n || 0) + '</span>'; }
 
 /* ---------- chrome ---------- */
 function sideHTML(cur){
-  return '<a class="sa-brand" href="dashboard.html" aria-label="Siracusa · Админ, към таблото"><span class="sa-mono" aria-hidden="true">S</span><span class="word">Siracusa</span><span class="sa-btag">Админ</span></a>' +
+  return '<a class="sa-brand" href="dashboard.html" aria-label="Siracusa · Админ, към таблото"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></a>' +
     '<nav class="sa-nav" aria-label="Раздели">' + A.GROUPS.map(function(g){ var items = g[1].filter(function(id){ return A.can(id); }); if (!items.length) return "";
       return '<div class="sa-g"><h2>' + esc(g[0]) + '</h2>' + items.map(function(id){ var s = A.SEC[id];
-        var inner = ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + '</span><span class="sh">' + esc(s.short) + '</span>' + (s.soon ? '<span class="soon">Скоро</span>' : badge(id));
+        var inner = ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + '</span><span class="sh">' + esc(s.short) + '</span>' + (s.soon ? '<span class="soon sa-tag soon">' + ic("sparkle", 14) + 'Скоро</span>' : badge(id));
         if (s.soon) return '<button class="sa-i" type="button" data-sa="soon" data-id="' + id + '" title="' + esc(s.n) + ': скоро">' + inner + '</button>';
         return '<a class="sa-i" href="' + s.href + '"' + (cur === id ? ' aria-current="page"' : '') + ' title="' + esc(s.n) + '">' + inner + '</a>'; }).join("") + '</div>'; }).join("") +
       (A.APPS.some(function(id){ return A.can(id) && A.me.role !== "admin" && A.me.role !== "owner" && A.me.role !== "manager"; }) ? '<div class="sa-g"><h2>Приложение</h2>' + A.APPS.filter(function(id){ return A.can(id); }).map(function(id){ var s = A.SEC[id];
@@ -288,19 +336,20 @@ function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = TH
     '<div class="sa-crumb"><small class="sa-only-td">' + esc(o.crumb || g || "Админ") + '</small><b>' + esc(o.barTitle || (s && s.n) || o.title || "") + '</b></div>' +
     '<div class="sa-search sa-only-d" role="search"><label class="vh" for="sa-q">Търси раздел</label>' + ic("magnifying-glass", 20) + '<input id="sa-q" type="search" placeholder="Търси раздел" autocomplete="off" aria-controls="sa-sres" aria-expanded="false"><span class="k" aria-hidden="true">/</span><div class="sa-sres" id="sa-sres" role="listbox" hidden></div></div>' +
     '<button class="sa-tb sa-only-t" type="button" data-sa="sections">' + ic("magnifying-glass", 20) + 'Търси</button>' +
-    (pen ? '<button class="sa-tb sa-only-td" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + 'Молив</button>' : '') +
-    '<button class="sa-tb sa-only-d" type="button" data-sa="theme" aria-label="Тема: ' + th[1] + '. Смени">' + ic(th[2], 20) + th[1] + '</button>' +
-    '<button class="sa-tb sa-only-p" type="button" data-sa="sections">' + ic("list", 22) + 'Раздели</button>' +
+    (pen ? '<button class="sa-tb" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + 'Молив</button>' : '') +
+    '<button class="sa-tb sa-only-d" type="button" data-sa="theme" aria-label="Тема: ' + th[1] + '. Смени">' + ic(th[2], 20) + 'Тема: ' + th[1] + '</button>' +
+    (pen ? '' : '<button class="sa-tb sa-only-p" type="button" data-sa="sections">' + ic("list", 22) + 'Раздели</button>') +
     '<button class="sa-me" type="button" data-sa="profile" aria-label="Профил: ' + esc(A.me.name) + ', ' + esc(A.roleName(A.me.role)) + '"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><span class="who sa-only-d"><b>' + esc(A.me.name) + '</b><small>' + esc(A.roleName(A.me.role)) + '</small></span></button>' +
     '<button class="sa-tb sa-only-d" type="button" data-sa="logout">' + ic("sign-out", 20) + 'Изход</button>' +
   '</header>'; }
 function bnavHTML(cur){ var items = [["dashboard","Табло","squares-four","dashboard.html"],["orders","Поръчки","receipt","orders.html"],["notes","Бележки","pencil-simple","notes.html"]].filter(function(x){ return A.can(x[0]); });
-  return '<nav class="sa-bnav" aria-label="Основни раздели">' + items.map(function(x){ return '<a href="' + x[3] + '"' + (cur === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[2], 24) + x[1] + (x[0] === "notes" ? badge("notes") : '') + '</a>'; }).join("") +
+  return '<nav class="sa-bnav" aria-label="Основни раздели">' + items.map(function(x){ return '<a href="' + x[3] + '"' + (cur === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[2], 24) + x[1] + badge(x[0]) + '</a>'; }).join("") +
     '<button type="button" data-sa="sections"' + (["dashboard","orders","notes"].indexOf(cur) < 0 ? ' aria-current="page"' : '') + '>' + ic("list", 24) + 'Раздели</button></nav>'; }
 function protoHTML(o){ var role = A.me ? A.me.role : "";
   return '<section class="sa-proto" aria-label="Само в прототипа" data-edit-id="admin.proto"><h2>' + ic("sliders-horizontal", 20) + 'Само в прототипа</h2>' +
     (o.states && o.states.length ? '<p>Състояние на екрана:</p><div class="row">' + o.states.map(function(s){ var h = Object.assign({}, A.hash, {st:s[0]});
       return '<a class="chip" href="#' + Object.keys(h).filter(function(k){ return h[k]; }).map(function(k){ return k + "=" + encodeURIComponent(h[k]); }).join("&") + '" data-sa="state" aria-pressed="' + (A.st === s[0]) + '" style="text-decoration:none">' + esc(s[1]) + '</a>'; }).join("") + '</div>' : '') +
+    '<p>Час на прототипа (днешната дата; смяната пресъздава примерните поръчки и резервации):</p><div class="row">' + A.TIMES.map(function(t){ return '<button class="chip" type="button" data-sa="ptime" data-v="' + t + '" aria-pressed="' + (A.protoTime === t) + '">' + t + '</button>'; }).join("") + '</div>' +
     '<p>Виж като (сменя ролята на влезлия, за да се види какво вижда всяка роля):</p><div class="row">' + A.DEFAULT_ROLES.map(function(r){ return '<button class="chip" type="button" data-sa="viewas" data-v="' + r.id + '" aria-pressed="' + (role === r.id) + '">' + esc(r.n) + '</button>'; }).join("") + '</div>' +
     '<p>Пробни акаунти: <code>admin</code>, <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code>, <code>marketing</code>, всички с парола <code>' + A.PASSWORD + '</code>. Само в прототипа; истинските пароли са в <code>.env</code> и не са в git.</p>' +
     '<div class="row"><button class="chip" type="button" data-sa="reset">' + ic("arrow-counter-clockwise", 18) + 'Върни данните в начало</button><a class="chip" href="index.html" style="text-decoration:none">' + ic("list", 18) + 'Всички екрани</a></div>' +
@@ -311,7 +360,7 @@ function protoHTML(o){ var role = A.me ? A.me.role : "";
 A.mount = function(o){ o = o || {};
   if (!A.me && !o.public){ location.replace("login.html#next=" + encodeURIComponent(location.pathname.split("/").pop() + location.hash)); return null; }
   document.title = (o.docTitle || o.title || (A.SEC[o.section] && A.SEC[o.section].n) || "Админ") + " | Siracusa · Админ";
-  A.badges.notes = A.notes.count("new");
+  A.computeBadges();
   var app = document.createElement("div"); app.className = "sa-app" + (o.immersive ? " immersive" : ""); app.dataset.side = o.immersive ? "mini" : (A.prefs.side === "mini" ? "mini" : "open"); app.dataset.page = o.section || "";
   var allowed = !o.section || A.can(o.section);
   var s = A.SEC[o.section] || {};
@@ -321,9 +370,15 @@ A.mount = function(o){ o = o || {};
     bnavHTML(o.section) + '<div class="sa-ov"></div>';
   document.body.appendChild(app);
   A.app = app; A.side = app.querySelector(".sa-side"); A.col = app.querySelector(".sa-col"); A.scroller = app.querySelector(".sa-scroller"); A.ov = app.querySelector(".sa-ov"); A.bnav = app.querySelector(".sa-bnav");
-  bindSearch();
-  if (window.SAPen && A.can("notes") && o.pencil !== false && !A.inPreview) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:syncPen, fabBottom:o.fabBottom});
+  bindSearch(); watchTabs();
+  if (window.SAPen && A.can("notes") && o.pencil !== false && !A.inPreview) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:syncPen, fabPhone:false, barTop:[8, 88], now:A.now});
   return allowed ? app.querySelector("[data-body]") : null; };
+/* табовете, които не се събират: избледняване на ръба и избраният таб се вижда целият */
+function fadeTabs(){ document.querySelectorAll(".sa-tabs").forEach(function(t){ var max = t.scrollWidth - t.clientWidth; t.classList.toggle("fl", max > 2 && t.scrollLeft > 2); t.classList.toggle("fr", max > 2 && t.scrollLeft < max - 2);
+  if (!t._sa){ t._sa = 1; t.addEventListener("scroll", fadeTabs, {passive:true}); var cur = t.querySelector('[aria-selected="true"],[aria-pressed="true"],[aria-current="page"]'); if (cur && max > 2) t.scrollLeft = Math.max(0, cur.offsetLeft - t.offsetLeft - 24); } }); }
+A.fadeTabs = fadeTabs;
+function watchTabs(){ var q = 0; function run(){ if (q) return; q = requestAnimationFrame(function(){ q = 0; fadeTabs(); }); }
+  try{ new MutationObserver(run).observe(A.scroller, {childList:true, subtree:true}); }catch(e){} window.addEventListener("resize", run); run(); }
 function syncPen(on){ document.querySelectorAll('[data-sa="pen"]').forEach(function(b){ b.setAttribute("aria-pressed", String(!!on)); }); }
 A.syncPen = syncPen;
 A.refreshSide = function(){ if (A.side) A.side.innerHTML = sideHTML(A.app.dataset.page); };
@@ -366,13 +421,14 @@ document.addEventListener("click", function(e){ var t = e.target.closest("[data-
   if (a === "sections"){ openSections(); return; }
   if (a === "profile"){ openProfile(); return; }
   if (a === "logout"){ A.logout(); return; }
-  if (a === "theme"){ var i = THEMES.map(function(x){ return x[0]; }).indexOf(A.prefs.theme); A.prefs.theme = THEMES[(i + 1) % THEMES.length][0]; A.savePrefs(); A.applyTheme(); var th = THEMES[(i + 1) % THEMES.length]; t.innerHTML = ic(th[2], 20) + th[1]; t.setAttribute("aria-label", "Тема: " + th[1] + ". Смени"); A.onTheme && A.onTheme(); return; }
+  if (a === "theme"){ var i = THEMES.map(function(x){ return x[0]; }).indexOf(A.prefs.theme); A.prefs.theme = THEMES[(i + 1) % THEMES.length][0]; A.savePrefs(); A.applyTheme(); var th = THEMES[(i + 1) % THEMES.length]; t.innerHTML = ic(th[2], 20) + 'Тема: ' + th[1]; t.setAttribute("aria-label", "Тема: " + th[1] + ". Смени"); A.onTheme && A.onTheme(); return; }
   if (a === "settheme"){ A.prefs.theme = t.dataset.v; A.savePrefs(); A.applyTheme(); document.querySelectorAll('[data-sa="settheme"]').forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.v === A.prefs.theme)); });
-    var tb = A.app.querySelector('[data-sa="theme"]'), th2 = THEMES.filter(function(x){ return x[0] === A.prefs.theme; })[0]; if (tb){ tb.innerHTML = ic(th2[2], 20) + th2[1]; } A.onTheme && A.onTheme(); return; }
+    var tb = A.app.querySelector('[data-sa="theme"]'), th2 = THEMES.filter(function(x){ return x[0] === A.prefs.theme; })[0]; if (tb){ tb.innerHTML = ic(th2[2], 20) + 'Тема: ' + th2[1]; } A.onTheme && A.onTheme(); return; }
   if (a === "side"){ A.prefs.side = A.prefs.side === "mini" ? "open" : "mini"; A.savePrefs(); A.app.dataset.side = A.prefs.side; A.refreshSide(); return; }
   if (a === "pen"){ if (A.pen) A.pen.toggle(); return; }
   if (a === "soon"){ e.preventDefault(); soonSheet(t.dataset.id); return; }
   if (a === "viewas"){ A.viewAs(t.dataset.v); return; }
+  if (a === "ptime"){ A.setProtoTime(t.dataset.v); location.reload(); return; }
   if (a === "reset"){ A.data.reset(); A.toast("Данните са върнати в начало"); setTimeout(function(){ location.reload(); }, 700); return; }
   if (a === "state"){ e.preventDefault(); location.hash = t.getAttribute("href").slice(1); location.reload(); return; }
   if (a === "retry"){ t.disabled = true; var old = t.innerHTML; t.innerHTML = "Проверяваме …"; setTimeout(function(){ t.disabled = false; t.innerHTML = old; A.toast("Още няма връзка. Опитваме сами на всеки 10 сек."); }, 900); return; }

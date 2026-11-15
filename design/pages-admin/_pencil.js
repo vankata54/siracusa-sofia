@@ -33,9 +33,14 @@ function kindOf(el){ var t = el.tagName.toLowerCase(), r = el.getAttribute("role
   if (/(badge|chip|tag|pill)/.test(c)) return "Етикет";
   if (INLINE.test(t)) return "Текст";
   return "Блок"; }
+/* never the value of a field: the label of the field (and nothing at all for passwords, phones, e-mails) */
+function labelOf(el){ var doc = el.ownerDocument, l = null;
+  if (el.id){ try{ l = doc.querySelector('label[for="' + el.id.replace(/"/g, '\\"') + '"]'); }catch(e){} }
+  if (!l) l = el.closest("label");
+  var t = l ? clean(Array.prototype.filter.call(l.childNodes, function(n){ return !(n.nodeType === 1 && /^(INPUT|SELECT|TEXTAREA)$/.test(n.tagName)); }).map(function(n){ return n.textContent; }).join(" ")) : "";
+  return t || clean(el.getAttribute("aria-label") || el.getAttribute("placeholder") || el.getAttribute("title") || ""); }
 function textOf(el){ var t = el.tagName.toLowerCase();
-  if (t === "input" || t === "textarea") return clean(el.value || el.placeholder || el.getAttribute("aria-label") || "");
-  if (t === "select") return clean(el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : "");
+  if (t === "input" || t === "textarea" || t === "select") return labelOf(el);
   if (t === "img") return clean(el.alt || "");
   var s = clean(el.innerText || el.textContent || ""); return s || clean(el.getAttribute("aria-label") || el.getAttribute("title") || ""); }
 function describe(el){ var k = kindOf(el), t = textOf(el); if (t.length > 34) t = t.slice(0, 32).replace(/\s+\S*$/, "") + " …"; return k + (t ? " „" + t + "“" : ""); }
@@ -44,13 +49,16 @@ function describe(el){ var k = kindOf(el), t = textOf(el); if (t.length > 34) t 
 var STATE = /^(on|in|rv|rv-on|active|done|bump|open|away|mini|scrolled|warn|late|sel|cur|hover|focus|show|hide|hidden|is-.*|has-.*|js-.*)$/;
 function cssEsc(win, s){ return win.CSS && win.CSS.escape ? win.CSS.escape(s) : String(s).replace(/([^\w-])/g, "\\$1"); }
 function goodId(id){ return id && /^[A-Za-z][\w-]*$/.test(id) && !/\d{3,}/.test(id) && !/^(sh|sa)[a-z0-9]{5,6}$/.test(id); }
-function pieces(el, win){ var t = el.tagName.toLowerCase(), out = [];
+function pieces(el, win){ var t = el.tagName.toLowerCase(), out = [], late = [];
   if (goodId(el.id)) out.push("#" + cssEsc(win, el.id));
   ["data-edit-id","data-add","data-id","data-act","data-sa","data-k","name","for","aria-label","href","type"].forEach(function(a){ var v = el.getAttribute(a);
-    if (v && v.length <= 60 && !/^javascript:/i.test(v) && v !== "#") out.push(t + "[" + a + "=\"" + v.replace(/["\\]/g, "\\$&") + "\"]"); });
+    if (!v || v.length > 60 || /^javascript:/i.test(v) || v === "#") return;
+    var sel = t + "[" + a + "=\"" + v.replace(/["\\]/g, "\\$&") + "\"]";
+    /* aria-label and href with numbers follow live data (a timer, an order number): only as a last resort */
+    if ((a === "aria-label" || a === "href") && /\d/.test(v)) late.push(sel); else out.push(sel); });
   var cls = (typeof el.className === "string" ? el.className : "").split(/\s+/).filter(function(c){ return c && !STATE.test(c) && /^[A-Za-z_][\w-]*$/.test(c); }).slice(0, 2);
   if (cls.length) out.push(t + "." + cls.map(function(c){ return cssEsc(win, c); }).join("."));
-  out.push(t); return out; }
+  out.push(t); return out.concat(late); }
 function nth(el, base){ var p = el.parentElement; if (!p) return base; var same = Array.prototype.filter.call(p.children, function(c){ return c.tagName === el.tagName; });
   if (same.length < 2) return base; try{ if (Array.prototype.filter.call(p.children, function(c){ return c.matches(base); }).length < 2) return base; }catch(e){}
   return base + ":nth-of-type(" + (same.indexOf(el) + 1) + ")"; }
@@ -76,6 +84,10 @@ function resolve(el, win){ if (!el || el.nodeType !== 1) return null; var doc = 
   if (/^sa-pen-/i.test(el.tagName)) return null;
   var s = el.closest("svg"); if (s && s.parentElement) el = s.parentElement;
   var it = el.closest("a[href],button,label,input,select,textarea,summary,[role=button],[role=tab],[role=switch],[role=option]"); if (it) el = it;
+  /* decorative layers without text or role (veils, gradients): take the parent */
+  for (var k = 0; k < 3 && el.parentElement && el.parentElement !== doc.body; k++){
+    var deco = el.getAttribute("aria-hidden") === "true" || (!clean(el.textContent) && !el.getAttribute("role") && !/^(img|svg|input|select|textarea|button|a|video|canvas|picture|iframe)$/i.test(el.tagName) && !el.querySelector("img,svg,input,select,textarea,button"));
+    if (!deco) break; el = el.parentElement; }
   if (el === doc.documentElement || el === doc.body) return null;
   var r = el.getBoundingClientRect(), vw = win.innerWidth, vh = win.innerHeight;
   if (r.width * r.height > vw * vh * .8) return null; /* the whole screen is not a useful target */
@@ -91,14 +103,14 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '.fab[aria-pressed="true"]{background:var(--ember); color:var(--on-ember)} .fab[aria-pressed="true"] svg{color:var(--on-ember)}' +
   '@container pen (max-width:699px){ .fab{right:12px; bottom:var(--fab-bp, 96px)} :host([data-nofab-phone]) .fab{display:none} }' +
   ':host([data-sheet]) .fab{display:none}' + /* a sheet of the admin is open: the round button must not cover its buttons */
-  '.bar{position:absolute; top:10px; left:50%; transform:translate(-50%,-140%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; max-width:calc(100% - 24px); min-height:60px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transition:transform var(--t-slow, 320ms) var(--ease, ease), opacity var(--t-slow, 320ms) var(--ease, ease); font-size:16px; line-height:1.3}' +
+  '.bar{position:absolute; top:var(--bar-t, 10px); left:50%; transform:translate(-50%,-140%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; max-width:calc(100% - 24px); min-height:60px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ember); color:var(--on-ember); box-shadow:var(--shadow-lg); transition:transform var(--t-slow, 320ms) var(--ease, ease), opacity var(--t-slow, 320ms) var(--ease, ease); font-size:16px; line-height:1.3}' +
   '.bar.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}' +
   '.bar .t{min-width:0} .bar .t b{font-weight:800} .bar .t span{font-weight:600}' +
   '.bar .acts{display:flex; gap:6px; flex:none}' +
   '.bb{display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:color-mix(in srgb, var(--on-ember) 12%, transparent); color:var(--on-ember); font-weight:800; font-size:16px; white-space:nowrap}' +
   '.bb.main{background:var(--on-ember); color:var(--ember)}' +
   '.bb[hidden]{display:none}' +
-  '@container pen (max-width:899px){ .bar{left:8px; right:8px; max-width:none; transform:translateY(-140%); border-radius:26px; flex-wrap:wrap; padding:10px 8px 8px 16px} .bar.on{transform:none} .bar .t{flex:1 1 100%; padding-right:8px} .bar .acts{flex:1 1 100%; flex-wrap:wrap} .bar .acts .bb{flex:1 1 auto} }' +
+  '@container pen (max-width:899px){ .bar{top:var(--bar-tp, 8px); left:8px; right:8px; max-width:none; transform:translateY(-140%); border-radius:26px; flex-wrap:wrap; padding:10px 8px 8px 16px} .bar.on{transform:none} .bar .t{flex:1 1 100%; padding-right:8px} .bar .acts{flex:1 1 100%; flex-wrap:wrap} .bar .acts .bb{flex:1 1 auto} }' +
   '.sw{position:absolute; inset:0; pointer-events:none}' +
   '.sw .scrim{position:absolute; inset:0; width:100%; border:0; background:var(--scrim); opacity:0; transition:opacity var(--t-slow, 320ms) var(--ease, ease)}' +
   '.sw.on{pointer-events:auto} .sw.on .scrim{opacity:1}' +
@@ -134,7 +146,7 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '.toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}' +
   '.toast svg{color:var(--ok)}' +
   '.toast a{flex:none; min-height:44px; padding:0 16px; border-radius:999px; background:color-mix(in srgb, var(--bg) 18%, transparent); color:inherit; font-weight:800; text-decoration:none; display:inline-flex; align-items:center}' +
-  '@container pen (max-width:699px){ .toast{top:84px; bottom:auto; transform:translate(-50%,-180%)} .toast.on{transform:translate(-50%,0)} }' +
+  '@container pen (max-width:699px){ .toast{bottom:var(--toast-bp, 96px)} }' +
   '@media (prefers-reduced-motion: reduce){ *{transition-duration:1ms !important} }';
 var LAYER_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z-index:' + (ZTOP - 1) + '}' +
   '.box{position:absolute; left:0; top:0; width:0; height:0; border:2px solid var(--red); border-radius:8px; background:color-mix(in srgb, var(--red) 7%, transparent); box-shadow:0 0 0 4px color-mix(in srgb, var(--red) 16%, transparent); opacity:0; transition:opacity 120ms ease}' +
@@ -174,10 +186,12 @@ SAPen.selectorFor = selectorFor; SAPen.describe = describe;
 
 /* ---------- mount ---------- */
 SAPen.mount = function(o){ o = o || {};
-  var ui = window, udoc = document, on = false, sheetOpen = false, lastType = "mouse", cand = null, stack = [], saved = 0, tw = null;
+  var ui = window, udoc = document, backTo = null, on = false, sheetOpen = false, lastType = "mouse", cand = null, stack = [], saved = 0, tw = null;
   var getTarget = o.target || function(){ return window; };
   var host = udoc.createElement("sa-pen-ui"), root = host.attachShadow({mode:"open"});
   if (o.fabPhone === false) host.setAttribute("data-nofab-phone", "");
+  if (o.barTop){ host.style.setProperty("--bar-tp", o.barTop[0] + "px"); host.style.setProperty("--bar-t", o.barTop[1] + "px"); }
+  if (o.toastBottom) host.style.setProperty("--toast-bp", o.toastBottom + "px");
   if (o.fabBottom){ host.style.setProperty("--fab-bp", o.fabBottom[0] + "px"); host.style.setProperty("--fab-b", o.fabBottom[1] + "px"); }
   root.innerHTML = '<style>' + UI_CSS + '</style>' +
     (o.fab === false ? '' : '<button class="fab" type="button" aria-pressed="false" data-fab>' + svg("pencil-simple", 22) + '<span>Молив</span></button>') +
@@ -198,7 +212,15 @@ SAPen.mount = function(o){ o = o || {};
     bar.querySelector("[data-up]").hidden = !cand || !cand.parentElement || cand.parentElement === (tdoc() && tdoc().body);
     bar.querySelector("[data-down]").hidden = !cand || !stack.length; }
   function setCand(el, keepStack){ cand = el; if (!keepStack) stack = []; var L = tw && layerOf(tw); if (!L) return;
-    if (!el){ L.clear(); barText(); return; } L.draw(el, describe(el) + (el.closest("[data-edit-id]") ? " · " + el.closest("[data-edit-id]").getAttribute("data-edit-id") : ""), lastType === "touch" || lastType === "key" ? "picked" : ""); barText(); }
+    if (!el){ L.clear(); barText(); return; } L.draw(el, describe(el) + (el.closest("[data-edit-id]") ? " · " + el.closest("[data-edit-id]").getAttribute("data-edit-id") : ""), lastType === "touch" || lastType === "key" ? "picked" : ""); barText();
+    if (lastType === "touch" || lastType === "key") requestAnimationFrame(clearOfBar); }
+  /* the bar is drawn over the top of the screen: scroll the outlined element just under it */
+  function clearOfBar(){ if (!cand || !cand.isConnected) return; var br = bar.getBoundingClientRect(), r = cand.getBoundingClientRect(), sc = 1, top = r.top;
+    if (tw !== ui){ try{ var fr = tw.frameElement.getBoundingClientRect(); sc = fr.width / (tw.innerWidth || fr.width) || 1; top = fr.top + r.top * sc; }catch(x){ return; } }
+    var need = (br.bottom + 12 - top) / sc; if (need <= 0) return;
+    var p = cand.parentElement; while (p && p !== tw.document.body && p !== tw.document.documentElement){ var cs = tw.getComputedStyle(p); if (/(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight){ p.scrollTop -= need; break; } p = p.parentElement; }
+    if (!p || p === tw.document.body || p === tw.document.documentElement) tw.scrollBy(0, -need);
+    setTimeout(function(){ if (cand) layerOf(tw).draw(cand, null, "picked"); }, 30); }
   function ours(e){ var p = e.composedPath ? e.composedPath() : []; for (var i = 0; i < p.length; i++){ if (p[i] === host || (p[i] && p[i].tagName && /^SA-PEN-/i.test(p[i].tagName))) return true; } return false; }
 
   /* --- events on the target window (capture phase, so the page never sees them while the pencil is on) --- */
@@ -236,7 +258,7 @@ SAPen.mount = function(o){ o = o || {};
   ui.addEventListener("keydown", function(e){ if (!on || tw === ui) return; if (e.key === "Escape" && sheetOpen) return; if (!ours(e)) key(e); }, true);
 
   /* --- sheet --- */
-  function openSheet(){ if (!cand) return; var el = cand; sheetOpen = true; var L = layerOf(tw); L.draw(el, describe(el), "picked");
+  function openSheet(){ if (!cand) return; var el = cand; sheetOpen = true; backTo = udoc.activeElement; var L = layerOf(tw); L.draw(el, describe(el), "picked");
     var mod = val(o.module) || "admin", url = (o.url ? o.url() : pathOf(tw)), vp = o.viewport ? o.viewport() : {w:tw.innerWidth, h:tw.innerHeight};
     var etxt = textOf(el), edit = el.closest("[data-edit-id]"), sel = selectorFor(el), A = ui.A, mname = A && A.MODULE_NAMES ? A.MODULE_NAMES[mod] || mod : mod;
     var sc = A && A.screenOf ? A.screenOf(url) : null, page = sc ? sc.s.n : url.split("/").pop().split("#")[0];
@@ -248,9 +270,10 @@ SAPen.mount = function(o){ o = o || {};
       '<details><summary>Технически данни</summary><dl><dt>Адрес</dt><dd>' + esc(url) + '</dd><dt>CSS селектор</dt><dd>' + esc(sel) + '</dd><dt>data-edit-id</dt><dd>' + (edit ? esc(edit.getAttribute("data-edit-id")) : "няма") + '</dd></dl></details></div>' +
       '<div class="foot"><button class="pill line" type="button" data-x>Откажи</button><button class="pill red" type="button" data-save>' + svg("check", 22) + 'Запази бележката</button></div></div>';
     var ta = sw.querySelector("textarea"), err = sw.querySelector(".err");
-    function close(){ sheetOpen = false; sw.classList.remove("on"); setTimeout(function(){ if (!sheetOpen) sw.innerHTML = ""; }, 340); if (cand && on) setCand(cand, true); try{ (tw === ui ? null : tw.frameElement) && tw.frameElement.focus(); }catch(x){} }
+    function close(){ sheetOpen = false; sw.classList.remove("on"); setTimeout(function(){ if (!sheetOpen) sw.innerHTML = ""; }, 340); if (cand && on) setCand(cand, true);
+      try{ if (tw !== ui) tw.frameElement.focus(); var el2 = cand; if (el2 && el2.isConnected && (el2.tabIndex >= 0 || /^(A|BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el2.tagName))) el2.focus({preventScroll:true}); else if (fab && fab.offsetParent) fab.focus({preventScroll:true}); else if (backTo && backTo.focus) backTo.focus({preventScroll:true}); }catch(x){} }
     function save(){ var text = ta.value.trim(); if (!text){ err.hidden = false; ta.setAttribute("aria-invalid", "true"); ta.setAttribute("aria-describedby", "pen-err pen-help"); ta.focus(); return; }
-      var now = new Date().toISOString(), author = val(o.author) || "?";
+      var now = (o.now ? o.now() : new Date()).toISOString(), author = val(o.author) || "?";
       var note = {id:rid(), module:mod, url:url, selector:sel, editId:edit ? edit.getAttribute("data-edit-id") : null, text:text.slice(0, 4000), elementText:etxt.slice(0, 500), viewport:{w:Math.round(vp.w), h:Math.round(vp.h)}, screenshot:null, author:author, status:"new", createdAt:now, updatedAt:now};
       if (o.onSave) o.onSave(note); else { try{ var l = JSON.parse(localStorage.getItem("sa-notes") || "[]"); l.unshift(note); localStorage.setItem("sa-notes", JSON.stringify(l)); }catch(x){} }
       saved++; close(); toast("Бележката е записана", o.notesHref ? {label:"Виж бележките", href:o.notesHref} : null); barText(); }
@@ -270,6 +293,8 @@ SAPen.mount = function(o){ o = o || {};
     bar.classList.toggle("on", on); if (on){ attach(getTarget()); barText(); } else { cand = null; stack = []; if (tw && tw.__saPenLayer) tw.__saPenLayer.clear(); }
     o.onToggle && o.onToggle(on); }
   function off(){ setOn(false); }
+  root.addEventListener("keydown", function(e){ if (e.key === "Escape" && on && !sheetOpen){ e.preventDefault(); e.stopPropagation(); off(); if (fab && fab.offsetParent) fab.focus(); } });
+  root.addEventListener("pointerdown", function(e){ if (e.pointerType) lastType = e.pointerType; }, true);
   if (fab){ fab.addEventListener("click", function(){ setOn(!on); }); fab.setAttribute("aria-label", "Молив: посочете елемент и напишете какво да се промени"); }
   bar.querySelector("[data-offb]").onclick = off;
   bar.querySelector("[data-pick]").onclick = function(){ openSheet(); };

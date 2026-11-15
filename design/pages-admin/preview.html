@@ -28,7 +28,8 @@
 .pv-hint .ic{color:var(--red); margin-top:1px}
 .pv-hint b{color:var(--ink)}
 @container page (min-width:1000px){
-  .pv-tools{flex-direction:column; flex-wrap:nowrap; align-items:stretch; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; gap:16px; padding:18px}
+  .pv-tools{flex-direction:column; flex-wrap:nowrap; align-items:stretch; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; gap:16px; padding:18px 18px 28px}
+  .pv-tools > *{flex:none}
   .pv-tools .seg{display:grid}
 }
 @container page (min-width:1000px){ .pv-tools .grp.nw{display:none} }
@@ -75,7 +76,7 @@
   .pv-fbar .ic{color:var(--muted)}
   .pv-fbar [aria-pressed="true"]{background:var(--ember); color:var(--on-ember)}
   .pv-fbar [aria-pressed="true"] .ic{color:var(--on-ember)}
-  .pv-nb{top:8px; left:8px; right:8px; flex-wrap:wrap}
+  .pv-nb{top:8px; left:8px; right:8px; flex-wrap:wrap} .pv-nb .tx{flex:1 1 calc(100% - 40px)} .pv-nb .pill{flex:1 1 auto}
 }
 .pv-list{display:grid; gap:4px; margin:6px 0 0}
 .pv-list button{display:flex; align-items:center; gap:12px; min-height:52px; padding:0 14px; border:0; border-radius:18px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; text-align:left; cursor:pointer}
@@ -91,6 +92,8 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -100,16 +103,20 @@ A.liveHash = true;
 if (!A.me){ A.mount({}); return; }
 var H = A.hash;
 var NOTE = H.n ? A.notes.list().filter(function(x){ return x.id === H.n; })[0] : null;
-var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); });
-var mod = (NOTE && A.MOD[NOTE.module]) || A.MOD[H.m] || mods[0];
-if (mod && (mod.soon || !A.modCan(mod))) mod = null;
+/* екраните на самия админ: само разделите, които ролята вижда */
+var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); }).map(function(m){ if (m.id !== "admin") return m; var c = Object.assign({}, m); c.screens = m.screens.filter(function(x){ return x.k === "login" || !A.SEC[x.k] || A.can(x.k); }); return c; });
+var MODS = {}; mods.forEach(function(m){ MODS[m.id] = m; });
+var CANPEN = A.can("notes");
+var want = (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
+if (denied && NOTE) NOTE = null;
 var DEV = {phone:[390,844,"Телефон"], tablet:[820,1180,"Таблет"], desktop:[1440,900,"Компютър"]};
-var TIMES = [["now","Сега"],["08:30","08:30 · преди отваряне"],["12:30","12:30 · обед"],["16:30","16:30 · -30% обедно"],["21:30","21:30 · без доставка"],["23:30","23:30 · затворено"]];
+var TIMES = [["now","Сега (истинският час)"],["08:30","08:30 · преди отваряне"],["12:30","12:30 · обед"],["16:30","16:30 · -30% обедно"],["21:30","21:30 · без доставка"],["23:30","23:30 · затворено"]];
+if (!TIMES.some(function(t){ return t[0] === A.protoTime; })) TIMES.splice(1, 0, [A.protoTime, A.protoTime + " · часът на админа"]);
 var THEMES = [["system","Авто"],["light","Светла"],["dark","Тъмна"]];
 var ROUTES = {home:"/", menu:"/menu/", category:"/menu/pitsi/", dish:"/menu/pitsi/…/", lunch:"/obedno-menu/", cart:"/kolichka/", tracking:"/porachka/1042/", office:"/obedna-porachka-za-ofisa/", reservation:"/rezervatsia/", events:"/sabitia/", event:"/sabitia/gratska-vecher/", celebration:"/praznik/", offers:"/oferti/", login:"/vhod/", profile:"/profil/", delivery:"/dostavka/", pickup:"/vzemi-ot-myasto/", bertha:"/furna-bertha/", about:"/za-nas/", gallery:"/galeria/", contacts:"/kontakti/", allergens:"/alergeni/", "404":"/404"};
 
-var st = {d:H.d && DEV[H.d] ? H.d : (mod ? mod.dev || "phone" : "phone"), land:H.o === "land" || (!H.o && mod && mod.land), t:H.t || "now", th:H.th || "system", z:H.z === "100" ? "100" : "fit", p:H.p || "", custom:null};
-if (NOTE){ var w = NOTE.viewport.w, h = NOTE.viewport.h; st.d = w < 700 ? "phone" : w < 1100 ? "tablet" : "desktop"; st.custom = [w, h]; st.land = w > h && st.d === "tablet"; }
+var st = {d:H.d && DEV[H.d] ? H.d : (mod ? mod.dev || "phone" : "phone"), land:H.o === "land" || (!H.o && mod && mod.land), t:H.t || A.protoTime, th:H.th || "system", z:H.z === "100" ? "100" : "fit", p:H.p || "", custom:null};
+if (NOTE){ var w = NOTE.viewport.w, h = NOTE.viewport.h; st.d = w < 700 ? "phone" : (w < 1100 || (w < 1366 && w > h && mod.dev === "tablet")) ? "tablet" : "desktop"; st.custom = [w, h]; st.land = w > h && st.d === "tablet"; }
 function scr(){ if (!mod) return null; var all = (mod.screens || []).concat(mod.states || []); return all.filter(function(x){ return x.k === st.p; })[0] || all[0]; }
 var cur = scr(); if (cur) st.p = cur.k;
 if (NOTE){ var fs = A.screenOf(NOTE.url); st.p = fs && fs.m === mod ? fs.s.k : ""; }
@@ -120,6 +127,7 @@ if (!body) return;
 if (!mod){ body.innerHTML = '<div class="sa-card">' + A.empty({icon:"lock", title:"Няма модул, който ролята да вижда на живо.", text:"Помолете главния админ за права.", action:'<a class="pill pill-ink" href="dashboard.html">Към таблото</a>'}) + '</div>'; return; }
 
 /* ---------- markup ---------- */
+function frameSrc0(){ if (NOTE) return ".." + NOTE.url; var x = scr(); return mod.dir + (x ? x.f : ""); }
 function optList(){ return '<optgroup label="Екрани">' + mod.screens.map(function(x){ return '<option value="' + x.k + '"' + (x.k === st.p ? ' selected' : '') + '>' + esc(x.n) + '</option>'; }).join("") + '</optgroup>' +
   (mod.states ? '<optgroup label="Състояния">' + mod.states.map(function(x){ return '<option value="' + x.k + '"' + (x.k === st.p ? ' selected' : '') + '>' + esc(x.n) + '</option>'; }).join("") + '</optgroup>' : '') +
   (st.p === "" ? '<option value="" selected>Друг екран</option>' : ''); }
@@ -137,14 +145,15 @@ body.innerHTML = '<div class="pv" data-edit-id="admin.preview">' +
     (mod.time ? '<div class="grp ww"><label class="pv-lb" for="pv-t">Час на деня</label>' + timeSel("pv-t") + '</div>' : '') +
     '<div class="grp ww"><span class="pv-lb">Тема в рамката</span>' + themeSeg() + '</div>' +
     '<div class="grp ww"><span class="pv-lb">Мащаб</span>' + zoomSeg() + '</div>' +
-    '<div class="grp ww"><span class="pv-lb">Рамката</span><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" data-newtab target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Отвори в нов раздел</a></div></div>' +
-    '<p class="pv-hint">' + ic("pencil-simple",20) + '<span><b>Моливът работи и в рамката.</b> Натиснете „Молив“ и посочете елемент от екрана вдясно.</span></p>' +
+    '<div class="grp ww"><span class="pv-lb">Рамката</span><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" data-newtab href="' + esc(frameSrc0()) + '" target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Отвори в нов раздел</a></div></div>' +
+    (CANPEN ? '<p class="pv-hint">' + ic("pencil-simple",20) + '<span><b>Моливът работи и в рамката.</b> Натиснете „Молив“ и посочете елемент от екрана вдясно.</span></p>' : '') +
   '</div>' +
   '<div class="pv-stage" data-stage><div class="pv-fit" data-fit><div class="pv-dev" data-dev-box></div></div><span class="pv-cap" data-cap></span></div>' +
 '</div>';
 var tools = body.querySelector("[data-tools]"), stage = body.querySelector("[data-stage]"), fit = body.querySelector("[data-fit]"), box = body.querySelector("[data-dev-box]"), cap = body.querySelector("[data-cap]");
 /* phone floating bar */
-A.col.insertAdjacentHTML("beforeend", '<nav class="pv-fbar" aria-label="Прегледът"><a href="dashboard.html#modules">' + ic("caret-left",24) + 'Табло</a><button type="button" data-fb="screen">' + ic("list",24) + 'Екран</button><button type="button" data-fb="device">' + ic("sliders-horizontal",24) + 'Устройство</button><button type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",24) + 'Молив</button></nav>');
+A.col.insertAdjacentHTML("beforeend", '<nav class="pv-fbar" aria-label="Прегледът"><a href="dashboard.html#modules">' + ic("caret-left",24) + 'Табло</a><button type="button" data-fb="screen">' + ic("list",24) + 'Екран</button><button type="button" data-fb="device">' + ic("sliders-horizontal",24) + 'Устройство</button>' + (CANPEN ? '<button type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple",24) + 'Молив</button>' : '') + '</nav>');
+if (!CANPEN) A.col.querySelector(".pv-fbar").style.gridTemplateColumns = "repeat(3,1fr)";
 var fbar = A.col.querySelector(".pv-fbar");
 
 var frame = null, loadEl = null, phoneBare = false, showNote = !!NOTE;
@@ -156,8 +165,10 @@ function addr(){ var x = scr(); if (mod.id === "site" && x && ROUTES[x.k]) retur
 /* sc-prefs: the client prototype reads time and theme at load. The preview arms its own prefs right before each load of the frame
    and restores the viewer's own prefs as soon as the frame has read them. */
 var ORIG = null; try{ ORIG = localStorage.getItem("sc-prefs"); }catch(e){}
-function arm(){ var p = {}; try{ p = JSON.parse(ORIG || "{}") || {}; }catch(e){} p.view = "desktop"; p.theme = st.th; p.time = mod.time ? st.t : (p.time || "now"); try{ localStorage.setItem("sc-prefs", JSON.stringify(p)); }catch(e){} }
-function disarm(){ try{ if (ORIG == null) localStorage.removeItem("sc-prefs"); else localStorage.setItem("sc-prefs", ORIG); }catch(e){} }
+/* и съгласието за бисквитки („само необходимите“), за да не закрива банерът рамката; вашият избор се връща */
+var ORIGC = null; try{ ORIGC = localStorage.getItem("sc-cookie"); }catch(e){}
+function arm(){ var p = {}; try{ p = JSON.parse(ORIG || "{}") || {}; }catch(e){} p.view = "desktop"; p.theme = st.th; p.time = mod.time ? st.t : (p.time || "now"); try{ localStorage.setItem("sc-prefs", JSON.stringify(p)); if (ORIGC == null) localStorage.setItem("sc-cookie", JSON.stringify("min")); }catch(e){} }
+function disarm(){ try{ if (ORIG == null) localStorage.removeItem("sc-prefs"); else localStorage.setItem("sc-prefs", ORIG); if (ORIGC == null) localStorage.removeItem("sc-cookie"); }catch(e){} }
 window.addEventListener("pagehide", disarm);
 
 function build(){
@@ -207,14 +218,14 @@ function noteBanner(ok){ var old = stage.querySelector(".pv-nb"); old && old.rem
   stage.insertAdjacentHTML("beforeend", '<div class="pv-nb' + (ok ? '' : ' warn') + '" role="status">' + ic(ok ? "pencil-simple" : "warning", 22) + '<span class="tx">' + (ok ? '<b>Бележка:</b> ' + esc(NOTE.text) : '<b>Елементът го няма на страницата.</b> Може да е променен или да е в друго състояние. Бележката: „' + esc(NOTE.text) + '“') + '</span><a class="pill pill-soft" href="notes.html">Бележките</a><button class="pill pill-line" type="button" data-hide-note>Скрий</button></div>'); }
 stage.addEventListener("click", function(e){ if (e.target.closest("[data-hide-note]")){ stage.querySelector(".pv-nb").remove(); try{ SAPen.hide(frame.contentWindow); }catch(x){} } });
 
-function saveHash(){ var h = {m:mod.id, p:st.p, d:st.d}; if (st.d === "tablet") h.o = st.land ? "land" : "port"; if (mod.time && st.t !== "now") h.t = st.t; if (st.th !== "system") h.th = st.th; if (st.z === "100") h.z = "100"; if (NOTE && st.custom) h.n = NOTE.id; A.setHash(h); }
+function saveHash(){ var h = {m:mod.id, p:st.p, d:st.d}; if (st.d === "tablet") h.o = st.land ? "land" : "port"; if (mod.time && st.t !== A.protoTime) h.t = st.t; if (st.th !== "system") h.th = st.th; if (st.z === "100") h.z = "100"; if (NOTE && st.custom) h.n = NOTE.id; A.setHash(h); }
 function go(p){ st.p = p; NOTE = NOTE && st.custom ? NOTE : null; showNote = false; var old = stage.querySelector(".pv-nb"); old && old.remove(); saveHash(); loadEl.classList.remove("off"); arm(); frame.src = frameSrc(); var x = scr(); frame.title = mod.n + ": " + (x ? x.n : "екран"); }
 function rebuild(){ saveHash(); build(); }
 
 /* ---------- pencil (targets the frame) ---------- */
-var pen = SAPen.mount({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
+var pen = !CANPEN ? null : SAPen.mount({module:function(){ return mod.id; }, target:function(){ return frame.contentWindow; }, viewport:function(){ return {w:st.vp[0], h:st.vp[1]}; },
   url:function(){ try{ var w = frame.contentWindow, p = w.location.pathname, i = p.indexOf("/pages"); return (i > -1 ? p.slice(i) : p) + w.location.hash; }catch(e){ return frameSrc(); } },
-  author:A.who, notesHref:"notes.html", fabPhone:false,
+  author:A.who, notesHref:"notes.html", fabPhone:false, barTop:[8, 88], now:A.now, toastBottom:96,
   onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:A.syncPen});
 A.pen = pen;
 
@@ -235,15 +246,17 @@ document.addEventListener("click", function(e){ var t = e.target.closest("[data-
   if (t.dataset.fb === "screen"){ var s = A.sheet({title:mod.n + ": екран", html:'<div class="pv-sh"><div class="field"><label for="pv-m2">Модул</label><select class="input" id="pv-m2" data-mod>' + mods.map(function(m){ return '<option value="' + m.id + '"' + (m === mod ? ' selected' : '') + '>' + esc(m.n) + '</option>'; }).join("") + '</select></div>' +
       '<div><span class="label">Екрани</span><div class="pv-list">' + mod.screens.map(li).join("") + '</div></div>' + (mod.states ? '<div><span class="label">Състояния</span><div class="pv-list">' + mod.states.map(li).join("") + '</div></div>' : '') + '</div>'}); return; }
   if (t.dataset.fb === "device"){ A.sheet({title:"Устройство и изглед", html:'<div class="pv-sh"><div class="field"><span class="label">Устройство</span>' + devSeg() + '</div>' + (mod.time ? '<div class="field"><label for="pv-t2">Час на деня</label>' + timeSel("pv-t2") + '</div>' : '') +
-      '<div class="field"><span class="label">Тема в рамката</span>' + themeSeg() + '</div><div class="field"><span class="label">Мащаб</span>' + zoomSeg() + '</div><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" href="' + esc(tools.querySelector("[data-newtab]").href || frameSrc()) + '" target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Нов раздел</a></div></div>'}); layout(); return; }
+      '<div class="field"><span class="label">Тема в рамката</span>' + themeSeg() + '</div><div class="field"><span class="label">Мащаб</span>' + zoomSeg() + '</div><div class="pv-acts"><button class="pill pill-line" type="button" data-reload>' + ic("arrow-clockwise",18) + 'Презареди</button><a class="pill pill-line" href="' + esc(tools.querySelector("[data-newtab]").href || frameSrc()) + '" data-newtab2 target="_blank" rel="noopener">' + ic("arrow-up-right",18) + 'Нов раздел</a></div></div>'}); layout(); return; }
 });
 function li(x){ return '<button type="button" data-pick="' + x.k + '"' + (x.k === st.p ? ' aria-current="true"' : '') + '>' + esc(x.n) + '<small>' + esc(x.f.split("#")[0]) + '</small></button>'; }
 document.addEventListener("change", function(e){ var t = e.target;
   if (t.matches("[data-scr]")){ go(t.value); return; }
   if (t.matches("[data-time]")){ setTime(t.value); return; }
   if (t.matches("[data-mod]")){ var m = A.MOD[t.value]; location.hash = "m=" + m.id + "&p=" + m.screens[0].k + "&d=" + (m.dev || "phone"); location.reload(); } });
+document.addEventListener("click", function(e){ var a = e.target.closest("[data-newtab], [data-newtab2]"); if (!a) return; arm(); setTimeout(disarm, 2500); });
 var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ var was = phoneBare; if ((isPhoneUI() && st.d === "phone" && !st.custom) !== was) build(); else layout(); }, 120); });
 build();
+if (denied) A.toast("Нямате права за „" + denied.n + "“; показваме „" + mod.n + "“.");
 })();
 </script>
 </body>

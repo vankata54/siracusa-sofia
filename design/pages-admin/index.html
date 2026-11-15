@@ -40,6 +40,9 @@ html,body{overflow:auto}
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script>
+<script src="_seed-res.js"></script>
+<script src="_pencil.js"></script>
 <script>
 (function(){
 var ic = A.ic, esc = A.esc;
@@ -52,23 +55,43 @@ var S1 = [
   ["notes","Бележки (молив)","1","pencil-simple","Нови · В работа · Готови, филтър по модул, търсене, „Покажи на страницата“, изтриване с „Отмени“, NOTES.json.",[["notes.html","Нови"],["notes.html#s=doing","В работа"],["notes.html#s=done","Готови"],["notes.html#st=empty","Празно"],["notes.html#st=loading","Зареждане"],["notes.html#st=error","Грешка"],["notes.html#st=offline","Без връзка"]]],
   ["roles","Роли и права","1","shield-check","Роли × раздели с отметки, „3 промени“, запис в дневника, „Отмени“. На телефон: роля и превключватели.",[["roles.html","Обичайно"],["roles.html#r=waiter","Телефон: Сервитьор"],["roles.html#st=loading","Зареждане"],["roles.html#st=error","Грешка"],["roles.html#st=offline","Без връзка"]]]
 ];
-var S2 = [["menu","Меню","fork-knife"],["lunch","Обедно меню","bowl-food"],["zones","Зони за доставка","map-trifold"],["offers","Оферти и ваучери","seal-percent"],["events","Събития","confetti"],["orders","Поръчки","receipt"]];
-var S3 = [["reservations","Резервации","calendar-check"],["hall","Залата и масите","chair"],["qr","QR генератор","qr-code"],["customers","Клиенти","users"],["reports","Отчети","chart-bar"],["staff","Персонал","users-three"],["audit","Дневник","list-bullets"],["settings","Настройки","sliders-horizontal"]];
+var C = [["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]];
+function st(f, extra, empty){ return [[f + ".html","Обичайно"]].concat(empty === false ? [] : [[f + ".html#st=empty", empty || "Празно"]]).concat(C.map(function(c){ return [f + ".html#st=" + c[0], c[1]]; })).concat(extra || []); }
+/* състоянията и адресите са от README-2.md и README-3.md */
+var S2 = [
+  ["menu","Меню","2","fork-knife",st("menu",[["menu.html#f=out","Изчерпани днес"],["menu.html#f=chg","С промени"],["menu.html#c=pitsi","Пици"],["menu.html#d=kebapcheta","Лист на ястие"]])],
+  ["lunch","Обедно меню","2","bowl-food",st("lunch",[["lunch.html#st=pin","С ПИН (друг служител)"]],"Празна седмица")],
+  ["zones","Зони за доставка","2","map-trifold",st("zones",[["zones.html#z=gorublyane","Горубляне"]])],
+  ["offers","Оферти и ваучери","2","seal-percent",st("offers",[["offers.html#t=codes","Кодове"],["offers.html#t=iq","Запитвания"]])],
+  ["events","Събития","2","confetti",st("events",[["events.html#t=past","Минали"]])],
+  ["orders","Поръчки","2","receipt",st("orders",[["orders.html#st=new","Нова поръчка"],["orders.html#s=done","Доставени"],["orders.html#ch=table","От масата"],["orders.html#n=1047","Детайл № 1047"]])]
+];
+var S3 = [
+  ["reservations","Резервации","3","calendar-check",st("reservations",[["reservations.html#f=new","Нови"],["reservations.html#d=2026-11-20","Друг ден"]],"Празен ден")],
+  ["hall","Залата и масите","3","chair",st("hall",[["hall.html#z=garden","Градина"],["hall.html#v=list","Списък"],["hall.html#t=S6","Маса S6"]],"Градина без маси")],
+  ["qr","QR генератор","3","qr-code",st("qr",[["qr.html#t=S5","Маса S5"]],"Няма маси")],
+  ["customers","Клиенти","3","users",st("customers",[["customers.html#tab=feedback","Обратна връзка"],["customers.html#tab=requests","Запитвания"],["customers.html#f=bl","Блокирани"]])],
+  ["reports","Отчети","3","chart-bar",st("reports",[["reports.html#p=today","Днес"],["reports.html#p=yday","Вчера"],["reports.html#p=30","30 дни"],["reports.html#c=0","Без сравнение"]],"Няма поръчки")],
+  ["staff","Персонал","3","users-three",st("staff",[["staff.html#f=off","Неактивни"],["staff.html#f=all","Всички"]],"Само главният админ")],
+  ["audit","Дневник","3","list-bullets",st("audit",[["audit.html#g=menu","Само меню"],["audit.html#p=all","Всичко"]])],
+  ["settings","Настройки","3","sliders-horizontal",st("settings",[["settings.html#st=busy","Натоварено"]], false)]
+];
 function card(s){ return '<section class="sc2 sa-card"><a class="main" href="' + s[0] + '.html"><span class="si">' + ic(s[3],24) + '</span><span><b>' + esc(s[1]) + '</b><small>' + s[0] + '.html · автор ' + s[2] + '</small></span></a><p>' + esc(s[4]) + '</p>' +
   (s[5] && s[5].length ? '<div class="st2">' + s[5].map(function(x){ return '<a href="' + x[0] + '">' + esc(x[1]) + '</a>'; }).join("") + '</div>' : '') + '</section>'; }
-function small(s, a){ var sec = A.SEC[s[0]]; return card([s[0], s[1], a, s[2], sec ? sec.desc : "", [[s[0] + ".html","Обичайно"],[s[0] + ".html#st=loading","Зареждане"],[s[0] + ".html#st=empty","Празно"],[s[0] + ".html#st=offline","Без връзка"]]]); }
+function sec(s){ var x = A.SEC[s[0]]; return [s[0], s[1], s[2], s[3], x ? x.desc : "", s[4]]; }
 var el = document.createElement("div"); el.className = "ix";
 el.innerHTML = '<header><div class="brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div><h1>Админ панел: всички екрани</h1>' +
   '<p class="lead muted">Жив прототип. Телефон (390) и компютър (1440) са еднакво важни. Влизането е с пробни акаунти; всяка страница без вход води към „Вход“.</p>' +
   '<p class="label" style="margin:6px 0 0">Влез като:</p><div class="who">' + A.ACCOUNTS.map(function(a){ return '<button class="chip" type="button" data-as="' + a[0] + '">' + esc(A.roleName(a[1])) + '</button>'; }).join("") + '</div></header>' +
   '<h2>Рамка, вход, табло, преглед, бележки, роли ' + '<span class="sa-tag">автор 1</span></h2><p>Общата рамка (<code>_admin.css</code>, <code>_admin.js</code>, <code>_pencil.js</code>) е описана в README.md.</p><div class="grid">' + S1.map(card).join("") + '</div>' +
-  '<h2>Меню, продажби, поръчки <span class="sa-tag">автор 2</span></h2><p>Правят се с рамката; връзката води към файла, щом е готов.</p><div class="grid">' + S2.map(function(s){ return small(s, "2"); }).join("") + '</div>' +
-  '<h2>Резервации, залата, хора, анализ, настройки <span class="sa-tag">автор 3</span></h2><p>Финанси и гориво остава „Скоро“ (плочка за собственика).</p><div class="grid">' + S3.map(function(s){ return small(s, "3"); }).join("") + '</div>' +
+  '<h2>Меню, продажби, поръчки <span class="sa-tag">автор 2</span></h2><p>Меню, обедно меню, зони, оферти, събития и поръчки.</p><div class="grid">' + S2.map(function(s){ return card(sec(s)); }).join("") + '</div>' +
+  '<h2>Резервации, залата, хора, анализ, настройки <span class="sa-tag">автор 3</span></h2><p>Резервации, залата, QR, клиенти, отчети, персонал, дневник и настройки. Финанси и гориво остава „Скоро“.</p><div class="grid">' + S3.map(function(s){ return card(sec(s)); }).join("") + '</div>' +
   '<section class="notes sa-card"><h2>За прототипа</h2><ul><li>Пробни акаунти: <code>admin</code>, <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code>, <code>marketing</code>, парола <code>' + A.PASSWORD + '</code> (само тук).</li>' +
   '<li>Данните са в този браузър (<code>localStorage</code>, префикс <code>sa-</code>), общи за всички екрани. „Върни данните в начало“ е в панела „Само в прототипа“ най-долу.</li>' +
   '<li>Поръчките, резервациите, клиентите и сумите са примерни и са отбелязани. Менюто и цените са истинските.</li>' +
   '<li>Прегледът на живо зарежда истинските прототипи от <code>../pages/</code>, <code>../pages-masa/</code>, <code>../pages-servitor/</code>, <code>../pages-kuhnya/</code>, <code>../pages-shofyor/</code>. Работи от http сървър (не <code>file://</code>), за да може моливът да огражда в рамката.</li></ul></section>';
 document.body.appendChild(el);
+if (window.SAPen && A.me && A.can("notes")) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", now:A.now, fabPhone:false, onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); }});
 el.addEventListener("click", function(e){ var b = e.target.closest("[data-as]"); if (!b) return; A.login(b.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = "dashboard.html"; });
 })();
 </script>
