@@ -79,9 +79,11 @@ function sample(){ var out = [], dishes = SC.items.filter(function(x){ return x.
   function day(d){ var p = T.split("-").map(Number), k = new Date(Date.UTC(p[0], p[1] - 1, p[2] - d, 10)); return k.getUTCFullYear() + "-" + String(k.getUTCMonth() + 1).padStart(2, "0") + "-" + String(k.getUTCDate()).padStart(2, "0"); }
   function E(d, t, who, role, action, text, target){ var m = +t.slice(0, 2) * 60 + +t.slice(3); if (!d && m > NM) return; out.push({id:"s" + out.length, at:A.rl.isoAt(day(d), m), who:who, role:role, action:action, text:text, target:target || null, sample:true}); }
   /* съгласувано с другите екрани: „Натоварено“ е изключено преди 19:42 (Настройки: обичаен режим), изчерпаното е това от A.soldOutToday() */
-  E(0, "19:30", "Управител 1", "manager", "settings.update", "„Натоварено“: изключено, около 35 мин");
-  E(0, "18:55", "Управител 1", "manager", "settings.update", "„Натоварено“: включено, около 55 мин");
-  var outId = (A.soldOutToday ? A.soldOutToday() : [])[0];
+  var KS = (A.rl && A.rl.settings ? A.rl.settings().kitchen : null) || {}, nMin = +KS.etaMin || 35, bMin = +KS.etaBusyMin || nMin + 20;
+  E(0, "19:30", "Управител 1", "manager", "settings.update", "„Натоварено“: изключено, около " + nMin + " мин");
+  E(0, "18:55", "Управител 1", "manager", "settings.update", "„Натоварено“: включено, около " + bMin + " мин");
+  /* само ястие, изчерпано днес с ключа (sa-soldout), не изчерпаното в данните на менюто */
+  var SO = A.data.get("soldout", null), outId = SO && SO.date === A.todayKey() ? (SO.ids || []).filter(function(id){ return (SO.back || []).indexOf(id) < 0; })[0] : null;
   if (outId && SC.byId[outId]) E(0, "18:40", "Кухня · Скара", "kitchen", "menu.sold_out", "Изчерпано днес: „" + SC.byId[outId].n + "“", outId);
   E(0, "16:10", "Поли", "admin", "note.create", "Нова бележка: Заглавието да е на два реда на телефон.");
   E(0, "15:02", "?", "", "staff.login_failed", "Грешен вход: потребител „waiter2“");
