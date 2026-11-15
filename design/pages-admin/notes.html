@@ -93,6 +93,9 @@ var body = A.mount(FULL ? {section:"notes", title:"Бележки", eyebrow:"Р�
     sub:"Препоръките, които сте пратили с молива, и докъде са стигнали. Само за четене: главният админ ги одобрява.",
     states:[["","Обичайно"],["empty","Празно"]]});
 if (!body) return;
+/* служител: „Към приложението“ връща в екрана на модула, от който е дошъл (иначе в началото на модула) */
+(function(){ if (FULL || !A.isStaffApp || !A.isStaffApp()) return; var r = document.referrer || "", m = r.match(/\/(pages-(servitor|kuhnya|shofyor))\/[^?#]*(#.*)?$/), a = A.app.querySelector('.sa-top a.sa-tb');
+  var want = {waiter:"servitor", kitchen:"kuhnya", driver:"shofyor"}[A.me.role]; if (a && m && m[2] === want) a.href = "../" + r.slice(r.indexOf(m[1])); })();
 var STS = A.NOTE_STATUSES, STEP = {new:0, approved:1, doing:2, review:3, published:4};
 var ICO = {new:"sparkle", approved:"check", doing:"hourglass", review:"eye", published:"check-circle", rejected:"x"};
 var RUN_MS = 3500;

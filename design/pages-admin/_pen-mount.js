@@ -12,7 +12,9 @@
    - data-place="bottom" на телефон над долната лента (data-bottom px от долния ръб, напр. 96 над лента от 80 px);
    - data-side="right" | "left"; от 700 px ширина: data-wide-place="bottom" (data-wide-bottom, 24) или "top" (data-wide-top, 16), data-wide-side.
    Изберете място, където бутонът не застъпва основни действия (за кухнята на таблет: горе вдясно, в реда на броячите).
-   Програмно: SAPenMount.mount({place, top, bottom, side, wideBottom, widePlace, wideTop, wideSide, module}) -> контролерът на молива или null. */
+   - data-slot="<селектор>" (или slot: елемент): бутонът се слага в този елемент, в потока (без плаване);
+   - data-toast-wide="top" | "bottom": известието на широк екран; по подразбиране горе, ако бутонът е горе или в слот.
+   Програмно: SAPenMount.mount({place, top, bottom, side, wideBottom, widePlace, wideTop, wideSide, module, slot, toastWide}) -> контролерът на молива или null. */
 (function(){
 "use strict";
 if (window.SAPenMount) return;
@@ -29,7 +31,10 @@ function mount(o){ o = o || {};
   var ses = load("sa-session", null); if (!ses || !ses.role || !window.SAPen || inPreview()) return null;
   var rec = ses.role !== "admin" && ses.role !== "marketing"; /* служителите: само препоръки */
   var author = (ses.name || ses.user) + " (" + (ROLE[ses.role] || ses.role) + ")", mod = o.module || moduleOf();
+  var slotEl = typeof o.slot === "string" ? document.querySelector(o.slot) : o.slot || null;
   var pen = SAPen.mount({module:mod, author:author, recommend:rec, fab:false, notesHref:"../pages-admin/notes.html", barTop:[8, 8], toastBottom:o.bottom != null ? +o.bottom + 64 : 96,
+    /* широк екран: известието горе, ако бутонът е горе или в слот на модула (иначе стои над „Готово“ на картите в кухнята) */
+    toastTop:o.toastTop || 84, /* под горната лента на модула и под лентата в жар */ toastWideTop:function(){ return o.toastWide === "top" || (o.toastWide !== "bottom" && (wplace === "top" || btn.parentElement !== document.body)); },
     onSave:function(n){ n.source = {type:"staff", role:ses.role, user:ses.user}; var l = load("sa-notes", null); if (!Array.isArray(l)) l = []; l.unshift(n); store("sa-notes", l); },
     onToggle:function(on){ btn.setAttribute("aria-pressed", String(on)); btn.innerHTML = on ? icon("x", 20) + '<span>Изключи</span>' : icon("pencil-simple", 20) + '<span>Молив</span>';
       btn.style.background = on ? "var(--ember)" : "var(--glass)"; btn.style.color = on ? "var(--on-ember)" : "var(--ink)"; }});
@@ -44,12 +49,15 @@ function mount(o){ o = o || {};
     ".sa-pen-btn:active{transform:scale(.96)} .sa-pen-btn:focus-visible{outline:3px solid var(--red); outline-offset:2px}" +
     ".sa-pen-btn svg{color:var(--red)} .sa-pen-btn[aria-pressed=\"true\"] svg{color:inherit}" +
     "@media (min-width:700px){ .sa-pen-btn{top:" + (wplace === "top" ? wtop + "px" : "auto") + "; bottom:" + (wplace === "top" ? "auto" : wide + "px") + "; " + (wside === "left" ? "left:24px; right:auto" : "right:24px; left:auto") + "; min-height:52px; padding:0 20px 0 16px; font-size:16px} }"; /* ширината на прозореца: скриптът е извън контейнерите на модулите */
-  document.head.appendChild(st); document.body.appendChild(btn);
+  st.textContent += ".sa-pen-btn.in-slot{position:static; top:auto; bottom:auto; left:auto; right:auto; box-shadow:inset 0 0 0 1px var(--line-strong)}";
+  document.head.appendChild(st);
+  /* слот: модулът дава място (елемент или селектор), бутонът е в потока, не плаващ */
+  if (slotEl){ btn.classList.add("in-slot"); slotEl.appendChild(btn); } else document.body.appendChild(btn);
   btn.addEventListener("click", function(){ pen.toggle(); });
   pen.button = btn; return pen; }
 
 window.SAPenMount = {mount:mount};
 var ds = script ? script.dataset : {};
-function auto(){ window.SAPenMount.pen = mount({place:ds.place, top:ds.top, bottom:ds.bottom, side:ds.side, wideBottom:ds.wideBottom, widePlace:ds.widePlace, wideTop:ds.wideTop, wideSide:ds.wideSide, module:ds.module}); }
+function auto(){ window.SAPenMount.pen = mount({place:ds.place, top:ds.top, bottom:ds.bottom, side:ds.side, wideBottom:ds.wideBottom, widePlace:ds.widePlace, wideTop:ds.wideTop, wideSide:ds.wideSide, module:ds.module, slot:ds.slot, toastWide:ds.toastWide}); }
 if (ds.auto !== "false"){ if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", auto); else auto(); }
 })();

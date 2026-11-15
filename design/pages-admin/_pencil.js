@@ -15,6 +15,8 @@
 if (window.SAPen) return;
 var SAPen = window.SAPen = {};
 var ZTOP = 2147483000;
+/* имената на модулите и извън админа (модулите на персонала нямат A.MODULE_NAMES) */
+var MOD_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", admin:"Админ"};
 
 function svg(n, s){ var I = window.SC_ICONS || {}; return I[n] ? '<svg viewBox="0 0 256 256" width="' + (s || 20) + '" height="' + (s || 20) + '" fill="currentColor" aria-hidden="true">' + I[n] + '</svg>' : ''; }
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
@@ -142,11 +144,14 @@ var UI_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z
   '.foot{display:flex; gap:8px; flex:none; padding-top:12px; margin-top:6px; border-top:1px solid var(--line)}' +
   '.pill{flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:56px; padding:0 18px; border:0; border-radius:999px; font-weight:800; font-size:17px; white-space:nowrap; transition:transform var(--t-fast, 120ms) var(--ease, ease)}' +
   '.pill:active{transform:scale(.97)} .pill.red{background:var(--red); color:var(--on-red); flex:1.6} .pill.line{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong)}' +
+  '.pill{min-width:0}' +
+  '@container pen (max-width:439px){ .foot{flex-direction:column-reverse; gap:6px} .foot .pill{flex:none; width:100%; min-height:52px} }' +
   '.toast{position:absolute; left:50%; bottom:28px; transform:translate(-50%,160%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:10px; min-height:56px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; font-size:16px; box-shadow:var(--shadow-lg); max-width:calc(100% - 24px); width:max-content; transition:transform var(--t-slow, 320ms) var(--ease, ease), opacity var(--t-slow, 320ms) var(--ease, ease)}' +
   '.toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}' +
   '.toast svg{color:var(--ok)}' +
   '.toast a{flex:none; min-height:44px; padding:0 16px; border-radius:999px; background:color-mix(in srgb, var(--bg) 18%, transparent); color:inherit; font-weight:800; text-decoration:none; display:inline-flex; align-items:center}' +
   '@container pen (max-width:699px){ .toast{bottom:var(--toast-bp, 96px)} }' +
+  '@container pen (min-width:700px){ :host([data-toast-top]) .toast{bottom:auto; top:var(--toast-t, 16px); transform:translate(-50%,-160%)} :host([data-toast-top]) .toast.on{transform:translate(-50%,0)} }' +
   '@media (prefers-reduced-motion: reduce){ *{transition-duration:1ms !important} }';
 var LAYER_CSS = ':host{all:initial; position:fixed; inset:0; pointer-events:none; z-index:' + (ZTOP - 1) + '}' +
   '.box{position:absolute; left:0; top:0; width:0; height:0; border:2px solid var(--red); border-radius:8px; background:color-mix(in srgb, var(--red) 7%, transparent); box-shadow:0 0 0 4px color-mix(in srgb, var(--red) 16%, transparent); opacity:0; transition:opacity 120ms ease}' +
@@ -262,8 +267,8 @@ SAPen.mount = function(o){ o = o || {};
   /* --- sheet --- */
   function openSheet(){ if (!cand) return; var el = cand; sheetOpen = true; backTo = udoc.activeElement; var L = layerOf(tw); L.draw(el, describe(el), "picked");
     var mod = val(o.module) || "admin", url = (o.url ? o.url() : pathOf(tw)), vp = o.viewport ? o.viewport() : {w:tw.innerWidth, h:tw.innerHeight};
-    var etxt = textOf(el), edit = el.closest("[data-edit-id]"), sel = selectorFor(el), A = ui.A, mname = A && A.MODULE_NAMES ? A.MODULE_NAMES[mod] || mod : mod;
-    var sc = A && A.screenOf ? A.screenOf(url) : null, page = sc ? sc.s.n : url.split("/").pop().split("#")[0];
+    var etxt = textOf(el), edit = el.closest("[data-edit-id]"), sel = selectorFor(el), A = ui.A, mname = (A && A.MODULE_NAMES && A.MODULE_NAMES[mod]) || MOD_NAMES[mod] || mod;
+    var sc = A && A.screenOf ? A.screenOf(url) : null, tt = clean((tw.document.title || "").split("|")[0]), page = sc ? sc.s.n : tt || url.split("/").pop().split("#")[0];
     sw.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pen-h">' +
       '<div class="handle"></div><div class="sh"><h2 id="pen-h">' + (REC ? 'Какво да подобрим?' : 'Какво да се промени?') + '</h2><button class="x" type="button" data-x>' + svg("x", 20) + 'Затвори</button></div>' +
       '<div class="body"><div class="meta"><span class="tag">' + svg("squares-four", 16) + esc(mname) + '</span><span class="tag">' + esc(page) + '</span><span class="tag">' + vp.w + ' × ' + vp.h + '</span></div>' +
@@ -287,7 +292,8 @@ SAPen.mount = function(o){ o = o || {};
         if (e.shiftKey && act === a){ e.preventDefault(); z.focus(); } else if (!e.shiftKey && act === z){ e.preventDefault(); a.focus(); } } });
     requestAnimationFrame(function(){ requestAnimationFrame(function(){ sw.classList.add("on"); ta.focus({preventScroll:true}); }); }); }
 
-  var tt; function toast(text, link){ toastEl.innerHTML = svg("check-circle", 22) + '<span>' + esc(text) + '</span>' + (link ? '<a href="' + esc(link.href) + '">' + esc(link.label) + '</a>' : '');
+  if (o.toastTop) host.style.setProperty("--toast-t", o.toastTop + "px");
+  var tt; function toast(text, link){ var tp = typeof o.toastWideTop === "function" ? o.toastWideTop() : !!o.toastWideTop; if (tp) host.setAttribute("data-toast-top", ""); else host.removeAttribute("data-toast-top"); toastEl.innerHTML = svg("check-circle", 22) + '<span>' + esc(text) + '</span>' + (link ? '<a href="' + esc(link.href) + '">' + esc(link.label) + '</a>' : '');
     requestAnimationFrame(function(){ toastEl.classList.add("on"); }); clearTimeout(tt); tt = setTimeout(function(){ toastEl.classList.remove("on"); }, 5200); }
 
   function pathOf(win){ var p = win.location.pathname, i = p.indexOf("/design/"); if (i > -1) p = p.slice(i + 7); return p + win.location.hash; }
