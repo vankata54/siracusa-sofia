@@ -9,9 +9,10 @@ import { ic } from "../../lib/icons.ts";
 import { esc, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT as R, ALLERGENS as AL, allergenName } from "../../lib/consts.ts";
+import { NO_COMP, joinAnd } from "../menu/_search-ui.ts";
 import "sc-icons:arrow-clockwise,bowl-food,caret-down,caret-right,clock,funnel,globe,info,magnifying-glass,phone,warning-circle,x"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
-export { AL };
+export { AL, NO_COMP };
 export const TEL = "tel:" + R.phoneIntl;
 export { noun };
 export const plural = (n: number) => pl(n, "ястие", "ястия");
@@ -54,7 +55,7 @@ export function faqData(upd: string): [string, string][] {
   return [
     ["Колко точни са тези данни?", "<p>Алергените са извлечени автоматично от състава в менюто (" + upd + "). Кухнята ги проверява едно по едно. Дотогава ги приемайте като ориентир, а не като гаранция.</p>"],
     ["Имам силна алергия. Какво да направя?", '<p>Обадете ни се на <a href="' + TEL + '">' + R.phone + "</a> преди да поръчате или кажете на сервитьора. При поръчка онлайн напишете алергията в бележката към поръчката.</p><p><span class=\"missing\">[ЛИПСВА: как кухнята предпазва от смесване, например обща фурна и фритюрник]</span></p>"],
-    ["Защо при някои ястия пише „Няма данни“?", "<p>За тях още нямаме пълен състав в менюто. Кухнята го въвежда. Попитайте ни и ще ви кажем веднага.</p>"],
+    ["Защо при някои ястия пише „Нямаме пълен състав“?", "<p>За тях още нямаме пълен състав в менюто. Кухнята го въвежда. Попитайте ни и ще ви кажем веднага.</p>"],
     ["Къде още виждам алергените?", "<p>На страницата на всяко ястие и в количката, преди да поръчате.</p>"],
     ["Какво е Регламент (ЕС) 1169/2011?", "<p>Европейското правило за информацията за храните. По него всеки ресторант посочва 14-те основни алергена в ястията си.</p>"],
   ];
@@ -79,7 +80,7 @@ export function chipsHTML(): string {
 
 /* ---------- the table: one markup, cards on the phone, a real table at 1100+ ---------- */
 export function theadHTML(): string {
-  return '<thead><tr><th scope="col" class="th-dish"><b class="th-d">Ястие</b><span class="legend" aria-hidden="true"><span><span class="lgtk">' + u("check", 14) + '</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></th>' +
+  return '<thead><tr><th scope="col" class="th-dish"><b class="th-d">Ястие</b><span class="legend" aria-hidden="true"><span><span class="lgtk">' + u("check", 14) + '</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Нямаме пълен състав</span></span></th>' +
     AL.map((a) => '<th scope="col" class="c-' + a[0] + '"><span class="ah"><i>' + u(a[2], 20) + '</i><span class="hn">' + (HY[a[0]] || a[1]) + "</span></span></th>").join("") + "</tr></thead>";
 }
 export function tableOpen(): string {
@@ -103,11 +104,11 @@ export function rowHTML(x: Dish, out: boolean): string {
   const has = !!x.comp;
   const name = '<th scope="row" class="nm"><a href="' + url.dish(x) + '"><b>' + esc(x.n) + "</b></a>" +
     (has ? '<p class="comp">' + esc(cap(x.comp)) + "</p>" : "") +
-    (!has && x.al.length ? '<p class="ndn"><span>Непълен състав, попитайте ни.<span class="pz"> Знаем поне за:</span></span></p>' : "") +
+    (!has && x.al.length ? '<p class="ndn"><span>' + NO_COMP + '.<span class="pz"> Знаем поне за:</span></span></p>' : "") +
     (out ? OUT_BADGE : "") + "</th>";
   let cells: string;
   if (!has && !x.al.length) {
-    cells = '<td class="nd" colspan="' + AL.length + '"><p><span><b>Няма данни за алергени,</b> попитайте ни</span></p>';
+    cells = '<td class="nd" colspan="' + AL.length + '"><p><span><b>Нямаме пълен състав,</b> попитайте ни</span></p>';
   } else {
     cells = AL.map((a) => x.al.indexOf(a[0]) > -1 ? '<td class="y"><span class="tk"><i>' + u(a[2], 16) + '</i><span class="w">' + a[1] + "</span></span>" : "<td>").join("");
     if (has && !x.al.length) cells += '<td class="none"><p><span>Не открихме алергени в състава · Не е потвърдено от кухнята</span></p>';
@@ -120,16 +121,17 @@ export function summaryText(st: { a: string[]; q: string; nd: boolean }, n: numb
   const bits: string[] = [];
   if (st.a.length) bits.push("без " + st.a.map((k) => allergenName(k).toLowerCase()).join(", "));
   if (st.q.trim()) bits.push("„" + esc(st.q.trim()) + "“");
-  if (st.a.length && !st.nd && nn) bits.push("+ " + plural(nn) + " без данни най-долу");
-  if (st.nd) bits.push("само с данни");
+  if (!st.nd && nn) bits.push("+ " + plural(nn) + " без пълен състав най-долу");
+  if (st.nd) bits.push("само с пълен състав");
   return "<b>" + plural(n) + "</b>" + (bits.length ? " · " + bits.join(" · ") : " · всички");
 }
 
-/* ---------- the "cannot check" group (an allergen is excluded): summary of the <details> ---------- */
-export function ndSummaryHTML(nd: number, a: string[]): string {
-  const names = a.map((k) => allergenName(k).toLowerCase()).join(", ");
-  return '<summary><span class="ni">' + ic("warning-circle", 24) + '</span><span class="nt2"><b>Не можем да проверим: ' + plural(nd) + "</b><span>Нямаме състав за тях и не знаем дали съдържат " + esc(names) + ". Попитайте ни преди да поръчате: " + R.phone + '.</span></span><span class="tg" aria-hidden="true">' + ic("caret-down", 18) + "</span></summary>";
+/* ---------- the "cannot check" group (an allergen is excluded, or the search says „без ...“): summary of the <details> ---------- */
+/** names: what we cannot promise (the ticked allergens and the „без ...“ words of the search), already lower case */
+export function ndSummaryHTML(nd: number, names: string[]): string {
+  return '<summary><span class="ni">' + ic("warning-circle", 24) + '</span><span class="nt2"><b>' + NO_COMP + '</b><span><b class="nn">' + plural(nd) + ".</b> Не знаем дали съдържат " + esc(joinAnd(names)) + ". Обадете ни се, преди да поръчате: " + R.phone + '.</span></span><span class="tg" aria-hidden="true">' + ic("caret-down", 18) + "</span></summary>";
 }
+export const allergenLabel = (k: string): string => allergenName(k).toLowerCase();
 
 /* ---------- states ---------- */
 export function stateBox(icon: string, cls: string, title: string, text: string, acts: string): string {

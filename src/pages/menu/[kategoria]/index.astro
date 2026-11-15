@@ -98,6 +98,20 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
 .dcard .rowp .price{font-size:19px}
 .grid-dishes .dcard{grid-template-rows:1fr auto}
 .grid-dishes .dcard .open{align-content:start}
+/* search (decision 15.11.2026): chips next to the recognised words, the band „Съдържат ...“, „Нямаме пълен състав“ last */
+.qchips{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0 4px}
+.qchips .ql{font-size:14px; font-weight:700; color:var(--muted)}
+.qchip{min-height:48px; padding:0 12px 0 16px; gap:6px}
+.qchip[aria-pressed="true"]{padding:0 16px 0 12px}
+.sband{display:flex; align-items:center; gap:8px; margin:28px 0 14px; min-height:48px; padding:8px 18px 8px 14px; border-radius:var(--r-pill); background:var(--surface-2); font-size:17px; font-weight:800; line-height:1.25; letter-spacing:-.01em}
+.sband .ic{flex:none; color:var(--muted)}
+.sband .n{margin-left:auto; padding-left:8px; flex:none; color:var(--muted); font-weight:600; font-size:14px; font-variant-numeric:tabular-nums}
+.qunk{margin-top:32px}
+.qunk-h{display:grid; gap:8px; justify-items:start; margin-bottom:14px; padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.qunk-h .sband{width:100%; margin:0; padding:0; min-height:0; background:transparent}
+.qunk-h .sband .ic{color:var(--warn)}
+.qunk-h .qunk-t{margin:0; color:var(--muted); font-size:16px}
+.qunk-h .pill{min-height:48px; margin-top:4px}
 .dcard .nodata{display:flex; gap:6px; align-items:flex-start; margin:-2px 0 0; font-size:14px; font-weight:700; line-height:1.35; color:var(--warn)}
 .dcard .nodata .ic{margin-top:1px; flex:none}
 .dcard.is-out .nm,.dcard.is-out .price{color:var(--muted)}
@@ -198,6 +212,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   import { stateBox, skeleton, previewPanel, pvChip, PV } from "../../../lib/ui.ts";
   import type { Dish } from "../../../lib/data.ts";
   import { plural } from "../_menu.ts";
+  import { toggle } from "../../../lib/search.ts";
   import {
     parseHash, hashOf, anyFilter, apply, chipsHTML, resultsHTML, noticesHTML, timeFact, timeFactCls, crumbsHTML, count, laterText,
     type CatState, type Sort,
@@ -337,6 +352,8 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
     const b = (e.target as Element).closest<HTMLElement>("button, a");
     if (!b || !root.contains(b)) return;
     if (b.dataset.f) { const k = b.dataset.f; st.f = st.f.indexOf(k) > -1 ? st.f.filter((z) => z !== k) : st.f.concat(k); refresh(); elChips.querySelector<HTMLElement>('[data-f="' + k + '"]')?.focus({ preventScroll: true }); return; }
+    /* „глутен ✕“ ↔ „без глутен“: the word changes in the address (the search is only in this category); the focus stays on the chip */
+    if (b.dataset.qtoggle != null) { const w = b.dataset.qtoggle; st.q = toggle(st.q, w); refresh(); elRes.querySelector<HTMLElement>('[data-qtoggle="' + CSS.escape(w) + '"]')?.focus({ preventScroll: true }); return; }
     if (b.hasAttribute("data-allergens")) { allergenSheet(); return; }
     if (b.hasAttribute("data-morefilters")) { moreFilters(); return; }
     if (b.hasAttribute("data-sort")) { sortSheet(); return; }

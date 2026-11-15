@@ -4,7 +4,7 @@
    (from the data), the controls, ALL dishes of the menu as one table (cards on the phone, 14 columns at 1100+), with the
    allergens of each dish as data attributes, the reference of the 14 allergens, the FAQ and JSON-LD (BreadcrumbList,
    FAQPage). The browser only filters and reorders the rows that are already there (no menu download): "Без ...",
-   "Скрий ястията без данни", the "cannot check" group, the category sheet and the address (#a=gluten.milk&q=..&nd=1).
+   "Скрий ястията без пълен състав", the "cannot check" group, the category sheet and the address (#a=gluten.milk&q=..&nd=1).
    The search loads the menu chunk lazily (same logic as the menu, src/lib/filters.ts). Also in the browser: the lunch
    note (today or not), "Изчерпано днес" from the live menu and, only in preview (?preview=1), the states panel. */
 import Base from "../../layouts/Base.astro";
@@ -66,8 +66,9 @@ const sp = (h: string) => h.replace(ic("phone", 20), u("phone", 20));
   <section class="sec ctl" id="filters" aria-labelledby="ctl-h"><h2 class="vh" id="ctl-h">Търсене и филтри</h2>
     <div class="search" role="search"><label for="q">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
       <input id="q" type="search" placeholder="пица, моцарела, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-      <button class="clr" type="button" data-clrq aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div></div>
-    <div class="frow"><label class="check"><input type="checkbox" id="nd"><span><b>Скрий ястията без данни</b><small>{plural(NODATA)} още нямат състав</small></span></label>
+      <button class="clr" type="button" data-clrq aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div>
+      <div class="qchips" data-qchips role="group" aria-label="Как разбрахме търсенето" hidden></div></div>
+    <div class="frow"><label class="check"><input type="checkbox" id="nd"><span><b>Скрий ястията без пълен състав</b><small>{plural(NODATA)} още нямат състав</small></span></label>
       <button class="link" type="button" data-clear hidden><Fragment set:html={ic("x", 18)} />Изчисти всичко</button></div>
     <div class="fgrp" role="group" aria-labelledby="al-l"><p class="flbl" id="al-l">Изключете алерген</p><p class="help">Скриваме ястията, които го съдържат по състава. Може няколко наведнъж.</p><div class="achips" set:html={chipsHTML()}></div></div>
   </section>
@@ -152,7 +153,21 @@ svg.ic{fill:currentColor}
 .sbox input{width:100%; min-height:56px; padding:0 58px 0 50px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong), var(--hi); font-size:17px; outline:none; -webkit-appearance:none; appearance:none}
 .sbox input::placeholder{color:var(--muted)}
 .sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
-.sbox input::-webkit-search-cancel-button{display:none}
+/* one clear button only: never the browser's own one inside type=search */
+.sbox input::-webkit-search-cancel-button,.sbox input::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}
+/* the chips next to the recognised words: „глутен ✕“ ↔ „без глутен“ (same look as /menu/ and the prototype) */
+.qchips{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px}
+.qchips[hidden]{display:none}
+.qchips .ql{font-size:14px; font-weight:700; color:var(--muted)}
+.qchip{min-height:48px; padding:0 12px 0 16px; gap:6px}
+.qchip[aria-pressed="true"]{padding:0 16px 0 12px}
+/* the search groups in the table: by name, then the band „Съдържат ...“ (the group's heading, with its count) */
+.atbl .cath.qband .ch{display:flex; align-items:center; gap:8px; min-height:48px; padding:8px 18px 8px 14px; border-radius:var(--r-pill); background:var(--surface-2)}
+.atbl .cath.qband h3{font-size:17px; letter-spacing:-.01em}
+.atbl .cath.qband .ch .ic{flex:none; color:var(--muted)}
+.atbl .cath.qband .cn{margin-left:auto}
+.atbl .cath.qband .ch{border-bottom:0}
+.ndbox .nt2 .nn{display:inline; font-size:15px; color:var(--ink)}
 .sbox .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
 .sbox .clr[hidden]{display:none}
 .fgrp{display:grid; gap:4px}
@@ -376,7 +391,9 @@ svg.ic{fill:currentColor}
   import { SC } from "../../client/sc.ts";
   import { api } from "../../client/api.ts";
   import "sc-icons:eye,sliders-horizontal"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
-  import { AL, summaryText, ndSummaryHTML, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE, noun } from "./_alergeni.ts";
+  import { AL, summaryText, ndSummaryHTML, allergenLabel, emptyHTML, errorHTML, offlineHTML, loadingHTML, lunchHTML, cathHTML, tableOpen, OUT_BADGE, noun, NO_COMP } from "./_alergeni.ts";
+  import { qchipsHTML } from "../menu/_search-ui.ts";
+  import type { Chip } from "../../lib/search.ts";
   import { previewPanel, pvChip, PV, loadingText } from "../../lib/ui.ts";
   import type { Dish } from "../../lib/data.ts";
 
@@ -385,7 +402,7 @@ svg.ic{fill:currentColor}
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => main.querySelector<T>(s)!;
   const listEl = $("[data-list]"), stateEl = $("[data-state]"), mainTbl = listEl.querySelector<HTMLTableElement>("table.atbl")!;
   const sumA = $("[data-sum]"), sum2 = $("[data-sum2]"), qIn = $<HTMLInputElement>("#q"), ndIn = $<HTMLInputElement>("#nd"), ring = $(".ring");
-  const clrQ = $(".sbox [data-clrq]"), clearAll = $(".frow [data-clear]");
+  const clrQ = $(".sbox [data-clrq]"), clearAll = $(".frow [data-clear]"), qChipsEl = $("[data-qchips]");
   const AIDS = AL.map((a) => a[0] as string);
 
   /* ---------- the rows the server drew (the browser never draws a dish itself) ---------- */
@@ -402,7 +419,7 @@ svg.ic{fill:currentColor}
   const catName: Record<string, string> = {};
   const catOrder = Array.from(mainTbl.querySelectorAll<HTMLElement>("tbody.cath")).map((t) => { catName[t.dataset.cat!] = t.querySelector("h3")!.textContent || ""; return t.dataset.cat!; });
 
-  /* the "cannot check" group (an allergen is excluded and "Скрий ястията без данни" is off): its own table, folded */
+  /* the "cannot check" group (an allergen is excluded and "Скрий ястията без пълен състав" is off): its own table, folded */
   const ndBox = document.createElement("details");
   ndBox.className = "ndbox"; ndBox.id = "nodata"; ndBox.hidden = true;
   ndBox.innerHTML = "<summary></summary>" + tableOpen() + "</table>";
@@ -435,46 +452,54 @@ svg.ic{fill:currentColor}
   }
   const active = () => st.a.length > 0 || !!st.q.trim() || st.nd;
 
-  /* ---------- search: the menu's own logic (src/lib/filters.ts), loaded only when someone searches ---------- */
-  type Search = { searchScores: (l: Dish[], q: string) => Record<string, number>; byId: Record<string, Dish> };
+  /* ---------- search: the one search of the site (src/lib/search.ts via filters.ts), loaded only when someone searches ---------- */
+  type Groups = { query: { inc: unknown[] }; band: string; name: Dish[]; comp: Dish[]; rest: Dish[]; unknown: Dish[] };
+  type Search = { searchGroups: (l: Dish[], q: string) => Groups; chips: (q: string) => Chip[]; toggle: (q: string, w: string) => string; byId: Record<string, Dish> };
   let search: Search | null = null, searchP: Promise<void> | null = null, searchErr = false;
   function loadSearch(): Promise<void> {
     if (!searchP) {
       searchErr = false;
-      searchP = Promise.all([SC.loadModule(() => import("../../lib/filters.ts")), SC.loadModule(() => import("../../lib/data.ts"))]) /* retries after a failed load */
-        .then(([f, d]) => { search = { searchScores: f.searchScores, byId: d.byId }; })
+      searchP = Promise.all([SC.loadModule(() => import("../../lib/filters.ts")), SC.loadModule(() => import("../../lib/data.ts")), SC.loadModule(() => import("../../lib/search.ts"))]) /* retries after a failed load */
+        /* the rows know a dish by its address: the slug where the id was cut (decision 12.11.2026), else the id */
+        .then(([f, d, q]) => { search = { searchGroups: f.searchGroups, chips: q.chips, toggle: q.toggle, byId: Object.fromEntries(d.items.map((x) => [x.slug || x.id, x])) }; })
         .catch(() => { searchP = null; searchErr = true; });
     }
     return searchP;
   }
 
-  /* ---------- filtering (same rules as the prototype) ---------- */
+  /* ---------- filtering (same rules as the prototype) + the search groups (decision 15.11.2026) ---------- */
   type Group = { c: string; items: Row[]; top: number };
-  type Res = { list: Row[]; groups: Group[]; ndGroups: Group[]; n: number; nd: number };
+  type Res = { list: Row[]; groups: Group[]; ndGroups: Group[]; n: number; nd: number; chips: Chip[] };
+  const byRow = new Map(rows.map((r) => [r.id, r]));
+  /* inside a category: dishes we can check first, then "no data", sold out always last */
+  const rank = (r: Row) => (r.o ? 2 : 0) + (r.c ? 0 : 1);
+  const byCat = (list: Row[]): Group[] => catOrder.map((c) => ({ c, items: list.filter((r) => r.cat === c).sort((a, b) => (rank(a) - rank(b)) || (a.i - b.i)), top: 0 })).filter((g) => g.items.length);
   function results(): Res {
     const qv = st.q.trim();
     let list = rows.filter((r) => (!st.nd || r.c) && !st.a.some((a) => r.al.indexOf(a) > -1));
-    let sc: Record<string, number> | undefined;
+    let groups: Group[], unknown: Row[] = [], chips: Chip[] = [];
     if (qv && search) {
-      const s = search;
-      sc = s.searchScores(list.map((r) => s.byId[r.id]).filter(Boolean), qv);
-      list = list.filter((r) => sc![r.id]);
-    }
-    /* inside a category: dishes we can check first, then "no data", sold out always last */
-    const rank = (r: Row) => (r.o ? 2 : 0) + (r.c ? 0 : 1);
-    let groups: Group[] = catOrder.map((c) => {
-      const it = list.filter((r) => r.cat === c).sort((a, b) => (rank(a) - rank(b)) || (sc ? sc[b.id] - sc[a.id] : 0) || (a.i - b.i));
-      return { c, items: it, top: sc ? Math.max(0, ...it.map((r) => sc![r.id])) : 0 };
-    }).filter((g) => g.items.length);
-    if (sc) groups.sort((a, b) => b.top - a.top);
-    /* with an allergen excluded, dishes we cannot check go to their own group at the end */
-    const ndGroups: Group[] = [];
-    let nd = 0;
+      /* by name on top, the band „Съдържат ...“ and the dishes by composition; only „без ...“: the dishes that pass it, by
+         category; the dishes without a composition never pass „без ...“: they go to the group at the bottom */
+      const s = search, g = s.searchGroups(list.map((r) => s.byId[r.id]).filter(Boolean), qv), back = (a: Dish[]) => a.map((x) => byRow.get(x.slug || x.id)!).filter(Boolean);
+      const out = (a: Row[]) => a.map((r, i) => [r, i] as const).sort((p, q) => Number(p[0].o) - Number(q[0].o) || p[1] - q[1]).map((z) => z[0]);
+      chips = s.chips(qv); unknown = back(g.unknown);
+      if (!g.query.inc.length) { list = back(g.rest); groups = byCat(list); }
+      else {
+        const nm = out(back(g.name)), cp = out(back(g.comp));
+        catName["q-name"] = "По име"; catName["q-comp"] = g.band;
+        groups = [{ c: "q-name", items: nm, top: 0 }, { c: "q-comp", items: cp, top: 0 }].filter((z) => z.items.length);
+        list = nm.concat(cp);
+      }
+    } else groups = byCat(list);
+    /* with an allergen excluded, dishes we cannot check go to their own group at the end (with the search unknowns) */
     if (st.a.length > 0 && !st.nd) {
-      groups.forEach((g) => { const x = g.items.filter((r) => !r.c); if (x.length) { ndGroups.push({ c: g.c, items: x, top: 0 }); nd += x.length; } });
+      groups.forEach((g) => g.items.forEach((r) => { if (!r.c) unknown.push(r); }));
       groups = groups.map((g) => ({ ...g, items: g.items.filter((r) => r.c) })).filter((g) => g.items.length);
     }
-    return { list, groups, ndGroups, n: list.length - nd, nd };
+    unknown = [...new Set(unknown)];
+    const n = groups.reduce((k, g) => k + g.items.length, 0);
+    return { list: groups.flatMap((g) => g.items).concat(unknown), groups, ndGroups: byCat(unknown), n, nd: unknown.length, chips };
   }
 
   function fill(tbl: HTMLTableElement, groups: Group[], pre: string) {
@@ -482,7 +507,10 @@ svg.ic{fill:currentColor}
     const frag = document.createDocumentFragment(), tmp = document.createElement("table");
     for (const g of groups) {
       tmp.innerHTML = cathHTML(pre, g.c, catName[g.c] || "", g.items.length);
-      frag.appendChild(tmp.firstElementChild!);
+      const head = tmp.firstElementChild as HTMLElement;
+      /* the band „Съдържат ...“ is the heading of its group (with an icon, not only a colour) */
+      if (g.c === "q-comp") { head.classList.add("qband"); head.querySelector(".ch")!.insertAdjacentHTML("afterbegin", ic("bowl-food", 20)); }
+      frag.appendChild(head);
       const tb = document.createElement("tbody");
       tb.className = "grp";
       for (const r of g.items) tb.appendChild(r.el);
@@ -500,6 +528,9 @@ svg.ic{fill:currentColor}
     ring.querySelectorAll<HTMLElement>("[data-ring]").forEach((t) => t.classList.toggle("off", st.a.indexOf(t.dataset.ring!) > -1));
     clearAll.hidden = !active();
     clrQ.hidden = !st.q;
+    const qc = st.q.trim() && search ? qchipsHTML(search.chips(st.q)) : "";
+    if (qChipsEl.innerHTML !== qc) qChipsEl.innerHTML = qc;
+    qChipsEl.hidden = !qc;
     main.querySelectorAll<HTMLElement>("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === st.view)));
     /* the states say it once, in the box (the summary line stays quiet) */
     if (st.view === "loading") { setSum("<b>" + loadingText("алергените") + "</b>"); showState(loadingHTML()); return; }
@@ -519,7 +550,7 @@ svg.ic{fill:currentColor}
     fill(mainTbl, r.groups, "g");
     ndBox.hidden = !r.nd;
     if (r.nd) {
-      ndBox.querySelector("summary")!.outerHTML = ndSummaryHTML(r.nd, st.a);
+      ndBox.querySelector("summary")!.outerHTML = ndSummaryHTML(r.nd, [...new Set(st.a.map(allergenLabel).concat(r.chips.filter((c) => c.without).map((c) => c.label)))]);
       ndBox.open = !r.n;
       fill(ndTbl, r.ndGroups, "gn");
     }
@@ -536,7 +567,7 @@ svg.ic{fill:currentColor}
   function catSheet() {
     if (!last) return;
     let h = '<div class="catlist">' + last.groups.map((g) => '<button type="button" data-jump="g-' + g.c + '">' + SC.esc(catName[g.c]) + "<span>" + noun(g.c, g.items.length) + "</span></button>").join("");
-    if (last.nd) h += '<p class="sep">Без данни за алергени</p><button type="button" data-jump="nodata">Не можем да проверим<span>' + SC.plural(last.nd, "ястие", "ястия") + "</span></button>";
+    if (last.nd) h += '<p class="sep">Без пълен състав</p><button type="button" data-jump="nodata">' + NO_COMP + "<span>" + SC.plural(last.nd, "ястие", "ястия") + "</span></button>";
     const sh = SC.sheet({ title: "Към категория", html: h + "</div>" });
     sh.el.addEventListener("click", (e) => {
       const b = (e.target as Element).closest<HTMLElement>("[data-jump]"); if (!b) return;
@@ -556,6 +587,8 @@ svg.ic{fill:currentColor}
   main.addEventListener("click", (e) => {
     const b = (e.target as Element).closest<HTMLElement>("button"); if (!b) return;
     if (b.dataset.al) { const k = b.dataset.al; st.a = st.a.indexOf(k) > -1 ? st.a.filter((z) => z !== k) : st.a.concat([k]); SC.haptic(); update(); return; }
+    /* „глутен ✕“ ↔ „без глутен“: the word changes in the field and the address; the focus stays on the same chip */
+    if (b.dataset.qtoggle != null && search) { const w = b.dataset.qtoggle; qIn.value = search.toggle(qIn.value, w); st.q = qIn.value; update(); qChipsEl.querySelector<HTMLElement>('[data-qtoggle="' + CSS.escape(w) + '"]')?.focus({ preventScroll: true }); return; }
     if (b.hasAttribute("data-clrq")) { st.q = ""; qIn.value = ""; update(); qIn.focus({ preventScroll: true }); return; }
     if (b.hasAttribute("data-clear")) { st.a = []; st.q = ""; st.nd = false; qIn.value = ""; ndIn.checked = false; update(); return; }
     if (b.hasAttribute("data-cats")) { catSheet(); return; }

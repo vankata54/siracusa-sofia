@@ -63,7 +63,7 @@ test("category: light HTML (lazy illustrations), own Menu @id, 'Други ка�
 test("category: 'no allergen data' note under the price, as in the prototype", async ({ page }) => {
   await open(page, "/menu/supi/", "12:30", "#a=gluten");
   const nd = page.locator(".flt .dcard .nodata");
-  await expect(nd.first()).toHaveText("Няма данни за алергени. Попитайте ни.");
+  await expect(nd.first()).toHaveText("Нямаме пълен състав, попитайте ни."); /* the one phrase (decision 15.11.2026) */
   /* below the price row */
   const card = page.locator(".flt .dcard", { has: page.locator(".nodata") }).first();
   const yPrice = (await card.locator(".rowp").boundingBox())!.y, yNote = (await card.locator(".nodata").boundingBox())!.y;
@@ -126,5 +126,51 @@ test("category: '+' shows the order bar; no horizontal scroll on 360", async ({ 
   await cards(page).first().locator(".plus").click();
   await expect(page.locator(".cbar")).toHaveClass(/on/);
   await expect(page.locator(".cbar [data-cn]")).toContainText("1 ястие");
+  expect(errors).toEqual([]);
+});
+
+/* ---------- search only in this category (decision 15.11.2026): by name, the band, „без ...“, the chips ---------- */
+test("category search: „лук“ in the pizzas: by name on top, the band „Съдържат лук“, no repeats", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "/menu/pitsi/", "12:30", "#q=" + encodeURIComponent("лук"));
+  const grids = page.locator(".flt .grid-dishes");
+  const top = await grids.first().locator(".nm").allTextContents();
+  expect(top).toContain("Пица с луканка");
+  const band = page.locator(".flt h3.sband");
+  await expect(band).toContainText("Съдържат лук");
+  const below = await page.locator(".flt h3.sband + .grid-dishes .nm").allTextContents();
+  expect(below.length).toBeGreaterThan(0);
+  expect(below).not.toContain("Пица с луканка");
+  expect(below.filter((n) => top.indexOf(n) > -1)).toEqual([]);
+  /* only this category, and the count in the live heading */
+  for (const n of top.concat(below)) expect(n).toMatch(/пиц/i);
+  await expect(page.locator("#res-h")).toContainText((top.length + below.length) + " от 15 пици");
+  /* the chip „лук ✕“ ↔ „без лук“ changes the address; the focus stays on it */
+  const chip = page.locator('.flt [data-qtoggle="лук"]');
+  await expect(chip).toHaveText("лук");
+  await chip.click();
+  await expect(page).toHaveURL(/#q=%D0%B1%D0%B5%D0%B7%20%D0%BB%D1%83%D0%BA$/);
+  await expect(page.locator('.flt [data-qtoggle="лук"]')).toHaveText("без лук");
+  await expect(page.locator('.flt [data-qtoggle="лук"]')).toBeFocused();
+  await expect(page.locator(".flt h3.sband")).toHaveCount(0);
+  await expect(page.locator(".flt .dcard", { hasText: "Пица с риба Тон" })).toHaveCount(0); /* has red onion */
+  expect(errors).toEqual([]);
+});
+
+test("category search: „без глутен“ keeps the dishes without composition apart at the bottom", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "/menu/topli-predyastia/", "12:30", "#q=" + encodeURIComponent("без глутен"));
+  const unk = page.locator(".flt .qunk");
+  await expect(unk).toBeVisible();
+  await expect(unk.locator("h3")).toContainText("Нямаме пълен състав, попитайте ни");
+  await expect(page.locator(".flt [data-results] > :last-child")).toHaveClass(/qunk/);
+  /* above the group: only dishes with a composition */
+  const above = page.locator(".flt .grid-dishes:not(.qunk .grid-dishes) .dcard");
+  const n = await above.count();
+  expect(n).toBeGreaterThan(0);
+  await expect(above.locator(".cp")).toHaveCount(n);
+  expect(await unk.locator(".dcard").count()).toBe(9);
+  await expect(unk.locator(".dcard .cp")).toHaveCount(0);
+  await expect(page.locator("#res-h")).toContainText("без пълен състав най-долу");
   expect(errors).toEqual([]);
 });

@@ -58,7 +58,7 @@ export function allergenBlock(d: Dish): string {
   let h = '<div class="fblk"><h2 class="h3">Алергени</h2>';
   if (!d.comp) {
     h += (al.length ? '<p class="algnone" style="margin-bottom:8px">Съдържа поне:</p><ul class="algs">' + li + "</ul>" : "") +
-      '<p class="algnone">' + (al.length ? "Пълни данни за алергените още нямаме." : "Няма данни за алергени, попитайте ни.") + "</p>" +
+      '<p class="algnone">' + (al.length ? "Пълни данни за алергените още нямаме." : "Нямаме пълен състав, попитайте ни.") + "</p>" +
       '<p class="note-auto" style="margin:0">' + ic("info", 18) + "<span>Кухнята въвежда състава и алергените на това ястие. Дотогава ви казваме по телефона.</span></p>" +
       '<div class="ask">' + callBtn("pill pill-line") + "</div>";
   } else {

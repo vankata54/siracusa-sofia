@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /* Allergens (/alergeni/): server HTML (SEO, every dish with its allergens, JSON-LD BreadcrumbList and FAQPage),
-   "Без ..." filters and "Скрий ястията без данни" on the rows the server drew (no menu download), the "cannot check"
+   "Без ..." filters and "Скрий ястията без пълен състав" on the rows the server drew (no menu download), the "cannot check"
    group, search with the menu's logic (menu chunk loaded only then), the address, the category sheet, the states panel
    only in preview, no horizontal scroll at 360, no console errors. */
 function watch(page: Page) {
@@ -27,7 +27,8 @@ test("allergens: SEO, all dishes in the server HTML, JSON-LD, no invented facts"
   expect(Buffer.byteLength(html)).toBeLessThan(120_000); /* speed: icons from one sprite / CSS, empty cells without allergen */
   expect(html).toContain("Алергените са предварителни, от състава. Кухнята ги потвърждава.");
   expect(html).toContain("Състав имаме за 54 от 127 ястия");
-  expect(html).toContain("Няма данни за алергени,</b> попитайте ни");
+  expect(html).toContain("Нямаме пълен състав,</b> попитайте ни"); /* the one phrase (decision 15.11.2026) */
+  expect(html).not.toContain("Няма данни");
   expect(html).toContain("[ЛИПСВА: дата на проверката от кухнята]");
   expect(html).not.toContain("Само в прегледа");
   expect(html).not.toMatch(/[—–]/);
@@ -63,7 +64,8 @@ test("allergens: filter Без ..., the cannot-check group, hide no data, clear;
     return (c[1].classList.contains("y") ? "gluten " : "") + (c[7].classList.contains("y") ? "milk " : "") + (e.querySelector(".comp") ? "comp" : "");
   }))) expect(r).toBe("comp");
   await expect(page.locator("#nodata")).toBeVisible();
-  await expect(page.locator("#nodata summary")).toContainText("Не можем да проверим");
+  await expect(page.locator("#nodata summary")).toContainText("Нямаме пълен състав, попитайте ни");
+  await expect(page.locator("#nodata summary")).toContainText("Не знаем дали съдържат глутен и мляко");
   expect(await ndRows(page).count()).toBeGreaterThan(0);
   await expect(page.locator("[data-sum]:visible, [data-sum2]:visible").first()).toContainText("без глутен, мляко");
   /* hide the dishes without data: the group goes away */
@@ -83,7 +85,9 @@ test("allergens: search like the menu (Latin, typos), empty state, from the addr
   await expect(mainRows(page).first().locator("a")).toHaveAttribute("href", /kebapcheta/);
   await expect(page.locator("#q")).toHaveValue("kebapcheta");
   await page.locator("#q").fill("pica");
-  await expect(page.locator("tbody.cath").first()).toContainText("Пици");
+  /* the search groups (decision 15.11.2026): „pica“ is „пица“, by name on top */
+  await expect(page.locator("tbody.cath").first()).toContainText("По име");
+  await expect(mainRows(page).first().locator("a")).toHaveAttribute("href", /\/pitsi\//);
   await page.locator("#q").fill("zzqqxx");
   await expect(page.locator("[data-state]")).toContainText("Не намерихме „zzqqxx“");
   await page.locator("[data-state] [data-clrq]").click();
@@ -118,5 +122,71 @@ test("allergens: preview states panel only in preview", async ({ page }) => {
   await expect(page.locator("[data-state]")).toContainText("Не успяхме да заредим алергените");
   await page.locator("[data-state] [data-retry]").click();
   await expect(mainRows(page)).toHaveCount(127, { timeout: 5000 });
+  expect(errors).toEqual([]);
+});
+
+/* ---------- search (decision 15.11.2026): by name, the band „Съдържат ...“, „без ...“ apart, the chips, one clear button ---------- */
+const rowNames = (page: Page, sel: string) => page.locator(sel).evaluateAll((els) => els.map((e) => e.querySelector(".nm b")!.textContent || ""));
+
+test("allergens search: „лук“: by name on top, the band „Съдържат лук“ heads its group, no repeats", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "#q=" + encodeURIComponent("лук"));
+  const heads = page.locator("[data-list] > table.atbl tbody.cath h3");
+  await expect(heads.first()).toHaveText("По име");
+  await expect(page.locator("[data-list] > table.atbl tbody.cath.qband h3")).toHaveText("Съдържат лук");
+  const top = await rowNames(page, "[data-list] > table.atbl tbody.cath:not(.qband) + tbody.grp tr.dish");
+  const below = await rowNames(page, "[data-list] > table.atbl tbody.qband + tbody.grp tr.dish");
+  expect(top).toContain("Луканка");
+  expect(top).toContain("Пица с луканка");
+  expect(below.length).toBeGreaterThan(5);
+  expect(below).not.toContain("Сет от български колбаси");
+  expect(below.filter((n) => top.indexOf(n) > -1)).toEqual([]);
+  await expect(page.locator("#nodata")).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("allergens search: „onion“, „gluten“ and „без глутен“ (never a dish without composition in the table)", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "#q=onion");
+  await expect(page.locator("tbody.cath.qband h3")).toHaveText("Съдържат лук");
+  await page.locator("#q").fill("gluten");
+  await expect(page.locator("tbody.cath.qband h3")).toHaveText("Съдържат глутен");
+  await page.locator("#q").fill("без глутен");
+  await expect(page.locator("#nodata")).toBeVisible();
+  await expect(page.locator("#nodata summary")).toContainText("Нямаме пълен състав, попитайте ни");
+  /* all 73 dishes without a composition are there (also those with a new address, decision 12.11) and none is in the table */
+  await expect(ndRows(page)).toHaveCount(73);
+  const n = await mainRows(page).count();
+  expect(n).toBeGreaterThan(5);
+  await expect(mainRows(page).locator(".comp")).toHaveCount(n);
+  await expect(mainRows(page).locator("td.nd")).toHaveCount(0);
+  /* column 1 = gluten */
+  expect(await mainRows(page).evaluateAll((els) => els.filter((e) => (e as HTMLTableRowElement).cells[1].classList.contains("y")).length)).toBe(0);
+  await expect(page.locator("[data-sum]:visible, [data-sum2]:visible").first()).toContainText("без пълен състав най-долу");
+  expect(errors).toEqual([]);
+});
+
+test("allergens search: the chip switches „глутен“ ↔ „без глутен“; one clear button", async ({ page }) => {
+  const errors = watch(page);
+  await open(page);
+  await page.locator("#q").fill("глутен");
+  const chip = page.locator('[data-qchips] [data-qtoggle="глутен"]');
+  await expect(chip).toHaveText("глутен");
+  await chip.click();
+  await expect(page.locator("#q")).toHaveValue("без глутен");
+  await expect(page).toHaveURL(/#q=%D0%B1%D0%B5%D0%B7%20%D0%B3%D0%BB%D1%83%D1%82%D0%B5%D0%BD$/);
+  await expect(chip).toHaveText("без глутен");
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(chip).toBeFocused();
+  await expect(page.locator("#nodata")).toBeVisible();
+  await chip.click();
+  await expect(page.locator("#q")).toHaveValue("глутен");
+  await expect(page.locator("tbody.cath.qband h3")).toHaveText("Съдържат глутен");
+  await expect(page.locator(".sbox button:visible")).toHaveCount(1);
+  expect(await page.locator("#q").evaluate((i) => getComputedStyle(i, "::-webkit-search-cancel-button").webkitAppearance)).toBe("none");
+  await page.locator(".sbox [data-clrq]").click();
+  await expect(page.locator("#q")).toHaveValue("");
+  await expect(page.locator("[data-qchips]")).toBeHidden();
+  await expect(mainRows(page)).toHaveCount(127);
   expect(errors).toEqual([]);
 });

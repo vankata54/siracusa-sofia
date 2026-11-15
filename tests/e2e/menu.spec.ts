@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 /* Menu (/menu/): all dishes in the server HTML, JSON-LD, filters, allergens, search, scrollspy, breakfast by the hour,
    the address keeps the choice, "+" shows the order bar. */
@@ -128,4 +129,125 @@ test("menu: + adds to the cart and shows the order bar; no overflow at 360", asy
   await expect(page.locator(".cbar [data-cgo]")).toContainText("Поръчай ·");
   expect(errors).toEqual([]);
   await expect(page.locator(".cbar [data-cgo]")).toHaveAttribute("href", /\/kolichka\//);
+});
+
+/* ---------- search (decision 15.11.2026: one search; by name on top, the band „Съдържат ...“, „без ...“, chips) ---------- */
+const group = (page: Page, id: string) => page.locator("#c-q-" + id);
+const names = (page: Page, id: string) => group(page, id).locator(".dcard .nm").allTextContents();
+
+test("menu search: „лук“ finds Луканка by name, the band „Съдържат лук“ below, no repeats, the navigation lists the groups", async ({ page, isMobile }) => {
+  const errors = watch(page);
+  await open(page, "12:30", "#q=" + encodeURIComponent("лук"));
+  await expect(group(page, "name")).toBeVisible();
+  const top = await names(page, "name");
+  expect(top).toContain("Луканка");
+  expect(top).toContain("Пица с луканка");
+  /* the band is the heading of its group (an h2 with its count), not only a colour */
+  await expect(group(page, "comp").locator("h2.sband")).toContainText("Съдържат лук");
+  await expect(group(page, "comp")).toHaveAttribute("aria-labelledby", "h-q-comp");
+  const below = await names(page, "comp");
+  expect(below.length).toBeGreaterThan(5);
+  expect(below).not.toContain("Сет от български колбаси");
+  expect(below).not.toContain("Пица с луканка");
+  expect(below.filter((n) => top.indexOf(n) > -1)).toEqual([]);
+  /* no category sections while searching; „лук“ alone has no „без ...“, so no group without composition */
+  await expect(page.locator("[data-results] .mcat:not(.qgrp)")).toHaveCount(0);
+  await expect(group(page, "unknown")).toHaveCount(0);
+  /* the count is in the live line */
+  await expect(page.locator("[data-count]")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator("[data-count]")).toContainText("Намерихме " + (top.length + below.length) + " ястия");
+  const nav = isMobile ? page.locator("[data-catscroll]") : page.locator("[data-slist]");
+  await expect(nav.locator('[data-go="q-comp"]')).toContainText("Съдържат лук");
+  expect(errors).toEqual([]);
+});
+
+test("menu search: English „onion“ and „gluten“", async ({ page }) => {
+  await open(page, "12:30", "#q=onion");
+  await expect(group(page, "comp").locator(".sband")).toContainText("Съдържат лук");
+  expect(await names(page, "comp")).not.toContain("Пица с луканка");
+  await expect(page.locator('[data-qchips] [data-qtoggle="onion"]')).toHaveText("лук");
+  await page.locator("#mq").fill("gluten");
+  await expect(group(page, "comp").locator(".sband")).toContainText("Съдържат глутен");
+  expect((await names(page, "comp")).length).toBeGreaterThan(3);
+  await expect(page.locator('[data-qchips] [data-qtoggle="gluten"]')).toHaveText("глутен");
+});
+
+test("menu search: „без глутен“ never lists a dish without composition; they are apart at the bottom", async ({ page }) => {
+  const errors = watch(page);
+  await open(page, "12:30", "#q=" + encodeURIComponent("без глутен"));
+  const res = page.locator("[data-results]");
+  await expect(group(page, "unknown")).toBeVisible();
+  /* the group is the last one, with the one phrase as its heading */
+  await expect(res.locator(":scope > section").last()).toHaveId("c-q-unknown");
+  await expect(group(page, "unknown").locator("h2")).toContainText("Нямаме пълен състав, попитайте ни");
+  await expect(group(page, "unknown")).toContainText("Не знаем дали съдържат глутен");
+  /* every dish above it has a composition line and no gluten chip-filter can let a dish without one through */
+  const above = res.locator(".mcat:not(.q-unknown) .dcard");
+  const n = await above.count();
+  expect(n).toBeGreaterThan(5);
+  await expect(above.locator(".cp")).toHaveCount(n);
+  expect(await group(page, "unknown").locator(".dcard .cp").count()).toBe(0);
+  await expect(page.locator("[data-count]")).toContainText("без пълен състав най-долу");
+  expect(errors).toEqual([]);
+});
+
+test("menu search: the chip switches „глутен“ ↔ „без глутен“ in the field and the address; one clear button", async ({ page }) => {
+  const errors = watch(page);
+  await open(page);
+  await page.locator("#mq").fill("глутен");
+  const chip = page.locator('[data-qchips] [data-qtoggle="глутен"]');
+  await expect(chip).toHaveText("глутен");
+  await expect(chip).toHaveAttribute("aria-pressed", "false");
+  await chip.click();
+  await expect(page.locator("#mq")).toHaveValue("без глутен");
+  await expect(page).toHaveURL(/#q=%D0%B1%D0%B5%D0%B7%20%D0%B3%D0%BB%D1%83%D1%82%D0%B5%D0%BD$/);
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(chip).toHaveText("без глутен");
+  await expect(chip).toBeFocused(); /* the focus is not lost */
+  await expect(group(page, "unknown")).toBeVisible();
+  await chip.click();
+  await expect(page.locator("#mq")).toHaveValue("глутен");
+  await expect(group(page, "comp").locator(".sband")).toContainText("Съдържат глутен");
+  /* exactly one clear button in the field: ours, never the browser's own one */
+  await expect(page.locator(".sbox button:visible")).toHaveCount(1);
+  expect(await page.locator("#mq").evaluate((i) => getComputedStyle(i, "::-webkit-search-cancel-button").webkitAppearance)).toBe("none");
+  await page.locator(".sbox [data-qclear]").click();
+  await expect(page.locator("#mq")).toHaveValue("");
+  await expect(page.locator("#mq")).toBeFocused();
+  await expect(page.locator("[data-qchips]")).toBeHidden();
+  await expect(visibleCards(page)).toHaveCount(124);
+  expect(errors).toEqual([]);
+});
+
+test("menu search: the filters and the ticked allergens apply together with the search", async ({ page }) => {
+  await open(page, "12:30", "#q=" + encodeURIComponent("лук"));
+  const all = await page.locator("[data-results] .dcard").count();
+  await page.locator('[data-fchips] [data-f="veg"]').click();
+  await expect(page).toHaveURL(/f=veg&q=/);
+  await expect.poll(() => page.locator("[data-results] .dcard").count()).toBeLessThan(all);
+  expect(await page.locator("[data-results] .dcard").count()).toBeGreaterThan(0);
+  await expect(page.locator("#mq")).toHaveValue("лук");
+  await page.goto("/menu/?preview=1&t=12:30#a=milk&q=" + encodeURIComponent("лук"));
+  await expect(page.locator("[data-results] .dcard", { hasText: "Пица с луканка" })).toHaveCount(0);
+  await expect(page.locator("[data-results] .dcard", { hasText: "Луканка" }).first()).toBeVisible();
+});
+
+test("search states pass axe (no serious / critical) on the menu, a category and the allergens; light and dark", async ({ page }) => {
+  const axe = async (include: string) => {
+    await page.waitForFunction(() => document.getAnimations().every((a) => { const t = a.effect?.getTiming(); return a.playState !== "running" || !t || t.iterations === Infinity || Number(t.duration) >= 2000; }));
+    const r = await new AxeBuilder({ page }).include(include).analyze();
+    return r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id + ": " + v.nodes.map((n) => n.target.join(" ")).join(", "));
+  };
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await open(page, "12:30", "#q=" + encodeURIComponent("пица без лук"));
+    await expect(page.locator("#c-q-unknown, #c-q-name").first()).toBeVisible();
+    expect(await axe("[data-menupg]")).toEqual([]);
+    await page.goto("/menu/topli-predyastia/?preview=1&t=12:30#q=" + encodeURIComponent("сирене без глутен"));
+    await expect(page.locator(".flt .qchips")).toBeVisible();
+    expect(await axe(".flt")).toEqual([]);
+    await page.goto("/alergeni/#q=" + encodeURIComponent("лук"));
+    await expect(page.locator("tbody.cath.qband")).toBeVisible();
+    expect(await axe("#filters, #res")).toEqual([]);
+  }
 });

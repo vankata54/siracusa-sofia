@@ -8,8 +8,12 @@ import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural as pl } from "../../lib/format.ts";
 import { url } from "../../lib/routes.ts";
 import { hourNote, offlineKeep } from "../../lib/ui.ts";
-import { NOUN, noun, passes, filterById, searchScores, sortInCat } from "../../lib/filters.ts";
-import "sc-icons:barbell,caret-right,clock,drop,funnel,grains,info,magnifying-glass,moon,moped,phone,plant,sliders-horizontal,storefront,sun,users-three,warning,warning-circle,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
+import { NOUN, noun, passes, filterById, searchGroups, sortInCat } from "../../lib/filters.ts";
+import { chips as qChips, type Chip } from "../../lib/search.ts";
+import { callBtn } from "../../lib/ui.ts";
+import { NO_COMP, qchipsHTML, withoutTitle, unknownText } from "./_search-ui.ts";
+export { qchipsHTML, NO_COMP };
+import "sc-icons:barbell,bowl-food,caret-right,clock,drop,funnel,grains,info,magnifying-glass,moon,moped,phone,plant,sliders-horizontal,storefront,sun,users-three,warning,warning-circle,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
 export const MAIN_CATS: Category[] = cats.filter((c) => c.id !== "zakuski");
 export const MAIN_ITEMS: Dish[] = items.filter((x) => x.cat !== "zakuski");
@@ -20,6 +24,11 @@ export { filterById };
 export type MenuKind = "main" | "bf";
 export interface MenuState { menu: MenuKind; f: string[]; a: string[]; q: string; cat: string | null }
 export interface Group { c: Category; items: Dish[]; top: number }
+/** A search group (decision 15.11.2026): by name on top, „Съдържат ...“ by composition below, „Нямаме пълен състав“ last. */
+export interface SGroup { c: { id: string; n: string }; items: Dish[]; kind: "name" | "comp" | "unknown" }
+/** What the navigation needs (categories and search groups alike). */
+export type NavGroup = { c: { id: string; n: string }; items: { length: number } };
+export interface Results { list: Dish[]; groups: Group[]; search: SGroup[]; unknown: number; chips: Chip[] }
 
 /* chip colours and the "Без лук" icon ("x" on a pressed chip reads as "remove") */
 export const FICON: Record<string, string> = { veg: "leaf", hot: "pep" };
@@ -57,17 +66,23 @@ export function hashOf(st: MenuState): string {
 /* ---------- results ---------- */
 export const scopeItems = (st: MenuState): Dish[] => (st.menu === "bf" ? BF_ITEMS : MAIN_ITEMS);
 export const scopeCats = (st: MenuState): Category[] => (st.menu === "bf" ? [catById.zakuski] : MAIN_CATS);
-export function results(st: MenuState): { list: Dish[]; groups: Group[] } {
-  const qv = st.q.trim();
-  let list = scopeItems(st).filter((x) => passes(x, st));
-  let sc: Record<string, number> | undefined;
-  if (qv) { sc = searchScores(list, qv); list = list.filter((x) => sc![x.id]); }
-  const groups = scopeCats(st).map((c) => {
-    const it = sortInCat(list.filter((x) => x.cat === c.id), sc);
-    return { c, items: it, top: sc ? Math.max(0, ...it.map((x) => sc![x.id])) : 0 };
-  }).filter((g) => g.items.length);
-  if (qv) groups.sort((a, b) => b.top - a.top);
-  return { list, groups };
+/** Without a search: the categories as sections. With a search (lib/search.ts): the dishes by name on top, then the band
+    „Съдържат ...“ with the dishes by composition (never repeated), and the dishes without a composition apart at the bottom
+    (only with „без ...“). Only „без ...“: the dishes that pass it, in their categories (like a filter), then that bottom group.
+    The filters and the ticked allergens apply first, together with the search. */
+export function results(st: MenuState): Results {
+  const qv = st.q.trim(), base = scopeItems(st).filter((x) => passes(x, st));
+  const byCat = (list: Dish[]): Group[] => scopeCats(st).map((c) => ({ c, items: sortInCat(list.filter((x) => x.cat === c.id)), top: 0 })).filter((g) => g.items.length);
+  if (!qv) return { list: base, groups: byCat(base), search: [], unknown: 0, chips: [] };
+  const g = searchGroups(base, qv), chips = qChips(qv), search: SGroup[] = [];
+  const only = !g.query.inc.length;
+  if (!only) {
+    if (g.name.length) search.push({ c: { id: "q-name", n: "По име" }, items: sortInCat(g.name), kind: "name" });
+    if (g.comp.length) search.push({ c: { id: "q-comp", n: g.band }, items: sortInCat(g.comp), kind: "comp" });
+  }
+  if (g.unknown.length) search.push({ c: { id: "q-unknown", n: "Нямаме пълен състав" }, items: sortInCat(g.unknown), kind: "unknown" });
+  const list = only ? g.rest : g.name.concat(g.comp);
+  return { list, groups: only ? byCat(g.rest) : [], search, unknown: g.unknown.length, chips };
 }
 
 /* ---------- small pieces ---------- */
@@ -91,7 +106,7 @@ export function card(x: Dish, o: { nd?: boolean; later?: string | null; lazy?: b
   /* lazy: the illustration (placeholder until the photo shoot, heavy SVG) is drawn by the browser near the viewport */
   if (o.lazy) h = h.replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ');
   if (x.comp) h = h.replace('</a><div class="rowp">', '<span class="cp">' + esc(cap(x.comp)) + '</span></a><div class="rowp">');
-  if (o.nd && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">' + ic("info", 18) + 'Няма данни за алергени, попитайте ни</span></a><div class="rowp">');
+  if (o.nd && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">' + ic("info", 18) + NO_COMP + '</span></a><div class="rowp">');
   if (o.later) h = h.replace('class="pic ', 'class="pic out ').replace(/<button class="plus"[\s\S]*?<\/button>/, '<span class="later">' + o.later + "</span>");
   return h;
 }
@@ -107,6 +122,21 @@ export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: bool
     (o.q ? "" : '<p class="cseo missing">[ЛИПСВА: SEO текст за „' + esc(c.n) + "“, 2 - 3 изречения]</p>") +
     '<div class="grid-dishes">' + g.items.map((x) => card(x, { nd: o.nd, later: o.later, lazy: o.lazy })).join("") + "</div></section>";
 }
+
+/** One search group. The heading is the group's title (not only a colour): by name (for screen readers only, the count line
+    above says it), the band „Съдържат лук“ with its count, „Нямаме пълен състав, попитайте ни“ with a sentence and the call. */
+export function searchSectionHTML(g: SGroup, o: { q: string; chips: Chip[]; later?: string | null; nd?: boolean; lazy?: boolean }): string {
+  const id = g.c.id, n = g.items.length;
+  let head: string;
+  if (g.kind === "name") head = '<h2 class="vh" id="h-' + id + '">По име: „' + esc(o.q) + "“, " + plural(n) + "</h2>";
+  else if (g.kind === "comp") head = '<h2 class="sband" id="h-' + id + '">' + ic("bowl-food", 20) + "<span>" + esc(g.c.n) + '</span><span class="n">' + plural(n) + "</span></h2>";
+  else head = '<div class="qunk-h"><h2 class="sband unk" id="h-' + id + '">' + ic("warning-circle", 20) + "<span>" + NO_COMP + '</span><span class="n">' + plural(n) + "</span></h2>" +
+    '<p class="qunk-t">' + unknownText(o.chips) + "</p>" + callBtn("pill pill-line") + "</div>";
+  /* the dishes without a composition: the heading already says it, no note on every card */
+  return '<section class="mcat qgrp q-' + g.kind + '" id="c-' + id + '" data-cat="' + id + '" aria-labelledby="h-' + id + '">' + head +
+    '<div class="grid-dishes">' + g.items.map((x) => card(x, { nd: g.kind === "unknown" ? false : o.nd, later: o.later, lazy: o.lazy })).join("") + "</div></section>";
+}
+export { withoutTitle };
 
 /** Sub-line under each menu in the segment (depends on the hour). */
 /** lunchToday: the lunch menu in the data is for today (or preview/demo); otherwise no "-30%" promise, like the home page. */
@@ -140,9 +170,12 @@ export function filterChipsHTML(st: MenuState): string {
   return h + '<button class="chip more" type="button" data-sheet="more" aria-haspopup="dialog">' + ic("sliders-horizontal", 20) + "Още филтри</button>";
 }
 
-export function countHTML(st: MenuState, n: number): string {
+/** The count line (aria-live): with a search, also how many dishes are apart because we have no composition for them. */
+export function countHTML(st: MenuState, n: number, unknown = 0): string {
   const total = scopeItems(st).length, q = st.q.trim();
-  if (q) return n ? "Намерихме " + plural(n) + " <span>за „" + esc(q) + "“</span>" : "Нищо за „" + esc(q) + "“" + (st.f.length || st.a.length ? " <span>с тези филтри</span>" : "");
+  const unk = unknown ? " · " + plural(unknown) + " без пълен състав най-долу" : "";
+  if (q && n) return "Намерихме " + plural(n) + " <span>за „" + esc(q) + "“" + unk + "</span>";
+  if (q) { const tail = (st.f.length || st.a.length ? " с тези филтри" : "") + unk; return "Нищо " + (unknown ? "сигурно " : "") + "за „" + esc(q) + "“" + (tail ? " <span>" + tail.trim() + "</span>" : ""); }
   if (st.f.length || st.a.length) return "Показваме " + n + " <span>от " + plural(total) + "</span>";
   return plural(total) + " <span>· " + (st.menu === "bf" ? "закуски" : MAIN_CATS.length + " категории") + "</span>";
 }
@@ -165,11 +198,11 @@ export function noticesHTML(S: State, st: MenuState, offline = false): string {
 /** Breakfast cards outside 10:00 - 11:30: no "+", the hour instead. */
 export const laterText = (S: State, st: MenuState): string | null => (st.menu === "bf" && !S.breakfast ? (S.m < 600 ? "от 10:00" : "утре<br>от 10:00") : null);
 
-export function catChipsHTML(groups: Group[]): string {
+export function catChipsHTML(groups: NavGroup[]): string {
   return '<span class="ind" aria-hidden="true"><i class="l"></i><i class="m"></i><i class="r"></i></span>' +
     groups.map((g) => '<a class="chip" href="#' + g.c.id + '" data-go="' + g.c.id + '">' + esc(g.c.n) + ' <span class="n">' + g.items.length + "</span></a>").join("");
 }
-export function sideHTML(groups: Group[]): string {
+export function sideHTML(groups: NavGroup[]): string {
   return '<span class="smark" aria-hidden="true"></span>' +
     groups.map((g) => '<a href="#' + g.c.id + '" data-go="' + g.c.id + '"><span>' + esc(g.c.n) + '</span><span class="n">' + g.items.length + "</span></a>").join("");
 }

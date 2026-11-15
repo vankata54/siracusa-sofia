@@ -10,8 +10,11 @@ import { kind } from "../../../lib/art.ts";
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt } from "../../../lib/format.ts";
 import { url } from "../../../lib/routes.ts";
-import { noun, NOUN, passes, searchScores, filterById } from "../../../lib/filters.ts";
+import { noun, NOUN, passes, searchGroups, filterById } from "../../../lib/filters.ts";
+import { chips as qChips } from "../../../lib/search.ts";
+import { callBtn } from "../../../lib/ui.ts";
 import { card, cap, fic, FICON } from "../_menu.ts";
+import { NO_COMP, qchipsHTML, unknownText } from "../_search-ui.ts";
 /* icons this module draws (registered for SC.ic in the browser; the server has them all) */
 import "sc-icons:arrow-up-right,bowl-food,bread,cake,caret-down,caret-right,carrot,clock,coffee,cooking-pot,flame,fork-knife,funnel,hamburger,info,jar,knife,list-bullets,list-checks,moped,phone,pizza,scales,sliders-horizontal,star,storefront,tag,warning-circle,x"; /* the icons of this page in one module (scripts/icon-groups.mjs) */
 
@@ -63,11 +66,19 @@ export function hashOf(st: CatState): string {
 export const anyFilter = (st: CatState): boolean => !!(st.f.length || st.a.length || st.q);
 
 /* ---------- data helpers ---------- */
-/** Filters + allergens + search. A dish without composition cannot be checked for allergens: it stays, with a note. */
+/** Filters + allergens + search (only in this category). A dish without composition cannot be checked for allergens: it stays,
+    with a note. With a search: the dishes by name, then by composition (lib/search.ts); with „без ...“ the dishes without a
+    composition never count (they are apart at the bottom, see found()). */
 export function apply(list: Dish[], f: string[], a: string[], q: string): Dish[] {
-  let out = list.filter((x) => passes(x, { f, a: x.comp ? a : [] }));
-  if (q.trim()) { const sc = searchScores(out, q); out = out.filter((x) => sc[x.id]); }
-  return out;
+  const r = found(list, f, a, q);
+  return r.name.concat(r.comp);
+}
+/** The search groups in this category: name (or, only „без ...“, every dish that passes it), comp + band, unknown. */
+export function found(list: Dish[], f: string[], a: string[], q: string): { name: Dish[]; comp: Dish[]; band: string; unknown: Dish[] } {
+  const out = list.filter((x) => passes(x, { f, a: x.comp ? a : [] }));
+  if (!q.trim()) return { name: out, comp: [], band: "", unknown: [] };
+  const g = searchGroups(out, q);
+  return g.query.inc.length ? { name: g.name, comp: g.comp, band: g.band, unknown: g.unknown } : { name: g.rest, comp: [], band: "", unknown: g.unknown };
 }
 /** "Препоръчани": price anchor first (hit or the priciest), then "Ново", then menu order; sold out always last. */
 export function sorted(list: Dish[], all: Dish[], sort: Sort): Dish[] {
@@ -189,24 +200,35 @@ export function laterText(c: Category, S: State | null): string | null {
     the browser draws them near the viewport, like /menu/. Names, prices and links stay in the HTML. */
 export const EAGER = 4;
 /** The menu's card; a sold-out dish also gets muted name and price (.is-out); without composition and with a ticked
-    allergen, the prototype's note under the price ("Няма данни за алергени. Попитайте ни."). */
+    allergen, the prototype's note under the price („Нямаме пълен състав, попитайте ни.“, the one phrase). */
 export function cardC(x: Dish, nd: boolean, later: string | null, lazy = false): string {
   let h = card(x, { later: isOut(x) ? null : later, lazy });
-  if (nd && !x.comp) h = h.replace(/<\/div><\/div>$/, '</div><p class="nodata">' + ic("warning-circle", 16) + "<span>Няма данни за алергени. Попитайте ни.</span></p></div>");
+  if (nd && !x.comp) h = h.replace(/<\/div><\/div>$/, '</div><p class="nodata">' + ic("warning-circle", 16) + "<span>" + NO_COMP + ".</span></p></div>");
   return isOut(x) ? h.replace('<div class="dcard"', '<div class="dcard is-out"') : h;
 }
 export function resultsHTML(c: Category, st: CatState, S: State | null): string {
-  const it = inCat(c.id), total = it.length, res = sorted(apply(it, st.f, st.a, st.q), it, st.sort), any = anyFilter(st);
-  const title = any ? res.length + " от " + count(c.id, total) : count(c.id, total);
-  const sub = any ? "<small>" + (st.q ? "с „" + esc(st.q) + "“" + (st.f.length || st.a.length ? " и филтрите" : "") : "с избраните филтри") + "</small>" : "";
+  const it = inCat(c.id), total = it.length, any = anyFilter(st), q = st.q.trim();
+  const g = found(it, st.f, st.a, st.q), order = (a: Dish[]) => (q && st.sort === "rec" ? a.map((x, i) => [x, i] as const).sort((p, r) => Number(isOut(p[0])) - Number(isOut(r[0])) || p[1] - r[1]).map((z) => z[0]) : sorted(a, it, st.sort));
+  const name = order(g.name), comp = order(g.comp), unknown = order(g.unknown), n = name.length + comp.length;
+  const title = any ? n + " от " + count(c.id, total) : count(c.id, total);
+  const sub = any ? "<small>" + (q ? "с „" + esc(q) + "“" + (st.f.length || st.a.length ? " и филтрите" : "") + (unknown.length ? " · " + count(c.id, unknown.length) + " без пълен състав най-долу" : "") : "с избраните филтри") + "</small>" : "";
+  const qc = q ? qchipsHTML(qChips(q)) : "";
   const head = '<div class="resbar"><h2 id="res-h" aria-live="polite">' + title + sub + '</h2><button class="pill pill-soft sortbtn" type="button" data-sort aria-haspopup="dialog">' + ic("list-bullets", 18) + SORT_NAME[st.sort] + "</button></div>" +
+    (qc ? '<div class="qchips" role="group" aria-label="Как разбрахме търсенето">' + qc + "</div>" : "") +
     '<div class="res-note"><span class="note-auto">' + ic("info", 18) + "<span>Алергените са предварителни, от състава. Кухнята ги потвърждава.</span></span>" +
     (any ? '<button class="link" type="button" data-clear>' + ic("x", 16) + "Изчисти филтрите</button>" : "") + "</div>";
   const later = laterText(c, S), nd = st.a.length > 0;
-  const grid = res.length ? res.map((x, i) => cardC(x, nd, later, i >= EAGER)).join("") :
-    '<div class="empty empty-f"><span class="ill">' + ic("funnel", 40) + '</span><h3 class="h3">Няма ' + many(c.id) + ' с тези филтри</h3><p class="muted">Махнете някой филтър или вижте цялото меню.</p>' +
-    '<div class="row" style="flex-wrap:wrap;justify-content:center"><button class="pill pill-red" type="button" data-clear>Изчисти филтрите</button><a class="pill pill-line" href="' + url.menu() + '">Цялото меню</a></div></div>';
-  return head + '<div class="grid-dishes">' + grid + "</div>";
+  let k = 0;
+  const cards = (a: Dish[], noteless = false) => a.map((x) => cardC(x, nd && !noteless, later, k++ >= EAGER)).join("");
+  const empty = '<div class="empty empty-f"><span class="ill">' + ic("funnel", 40) + '</span><h3 class="h3">Няма ' + many(c.id) + " " + (q ? "за „" + esc(q) + "“" : "с тези филтри") + '</h3><p class="muted">' + (q ? "Опитайте друга дума или вижте цялото меню." : "Махнете някой филтър или вижте цялото меню.") + "</p>" +
+    '<div class="row" style="flex-wrap:wrap;justify-content:center"><button class="pill pill-red" type="button" data-clear>' + (q ? "Изчисти търсенето" : "Изчисти филтрите") + '</button><a class="pill pill-line" href="' + url.menu() + '">Цялото меню</a></div></div>';
+  /* with a search: by name on top, the band „Съдържат ...“ (a heading, with the count) and the dishes by composition,
+     the dishes without a composition apart at the bottom (decision 15.11.2026) */
+  let body = name.length ? '<div class="grid-dishes">' + cards(name) + "</div>" : !comp.length && !unknown.length ? '<div class="grid-dishes">' + empty + "</div>" : "";
+  if (comp.length) body += '<h3 class="sband">' + ic("bowl-food", 20) + "<span>" + esc(g.band) + '</span><span class="n">' + count(c.id, comp.length) + "</span></h3>" + '<div class="grid-dishes">' + cards(comp) + "</div>";
+  if (unknown.length) body += '<section class="qunk" aria-labelledby="unk-h"><div class="qunk-h"><h3 class="sband unk" id="unk-h">' + ic("warning-circle", 20) + "<span>" + NO_COMP + '</span><span class="n">' + count(c.id, unknown.length) + "</span></h3>" +
+    '<p class="qunk-t">' + unknownText(qChips(q)) + "</p>" + callBtn("pill pill-line") + '</div><div class="grid-dishes">' + cards(unknown, true) + "</div></section>";
+  return head + body;
 }
 
 /* ---------- other categories (below the fold: the small plates are drawn by the browser, lazily) ---------- */

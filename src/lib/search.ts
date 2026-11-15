@@ -106,8 +106,10 @@ function byName(x: Searchable, w: QWord, typo = false): boolean {
   const n = idx(x).name;
   if (w.v.some((v) => v.length >= 2 && n.some((t) => t.indexOf(v) === 0))) return true;
   if (w.c && hasForm(n, w.c.forms)) return true;
-  /* една правописна грешка в дума от 4 букви, две от 9 (както досега): само ако нищо не е намерено без тях */
-  if (typo) return w.v.some((v) => { const k = v.length >= 9 ? 2 : v.length >= 4 ? 1 : 0; return k > 0 && n.some((t) => { for (let L = Math.max(1, v.length - k); L <= v.length + k; L++) if (dl(v, t.slice(0, L)) <= k) return true; return false; }); });
+  /* една правописна грешка в дума над 4 букви (5+), две от 9 (design/PAGES.md): само ако нищо не е намерено без тях.
+     Броят се написаните букви, не латиницата („суши“ е 4 букви, макар „sushi“ да е 5): „суши“ не намира „сушен домат“. */
+  const len = w.raw.replace(/[^0-9a-zа-яѝ]/gi, "").length, k = len >= 9 ? 2 : len >= 5 ? 1 : 0;
+  if (typo) return k > 0 && w.v.some((v) => n.some((t) => { for (let L = Math.max(1, v.length - k); L <= v.length + k; L++) if (dl(v, t.slice(0, L)) <= k) return true; return false; }));
   return false;
 }
 /** By composition: whole words and their forms, the allergens of the dish, its tags. Nothing without a composition. */
@@ -189,10 +191,10 @@ export function chips(raw: string): Chip[] {
   const q = parse(raw);
   return [...q.inc.filter((w) => w.c).map((w) => ({ label: w.label, without: false, word: w.raw })), ...q.exc.map((w) => ({ label: w.label, without: true, word: w.raw }))];
 }
-/** Switch one word between „X“ and „без X“ in the query text. */
+/** Switch one word between „X“ and „без X“ in the query text („-X“, „X-free“ and „X free“ also count as „без X“). */
 export function toggle(raw: string, word: string): string {
   const esc = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), s = String(raw || "");
-  const neg = new RegExp("(^|\\s)(без|bez|no|without|not)\\s+" + esc + "(?=\\s|$)", "i");
+  const neg = new RegExp("(^|\\s)(?:(?:без|bez|no|without|not)\\s+" + esc + "|[-‑]" + esc + "|" + esc + "[-‑\\s](?:free|фри))(?=\\s|$)", "i");
   if (neg.test(s)) return s.replace(neg, "$1" + word).replace(/\s+/g, " ").trim();
   const pos = new RegExp("(^|\\s)" + esc + "(?=\\s|$)", "i");
   return (pos.test(s) ? s.replace(pos, "$1без " + word) : (s + " без " + word)).replace(/\s+/g, " ").trim();

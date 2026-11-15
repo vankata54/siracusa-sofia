@@ -199,3 +199,13 @@ for (const w of [360, 390]) {
     }
   });
 }
+
+test("dish: without a composition says the one phrase „Нямаме пълен състав, попитайте ни“ (decision 15.11.2026)", async ({ page, request }) => {
+  const html = await (await request.get("/menu/supi/pileshka-supa/")).text();
+  expect(html).toContain("Нямаме пълен състав, попитайте ни.");
+  expect(html).not.toContain("Няма данни за алергени");
+  const errors = watch(page);
+  await open(page, "/menu/supi/pileshka-supa/");
+  await expect(page.locator(".algnone").first()).toHaveText("Нямаме пълен състав, попитайте ни.");
+  expect(errors).toEqual([]);
+});

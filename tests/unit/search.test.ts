@@ -30,6 +30,18 @@ describe("search: by name, then „Съдържат ...“", () => {
     expect(ids(r.comp)).not.toContain("kolbasi");
     expect(r.name.filter((x) => r.comp.indexOf(x) > -1)).toEqual([]);
   });
+  it("a typo is forgiven only in a word of 5+ letters (two from 9): „суши“ does not find „сушен домат“", () => {
+    const l = [D("brusk", "Брускета със сушен домат", "хляб, домат"), D("keb", "Кебапчета", "кайма")];
+    expect(ids(searchDishes(l, "суши").name)).toEqual([]);
+    expect(ids(searchDishes(l, "суши").comp)).toEqual([]);
+    expect(ids(searchDishes(l, "kebapceta").name)).toEqual(["keb"]); /* 9 letters: two typos */
+    expect(ids(searchDishes(l, "кебепчета").name)).toEqual(["keb"]);
+    expect(ids(searchDishes(l, "брускта").name)).toEqual(["brusk"]); /* 7 letters: one */
+    expect(searchGroups(items, "kebapceta").name.map((x) => x.n)).toContain("Кебапчета");
+    /* on the real menu: „суши“ finds nothing (the „Брускети ... сушен домат“ was a typo match) */
+    const g = searchGroups(items, "суши");
+    expect(g.name.length + g.comp.length).toBe(0);
+  });
   it("2 letters are enough by name", () => { expect(ids(searchDishes(list, "лу").name)).toContain("lukanka"); });
   it("the forms of a word, not a longer word", () => {
     expect(isForm("luk", "luk")).toBe(true);
@@ -88,6 +100,12 @@ describe("search: „без ...“ never lets a dish without a composition throu
     expect(chips("глутен")).toEqual([{ label: "глутен", without: false, word: "глутен" }]);
     expect(toggle("пица глутен", "глутен")).toBe("пица без глутен");
     expect(toggle("пица без глутен", "глутен")).toBe("пица глутен");
+    /* the other ways to say „без“: the chip turns them back into the plain word, never „-лук без лук“ */
+    expect(toggle("-лук", "лук")).toBe("лук");
+    expect(toggle("gluten-free", "gluten")).toBe("gluten");
+    expect(toggle("gluten free пица", "gluten")).toBe("gluten пица");
+    expect(toggle("no gluten", "gluten")).toBe("gluten");
+    expect(chips("gluten-free")).toEqual([{ label: "глутен", without: true, word: "gluten" }]);
   });
 });
 
