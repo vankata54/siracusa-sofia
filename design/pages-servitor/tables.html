@@ -17,17 +17,35 @@
 .sum a.emb{background:var(--ember); color:var(--on-ember)} .sum a.emb span{color:var(--on-ember); opacity:.8}
 .strips{display:grid; gap:8px}
 .more{display:flex; justify-content:center}
+.resl{display:grid; gap:8px}
+.resr{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:center; padding:12px 16px 12px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.resr .tm{grid-row:span 2; display:grid; place-items:center; min-width:64px; height:56px; border-radius:16px; background:var(--surface-2); font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.resr b{font-size:16px; font-weight:800; line-height:1.25}
+.resr small{font-size:14px; font-weight:600; color:var(--muted); line-height:1.3}
+.rsheet .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.rsheet .field{margin-top:14px}
+.rsheet select.input{appearance:auto}
+.rsheet .tchips{display:flex; flex-wrap:wrap; gap:8px}
+.rsheet .tchips .chip{min-width:72px; justify-content:center; font-variant-numeric:tabular-nums}
+.rsheet .tchips .chip small{font-size:14px; font-weight:600; opacity:.75}
+.stepper{display:flex; align-items:center; gap:6px; width:max-content; padding:4px; border-radius:999px; background:var(--surface-2)}
+.stepper button{width:48px; height:48px; border:0; border-radius:50%; background:var(--surface); color:var(--ink); display:grid; place-items:center; cursor:pointer; box-shadow:var(--shadow)}
+.stepper button[disabled]{opacity:.4; cursor:not-allowed}
+.stepper output{min-width:64px; text-align:center; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.rsheet .days{display:flex; gap:8px; flex-wrap:wrap}
 </style>
 </head>
 <body>
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
 <script src="_staff.js"></script>
 <script>
-var main = ST.mount({page:"tables", title:"Залата", nav:"tables"});
+var main = ST.mount({page:"tables", title:"Залата", nav:"tables", homeFind:true});
 var ic = SC.ic, esc = SC.esc;
-var zone = ST.hash.zone || "salon", showCached = false;
+var zone = ST.hash.zone || "salon", showCached = false, showAllRes = false;
 var SHORT = {bill:"Сметка", qr:"QR поръчка", ready:"Готово", wait:"Чака поръчка", busy:"Заета", free:"Свободна"};
 
 function tile(n){ var t = ST.tableByN[n], s = ST.tStatus(n), mine = ST.isMine(n);
@@ -57,7 +75,8 @@ function render(){
   if (ST.offline && !showCached){ main.innerHTML = offlineScreen(); return; }
   var q = queue(), ready = ST.readyGroups();
   var html = (ST.offline ? '<section class="st-sec"><div class="notice warn">'+ic("clock",22)+'<span><b>Последни данни от '+ST.clock(ST.db.lastSync||Date.now()-60000)+'.</b> Таймерите са спрени, а „Отивам“ ще може, щом има връзка.</span></div></section>' : '')+
-    '<section class="st-sec"><div class="sum">'+
+    '<section class="st-sec" style="padding-top:12px"><button class="st-findfield" type="button" data-act="find" aria-label="Търси: маси, поръчки, изчерпано, резервации, ястия">'+ic("magnifying-glass",22)+'<span>Търси маса, №, резервация, ястие…</span></button></section>'+
+    '<section class="st-sec" style="padding-top:12px"><div class="sum">'+
     '<a href="calls.html" class="'+(q.length?"hot":"")+'"><b>'+q.length+'</b><span>повиквания и QR</span></a>'+
     '<a href="ready.html" class="'+(ready.length?"emb":"")+'"><b>'+ready.length+'</b><span>маси с готово</span></a>'+
     '<a href="#zala"><b>'+SC.TABLES.filter(function(t){ return ST.tStatus(t.n).k==="free"; }).length+'</b><span>свободни маси</span></a></div></section>';
@@ -66,6 +85,11 @@ function render(){
       (q.length>3?'<div class="more"><a class="link" href="calls.html">Още '+(q.length-3)+' в „Повиквания“'+ic("caret-right",18)+'</a></div>':'')+'</section>';
   }
   html += '<section class="st-sec"><div class="st-h"><h2>Моите маси</h2><span class="muted">'+ST.MINE.length+' маси</span></div><div class="tgrid">'+ST.MINE.map(tile).join("")+'</div></section>';
+  var today = ST.dayKey(new Date()), rs = ST.resAll().filter(function(r){ return r.day >= today; });
+  html += '<section class="st-sec" id="res"><div class="st-h"><h2>Резервации</h2><button class="link" type="button" data-newres style="font-size:16px">'+ic("plus",20)+'Нова резервация</button></div>'+
+    (rs.length ? '<div class="resl">'+rs.slice(0, showAllRes ? 99 : 3).map(function(r){ return '<div class="resr"><span class="tm">'+ST.hm(r.at)+'</span><b>Маса '+r.t+' · '+SC.plural(r.n,"човек","души")+' · '+esc(r.name)+'</b><small>'+(r.day===today?'Днес':ST.dayText(r.day))+' · '+esc(r.phone)+(r.note?' · '+esc(r.note):'')+'</small></div>'; }).join("")+'</div>'+
+      (rs.length>3 && !showAllRes ? '<div class="more"><button class="link" type="button" data-allres>Още '+(rs.length-3)+ic("caret-down",18)+'</button></div>' : '')
+    : '<div class="notice">'+ic("calendar-blank",22)+'<span>Няма резервации за днес.</span></div>')+'</section>';
   var zs = SC.TABLES.filter(function(t){ return t.zone===zone; });
   html += '<section class="st-sec" id="zala"><div class="st-h"><h2>Цялата зала</h2></div>'+
     '<div class="st-seg" role="group" aria-label="Зона" style="margin-bottom:12px">'+["salon","garden"].map(function(z){ return '<button type="button" data-zone="'+z+'" aria-pressed="'+(zone===z)+'">'+ST.ZONE[z]+' <span class="n">'+SC.TABLES.filter(function(t){ return t.zone===z; }).length+'</span></button>'; }).join("")+'</div>'+
@@ -75,9 +99,57 @@ function render(){
     '</div><p class="small muted" style="margin:12px 0 0">Масите, номерата и местата са условни за макета <span class="missing">[ЛИПСВА: истински план и брой места от админ панела]</span>.</p></section>';
   main.innerHTML = html; ST.tick();
 }
+/* „Нова резервация“ за персонала (решение 15.11): дата, час, брой хора, маса (свободните), име и телефон на госта, бележка.
+   Без маркетингово съгласие: гостът не дава съгласие през сервитьора. Часовете са като на сайта (11:00-21:30, допускане). */
+function newRes(){ var now = new Date(), d0 = ST.dayKey(now), d1 = ST.dayKey(new Date(now.getTime()+864e5));
+  var f = {day:d0, at:null, n:2, t:null, name:"", phone:"", note:""}, err = {};
+  function slots(){ var m = f.day===d0 ? now.getHours()*60+now.getMinutes() : -1; return ST.SLOTS.filter(function(x){ return x > m + 15; }); }
+  function fit(){ return SC.TABLES.filter(function(t){ return t.seats >= f.n && t.seats <= f.n + 2 && f.at != null && ST.tableFreeAt(t.n, f.day, f.at); }); }
+  if (!f.at) f.at = slots()[0] != null ? slots()[0] : null;
+  var sh = ST.sheet({title:"Нова резервация", html:'<div class="rsheet" id="rs"></div>', foot:'<button class="pill pill-red pill-lg pill-block" type="button" data-rsave>'+ic("calendar-check",22)+'Запази резервацията</button>'});
+  var box = sh.el.querySelector("#rs");
+  function e(k){ return err[k] ? '<span class="err" id="e-'+k+'">'+err[k]+'</span>' : ''; }
+  function inv(k){ return err[k] ? ' aria-invalid="true" aria-describedby="e-'+k+'"' : ''; }
+  function paint(focus){ var sl = slots(), ts = fit();
+    if (f.t && !ts.some(function(t){ return t.n===f.t; })) f.t = null;
+    box.innerHTML =
+      '<div class="field" style="margin-top:0"><span class="label" id="l-day">Дата</span><div class="days" role="group" aria-labelledby="l-day">'+
+        [[d0,"Днес"],[d1,"Утре"]].map(function(x){ return '<button class="chip" type="button" data-day="'+x[0]+'" aria-pressed="'+(f.day===x[0])+'">'+x[1]+' · '+ST.dayText(x[0])+'</button>'; }).join("")+
+        '</div><label class="vh" for="rday">Друга дата</label><input class="input" id="rday" type="date" min="'+d0+'" value="'+f.day+'" aria-label="Друга дата"></div>'+
+      '<div class="grid2"><div class="field"><label for="rat">Час</label>'+(sl.length ? '<select class="input" id="rat"'+inv("at")+'>'+sl.map(function(x){ return '<option value="'+x+'"'+(x===f.at?' selected':'')+'>'+ST.hm(x)+'</option>'; }).join("")+'</select>' : '<p class="muted" style="margin:0">За днес часовете свършиха.</p>')+e("at")+'</div>'+
+      '<div class="field"><span class="label" id="l-n">Брой хора</span><div class="stepper" role="group" aria-labelledby="l-n"><button type="button" data-n="-1" aria-label="По-малко хора"'+(f.n<=1?' disabled':'')+'>'+ic("minus",20)+'</button><output aria-live="polite">'+f.n+'</output><button type="button" data-n="1" aria-label="Повече хора"'+(f.n>=12?' disabled':'')+'>'+ic("plus",20)+'</button></div></div></div>'+
+      (f.n>=12 ? '<p class="small muted" style="margin:8px 0 0">Повече от 12 души: празник, през управителя.</p>' : '')+
+      '<div class="field"><span class="label" id="l-t">Маса · свободните за '+(f.at!=null?ST.hm(f.at):'часа')+'</span>'+(ts.length ? '<div class="tchips" role="group" aria-labelledby="l-t">'+ts.map(function(t){ return '<button class="chip" type="button" data-rt="'+t.n+'" aria-pressed="'+(f.t===t.n)+'" aria-label="Маса '+t.n+', '+ST.ZONE[t.zone]+', '+t.seats+' места">'+t.n+' <small>'+ST.ZONE[t.zone]+' · '+t.seats+'</small></button>'; }).join("")+'</div>' : (f.n>6 ? '<p class="muted" style="margin:0">Над 6 души: управителят събира маси.</p>' : '<p class="muted" style="margin:0">Няма свободна маса за '+f.n+' в този час. Опитай друг час.</p>'))+e("t")+
+        '<span class="help">Масите и местата са условни за макета.</span></div>'+
+      '<div class="field"><label for="rname">Име на госта</label><input class="input" id="rname" autocomplete="off" value="'+esc(f.name)+'"'+inv("name")+'>'+e("name")+'</div>'+
+      '<div class="field"><label for="rph">Телефон на госта</label><input class="input" id="rph" type="tel" inputmode="tel" autocomplete="off" placeholder="0888 12 34 56" value="'+esc(f.phone)+'"'+inv("phone")+'>'+e("phone")+'</div>'+
+      '<div class="field"><label for="rnote">Бележка (по желание)</label><input class="input" id="rnote" autocomplete="off" placeholder="Например: детско столче" value="'+esc(f.note)+'"></div>';
+    if (focus){ var el = box.querySelector(focus); el && el.focus(); } }
+  paint();
+  box.addEventListener("input", function(ev){ var t = ev.target;
+    if (t.id==="rname") f.name = t.value; else if (t.id==="rph") f.phone = t.value; else if (t.id==="rnote") f.note = t.value; });
+  box.addEventListener("change", function(ev){ var t = ev.target;
+    if (t.id==="rat"){ f.at = +t.value; paint("#rat"); } else if (t.id==="rday" && t.value){ f.day = t.value < d0 ? d0 : t.value; f.at = slots()[0] != null ? slots()[0] : null; paint("#rday"); } });
+  sh.el.addEventListener("click", function(ev){ var b = ev.target.closest("button"); if (!b) return;
+    if (b.dataset.day){ f.day = b.dataset.day; var sl = slots(); if (sl.indexOf(f.at) < 0) f.at = sl[0] != null ? sl[0] : null; paint('[data-day="'+f.day+'"]'); return; }
+    if (b.dataset.n){ f.n = Math.max(1, Math.min(12, f.n + +b.dataset.n)); paint('[data-n="'+b.dataset.n+'"]'); return; }
+    if (b.dataset.rt){ f.t = +b.dataset.rt; delete err.t; paint('[data-rt="'+f.t+'"]'); return; }
+    if (b.hasAttribute("data-rsave")){ err = {};
+      if (f.at == null) err.at = "Избери час.";
+      if (!f.t) err.t = "Избери маса.";
+      if (!f.name.trim()) err.name = "Напиши името на госта.";
+      var ph = f.phone.replace(/[\s\-()]/g, ""); if (!/^(\+359|0)\d{8,9}$/.test(ph)) err.phone = f.phone.trim() ? "Провери номера: например 0888 12 34 56." : "Напиши телефона на госта.";
+      var first = ["at","t","name","phone"].filter(function(k){ return err[k]; })[0];
+      if (first){ paint({at:"#rat", t:"[data-rt]", name:"#rname", phone:"#rph"}[first]); return; }
+      var r = ST.addRes({day:f.day, at:f.at, t:f.t, n:f.n, name:f.name.trim(), phone:f.phone.trim(), note:f.note.trim()});
+      sh.close(); ST.toast("Резервация: Маса "+r.t+" · "+ST.dayText(r.day)+" · "+ST.hm(r.at), function(){ ST.delRes(r.id); }); } }); }
+if (ST.hash.newres !== undefined) setTimeout(newRes, 300);
+
 render(); ST.on(render);
 main.addEventListener("click", function(e){ var b = e.target.closest("button,a[data-off]"); if (!b) return;
   if (b.dataset.zone){ zone = b.dataset.zone; render(); return; }
+  if (b.hasAttribute("data-newres")){ newRes(); return; }
+  if (b.hasAttribute("data-allres")){ showAllRes = true; render(); return; }
   if (b.hasAttribute("data-cached")){ showCached = true; ST.frozen = true; render(); return; }
   if (b.hasAttribute("data-off")){ ST.toast("Без връзка колегите няма да видят. Опитай, щом връзката се върне."); return; }
   if (b.dataset.take){ var id = b.dataset.take, c = ST.db.calls.filter(function(x){ return x.id===id; })[0]; ST.takeCall(id); ST.haptic(); ST.toast("Маса "+c.t+": отивам. Колегите виждат, че масата е поета."); return; }

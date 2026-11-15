@@ -67,7 +67,7 @@ function render(){ var h = '<div class="lg">';
   } else if (view==="shift"){
     h += '<div class="hello"><span class="av">'+ic("user",32)+'</span><div><h1 class="h2">Смяна · '+esc(who)+'</h1><p class="muted" style="margin:2px 0 0;font-weight:700">'+today()+' · от '+ST.clock(Date.now())+'</p></div></div>'+
       '<div><p class="st-cap">Моите маси днес</p><div class="tchips">'+SC.TABLES.map(function(t){ return '<button class="chip" type="button" data-t="'+t.n+'" aria-pressed="'+(myT.indexOf(t.n)>-1)+'" aria-label="Маса '+t.n+', '+ST.ZONE[t.zone]+'">'+t.n+'</button>'; }).join("")+'</div>'+
-      '<p class="small muted" style="margin:10px 0 0">Салон: 1-12 · Градина: 13-20 (условно). Кой разпределя масите, управителят или сервитьорът: <span class="missing">[ЛИПСВА: решение]</span>.</p></div>'+
+      '<p class="small muted" style="margin:10px 0 0">Избери своите маси за смяната. Управителят може да ги промени. Салон: 1-12 · Градина: 13-20 (условно).</p></div>'+
       '<div class="notice">'+ic("bell-ringing",22)+'<span>Повикванията от моите маси идват на телефона и на часовника. Повикванията от другите маси, които никой не е поел, също се виждат.</span></div>'+
       '<a class="pill pill-red pill-lg pill-block" href="tables.html" data-start'+(myT.length?'':' aria-disabled="true"')+'>Започни смяната · '+SC.plural(myT.length,"маса","маси")+'</a>';
   } else if (view==="end"){
@@ -82,12 +82,12 @@ function render(){ var h = '<div class="lg">';
 }
 render();
 function digit(d){ if (view!=="pin") return; pinBad = false; if (pin.length<4) pin += d; render();
-  if (pin.length===4) setTimeout(function(){ if (pin==="0000"){ pinBad = true; pin = ""; render(); return; } view = "shift"; render(); window.scrollTo(0,0); }, 250); }
+  if (pin.length===4) setTimeout(function(){ if (pin==="0000"){ pinBad = true; pin = ""; render(); return; } ST.signIn(who); view = "shift"; render(); window.scrollTo(0,0); }, 250); }
 document.addEventListener("keydown", function(e){ if (view!=="pin" || document.querySelector(".st-sheetwrap.on")) return; if (/^[0-9]$/.test(e.key)) digit(e.key); else if (e.key==="Backspace"){ pin = pin.slice(0,-1); render(); } });
 main.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p");
   perr = {}; if (!u.value.trim()) perr.u = "Въведи потребител."; if (!p.value) perr.p = "Въведи парола.";
   if (perr.u || perr.p){ var uv = u.value; render(); main.querySelector("#u").value = uv; main.querySelector(perr.u ? "#u" : "#p").focus(); return; }
-  view = "shift"; render(); window.scrollTo(0,0); });
+  ST.signIn(who); view = "shift"; render(); window.scrollTo(0,0); });
 main.addEventListener("click", function(e){ var b = e.target.closest("button,a"); if (!b) return;
   if (b.dataset.v){ view = b.dataset.v; pin = ""; pinBad = false; perr = {}; render(); return; }
   if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"); var sh = p.type==="password"; p.type = sh ? "text" : "password"; b.setAttribute("aria-pressed", sh); b.innerHTML = ic(sh?"lock":"eye",20)+(sh?"Скрий":"Покажи"); return; }
@@ -96,6 +96,7 @@ main.addEventListener("click", function(e){ var b = e.target.closest("button,a")
   if (b.hasAttribute("data-del")){ pin = pin.slice(0,-1); render(); return; }
   if (b.hasAttribute("data-clear")){ pin = ""; pinBad = false; render(); return; }
   if (b.dataset.t){ var n = +b.dataset.t, i = myT.indexOf(n); if (i>-1) myT.splice(i,1); else myT.push(n); render(); return; }
+  if (b.hasAttribute("data-end")){ ST.signOut(); return; }
   if (b.hasAttribute("data-start")){ if (!myT.length){ e.preventDefault(); ST.toast("Избери поне една маса."); return; } ST.setMine(myT.sort(function(a,c){ return a-c; })); return; }
 });
 </script>
