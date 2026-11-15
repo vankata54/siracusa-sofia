@@ -137,6 +137,8 @@
 
 /* ---------- редактор (15.11): табове, чернова, категории, „Добави“ и „Смени“ ---------- */
 .mn-tabs{margin:24px 0 0}
+.mn-tsel{display:none}
+@container page (max-width:559px){ .mn-tabs .sa-tabs{display:none} .mn-tsel{display:block} .mn-ci .acts .pill, .mn-ci .acts .mn-on{flex:1 1 auto; justify-content:center} }
 @container page (min-width:700px){ .mn-tabs .sa-tabs{display:inline-flex} }
 .mn-pubinfo{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:12px 0 0; font-size:15px; font-weight:600; color:var(--muted)}
 .mn-pubinfo .ic{color:var(--ok)}
@@ -324,7 +326,7 @@ function summary(){ var outs = outList(), list = all(), df = diff(), np = A.data
 
 function tabsHTML(){ var df = diff();
   return '<div class="mn-tabs" data-edit-id="admin.menu.tabs"><div class="sa-tabs" role="tablist" aria-label="Редактор на менюто">' + [["","Ястия", all().length],["cats","Категории", cats().length],["opts","Добави и Смени", null]].map(function(t){
-    return '<button type="button" role="tab" id="mt-' + (t[0] || "dishes") + '" aria-controls="mn-tp" aria-selected="' + (view.t === t[0]) + '" tabindex="' + (view.t === t[0] ? 0 : -1) + '" data-tab="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="c">' + t[2] + '</span>' : '') + '</button>'; }).join("") + '</div></div>'; }
+    return '<button type="button" role="tab" id="mt-' + (t[0] || "dishes") + '" aria-controls="mn-tp" aria-selected="' + (view.t === t[0]) + '" tabindex="' + (view.t === t[0] ? 0 : -1) + '" data-tab="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="c">' + t[2] + '</span>' : '') + '</button>'; }).join("") + '</div><div class="mn-tsel"><label class="vh" for="mn-ts">Част от редактора</label><select class="input" id="mn-ts">' + [["","Ястия (" + all().length + ")"],["cats","Категории (" + cats().length + ")"],["opts","Добави и Смени"]].map(function(t){ return '<option value="' + t[0] + '"' + (view.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join("") + '</select></div></div>'; }
 
 function toolbar(){ var list = all(true);
   return '<div class="mn-bar" data-edit-id="admin.menu.toolbar"><div class="sa-field-s"><label class="vh" for="mn-q">Търси ястие</label>' + ic("magnifying-glass",20) + '<input class="input" id="mn-q" type="search" placeholder="Търси ястие (и на латиница)" autocomplete="off" value="' + esc(view.q) + '"></div>' +
@@ -443,6 +445,7 @@ body.addEventListener("focusout", function(e){ var t = e.target;
   if (!t.matches("[data-price]") || !t.isConnected) return; var x = dish(rowOf(t)); if (!x || t.value === num(x.p)) return;
   var rt = e.relatedTarget, same = rt && rt.closest && rt.closest(".mn-row") === t.closest(".mn-row");
   savePrice(t, same ? (rt.matches("[data-out]") ? "[data-out]" : rt.matches("[data-edit]") ? "[data-edit]" : null) : null); });
+body.addEventListener("change", function(e){ if (e.target.id !== "mn-ts") return; view.t = e.target.value; syncHash(); draw(); var n = body.querySelector("#mn-ts"); n && n.focus({preventScroll:true}); });
 body.addEventListener("input", function(e){ var t = e.target; if (t.id === "mn-q"){ view.q = t.value; syncHash(); drawList(); } });
 body.addEventListener("click", function(e){ var t;
   if ((t = e.target.closest("[data-tab]"))){ view.t = t.dataset.tab; syncHash(); draw(); var n = body.querySelector('[data-tab="' + view.t + '"]'); n && n.focus({preventScroll:true}); return; }

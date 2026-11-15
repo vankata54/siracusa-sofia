@@ -191,7 +191,9 @@ var esc = SC.esc, ic = SC.ic, fmt = SC.fmt;
 var ADDON_OPTS = (function(){ try{ var o = JSON.parse(localStorage.getItem("sa-menu-opts") || "null"); if (o && o.addon) return o.addon; }catch(e){} return null; })();
 var ADDON_CATS = ADDON_OPTS && ADDON_OPTS.cats ? ADDON_OPTS.cats : ["pitsi","burgeri"];
 var ADDON_DISH = ADDON_OPTS && ADDON_OPTS.dishes ? ADDON_OPTS.dishes : {};
-var ADDONS = SC.inCat("dobavki").slice().sort(function(a,b){ return b.p-a.p; });
+/* цените на добавките, сменени от админа (sa-menu-opts.addon.prices), печелят над данните на менюто */
+var ADDON_PRICES = ADDON_OPTS && ADDON_OPTS.prices ? ADDON_OPTS.prices : {};
+var ADDONS = SC.inCat("dobavki").map(function(a){ var v = ADDON_PRICES[a.id]; return v != null && !isNaN(+v) ? Object.assign({}, a, {p:+v}) : a; }).sort(function(a,b){ return b.p-a.p; });
 var ICON_OF = {}; SC.ALLERGENS.forEach(function(a){ ICON_OF[a[0]] = a[2]; });
 
 var main = SC.mount({page:"dish", nav:"menu", back:{href:"menu.html", label:"Меню"}, title:"", actionBar:true});
