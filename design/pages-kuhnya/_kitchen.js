@@ -71,11 +71,10 @@ K.sound = function(){ return load("sound", true); };
 /* браузърът пуска звук само след докосване: докато не е отключен, „Звук“ не се показва като включен */
 /* Отключва се от ПЪРВОТО докосване където и да е (и при вход с ПИН) и се пази за сесията (sessionStorage), за да не се губи при смяна на таб.
    В продукта опашката е едно приложение и отключването просто остава. */
-function sget(k){ try{ return sessionStorage.getItem("sk-"+k); }catch(e){ return null; } }
-function sset(k, v){ try{ sessionStorage.setItem("sk-"+k, v); }catch(e){} }
-K.audioReady = sget("audio") === "1";
+/* „отключено“ не се пази между зарежданията (браузърът иска докосване при всяко зареждане); помни се само изборът вкл./изкл. (sk-sound) */
+K.audioReady = false;
 K.unlock = function(){ try{ var A = window.AudioContext || window.webkitAudioContext; K._ac = K._ac || new A(); if (K._ac.resume) K._ac.resume(); }catch(e){}
-  var was = K.audioReady; K.audioReady = true; sset("audio", "1"); if (!was && K.onAudio) K.onAudio(); };
+  var was = K.audioReady; K.audioReady = true; if (!was) K.unlockedAt = Date.now(); if (!was && K.onAudio) K.onAudio(); };
 document.addEventListener("pointerdown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
 document.addEventListener("keydown", function(){ if (!K._ac || !K.audioReady) K.unlock(); }, {capture:true});
 

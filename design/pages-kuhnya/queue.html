@@ -42,7 +42,7 @@ function strip(){
   var qn = document.querySelector("[data-qn]"); if (qn) qn.textContent = c.n;
   var snd = !K.sound() ? '<button class="kpill" type="button" data-sound aria-pressed="false">' + ic("bell",22) + 'Звук изкл.</button>'
     : K.audioReady ? '<button class="kpill" type="button" data-sound aria-pressed="true">' + ic("bell-ringing",22) + 'Звук вкл.</button>'
-    : '<button class="kpill" type="button" data-sound data-unlock title="Браузърът пуска звук след първото докосване на екрана">' + ic("bell",22) + 'Включи звука</button>';
+    : '<button class="kpill ask" type="button" data-sound data-unlock title="Браузърът пуска звук едва след докосване на екрана">' + ic("bell",22) + 'Звук: докоснете</button>';
   K.strip.innerHTML = (offline ? K.offlineHTML("queue") : '') +
     '<div class="kcount"><span>Чакат <b>' + c.n + '</b></span>' + (c.late ? '<span class="sep"></span><span class="late">' + ic("warning",20).replace('class="ic"','class="ic" style="display:inline;vertical-align:-3px;color:var(--danger)"') + ' Закъсняват <b>' + c.late + '</b></span>' : '') +
       (c.soon ? '<span class="sep"></span><span>Наближават <b>' + c.soon + '</b></span>' : '') + '</div>' +
@@ -61,7 +61,8 @@ function strip(){
   var lb = K.strip.querySelector("[data-later]"); if (lb) lb.addEventListener("click", function(){ laterOpen = !laterOpen; strip(); });
   var sb = K.strip.querySelector("[data-sound]");
   if (sb) sb.addEventListener("click", function(){
-    if (sb.hasAttribute("data-unlock")){ K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
+    /* докосването на „Звук: докоснете“ само отключва (pointerdown вече го е направил): не изключва звука в същото движение */
+    if (sb.hasAttribute("data-unlock") || Date.now() - (K.unlockedAt || 0) < 500){ K.unlock(); K.beep(); } else { K.store("sound", !K.sound()); if (K.sound()){ K.unlock(); K.beep(); } }
     strip(); });
   K.placeToast();
 }
@@ -70,7 +71,7 @@ function render(){
   if (!orders.length){
     main.innerHTML = '<div class="kempty"><div><div class="ill">' + ic("check-circle",64) + '</div><h2>Няма поръчки в момента</h2>' +
       '<p>Новите поръчки за ' + esc(K.sec.n) + ' ще се появят тук сами' + (K.sound() && K.audioReady ? ', със звуков сигнал' : '') + '.</p>' +
-      (K.sound() && !K.audioReady ? '<p style="font-size:17px">Звукът се включва с първото докосване на екрана.</p>' : '') +
+      (K.sound() && !K.audioReady ? '<p style="font-size:17px">Звук: докоснете екрана, за да чувате новите поръчки.</p>' : '') +
       '<p style="font-size:17px">Последна изпълнена: Маса 11 в 19:40</p></div></div>';
     strip(); return; }
   var keep = main.querySelector("[data-q]"), sl = keep ? keep.scrollLeft : 0;
