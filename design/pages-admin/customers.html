@@ -178,9 +178,9 @@ function draw(){ var y = A.scroller.scrollTop; var gd = body.querySelector(".cu-
       '<li>' + ic("check-circle",18) + '<span>Съгласията дава и оттегля само клиентът. Офертите са неотметнати по подразбиране.</span></li>' +
       '<li>' + ic("trash",18) + '<span>„Изтегли данните“ и „Изтрий“ по искане на клиента. Поръчките остават за касовия отчет, без връзка с профила.</span></li></ul></details>' +
     '<div class="cu-top"><div class="sa-tabs" role="tablist" aria-label="Изглед">' +
-      '<button role="tab" type="button" data-tab="profiles" aria-selected="' + (tab === "profiles") + '">' + ic("users",20) + 'Профили<span class="c">' + (st === "empty" ? 0 : CU.length) + '</span></button>' +
-      '<button role="tab" type="button" data-tab="feedback" aria-selected="' + (tab === "feedback") + '">' + ic("chat-circle-dots",20) + 'Обратна връзка' + (nF ? '<span class="c">' + nF + '</span>' : '') + '</button>' +
-      '<button role="tab" type="button" data-tab="requests" aria-selected="' + (tab === "requests") + '">' + ic("gift",20) + 'Запитвания' + (nR ? '<span class="c">' + nR + '</span>' : '') + '</button></div></div>' +
+      '<button role="tab" type="button" data-tab="profiles" aria-selected="' + (tab === "profiles") + '" tabindex="' + (tab === "profiles" ? 0 : -1) + '">' + ic("users",20) + 'Профили<span class="c">' + (st === "empty" ? 0 : CU.length) + '</span></button>' +
+      '<button role="tab" type="button" data-tab="feedback" aria-selected="' + (tab === "feedback") + '" tabindex="' + (tab === "feedback" ? 0 : -1) + '">' + ic("chat-circle-dots",20) + 'Обратна връзка' + (nF ? '<span class="c">' + nF + '</span>' : '') + '</button>' +
+      '<button role="tab" type="button" data-tab="requests" aria-selected="' + (tab === "requests") + '" tabindex="' + (tab === "requests" ? 0 : -1) + '">' + ic("gift",20) + 'Запитвания' + (nR ? '<span class="c">' + nR + '</span>' : '') + '</button></div></div>' +
     '<div data-panel>' + (tab === "profiles" ? profilesHTML() : fbHTML(tab)) + '</div>';
   A.scroller.scrollTop = y; A.setBadge("customers", nF); A.setBadge("offers", nR); }
 draw();
@@ -234,6 +234,9 @@ document.addEventListener("click", function(e){ var t;
   if (e.target.closest("[data-csv]")){ var rows = [["Клиент","Телефон (скрит)","Профил от","Поръчки","Общо €","Оферти","Рожден ден","Блокиран"]].concat(list().map(function(c){ return [c.name, maskPh(c.phone), c.since.slice(0, 10), c.orders.length, spent(c).toFixed(2).replace(".", ","), c.consent.marketing ? "да" : "не", c.consent.birthday ? "да" : "не", blk(c) ? "да" : "не"]; }));
     A.download("siracusa-klienti.csv", "﻿" + rows.map(function(r){ return r.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(";"); }).join("\n"), "text/csv"); A.audit("customer.export", "Изтеглен списък с клиенти (" + list().length + ", телефоните скрити)"); A.toast("Списъкът е изтеглен, телефоните са скрити"); return; }
 });
+/* табовете: стрелките местят избора (tabindex само на избрания) */
+body.addEventListener("keydown", function(e){ var b = e.target.closest && e.target.closest(".cu-top [data-tab]"); if (!b || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return; e.preventDefault();
+  var L = ["profiles","feedback","requests"], i = (L.indexOf(b.dataset.tab) + (e.key === "ArrowRight" ? 1 : 2)) % 3; tab = L[i]; hashSync(); draw(); var nb = body.querySelector('[data-tab="' + tab + '"]'); nb && nb.focus(); });
 body.addEventListener("input", function(e){ if (e.target.id !== "cu-q") return; q = e.target.value; var pos = e.target.selectionStart; draw(); var i = body.querySelector("#cu-q"); i.focus(); try{ i.setSelectionRange(pos, pos); }catch(x){} });
 })();
 </script>
