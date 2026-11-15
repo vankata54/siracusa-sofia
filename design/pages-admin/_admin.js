@@ -454,7 +454,9 @@ function openSections(){ var cur = A.app.dataset.page;
   var sh = A.sheet({title:"Търсене и раздели", focus:"#sa-q2", html:'<div class="sa-search sa-field-s" role="search" style="margin:4px 0 6px"><label class="vh" for="sa-q2">Търсене: раздели, ястия, поръчки, резервации</label>' + ic("magnifying-glass", 20) + '<input class="input" id="sa-q2" type="search" placeholder="Търси навсякъде" autocomplete="off" aria-controls="sa-q2r"><button class="sa-clear" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button></div><div data-list id="sa-q2r" role="listbox" aria-label="Резултати">' + A.sectionsHTML(cur) + '</div>'});
   sh.el.classList.add("sa-tall");
   var inp = sh.body.querySelector("#sa-q2"), box = sh.body.querySelector("[data-list]"), clr = sh.body.querySelector(".sa-clear");
-  function draw(){ var q = inp.value.trim(); clr.hidden = !q; box.innerHTML = q ? A.searchHTML(q, "q2") : A.sectionsHTML(cur); }
+  var open = {}, lastQ = "";
+  function draw(){ var q = inp.value.trim(); if (q !== lastQ){ open = {}; lastQ = q; } clr.hidden = !q; box.innerHTML = q ? A.searchHTML(q, "q2", open) : A.sectionsHTML(cur); }
+  box.addEventListener("click", function(e){ var m = e.target.closest("[data-smore]"); if (!m) return; e.preventDefault(); open[m.dataset.smore] = true; draw(); var nb = box.querySelector('[data-smore="' + m.dataset.smore + '"]'); });
   inp.addEventListener("input", draw); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
   A.onSearchReady = function(){ if (inp.isConnected && inp.value.trim()) draw(); };
   inp.addEventListener("keydown", function(e){ if (e.key === "Enter"){ var a = box.querySelector("a[href], button[data-ask]"); if (a){ e.preventDefault(); a.click(); } } }); }
@@ -473,32 +475,45 @@ var RST = {"new":"Нова", confirmed:"Потвърдена", seated:"Дошл�
 A.loadSearch = function(cb){ if (window.SCSearch) return cb && cb(); if (A._sl){ A._sl.push(cb); return; } A._sl = [cb];
   var sc = document.createElement("script"); sc.src = "../ds/search.js"; sc.onload = function(){ var l = A._sl; A._sl = null; l.forEach(function(f){ f && f(); }); A.onSearchReady && A.onSearchReady(); }; document.head.appendChild(sc); };
 function digits(x){ return String(x || "").replace(/\D/g, ""); }
-A.search = function(q){ var out = [], nq = norm(q), dq = digits(q), cut = 5, txt = nq.replace(/[^a-z ]/g, "").trim().length >= 3;
-  function grp(key, title, items, extra){ if (items.length) out.push({key:key, title:title, items:items.slice(0, cut), more:Math.max(0, items.length - cut), extra:extra || ""}); }
+A.search = function(q, open){ open = open || {}; var out = [], nq = norm(q), dq = digits(q), txt = nq.replace(/[^a-z ]/g, "").trim().length >= 3;
+  function grp(key, title, items, extra, exact){ if (!items.length) return; var cut = open[key] ? 60 : 5; out.push({key:key, title:title, items:items.slice(0, cut), more:Math.max(0, items.length - cut), extra:extra || "", exact:!!exact, i:out.length}); }
+  /* имена на хора: точното съвпадение („Клиент 3“) е първо; „Клиент 33“ само ако точно няма */
+  function people(list, nameOf, phoneOf){ var ex = [], part = [];
+    list.forEach(function(x){ var nm = norm(nameOf(x) || ""), ph = digits(phoneOf(x));
+      if ((txt && nm === nq) || (dq.length >= 6 && ph === dq)) ex.push(x);
+      else if ((dq.length >= 3 && ph.indexOf(dq) > -1) || (txt && (nm.indexOf(nq + " ") === 0 || (" " + nm + " ").indexOf(" " + nq + " ") > -1 || (!/\d/.test(nq) && nm.indexOf(nq) > -1)))) part.push(x); });
+    return {ex:ex, part:part}; }
+  var P = {};
+  if (A.can("customers")) P.cus = people(listOf(get("customers", [])), function(c){ return c.name; }, function(c){ return c.phone; });
+  if (A.can("reservations")) P.res = people(A.reservations(), function(r0){ return r0.name; }, function(r0){ return r0.phone; });
+  if (A.can("orders")) P.ord = people(A.orders(), function(o){ return o.name; }, function(o){ return o.phone; });
+  var anyExact = Object.keys(P).some(function(k){ return P[k].ex.length; });
+  function pick(k){ var x = P[k]; return !x ? [] : anyExact ? x.ex : x.part; }
   grp("sec", "Раздели", A.searchSections(q).map(function(s0){ return {href:s0.soon ? "" : s0.href, soon:s0.soon ? s0.id : "", icon:s0.ic, title:s0.n, meta:s0.soon ? "Скоро" : A.groupOf(s0.id)}; }));
+  if (A.can("customers")) grp("cus", "Клиенти", pick("cus").map(function(c){ return {href:"customers.html", icon:"user", title:c.name || "Клиент", meta:c.phone ? A.maskPhone(c.phone) : ""}; }), "", P.cus.ex.length);
+  if (A.can("orders")){ var byNo = dq ? A.orders().filter(function(o){ return o.no === dq || (dq.length >= 3 && dq.length < 6 && o.no.indexOf(dq) === 0); }) : [], seen = {}, ol = byNo.concat(pick("ord")).filter(function(o){ if (seen[o.no]) return false; seen[o.no] = 1; return true; });
+    grp("ord", "Поръчки", ol.map(function(o){ return {href:"orders.html#n=" + o.no, icon:"receipt", title:"№ " + o.no + " · " + (OST[o.status] || o.status), meta:(o.name || "") + (o.phone ? " · " + A.maskPhone(o.phone) : "")}; }), "", byNo.some(function(o){ return o.no === dq; }) || P.ord.ex.length); }
+  if (A.can("reservations")) grp("res", "Резервации", pick("res").slice().sort(function(a0, b0){ return a0.date < b0.date ? 1 : -1; }).map(function(r0){ return {href:"reservations.html#d=" + r0.date, icon:"calendar-check", title:(r0.name || "Резервация") + " · " + r0.time,
+    meta:A.fmtDate(new Date(r0.date + "T12:00:00"), true) + " · " + A.plural(+r0.people || 0, "човек", "души") + " · " + (RST[r0.status] || r0.status)}; }), "", P.res.ex.length);
   if (A.can("menu") || A.can("lunch")){
     if (window.SCSearch){ var r = SCSearch.searchDishes(SC.items, q), dish = function(x){ return {href:"menu.html#d=" + x.id, icon:"fork-knife", title:x.n, meta:(SC.catById[x.cat] ? SC.catById[x.cat].n + " · " : "") + SC.fmt(x.p)}; };
-      grp("dish", "Ястия", r.name.map(dish));
+      var exc = (r.query && r.query.exc || []).map(function(w){ return w.label; }), excT = exc.length ? "Без " + exc.join(" и ") + " по състава" : "";
+      grp("dish", r.query && r.query.inc && r.query.inc.length ? "Ястия" : excT || "Ястия", r.name.map(dish));
       if (r.comp.length) grp("dishc", r.band || "Съдържат", r.comp.map(dish));
-      if (r.rest.length && !r.name.length && !r.comp.length) grp("dishr", "Ястия", r.rest.map(dish));
+      if (r.rest.length && !r.name.length && !r.comp.length) grp("dishr", excT || "Ястия", r.rest.map(dish));
       if (r.unknown.length) grp("dishu", "Нямаме пълен състав, попитайте ни", r.unknown.map(dish)); }
-    else out.push({key:"wait", title:"Ястия", items:[], wait:true}); }
-  if (A.can("orders")) grp("ord", "Поръчки", A.orders().filter(function(o){ return (dq && (o.no === dq || (dq.length >= 3 && (digits(o.phone).indexOf(dq) > -1 || o.no.indexOf(dq) === 0)))) || (txt && norm(o.name || "").indexOf(nq) > -1); })
-    .map(function(o){ return {href:"orders.html#n=" + o.no, icon:"receipt", title:"№ " + o.no + " · " + (OST[o.status] || o.status), meta:(o.name || "") + (o.phone ? " · " + A.maskPhone(o.phone) : "")}; }));
-  if (A.can("reservations")) grp("res", "Резервации", A.reservations().filter(function(r0){ return (dq.length >= 3 && digits(r0.phone).indexOf(dq) > -1) || (txt && norm((r0.name || "") + " " + (r0.occasion || "")).indexOf(nq) > -1); })
-    .sort(function(a0, b0){ return a0.date < b0.date ? 1 : -1; }).map(function(r0){ return {href:"reservations.html#d=" + r0.date, icon:"calendar-check", title:(r0.name || "Резервация") + " · " + r0.time, meta:A.fmtDate(new Date(r0.date + "T12:00:00"), true) + " · " + (r0.people || "") + " души · " + (RST[r0.status] || r0.status)}; }));
-  if (A.can("customers")) grp("cus", "Клиенти", listOf(get("customers", [])).filter(function(c){ return (dq.length >= 3 && digits(c.phone).indexOf(dq) > -1) || (txt && norm(c.name || "").indexOf(nq) > -1); })
-    .map(function(c){ return {href:"customers.html", icon:"user", title:c.name || "Клиент", meta:c.phone ? A.maskPhone(c.phone) : ""}; }));
+    else out.push({key:"wait", title:"Ястия", items:[], wait:true, i:out.length}); }
   var notes = A.can("notes") ? A.notes.list() : A.notes.mine();
-  if (nq.length >= 3) grp("note", A.can("notes") ? "Бележки" : "Моите препоръки", notes.filter(function(n){ return norm(n.text + " " + (n.elementText || "")).indexOf(nq) > -1; })
+  if (txt) grp("note", A.can("notes") ? "Бележки" : "Моите препоръки", notes.filter(function(n){ return norm(n.text + " " + (n.elementText || "")).indexOf(nq) > -1; })
     .map(function(n){ return {href:"notes.html#s=" + n.status, icon:"pencil-simple", title:n.text, meta:A.noteStatusName(n.status) + " · " + (A.MODULE_NAMES[n.module] || n.module)}; }));
-  return out; };
-A.searchHTML = function(q, pre){ var g = A.search(q), i = 0, any = false;
+  /* групата с точното съвпадение е най-горе */
+  return out.sort(function(a0, b0){ return (b0.exact ? 1 : 0) - (a0.exact ? 1 : 0) || a0.i - b0.i; }); };
+A.searchHTML = function(q, pre, open){ var g = A.search(q, open), i = 0, any = false;
   if (!window.SCSearch && (A.can("menu") || A.can("lunch"))) A.loadSearch();
   var h = g.map(function(gr){ if (gr.wait) return '<div class="sa-rg"><h3>Ястия</h3><p class="none" role="status">Зареждаме търсенето на ястия …</p></div>';
     any = true; return '<div class="sa-rg"><h3>' + esc(gr.title) + (gr.extra ? ' <small>' + esc(gr.extra) + '</small>' : '') + '</h3>' + gr.items.map(function(it){ var id = "sa-" + pre + "-" + (i++);
       return it.soon ? '<button type="button" role="option" id="' + id + '" data-sa="soon" data-id="' + it.soon + '">' + ic(it.icon, 20) + '<span><b>' + esc(it.title) + '</b><small>' + esc(it.meta) + '</small></span></button>'
-        : '<a href="' + it.href + '" role="option" id="' + id + '">' + ic(it.icon, 20) + '<span><b>' + esc(it.title) + '</b>' + (it.meta ? '<small>' + esc(it.meta) + '</small>' : '') + '</span></a>'; }).join("") + (gr.more ? '<p class="more">и още ' + gr.more + '</p>' : '') + '</div>'; }).join("");
+        : '<a href="' + it.href + '" role="option" id="' + id + '">' + ic(it.icon, 20) + '<span><b>' + esc(it.title) + '</b>' + (it.meta ? '<small>' + esc(it.meta) + '</small>' : '') + '</span></a>'; }).join("") + (gr.more ? '<button class="sa-more" type="button" role="option" id="sa-' + pre + '-m-' + gr.key + '" data-smore="' + gr.key + '" aria-label="Покажи още ' + gr.more + ' в „' + esc(gr.title) + '“">' + ic("caret-down", 18) + 'Покажи още ' + gr.more + '</button>' : '') + '</div>'; }).join("");
   return (any ? h : '<p class="none">Нищо не намерихме за „' + esc(q) + '“. Опитайте с друга дума, № на поръчка или последните цифри на телефон.</p>' + h) +
     '<button class="sa-ask" type="button" role="option" id="sa-' + pre + '-ai" data-ask="' + esc(q) + '">' + ic("sparkle", 20) + '<span><b>Попитай AI: „' + esc(q) + '“</b><small>Пример в прототипа</small></span></button>'; };
 /* „Попитай AI“: примерен поток, отговорът е само от намереното по-горе */
@@ -512,8 +527,9 @@ A.askAI = askAI;
 function bindSearch(){ var inp = A.app.querySelector("#sa-q"); if (!inp) return; var box = A.app.querySelector("#sa-sres"), clr = A.app.querySelector(".sa-top .sa-clear"), kbd = A.app.querySelector(".sa-top .sa-search .k"), sel = -1;
   function opts(){ return Array.prototype.slice.call(box.querySelectorAll("[role=option]")); }
   function mark(){ var o = opts(); o.forEach(function(el, i){ el.setAttribute("aria-selected", String(i === sel)); }); if (o[sel]){ inp.setAttribute("aria-activedescendant", o[sel].id); o[sel].scrollIntoView({block:"nearest"}); } else inp.removeAttribute("aria-activedescendant"); }
-  function draw(){ var q = inp.value.trim(); clr.hidden = !q; kbd.hidden = !!q; sel = -1;
-    box.innerHTML = q ? A.searchHTML(q, "q") : '<div class="sa-rg"><h3>Раздели</h3>' + A.visibleSections().slice(0, 6).map(function(s0, i){ return '<a href="' + (s0.soon ? '#' : s0.href) + '" role="option" id="sa-q-s' + i + '"' + (s0.soon ? ' data-sa="soon" data-id="' + s0.id + '"' : '') + '>' + ic(s0.ic, 20) + '<span><b>' + esc(s0.n) + '</b><small>' + esc(s0.soon ? "Скоро" : A.groupOf(s0.id)) + '</small></span></a>'; }).join("") + '</div><p class="hint">Търсете раздел, ястие („без лук“, „пиле“), № на поръчка или телефон.</p>';
+  var open = {}, lastQ = "";
+  function draw(){ var q = inp.value.trim(); if (q !== lastQ){ open = {}; lastQ = q; } clr.hidden = !q; kbd.hidden = !!q; sel = -1;
+    box.innerHTML = q ? A.searchHTML(q, "q", open) : '<div class="sa-rg"><h3>Раздели</h3>' + A.visibleSections().slice(0, 6).map(function(s0, i){ return '<a href="' + (s0.soon ? '#' : s0.href) + '" role="option" id="sa-q-s' + i + '"' + (s0.soon ? ' data-sa="soon" data-id="' + s0.id + '"' : '') + '>' + ic(s0.ic, 20) + '<span><b>' + esc(s0.n) + '</b><small>' + esc(s0.soon ? "Скоро" : A.groupOf(s0.id)) + '</small></span></a>'; }).join("") + '</div><p class="hint">Търсете раздел, ястие („без лук“, „пиле“), № на поръчка или телефон.</p>';
     box.hidden = false; inp.setAttribute("aria-expanded", "true"); mark(); }
   function hide(){ box.hidden = true; inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); }
   A.onSearchReady = function(){ if (!box.hidden) draw(); };
@@ -523,6 +539,7 @@ function bindSearch(){ var inp = A.app.querySelector("#sa-q"); if (!inp) return;
     if (e.key === "ArrowDown"){ e.preventDefault(); sel = Math.min(o.length - 1, sel + 1); mark(); } else if (e.key === "ArrowUp"){ e.preventDefault(); sel = Math.max(0, sel - 1); mark(); }
     else if (e.key === "Enter"){ var t = o[sel >= 0 ? sel : 0]; if (t){ e.preventDefault(); t.click(); } } else if (e.key === "Escape"){ if (inp.value){ inp.value = ""; draw(); } else { hide(); inp.blur(); } } });
   box.addEventListener("mousedown", function(e){ e.preventDefault(); });
+  box.addEventListener("click", function(e){ var m = e.target.closest("[data-smore]"); if (!m) return; e.preventDefault(); open[m.dataset.smore] = true; var y = box.scrollTop; draw(); box.scrollTop = y; });
   inp.addEventListener("blur", function(){ setTimeout(hide, 150); });
   document.addEventListener("keydown", function(e){ if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "") && !document.querySelector(".sa-ov .sheetwrap.on") && inp.offsetParent){ e.preventDefault(); inp.focus(); } }); }
 

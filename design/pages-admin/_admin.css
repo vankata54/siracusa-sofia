@@ -113,6 +113,8 @@ body{background:var(--bg)}
 .sa-rg b, .sa-ask b{font-weight:700; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sa-rg small, .sa-ask small{font-size:14px; font-weight:600; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sa-rg [aria-selected="true"], .sa-rg a:hover, .sa-rg button:hover, .sa-ask:hover, .sa-ask[aria-selected="true"]{background:var(--surface-2)}
+.sa-rg .sa-more{display:inline-flex; width:auto; align-items:center; gap:6px; min-height:48px; margin:2px 6px 4px; padding:0 14px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:700; font-size:15px; cursor:pointer}
+.sa-rg .sa-more:hover{background:var(--surface-3)}
 .sa-ask{margin-top:6px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
 .sa-ask .ic{color:var(--ember); flex:none}
 .sa-rg .more, .sa-sres .hint, [data-list] .none, .sa-sres .none{margin:2px 12px 6px; font-size:15px; color:var(--muted)}
