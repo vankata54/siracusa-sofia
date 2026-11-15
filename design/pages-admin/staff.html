@@ -61,6 +61,7 @@ tr.off td{color:var(--muted)}
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -76,7 +77,7 @@ if (!body) return;
 /* ---------- потребители (прототип: sa-staff). Паролата никога не се пази тук; в кода: scrypt хеш (src/core/staff.ts) ---------- */
 var now = A.now || function(){ return new Date(); }, DAY = 864e5, NOW = now().getTime();
 /* d дни назад в час hhmm (минути) по София; днешните само до часа на прототипа */
-function ago(d, m){ var day = A.seed.today(); var p = day.split("-").map(Number), k = new Date(Date.UTC(p[0], p[1] - 1, p[2] - d, 10)); var key = k.getUTCFullYear() + "-" + String(k.getUTCMonth() + 1).padStart(2, "0") + "-" + String(k.getUTCDate()).padStart(2, "0"); if (!d) m = Math.min(m || 600, A.seed.nowMin() - 5); return A.seed.isoAt(key, m || 600); }
+function ago(d, m){ var day = A.rl.today(); var p = day.split("-").map(Number), k = new Date(Date.UTC(p[0], p[1] - 1, p[2] - d, 10)); var key = k.getUTCFullYear() + "-" + String(k.getUTCMonth() + 1).padStart(2, "0") + "-" + String(k.getUTCDate()).padStart(2, "0"); if (!d) m = Math.min(m || 600, A.rl.nowMin() - 5); return A.rl.isoAt(key, m || 600); }
 function seed(){ var L = A.ACCOUNTS.map(function(a, i){ return {id:"u" + (i + 1), username:a[0], name:a[2], role:a[1], active:true, pin:["waiter","kitchen","driver"].indexOf(a[1]) > -1, lastLogin:ago([0,1,1,0,0,0,3][i], [1150,1290,1065,1010,935,980,690][i]), createdAt:ago(40 + i, 640), pwAt:ago(40 + i, 650)}; });
   L.push({id:"u8", username:"waiter2", name:"Сервитьор 2", role:"waiter", active:true, pin:true, lastLogin:ago(0, 1025), createdAt:ago(30, 700), pwAt:ago(30, 705)});
   L.push({id:"u9", username:"waiter3", name:"Сервитьор 3", role:"waiter", active:false, pin:true, lastLogin:ago(21, 1330), createdAt:ago(35, 660), pwAt:ago(35, 665)});

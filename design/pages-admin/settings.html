@@ -80,6 +80,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -93,7 +94,7 @@ if (!body) return;
 
 /* ---------- настройките (като src/core/settings.ts + полетата, които още ги няма в ядрото) ---------- */
 var now = A.now || function(){ return new Date(); };
-var DEF = A.seed.SETTINGS; /* _seed-res.js: един източник */
+var DEF = A.rl.SETTINGS; /* _res-lib.js: стойностите по подразбиране */
 function clone(v){ return JSON.parse(JSON.stringify(v)); }
 function load(){ var s = A.data.get("settings", {}); var o = Object.assign(clone(DEF), s); o.kitchen = Object.assign(clone(DEF.kitchen), s.kitchen || {}); return o; }
 var saved = load(); if (st === "busy" && !saved.kitchen.busy){ saved.kitchen.busy = true; saved.kitchen.busyAt = new Date(now().getTime() - 38 * 60e3).toISOString(); }

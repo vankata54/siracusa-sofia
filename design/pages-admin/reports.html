@@ -19,6 +19,7 @@
 .rp-custom .field{flex:1 1 160px; max-width:220px}
 .rp-meta{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin:0 0 16px; color:var(--muted); font-weight:600; font-size:15px}
 .rp-meta b{color:var(--ink)}
+.rp-meta .sa-tag{white-space:normal; height:auto; min-height:28px; padding-top:3px; padding-bottom:3px}
 .kp{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden; margin-bottom:16px}
 @container page (min-width:900px){ .kp{grid-template-columns:repeat(5, minmax(0,1fr))} }
 @container page (max-width:899px){ .kp > div:last-child{grid-column:1 / -1} }
@@ -95,6 +96,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -108,7 +110,7 @@ var body = A.mount({section:"reports", title:"Отчети",
 if (!body) return;
 
 /* ---------- време ---------- */
-var now = A.now || function(){ return new Date(); }, TODAY = A.seed.today(); /* часът на прототипа */
+var now = A.now || function(){ return new Date(); }, TODAY = A.rl.today(); /* часът на прототипа */
 function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
 function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
 function addD(k, n){ var d = parse(k); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
@@ -122,20 +124,33 @@ var POP = POOL.map(function(x, i){ var r = rng("pop" + x.id)(); return Math.pow(
 function pick(r){ var t = r() * POPS; for (var i = 0; i < POOL.length; i++){ t -= POP[i]; if (t <= 0) return POOL[i]; } return POOL[0]; }
 var CH = [["Доставка","truck",.42],["Вземане","storefront",.23],["Маса","chair",.30],["Офис","briefcase",.05]];
 var cache = {};
-function dayData(k){ if (cache[k]) return cache[k]; var r = rng("day" + k), dow = parse(k).getUTCDay(), n = Math.round((dow === 5 || dow === 6 ? 58 : dow === 0 ? 50 : 40) * (.85 + r() * .3));
-  var d = {k:k, orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, dish:{}, res:0, ns:0};
+/* Днес: от общите данни (sa-orders на „Поръчки“ и sa-reservations на „Резервации“), за да са същите числа; по-старите дни са примерни */
+var ADD = {}; SC.inCat("dobavki").forEach(function(x){ ADD["+ " + x.n] = x.p; });
+var CHI = {delivery:0, pickup:1, table:2, office:3};
+var RES = A.data.get("reservations", null);
+function orderSum(o){ var sub = (o.lines || []).reduce(function(s, l){ var x = SC.byId[l.id]; return s + (x ? (x.p + (l.mods || []).reduce(function(m, k){ return m + (ADD[k] || 0); }, 0)) * (l.q || 1) : 0); }, 0);
+  return sub - (o.code ? Math.round(sub * 10) / 100 : 0); }
+function resOf(d, k){ if (!RES || k < A.rl.addDays(TODAY, -30)) return false; var L = RES.filter(function(r){ return r.date === k; });
+  d.res = L.filter(function(r){ return ["cancelled","waitlist"].indexOf(r.status) < 0; }).length; d.ns = L.filter(function(r){ return r.status === "no_show"; }).length; return true; }
+function liveToday(d){ var O = A.orders ? A.orders() : []; d.cancelled = 0;
+  O.forEach(function(o){ if (o.status === "cancelled"){ d.cancelled++; return; } var tot = orderSum(o), c = CHI[o.channel] != null ? CHI[o.channel] : 1, hh = A.sofia(new Date(o.ts)).h;
+    d.orders++; d.rev += tot; d.ch[c].o++; d.ch[c].rev += tot; d.hour[hh] = (d.hour[hh] || 0) + 1; d.hrev[hh] = (d.hrev[hh] || 0) + tot;
+    (o.lines || []).forEach(function(l){ if (SC.byId[l.id]) d.dish[l.id] = (d.dish[l.id] || 0) + (l.q || 1); }); });
+  if (!resOf(d, TODAY)){ d.res = 0; d.ns = 0; } d.live = true; }
+function dayData(k){ if (cache[k]) return cache[k]; var r = rng("day" + k), dow = parse(k).getUTCDay(), n = Math.round((dow === 5 || dow === 6 ? 44 : dow === 0 ? 38 : 32) * (.85 + r() * .3)); /* като примерния ден в „Поръчки“ */
+  var d = {k:k, orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, hrev:{}, dish:{}, res:0, ns:0};
   if (k > TODAY){ cache[k] = d; return d; }
-  var nowH = A.sofia(now()).h; if (k === TODAY) n = Math.round(n * Math.max(0, Math.min(1, (nowH - 10) / 12)));
+  if (k === TODAY){ liveToday(d); cache[k] = d; return d; }
   for (var i = 0; i < n; i++){ var x = r(), c = x < .42 ? 0 : x < .65 ? 1 : x < .95 ? 2 : 3, hh = r() < .45 ? 11 + Math.floor(r() * 4) : r() < .14 ? 15 + Math.floor(r() * 2) : 17 + Math.floor(r() * (c === 0 ? 4 : 6));
-    if (k === TODAY && hh > nowH) hh = Math.max(10, nowH); var lines = 1 + Math.floor(r() * (c === 2 ? 5 : 3)), tot = 0;
+    var lines = 1 + Math.floor(r() * (c === 2 ? 5 : 3)), tot = 0;
     for (var j = 0; j < lines; j++){ var it = pick(r), q = r() < .2 ? 2 : 1; tot += it.p * q; d.dish[it.id] = (d.dish[it.id] || 0) + q; }
-    d.orders++; d.rev += tot; d.ch[c].o++; d.ch[c].rev += tot; d.hour[hh] = (d.hour[hh] || 0) + 1; }
-  d.res = k === TODAY ? 0 : Math.round((dow === 5 || dow === 6 ? 11 : 6) * (.8 + r() * .4)); d.ns = d.res && r() < .35 ? 1 : 0;
+    d.orders++; d.rev += tot; d.ch[c].o++; d.ch[c].rev += tot; d.hour[hh] = (d.hour[hh] || 0) + 1; d.hrev[hh] = (d.hrev[hh] || 0) + tot; }
+  if (!resOf(d, k)){ d.res = Math.round((dow === 5 || dow === 6 ? 11 : 6) * (.8 + r() * .4)); d.ns = d.res && r() < .35 ? 1 : 0; }
   cache[k] = d; return d; }
-function agg(a, b){ var o = {orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, dish:{}, res:0, ns:0, days:[]};
-  if (st === "empty") { for (var k0 = a; k0 <= b; k0 = addD(k0, 1)) o.days.push({k:k0, orders:0, rev:0, res:0, ns:0, hour:{}}); return o; }
-  for (var k = a; k <= b; k = addD(k, 1)){ var d = dayData(k); o.days.push(d); o.orders += d.orders; o.rev += d.rev; o.res += d.res; o.ns += d.ns;
-    d.ch.forEach(function(c, i){ o.ch[i].o += c.o; o.ch[i].rev += c.rev; }); Object.keys(d.hour).forEach(function(h){ o.hour[h] = (o.hour[h] || 0) + d.hour[h]; }); Object.keys(d.dish).forEach(function(id){ o.dish[id] = (o.dish[id] || 0) + d.dish[id]; }); }
+function agg(a, b){ var o = {orders:0, rev:0, ch:CH.map(function(){ return {o:0, rev:0}; }), hour:{}, hrev:{}, dish:{}, res:0, ns:0, days:[], cancelled:0};
+  if (st === "empty") { for (var k0 = a; k0 <= b; k0 = addD(k0, 1)) o.days.push({k:k0, orders:0, rev:0, res:0, ns:0, hour:{}, hrev:{}}); return o; }
+  for (var k = a; k <= b; k = addD(k, 1)){ var d = dayData(k); o.days.push(d); o.orders += d.orders; o.rev += d.rev; o.res += d.res; o.ns += d.ns; o.cancelled += d.cancelled || 0;
+    d.ch.forEach(function(c, i){ o.ch[i].o += c.o; o.ch[i].rev += c.rev; }); Object.keys(d.hour).forEach(function(h){ o.hour[h] = (o.hour[h] || 0) + d.hour[h]; o.hrev[h] = (o.hrev[h] || 0) + (d.hrev[h] || 0); }); Object.keys(d.dish).forEach(function(id){ o.dish[id] = (o.dish[id] || 0) + d.dish[id]; }); }
   return o; }
 
 /* ---------- период ---------- */
@@ -171,10 +186,10 @@ function tableHTML(t){ return '<div class="tbl-alt"><table class="sa-table"><the
 function draw(){ var y = A.scroller.scrollTop;
   if (st === "loading"){ body.innerHTML = A.skel(5, "Смятаме отчета …"); return; }
   if (st === "error"){ body.innerHTML = A.error("Не успяхме да сметнем отчета. Поръчките и оборотът са запазени; опитайте пак."); return; }
-  var R = range(), cur = agg(R[0], R[1]), PR = prevRange(R[0], R[1]), prev = agg(PR[0], PR[1]), one = R[0] === R[1];
+  var R = range(), cur = agg(R[0], R[1]), PR = prevRange(R[0], R[1]), prev = agg(PR[0], PR[1]), upTo = per === "today" ? A.hm(now()) : "", one = R[0] === R[1]; if (upTo) prev = cutAt(prev, A.sofia(now()).h);
   var avg = cur.orders ? cur.rev / cur.orders : 0, pavg = prev.orders ? prev.rev / prev.orders : 0, nsr = cur.res ? Math.round(cur.ns / cur.res * 100) : 0;
   /* по ден или по час */
-  var main = one ? hours(cur).map(function(h){ return {l:h[0] + ":00", v:h[1], t:h[0] + ":00 - " + h[0] + ":59", tv:A.plural(h[1], "поръчка", "поръчки")}; })
+  var main = one ? hours(cur).map(function(h){ var v = cur.hrev[+h[0]] || 0; return {l:h[0] + ":00", v:Math.round(v), t:h[0] + ":00 - " + h[0] + ":59", tv:SC.fmt(v) + " · " + A.plural(h[1], "поръчка", "поръчки")}; })
     : cur.days.map(function(d){ return {l:fd(d.k, true).replace(/^.., /, ""), v:Math.round(d.rev), t:fd(d.k), tv:SC.fmt(d.rev) + " · " + A.plural(d.orders, "поръчка", "поръчки"), hi:d.k === TODAY}; });
   var hrs = hours(cur), pk = hrs.reduce(function(a, h){ return h[1] > a[1] ? h : a; }, ["", 0]);
   var top = Object.keys(cur.dish).map(function(id){ return {x:SC.byId[id], q:cur.dish[id]}; }).sort(function(a, b){ return b.q - a.q; }).slice(0, 8), tq = top.length ? top[0].q : 1;
@@ -184,17 +199,17 @@ function draw(){ var y = A.scroller.scrollTop;
       '<div class="rp-psel"><label class="vh" for="rp-p">Период</label><select class="input" id="rp-p" data-psel>' + P.map(function(p){ return '<option value="' + p[0] + '"' + (per === p[0] ? ' selected' : '') + '>' + p[1] + '</option>'; }).join("") + '</select></div>' +
       '<label class="cmp">Сравни с предишния<span class="sa-switch"><input type="checkbox" role="switch" data-cmp' + (cmp ? ' checked' : '') + '><span class="tr"></span></span></label></div>' +
     (per === "custom" ? '<div class="rp-custom"><div class="field"><label for="rp-a">От</label><input class="input" id="rp-a" type="date" max="' + TODAY + '" value="' + cust.a + '" data-ca></div><div class="field"><label for="rp-b">До</label><input class="input" id="rp-b" type="date" max="' + TODAY + '" value="' + cust.b + '" data-cb></div><p class="muted" style="margin:0 0 12px;font-size:15px">До 92 дни.</p></div>' : '') +
-    '<p class="rp-meta"><span><b>' + (one ? fd(R[0]) : fd(R[0], true) + ' - ' + fd(R[1], true)) + '</b>' + (cmp ? ' · спрямо ' + (PR[0] === PR[1] ? fd(PR[0], true) : fd(PR[0], true) + ' - ' + fd(PR[1], true)) : '') + '</span>' + A.sample("Примерни числа, истински ястия и цени") + '</p>' +
+    '<p class="rp-meta"><span><b>' + (one ? fd(R[0]) : fd(R[0], true) + ' - ' + fd(R[1], true)) + '</b>' + (cmp ? ' · спрямо ' + (PR[0] === PR[1] ? fd(PR[0], true) + (upTo ? ' до ' + upTo : '') : fd(PR[0], true) + ' - ' + fd(PR[1], true)) : '') + '</span>' + A.sample(R[1] === TODAY ? "Днес: като в „Поръчки“ и „Резервации“; по-старите дни са примерни" : "Примерни числа, истински ястия и цени") + '</p>' +
     (!cur.orders && !cur.res ? '<div class="sa-card">' + A.empty({icon:"chart-bar", title:"Няма поръчки за този период.", text:per === "today" ? "Поръчките за днес ще се появят тук от 10:00." : "Изберете друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'}) + '</div>' :
     '<div class="kp" data-edit-id="admin.reports.kpi">' +
-      '<div><span class="l">Поръчки</span><b>' + cur.orders + '</b>' + delta(cur.orders, prev.orders) + '</div>' +
+      '<div><span class="l">Поръчки' + (cur.cancelled ? ' (+' + cur.cancelled + ' отказ' + (cur.cancelled === 1 ? 'ана' : 'ани') + ')' : '') + '</span><b>' + cur.orders + '</b>' + delta(cur.orders, prev.orders) + '</div>' +
       '<div><span class="l">Оборот</span><b>' + SC.fmt(cur.rev) + '</b>' + delta(cur.rev, prev.rev) + '</div>' +
       '<div><span class="l">Среден бон</span><b>' + SC.fmt(avg) + '</b>' + delta(avg, pavg) + '</div>' +
       '<div><span class="l">Резервации</span><b>' + cur.res + '</b>' + delta(cur.res, prev.res) + '</div>' +
       '<div><span class="l">Неявили се</span><b>' + cur.ns + (cur.res ? ' <span style="font-size:18px;color:var(--muted)">(' + nsr + '%)</span>' : '') + '</b>' + delta(cur.ns, prev.ns, true) + '</div></div>' +
     '<div class="rp-g two">' +
-      chartCard("main", one ? "Поръчки по час" : "Оборот по ден", one ? fd(R[0]) : (R[1] === TODAY && dayData(TODAY).rev > 0 ? "Днес (до " + A.hm(now()) + ") е в червено" : ""), colChart("main", main, {fmt:one ? String : eur0, xn:one ? 7 : 6}),
-        {head:one ? ["Час","Поръчки"] : ["Ден","Оборот","Поръчки"], rows:one ? hrs.map(function(h){ return [h[0] + ":00", h[1]]; }) : cur.days.map(function(d){ return [fd(d.k, true), SC.fmt(d.rev), d.orders]; })}) +
+      chartCard("main", one ? "Оборот по час" : "Оборот по ден", one ? fd(R[0]) : (R[1] === TODAY && dayData(TODAY).rev > 0 ? "Днес (до " + A.hm(now()) + ") е в червено" : ""), colChart("main", main, {fmt:one ? eur0 : eur0, xn:one ? 7 : 6}),
+        {head:one ? ["Час","Оборот","Поръчки"] : ["Ден","Оборот","Поръчки"], rows:one ? hrs.map(function(h){ return [h[0] + ":00", SC.fmt(cur.hrev[+h[0]] || 0), h[1]]; }) : cur.days.map(function(d){ return [fd(d.k, true), SC.fmt(d.rev), d.orders]; })}) +
       chartCard("ch", "По канал", "Оборот и дял", '<div class="rp-hb">' + cur.ch.map(function(c, i){ return {c:c, i:i}; }).sort(function(a, b){ return b.c.rev - a.c.rev; }).map(function(z){ var c = z.c, sh = cur.rev ? Math.round(c.rev / cur.rev * 100) : 0;
           return '<div class="r"><span class="n">' + ic(CH[z.i][1], 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + CH[z.i][0] + '</span><span class="v">' + SC.fmt(c.rev) + '<small>' + sh + '% · ' + c.o + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.rev / chMax * 100) + '%"></i></span></div>'; }).join("") + '</div>',
         {head:["Канал","Оборот","Дял","Поръчки"], rows:cur.ch.map(function(c, i){ return [CH[i][0], SC.fmt(c.rev), (cur.rev ? Math.round(c.rev / cur.rev * 100) : 0) + "%", c.o]; })}, '<p class="muted" style="margin:0;font-size:15px">Телефонните поръчки влизат през сервитьора като „Маса“ или „Вземане“.</p>') +
@@ -211,6 +226,9 @@ function draw(){ var y = A.scroller.scrollTop;
     '<div style="height:16px"></div><section class="ch cost" data-edit-id="admin.reports.cost"><span class="ill">' + ic("scales",30) + '</span><h2>Печалба по ястие</h2><p class="muted" style="margin:0">Матрицата „популярност срещу печалба“ и марж на ястие искат себестойност: ' + A.missing("себестойност на ястията") + '. Щом се въведе в менюто, отчетът се появява тук.</p></section>' +
     '<div style="height:16px"></div><div class="rp-soon">' + A.soonTag() + '<span><b>Отчети по имейл</b> всеки понеделник в 6:00 и на 1-во число (PDF), известие при отклонение.</span></div>');
   A.scroller.scrollTop = y; bindTips(main, hrs, cur); }
+/* „Днес“ се сравнява с вчера до същия час: поръчките и оборотът до часа на прототипа (резервациите са за целия ден) */
+function cutAt(o, h){ var tot = 0, part = 0, rv = 0; Object.keys(o.hour).forEach(function(k){ tot += o.hour[k]; if (+k <= h){ part += o.hour[k]; rv += o.hrev[k] || 0; } });
+  var f = tot ? part / tot : 0, x = JSON.parse(JSON.stringify(o)); x.orders = part; x.rev = rv; x.ch.forEach(function(c){ c.o = Math.round(c.o * f); c.rev = c.rev * f; }); return x; }
 function hours(o){ var out = []; for (var h = 10; h <= 22; h++) out.push([String(h).padStart(2, "0"), o.hour[h] || 0]); return out; }
 
 /* ---------- подсказка при посочване ---------- */

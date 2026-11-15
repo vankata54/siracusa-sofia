@@ -117,6 +117,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -131,7 +132,7 @@ if (!body) return;
 
 /* ---------- данни: sa-tables (един източник за залата, резервациите и QR), начало от условните SC.TABLES ---------- */
 var WORLD = {salon:{w:800, h:640}, garden:{w:800, h:440}}, ZN = {salon:"Салон", garden:"Градина"};
-var tablesState = A.seed.tables; /* един източник: _seed-res.js */
+var tablesState = A.rl.tables; /* един източник: _seed-res.js */
 function clone(v){ return JSON.parse(JSON.stringify(v)); }
 var saved = tablesState();
 if (st === "empty") saved.tables = saved.tables.filter(function(t){ return t.zone !== "garden"; });

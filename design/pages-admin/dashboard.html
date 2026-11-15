@@ -19,6 +19,7 @@
 /* today: one shell, four cores */
 .kpis{display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr))}
 .kpis.n1{grid-template-columns:minmax(0,1fr)}
+@container page (max-width:899px){ .kpis.n3 > .kpi:last-child{grid-column:1/-1} }
 @container page (min-width:900px){ .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))} }
 .kpi .sm{display:none}
 @container page (max-width:520px){ .kpi .lg{display:none} .kpi .sm{display:inline} }
@@ -104,6 +105,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -163,7 +165,7 @@ var META = {
   dashboard:"Тук сте", orders:A.plural(inWork, "в работа", "в работа") + " · примерни", reservations:A.plural(resToday, "днес", "днес") + " · примерни",
   menu:SC.items.length + " ястия · " + A.plural(outs.length, "изчерпано", "изчерпани") + " днес", lunch:"Последно качено: " + lunchDay,
   offers:A.plural(SC.offers().length, "оферта", "оферти") + " в сайта сега", events:ev ? esc(ev.n) + ", " + A.fmtDate(ev.date, true) : "Няма предстоящи", zones:SC.ZONES.length + " квартала · доставка до 21:00",
-  hall:A.tables().length + " маси (условни за макета)", qr:A.tables().length + " етикета за печат",
+  hall:A.activeTables().length + " маси (условни за макета)", qr:A.activeTables().length + " етикета за печат",
   customers:"Примерни данни", staff:A.ACCOUNTS.length + " пробни акаунта", roles:A.DEFAULT_ROLES.length + " роли",
   reports:"Основни отчети", audit:A.plural(A.data.get("audit", []).length, "запис", "записа"), finance:"За собственика",
   notes:newNotes ? A.plural(newNotes, "нова бележка", "нови бележки") : "Няма нови", site:"Модулите на живо", settings:busy ? "Натоварено: около " + KS.etaBusyMin + " мин" : "Доставка: около " + KS.etaMin + " мин"

@@ -101,6 +101,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -193,7 +194,7 @@ var body = A.mount({section:"qr", title:"QR генератор",
 if (!body) return;
 
 /* ---------- масите: един източник с „Залата и масите“ (sa-tables), иначе условните SC.TABLES ---------- */
-var tablesState = A.seed.tables; /* един източник: _seed-res.js */
+var tablesState = A.rl.tables; /* един източник: _seed-res.js */
 var T = (st === "empty" ? [] : tablesState().tables.filter(function(t){ return !t.off; })).slice().sort(function(a, b){ return a.n - b.n; });
 var ZN = {salon:"Салон", garden:"Градина"};
 

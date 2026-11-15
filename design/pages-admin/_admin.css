@@ -145,10 +145,12 @@ body{background:var(--bg)}
 @container page (min-width:940px){ .sa-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))} .sa-grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))} }
 .sa-tag{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:14px; font-weight:700; line-height:1.2; white-space:nowrap}
 .sa-tag.sample{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); border-radius:999px}
-.sa-tag.soon{background:var(--chip-dark); color:var(--on-chip-dark)}
+.sa-tag.soon{background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:inset 0 0 0 1px var(--line-strong)}
 .sa-tag.soon .ic{color:var(--ember)}
-.sa-tag.ok{color:var(--ok)}
-.sa-tag.warn{color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor; background:transparent}
+.sa-tag.ok{color:var(--ink)}
+.sa-tag.ok .ic{color:var(--ok)}
+.sa-tag.warn{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn); background:transparent}
+.sa-tag.warn .ic{color:var(--warn)}
 .sa-tag.new{background:var(--red); color:var(--on-red)}
 .sa-tag.ember{background:var(--ember); color:var(--on-ember)}
 

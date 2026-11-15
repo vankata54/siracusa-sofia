@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="_admin.css">
 <style>
 .rs{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
-@container page (min-width:1000px){ .rs{grid-template-columns:344px minmax(0,1fr); align-items:start} .rs-side{position:sticky; top:96px} }
+@container page (min-width:1000px){ .rs{grid-template-columns:372px minmax(0,1fr); align-items:start} .rs-side{position:sticky; top:96px} }
 .rs-side{display:grid; gap:12px; min-width:0}
 .rs-main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-content:start}
 /* календар */
@@ -21,7 +21,7 @@
 .cal-h .iconbtn{background:transparent}
 .cal-g{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:0; text-align:center}
 .cal-g .dw{font-size:14px; font-weight:700; color:var(--muted); padding:4px 0}
-.cal-g button{position:relative; min-height:48px; min-width:44px; border:0; border-radius:16px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; font-variant-numeric:tabular-nums; display:grid; place-items:center; padding:0}
+.cal-g button{position:relative; min-height:48px; min-width:48px; border:0; border-radius:16px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; font-variant-numeric:tabular-nums; display:grid; place-items:center; padding:0}
 .cal-g button:hover{background:var(--surface-2)}
 .cal-g button.out{color:var(--muted); opacity:.55}
 .cal-g button.today{box-shadow:inset 0 0 0 2px var(--red)}
@@ -70,7 +70,8 @@
 .bars-x span:last-child{grid-column:span 2; text-align:right}
 /* филтри и списък */
 .rs-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
-.rs-bar .sa-tabs{flex:1 1 520px}
+.rs-bar .sa-tabs{flex:1 1 520px; flex-wrap:wrap; border-radius:28px; overflow:visible}
+.rs-bar .sa-tabs button{flex:0 1 auto}
 .rs-sel{display:none; flex:1 1 160px}
 @container page (max-width:699px){ .rs-bar .sa-tabs{display:none} .rs-sel{display:block} }
 .rs-bar .sa-field-s{flex:1 1 220px}
@@ -141,6 +142,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -154,7 +156,7 @@ var body = A.mount({section:"reservations", title:"Резервации",
 if (!body) return;
 
 /* ---------- време: часът на прототипа A.now() (по подразбиране 19:42) ---------- */
-var now = A.now || function(){ return new Date(); }, SD = A.seed;
+var now = A.now || function(){ return new Date(); }, SD = A.rl; /* помощниците: _res-lib.js */
 var TODAY = SD.today(), NOWM = SD.nowMin();
 function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
 function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
@@ -167,11 +169,11 @@ var SLOTS = []; for (var m0 = 660; m0 <= 1290; m0 += 30) SLOTS.push(hm(m0)); /* 
 /* ---------- маси, настройки, примерни данни: _seed-res.js (един източник за таблото и разделите) ---------- */
 var TABLES = SD.tables().tables.filter(function(t){ return !t.off; });
 function tab(id){ return TABLES.filter(function(t){ return t.id === id; })[0]; }
-var SET = A.data.get("settings", SD.SETTINGS), DUR = SET.resMinutes || 120, NOSHOW = SET.noShowLimit || 2;
+var SET = SD.settings(), DUR = SET.resMinutes || 120, NOSHOW = SET.noShowLimit || 2;
 var ZN = {salon:"Салон", garden:"Градина"};
 var fmtPh = SD.fmtPhone, maskPh = SD.maskPhone;
 var OCC = ["Рожден ден","Имен ден","Годишнина","Делова среща","Друго"];
-var RES = SD.reservations(), BL = A.data.get("blocks", {});
+var RES = A.data.get("reservations", []) || [], BL = A.data.get("blocks", {}) || {}; /* примерите: _seed-res.js; без тях празен ден */
 function save(){ A.data.set("reservations", RES); }
 function saveBL(){ A.data.set("blocks", BL); }
 var CAN_BLOCK = A.me.role === "admin" || A.me.role === "owner" || A.me.role === "manager";

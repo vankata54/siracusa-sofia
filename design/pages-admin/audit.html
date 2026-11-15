@@ -50,6 +50,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -74,9 +75,9 @@ function gOf(id){ return G.filter(function(g){ return g[0] === id; })[0]; }
 
 /* ---------- примерни записи (отбелязани) + истинските от този прототип (sa-audit) ---------- */
 /* примерите са в работно време по часа на прототипа A.now(): E(дни назад, "ЧЧ:ММ", …); днешните само до часа на прототипа */
-function sample(){ var out = [], dishes = SC.items.filter(function(x){ return x.cat === "skara-bertha" || x.cat === "pitsi"; }), L = SC.lunch, T = A.seed.today(), NM = A.seed.nowMin();
+function sample(){ var out = [], dishes = SC.items.filter(function(x){ return x.cat === "skara-bertha" || x.cat === "pitsi"; }), L = SC.lunch, T = A.rl.today(), NM = A.rl.nowMin();
   function day(d){ var p = T.split("-").map(Number), k = new Date(Date.UTC(p[0], p[1] - 1, p[2] - d, 10)); return k.getUTCFullYear() + "-" + String(k.getUTCMonth() + 1).padStart(2, "0") + "-" + String(k.getUTCDate()).padStart(2, "0"); }
-  function E(d, t, who, role, action, text, target){ var m = +t.slice(0, 2) * 60 + +t.slice(3); if (!d && m > NM) return; out.push({id:"s" + out.length, at:A.seed.isoAt(day(d), m), who:who, role:role, action:action, text:text, target:target || null, sample:true}); }
+  function E(d, t, who, role, action, text, target){ var m = +t.slice(0, 2) * 60 + +t.slice(3); if (!d && m > NM) return; out.push({id:"s" + out.length, at:A.rl.isoAt(day(d), m), who:who, role:role, action:action, text:text, target:target || null, sample:true}); }
   E(0, "18:55", "Управител 1", "manager", "settings.update", "„Натоварено“: включено, около 55 мин");
   E(0, "18:40", "Кухня · Скара", "kitchen", "menu.sold_out", "Изчерпано днес: „" + dishes[3].n + "“", dishes[3].id);
   E(0, "16:10", "Поли", "admin", "note.create", "Нова бележка: Заглавието да е на два реда на телефон.");

@@ -25,7 +25,7 @@ A.data = {
   update:function(k, d, fn){ var v = get(k, d), r = fn(v); r = r === undefined ? v : r; set(k, r); return r; },
   keys:function(){ var out = []; try{ for (var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if (k && k.indexOf(P) === 0) out.push(k.slice(P.length)); } }catch(e){} return out; },
   /* „Върни данните в начало“: трие всички sa- ключове без сесията и настройките на изгледа */
-  reset:function(){ A.data.keys().forEach(function(k){ if (k !== "session" && k !== "prefs") del(k); }); }
+  reset:function(){ A.data.keys().forEach(function(k){ if (k !== "session" && k !== "prefs") del(k); }); try{ sessionStorage.removeItem("sa-clock"); }catch(e){} }
 };
 
 /* ---------- hash ---------- */
@@ -49,7 +49,11 @@ function sofiaParts(d){
 A.TIMES = ["12:30","19:42","21:30","23:30"];
 var _pref0 = get("prefs", {});
 A.protoTime = A.TIMES.indexOf(_pref0.time) > -1 ? _pref0.time : "19:42";
-var OFFSET = (function(){ var r = sofiaParts(new Date()), t = A.protoTime.split(":"); return ((+t[0]) * 60 + (+t[1]) - (r.h * 60 + r.m)) * 60000 - new Date().getSeconds() * 1000; })();
+/* отместването се пази за сесията (sessionStorage): часът тече от първото зареждане, не започва отначало на всяка страница */
+var OFFSET = (function(){ var k = "sa-clock", c = null; try{ c = JSON.parse(sessionStorage.getItem(k) || "null"); }catch(e){}
+  if (c && c.time === A.protoTime && typeof c.offset === "number" && Math.abs(c.offset) < 864e5) return c.offset;
+  var r = sofiaParts(new Date()), t = A.protoTime.split(":"), off = ((+t[0]) * 60 + (+t[1]) - (r.h * 60 + r.m)) * 60000 - new Date().getSeconds() * 1000;
+  try{ sessionStorage.setItem(k, JSON.stringify({time:A.protoTime, offset:off})); }catch(e){} return off; })();
 A.now = function(){ return new Date(Date.now() + OFFSET); };
 A.sofia = function(d){ return sofiaParts(d || A.now()); };
 A.todayKey = function(d){ var s = A.sofia(d); return s.y + "-" + String(s.mo + 1).padStart(2, "0") + "-" + String(s.d).padStart(2, "0"); };
@@ -68,7 +72,7 @@ A.status = function(){ var m = A.minutes();
   if (m < 600) return ["", "<b>Затворено</b> · отваряме в 10:00"]; if (m >= 1380) return ["", "<b>Затворено</b> · отваряме утре в 10:00"];
   if (m < 1260) return ["ok", "<b>Отворено до 23:00</b> · Доставка до 21:00"]; if (m < 1350) return ["warn", "<b>Доставката приключи за днес</b> · Вземане до 22:30"];
   return ["warn", "<b>Кухнята затвори</b> · Отворено до 23:00"]; };
-A.setProtoTime = function(t){ var p = get("prefs", {}); p.time = t; set("prefs", p); del("orders"); del("reservations"); };
+A.setProtoTime = function(t){ var p = get("prefs", {}); p.time = t; set("prefs", p); del("orders"); del("reservations"); try{ sessionStorage.removeItem("sa-clock"); }catch(e){} };
 A.plural = SC.plural;
 
 /* ---------- sections (имената са от src/core/staff.ts, SECTIONS) ---------- */
@@ -251,12 +255,15 @@ A.initials = function(name){ var p = String(name || "?").replace(/[^\p{L}\p{N} ]
 /* ---------- toast (едно известие; новото заменя старото) ---------- */
 /* A.toast("Бележката е изтрита", {undo:fn, undoLabel:"Отмени", action:{label, href} | {label, fn}, ms}) */
 var toastT;
+/* известието е винаги над лентата „Запази“ / „Публикувай“, и когато лентата се появи след него */
+function toastUp(){ var t = (A.col || document.body).querySelector(".sa-toast"); if (t) t.classList.toggle("up", !!document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on")); }
+A.toastUp = toastUp;
 A.toast = function(text, o){ o = o || {}; var col = A.col || document.body, t = col.querySelector(".sa-toast");
   if (!t){ t = document.createElement("div"); t.className = "sa-toast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); col.appendChild(t); }
   t.innerHTML = '<span class="tx">' + esc(text) + '</span>' + (o.action ? (o.action.href ? '<a href="' + esc(o.action.href) + '">' + esc(o.action.label) + ic("caret-right", 18) + '</a>' : '<button type="button" data-ta>' + esc(o.action.label) + '</button>') : '') + (o.undo ? '<button type="button" data-tu>' + ic("arrow-counter-clockwise", 18) + esc(o.undoLabel || "Отмени") + '</button>' : '');
   var u = t.querySelector("[data-tu]"); if (u) u.onclick = function(){ t.classList.remove("on"); o.undo(); };
   var a = t.querySelector("[data-ta]"); if (a) a.onclick = function(){ t.classList.remove("on"); o.action.fn(); };
-  t.classList.toggle("up", !!document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on"));
+  toastUp();
   requestAnimationFrame(function(){ t.classList.add("on"); }); clearTimeout(toastT);
   toastT = setTimeout(function(){ t.classList.remove("on"); }, o.ms || (o.undo ? 6000 : 3200)); };
 
@@ -307,6 +314,10 @@ A.soldOutToday = function(){ var d = get("soldout", null); if (!d || d.date !== 
   SC.items.concat(SC.lunch || []).forEach(function(x){ if (SC.isOut(x) && back.indexOf(x.id) < 0 && out.indexOf(x.id) < 0) out.push(x.id); });
   return out.filter(function(id){ return !!SC.byId[id]; }); };
 A.tables = function(){ var d = get("tables", null); return d && d.tables ? d.tables : SC.TABLES; };
+A.activeTables = function(){ return A.tables().filter(function(t){ return !t.off; }); };
+/* телефон: „0888 12 34 56“ и скрит „0888 •• •• 56“ (общите помощници, не в примерните данни) */
+A.fmtPhone = function(p){ var d = String(p || "").replace(/\D/g, ""); if (d.indexOf("359") === 0) d = "0" + d.slice(3); return d.length === 10 ? d.slice(0, 4) + " " + d.slice(4, 6) + " " + d.slice(6, 8) + " " + d.slice(8) : String(p || ""); };
+A.maskPhone = function(p){ var f = A.fmtPhone(p); return f.length === 13 ? f.slice(0, 4) + " •• •• " + f.slice(11) : f; };
 
 A.badges = {};
 /* броят на всеки раздел, сметнат на всяка страница от общите ключове */
@@ -338,7 +349,7 @@ function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = TH
     '<button class="sa-tb sa-only-t" type="button" data-sa="sections">' + ic("magnifying-glass", 20) + 'Търси</button>' +
     (pen ? '<button class="sa-tb" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + 'Молив</button>' : '') +
     '<button class="sa-tb sa-only-d" type="button" data-sa="theme" aria-label="Тема: ' + th[1] + '. Смени">' + ic(th[2], 20) + 'Тема: ' + th[1] + '</button>' +
-    (pen ? '' : '<button class="sa-tb sa-only-p" type="button" data-sa="sections">' + ic("list", 22) + 'Раздели</button>') +
+    
     '<button class="sa-me" type="button" data-sa="profile" aria-label="Профил: ' + esc(A.me.name) + ', ' + esc(A.roleName(A.me.role)) + '"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><span class="who sa-only-d"><b>' + esc(A.me.name) + '</b><small>' + esc(A.roleName(A.me.role)) + '</small></span></button>' +
     '<button class="sa-tb sa-only-d" type="button" data-sa="logout">' + ic("sign-out", 20) + 'Изход</button>' +
   '</header>'; }
@@ -371,6 +382,7 @@ A.mount = function(o){ o = o || {};
   document.body.appendChild(app);
   A.app = app; A.side = app.querySelector(".sa-side"); A.col = app.querySelector(".sa-col"); A.scroller = app.querySelector(".sa-scroller"); A.ov = app.querySelector(".sa-ov"); A.bnav = app.querySelector(".sa-bnav");
   bindSearch(); watchTabs();
+  try{ new MutationObserver(toastUp).observe(A.col, {subtree:true, attributes:true, attributeFilter:["class"]}); }catch(e){}
   if (window.SAPen && A.can("notes") && o.pencil !== false && !A.inPreview) A.pen = SAPen.mount({module:"admin", author:A.who, notesHref:"notes.html", onSave:function(n){ A.notes.add(n); A.audit("note.create", "Нова бележка: " + n.text.slice(0, 80), n.id); A.setBadge("notes", A.notes.count("new")); }, onToggle:syncPen, fabPhone:false, barTop:[8, 88], now:A.now});
   return allowed ? app.querySelector("[data-body]") : null; };
 /* табовете, които не се събират: избледняване на ръба и избраният таб се вижда целият */

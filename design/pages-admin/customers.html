@@ -82,6 +82,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -96,7 +97,7 @@ if (!body) return;
 
 /* ---------- примерни данни: „Клиент N“, телефоните от резервациите, истинските ястия и цени ---------- */
 function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-var phoneOf = A.seed.phoneOf, fmtPh = A.seed.fmtPhone, maskPh = A.seed.maskPhone; /* _seed-res.js */
+var phoneOf = A.rl.phoneOf, fmtPh = A.rl.fmtPhone, maskPh = A.rl.maskPhone; /* _seed-res.js */
 var now = A.now || function(){ return new Date(); };
 function maskMail(m){ var a = m.split("@"); return a[0][0] + "***@" + a[1]; }
 var DAY = 864e5, NOW = now().getTime(), CH = ["Доставка","Вземане","Маса","Офис"];
@@ -112,8 +113,8 @@ function seed(){ var out = [];
 var CU = A.data.get("customers", null); if (!CU){ CU = seed(); A.data.set("customers", CU); }
 var BL = A.data.get("blocks", {}); /* _seed-res.js */
 var RES = A.data.get("reservations", []);
-var FB = A.seed.feedback(); /* _seed-res.js */
-var IQ = (A.seed.inquiries ? A.seed.inquiries() : A.data.get("feedback-iq", [])) || []; /* запитванията: един източник с „Оферти и ваучери“ (_seed-orders.js) */
+var FB = A.data.get("feedback", []) || []; /* примерите: _seed-res.js */
+var IQ = A.data.get("feedback-iq", []) || []; /* запитванията: един източник с „Оферти и ваучери“ (_seed-orders.js) */
 function saveIQ(){ A.data.set("feedback-iq", IQ); }
 function save(){ A.data.set("customers", CU); } function saveFB(){ A.data.set("feedback", FB); } function saveBL(){ A.data.set("blocks", BL); }
 var CAN_BLOCK = A.me.role === "admin" || A.me.role === "owner" || A.me.role === "manager";

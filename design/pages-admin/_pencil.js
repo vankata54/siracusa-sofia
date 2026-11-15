@@ -168,8 +168,8 @@ function layerOf(win){ var doc = win.document; if (win.__saPenLayer && win.__saP
     L.box.style.width = w + "px"; L.box.style.height = h + "px"; L.box.style.transform = "translate(" + x + "px," + y + "px)";
     L.box.className = "box on" + (cls ? " " + cls : "");
     if (label != null) L.lab.textContent = label;
-    var lw = Math.min(L.lab.offsetWidth || 160, win.innerWidth - 16), ly = y - 34 < 4 ? Math.min(y + h + 6, win.innerHeight - 34) : y - 34, lx = Math.max(8, Math.min(x, win.innerWidth - lw - 8));
-    if (y - 34 < 4 && y + h + 40 > win.innerHeight) ly = Math.max(4, y + 6), lx = Math.max(8, Math.min(x + 6, win.innerWidth - lw - 8));
+    var top0 = Math.max(4, L.avoidY || 0), lw = Math.min(L.lab.offsetWidth || 160, win.innerWidth - 16), ly = y - 34 < top0 ? Math.min(y + h + 6, win.innerHeight - 34) : y - 34, lx = Math.max(8, Math.min(x, win.innerWidth - lw - 8));
+    if (y - 34 < top0 && y + h + 40 > win.innerHeight) ly = Math.max(4, y + 6), lx = Math.max(8, Math.min(x + 6, win.innerWidth - lw - 8));
     L.lab.style.transform = "translate(" + lx + "px," + ly + "px)"; L.lab.classList.add("on"); };
   L.clear = function(){ L.el = null; L.box.className = "box"; L.lab.classList.remove("on"); };
   var raf = 0; function re(){ if (raf) return; raf = win.requestAnimationFrame(function(){ raf = 0; if (L.el) L.draw(L.el, null, L.box.className.replace(/^box ?(on)? ?/, "")); }); }
@@ -212,6 +212,8 @@ SAPen.mount = function(o){ o = o || {};
     bar.querySelector("[data-up]").hidden = !cand || !cand.parentElement || cand.parentElement === (tdoc() && tdoc().body);
     bar.querySelector("[data-down]").hidden = !cand || !stack.length; }
   function setCand(el, keepStack){ cand = el; if (!keepStack) stack = []; var L = tw && layerOf(tw); if (!L) return;
+    /* the label must not go under the ember bar (same window only; in the frame the bar is outside) */
+    L.avoidY = tw === ui && on ? bar.getBoundingClientRect().bottom + 4 : 0;
     if (!el){ L.clear(); barText(); return; } L.draw(el, describe(el) + (el.closest("[data-edit-id]") ? " · " + el.closest("[data-edit-id]").getAttribute("data-edit-id") : ""), lastType === "touch" || lastType === "key" ? "picked" : ""); barText();
     if (lastType === "touch" || lastType === "key") requestAnimationFrame(clearOfBar); }
   /* the bar is drawn over the top of the screen: scroll the outlined element just under it */

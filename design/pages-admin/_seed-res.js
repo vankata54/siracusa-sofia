@@ -1,7 +1,7 @@
-/* Siracusa · Админ: примерни резервации, блокирани номера и настройки (автор 3). Зарежда се след _admin.js на всяка страница.
+/* Siracusa · Админ: примерни резервации, блокирани номера и настройки (автор 3). Зарежда се след _admin.js и _res-lib.js на всяка страница.
    Един източник за таблото, лентата и разделите. Всеки ключ се попълва само ако липсва, по часа на прототипа A.now().
    A.seed.reservations(force) -> sa-reservations (+ sa-blocks)    A.seed.settings(force) -> sa-settings
-   A.seed.feedback(force) -> sa-feedback (обратна връзка). Помощни: A.seed.tables() (планът: sa-tables или условните SC.TABLES), A.seed.phoneOf(i), A.seed.maskPhone(p), A.seed.fmtPhone(p).
+   A.seed.feedback(force) -> sa-feedback (обратна връзка). Помощниците (A.rl) са в _res-lib.js; този файл само попълва ключовете.
 
    Форма на данните (описана и в README-3.md):
    sa-reservations: [{id, date:"2026-11-15", time:"19:30", people:4, table:"S3"|null, zone:"salon"|"garden"|null, name:"Клиент 7",
@@ -14,32 +14,18 @@
 (function(){
 "use strict";
 var A = window.A; if (!A || !A.data) return;
+var R = A.rl; if (!R) return; /* помощниците са в _res-lib.js */
 var S = A.seed = A.seed || {};
-function now(){ return A.now ? A.now() : new Date(); }
-function sofia(d){ return A.sofia(d); }
-function ymd(d){ return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
+var addD = R.addDays, isoAt = R.isoAt;
 function parse(k){ var p = k.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], 10)); }
-function addD(k, n){ var d = parse(k); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
 function hm(m){ return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
 function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-/* ISO на ден (YYYY-MM-DD) и час по София (минути от полунощ); зимно време UTC+2, лятно UTC+3 */
-function isoAt(day, min){ var d = parse(day); d.setUTCHours(0, 0, 0, 0); var t = d.getTime() + (min - 120) * 60000, off = sofia(new Date(t)).h * 60 + sofia(new Date(t)).m - min; return new Date(t - off * 60000).toISOString(); }
-S.today = function(){ var s = sofia(now()); return s.y + "-" + String(s.mo + 1).padStart(2, "0") + "-" + String(s.d).padStart(2, "0"); };
-S.nowMin = function(){ var s = sofia(now()); return s.h * 60 + s.m; };
-S.isoAt = isoAt;
-S.phoneOf = function(i){ return "08" + ["88","87","89","98","99","95"][i % 6] + String((i * 791 * 37 + 123457) % 1000000).padStart(6, "0"); };
-S.fmtPhone = function(p){ return p.slice(0, 4) + " " + p.slice(4, 6) + " " + p.slice(6, 8) + " " + p.slice(8); };
-S.maskPhone = function(p){ return p.slice(0, 4) + " ** ** " + p.slice(8); };
-S.tables = function(){ var d = A.data.get("tables", null); if (d && d.tables) return d;
-  return {tables:SC.TABLES.map(function(t){ return {id:t.id, n:t.n, zone:t.zone, seats:t.seats, shape:t.shape, cx:110 + t.x * 193, cy:100 + t.y * 200, window:t.window, stroller:t.stroller, access:t.access, walkin:true}; }), joins:[], garden:true}; };
-
-S.SETTINGS = {kitchen:{busy:false, etaMin:35, etaBusyMin:55, busyAt:null}, resMinutes:120, celebrationPrice:"offer", earlyDays:null, noShowLimit:2, callCooldown:3, callManager:5};
-S.settings = function(force){ if (!force && A.data.get("settings", null)) return A.data.get("settings"); var v = JSON.parse(JSON.stringify(S.SETTINGS)); A.data.set("settings", v); return v; };
+S.settings = function(force){ if (!force && A.data.get("settings", null)) return A.data.get("settings"); var v = JSON.parse(JSON.stringify(R.SETTINGS)); A.data.set("settings", v); return v; };
 
 var OCC = ["Рожден ден","Имен ден","Годишнина","Делова среща"], NOTES = ["Идваме с детска количка.","Маса до прозореца, ако може.","Ще закъснеем с 10 минути.","Един гост е с инвалидна количка."];
 S.reservations = function(force){
   if (!force && A.data.get("reservations", null)) return A.data.get("reservations");
-  var TODAY = S.today(), NOWM = S.nowMin(), TABLES = S.tables().tables.filter(function(t){ return !t.off; }), DUR = (A.data.get("settings", null) || S.SETTINGS).resMinutes || 120, out = [], id = 1, phoneOf = S.phoneOf;
+  var TODAY = R.today(), NOWM = R.nowMin(), TABLES = R.tables().tables.filter(function(t){ return !t.off; }), DUR = R.settings().resMinutes || 120, out = [], id = 1, phoneOf = R.phoneOf;
   for (var dd = -30; dd <= 14; dd++){ var day = addD(TODAY, dd), r = rng("res" + day), dow = parse(day).getUTCDay(), n = dd === 0 ? 13 : (dow === 5 || dow === 6 ? 10 : 6) + Math.floor(r() * 4), holds = {};
     for (var k = 0; k < n; k++){ var lunch = r() < .35, slot = lunch ? 660 + 30 * Math.floor(r() * 6) : 1080 + 30 * Math.floor(r() * 8), t = hm(slot), ppl = [1,2,2,2,3,4,4,4,5,6,8][Math.floor(r() * 11)];
       var gi = Math.floor(r() * 36); if ([2, 4, 8].indexOf(gi) > -1) gi += 10;
@@ -69,13 +55,13 @@ S.reservations = function(force){
 
 /* обратна връзка: „Пишете ни“ и отговорите след оценка „Не“ (запитванията за ваучер и рожден ден са в sa-feedback-iq, _seed-orders.js)
    sa-feedback: [{id, topic:"contact"|"rating", name, contact:"0888123456"|"ime@primer.bg", orderNo?, message, status:"new"|"done", createdAt:ISO}] */
-S.feedback = function(force){ if (!force && A.data.get("feedback", null)) return A.data.get("feedback"); var T = S.today(), NM = S.nowMin();
+S.feedback = function(force){ if (!force && A.data.get("feedback", null)) return A.data.get("feedback"); var T = R.today(), NM = R.nowMin();
   function at(d, m){ if (!d) m = Math.min(m, NM - 20); return isoAt(addD(T, -d), m); }
   var v = [
-    {id:"f1", topic:"rating", name:"Клиент 12", contact:S.phoneOf(11), orderNo:"1047", message:"Примерен отговор на „Как да подобрим обслужването?“ след оценка „Не“.", status:"new", createdAt:at(0, 1110)},
+    {id:"f1", topic:"rating", name:"Клиент 12", contact:R.phoneOf(11), orderNo:"1047", message:"Примерен отговор на „Как да подобрим обслужването?“ след оценка „Не“.", status:"new", createdAt:at(0, 1110)},
     {id:"f2", topic:"contact", name:"Гост без профил", contact:"gost@primer.bg", message:"Примерно съобщение от формата „Пишете ни“ на страницата „Контакти“.", status:"new", createdAt:at(1, 1335)},
-    {id:"f5", topic:"contact", name:"Клиент 21", contact:S.phoneOf(20), message:"Примерно съобщение от формата „Пишете ни“.", status:"done", createdAt:at(5, 860)},
-    {id:"f6", topic:"rating", name:"Клиент 30", contact:S.phoneOf(29), orderNo:"1031", message:"Примерен отговор на „Как да подобрим обслужването?“.", status:"done", createdAt:at(9, 1270)}];
+    {id:"f5", topic:"contact", name:"Клиент 21", contact:R.phoneOf(20), message:"Примерно съобщение от формата „Пишете ни“.", status:"done", createdAt:at(5, 860)},
+    {id:"f6", topic:"rating", name:"Клиент 30", contact:R.phoneOf(29), orderNo:"1031", message:"Примерен отговор на „Как да подобрим обслужването?“.", status:"done", createdAt:at(9, 1270)}];
   A.data.set("feedback", v); return v; };
 
 S.settings(); S.reservations(); S.feedback();

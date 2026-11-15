@@ -93,6 +93,7 @@
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script>
+<script src="_res-lib.js"></script>
 <script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
@@ -169,7 +170,10 @@ var ORIG = null; try{ ORIG = localStorage.getItem("sc-prefs"); }catch(e){}
 var ORIGC = null; try{ ORIGC = localStorage.getItem("sc-cookie"); }catch(e){}
 function arm(){ var p = {}; try{ p = JSON.parse(ORIG || "{}") || {}; }catch(e){} p.view = "desktop"; p.theme = st.th; p.time = mod.time ? st.t : (p.time || "now"); try{ localStorage.setItem("sc-prefs", JSON.stringify(p)); if (ORIGC == null) localStorage.setItem("sc-cookie", JSON.stringify("min")); }catch(e){} }
 function disarm(){ try{ if (ORIG == null) localStorage.removeItem("sc-prefs"); else localStorage.setItem("sc-prefs", ORIG); if (ORIGC == null) localStorage.removeItem("sc-cookie"); }catch(e){} }
-window.addEventListener("pagehide", disarm);
+/* the preview never leaves its prefs behind: when the page goes away, the frame must not arm again */
+var leaving = false;
+function leave(){ leaving = true; disarm(); }
+window.addEventListener("pagehide", leave); window.addEventListener("beforeunload", leave);
 
 function build(){
   var d = dims(); phoneBare = isPhoneUI() && st.d === "phone" && !st.custom;
@@ -200,7 +204,8 @@ function layout(){
 
 function onLoad(){ disarm(); var win = frame.contentWindow, doc;
   try{ doc = frame.contentDocument; }catch(e){ return; }
-  try{ win.addEventListener("pagehide", function(){ arm(); if (loadEl) loadEl.classList.remove("off"); }); }catch(e){}
+  /* a link inside the frame: arm just before the next page of the frame reads its prefs, never while the preview itself is leaving */
+  try{ win.addEventListener("pagehide", function(){ if (leaving) return; arm(); if (loadEl) loadEl.classList.remove("off"); setTimeout(disarm, 4000); }); }catch(e){}
   try{ doc.head.insertAdjacentHTML("beforeend", '<style>.pv-bar{display:none!important}</style>'); doc.documentElement.classList.remove("pv-phone");
     if (st.th !== "system") doc.documentElement.setAttribute("data-theme", st.th); }catch(e){}
   loadEl && loadEl.classList.add("off");
@@ -253,7 +258,7 @@ document.addEventListener("change", function(e){ var t = e.target;
   if (t.matches("[data-scr]")){ go(t.value); return; }
   if (t.matches("[data-time]")){ setTime(t.value); return; }
   if (t.matches("[data-mod]")){ var m = A.MOD[t.value]; location.hash = "m=" + m.id + "&p=" + m.screens[0].k + "&d=" + (m.dev || "phone"); location.reload(); } });
-document.addEventListener("click", function(e){ var a = e.target.closest("[data-newtab], [data-newtab2]"); if (!a) return; arm(); setTimeout(disarm, 2500); });
+document.addEventListener("click", function(e){ var a = e.target.closest("[data-newtab], [data-newtab2]"); if (!a) return; arm(); setTimeout(disarm, 1500); });
 var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ var was = phoneBare; if ((isPhoneUI() && st.d === "phone" && !st.custom) !== was) build(); else layout(); }, 120); });
 build();
 if (denied) A.toast("Нямате права за „" + denied.n + "“; показваме „" + mod.n + "“.");
