@@ -47,9 +47,9 @@ export function dl(a: string, b: string): number {
 /** Окончания на българските форми: лук-а, лук-ът, лук-ов, домат-и, домат-ен, сирен-ето, гъб-и (основата губи крайната гласна). */
 export const ENDINGS = ["", "a", "at", "ya", "yat", "ta", "to", "te", "ti", "ov", "ova", "ovo", "ovi", "ove", "ovete", "i", "ite", "e", "ete", "en", "na", "no", "ni", "ena", "eno", "eni", "ski", "ska", "sko", "ki", "ka", "ko", "eto", "ata", "tsa", "tse", "tsi"];
 /** Is `token` a form of `lemma` (both Latin, one word)? „lukanka“ is not a form of „luk“. */
-export function isForm(token: string, lemma: string): boolean {
+export function isForm(token: string, lemma: string, strip = true): boolean {
   if (token === lemma) return true;
-  const base = lemma.length > 3 && /[aeiouy]$/.test(lemma) ? lemma.slice(0, -1) : lemma;
+  const base = strip && lemma.length > 3 && /[aeiouy]$/.test(lemma) ? lemma.slice(0, -1) : lemma;
   return base.length >= 2 && token.indexOf(base) === 0 && ENDINGS.indexOf(token.slice(base.length)) > -1;
 }
 
@@ -100,7 +100,8 @@ function idx(x: Searchable) {
   if (!w) { w = { name: norm(x.n + " " + (x.kw || "")), comp: norm(x.comp || "") }; IDX.set(x, w); }
   return w;
 }
-const hasForm = (toks: string[], forms: string[]): boolean => toks.some((t) => forms.some((f) => isForm(t, f)));
+const hasForm = (toks: string[], forms: string[], strip = true): boolean => toks.some((t) => forms.some((f) => isForm(t, f, strip)));
+/* дума извън речника („суши“): само тя и окончанията ѝ, без да губи крайната гласна („сушен“ не е форма на „суши“) */
 /** By name: a word that starts with the typed word (2+ letters), or a form of the concept (onion → „Лучена ...“). */
 function byName(x: Searchable, w: QWord, typo = false): boolean {
   const n = idx(x).name;
@@ -120,10 +121,10 @@ function byComp(x: Searchable, w: QWord): boolean {
     if (w.c.tag && x.t.indexOf(w.c.tag) > -1) return true;
     return hasForm(idx(x).comp, w.c.forms);
   }
-  return w.v.some((v) => v.length >= 2 && hasForm(idx(x).comp, [v]));
+  return w.v.some((v) => v.length >= 2 && hasForm(idx(x).comp, [v], false));
 }
 /** The dish has the excluded thing (or we cannot know: no composition). */
-function has(x: Searchable, w: QWord): boolean { return byComp(x, w) || (w.c ? hasForm(idx(x).name, w.c.forms) : w.v.some((v) => hasForm(idx(x).name, [v]))); }
+function has(x: Searchable, w: QWord): boolean { return byComp(x, w) || (w.c ? hasForm(idx(x).name, w.c.forms) : w.v.some((v) => hasForm(idx(x).name, [v], false))); }
 
 /* ---------- резултатът ---------- */
 export interface Result<T extends Searchable> {

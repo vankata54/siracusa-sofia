@@ -122,9 +122,9 @@ var SCSearch = (() => {
     return d[m][n];
   }
   var ENDINGS = ["", "a", "at", "ya", "yat", "ta", "to", "te", "ti", "ov", "ova", "ovo", "ovi", "ove", "ovete", "i", "ite", "e", "ete", "en", "na", "no", "ni", "ena", "eno", "eni", "ski", "ska", "sko", "ki", "ka", "ko", "eto", "ata", "tsa", "tse", "tsi"];
-  function isForm(token, lemma) {
+  function isForm(token, lemma, strip = true) {
     if (token === lemma) return true;
-    const base = lemma.length > 3 && /[aeiouy]$/.test(lemma) ? lemma.slice(0, -1) : lemma;
+    const base = strip && lemma.length > 3 && /[aeiouy]$/.test(lemma) ? lemma.slice(0, -1) : lemma;
     return base.length >= 2 && token.indexOf(base) === 0 && ENDINGS.indexOf(token.slice(base.length)) > -1;
   }
   var toConcept = (t) => ({ label: t.bg[0], forms: t.bg.map((w) => norm(w).join(" ")).filter((w) => w.indexOf(" ") < 0), al: t.al, tag: t.tag });
@@ -180,7 +180,7 @@ var SCSearch = (() => {
     }
     return w;
   }
-  var hasForm = (toks, forms) => toks.some((t) => forms.some((f) => isForm(t, f)));
+  var hasForm = (toks, forms, strip = true) => toks.some((t) => forms.some((f) => isForm(t, f, strip)));
   function byName(x, w, typo = false) {
     const n = idx(x).name;
     if (w.v.some((v) => v.length >= 2 && n.some((t) => t.indexOf(v) === 0))) return true;
@@ -199,10 +199,10 @@ var SCSearch = (() => {
       if (w.c.tag && x.t.indexOf(w.c.tag) > -1) return true;
       return hasForm(idx(x).comp, w.c.forms);
     }
-    return w.v.some((v) => v.length >= 2 && hasForm(idx(x).comp, [v]));
+    return w.v.some((v) => v.length >= 2 && hasForm(idx(x).comp, [v], false));
   }
   function has(x, w) {
-    return byComp(x, w) || (w.c ? hasForm(idx(x).name, w.c.forms) : w.v.some((v) => hasForm(idx(x).name, [v])));
+    return byComp(x, w) || (w.c ? hasForm(idx(x).name, w.c.forms) : w.v.some((v) => hasForm(idx(x).name, [v], false)));
   }
   var joinAnd = (a) => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " и " + a[a.length - 1];
   function searchDishes(list, raw) {

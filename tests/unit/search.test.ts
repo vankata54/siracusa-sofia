@@ -51,6 +51,7 @@ describe("search: by name, then „Съдържат ...“", () => {
     expect(isForm("lukanka", "luk")).toBe(false);
     expect(isForm("gabi", "gaba")).toBe(true);
     expect(isForm("sireneto", "sirene")).toBe(true);
+    expect(isForm("sushen", "sushi", false)).toBe(false); /* a word outside the dictionary keeps its last vowel */
   });
 });
 
@@ -126,5 +127,13 @@ describe("search on the real menu", () => {
   it("„бургер“ finds the burgers by the category word", () => {
     expect(searchGroups(items, "бургер").name.length).toBeGreaterThanOrEqual(items.filter((x) => x.cat === "burgeri").length);
     expect(searchable(items[0]).kw).toBeTruthy();
+  });
+});
+
+describe("search: a word outside the dictionary", () => {
+  it("„суши“ does not find „сушен домат“ in the composition", () => {
+    const r = searchDishes([D("b", "Брускети", "хляб, сушен домат"), D("s", "Суши сет", "ориз, сьомга")], "суши");
+    expect(ids(r.name)).toEqual(["s"]);
+    expect(ids(r.comp)).toEqual([]);
   });
 });

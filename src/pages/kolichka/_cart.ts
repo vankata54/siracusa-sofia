@@ -209,7 +209,7 @@ export function start(): void {
     const items = I.rows.filter((r) => !r.out);
     return '<details class="allerg"><summary>' + ic("info", 20) + "Алергени в поръчката" + ic("caret-down", 18) + "</summary><ul>" + items.map((r) => {
       const x = r.x;
-      return "<li><span>" + esc(x.n) + "</span><span>" + (x.comp ? (x.al.length ? x.al.map(SC.allergenName).join(", ") : "Без основните 14 алергена") : "Няма данни, попитайте ни") + "</span></li>";
+      return "<li><span>" + esc(x.n) + "</span><span>" + (x.comp ? (x.al.length ? x.al.map(SC.allergenName).join(", ") : "Без основните 14 алергена") : "Нямаме пълен състав, попитайте ни") + "</span></li>";
     }).join("") + '</ul><p class="note-auto">' + ic("info", 18) + "<span>Алергените са предварителни, от състава. Кухнята ги потвърждава. Попитайте ни на " + R.phone + ".</span></p></details>";
   }
 
