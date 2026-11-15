@@ -84,8 +84,8 @@ SC.status = function(){ var m = SC.minutes();
 };
 /* honest delivery estimate (prototype: fixed by hour; real one comes from the kitchen load) */
 /* „Натоварено“ е само ръчният превключвател (решение 04.11): от настройките на админа (sa-settings) или, ако ги няма, от кухнята (sk-busy). Без часова симулация. */
-SC.eta = function(){ var busy = false; try{ var a = JSON.parse(localStorage.getItem("sa-settings") || "null"); if (a && a.kitchen) busy = !!a.kitchen.busy; else { var k = JSON.parse(localStorage.getItem("sk-busy") || "null"); busy = !!(k && k.on); } }catch(e){}
-  return busy ? {min:55, busy:true, text:"Възможни са закъснения · около 55 мин"} : {min:35, busy:false, text:"около 35 мин"}; };
+SC.eta = function(){ var busy = false, n = 35, b = 55; try{ var a = JSON.parse(localStorage.getItem("sa-settings") || "null"); if (a && a.kitchen){ busy = !!a.kitchen.busy; if (+a.kitchen.etaMin > 0) n = +a.kitchen.etaMin; b = +a.kitchen.etaBusyMin > 0 ? +a.kitchen.etaBusyMin : n + 20; } else { var k = JSON.parse(localStorage.getItem("sk-busy") || "null"); busy = !!(k && k.on); } }catch(e){}
+  return busy ? {min:b, busy:true, text:"Възможни са закъснения · около " + b + " мин"} : {min:n, busy:false, text:"около " + n + " мин"}; };
 SC.lastSaturday = function(){ var n = new Date(), y = n.getFullYear(), mo = n.getMonth();
   function ls(y,mo){ var d = new Date(y,mo+1,0); while(d.getDay()!==6) d.setDate(d.getDate()-1); return d; }
   var d = ls(y,mo), t = new Date(y,mo,n.getDate()); if (d < t) d = ls(mo===11?y+1:y,(mo+1)%12);

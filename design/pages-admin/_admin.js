@@ -256,7 +256,15 @@ A.initials = function(name){ var p = String(name || "?").replace(/[^\p{L}\p{N} ]
 /* A.toast("Бележката е изтрита", {undo:fn, undoLabel:"Отмени", action:{label, href} | {label, fn}, ms}) */
 var toastT;
 /* известието е винаги над лентата „Запази“ / „Публикувай“, и когато лентата се появи след него */
-function toastUp(){ var t = (A.col || document.body).querySelector(".sa-toast"); if (t) t.classList.toggle("up", !!document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on")); }
+/* известието стои над видимата лента „Запази“, колкото и висока да е тя (на 390 може да е на два реда) */
+function toastUp(){ var col = A.col || document.body, t = col.querySelector(".sa-toast"); if (!t) return; var bar = document.querySelector(".sa-pbar.on, .rl-bar.on, [data-pbar].on, .st-savebar.on, .hl-savebar.on");
+  t.classList.toggle("up", !!bar);
+  /* от разположението (bottom + височина), не от getBoundingClientRect: лентата влиза с transform и по време на анимацията е още долу */
+  if (bar){ var cs = getComputedStyle(bar), bb = parseFloat(cs.bottom); t.style.bottom = (cs.position === "fixed" || isNaN(bb) ? Math.max(28, Math.round(col.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 12)) : Math.round(bb + bar.offsetHeight + 12)) + "px"; } else t.style.bottom = ""; }
+window.addEventListener("resize", function(){ toastUp(); });
+/* която и страница да покаже или скрие своята лента (.on), известието се мести само: един наблюдател за всички екрани */
+var toastRaf = 0;
+try{ new MutationObserver(function(){ if (toastRaf) return; toastRaf = requestAnimationFrame(function(){ toastRaf = 0; toastUp(); }); }).observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:["class"]}); }catch(e){}
 A.toastUp = toastUp;
 A.toast = function(text, o){ o = o || {}; var col = A.col || document.body, t = col.querySelector(".sa-toast");
   if (!t){ t = document.createElement("div"); t.className = "sa-toast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); col.appendChild(t); }
