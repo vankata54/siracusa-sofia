@@ -274,6 +274,8 @@ function render(){
   SC.ov.querySelectorAll(".dish-abar, .sheetwrap").forEach(function(n){ n.remove(); });
   if (ttlObs) ttlObs.disconnect();
   var fab = SC.ov.querySelector(".aifab"); if (fab) fab.classList.toggle("up", !!x);
+  /* махнато в админа ястие: старият адрес води към категорията му (в кода 301) */
+  if (SC.removed && SC.removed[id]){ var rc = SC.removed[id].cat; try{ sessionStorage.setItem("sc-moved", SC.removed[id].n); }catch(e){} location.replace(SC.catById[rc] ? "category.html#" + rc : "menu.html"); return; }
   if (!x) return notFound(id);
   cat = catOf(x);
   var out = SC.isOut(x), sug = out ? [] : SC.suggest(x.id, SC.cart.lines().map(function(l){ return l.id; }));
@@ -292,6 +294,7 @@ function render(){
   var info =
     '<nav aria-label="Хлебни трохи"><ol class="crumbs"><li><a href="menu.html">Меню</a></li><li>'+ic("caret-right",16)+'<a href="'+cat.href+'">'+esc(cat.n)+'</a></li></ol></nav>'+
     '<h1 class="h1" data-h1>'+esc(x.n)+'</h1>'+
+    (x.desc ? '<p class="lead" style="margin:10px 0 0">'+esc(x.desc)+'</p>' : '')+
     '<div class="prow2"><span class="pg"><span class="price">'+fmt(x.p)+'</span>'+(x.per100?'<span class="g">за 100 гр.</span>':x.g?'<span class="g">'+esc(x.g)+'</span>':'')+'</span>'+favHTML()+'</div>'+
     (x.per100 ? '<p class="per100note">Продава се на тегло: сумата се смята по теглото на парчето. <span class="missing">[ЛИПСВА: среден грамаж на порция]</span></p>' : '')+
     (facts.length ? '<div class="badges facts">'+facts.join("")+'</div>' : '')+

@@ -24,6 +24,9 @@
 .im-file .ic{color:var(--muted)}
 .im-file small{display:block; font-size:14px; color:var(--muted); font-weight:600}
 .im-mode{display:grid; gap:8px; margin-top:16px}
+.im-mode .seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.im-warn{display:flex; gap:8px; align-items:flex-start; font-size:15px; font-weight:700; color:var(--ink)}
+.im-warn .ic{color:var(--warn); margin-top:2px}
 .im-mode .seg button{font-size:15px; min-height:52px; white-space:normal; line-height:1.15; padding:0 8px}
 .im-go{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
 .im-read{display:grid; gap:16px; padding:28px 22px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
@@ -71,10 +74,10 @@
 (function(){
 var ic = A.ic, esc = A.esc, st = A.st;
 A.liveHash = true;
-var body = A.mount({section:"menu", title:"Внос на меню", docTitle:"Внос на меню", eyebrow:"Меню",
+var body = A.mount({section:"menu", title:"Внос на меню", docTitle:"Внос на меню", barTitle:"Внос на меню", crumb:"Меню", eyebrow:"Меню",
   sub:"Качете новото меню като PDF или снимка. Claude го чете и прави чернова; вие проверявате всеки ред и публикувате от „Меню“.",
   actions:'<a class="pill pill-line pill-lg" href="menu.html">' + ic("arrow-left",22) + 'Към менюто</a>',
-  states:[["","Качване"],["reading","Чете се"],["review","Чернова за проверка"],["error","Файлът не се чете"],["offline","Без връзка"]]});
+  states:[["","Качване"],["loading","Зареждане"],["reading","Чете се"],["review","Чернова за проверка"],["error","Файлът не се чете"],["offline","Без връзка"]]});
 if (!body) return;
 
 /* Примерна чернова в прототипа: истинските категории, ястията са „Примерно ястие N“, цени не се измислят (празни за попълване).
@@ -82,16 +85,16 @@ if (!body) return;
 var CATS = SC.cats.filter(function(c){ return c.id !== "dobavki"; });
 function sample(){ var pick = ["pitsi","pitsi","skara-bertha","skara-bertha","salati","pasta-i-rizoto","deserti","burgeri"];
   return pick.map(function(c, i){ return {k:i, cat:c, n:"Примерно ястие " + (i + 1), g:i % 3 ? "350 гр." : "", p:"", flag:i % 3 ? "Цената не се чете ясно" : "Грамажът и цената не се четат", skip:false}; }); }
-var S = {step:st === "review" ? 2 : st === "reading" ? 1 : 0, file:st ? {name:"novo-menyu.pdf", size:1840000, type:"application/pdf"} : null, mode:"add", rows:st === "review" ? sample() : []};
-function kb(n){ return n > 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.round(n / 1024) + " KB"; }
+var S = {step:st === "review" ? 2 : st === "reading" ? 1 : 0, file:["review","reading","error"].indexOf(st) > -1 ? {name:"novo-menyu.pdf", size:1840000, type:"application/pdf"} : null, mode:"add", rows:st === "review" ? sample() : []};
+function kb(n){ return n > 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : n < 1024 ? "под 1 KB" : Math.round(n / 1024) + " KB"; }
 function stepper(){ var t = ["Качете файла","Проверете черновата","Публикувайте от „Меню“"], k = S.step === 2 ? 1 : 0;
   return '<div class="stepper im-steps" style="--n:3" data-edit-id="admin.menuimport.steps"><div class="bar">' + t.map(function(x, i){ return '<span class="' + (i <= k ? 'on' : '') + '"></span>'; }).join("") + '</div><div class="t"><span>Стъпка <b>' + (k + 1) + ' от 3</b></span><span>' + t[k] + '</span></div></div>'; }
 
 function upload(){ return '<section class="im-drop" data-drop data-edit-id="admin.menuimport.upload"><div class="ill">' + ic("export",40) + '</div><h2>Новото меню</h2><p>PDF или снимка (JPG, PNG), до 20 MB. Може и няколко снимки една след друга.</p>' +
-  '<input class="vh im-in" id="im-f" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" aria-describedby="im-f-e"><label class="pill pill-ink pill-lg" for="im-f">' + ic("export",22) + (S.file ? 'Друг файл' : 'Избери файл') + '</label><p class="err" id="im-f-e" role="alert" style="color:var(--danger); font-weight:700"' + (st === "error" ? '' : ' hidden') + '>' + (st === "error" ? 'Не успяхме да прочетем файла. Качете PDF или снимка до 20 MB.' : '') + '</p></section>' +
+  '<input class="vh im-in" id="im-f" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" aria-describedby="im-f-e"><label class="pill pill-ink pill-lg" for="im-f">' + ic("export",22) + (S.file ? 'Друг файл' : 'Избери файл') + '</label><p class="err" id="im-f-e" role="alert" style="color:var(--danger); font-weight:700"' + (st === "error" ? '' : ' hidden') + '>' + (st === "error" ? 'Не успяхме да прочетем „' + esc(S.file ? S.file.name : "файла") + '“. Файлът може да е защитен с парола или сканиран неясно. Опитайте с друг файл или със снимки на страниците.' : '') + '</p></section>' +
   (S.file ? '<div class="im-file" style="margin-top:12px">' + ic(/pdf/.test(S.file.type) ? "note" : "image",24) + '<span>' + esc(S.file.name) + '<small>' + kb(S.file.size) + '</small></span></div>' : '') +
   '<div class="im-mode"><span class="label" id="im-ml">Какво да направим с черновата</span><div class="seg" role="group" aria-labelledby="im-ml"><button type="button" data-mode="add" aria-pressed="' + (S.mode === "add") + '">Добави към менюто</button><button type="button" data-mode="replace" aria-pressed="' + (S.mode === "replace") + '">Замени цялото меню</button></div>' +
-  '<span class="help" style="font-size:14px; color:var(--muted)">' + (S.mode === "replace" ? "Ястията, които ги няма в черновата, ще се махнат при „Публикувай“; старите им адреси водят (301) към категорията." : "Новите ястия влизат в черновата до сегашните.") + '</span></div>' +
+  (S.mode === "replace" ? '<span class="im-warn">' + ic("warning-circle",18) + '<span>Сегашните ' + activeCount() + ' ястия ще се махнат от сайта след „Публикувай“. Старите им адреси водят (301) към категорията.</span></span>' : '<span class="help" style="font-size:14px; color:var(--muted)">Новите ястия влизат в черновата до сегашните.</span>') + '</div>' +
   '<div class="im-go"><button class="pill pill-red pill-lg" type="button" data-read' + (S.file ? '' : ' disabled') + '>' + ic("sparkle",22) + 'Прочети менюто</button></div>' +
   '<p class="im-note" style="margin-top:16px">' + ic("info",20) + '<span>Автоматичното четене идва в етап E. В прототипа след „Прочети менюто“ се показва примерна чернова.</span></p>'; }
 
@@ -102,18 +105,21 @@ function rowHTML(r){ var bad = !r.skip && !priceOk(r.p);
     '<label class="im-skip">Не внасяй<span class="sa-switch"><input type="checkbox" role="switch" data-skip aria-label="Не внасяй ред ' + (r.k + 1) + '"' + (r.skip ? ' checked' : '') + '><span class="tr"></span></span></label></div>' +
     '<div class="im-f"><div class="field"><label for="im-n' + r.k + '">Име</label><input class="input" id="im-n' + r.k + '" data-fld="n" value="' + esc(r.n) + '" autocomplete="off"></div>' +
       '<div class="field"><label for="im-c' + r.k + '">Категория</label><select class="input" id="im-c' + r.k + '" data-fld="cat">' + CATS.map(function(c){ return '<option value="' + c.id + '"' + (c.id === r.cat ? ' selected' : '') + '>' + esc(c.n) + '</option>'; }).join("") + '</select></div>' +
-      '<div class="field"><label for="im-g' + r.k + '">Грамаж</label><input class="input" id="im-g' + r.k + '" data-fld="g" value="' + esc(r.g) + '" placeholder="350 гр." autocomplete="off"></div>' +
+      '<div class="field"><label for="im-g' + r.k + '">Грамаж</label><input class="input" id="im-g' + r.k + '" data-fld="g" value="' + esc(r.g) + '" placeholder="напр. 350 гр." autocomplete="off"></div>' +
       '<div class="field"><label for="im-p' + r.k + '">Цена</label><div class="im-eu"><input class="input" id="im-p' + r.k + '" data-fld="p" inputmode="decimal" value="' + esc(r.p) + '" placeholder="0,00" autocomplete="off"' + (bad ? ' aria-invalid="true"' : '') + '><span class="u" aria-hidden="true">€</span></div></div></div></article>'; }
+function menuNow(){ return A.data.get("menu-draft", null) || {menu:A.data.get("menu", {})}; }
+function activeCount(){ var M = menuNow().menu || {}, n = SC.items.filter(function(x){ return !(M[x.id] && M[x.id]._del); }).length; Object.keys(M).forEach(function(k){ if (M[k]._new && !M[k]._del) n++; }); return n; }
 function priceOk(p){ var v = String(p || "").replace(/\s/g, "").replace(",", "."); return /^\d{1,3}(\.\d{1,2})?$/.test(v) && +v > 0; }
 function review(){ var use = S.rows.filter(function(r){ return !r.skip; }), noP = use.filter(function(r){ return !priceOk(r.p); }).length, cur = SC.items.length;
   return A.banner({tone:"warn", icon:"info", title:"Примерна чернова в прототипа", text:"Това не е истинското меню: редовете са примерни, за да се види проверката. Истинското четене идва в етап E."}) +
     '<div class="im-sum"><div class="im-k"><span class="lb">Прочетени редове</span><span class="v">' + S.rows.length + '</span></div><div class="im-k"><span class="lb">Ще се внесат</span><span class="v">' + use.length + '</span></div><div class="im-k"><span class="lb">Без цена</span><span class="v">' + noP + '</span></div>' +
-      '<div class="im-k"><span class="lb">' + (S.mode === "replace" ? "Ще се махнат" : "Сегашни ястия") + '</span><span class="v">' + cur + '</span></div></div>' +
-    '<p class="muted" style="margin:0 0 12px">Сравнете всеки ред със снимката или PDF файла, поправете името, категорията, грамажа и цената. Редовете с жълта рамка искат внимание.</p>' +
+      '<div class="im-k"><span class="lb">' + (S.mode === "replace" ? "Ще се махнат" : "Сегашни ястия") + '</span><span class="v">' + activeCount() + '</span></div></div>' +
+    '<p class="muted" style="margin:0 0 12px">Сравнете всеки ред със снимката или PDF файла, поправете името, категорията, грамажа и цената. Редовете с рамка и бележка искат внимание.</p>' +
     '<div class="im-rows" data-rows>' + S.rows.map(rowHTML).join("") + '</div>' +
     '<div class="im-bottom"><button class="pill pill-red pill-lg" type="button" data-put>' + ic("check",22) + 'Сложи в черновата на менюто</button><button class="pill pill-line pill-lg" type="button" data-again>' + ic("arrow-counter-clockwise",22) + 'Друг файл</button><p class="err" data-err role="alert" hidden></p></div>'; }
 
-function draw(){ if (st === "offline" && S.step === 0){ body.innerHTML = A.offline("Качването и четенето искат връзка. Черновата на менюто е запазена.") + '<div style="height:16px"></div>' + stepper() + upload(); return; }
+function draw(){ if (st === "loading"){ body.innerHTML = A.skel(4, "Зареждаме …"); return; }
+  if (st === "offline" && S.step === 0){ body.innerHTML = A.offline("Качването и четенето искат връзка. Черновата на менюто е запазена.") + '<div style="height:16px"></div>' + stepper() + upload(); return; }
   body.innerHTML = stepper() + (S.step === 0 ? upload() : S.step === 1 ? reading() : review());
   if (S.step === 1){ var b = body.querySelector("[data-bar]"); requestAnimationFrame(function(){ requestAnimationFrame(function(){ b.classList.add("go"); }); });
     if (st !== "reading") setTimeout(function(){ S.step = 2; S.rows = sample(); draw(); A.audit("menu.import", "Внос на меню: прочетен „" + S.file.name + "“ (примерна чернова)", null); var h = body.querySelector(".sa-banner"); h && h.scrollIntoView({block:"start"}); }, 2600); } }
@@ -142,7 +148,8 @@ function put(){ var use = S.rows.filter(function(r){ return !r.skip; }), bad = u
   if (!use.length){ er.hidden = false; er.textContent = "Няма редове за внос: включете поне един."; return; }
   if (bad.length){ er.hidden = false; er.textContent = A.plural(bad.length, "ред", "реда") + " без име или цена. Попълнете ги или включете „Не внасяй“."; var f = body.querySelector('[data-k="' + bad[0].k + '"] [data-fld="p"]'); f && f.focus(); return; }
   var pubM = A.data.get("menu", {}), d = A.data.get("menu-draft", null) || {menu:JSON.parse(JSON.stringify(pubM)), cats:A.data.get("menu-cats", {order:null, names:{}, added:[], removed:[]}), opts:Object.assign({addon:{cats:["pitsi","burgeri"], dishes:{}, prices:{}}, swap:{on:false, groups:[], dishes:{}}}, A.data.get("menu-opts", {}))};
-  if (S.mode === "replace") SC.items.forEach(function(x){ d.menu[x.id] = Object.assign({}, d.menu[x.id] || {}, {_del:true}); });
+  if (S.mode === "replace"){ SC.items.forEach(function(x){ d.menu[x.id] = Object.assign({}, d.menu[x.id] || {}, {_del:true}); });
+    Object.keys(d.menu).forEach(function(k){ if (d.menu[k]._new && !SC.byId[k]){ if (pubM[k]) d.menu[k]._del = true; else delete d.menu[k]; } }); }
   use.forEach(function(r){ var id = "nov-" + Math.random().toString(36).slice(2, 8); d.menu[id] = {_new:true, src:"import", n:String(r.n).trim(), cat:r.cat, course:(SC.catById[r.cat] || {}).course || "main", g:String(r.g || "").trim(), p:+String(r.p).replace(/\s/g, "").replace(",", "."), desc:"", comp:"", t:[], al:[], noOnion:false, share:false}; });
   A.data.set("menu-draft", d); A.audit("menu.import", "Внос на меню: " + A.plural(use.length, "ястие", "ястия") + " в черновата" + (S.mode === "replace" ? " (замяна на менюто)" : ""), null);
   location.href = "menu.html#review=1"; }

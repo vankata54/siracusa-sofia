@@ -165,7 +165,8 @@
 .mn-ci{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px 14px; align-items:center; padding:12px 14px 12px 12px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); cursor:grab}
 .mn-ci.dragging{opacity:.45}
 .mn-ci.drop{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
-.mn-ci .no{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-variant-numeric:tabular-nums}
+.mn-ci .hd{display:inline-flex; align-items:center; gap:6px; color:var(--muted); cursor:grab}
+.mn-ci .no{color:var(--ink); width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-variant-numeric:tabular-nums}
 .mn-ci b{display:block; font-size:18px; letter-spacing:-.02em; line-height:1.25}
 .mn-ci small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
 .mn-ci .acts{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
@@ -284,6 +285,7 @@ function setOut(id, out){ var d = so(), b = SC.byId[id], data = !!(b && SC.isOut
   if (out && !data) d.ids.unshift(id); if (!out && data) d.back.push(id); A.data.set("soldout", d); }
 function outList(){ var ids = A.soldOutToday ? A.soldOutToday() : all().filter(function(x){ return isOut(x.id); }).map(function(x){ return x.id; }); return ids.map(function(id){ return dish(id) || SC.byId[id]; }).filter(Boolean); }
 
+function hideToast(){ var t = A.col && A.col.querySelector(".sa-toast"); if (t) t.classList.remove("on"); }
 function num(p){ return (Math.round(p * 100) / 100).toFixed(2).replace(".", ","); }
 function parsePrice(s){ var v = String(s || "").replace(/\s/g, "").replace("€", "").replace(",", "."); if (!/^\d{1,3}(\.\d{1,2})?$/.test(v)) return NaN; return +v; }
 function now(){ return A.now ? A.now() : new Date(); }
@@ -353,9 +355,9 @@ function groups(){ var list = all(view.f === "draft").filter(function(x){ return
 function catsTab(){ var d = D(), list = all(), order = cats(d);
   return '<div class="sa-sh" style="margin-top:20px"><h2>Категориите и редът им</h2><p>Влачете или „Нагоре“ / „Надолу“. Така ги вижда и сайтът.</p></div>' +
     '<div class="mn-cl" data-cl data-edit-id="admin.menu.catlist">' + order.map(function(c, i){ var n = list.filter(function(x){ return x.cat === c; }).length, on = (d.opts.addon.cats || []).indexOf(c) > -1;
-      return '<div class="mn-ci" draggable="true" data-cat="' + c + '"><span class="no" aria-hidden="true">' + (i + 1) + '</span><span><b>' + esc(catName(c)) + '</b><small>' + A.plural(n, "ястие", "ястия") + (SC.catById[c] ? '' : ' · нова в черновата') + '</small></span>' +
+      return '<div class="mn-ci" draggable="true" data-cat="' + c + '"><span class="hd" aria-hidden="true" title="Влачете">' + ic("list",22) + '<span class="no">' + (i + 1) + '</span></span><span><b>' + esc(catName(c)) + '</b><small>' + A.plural(n, "ястие", "ястия") + (SC.catById[c] ? '' : ' · нова в черновата') + '</small></span>' +
         '<div class="acts"><button class="pill pill-line" type="button" data-up' + (i ? '' : ' disabled') + ' aria-label="Нагоре: ' + esc(catName(c)) + '">' + ic("caret-up",18) + 'Нагоре</button><button class="pill pill-line" type="button" data-down' + (i < order.length - 1 ? '' : ' disabled') + ' aria-label="Надолу: ' + esc(catName(c)) + '">' + ic("caret-down",18) + 'Надолу</button>' +
-          (c === "dobavki" ? '' : '<label class="mn-on">Добави<span class="sa-switch"><input type="checkbox" role="switch" data-catadd aria-label="Добави при „' + esc(catName(c)) + '“"' + (on ? ' checked' : '') + '><span class="tr"></span></span></label>') +
+          (c === "dobavki" ? '' : '<label class="mn-on">Добавки<span class="sa-switch"><input type="checkbox" role="switch" data-catadd aria-label="Добави при „' + esc(catName(c)) + '“"' + (on ? ' checked' : '') + '><span class="tr"></span></span></label>') +
           '<button class="pill pill-line" type="button" data-rename aria-label="Преименувай: ' + esc(catName(c)) + '">' + ic("pencil-simple",18) + 'Преименувай</button>' +
           (n ? '' : '<button class="pill pill-line" type="button" data-catdel aria-label="Махни: ' + esc(catName(c)) + '">' + ic("trash",18) + 'Махни</button>') + '</div></div>'; }).join("") + '</div>' +
     '<div style="margin-top:12px"><button class="pill pill-line pill-lg" type="button" data-newcat>' + ic("plus",22) + 'Нова категория</button></div>' +
@@ -405,6 +407,7 @@ function drawList(){ var box = body.querySelector("[data-list]"); if (!box) retu
 function setBar(){ if (!pubBar){ pubBar = document.createElement("div"); pubBar.className = "mn-pub"; pubBar.setAttribute("role", "region"); pubBar.setAttribute("aria-label", "Черновата на менюто"); pubBar.setAttribute("data-edit-id", "admin.menu.pubbar"); A.col.appendChild(pubBar); }
   var df = diff(); pubBar.hidden = !df || !df.n || st === "loading" || st === "error" || st === "empty";
   pubBar.setAttribute("data-pbar", ""); pubBar.classList.toggle("on", !pubBar.hidden);
+  var fl = body.querySelector(".mn-flt"); if (fl){ var tmp = document.createElement("div"); tmp.innerHTML = toolbar(); fl.innerHTML = tmp.querySelector(".mn-flt").innerHTML; }
   pubBar.innerHTML = df ? '<span class="tx">Чернова: ' + A.plural(df.n, "промяна", "промени") + '</span><button class="pill pill-line" type="button" data-discard>' + ic("x",18) + 'Откажи</button><button class="pill pill-red" type="button" data-review>' + ic("paper-plane-right",20) + 'Публикувай</button>' : ''; }
 draw();
 
@@ -481,7 +484,7 @@ function bindCatDnD(){ var src = null; body.querySelectorAll(".mn-ci").forEach(f
   el.addEventListener("dragleave", function(){ el.classList.remove("drop"); });
   el.addEventListener("drop", function(e){ e.preventDefault(); var from = e.dataTransfer.getData("text/plain") || src, to = el.dataset.cat; if (!from || from === to) return; var order = cats(); order.splice(order.indexOf(from), 1); order.splice(order.indexOf(to), 0, from);
     var before = edit(function(d){ d.cats.order = order; }); draw(true); draftToast("„" + catName(from) + "“ на място " + (order.indexOf(from) + 1), before); }); }); }
-function catSheet(c){ var s = A.sheet({title:c ? "Преименувай категорията" : "Нова категория", focus:"#mc-n", html:'<div class="field"><label for="mc-n">Име</label><input class="input" id="mc-n" value="' + esc(c ? catName(c) : "") + '" autocomplete="off" aria-describedby="mc-n-e"><span class="err" id="mc-n-e" hidden></span></div><p class="muted" style="margin:12px 0 0; font-size:15px">' + (c ? 'Адресът на категорията в сайта не се сменя.' : 'Новата категория е най-долу; преместете я с „Нагоре“.') + '</p>',
+function catSheet(c){ hideToast(); var s = A.sheet({title:c ? "Преименувай категорията" : "Нова категория", focus:"#mc-n", html:'<div class="field"><label for="mc-n">Име</label><input class="input" id="mc-n" value="' + esc(c ? catName(c) : "") + '" autocomplete="off" aria-describedby="mc-n-e"><span class="err" id="mc-n-e" hidden></span></div><p class="muted" style="margin:12px 0 0; font-size:15px">' + (c ? 'Адресът на категорията в сайта не се сменя.' : 'Новата категория е най-долу; преместете я с „Нагоре“.') + '</p>',
     foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + (c ? 'Запази' : 'Добави') + '</button>'});
   s.foot.querySelector("[data-x]").onclick = s.close;
   s.foot.querySelector("[data-ok]").onclick = function(){ var i = s.body.querySelector("#mc-n"), n = i.value.trim(), er = s.body.querySelector("#mc-n-e");
@@ -490,7 +493,7 @@ function catSheet(c){ var s = A.sheet({title:c ? "Преименувай кат�
     var id = c || "kat-" + Math.random().toString(36).slice(2, 7), old = c ? catName(c) : "";
     var before = edit(function(d){ var cc = d.cats; cc.names = cc.names || {}; if (c) cc.names[c] = n; else { var ord = cats(d); cc.added = (cc.added || []).concat([{id:id, n:n}]); cc.order = ord.concat([id]); } });
     s.close(); draw(true); A.audit("menu.draft", c ? "Чернова: категория „" + old + "“ → „" + n + "“" : "Чернова: нова категория „" + n + "“", id); draftToast(c ? "категория „" + n + "“" : "нова категория „" + n + "“", before); }; }
-function groupSheet(){ var rows = 2;
+function groupSheet(){ hideToast(); var rows = 2;
   function rowH(i){ return '<div class="mn-optrow" data-or><div class="field"><label for="mg-o' + i + '">Опция ' + (i + 1) + '</label><input class="input" id="mg-o' + i + '" autocomplete="off"></div><div class="field"><label for="mg-p' + i + '">Доплата</label><div class="mn-pin"><input class="input" id="mg-p' + i + '" inputmode="decimal" placeholder="0,00" autocomplete="off"><span class="u" aria-hidden="true">€</span></div></div><button class="iconbtn" type="button" data-orx aria-label="Махни опция ' + (i + 1) + '">' + ic("x",20) + '</button></div>'; }
   var s = A.sheet({title:"Нова група „Смени“", focus:"#mg-n", html:'<div class="mn-form"><div class="mn-hid">' + ic("lock",20) + 'Скрито до новото меню</div><div class="field"><label for="mg-n">Име на групата</label><input class="input" id="mg-n" autocomplete="off" placeholder="Например: Гарнитура" aria-describedby="mg-n-e"><span class="err" id="mg-n-e" hidden></span></div>' +
     '<div class="mn-opts" data-opts>' + rowH(0) + rowH(1) + '</div><div><button class="pill pill-line" type="button" data-addrow>' + ic("plus",20) + 'Още опция</button></div><span class="err" data-oerr hidden></span>' +
@@ -510,7 +513,7 @@ function groupSheet(){ var rows = 2;
 
 /* ---------- лист за ястие ---------- */
 var photos = {}; /* снимките са само за прегледа в тази сесия; в кода отиват в хранилището на сайта */
-function openDish(id){ var x = id ? dish(id) : {id:null, n:"", desc:"", cat:view.c || cats()[0], comp:"", g:"", p:0, t:[], al:[], _new:true};
+function openDish(id){ hideToast(); var x = id ? dish(id) : {id:null, n:"", desc:"", cat:view.c || cats()[0], comp:"", g:"", p:0, t:[], al:[], _new:true};
   var base = id ? SC.byId[id] : null, out = id ? isOut(id) : false, o = D().opts.addon, ov = id && o.dishes && o.dishes.hasOwnProperty(id) ? (o.dishes[id] ? "on" : "off") : "cat";
   var catOpts = cats().map(function(c){ return '<option value="' + c + '"' + (c === x.cat ? ' selected' : '') + '>' + esc(catName(c)) + '</option>'; }).join("");
   var ph = photos[id] || null;
@@ -574,7 +577,7 @@ function removeDish(id, s){ var x = dish(id), cn = catName(x.cat);
     draw(true); A.audit("menu.draft", "Чернова: махнато „" + x.n + "“ (301 към „" + cn + "“)", id); draftToast("махнато „" + x.n + "“", before); }); }
 
 /* ---------- преди „Публикувай“: какво ще стане ---------- */
-function reviewSheet(){ var df = diff(); if (!df || !df.n){ A.toast("Черновата е празна."); return; }
+function reviewSheet(){ hideToast(); var df = diff(); if (!df || !df.n){ var e = A.sheet({title:"Публикувай менюто", html:A.empty({icon:"check-circle", title:"Няма промени за публикуване.", text:"Черновата е празна: сайтът е точно както е публикуван. Сменете цена, ястие или категория и те ще чакат тук."}), foot:'<button class="pill pill-ink pill-lg" type="button" data-x>Затвори</button>'}); e.foot.querySelector("[data-x]").onclick = e.close; return; }
   var d = draft(), p = pub(), pages = df.nw.length + df.chg.length + df.del.length + (df.cats ? cats(d).length : 0);
   var cs = {}; df.nw.concat(df.chg, df.del).forEach(function(id){ var x = dishIn(d.menu, id) || dishIn(p.menu, id); if (x) cs[x.cat] = 1; }); pages += Object.keys(cs).length + 1;
   function li(id, kind){ var x = dishIn(d.menu, id) || dishIn(p.menu, id), y = dishIn(p.menu, id), sub = "";
@@ -583,7 +586,7 @@ function reviewSheet(){ var df = diff(); if (!df || !df.n){ A.toast("Черно�
     else sub = esc(catName(x.cat, d)) + " · " + SC.fmt(x.p);
     return '<li><span>' + esc(x.n) + '<small>' + sub + '</small></span></li>'; }
   function part(title, icn, arr, kind){ return arr.length ? '<div><h3>' + ic(icn,20) + title + ' · ' + arr.length + '</h3><ul>' + arr.map(function(id){ return li(id, kind); }).join("") + '</ul></div>' : ''; }
-  var html = '<div class="mn-sum2" data-edit-id="admin.menu.review"><div class="what">' + ic("arrow-clockwise",22) + '<span><b>Сайтът се пресглобява сам:</b> ' + A.plural(pages, "страница", "страници") + ' (ястията, категориите и менюто), sitemap.xml, JSON-LD и адресите. Отнема около минута.</span></div>' +
+  var html = '<div class="mn-sum2" data-edit-id="admin.menu.review"><div class="what">' + ic("arrow-clockwise",22) + '<span><b>Сайтът се пресглобява сам:</b> ' + A.plural(pages, "страница", "страници") + ' (ястията, категориите и менюто), sitemap.xml, JSON-LD и адресите.</span></div>' +
     part("Нови ястия", "plus", df.nw, "new") + part("Променени", "pencil-simple", df.chg, "chg") + part("Махнати", "trash", df.del, "del") +
     (df.cats ? '<div><h3>' + ic("list",20) + 'Категории</h3><ul><li><span>Ред и имена<small>' + esc(cats(d).map(function(c){ return catName(c, d); }).join(" · ")) + '</small></span></li></ul></div>' : '') +
     (df.opts ? '<div><h3>' + ic("plus",20) + '„Добави“ и „Смени“</h3><ul><li><span>„Добави“ при: ' + esc((d.opts.addon.cats || []).map(function(c){ return catName(c, d); }).join(", ") || "никоя категория") + '<small>' + Object.keys(d.opts.addon.dishes || {}).length + ' ястия по изключение; „Смени“ остава скрито</small></span></li></ul></div>' : '') +

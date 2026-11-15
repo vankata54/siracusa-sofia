@@ -24,8 +24,28 @@ SC.plural = function(n, one, many){ return n + " " + (n===1 ? one : many); };
 
 /* ---------- data ---------- */
 SC.menu = M;
+/* Публикуваното меню от админа (sa-menu, sa-menu-cats; не черновата): в прототипа сайтът го показва така, както кодът го пресглобява.
+   Без тези ключове всичко е както в data/menu.js. Махнато ястие изчезва от категориите и търсенето; SC.removed[id] = категорията му (за „301“ в dish.html). */
+SC.removed = {};
+(function(){ if (/\/pages-admin\//.test(location.pathname)) return; /* админът работи с данните и сам прилага редакциите си */
+  var E = load("sa-menu", null), C = load("sa-menu-cats", null), skip = {_new:1, _del:1, src:1, photo:1};
+  if (E && typeof E === "object"){ var keep = [];
+    M.items.forEach(function(x){ var e = E[x.id]; if (!e){ keep.push(x); return; } if (e._del){ SC.removed[x.id] = {n:x.n, cat:x.cat, x:x}; return; }
+      var y = Object.assign({}, x); Object.keys(e).forEach(function(k){ if (!skip[k]) y[k] = e[k]; });
+      if (e.t && x.t.indexOf("out") > -1 && e.t.indexOf("out") < 0) y.t = e.t.concat(["out"]); keep.push(y); });
+    Object.keys(E).forEach(function(k){ var e = E[k]; if (!e || !e._new || e._del || !e.n || !(e.p > 0)) return; var y = {id:k, n:e.n, cat:e.cat, course:e.course || "main", comp:"", g:"", p:e.p, t:[], al:[], noOnion:false, share:false};
+      Object.keys(e).forEach(function(f){ if (!skip[f]) y[f] = e[f]; }); keep.push(y); });
+    M.items = keep; }
+  if (C && typeof C === "object"){ var cats = M.cats.map(function(c){ return Object.assign({}, c, C.names && C.names[c.id] ? {n:C.names[c.id]} : {}); });
+    (C.added || []).forEach(function(a){ cats.push({id:a.id, n:(C.names && C.names[a.id]) || a.n, course:"main"}); });
+    cats = cats.filter(function(c){ return (C.removed || []).indexOf(c.id) < 0; });
+    if (C.order && C.order.length) cats.sort(function(a, b){ var i = C.order.indexOf(a.id), j = C.order.indexOf(b.id); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
+    M.cats = cats; }
+})();
 SC.items = M.items;
 SC.byId = {}; M.items.forEach(function(x){ SC.byId[x.id] = x; });
+/* махнатото остава за справка (стари поръчки, количка, кухнята), но не е в менюто, категориите и търсенето */
+Object.keys(SC.removed).forEach(function(k){ SC.byId[k] = Object.assign({}, SC.removed[k].x, {removed:true}); });
 /* today's lunch items join the lookup (for cart/prices) but stay out of the main menu lists */
 SC.lunch = M.lunch.items.filter(function(x){ return x.p; }).map(function(x){ var g=x.group;
   var it = {id:x.id, n:x.n, cat:"obedno", group:g, course:/Супи|Салати/.test(g)?"starter":/Десерти/.test(g)?"dessert":"main", comp:"", g:"", p:x.p, t:[], al:[], noOnion:false, share:false, lunch:true};
@@ -327,6 +347,8 @@ SC.mount = function(o){ o = o || {};
   if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); if (f){ f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t=setTimeout(function(){ f.classList.add("mini"); }, 2600); } }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
   updateCartUI(false);
   document.title = (o.docTitle || o.title || "Siracusa") + (o.docTitle||o.title ? " | Siracusa Bar & Grill" : " Bar & Grill");
+  /* махнато ястие от менюто: dish.html пренасочва към категорията (като 301 в кода) и тук казваме защо */
+  try{ var mv = sessionStorage.getItem("sc-moved"); if (mv){ sessionStorage.removeItem("sc-moved"); setTimeout(function(){ SC.toast("„"+mv+"“ вече не е в менюто. Вижте другите ястия тук."); }, 400); } }catch(e){}
   return scroller.querySelector("[data-main]"); };
 
 /* ---------- global delegation ---------- */
