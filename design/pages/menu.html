@@ -63,6 +63,19 @@
 .alnote{margin-top:2px}
 .alnote .ic{margin-top:2px}
 
+/* ---------- search groups (shared core): by name, the band „Съдържат ...“, no composition at the bottom ---------- */
+.search .qchips{margin-top:8px}
+.qband{margin:0; min-height:56px; padding:8px 20px 8px 16px}
+.qband h2{display:flex; align-items:center; gap:10px; margin:0; font-size:22px; letter-spacing:-.03em}
+.qband .n{font-size:15px}
+.qband + .cdesc{margin:8px 0 14px}
+.mcat.k-name .cdesc{margin-bottom:14px}
+.qunk{display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; margin-bottom:18px; padding:16px 18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.qunk > .ic{color:var(--warn); margin-top:2px}
+.qunk p{margin:4px 0 0; color:var(--muted)}
+.qunk .link{min-height:0; display:inline}
+.qmore{margin-top:18px}
+
 /* ---------- notices ---------- */
 .notices{display:grid; gap:10px; margin-top:16px}
 .notices:empty{display:none}
@@ -216,6 +229,7 @@
 <body>
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
+<script src="../ds/search.js"></script>
 <script src="../ds/sc.js"></script>
 <script>
 (function(){
@@ -245,37 +259,10 @@ function writeHash(){ var p = [];
   try{ history.replaceState(null, "", p.length ? "#"+p.join("&") : location.pathname); }catch(e){} }
 readHash();
 
-/* ---------- search: case-insensitive, Latin input, one typo in words over 4 letters ---------- */
-var LAT = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya","ѝ":"i"};
-function latin(s){ return String(s).toLowerCase().replace(/[а-яѝ]/g, function(c){ return LAT[c] || c; }); }
-function squash(s){ return s.replace(/(.)\1+/g, "$1"); }
-function words(s){ return s.split(/[^a-z0-9]+/).filter(Boolean); }
-/* a typed (Latin) query can mean several spellings: c as "ц" (pica) or as "k" (carbonara) */
-function qVariants(raw){ var s = latin(raw).replace(/4/g,"ch").replace(/6/g,"sh").replace(/w/g,"v").replace(/x/g,"ks").replace(/kh/g,"h")
-    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts").replace(/ck/g,"k");
-  var a = s.replace(/ch/g,"\u0001").replace(/c/g,"ts").replace(/\u0001/g,"ch"), b = s.replace(/ch/g,"\u0001").replace(/c/g,"k").replace(/\u0001/g,"ch");
-  return (a === b ? [a] : [a,b]).map(function(v){ return words(squash(v)); }); }
-function dl(a, b){ var m = a.length, n = b.length, d = [], i, j; for (i=0;i<=m;i++){ d[i] = [i]; } for (j=0;j<=n;j++) d[0][j] = j;
-  for (i=1;i<=m;i++) for (j=1;j<=n;j++){ var c = a[i-1]===b[j-1] ? 0 : 1; d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+c);
-    if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1); } return d[m][n]; }
-/* exact prefix 3, inner substring 2, typo-tolerant prefix 0.5 (words of 4+ Latin letters, i.e. Cyrillic words over 4 letters and short Latin ones) */
-function wordScore(q, t){ if (t.indexOf(q) === 0) return 3; if (q.length >= 3 && t.indexOf(q) > 0) return 2;
-  var k = q.length >= 9 ? 2 : q.length >= 4 ? 1 : 0; if (!k) return 0;
-  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 0.5; } return 0; }
-var IDX = {}; SC.items.forEach(function(x){ var c = SC.catById[x.cat];
-  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:"")+" "+(NOUN[x.cat]&&x.cat!=="hlebcheta"?NOUN[x.cat][0]:""))))}; });
-/* name matches weigh 3x; returns {s: score, f: relied on a typo match} */
-function scoreWords(x, qw){ var total = 0, fz = false, w = IDX[x.id];
-  for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0;
-    w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
-    if (!s) return {s:0, f:false}; if (s === 1.5 || s === 0.5) fz = true; total += s; }
-  return {s:total, f:fz}; }
-/* search over a list: first spelling variant that finds anything wins; exact hits hide typo-only hits */
-function search(list, raw){ var vs = qVariants(raw), out = null;
-  for (var v=0; v<vs.length && !out; v++){ var hits = [];
-    list.forEach(function(x){ var r = scoreWords(x, vs[v]); if (r.s) hits.push([x, r]); });
-    if (hits.length){ if (hits.some(function(h){ return !h[1].f; })) hits = hits.filter(function(h){ return !h[1].f; }); out = hits; } }
-  var sc = {}; (out || []).forEach(function(h){ sc[h[0].id] = h[1].s; }); return sc; }
+/* ---------- search: the shared core (ds/search.js, built from src/lib/search.ts; decision 15.11) ----------
+   On top by name, under the band „Съдържат ...“ by composition, „без ...“ never lets a dish without a composition through:
+   those go to their own group at the bottom („Нямаме пълен състав, попитайте ни“). Filters and allergen ticks apply first. */
+function outLast(a){ return a.map(function(x,i){ return [x,i]; }).sort(function(p,q){ return (SC.isOut(p[0]) - SC.isOut(q[0])) || (p[1]-q[1]); }).map(function(z){ return z[0]; }); }
 
 /* ---------- filtering ---------- */
 function scopeItems(){ return st.menu === "bf" ? BF_ITEMS : MAIN_ITEMS; }
@@ -283,13 +270,17 @@ function scopeCats(){ return st.menu === "bf" ? [SC.catById.zakuski] : MAIN_CATS
 function fById(id){ return SC.FILTERS.filter(function(f){ return f.id===id; })[0]; }
 function passes(x){ for (var i=0;i<st.f.length;i++){ if (!fById(st.f[i]).test(x)) return false; }
   for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; } return true; }
-function results(){ var qv = st.q.trim() || null, list = scopeItems().filter(passes), sc = {};
-  if (qv){ sc = search(list, qv); list = list.filter(function(x){ return sc[x.id]; }); }
-  var groups = scopeCats().map(function(c){ var it = list.filter(function(x){ return x.cat === c.id; });
-    it = it.map(function(x,i){ return [x,i]; }).sort(function(a,b){ return (SC.isOut(a[0]) - SC.isOut(b[0])) || (qv ? sc[b[0].id]-sc[a[0].id] : 0) || (a[1]-b[1]); }).map(function(z){ return z[0]; });
-    return {c:c, items:it, top: qv ? Math.max.apply(null, it.map(function(x){ return sc[x.id]; }).concat([0])) : 0}; }).filter(function(g){ return g.items.length; });
-  if (qv) groups.sort(function(a,b){ return b.top - a.top; });
-  return {list:list, groups:groups}; }
+function catGroups(list){ return scopeCats().map(function(c){ return {c:c, items:outLast(list.filter(function(x){ return x.cat === c.id; }))}; }).filter(function(g){ return g.items.length; }); }
+function results(){ var q = st.q.trim(), list = scopeItems().filter(passes);
+  if (!q) return {list:list, n:list.length, unk:0, groups:catGroups(list), sr:null};
+  var sr = SC.searchGroups(list, q), groups = [];
+  if (sr.query.inc.length){
+    if (sr.name.length) groups.push({c:{id:"q-name", n:"По име"}, kind:"name", items:outLast(sr.name)});
+    if (sr.comp.length) groups.push({c:{id:"q-comp", n:sr.band}, kind:"band", items:outLast(sr.comp)}); }
+  else groups = catGroups(sr.rest);
+  if (sr.unknown.length) groups.push({c:{id:"q-unk", n:"Нямаме пълен състав"}, kind:"unk", items:outLast(sr.unknown)});
+  var shown = sr.name.concat(sr.comp, sr.query.inc.length ? [] : sr.rest);
+  return {list:shown.concat(sr.unknown), n:shown.length, unk:sr.unknown.length, groups:groups, sr:sr}; }
 
 /* ---------- small helpers ---------- */
 function noun(cat, n){ var w = NOUN[cat] || ["ястие","ястия"]; return n + " " + (n===1 ? w[0] : w[1]); }
@@ -302,10 +293,10 @@ function catDesc(c, shown){ var it = SC.inCat(c.id), parts = [(shown < it.length
   var v = it.filter(function(x){ return x.t.indexOf("veg")>-1; }).length; if (v && v < it.length) parts.push(v+" вегетариански");
   return parts.join(" · "); }
 var CARD = {};
-function card(x){ var key = x.id + (st.a.length && !x.comp ? "|nd" : "") + (st.menu==="bf" && !S.breakfast ? "|later" : "");
+function card(x, unk){ var nd = (st.a.length || unk) && !x.comp, key = x.id + (nd ? "|nd" : "") + (st.menu==="bf" && !S.breakfast ? "|later" : "");
   if (CARD[key]) return CARD[key]; var h = SC.dishCard(x);
   if (x.comp) h = h.replace('</a><div class="rowp">', '<span class="cp">'+SC.esc(cap(x.comp))+'</span></a><div class="rowp">');
-  if (st.a.length && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">'+SC.ic("info",18)+'Няма данни за алергени, попитайте ни</span></a><div class="rowp">');
+  if (nd) h = h.replace('</a><div class="rowp">', '<span class="nodata">'+SC.ic("info",18)+'Нямаме пълен състав, попитайте ни</span></a><div class="rowp">');
   if (st.menu==="bf" && !S.breakfast) h = h.replace('class="pic ', 'class="pic out ').replace(/<button class="plus"[\s\S]*?<\/button>/, '<span class="later">'+(S.m < 600 ? "от 10:00" : "утре<br>от 10:00")+'</span>');
   return (CARD[key] = h); }
 function cap(s){ s = String(s||"").trim().replace(/,(?=\S)/g, ", "); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -335,7 +326,7 @@ main.innerHTML =
       '</div>'+
       '<div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox">'+SC.ic("magnifying-glass",22)+
         '<input id="mq" type="search" placeholder="пица, kebapcheta, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">'+
-        '<button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden>'+SC.ic("x",20)+'</button></div></div>'+
+        '<button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden>'+SC.ic("x",20)+'</button></div><div data-qchips></div></div>'+
       '<div class="chips fchips" data-fchips role="group" aria-label="Филтри"></div>'+
     '</div>'+
     '<div class="mstat"><p class="cnt-t" data-count aria-live="polite" style="margin:0"></p><button class="link" type="button" data-clearall hidden>'+SC.ic("x",18)+'Изчисти</button></div>'+
@@ -378,7 +369,7 @@ function notices(){ var h = '';
 function count(){ var total = scopeItems().length, n = R.list.length, q = st.q.trim();
   if (st.view === "loading") elCount.innerHTML = 'Зареждаме менюто…';
   else if (st.view === "error") elCount.innerHTML = '';
-  else if (q) elCount.innerHTML = n ? 'Намерихме '+plural(n)+' <span>за „'+SC.esc(q)+'“</span>' : 'Нищо за „'+SC.esc(q)+'“'+(st.f.length || st.a.length ? ' <span>с тези филтри</span>' : '');
+  else if (q) elCount.innerHTML = R.list.length ? 'Намерихме '+plural(R.n)+' <span>за „'+SC.esc(q)+'“'+(R.unk ? ' · и '+R.unk+' без пълен състав' : '')+'</span>' : 'Нищо за „'+SC.esc(q)+'“'+(st.f.length || st.a.length ? ' <span>с тези филтри</span>' : '');
   else if (st.f.length || st.a.length) elCount.innerHTML = 'Показваме '+n+' <span>от '+plural(total)+'</span>';
   else elCount.innerHTML = plural(total)+' <span>· '+(st.menu==="bf" ? "закуски" : MAIN_CATS.length+" категории")+'</span>';
   $("[data-clearall]").hidden = !(st.f.length || st.a.length); }
@@ -391,7 +382,7 @@ function navs(){ var multi = R.groups.length > 1 && st.view !== "error" && st.vi
 function emptyHTML(){ var q = st.q.trim();
   if (q && !(st.f.length || st.a.length)) return '<div class="empty mempty"><span class="ill">'+SC.ic("magnifying-glass",40)+'</span><h2 class="h3">Не намерихме „'+SC.esc(q)+'“</h2><p>Проверете думата или опитайте някое от тези. Можете да попитате и асистента.</p>'+
     '<div class="tryq">'+["пица","кебапчета","салата","бургер"].map(function(w){ return '<button class="chip" type="button" data-try="'+w+'">'+w+'</button>'; }).join("")+'</div>'+
-    '<div class="acts"><button class="pill pill-line" type="button" data-qclear>'+SC.ic("x",20)+'Изчисти търсенето</button><button class="pill pill-ember" type="button" data-ai>'+SC.ic("sparkle",20)+'Попитай асистента</button></div></div>';
+    '<div class="acts"><button class="pill pill-line" type="button" data-qclear>'+SC.ic("x",20)+'Изчисти търсенето</button><button class="pill pill-ember" type="button" data-ai data-aiq="'+SC.esc(q)+'">'+SC.ic("sparkle",20)+'Попитай асистента</button></div></div>';
   var rm = st.f.map(function(id){ var f = fById(id); return '<button class="chip" type="button" data-f="'+id+'">'+SC.ic("x",18)+f.n+'</button>'; })
     .concat(st.a.map(function(id){ return '<button class="chip" type="button" data-arm="'+id+'">'+SC.ic("x",18)+'Без '+SC.allergenName(id).toLowerCase()+'</button>'; })).join("");
   return '<div class="empty mempty"><span class="ill">'+SC.ic("funnel",40)+'</span><h2 class="h3">Няма ястия с тези филтри</h2><p>'+(q ? 'Търсим „'+SC.esc(q)+'“ само сред ястията, които минават филтрите. ' : '')+'Махнете някой филтър или изчистете всички.</p>'+
@@ -401,7 +392,8 @@ function skeletonHTML(){ var cards = ''; for (var i=0;i<4;i++) cards += '<div cl
   return '<div aria-busy="true" aria-label="Менюто се зарежда"><div class="sk-row">'+[90,120,150,110].map(function(w){ return '<span class="skel" style="width:'+w+'px"></span>'; }).join("")+'</div>'+sec+sec+'</div>'; }
 function errorHTML(){ return '<div class="empty mempty err" role="alert"><span class="ill">'+SC.ic("warning",40)+'</span><h2 class="h3">Менюто не се зареди</h2><p>Връзката прекъсна, докато зареждахме. Опитайте пак след малко или поръчайте по телефона.</p>'+
   '<div class="acts"><button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+SC.RESTAURANT.phone+'</a></div></div>'; }
-function render(){ R = results();
+function joinAnd(a){ return a.length < 2 ? a.join("") : a.slice(0,-1).join(", ")+" и "+a[a.length-1]; }
+function render(){ R = results(); $("[data-qchips]").innerHTML = R.sr ? SC.searchChipsHTML(R.sr.chips) : ""; main.querySelector(".snav .label").textContent = R.sr ? "Резултати" : "Категории";
   main.querySelectorAll("[data-menu]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.menu === st.menu)); });
   filterChips(); notices(); count();
   if (st.view === "loading"){ R = {groups:[], list:R.list}; navs(); elRes.innerHTML = skeletonHTML(); return; }
@@ -409,12 +401,15 @@ function render(){ R = results();
   navs();
   var q = st.q.trim();
   if (!R.list.length){ elRes.innerHTML = emptyHTML(); return; }
-  elRes.innerHTML = R.groups.map(function(g){ var c = g.c;
-    return '<section class="mcat" id="c-'+c.id+'" data-cat="'+c.id+'" aria-labelledby="h-'+c.id+'">'+
-      '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">'+SC.esc(c.n)+'</h2>'+(st.menu==="main" ? '<a class="link" href="category.html#'+c.id+'"'+(NOUN[c.id] ? '' : ' aria-label="Към категорията '+SC.esc(c.n)+'"')+'>'+(NOUN[c.id] ? 'Всички '+NOUN[c.id][1] : 'Към категорията')+SC.ic("caret-right",18)+'</a>' : '')+'</div>'+
-      '<p class="cdesc">'+catDesc(c, g.items.length)+'</p>'+
-      (q ? '' : '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>')+
-      '<div class="grid-dishes">'+g.items.map(card).join("")+'</div></section>'; }).join("");
+  elRes.innerHTML = R.groups.map(function(g){ var c = g.c, items = g.items, more = "";
+    if (g.kind === "unk" && !st.unkAll && items.length > 8){ more = '<button class="pill pill-line qmore" type="button" data-unkall>Покажи всички '+items.length+SC.ic("caret-down",18)+'</button>'; items = items.slice(0, 8); }
+    var head = g.kind === "name" ? '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">По име</h2></div><p class="cdesc">'+plural(g.items.length)+' с „'+SC.esc(q)+'“ в името</p>'
+      : g.kind === "band" ? '<div class="sband qband"><h2 id="h-'+c.id+'">'+SC.ic("list-bullets",20)+SC.esc(c.n)+'</h2><span class="n">'+plural(g.items.length)+'</span></div><p class="cdesc">По състава. Ястията от горе не се повтарят.</p>'
+      : g.kind === "unk" ? '<div class="qunk">'+SC.ic("warning-circle",24)+'<div><h2 class="h3" id="h-'+c.id+'">Нямаме пълен състав, попитайте ни</h2><p>Не знаем дали '+(g.items.length === 1 ? "съдържа " : "съдържат ")+SC.esc(joinAnd(R.sr.query.exc.map(function(w){ return w.label; })))+'. Обадете се: <a class="link" href="tel:+359894365577">'+SC.RESTAURANT.phone+'</a></p></div></div>'
+      : '<div class="sec-h"><h2 class="h2" id="h-'+c.id+'">'+SC.esc(c.n)+'</h2>'+(st.menu==="main" ? '<a class="link" href="category.html#'+c.id+'"'+(NOUN[c.id] ? '' : ' aria-label="Към категорията '+SC.esc(c.n)+'"')+'>'+(NOUN[c.id] ? 'Всички '+NOUN[c.id][1] : 'Към категорията')+SC.ic("caret-right",18)+'</a>' : '')+'</div>'+
+        '<p class="cdesc">'+catDesc(c, g.items.length)+'</p>'+(q ? '' : '<p class="cseo missing">[ЛИПСВА: SEO текст за „'+SC.esc(c.n)+'“, 2 - 3 изречения]</p>');
+    return '<section class="mcat'+(g.kind ? " k-"+g.kind : "")+'" id="c-'+c.id+'" data-cat="'+c.id+'" aria-labelledby="h-'+c.id+'">'+head+
+      '<div class="grid-dishes">'+items.map(function(x){ return card(x, g.kind === "unk"); }).join("")+'</div>'+more+'</section>'; }).join("");
   requestAnimationFrame(spy); }
 
 /* ---------- scrollspy: sticky chips (phone) and sidebar (desktop) ---------- */
@@ -487,7 +482,7 @@ function jumpToResults(){ var top = scroller.scrollTop + topOf(main.querySelecto
 
 /* ---------- events ---------- */
 var qt;
-elQ.addEventListener("input", function(){ $("[data-qclear]").hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(function(){ st.q = elQ.value; writeHash(); render(); }, 120); });
+elQ.addEventListener("input", function(){ $("[data-qclear]").hidden = !elQ.value; clearTimeout(qt); qt = setTimeout(function(){ st.q = elQ.value; st.unkAll = false; writeHash(); render(); }, 120); });
 elQ.addEventListener("keydown", function(e){ if (e.key === "Escape" && elQ.value){ e.stopPropagation(); setQ(""); } if (e.key === "Enter"){ elQ.blur(); } });
 function setQ(v){ elQ.value = v; st.q = v; $("[data-qclear]").hidden = !v; writeHash(); render(); }
 $("[data-qclear]").hidden = !st.q;
@@ -501,6 +496,8 @@ main.addEventListener("click", function(e){ var t = e.target.closest("button, a"
   if (t.hasAttribute("data-clearall")){ st.f = []; st.a = []; writeHash(); render(); return; }
   if (t.hasAttribute("data-qclear")){ setQ(""); elQ.focus({preventScroll:true}); return; }
   if (t.dataset.try){ setQ(t.dataset.try); return; }
+  if (t.dataset.qtoggle){ setQ(SCSearch.toggle(st.q, t.dataset.qtoggle)); st.unkAll = false; return; }
+  if (t.hasAttribute("data-unkall")){ st.unkAll = true; render(); return; }
   if (t.hasAttribute("data-retry")){ setView("loading"); setTimeout(function(){ setView(navigator.onLine === false ? "offline" : "ok"); }, 900); return; }
   if (t.dataset.view){ setView(t.dataset.view); return; }
 });

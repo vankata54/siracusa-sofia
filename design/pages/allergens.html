@@ -111,6 +111,10 @@
 .atbl .cath th{padding:32px 4px 12px; text-align:left; font-weight:400}
 .atbl .cath .ch{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
 .atbl .cath h3{margin:0; font-size:22px; line-height:1.15; letter-spacing:-.03em; font-weight:800}
+.search .qchips{margin-top:8px}
+.atbl .cath.k-band .ch{align-items:center; margin-top:4px; padding:10px 16px; border-radius:var(--r-pill); background:var(--surface-2)}
+.atbl .cath.k-band h3{display:flex; align-items:center; gap:10px; font-size:20px}
+.atbl .cath.k-band h3 .ic{color:var(--muted)}
 .atbl .cath .cn{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
 .atbl .grp{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
 .atbl .dish{display:flex; flex-wrap:wrap; align-content:flex-start; gap:8px; padding:6px 16px 18px 18px}
@@ -280,6 +284,7 @@
 <body>
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
+<script src="../ds/search.js"></script>
 <script src="../ds/sc.js"></script>
 <script>
 (function(){
@@ -328,54 +333,35 @@ function writeHash(){ var p = [];
   try{ history.replaceState(null, "", p.length ? "#"+p.join("&") : location.pathname); }catch(e){} }
 readHash();
 
-/* ---------- search: same rules as the menu (case-insensitive, Latin input, one typo in words over 4 letters) ---------- */
-var LAT = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya","ѝ":"i"};
-function latin(s){ return String(s).toLowerCase().replace(/[а-яѝ]/g, function(c){ return LAT[c] || c; }); }
-function squash(s){ return s.replace(/(.)\1+/g, "$1"); }
-function words(s){ return s.split(/[^a-z0-9]+/).filter(Boolean); }
-function qVariants(raw){ var s = latin(raw).replace(/4/g,"ch").replace(/6/g,"sh").replace(/w/g,"v").replace(/x/g,"ks").replace(/kh/g,"h")
-    .replace(/ja/g,"ya").replace(/ju/g,"yu").replace(/j/g,"zh").replace(/q/g,"ya").replace(/tz|zz/g,"ts");
-  var a = s.replace(/ch/g,"\u0001").replace(/c/g,"ts").replace(/\u0001/g,"ch"), b = s.replace(/ch/g,"\u0001").replace(/c/g,"k").replace(/\u0001/g,"ch");
-  return (a === b ? [a] : [a,b]).map(function(v){ return words(squash(v)); }); }
-function dl(a, b){ var m = a.length, n = b.length, d = [], i, j; for (i=0;i<=m;i++){ d[i] = [i]; } for (j=0;j<=n;j++) d[0][j] = j;
-  for (i=1;i<=m;i++) for (j=1;j<=n;j++){ var c = a[i-1]===b[j-1] ? 0 : 1; d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+c);
-    if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2]+1); } return d[m][n]; }
-function wordScore(q, t){ if (t.indexOf(q) === 0) return 3; if (q.length >= 3 && t.indexOf(q) > 0) return 2;
-  var k = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0; if (!k) return 0;
-  for (var L = Math.max(1, q.length-k); L <= q.length+k; L++){ if (dl(q, t.slice(0,L)) <= k) return 1; } return 0; }
-var IDX = {}; ITEMS.forEach(function(x){ var c = SC.catById[x.cat];
-  IDX[x.id] = {name:words(squash(latin(x.n+" "+x.id.replace(/-/g," ")))), rest:words(squash(latin(x.comp+" "+(c?c.n:""))))}; });
-function score(x, qv){ var best = 0;
-  qv.forEach(function(qw){ var total = 0;
-    for (var i=0;i<qw.length;i++){ var q = qw[i], s = 0, w = IDX[x.id];
-      w.name.forEach(function(t){ s = Math.max(s, wordScore(q,t)*3); }); if (s < 9) w.rest.forEach(function(t){ s = Math.max(s, wordScore(q,t)); });
-      if (!s) return; total += s; }
-    best = Math.max(best, total); });
-  return best; }
-
-/* ---------- filtering ---------- */
-function results(){ var qv = st.q.trim() ? qVariants(st.q.trim()) : null, sc = {};
-  var list = ITEMS.filter(function(x){
-    if (st.nd && !x.comp) return false;
-    for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; }
-    if (!qv) return true; var s = score(x, qv); sc[x.id] = s; return s > 0; });
-  /* order inside a category: dishes we can check first, then "no data", sold out always last */
+/* ---------- search: the shared core (ds/search.js, built from src/lib/search.ts; decision 15.11) ----------
+   By name on top, the band „Съдържат ...“ by composition; „без ...“ never lets a dish without a composition through:
+   with „без ...“ or a ticked allergen they go to the box at the bottom („Нямаме пълен състав, попитайте ни“). */
+function results(){ var q = st.q.trim();
+  var base = ITEMS.filter(function(x){ if (st.nd && !x.comp) return false;
+    for (var j=0;j<st.a.length;j++){ if (x.al.indexOf(st.a[j]) > -1) return false; } return true; });
+  /* inside a group: dishes we can check first, then "no data", sold out always last */
   var rank = function(x){ return (SC.isOut(x) ? 2 : 0) + (x.comp ? 0 : 1); };
-  var groups = SC.cats.map(function(c){ var it = list.filter(function(x){ return x.cat === c.id; })
-      .map(function(x,i){ return [x,i]; }).sort(function(a,b){ return (rank(a[0]) - rank(b[0])) || (qv ? sc[b[0].id]-sc[a[0].id] : 0) || (a[1]-b[1]); }).map(function(z){ return z[0]; });
-    return {c:c, items:it, top: qv ? Math.max.apply(null, it.map(function(x){ return sc[x.id]; }).concat([0])) : 0}; }).filter(function(g){ return g.items.length; });
-  if (qv) groups.sort(function(a,b){ return b.top - a.top; });
-  /* with an allergen excluded, dishes we cannot check go to their own group at the end */
-  var split = st.a.length > 0 && !st.nd, nd = [];
-  if (split){ groups = groups.map(function(g){ nd = nd.concat(g.items.filter(function(x){ return !x.comp; }).map(function(x){ return [g.c, x]; }));
-    return {c:g.c, items:g.items.filter(function(x){ return x.comp; }), top:g.top}; }).filter(function(g){ return g.items.length; }); }
-  var ndGroups = []; nd.forEach(function(z){ var g = ndGroups.filter(function(y){ return y.c === z[0]; })[0]; if (!g){ g = {c:z[0], items:[]}; ndGroups.push(g); } g.items.push(z[1]); });
-  return {list:list, groups:groups, n:list.length - nd.length, nd:nd.length, ndGroups:ndGroups}; }
+  var order = function(a){ return a.map(function(x,i){ return [x,i]; }).sort(function(p,r){ return (rank(p[0]) - rank(r[0])) || (p[1]-r[1]); }).map(function(z){ return z[0]; }); };
+  var byCat = function(list){ return SC.cats.map(function(c){ return {c:c, items:order(list.filter(function(x){ return x.cat === c.id; }))}; }).filter(function(g){ return g.items.length; }); };
+  var sr = q ? SC.searchGroups(base, q) : null, groups;
+  if (!sr) groups = byCat(base);
+  else if (sr.query.inc.length){ groups = [];
+    if (sr.name.length) groups.push({c:{id:"q-name", n:"По име"}, kind:"name", items:order(sr.name)});
+    if (sr.comp.length) groups.push({c:{id:"q-comp", n:sr.band}, kind:"band", items:order(sr.comp)}); }
+  else groups = byCat(sr.rest);
+  var ex = sr ? sr.query.exc.map(function(w){ return w.label; }) : [];
+  var list = [].concat.apply([], groups.map(function(g){ return g.items; })).concat(sr ? sr.unknown : []);
+  var split = (st.a.length > 0 || ex.length > 0) && !st.nd, nd = [];
+  if (split){ groups = groups.map(function(g){ nd = nd.concat(g.items.filter(function(x){ return !x.comp; }).map(function(x){ return [SC.catById[x.cat] || g.c, x]; }));
+    return {c:g.c, kind:g.kind, items:g.items.filter(function(x){ return x.comp; })}; }).filter(function(g){ return g.items.length; }); }
+  if (sr) sr.unknown.forEach(function(x){ nd.push([SC.catById[x.cat], x]); });
+  var ndGroups = []; SC.cats.forEach(function(c){ var it = nd.filter(function(z){ return z[0] === c; }).map(function(z){ return z[1]; }); if (it.length) ndGroups.push({c:c, items:order(it)}); });
+  return {list:list, groups:groups, n:list.length - nd.length, nd:nd.length, ndGroups:ndGroups, sr:sr, ex:ex}; }
 function active(){ return st.a.length > 0 || !!st.q.trim() || st.nd; }
 function summaryText(n, nn){ var bits = [];
   if (st.a.length) bits.push("без "+st.a.map(function(k){ return SC.allergenName(k).toLowerCase(); }).join(", "));
   if (st.q.trim()) bits.push("„"+esc(st.q.trim())+"“");
-  if (st.a.length && !st.nd && nn) bits.push("+ "+plural(nn)+" без данни най-долу");
+  if (!st.nd && nn) bits.push("+ "+plural(nn)+" без пълен състав най-долу");
   if (st.nd) bits.push("само с данни");
   return '<b>'+plural(n)+'</b>'+(bits.length ? ' · '+bits.join(" · ") : ' · всички'); }
 
@@ -402,23 +388,23 @@ function controlsHTML(){
   return '<section class="sec ctl" id="filters" aria-labelledby="ctl-h"><h2 class="vh" id="ctl-h">Търсене и филтри</h2>'+
     '<div class="search"><label for="q">Търсете ястие или съставка</label><div class="sbox">'+ic("magnifying-glass",22)+
       '<input id="q" type="search" placeholder="пица, моцарела, karbonara" autocomplete="off" enterkeyhint="search" value="'+esc(st.q)+'">'+
-      '<button class="clr" type="button" data-clrq aria-label="Изчисти търсенето"'+(st.q?'':' hidden')+'>'+ic("x",20)+'</button></div></div>'+
+      '<button class="clr" type="button" data-clrq aria-label="Изчисти търсенето"'+(st.q?'':' hidden')+'>'+ic("x",20)+'</button></div><div data-qchips></div></div>'+
     '<div class="frow"><label class="check"><input type="checkbox" id="nd"'+(st.nd?' checked':'')+'><span><b>Скрий ястията без данни</b><small>'+plural(NODATA)+' още нямат състав</small></span></label>'+
       '<button class="link" type="button" data-clear'+(active()?'':' hidden')+'>'+ic("x",18)+'Изчисти всичко</button></div>'+
     '<div class="fgrp" role="group" aria-labelledby="al-l"><p class="flbl" id="al-l">Изключете алерген</p><p class="help">Скриваме ястията, които го съдържат по състава. Може няколко наведнъж.</p><div class="achips">'+chipsHTML()+'</div></div>'+
   '</section>'; }
 
-function thead(){ return '<thead><tr><th scope="col" class="th-dish"><b class="th-d">Ястие</b>'+'<span class="legend" aria-hidden="true"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Няма данни</span></span></th>'+
+function thead(){ return '<thead><tr><th scope="col" class="th-dish"><b class="th-d">Ястие</b>'+'<span class="legend" aria-hidden="true"><span><span class="lgtk">'+ic("check",14)+'</span>Съдържа</span><span><span class="no"></span>Не е открит в състава</span><span><span class="lgnd"></span>Нямаме пълен състав</span></span></th>'+
   AL.map(function(a){ return '<th scope="col" class="c-'+a[0]+'"><span class="ah"><i>'+ic(a[2],20)+'</i><span class="hn">'+(HY[a[0]]||a[1])+'</span></span></th>'; }).join("")+'</tr></thead>'; }
 
 function rowHTML(x){ var out = SC.isOut(x), has = !!x.comp;
   var name = '<th scope="row" class="nm"><a href="dish.html#'+x.id+'"><b>'+esc(x.n)+'</b>'+ic("caret-right",18)+'</a>'+
     (has ? '<p class="comp">'+esc(cap(x.comp))+'</p>' : '')+
-    (!has && x.al.length ? '<p class="ndn">'+ic("info",16)+'<span>Непълен състав, попитайте ни.<span class="pz"> Знаем поне за:</span></span></p>' : '')+
+    (!has && x.al.length ? '<p class="ndn">'+ic("info",16)+'<span>Нямаме пълен състав, попитайте ни.<span class="pz"> Знаем поне за:</span></span></p>' : '')+
     (out ? '<span class="badge out">'+ic("clock",16)+'Изчерпано днес</span>' : '')+'</th>';
   var cells;
   if (!has && !x.al.length){
-    cells = '<td class="nd" colspan="'+AL.length+'"><p>'+ic("info",20)+'<span><b>Няма данни за алергени,</b> попитайте ни</span></p></td>';
+    cells = '<td class="nd" colspan="'+AL.length+'"><p>'+ic("info",20)+'<span><b>Нямаме пълен състав,</b> попитайте ни</span></p></td>';
   } else {
     cells = AL.map(function(a){ var y = x.al.indexOf(a[0]) > -1;
       return y ? '<td class="a y c-'+a[0]+'"><span class="tk"><i>'+ic(a[2],16)+'</i><span class="w">'+a[1]+'</span></span></td>'
@@ -431,7 +417,7 @@ function tableHTML(r, pre){ pre = pre || "g";
   return '<table class="atbl"><caption class="vh">Ястия и 14-те алергена. „Съдържа“ означава, че алергенът е открит в състава.</caption>'+
     '<colgroup><col>'+AL.map(function(){ return '<col class="ca">'; }).join("")+'</colgroup>'+thead()+
     r.groups.map(function(g){
-      return '<tbody class="cath" id="'+pre+'-'+g.c.id+'"><tr><th colspan="'+(AL.length+1)+'" scope="colgroup"><span class="ch"><h3>'+esc(g.c.n)+'</h3><span class="cn">'+plural(g.items.length)+'</span></span></th></tr></tbody>'+
+      return '<tbody class="cath'+(g.kind ? " k-"+g.kind : "")+'" id="'+pre+'-'+g.c.id+'"><tr><th colspan="'+(AL.length+1)+'" scope="colgroup"><span class="ch"><h3>'+(g.kind === "band" ? ic("list-bullets",20) : "")+esc(g.c.n)+'</h3><span class="cn">'+plural(g.items.length)+'</span></span></th></tr></tbody>'+
         '<tbody class="grp">'+g.items.map(rowHTML).join("")+'</tbody>'; }).join("")+
   '</table>'; }
 
@@ -461,7 +447,7 @@ function refHTML(){
 function faqData(){ return [
   ["Колко точни са тези данни?", '<p>Алергените са извлечени автоматично от състава в менюто ('+UPD+'). Кухнята ги проверява едно по едно. Дотогава ги приемайте като ориентир, а не като гаранция.</p>'],
   ["Имам силна алергия. Какво да направя?", '<p>Обадете ни се на <a href="'+TEL+'">'+R.phone+'</a> преди да поръчате или кажете на сервитьора. При поръчка онлайн напишете алергията в бележката към поръчката.</p><p><span class="missing">[ЛИПСВА: как кухнята предпазва от смесване, например обща фурна и фритюрник]</span></p>'],
-  ["Защо при някои ястия пише „Няма данни“?", '<p>За тях още нямаме пълен състав в менюто. Кухнята го въвежда. Попитайте ни и ще ви кажем веднага.</p>'],
+  ["Защо при някои ястия пише „Нямаме пълен състав“?", '<p>За тях още нямаме пълен състав в менюто. Кухнята го въвежда. Попитайте ни и ще ви кажем веднага.</p>'],
   ["Къде още виждам алергените?", '<p>На страницата на всяко ястие и в количката, преди да поръчате.</p>'],
   ["Какво е Регламент (ЕС) 1169/2011?", '<p>Европейското правило за информацията за храните. По него всеки ресторант посочва 14-те основни алергена в ястията си.</p>']]; }
 function faqHTML(){ var q = faqData();
@@ -494,12 +480,12 @@ if (!reduce) ring.classList.add("go");
   var s = document.createElement("style"); s.textContent = '@container app (min-width:1100px){'+css+'}'; document.head.appendChild(s); })();
 
 var loadT, last = null;
-function ndHTML(r){ var names = st.a.map(function(k){ return SC.allergenName(k).toLowerCase(); }).join(", ");
-  return '<details class="ndbox" id="nodata"'+(r.n ? '' : ' open')+'><summary><span class="ni">'+ic("warning-circle",24)+'</span><span class="nt2"><b>Не можем да проверим: '+plural(r.nd)+'</b><span>Нямаме състав за тях и не знаем дали съдържат '+esc(names)+'. Попитайте ни преди да поръчате: '+R.phone+'.</span></span><span class="tg" aria-hidden="true">'+ic("caret-down",18)+'</span></summary>'+
+function ndHTML(r){ var nm = st.a.map(function(k){ return SC.allergenName(k).toLowerCase(); }).concat(r.ex || []), names = nm.length < 2 ? nm.join("") : nm.slice(0,-1).join(", ")+" и "+nm[nm.length-1];
+  return '<details class="ndbox" id="nodata"'+(r.n ? '' : ' open')+'><summary><span class="ni">'+ic("warning-circle",24)+'</span><span class="nt2"><b>Нямаме пълен състав, попитайте ни · '+plural(r.nd)+'</b><span>Не знаем дали съдържат '+esc(names)+'. Попитайте ни преди да поръчате: '+R.phone+'.</span></span><span class="tg" aria-hidden="true">'+ic("caret-down",18)+'</span></summary>'+
     tableHTML({groups:r.ndGroups}, "gn")+'</details>'; }
 function catSheet(){ if (!last) return; var h = '<div class="catlist">';
   h += last.groups.map(function(g){ return '<button type="button" data-jump="g-'+g.c.id+'">'+esc(g.c.n)+'<span>'+plural(g.items.length)+'</span></button>'; }).join("");
-  if (last.nd) h += '<p class="sep">Без данни за алергени</p><button type="button" data-jump="nodata">Не можем да проверим<span>'+plural(last.nd)+'</span></button>';
+  if (last.nd) h += '<p class="sep">Без пълен състав</p><button type="button" data-jump="nodata">Нямаме пълен състав<span>'+plural(last.nd)+'</span></button>';
   var sh = SC.sheet({title:"Към категория", html:h+'</div>'});
   sh.el.addEventListener("click", function(e){ var b = e.target.closest("[data-jump]"); if (!b) return; var id = b.dataset.jump; sh.close();
     if (id === "nodata"){ var d = main.querySelector("#nodata"); if (d) d.open = true; }
@@ -516,7 +502,7 @@ function render(){
     '<button class="pill pill-red" type="button" data-retry>'+ic("arrow-up-right",20)+'Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
   if (st.view === "offline"){ sum.innerHTML = '<b>Няма връзка</b> · опитайте пак'; list.innerHTML = stateBox("globe", "warn", "Няма връзка с интернет", "Алергените ще се покажат, щом телефонът се свърже. Можете и да ни се обадите: "+R.phone+".",
     '<button class="pill pill-red" type="button" data-retry>Опитай пак</button><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+'Обади се</a>'); return; }
-  var r = results(); last = r;
+  var r = results(); last = r; main.querySelector("[data-qchips]").innerHTML = r.sr ? SC.searchChipsHTML(r.sr.chips) : "";
   sum.innerHTML = summaryText(r.n, r.nd);
   if (!r.list.length){ list.innerHTML = emptyHTML(); return; }
   list.innerHTML = (r.n ? tableHTML(r) : emptyHTML()) + (r.nd ? ndHTML(r) : "");
@@ -534,6 +520,7 @@ function goto(id){ var el = main.querySelector("#"+id); if (!el) return; var sc 
   sc.scrollTo({top:Math.max(0,y), behavior:reduce?"auto":"smooth"}); }
 main.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return;
   if (b.dataset.al){ var k = b.dataset.al; st.a = st.a.indexOf(k) > -1 ? st.a.filter(function(z){ return z!==k; }) : st.a.concat([k]); SC.haptic(); update(); return; }
+  if (b.dataset.qtoggle){ st.q = SCSearch.toggle(st.q, b.dataset.qtoggle); qIn.value = st.q; update(); return; }
   if (b.hasAttribute("data-clrq")){ st.q = ""; qIn.value = ""; update(); qIn.focus({preventScroll:true}); return; }
   if (b.hasAttribute("data-clear")){ st.a = []; st.q = ""; st.nd = false; qIn.value = ""; main.querySelector("#nd").checked = false; update(); return; }
   if (b.hasAttribute("data-cats")){ catSheet(); return; }

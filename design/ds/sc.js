@@ -316,11 +316,16 @@ SC.footer = function(){ var R=SC.RESTAURANT;
     '<p style="margin:0"><button class="pill pill-line" type="button" data-suggest>'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button></p></footer>'; };
 function morePanel(){ return '<div class="stack" style="gap:2px">'+SC.PAGES.map(function(p){ return '<a class="kv" href="'+p[0]+'" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">'+p[1]+SC.ic("caret-right",18)+'</a>'; }).join("")+'</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:+359894365577">'+SC.ic("phone",20)+'0894 36 55 77</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div><button class="pill pill-line pill-block" type="button" data-suggest style="margin-top:8px">'+SC.ic("chat-circle-dots",20)+'Предложи подобрение</button>'; }
 /* Асистентът = умната търсачка (решение 15.11): ds/ai.js и ds/search.js се зареждат при първото отваряне. */
-function openAI(q){ var need = [], done = 0; if (!window.SCSearch) need.push("../ds/search.js"); if (!window.SCAI) need.push("../ds/ai.js");
-  var go = function(){ window.SCAI && SCAI.open(q || ""); };
-  if (!need.length) return go();
-  need.forEach(function(src){ var sc = document.createElement("script"); sc.src = src; sc.onload = function(){ if (++done === need.length) go(); };
-    sc.onerror = function(){ SC.toast("Асистентът не се зареди. Опитайте пак или ни се обадете: "+SC.RESTAURANT.phone); }; document.head.appendChild(sc); }); }
+/* the scripts load once, quietly after the page (so the search also works if the connection drops later), or on the first tap */
+var aiWait = null;
+function loadAI(cb){ if (window.SCSearch && window.SCAI) return cb && cb();
+  if (aiWait){ if (cb) aiWait.push(cb); return; } aiWait = cb ? [cb] : [];
+  var need = [], done = 0; if (!window.SCSearch) need.push("../ds/search.js"); if (!window.SCAI) need.push("../ds/ai.js");
+  need.forEach(function(src){ var sc = document.createElement("script"); sc.src = src;
+    sc.onload = function(){ if (++done === need.length){ var w = aiWait; aiWait = null; w.forEach(function(f){ f(); }); } };
+    sc.onerror = function(){ var hadCb = aiWait && aiWait.length; aiWait = null; sc.remove(); if (hadCb) SC.toast("Асистентът не се зареди. Опитайте пак или ни се обадете: "+SC.RESTAURANT.phone); };
+    document.head.appendChild(sc); }); }
+function openAI(q){ loadAI(function(){ SCAI.open(q || ""); }); }
 SC.openAI = openAI;
 function cookieBanner(){ if (load("sc-cookie", null)) return "";
   return '<div class="cookie" role="dialog" aria-label="Бисквитки"><p><b>Бисквитки.</b> Ползваме необходимите, за да работи количката. Аналитичните само ако разрешите.</p><div class="btns"><button class="pill pill-line" type="button" data-cookie="all">Приеми всички</button><button class="pill pill-line" type="button" data-cookie="min">Само необходимите</button><button class="pill pill-line" type="button" data-cookie="set">Настройки</button></div></div>'; }
@@ -349,6 +354,7 @@ SC.mount = function(o){ o = o || {};
   ov.insertAdjacentHTML("beforeend", (showNav ? bottomNav(o.nav) : "") + (o.ai===false ? "" : '<button class="aifab'+(o.actionBar?" up":"")+(showNav?"":" nonav")+'" type="button" data-ai aria-label="Асистент">'+SC.ic("sparkle",20)+'<span class="lbl">Асистент</span></button>') + cookieBanner());
   if ("IntersectionObserver" in window){ var sent = scroller.querySelector("[data-sent]"); new IntersectionObserver(function(es){ var sc=!es[0].isIntersecting; scroller.classList.toggle("scrolled", sc); var f=ov.querySelector(".aifab"); if (f){ f.classList.toggle("away", !sc); clearTimeout(f._t); f.classList.remove("mini"); if (sc) f._t=setTimeout(function(){ f.classList.add("mini"); }, 2600); } }, {root:scroller, rootMargin:"40px 0px 0px 0px"}).observe(sent); }
   updateCartUI(false);
+  if (o.ai !== false) setTimeout(function(){ loadAI(); }, 1200);
   document.title = (o.docTitle || o.title || "Siracusa") + (o.docTitle||o.title ? " | Siracusa Bar & Grill" : " Bar & Grill");
   /* махнато ястие от менюто: dish.html пренасочва към категорията (като 301 в кода) и тук казваме защо */
   try{ var mv = sessionStorage.getItem("sc-moved"); if (mv){ sessionStorage.removeItem("sc-moved"); setTimeout(function(){ SC.toast("„"+mv+"“ вече не е в менюто. Вижте другите ястия тук."); }, 400); } }catch(e){}

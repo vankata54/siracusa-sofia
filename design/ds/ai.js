@@ -68,23 +68,23 @@ function nowLine(){ var s = SC.state();
   return "Сега сме затворени. Отваряме в 10:00."; }
 function lunchBody(){ var s = SC.state(), today = SC.lunchIsToday(), L = SC.lunch;
   var rule = s.lunchDiscount ? "<p>След 15:00 обедното меню е само за вземане от място, с -30%.</p>" : "<p>Поръчка до 15:00 с доставка или вземане. След 15:00 само за вземане, с -30%.</p>";
-  if (!today) return '<p>Обедното меню се качва всяка сутрин.</p>' + rule + '<div class="acts">'+link("lunch.html","Обедно меню")+'</div>';
+  if (!today) return '<p>Обедното меню се качва всяка сутрин.</p>' + rule + '<div class="aacts">'+link("lunch.html","Обедно меню")+'</div>';
   var pick = [L[0], L[7], L[12], L[16]].filter(Boolean);
-  return '<p>Днес в обедното меню има '+plural(L.length)+', например:</p><ul class="ailist">'+pick.map(function(x){ return '<li>'+esc(x.n)+' · '+fmt(x.p)+'</li>'; }).join("")+'</ul>' + rule + '<div class="acts">'+link("lunch.html","Цялото обедно меню")+'</div>'; }
+  return '<p>Днес в обедното меню има '+plural(L.length)+', например:</p><ul class="ailist">'+pick.map(function(x){ return '<li>'+esc(x.n)+' · '+fmt(x.p)+'</li>'; }).join("")+'</ul>' + rule + '<div class="aacts">'+link("lunch.html","Цялото обедно меню")+'</div>'; }
 function infoHTML(it){ var h = "", s = SC.state(), st = SC.status();
   if (it.hours) h += card("clock", "Работно време", '<p>Всеки ден '+R.open+' - '+R.close+'. Кухнята приема поръчки до '+R.kitchen+', доставка до '+R.delivery+'.</p><p class="sub">Сега: '+st.html.replace(/<[^>]+>/g, "")+'</p>');
-  if (it.delivery) h += card("moped", "Доставка до "+R.delivery, '<p>'+nowLine()+'</p><p class="sub">Зони и време за доставка:</p><div class="zl">'+SC.ZONES.map(function(z){ return '<span>'+esc(z.n)+'<small>'+esc(z.eta)+(z.free ? " · безплатна" : " · такса: попитайте ни")+'</small></span>'; }).join("")+'</div><div class="acts">'+link("delivery.html","Доставка")+link("pickup.html","Вземи от място")+'</div>');
-  if (it.pickup && !it.delivery) h += card("storefront", "Вземи от място", '<p>Поръчайте онлайн и вземете от ресторанта до '+R.kitchen+'. '+(s.lunchDiscount ? "Обедното меню сега е с -30% при вземане." : "")+'</p><div class="acts">'+link("pickup.html","Вземи от място")+'</div>');
+  if (it.delivery) h += card("moped", "Доставка до "+R.delivery, '<p>'+nowLine()+'</p><p class="sub">Зони и време за доставка:</p><div class="zl">'+SC.ZONES.map(function(z){ return '<span>'+esc(z.n)+'<small>'+esc(z.eta)+(z.free ? " · безплатна" : " · такса: попитайте ни")+'</small></span>'; }).join("")+'</div><div class="aacts">'+link("delivery.html","Доставка")+link("pickup.html","Вземи от място")+'</div>');
+  if (it.pickup && !it.delivery) h += card("storefront", "Вземи от място", '<p>Поръчайте онлайн и вземете от ресторанта до '+R.kitchen+'. '+(s.lunchDiscount ? "Обедното меню сега е с -30% при вземане." : "")+'</p><div class="aacts">'+link("pickup.html","Вземи от място")+'</div>');
   if (it.lunch) h += card("bowl-food", "Обедно меню", lunchBody());
-  if (it.events) SC.events().forEach(function(e){ h += card("calendar-blank", esc(e.n), '<p><b>'+dateBG(e.date)+' · '+e.time+'</b> <span class="sub">· '+esc(e.cat)+'</span></p><p>'+esc(e.text)+'</p><p class="sub"><span class="missing">'+esc(e.note)+'</span></p><div class="acts">'+link("event.html#"+e.id,"Запази място")+link("events.html","Всички събития")+'</div>'); });
+  if (it.events) SC.events().forEach(function(e){ h += card("calendar-blank", esc(e.n), '<p><b>'+dateBG(e.date)+' · '+e.time+'</b> <span class="sub">· '+esc(e.cat)+'</span></p><p>'+esc(e.text)+'</p><p class="sub"><span class="missing">'+esc(e.note)+'</span></p><div class="aacts">'+link("event.html#"+e.id,"Запази място")+link("events.html","Всички събития")+'</div>'); });
   if (it.party){ var b = SC.offers().filter(function(o){ return o.id === "birthday"; })[0];
-    h += card("confetti", "Празник при нас", (b ? '<p>'+esc(b.t)+': '+esc(b.p)+'</p>' : '')+'<p class="sub">Цена и меню за празника: попитайте ни или сметнете в калкулатора.</p><div class="acts">'+link("celebration.html","Калкулатор на празник")+link("events.html","Събития и поводи")+'</div>'); }
-  if (it.offers) h += card("seal-percent", "Оферти сега", SC.offers().map(function(o){ return '<p><b>'+esc(o.t)+'.</b> '+esc(o.p)+'</p>'; }).join("")+'<div class="acts">'+link("offers.html","Всички оферти")+'</div>');
-  if (it.where) h += card("map-pin", "Адрес", '<p>'+esc(R.address)+'</p><div class="acts">'+link(R.maps,"Маршрут в Google Maps",true)+link("contacts.html","Контакти")+'</div>');
+    h += card("confetti", "Празник при нас", (b ? '<p>'+esc(b.t)+': '+esc(b.p)+'</p>' : '')+'<p class="sub">Цена и меню за празника: попитайте ни или сметнете в калкулатора.</p><div class="aacts">'+link("celebration.html","Калкулатор на празник")+link("events.html","Събития и поводи")+'</div>'); }
+  if (it.offers) h += card("seal-percent", "Оферти сега", SC.offers().map(function(o){ return '<p><b>'+esc(o.t)+'.</b> '+esc(o.p)+'</p>'; }).join("")+'<div class="aacts">'+link("offers.html","Всички оферти")+'</div>');
+  if (it.where) h += card("map-pin", "Адрес", '<p>'+esc(R.address)+'</p><div class="aacts">'+link(R.maps,"Маршрут в Google Maps",true)+link("contacts.html","Контакти")+'</div>');
   if (it.contact) h += card("phone", "Телефон", '<p><a class="link" href="'+TEL+'">'+esc(R.phone)+'</a> · <a class="link" href="tel:'+R.phone2.replace(/\s/g,"")+'">'+esc(R.phone2)+'</a></p><p class="sub">'+esc(R.email)+'</p>');
-  if (it.reserve) h += card("calendar-check", "Резервирай маса", '<p>Онлайн или по телефона '+esc(R.phone)+'.</p><div class="acts">'+link("reservation.html","Резервирай маса")+'</div>');
+  if (it.reserve) h += card("calendar-check", "Резервирай маса", '<p>Онлайн или по телефона '+esc(R.phone)+'.</p><div class="aacts">'+link("reservation.html","Резервирай маса")+'</div>');
   if (it.pay) h += card("wallet", "Плащане", '<p>В брой · Карта при получаване · Ваучер</p><p class="sub">Кои ваучери приемаме: попитайте ни.</p>');
-  if (it.nodata) h += card("question", "Нямаме това в данните на сайта", '<p>Попитайте ни и ще ви кажем веднага.</p><div class="acts"><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div>');
+  if (it.nodata) h += card("question", "Нямаме това в данните на сайта", '<p>Попитайте ни и ще ви кажем веднага.</p><div class="aacts"><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div>');
   return h; }
 
 /* ---------- ястията ---------- */
@@ -126,11 +126,11 @@ function aiAnswer(raw, w, r, it){
       addAll(all)+fine; }
   if (w.price){ var p = pickMains(under(safe), 4);
     if (!p.length) return '<p>В менюто няма основни ястия до '+fmt(w.price)+(excl.length ? " без "+joinAnd(excl) : "")+'. Най-евтиното основно е '+fmt(Math.min.apply(null, ITEMS.filter(function(x){ return MAINCATS.indexOf(x.cat) > -1; }).map(function(x){ return x.p; })))+'.</p>';
-    return '<p>Основни ястия до '+fmt(w.price)+(excl.length ? ", без "+joinAnd(excl) : "")+':</p>'+p.map(function(x){ return prow(x, x.t.indexOf("hit") > -1 ? "Хит" : "До "+fmt(w.price)); }).join("")+fine; }
+    return '<p>Основни ястия до '+fmt(w.price)+(excl.length ? ", без "+joinAnd(excl) : "")+':</p>'+p.map(function(x){ return prow(x, "До "+fmt(w.price)); }).join("")+fine; }
   if (excl.length){ var g = pickMains(safe, 4);
     return '<p>По състава без '+joinAnd(excl)+' изглеждат например:</p>'+g.map(function(x){ return prow(x, "Без "+joinAnd(excl)); }).join("")+
       '<p class="fine">Общо '+plural(safe.length)+' са без '+joinAnd(excl)+' по състава.'+(unk ? ' За '+plural(unk)+' нямаме пълен състав, попитайте ни.' : '')+' Кухнята потвърждава алергените.</p>'; }
-  if (it.events){ var e = SC.events()[0]; return '<p>Следващото събитие е '+esc(e.n)+': '+dateBG(e.date)+' от '+e.time+'. Програмата, менюто и цената още не са обявени, попитайте ни.</p><div class="acts">'+link("event.html#"+e.id,"Запази място")+'</div>'; }
+  if (it.events){ var e = SC.events()[0]; return '<p>Следващото събитие е '+esc(e.n)+': '+dateBG(e.date)+' от '+e.time+'. Програмата, менюто и цената още не са обявени, попитайте ни.</p><div class="aacts">'+link("event.html#"+e.id,"Запази място")+'</div>'; }
   var found = r ? r.name.concat(r.comp).filter(function(x){ return !SC.isOut(x); }).slice(0, 3) : [];
   if (found.length) return '<p>От менюто най-близо до „'+esc(raw.trim())+'“ са:</p>'+found.map(function(x){ return prow(x, SC.catById[x.cat] ? SC.catById[x.cat].n : ""); }).join("")+'<p class="fine">Искате предложение за цялата маса? Напишете за колко души и какво не ядете.</p>';
   return '<p>Не намирам това в менюто и в информацията на сайта. Попитайте ни: <a class="link" href="'+TEL+'">'+R.phone+'</a>.</p>'; }
@@ -177,7 +177,7 @@ function render(){ var raw = inp.value, q = raw.trim(); clr.hidden = !raw;
   else if (w.price){ var cheap = ITEMS.filter(function(x){ return x.p <= w.price && !SC.isOut(x); }).sort(function(a, b){ return ((MAINCATS.indexOf(b.cat) > -1) - (MAINCATS.indexOf(a.cat) > -1)) || (b.p - a.p); });
     h += '<p class="agh">До '+fmt(w.price)+'<span class="n">'+plural(cheap.length)+'</span></p>'+rows("price", cheap); n = cheap.length; }
   var anyInfo = Object.keys(it).length > 0;
-  if (!n && !unkN && !anyInfo) h += card("magnifying-glass", "Не намерихме „"+esc(q)+"“", '<p>Нито в менюто, нито в информацията на сайта. Проверете думата или попитайте ни.</p><div class="acts"><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div>');
+  if (!n && !unkN && !anyInfo) h += card("magnifying-glass", "Не намерихме „"+esc(q)+"“", '<p>Нито в менюто, нито в информацията на сайта. Проверете думата или попитайте ни.</p><div class="aacts"><a class="pill pill-line" href="'+TEL+'">'+ic("phone",20)+R.phone+'</a></div>');
   if (!isWish && !(ai.q === raw && ai.phase)) h += '<section class="awish" style="margin-top:16px"><b>Не е това, което търсите?</b><p>Опишете с думи: за колко души, какво не ядете, до каква цена.</p>'+(online() ? '<button class="pill pill-ember" type="button" data-aiask>'+ic("sparkle",20)+'Попитай AI</button>' : '<button class="pill" type="button" disabled>'+ic("sparkle",20)+'Попитай AI</button>')+'</section>';
   res.innerHTML = h;
   live.textContent = n ? "Намерихме "+plural(n)+(unkN ? " и "+unkN+" без пълен състав" : "") : (anyInfo ? "Има отговор от информацията" : "Нищо не намерихме"); }

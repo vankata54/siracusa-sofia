@@ -376,7 +376,7 @@ input[type="search"]::-ms-clear,input[type="search"]::-ms-reveal{display:none; w
 .ainfo p{margin:0 0 6px}
 .ainfo p:last-child{margin-bottom:0}
 .ainfo .sub{font-size:15px; color:var(--muted)}
-.ainfo .acts{display:flex; flex-wrap:wrap; gap:4px 16px}
+.ainfo .aacts{display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; margin:0; padding:0}
 .ainfo .zl{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0}
 .ainfo .zl span{display:inline-flex; align-items:center; min-height:32px; padding:0 12px; border-radius:var(--r-pill); background:var(--surface); font-size:14px; font-weight:700}
 .ainfo .zl span small{margin-left:6px; color:var(--muted); font-size:14px; font-weight:600}
@@ -385,7 +385,7 @@ input[type="search"]::-ms-clear,input[type="search"]::-ms-reveal{display:none; w
 .awish b{display:block; line-height:1.3}
 .awish p{margin:2px 0 10px; font-size:15px; color:var(--muted)}
 .awish .pill{width:100%}
-.aiex{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:var(--r-pill); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line-strong); font-size:14px; font-weight:700; color:var(--ink)}
+.aiex{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:4px 12px 4px 8px; border-radius:14px; line-height:1.3; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line-strong); font-size:14px; font-weight:700; color:var(--ink)}
 .aians{margin-top:12px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface-2)}
 .aians .hd{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; font-weight:800}
 .aians .hd > .ic{color:var(--ink)}
