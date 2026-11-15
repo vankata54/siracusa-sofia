@@ -104,6 +104,9 @@ if (!body) return;
 /* служител: „Към приложението“ връща в екрана на модула, от който е дошъл (иначе в началото на модула) */
 (function(){ if (FULL || !A.isStaffApp || !A.isStaffApp()) return; var r = document.referrer || "", m = r.match(/\/(pages-(servitor|kuhnya|shofyor))\/[^?#]*(#.*)?$/), a = A.app.querySelector('.sa-top a.sa-tb');
   var want = {waiter:"servitor", kitchen:"kuhnya", driver:"shofyor"}[A.me.role]; if (a && m && m[2] === want) a.href = "../" + r.slice(r.indexOf(m[1])); })();
+/* служител и роли без одобрение: кои препоръки са с нов статус от последното отваряне (етикет „Нов статус“) */
+var SEEN0 = A.me ? A.data.get("notes-seen-" + A.me.user, "") : "";
+function changed(n){ return !MAIN && n.status !== "new" && n.source && A.me && n.source.user === A.me.user && (!SEEN0 || n.updatedAt > SEEN0); }
 var STS = A.NOTE_STATUSES, STEP = {new:0, approved:1, doing:2, review:3, published:4};
 var ICO = {new:"sparkle", approved:"check", doing:"hourglass", review:"eye", published:"check-circle", rejected:"x"};
 var RUN_MS = 3500;
@@ -155,7 +158,7 @@ function card(n){ var so = A.noteSource(n), extra = "";
   else if (n.status === "rejected" && n.reason) extra = '<div class="nt-why"><b>Причина</b>' + esc(n.reason) + '</div>';
   else if (n.status === "approved") extra = '<p class="muted" style="margin:0">' + (n.fix ? 'Върната за поправка: „' + esc(n.fix) + '“. ' : '') + 'Чака изпълнение (влиза в NOTES.json).</p>';
   return '<article class="nt" data-id="' + n.id + '" data-edit-id="admin.notes.card">' +
-    '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + ic(ICO[n.status],16) + A.noteStatusName(n.status) + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span>' + (A.notes.isSample(n) ? '<span class="sa-tag sample">Примерна</span>' : '') + '<span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
+    '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + ic(ICO[n.status],16) + A.noteStatusName(n.status) + '</span><span class="sa-tag">' + esc(A.MODULE_NAMES[n.module] || n.module) + '</span>' + (A.notes.isSample(n) ? '<span class="sa-tag sample">Примерна</span>' : '') + (changed(n) ? '<span class="sa-tag ember">' + ic("sparkle",16) + 'Нов статус</span>' : '') + '<span class="when">' + esc(A.ago(n.createdAt)) + '</span></div>' +
     steps(n) + '<h3>' + esc(n.text) + '</h3>' +
     '<div class="where"><b>' + esc(A.MODULE_NAMES[n.module] || n.module) + ' · ' + esc(pageName(n)) + '</b><span>' + esc(n.url) + '</span></div>' +
     (n.selector ? '<div class="sel" title="CSS селектор">' + esc(n.selector) + (n.editId ? '<br>data-edit-id: ' + esc(n.editId) : '') + '</div>' : '<div class="sel">Без посочено място</div>') +

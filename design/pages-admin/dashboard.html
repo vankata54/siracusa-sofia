@@ -168,8 +168,11 @@ function waitHTML(){ if (st === "loading" || st === "error") return "";
   var nw = A.notesWaiting(), CANB = ["admin","owner","manager"].indexOf(me.role) > -1, W = [
     ["orders", A.can("orders"), A.orders().filter(function(o){ return o.status === "accepted"; }).length, "receipt", "Поръчки за приемане", "Нови, още не са започнати", "orders.html#s=accepted", "Приеми", "orders"],
     ["res", A.can("reservations"), A.reservationsToday().filter(function(r){ return r.status === "new"; }).length, "calendar-check", "Резервации за потвърждаване", "Днес, чакат потвърждение", "reservations.html#f=new", "Потвърди"],
-    ["notes", A.can("notes") || nw.n > 0, st === "empty" ? 0 : nw.n, "pencil-simple", A.isMainAdmin() ? "Бележки за одобрение" : "Вашите препоръки", nw.title || "", A.isMainAdmin() ? "notes.html#s=" + (nw.newN ? "new" : "review") : "notes.html", A.isMainAdmin() ? "Прегледай" : "Виж"],
-    ["noshow", A.can("reservations") && CANB, A.blocksPending(), "warning-circle", "Неявили се за решение", "Две неявявания: блокиране или не", "reservations.html#f=no_show", "Реши"]
+    /* главният админ: два реда, всеки с бутон към изгледа със същия брой (нови / за преглед) */
+    ["notes", A.isMainAdmin(), st === "empty" ? 0 : (nw.newN || 0), "pencil-simple", "Бележки за одобрение", "Нови бележки и препоръки", "notes.html#s=new", "Одобри"],
+    ["review", A.isMainAdmin(), st === "empty" ? 0 : (nw.reviewN || 0), "eye", "Бележки за преглед", "Изпълнени, чакат „Публикувай“", "notes.html#s=review", "Прегледай"],
+    ["mine", !A.isMainAdmin(), st === "empty" ? 0 : nw.n, "pencil-simple", "Вашите препоръки", nw.title || "", "notes.html", "Виж"],
+    ["noshow", A.can("reservations") && CANB, A.blocksPending(), "warning-circle", "Неявили се за решение", "Две неявявания: блокиране или не", "reservations.html#blocks", "Реши"]
   ].filter(function(x){ return x[1] && x[2] > 0; });
   return '<section class="db-wait sa-rise" data-edit-id="admin.dashboard.waiting" aria-labelledby="db-wait-h"><div class="sa-sh" style="margin-top:0"><h2 id="db-wait-h">Чака те</h2>' + (W.length ? '<p>' + A.plural(W.reduce(function(a0, x){ return a0 + x[2]; }, 0), "нещо", "неща") + ' за действие</p>' : '') + '</div>' +
     (W.length ? '<div class="waits">' + W.map(function(x){ return '<a class="wt" href="' + x[6] + '"' + (x[8] ? ' data-fresh="' + x[8] + '"' : '') + '><span class="si">' + ic(x[3], 22) + '</span><span class="tx"><b><span class="sa-n">' + x[2] + '</span>' + esc(x[4]) + '</b>' + (x[5] ? '<small>' + esc(x[5]) + '</small>' : '') + '</span><span class="wgo pill pill-ink">' + esc(x[7]) + ic("caret-right", 18) + '</span></a>'; }).join("") + '</div>'

@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="_admin.css">
 <style>
 .rs{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
-@container page (min-width:1000px){ .rs{grid-template-columns:372px minmax(0,1fr); align-items:start} .rs-side{position:sticky; top:96px} }
+@container page (min-width:1000px){ .rs{grid-template-columns:372px minmax(0,1fr); align-items:start} }
 .rs-side{display:grid; gap:12px; min-width:0}
 .rs-main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-content:start}
 /* календар */
@@ -110,6 +110,11 @@
 .st-waitlist{box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--ink)}
 .late{color:var(--warn); font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:4px}
 /* странични карти */
+.box{scroll-margin-top:96px}
+.box.flash{animation:bl-flash 2.2s var(--ease) both}
+@keyframes bl-flash{0%,70%{box-shadow:0 0 0 3px var(--ember), var(--shadow)} 100%{box-shadow:var(--hi), var(--shadow)}}
+.box h3:focus{outline:none}
+.box h3:focus-visible{outline:3px solid var(--red); outline-offset:4px; border-radius:8px}
 .box{padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:10px}
 .box h3{margin:0; font-size:18px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
 .box h3 .ic{color:var(--red)}
@@ -259,6 +264,16 @@ function draw(){ var y = A.scroller.scrollTop;
   '</div></div>';
   A.scroller.scrollTop = y; var dsel = body.querySelector('.days [aria-pressed="true"]'); dsel && dsel.scrollIntoView({block:"nearest", inline:"center"}); }
 draw();
+/* #blocks (от таблото „Чака те“ → „Неявили се за решение“): превърта до „Блокиране“, огражда го за миг и фокусира заглавието.
+   Карето е в лявата колона на компютър и под списъка на телефон: взимаме видимото. */
+function goBlocks(){ var box = [].filter.call(body.querySelectorAll('section.box[aria-labelledby^="bl-h"]'), function(b){ return b.offsetParent !== null; })[0]; if (!box) return;
+  var h = box.querySelector("h3"); h.setAttribute("tabindex", "-1");
+  box.scrollIntoView({block:"start"}); h.focus({preventScroll:true});
+  box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); setTimeout(function(){ box.classList.remove("flash"); }, 2200);
+  /* после шрифтът и данните още местят страницата: изравняваме под горната лента */
+  setTimeout(function(){ var top = box.getBoundingClientRect().top - A.scroller.getBoundingClientRect().top; if (Math.abs(top - 96) > 4) A.scroller.scrollTop += top - 96; }, 450); }
+if ("blocks" in A.hash && st !== "loading" && st !== "error") setTimeout(goBlocks, 60);
+window.addEventListener("hashchange", function(){ if (/(^#|&)blocks(&|$)/.test(location.hash)) goBlocks(); });
 function hashSync(){ A.setHash(Object.assign({}, A.hash, {d:day === TODAY ? "" : day, f:flt})); }
 function byId(id){ return RES.filter(function(r){ return r.id === id; })[0]; }
 

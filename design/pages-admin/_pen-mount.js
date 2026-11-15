@@ -59,6 +59,16 @@ function mount(o){ o = o || {};
   function slotted(){ btn.classList.toggle("in-slot", btn.parentElement !== document.body); }
   requestAnimationFrame(slotted); setTimeout(slotted, 600);
   btn.addEventListener("click", function(){ pen.toggle(); });
+  /* препоръките на служителя с нов статус (одобрена, отхвърлена, публикувана …) от последното отваряне на „Моите препоръки“: значка на бутона */
+  function changedN(){ var l = load("sa-notes", []), seen = load("sa-notes-seen-" + ses.user, ""); if (!Array.isArray(l)) return 0;
+    return l.filter(function(n){ return n.source && n.source.user === ses.user && n.status !== "new" && (!seen || n.updatedAt > seen); }).length; }
+  function badgeSync(){ var n = changedN(), b = btn.querySelector(".sa-pen-n");
+    if (!n){ if (b) b.remove(); btn.setAttribute("aria-label", "Молив"); return; }
+    if (!b){ b = document.createElement("span"); b.className = "sa-pen-n"; b.setAttribute("aria-hidden", "true"); btn.appendChild(b); }
+    b.textContent = n; btn.setAttribute("aria-label", "Молив, " + n + (n === 1 ? " препоръка с нов статус" : " препоръки с нов статус"));
+    btn.title = n + (n === 1 ? " препоръка с нов статус: „Моите препоръки“" : " препоръки с нов статус: „Моите препоръки“"); }
+  st.textContent += ".sa-pen-btn{position:fixed} .sa-pen-btn.in-slot{position:relative} .sa-pen-n{position:absolute; top:-4px; right:-4px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--ember); color:var(--on-ember); font:800 14px/22px var(--font, system-ui, sans-serif); text-align:center}";
+  badgeSync(); window.addEventListener("storage", function(e){ if (e.key === "sa-notes") badgeSync(); }); setInterval(badgeSync, 4000);
   pen.button = btn; return pen; }
 
 window.SAPenMount = {mount:mount};
