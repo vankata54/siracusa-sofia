@@ -41,6 +41,8 @@ SC.removed = {};
     cats = cats.filter(function(c){ return (C.removed || []).indexOf(c.id) < 0; });
     if (C.order && C.order.length) cats.sort(function(a, b){ var i = C.order.indexOf(a.id), j = C.order.indexOf(b.id); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
     M.cats = cats; }
+  /* категория без нито едно ястие не се показва на сайта, на масата и при персонала, докато в нея няма ястие (решение 15.11) */
+  if (E || C) M.cats = M.cats.filter(function(c){ return M.items.some(function(x){ return x.cat === c.id; }); });
 })();
 SC.items = M.items;
 SC.byId = {}; M.items.forEach(function(x){ SC.byId[x.id] = x; });
