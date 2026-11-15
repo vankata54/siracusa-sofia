@@ -20,7 +20,9 @@
 .ev-cats .chip[aria-pressed="true"] .ic{color:var(--ember)}
 
 .ev-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
-@container page (min-width:940px){ .ev-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:940px){ .ev-list{grid-template-columns:repeat(2,minmax(0,1fr))} .ev-list > .ev:last-child:nth-child(odd){grid-column:1 / -1} }
+.hol{color:var(--warn); background:transparent; box-shadow:inset 0 0 0 1.5px currentColor; white-space:normal; min-width:0}
+.hol .ic{color:var(--warn) !important}
 .ev{display:grid; grid-template-columns:92px minmax(0,1fr); gap:14px 16px; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start}
 .ev.draft{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
 .ev-date{display:grid; justify-items:center; align-content:center; gap:0; min-height:104px; border-radius:20px; background:var(--ink); color:var(--bg); text-align:center}
@@ -78,6 +80,7 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script><script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -85,7 +88,7 @@ var ic = A.ic, esc = A.esc, st = A.st;
 A.liveHash = true;
 
 var body = A.mount({section:"events", title:"Събития", docTitle:"Събития",
-  sub:"Тематични вечери, жива музика и празници. Ново събитие за под 2 минути; страницата в сайта се прави сама.",
+  sub:"Тематични вечери, жива музика и празници. Новото събитие се показва в сайта веднага след „Публикувай“.",
   actions:'<button class="pill pill-red pill-lg" type="button" data-new>' + ic("plus",22) + 'Ново събитие</button>',
   states:[["","Обичайно"],["loading","Зареждане"],["empty","Празно"],["error","Грешка"],["offline","Без връзка"]]});
 if (!body) return;
@@ -107,12 +110,15 @@ var tab = A.hash.t === "past" ? "past" : "up", cat = A.hash.c || "";
 function list(){ if (st === "empty") return []; return E.filter(function(e){ return (tab === "up" ? e.date >= today : e.date < today) && (!cat || e.cat === cat); }).sort(function(a, b){ return tab === "up" ? (a.date < b.date ? -1 : 1) : (a.date < b.date ? 1 : -1); }); }
 function priceHTML(e, long){ return e.priceMode === "free" ? "Вход свободен" : e.priceMode === "price" && e.price != null ? SC.fmt(e.price) : A.missing(long ? "цена или вход свободен" : "цена"); }
 function seatsHTML(e){ return e.seats != null ? A.plural(e.seats, "място", "места") : A.missing("брой"); }
+/* официалните празници с постоянна дата (Великден се мести: [ЛИПСВА] до собственика) */
+var HOL = {"01-01":"Нова година","03-03":"Освобождението","05-01":"Денят на труда","05-06":"Гергьовден","05-24":"24 май","09-06":"Съединението","09-22":"Независимостта","12-24":"Бъдни вечер","12-25":"Коледа","12-26":"Коледа"};
+function holiday(s){ return HOL[s.slice(5)] || ""; }
 function inDays(s){ var n = Math.round((dateOf(s) - dateOf(today)) / 864e5); return n === 0 ? "Днес" : n === 1 ? "Утре" : n > 0 ? "След " + n + " дни" : "Мина"; }
 
 function cardHTML(e){ var d = dateOf(e.date), past = e.date < today, s = past ? "past" : e.status;
   var site = e.real ? "preview.html#m=site&p=event&d=phone" : "preview.html#m=site&p=events&d=phone";
   return '<article class="ev' + (s === "draft" ? ' draft' : '') + '" data-id="' + e.id + '" data-edit-id="admin.events.card"><div class="ev-date" aria-hidden="true"><small>' + A.DAYS[A.sofia(d).dow] + '</small><b>' + A.sofia(d).d + '</b><small>' + SC.MON[A.sofia(d).mo] + '</small></div>' +
-    '<div class="ev-b"><div class="ev-tags"><span class="sa-tag ' + (s === "pub" ? 'st-pub' : s === "draft" ? 'st-draft' : 'st-past') + '">' + (s === "pub" ? ic("check",16) + 'В сайта' : s === "draft" ? 'Чернова' : 'Минало') + '</span><span class="sa-tag">' + ic(CATI[e.cat] || "calendar-blank",16) + esc(e.cat) + '</span></div>' +
+    '<div class="ev-b"><div class="ev-tags"><span class="sa-tag ' + (s === "pub" ? 'st-pub' : s === "draft" ? 'st-draft' : 'st-past') + '">' + (s === "pub" ? ic("check",16) + 'В сайта' : s === "draft" ? 'Чернова' : 'Минало') + '</span><span class="sa-tag">' + ic(CATI[e.cat] || "calendar-blank",16) + esc(e.cat) + '</span>' + (holiday(e.date) && !past ? '<span class="sa-tag hol">' + ic("warning-circle",16) + 'Празник (' + holiday(e.date) + '): проверете</span>' : '') + '</div>' +
       '<h3>' + esc(e.n) + '</h3><span class="when">' + esc(long(e.date)) + ' · ' + esc(e.time) + ' <span class="muted" style="font-weight:600">· ' + inDays(e.date) + '</span></span></div>' +
     '<dl class="ev-facts"><div><dt>Цена</dt><dd>' + priceHTML(e) + '</dd></div><div><dt>Места</dt><dd>' + seatsHTML(e) + '</dd></div><div><dt>Програма и меню</dt><dd>' + (e.prog && e.menu ? 'Попълнени' : A.missing([e.prog ? "" : "програма", e.menu ? "" : "меню"].filter(Boolean).join(" и "))) + '</dd></div></dl>' +
     '<div class="ev-f"><button class="pill pill-ink" type="button" data-edit aria-label="Промени ' + esc(e.n) + '">' + ic("pencil-simple",20) + 'Промени</button>' +
@@ -156,9 +162,6 @@ document.addEventListener("click", function(e){ if (e.target.closest("[data-new]
 function missingForPub(e){ return !e.n ? "име" : !e.date ? "дата" : ""; }
 
 /* ---------- редактор: лист с преглед „Така изглежда в сайта“ ---------- */
-function sheet(o){ var h = document.querySelector("sa-pen-ui"), fab = h && h.shadowRoot && h.shadowRoot.querySelector(".fab"), oc = o.onClose;
-  if (fab && !(A.pen && A.pen.isOn())) fab.style.visibility = "hidden";
-  o.onClose = function(){ if (fab) fab.style.visibility = ""; oc && oc(); }; return A.sheet(o); }
 function editor(id){ var e = id ? byId(id) : {id:null, n:"", cat:"Тематични вечери", date:"", time:"19:00", text:"", prog:"", menu:"", price:null, priceMode:"tbd", seats:null, status:"draft"};
   var T = []; for (var m = 600; m <= 1350; m += 30) T.push(String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"));
   var maxD = (function(){ var d = dateOf(today); d.setUTCDate(d.getUTCDate() + 365); return d.toISOString().slice(0, 10); })();
@@ -175,7 +178,7 @@ function editor(id){ var e = id ? byId(id) : {id:null, n:"", cat:"Тематич
     '<div class="field"><label for="ef-seats">Места <span class="muted" style="font-weight:600">(по желание)</span></label><input class="input" id="ef-seats" name="seats" inputmode="numeric" maxlength="3" value="' + (e.seats != null ? e.seats : '') + '" style="max-width:200px" aria-describedby="ef-seats-h ef-seats-e"><span class="help" id="ef-seats-h">Капацитетът на залата: ' + A.missing("от собственика") + '. Сайтът показва „Остават 6 места“, когато са малко.</span><span class="err" id="ef-seats-e" hidden></span></div>' +
     '<div class="ev-photo">' + ic("image",22) + '<span>Снимка: ' + A.missing("след фотосесията") + '. Дотогава сайтът показва иконата на категорията.</span></div>' +
     '<p class="ev-prevh">' + ic("eye",18) + 'Така изглежда в сайта</p><div class="ev-prev" data-prev aria-live="polite"></div></form>';
-  var s = sheet({title:id ? e.n : "Ново събитие", html:html, focus:id ? "[data-close]" : "#ef-n",
+  var s = A.sheet({title:id ? e.n : "Ново събитие", html:html, focus:id ? "[data-close]" : "#ef-n",
     foot:'<button class="pill pill-line pill-lg" type="button" data-draft>' + (id && e.status === "pub" ? 'Скрий от сайта' : 'Запази чернова') + '</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("paper-plane-right",22) + (id && e.status === "pub" ? 'Запази' : 'Публикувай') + '</button>'});
   var f = s.body.querySelector("form"), pm = e.priceMode;
   function read(){ var p = String(f.price.value).replace(/\s/g, "").replace(",", "."), se = f.seats.value.trim();

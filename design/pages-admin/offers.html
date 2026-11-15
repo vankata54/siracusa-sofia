@@ -16,6 +16,7 @@
 .of-policy b{display:block; font-size:18px; letter-spacing:-.02em; margin-bottom:2px}
 .of-policy p{margin:0; opacity:.9}
 .of-tabs{margin:24px 0 16px}
+@container page (max-width:560px){ .of-sh-p{flex:1 1 100%} }
 @container page (min-width:700px){ .of-tabs .sa-tabs{display:inline-flex} }
 
 /* offer cards */
@@ -68,7 +69,7 @@
 .of-st{display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:15px}
 .of-st.ok{color:var(--ok)} .of-st.used{color:var(--muted)}
 .of-codes{margin-top:12px}
-.of-codes .pill{min-height:44px; padding:0 14px; font-size:15px}
+.of-codes .pill{min-height:48px; padding:0 14px; font-size:15px}
 
 /* inquiries */
 .of-iq{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
@@ -83,7 +84,7 @@
 .iq blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--ember)}
 .iq.done blockquote{background:var(--surface)}
 .iq-f{display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid var(--line)}
-.st-new{background:var(--red); color:var(--on-red)}
+.st-new{background:var(--ink); color:var(--bg)}
 .st-call{background:var(--ember); color:var(--on-ember)}
 
 /* sheet form */
@@ -91,7 +92,7 @@
 .of-form .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
 .of-form .grp{display:grid; gap:8px}
 .of-cx{display:flex; flex-wrap:wrap; gap:6px}
-.of-cx .chip{min-height:44px; padding:0 14px}
+.of-cx .chip{min-height:48px; padding:0 14px}
 .of-pct{position:relative}
 .of-pct .input{padding-right:40px; font-weight:800}
 .of-pct .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
@@ -104,6 +105,7 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script><script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -124,7 +126,7 @@ var ls = SC.lastSaturday().d;
 /* офертите от сайта (design/pages/offers.html) с правилата от решенията; несигурното е [ЛИПСВА] */
 function seedOffers(){ return [
   {id:"lunch30", kind:"pct", pct:30, ic:"bowl-food", title:"Обедното меню след 15:00", sub:"при вземане от място", text:"Отстъпката се смята сама в количката. След 15:00 обедното меню не се доставя.", on:true, r:{days:[1,2,3,4,5], from:"15:00", to:"22:30", ch:["pickup"], dish:"lunch"}, rule:"Правило от решенията (19)", lock:true},
-  {id:"signup", kind:"pct", pct:10, ic:"user", title:"Направете профил", sub:"от следващата поръчка", text:"Веднъж на телефонен номер, и след изтриване на профила. Прилага се сам на следващата поръчка.", on:true, r:{days:ALLD, from:"10:00", to:"22:30", ch:["delivery","pickup"], dish:"all"}, rule:"Решение 27"},
+  {id:"signup", kind:"pct", pct:10, ic:"user", title:"Направете профил", sub:"от следващата поръчка", text:"Веднъж на телефонен номер, дори след изтриване на профила. Прилага се сам на следващата поръчка.", on:true, r:{days:ALLD, from:"10:00", to:"22:30", ch:["delivery","pickup"], dish:"all"}, rule:"Решение 27"},
   {id:"rating", kind:"pct", pct:10, ic:"chat-circle-dots", title:"Кажете ни как беше", sub:"за кратка оценка", text:"Еднакво при „Да“ и при „Не“. Код SC10- с 10 цифри, веднъж, на ястията (не на таксата), не се комбинира с -30%.", on:true, r:{days:ALLD, from:"10:00", to:"22:30", ch:["delivery","pickup","table"], dish:"all"}, rule:"Решение 30"},
   {id:"birthday", kind:"gift", pct:10, gift:"или малка торта", ic:"cake", title:"Рожден ден при нас", sub:"или малка торта", text:"Само с отделно съгласие „Искам подарък за рождения си ден“. Пишем седмица по-рано.", on:true, r:{days:ALLD, from:"10:00", to:"23:00", ch:["table"], dish:"all"}},
   {id:"celebration", kind:"pct", pct:5, ic:"confetti", title:"Ранна резервация на празник", sub:"от крайната цена", text:"Само за празник (не за тематични вечери). Показва се, щом зададете колко дни по-рано.", on:false, needs:"earlyDays", r:{days:ALLD, from:"10:00", to:"23:00", ch:["table"], dish:"all"}},
@@ -137,7 +139,7 @@ function S(){ return A.data.get("settings", {}); }
 function setS(p){ A.data.update("settings", {}, function(s){ Object.keys(p).forEach(function(k){ s[k] = p[k]; }); }); }
 function earlyDays(){ var v = S().earlyDays; return v == null ? null : v; }
 
-var now = Date.now(), H = 3600e3;
+var now = (A.now ? A.now() : new Date()).getTime(), H = 3600e3;
 function seedCodes(){ return [
   {code:"SC10-4829163057", kind:"rating", pct:10, from:"№ 1046", at:new Date(now - 26 * H).toISOString(), used:null},
   {code:"SC10-7051938264", kind:"rating", pct:10, from:"№ 1044", at:new Date(now - 50 * H).toISOString(), used:{no:"№ 1049", at:new Date(now - 4 * H).toISOString()}},
@@ -145,12 +147,7 @@ function seedCodes(){ return [
   {code:"SC10-9917250468", kind:"rating", pct:10, from:"Маса 7", at:new Date(now - 98 * H).toISOString(), used:{no:"№ 1047", at:new Date(now - 30 * H).toISOString()}}]; }
 var C = A.data.get("codes", null); if (!C){ C = seedCodes(); A.data.set("codes", C); }
 function saveC(){ A.data.set("codes", C); }
-function seedIq(){ return [
-  {id:"q1", topic:"voucher", sum:50, name:"Клиент 2", tel:"0888 00 00 02", note:"За рождения ден на колега.", at:new Date(now - 2 * H).toISOString(), st:"new"},
-  {id:"q2", topic:"birthday", name:"Клиент 7", tel:"0888 00 00 07", note:"Рожден ден на 3 декември, за 8 души. Искаме малка торта.", at:new Date(now - 5 * H).toISOString(), st:"new"},
-  {id:"q3", topic:"voucher", sum:30, name:"Клиент 5", tel:"0888 00 00 05", note:"", at:new Date(now - 28 * H).toISOString(), st:"call"},
-  {id:"q4", topic:"voucher", sum:100, name:"Клиент 9", tel:"0888 00 00 09", note:"Коледен подарък.", at:new Date(now - 76 * H).toISOString(), st:"done"}]; }
-var Q = A.data.get("feedback-iq", null); if (!Q){ Q = seedIq(); A.data.set("feedback-iq", Q); }
+var Q = (A.seed && A.seed.inquiries) ? A.seed.inquiries() : A.data.get("feedback-iq", []); /* примерните са в _seed-orders.js */
 function saveQ(){ A.data.set("feedback-iq", Q); }
 
 var tab = ["offers","codes","iq"].indexOf(A.hash.t) > -1 ? A.hash.t : "offers";
@@ -188,7 +185,7 @@ function tabsHTML(){ var nNew = Q.filter(function(q){ return q.st === "new"; }).
 
 function offersTab(){ if (st === "empty") return '<div class="sa-card">' + A.empty({icon:"seal-percent", title:"Още няма оферти.", text:"Добавете първата: правила по час, ден, канал и ястия. Включва се в сайта, когато решите.", action:'<button class="pill pill-red pill-lg" type="button" data-newoffer>' + ic("plus",22) + 'Нова оферта</button>'}) + '</div>';
   var on = O.filter(function(o){ return o.on && !blocked(o); }), off = O.filter(function(o){ return !(o.on && !blocked(o)); });
-  return '<div class="sa-sh" style="margin-top:8px"><h2>В сайта · ' + on.length + '</h2><p>Гръцката вечер е в „Събития“.</p></div><div class="of-list">' + on.map(offerHTML).join("") + '</div>' +
+  return '<div class="sa-sh" style="margin-top:8px"><h2>В сайта · ' + on.length + '</h2><p class="of-sh-p">Гръцката вечер е в „Събития“.</p></div><div class="of-list">' + on.map(offerHTML).join("") + '</div>' +
     (off.length ? '<div class="sa-sh"><h2>Изключени · ' + off.length + '</h2><p>Не се виждат в сайта.</p></div><div class="of-list">' + off.map(offerHTML).join("") + '</div>' : '') + celebration(); }
 
 function normCode(c){ var s = String(c || "").toUpperCase().replace(/[\s-]/g, ""); if (/^SCV/.test(s)) return "SCV-" + s.slice(3); return s.indexOf("SC10") === 0 ? "SC10-" + s.slice(4) : "SC10-" + s; }
@@ -260,9 +257,6 @@ function saveEarly(){ var i = body.querySelector("#of-ed"), er = body.querySelec
   A.audit("settings.update", txt, "earlyDays"); A.toast(txt + offlineNote(), {undo:function(){ setS({earlyDays:old}); draw(true); }}); }
 
 /* ---------- листове ---------- */
-function sheet(o){ var h = document.querySelector("sa-pen-ui"), fab = h && h.shadowRoot && h.shadowRoot.querySelector(".fab"), oc = o.onClose;
-  if (fab && !(A.pen && A.pen.isOn())) fab.style.visibility = "hidden";
-  o.onClose = function(){ if (fab) fab.style.visibility = ""; oc && oc(); }; return A.sheet(o); }
 function times(){ var o = []; for (var m = 600; m <= 1380; m += 30) o.push(String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0")); return o; }
 function mins(t){ var p = t.split(":"); return +p[0] * 60 + +p[1]; }
 function offerSheet(id){ var o = id ? byId(id) : {id:null, kind:"pct", pct:10, ic:"seal-percent", title:"", sub:"", text:"", on:false, mine:true, r:{days:ALLD.slice(), from:"10:00", to:"22:30", ch:["delivery","pickup"], dish:"all"}};
@@ -278,7 +272,7 @@ function offerSheet(id){ var o = id ? byId(id) : {id:null, kind:"pct", pct:10, i
     '<div class="field"><label for="ofs-dish">Ястия</label><select class="input" id="ofs-dish">' + dishOpts.map(function(d){ return '<option value="' + d[0] + '"' + (d[0] === o.r.dish ? ' selected' : '') + '>' + esc(d[1]) + '</option>'; }).join("") + '</select></div>' +
     '<p class="muted" style="margin:0; font-size:15px">Отстъпките не се комбинират: важи по-изгодната за клиента. ' + (id ? '' : 'Новата оферта е изключена, докато не я включите.') + '</p></form>';
   if (o.lock) html = '<p class="mn-lock" style="display:flex; gap:10px; align-items:flex-start; margin:0 0 14px; padding:12px 14px; border-radius:18px; background:var(--surface-2)">' + ic("lock",20) + '<span>' + esc(o.rule) + ': след 15:00 обедното меню е само за вземане, с -30%. Тук само се вижда; сменя се в ядрото.</span></p>' + html.replace(/<(input|select|button)(?=[ >])/g, '<$1 disabled');
-  var s = sheet({title:id ? "Правила: " + o.title : "Нова оферта", html:html, focus:id ? "[data-close]" : "#ofs-t",
+  var s = A.sheet({title:id ? "Правила: " + o.title : "Нова оферта", html:html, focus:id ? "[data-close]" : "#ofs-t",
     foot:o.lock ? '<button class="pill pill-ink pill-lg" type="button" data-x>Затвори</button>' : '<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok>' + ic("check",22) + (id ? 'Запази правилата' : 'Добави офертата') + '</button>'});
   var f = s.body;
   f.addEventListener("click", function(e){ var b = e.target.closest("[data-d],[data-c]"); if (b && !b.disabled) b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true")); });
@@ -297,7 +291,7 @@ function offerSheet(id){ var o = id ? byId(id) : {id:null, kind:"pct", pct:10, i
     else { o = Object.assign(o, {id:"of" + Math.random().toString(36).slice(2, 7), title:title, sub:"-" + pI.value + "%", pct:+pI.value, text:esc(f.querySelector("#ofs-x").value.trim() || "Текст: " + "[ЛИПСВА]"), r:r}); O.push(o); }
     saveO(); s.close(); draw(true); var txt = (id ? "Правила: " : "Нова оферта: ") + o.title + " · " + daysTxt(days) + ", " + from + " - " + to;
     A.audit(id ? "offer.update" : "offer.create", txt, o.id); A.toast(txt + offlineNote(), {undo:function(){ O = prev; saveO(); draw(true); }}); }; }
-function genSheet(){ var s = sheet({title:"Нови кодове", focus:"#og-v", html:'<form class="of-form" novalidate>' +
+function genSheet(){ var s = A.sheet({title:"Нови кодове", focus:"#og-v", html:'<form class="of-form" novalidate>' +
     '<div class="field"><label for="og-k">Вид</label><select class="input" id="og-k"><option value="sum">Ваучер за подарък (сума)</option><option value="pct">Отстъпка в %</option></select></div>' +
     '<div class="two"><div class="field"><label for="og-v">Стойност</label><div class="of-pct"><input class="input" id="og-v" inputmode="decimal" autocomplete="off" placeholder="50" aria-describedby="og-v-e"><span class="u" data-u aria-hidden="true">€</span></div><span class="err" id="og-v-e" hidden></span></div>' +
       '<div class="field"><label for="og-n">Брой кодове</label><input class="input" id="og-n" inputmode="numeric" value="1" maxlength="2" aria-describedby="og-n-e"><span class="err" id="og-n-e" hidden></span></div></div>' +
@@ -310,7 +304,7 @@ function genSheet(){ var s = sheet({title:"Нови кодове", focus:"#og-v"
     function er(i, id, m){ var e = f.querySelector(id); e.hidden = !m; e.textContent = m || ""; if (m) i.setAttribute("aria-invalid", "true"); else i.removeAttribute("aria-invalid"); return !m; }
     var ok1 = er(vI, "#og-v-e", !(v > 0) || (k === "pct" && (v >= 100 || v % 1)) || (k === "sum" && v > 999) ? (k === "sum" ? "Напишете сума като 50 или 25,50." : "Отстъпката е от 1 до 99%.") : ""), ok2 = er(nI, "#og-n-e", !(n >= 1 && n <= 50 && n % 1 === 0) ? "От 1 до 50 кода наведнъж." : "");
     if (!ok1){ vI.focus(); return; } if (!ok2){ nI.focus(); return; }
-    var made = []; for (var i = 0; i < n; i++){ var d = ""; for (var j = 0; j < 10; j++) d += Math.floor(Math.random() * 10); made.push({code:"SCV-" + d, kind:"gen", sum:k === "sum" ? v : null, pct:k === "pct" ? v : null, note:f.querySelector("#og-note").value.trim(), at:new Date().toISOString(), used:null}); }
+    var made = []; for (var i = 0; i < n; i++){ var d = ""; for (var j = 0; j < 10; j++) d += Math.floor(Math.random() * 10); made.push({code:"SCV-" + d, kind:"gen", sum:k === "sum" ? v : null, pct:k === "pct" ? v : null, note:f.querySelector("#og-note").value.trim(), at:(A.now ? A.now() : new Date()).toISOString(), used:null}); }
     C = made.concat(C); saveC(); draw(true); A.audit("code.create", "Нови кодове: " + n + " × " + (k === "sum" ? SC.fmt(v) : "-" + v + "%"), null);
     f.querySelector("[data-out]").innerHTML = '<div class="of-new" role="status"><b>Готово: ' + A.plural(n, "код", "кода") + '</b>' + made.slice(0, 5).map(function(c){ return '<span class="mono">' + c.code + '</span>'; }).join("") + (n > 5 ? '<span class="muted">и още ' + (n - 5) + ' в списъка</span>' : '') + '</div>';
     A.toast("Готово: " + A.plural(n, "нов код", "нови кода"), {action:{label:"Копирай", fn:function(){ try{ navigator.clipboard.writeText(made.map(function(c){ return c.code; }).join("\n")).catch(function(){}); }catch(x){} A.toast("Кодовете са копирани"); }}}); }; }

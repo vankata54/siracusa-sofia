@@ -16,6 +16,10 @@
 .or-live .pulse::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:or-pulse 2s var(--ease) infinite}
 @keyframes or-pulse{0%{transform:scale(1); opacity:.6}100%{transform:scale(2.6); opacity:0}}
 .or-live.lost .pulse, .or-live.lost .pulse::after{background:var(--warn)}
+.or-sm{display:flex; gap:8px; align-items:flex-start; margin:0 0 14px; font-size:15px; font-weight:600; color:var(--muted)}
+.or-sm .ic{margin-top:2px}
+.or-sel{display:none}
+@container page (max-width:1099px){ .or-bar .sa-tabs{display:none} .or-sel{display:block; flex:1 1 100%} }
 .or-new{margin:0 0 16px; animation:or-in var(--t-slow) var(--ease)}
 @keyframes or-in{from{transform:translateY(-10px); opacity:0} to{transform:none; opacity:1}}
 .or-new .pill{background:var(--on-ember); color:var(--ember)}
@@ -64,9 +68,9 @@
 .oc-f .nx{flex:2 1 auto}
 .stt{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
 .stt .dot, .or-colh .dot{background:currentColor}
-.s-accepted{background:var(--red); color:var(--on-red)} .s-cooking{background:var(--ember); color:var(--on-ember)} .s-ready{background:var(--ok); color:var(--on-ok)}
+.s-accepted{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong)} .s-cooking{background:var(--ember); color:var(--on-ember)} .s-ready{background:var(--ok); color:var(--on-ok)}
 .s-on_way{background:var(--ink); color:var(--bg)} .s-done{background:var(--surface-3); color:var(--ink)} .s-cancelled{background:transparent; color:var(--danger); box-shadow:inset 0 0 0 1.5px currentColor}
-.c-accepted{color:var(--red)} .c-cooking{color:var(--ember)} .c-ready{color:var(--ok)} .c-on_way{color:var(--ink)}
+.c-accepted{color:var(--muted)} .c-cooking{color:var(--ember)} .c-ready{color:var(--ok)} .c-on_way{color:var(--ink)}
 .late-t{color:var(--warn); background:transparent; box-shadow:inset 0 0 0 1.5px currentColor}
 .late-t .ic{color:var(--warn) !important}
 
@@ -103,6 +107,7 @@
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
 <script src="_admin.js"></script>
+<script src="_seed-orders.js"></script><script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
 <script>
 (function(){
@@ -116,9 +121,9 @@ var body = A.mount({section:"orders", title:"Поръчки", docTitle:"Поръ
 if (!body) return;
 
 /* ---------- правила (src/core/orders.ts) ---------- */
-var FLOW = {delivery:["accepted","cooking","ready","on_way","delivered"], pickup:["accepted","cooking","ready","picked_up"], table:["accepted","cooking","ready","served"]};
-var LABEL = {accepted:"Приета", cooking:"Готви се", ready:"Готова", on_way:"На път", delivered:"Доставена", picked_up:"Взета", served:"Поднесена", cancelled:"Отказана"};
-var NEXT = {cooking:"Готви се", ready:"Готова", on_way:"Даден на шофьор", delivered:"Доставена", picked_up:"Взета", served:"Поднесена"};
+var FLOW = (A.seed && A.seed.FLOW) || {delivery:["accepted","cooking","ready","on_way","delivered"], pickup:["accepted","cooking","ready","picked_up"], table:["accepted","cooking","ready","served"]};
+var LABEL = {accepted:"Приета", cooking:"Готви се", ready:"Готова", on_way:"На път", delivered:"Доставена", picked_up:"Взета", served:"Сервирана", cancelled:"Отказана"};
+var NEXT = {cooking:"Готви се", ready:"Готова", on_way:"Даден на шофьор", delivered:"Доставена", picked_up:"Взета", served:"Сервирана"};
 var FIN = ["delivered","picked_up","served"];
 var CH = {delivery:["Доставка","moped"], pickup:["Вземане","storefront"], table:["Маса","chair"], office:["Офис","briefcase"]};
 var PAY = {cash:"В брой", card:"Карта при получаване", voucher:"Ваучер"};
@@ -126,28 +131,11 @@ var ZONE = {}; SC.ZONES.forEach(function(z){ ZONE[z.n] = z; });
 function flowOf(o){ return o.channel === "table" ? FLOW.table : o.mode === "pickup" ? FLOW.pickup : FLOW.delivery; }
 function fin(o){ return FIN.indexOf(o.status) > -1; }
 
-/* ---------- примерни поръчки с истински ястия и цени (номерата от № 1042, като в ядрото) ---------- */
+/* ---------- примерните поръчки са в _seed-orders.js (един източник за таблото и лентата), по часа на прототипа ---------- */
 var MIN = 60000;
+function now(){ return A.now ? A.now() : new Date(); }
 function L(id, q, mods){ return {id:id, q:q || 1, mods:mods || []}; }
-function seed(){ var t = Date.now();
-  function O(no, ago, ch, mode, status, lines, x){ var o = Object.assign({no:String(no), ts:t - ago * MIN, channel:ch, mode:mode, status:status, lines:lines, pay:"cash", name:"Клиент " + (no - 1041), phone:"0888 00 00 " + String(no - 1041).padStart(2, "0"), times:{}}, x || {});
-    var f = flowOf(o), i = f.indexOf(status), step = Math.max(4, Math.floor(ago / (f.length + 1)));
-    if (status === "cancelled"){ o.times.accepted = new Date(o.ts).toISOString(); o.times.cancelled = new Date(o.ts + 6 * MIN).toISOString(); }
-    else for (var k = 0; k <= i; k++) o.times[f[k]] = new Date(o.ts + k * step * MIN).toISOString();
-    return o; }
-  return {base:t, list:[
-    O(1042, 150, "delivery", "delivery", "delivered", [L("pitsa-margarita",2), L("gratska-salata")], {zone:"Дружба 2", addr:"Дружба 2, бл. 205, вх. Б", driver:"Шофьор 1"}),
-    O(1043, 128, "pickup", "pickup", "picked_up", [L("kebapcheta",2), L("parzheni-kartofi")], {pay:"card"}),
-    O(1044, 110, "delivery", "delivery", "cancelled", [L("salata-tsezar-s-pileshki-prachki")], {zone:"Бусманци", addr:"Бусманци, ул. Примерна 4", reason:"Клиентът се отказа по телефона."}),
-    O(1045, 54, "delivery", "delivery", "on_way", [L("pitsa-s-burata-i-proshuto-krudo"), L("svinski-rebra"), L("tiramisu",2)], {zone:"Дружба 1", addr:"Дружба 1, бл. 12, вх. А, ет. 4", driver:"Шофьор 1", pay:"card"}),
-    O(1046, 44, "pickup", "pickup", "ready", [L("chiyzburger-s-teleshko-kyufte-blek-angas-s-parzh"), L("hrupkav-pileshki-burger-s-parzheni-kartofi")], {code:"SC10-4829163057"}),
-    O(1047, 38, "table", "pickup", "cooking", [L("pitsa-kaprichoza",1,["+ Гъби"]), L("shopska-salata",2), L("svinski-vrat")], {table:"12", name:"Маса 12", phone:"", qr:true}),
-    O(1048, 31, "delivery", "delivery", "cooking", [L("spageti-karbonara"), L("kapreze-s-burata-i-avokado")], {zone:"Горубляне", addr:"Горубляне, ул. Примерна 18"}),
-    O(1049, 26, "office", "delivery", "cooking", [L("pitsa-margarita",3), L("pitsa-vegetariana",2), L("tarator",5)], {zone:"Дружба 2", addr:"Дружба 2, офис сграда, ет. 3", name:"Офис на Клиент 8", note:"Обща поръчка за офиса, 5 души."}),
-    O(1050, 17, "delivery", "delivery", "accepted", [L("teleshki-buzi-s-kartofeno-pyure"), L("pileshka-supa")], {zone:"НПЗ Искър", addr:"НПЗ Искър, ул. Примерна 2", note:"Звънецът не работи, обадете се."}),
-    O(1051, 9, "pickup", "pickup", "accepted", [L("pitsa-s-proshuto-koto-i-tryufel"), L("kyunefe")], {pay:"card"}),
-    O(1052, 5, "table", "pickup", "accepted", [L("topeni-sirentsa-s-kornfleyks-i-domashno-sladko-o"), L("kebapcheta",3)], {table:"7", name:"Маса 7", phone:"", waiter:"Сервитьор 1"})]}; }
-var D = A.data.get("orders", null); if (!D || !D.base || Date.now() - D.base > 6 * 3600e3){ D = seed(); A.data.set("orders", D); }
+var D = A.seed && A.seed.orders ? A.seed.orders() : A.data.get("orders", {list:[]});
 function save(){ A.data.set("orders", D); }
 function byNo(no){ return D.list.filter(function(o){ return o.no === no; })[0]; }
 
@@ -156,9 +144,9 @@ var ADD = {}; SC.inCat("dobavki").forEach(function(a){ ADD["+ " + a.n] = a.p; })
 function lineP(l){ var x = SC.byId[l.id]; return (x.p + l.mods.reduce(function(s, m){ return s + (ADD[m] || 0); }, 0)) * l.q; }
 function sums(o){ var sub = o.lines.reduce(function(s, l){ return s + lineP(l); }, 0), disc = o.code ? Math.round(sub * 10) / 100 : 0, z = o.mode === "delivery" ? ZONE[o.zone] : null;
   var fee = o.mode !== "delivery" ? 0 : z && z.free ? 0 : null; return {sub:sub, disc:disc, fee:fee, total:sub - disc + (fee || 0), free:!!(z && z.free)}; }
-function ago(o){ var m = Math.max(0, Math.round((Date.now() - o.ts) / MIN)); return m < 1 ? "току-що" : m < 60 ? "преди " + m + " мин" : "преди " + Math.floor(m / 60) + " ч " + (m % 60 ? m % 60 + " мин" : ""); }
+function ago(o){ var m = Math.max(0, Math.round((now().getTime() - o.ts) / MIN)); return m < 1 ? "току-що" : m < 60 ? "преди " + m + " мин" : "преди " + Math.floor(m / 60) + " ч " + (m % 60 ? m % 60 + " мин" : ""); }
 /* „Закъснява“: доставка след времето на квартала, вземане след 20 мин (ORDER_RULES.pickupLeadMin), маса след 20 мин */
-function late(o){ if (fin(o) || o.status === "cancelled") return false; var m = (Date.now() - o.ts) / MIN; if (o.mode === "delivery"){ var z = ZONE[o.zone]; return m > (z ? z.etaMin : 35); } return o.status !== "ready" && m > 20; }
+function late(o){ if (fin(o) || o.status === "cancelled") return false; var m = (now().getTime() - o.ts) / MIN; if (o.mode === "delivery"){ var z = ZONE[o.zone]; return m > (z ? z.etaMin : 35); } return o.status !== "ready" && m > 20; }
 function chTag(o){ var c = CH[o.channel] || CH.delivery; return '<span class="sa-tag">' + ic(c[1],16) + c[0] + (o.channel === "table" ? " " + esc(o.table) : o.mode === "delivery" ? " · " + esc(o.zone) : "") + '</span>'; }
 function stTag(o){ var k = fin(o) ? "done" : o.status; return '<span class="stt s-' + k + '">' + (o.status === "cancelled" ? ic("x",14) : '') + LABEL[o.status] + '</span>'; }
 function nextOf(o){ if (o.status === "cancelled" || fin(o)) return null; var f = flowOf(o); return f[f.indexOf(o.status) + 1]; }
@@ -180,12 +168,12 @@ function cardHTML(o){ var s = sums(o), nx = nextOf(o), lt = late(o), items = o.l
     '<div class="oc-tags">' + chTag(o) + (lt ? '<span class="sa-tag late-t">' + ic("warning-circle",16) + 'Закъснява</span>' : '') + (o.qr ? '<span class="sa-tag">' + ic("qr-code",16) + 'QR</span>' : '') + (o.note ? '<span class="sa-tag">' + ic("note",16) + 'Бележка</span>' : '') + '</div>' +
     '<ul class="oc-items">' + items.map(function(l){ return '<li><span class="q">' + l.q + ' ×</span><span>' + esc(SC.byId[l.id].n) + (l.mods.length ? ' <span class="muted">(' + esc(l.mods.join(", ")) + ')</span>' : '') + '</span></li>'; }).join("") + (o.lines.length > 3 ? '<li class="more">и още ' + (o.lines.length - 3) + '</li>' : '') + '</ul>' +
     '<div class="oc-sum"><span class="price">' + SC.fmt(s.total) + (s.fee == null ? ' <small>+ такса ' + A.missing("в €") + '</small>' : '') + '</span><small>' + PAY[o.pay] + (s.disc ? ' · код -10%' : '') + '</small></div>' +
-    '<div class="oc-f">' + (nx ? '<button class="pill pill-red nx" type="button" data-next aria-label="' + esc(NEXT[nx]) + ': № ' + o.no + '">' + ic(nx === "on_way" ? "moped" : "check",20) + NEXT[nx] + '</button>' : '') +
+    '<div class="oc-f">' + (nx ? '<button class="pill ' + (lt ? 'pill-red' : 'pill-ink') + ' nx" type="button" data-next aria-label="' + esc(NEXT[nx]) + ': № ' + o.no + '">' + ic(nx === "on_way" ? "moped" : "check",20) + NEXT[nx] + '</button>' : '') +
       '<button class="pill pill-line" type="button" data-open aria-label="Детайли: № ' + o.no + '">' + ic("receipt",20) + 'Детайли</button></div></article>'; }
 
 function barHTML(){ var a = all();
   return '<div class="or-bar" data-edit-id="admin.orders.filters"><div class="row1"><div class="sa-tabs" role="tablist" aria-label="Статус">' + TABS.map(function(t){ var n = a.filter(tabTest(t[0])).length;
-      return '<button type="button" role="tab" aria-selected="' + (view.t === t[0]) + '" data-tab="' + t[0] + '" aria-controls="or-list">' + t[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div></div>' +
+      return '<button type="button" role="tab" aria-selected="' + (view.t === t[0]) + '" data-tab="' + t[0] + '" aria-controls="or-list">' + t[1] + '<span class="c">' + n + '</span></button>'; }).join("") + '</div><div class="or-sel"><label class="vh" for="or-st">Статус</label><select class="input" id="or-st">' + TABS.map(function(t){ return '<option value="' + t[0] + '"' + (view.t === t[0] ? ' selected' : '') + '>Статус: ' + t[1] + ' (' + a.filter(tabTest(t[0])).length + ')</option>'; }).join("") + '</select></div></div>' +
     '<div class="row2"><div class="or-ch" role="group" aria-label="Канал"><button class="chip" type="button" data-ch="" aria-pressed="' + (!view.ch) + '">Всички канали</button>' + Object.keys(CH).map(function(k){ var n = a.filter(function(o){ return o.channel === k && tabTest(view.t)(o); }).length;
       return '<button class="chip" type="button" data-ch="' + k + '" aria-pressed="' + (view.ch === k) + '">' + ic(CH[k][1],18) + CH[k][0] + ' <span class="n">' + n + '</span></button>'; }).join("") + '</div>' +
     '<div class="sa-field-s"><label class="vh" for="or-q">Търси поръчка</label>' + ic("magnifying-glass",20) + '<input class="input" id="or-q" type="search" placeholder="№, телефон или адрес" autocomplete="off" value="' + esc(view.q) + '"></div></div></div>'; }
@@ -193,7 +181,7 @@ function barHTML(){ var a = all();
 var wide = function(){ return body.getBoundingClientRect().width >= 1080; };
 function listHTML(){ var l = shown();
   if (!l.length){ if (view.q || view.ch) return '<div class="sa-card">' + A.empty({icon:"magnifying-glass", title:"Няма поръчка с този избор.", text:view.q ? "Търсете по № (например 1047), последните цифри на телефона или квартала." : "", action:'<button class="pill pill-line pill-lg" type="button" data-clear>' + ic("x",20) + 'Покажи всички</button>'}) + '</div>';
-    return '<div class="sa-card">' + A.empty({icon:view.t === "work" ? "check-circle" : "receipt", title:view.t === "work" ? "Няма поръчки в работа." : "Няма поръчки със статус „" + TABS.filter(function(x){ return x[0] === view.t; })[0][1] + "“.", text:view.t === "work" ? "Новата поръчка идва тук сама, с лента в жар и звук на таблета на кухнята." : ""}) + '</div>'; }
+    return '<div class="sa-card">' + A.empty({icon:view.t === "work" ? "check-circle" : "receipt", title:view.t === "work" ? "Няма поръчки в работа." : "Няма поръчки със статус „" + TABS.filter(function(x){ return x[0] === view.t; })[0][1] + "“.", text:view.t === "work" && !kitchenOpen() ? "Кухнята приема поръчки от 10:00 до 22:30. Днешните са в „Доставена“ и „Отказана“." : view.t === "work" ? "Новата поръчка идва тук сама, с лента в жар и звук на таблета на кухнята." : ""}) + '</div>'; }
   if (view.t === "work" && wide()){ return '<div class="or-board">' + ["accepted","cooking","ready","on_way"].map(function(k){ var c = l.filter(function(o){ return o.status === k; });
     return '<section class="or-colm" aria-labelledby="col-' + k + '"><div class="or-colh"><h2 id="col-' + k + '"><span class="dot c-' + k + '"></span>' + LABEL[k] + '</h2><span class="n">' + c.length + '</span></div>' + (c.length ? c.map(cardHTML).join("") : '<p class="or-none">Няма</p>') + '</section>'; }).join("") + '</div>'; }
   return '<div class="or-grid">' + l.map(cardHTML).join("") + '</div>'; }
@@ -205,25 +193,28 @@ function draw(keep){
   var y = A.scroller.scrollTop, act = document.activeElement && document.activeElement.id === "or-q";
   body.innerHTML = (st === "offline" ? A.offline("Връзката прекъсна. Показваме поръчките отпреди малко; новите ще дойдат, щом се свържем отново.") + '<div style="height:16px"></div>' : '') +
     (banner ? '<div class="or-new" data-edit-id="admin.orders.new">' + A.banner({tone:"ember", icon:"bell-ringing", title:"Нова поръчка № " + banner.no, text:esc(CH[banner.channel][0] + (banner.zone ? " · " + banner.zone : "") + " · " + SC.fmt(sums(banner).total) + " · " + banner.lines.map(function(l){ return l.q + " × " + SC.byId[l.id].n; }).join(", ")), action:'<button class="pill" type="button" data-seenew>' + ic("receipt",20) + 'Виж поръчката</button>'}) + '</div>' : '') +
-    '<p style="margin:0 0 12px">' + A.sample() + ' <span class="muted" style="font-size:15px">поръчките, хората и адресите</span>' + '</p>' + barHTML() + '<div id="or-list" role="tabpanel">' + listHTML() + '</div>';
+    '<p class="or-sm">' + ic("info",18) + '<span>Примерни данни: поръчките, хората и адресите. Ястията и цените са истински.</span></p>' + barHTML() + '<div id="or-list" role="tabpanel">' + listHTML() + '</div>';
   if (keep) A.scroller.scrollTop = y; if (act){ var i = body.querySelector("#or-q"); i.focus({preventScroll:true}); i.setSelectionRange(i.value.length, i.value.length); }
   A.setBadge("orders", all().filter(function(o){ return o.status === "accepted"; }).length); }
 function drawList(){ var box = body.querySelector("#or-list"); if (!box) return draw(true); box.innerHTML = listHTML();
   var b = body.querySelector(".or-bar"), tmp = document.createElement("div"); tmp.innerHTML = barHTML();
-  b.querySelector(".sa-tabs").innerHTML = tmp.querySelector(".sa-tabs").innerHTML; b.querySelector(".or-ch").innerHTML = tmp.querySelector(".or-ch").innerHTML; }
+  b.querySelector(".sa-tabs").innerHTML = tmp.querySelector(".sa-tabs").innerHTML; b.querySelector(".or-ch").innerHTML = tmp.querySelector(".or-ch").innerHTML; b.querySelector(".or-sel").innerHTML = tmp.querySelector(".or-sel").innerHTML; }
 draw();
 var lastW = body.getBoundingClientRect().width; new ResizeObserver(function(){ var w = body.getBoundingClientRect().width; if ((w >= 1080) !== (lastW >= 1080)) drawList(); lastW = w; }).observe(body);
 
 /* ---------- на живо: нова поръчка (прототип: 8 сек. след отваряне; #st=new веднага) ---------- */
-function arrive(){ if (D.list.some(function(o){ return o.no === "1053"; })) return;
-  var o = {no:"1053", ts:Date.now(), channel:"delivery", mode:"delivery", status:"accepted", zone:"Дружба 2", addr:"Дружба 2, бл. 118, вх. В", lines:[L("pitsa-kaprichoza"), L("salata-tsezar-s-beybi-kalmari"), L("sufle")], pay:"cash", name:"Клиент 12", phone:"0888 00 00 12", times:{accepted:new Date().toISOString()}};
-  D.list.push(o); save(); fresh[o.no] = 1; banner = o; draw(true); A.audit("order.new", "Нова поръчка № 1053 (примерна)", "1053"); }
+function kitchenOpen(){ var m = A.sofia(now()); m = m.h * 60 + m.m; return m >= 600 && m < 1350; }
+function arrive(){ if (!kitchenOpen() || D.list.some(function(o){ return o.arrived; })) return;
+  var m = A.sofia(now()); m = m.h * 60 + m.m; var dl = m < 1260, no = String(D.list.reduce(function(a, o){ return Math.max(a, +o.no); }, 1041) + 1), k = +no - 1041;
+  var o = {no:no, arrived:true, ts:now().getTime(), channel:dl ? "delivery" : "pickup", mode:dl ? "delivery" : "pickup", status:"accepted", lines:[L("pitsa-kaprichoza"), L("salata-tsezar-s-beybi-kalmari"), L("sufle")], pay:"cash", name:"Клиент " + k, phone:"0888 00 00 " + String(k).padStart(2, "0"), times:{accepted:now().toISOString()}};
+  if (dl){ o.zone = "Дружба 2"; o.addr = "Дружба 2, бл. 118, вх. В"; }
+  D.list.push(o); save(); fresh[o.no] = 1; banner = o; draw(true); A.audit("order.new", "Нова поръчка № " + no + " (примерна)", no); }
 if (st === "new") arrive(); else if (!st) setTimeout(arrive, 8000);
 setInterval(function(){ if (!document.querySelector(".sa-ov .sheetwrap.on") && st !== "loading" && st !== "error") drawList(); }, 30000);
 
 /* ---------- смяна на статус (с „Отмени“) ---------- */
 function setStatus(o, to, extra){ var prev = {status:o.status, times:JSON.parse(JSON.stringify(o.times)), reason:o.reason, driver:o.driver};
-  o.status = to; o.times[to] = new Date().toISOString(); if (extra) Object.assign(o, extra); if (to === "on_way" && !o.driver) o.driver = "Шофьор 2";
+  o.status = to; o.times[to] = now().toISOString(); if (extra) Object.assign(o, extra); if (to === "on_way" && !o.driver) o.driver = "Шофьор 2";
   delete fresh[o.no]; if (banner && banner.no === o.no) banner = null; save(); drawList(); if (!banner) { var nb = body.querySelector(".or-new"); nb && nb.remove(); }
   var txt = "№ " + o.no + ": " + LABEL[to] + (to === "on_way" ? " · " + o.driver : "") + (to === "cancelled" && o.reason ? " (" + o.reason + ")" : "");
   A.audit("order.status", txt, o.no);
@@ -238,6 +229,7 @@ body.addEventListener("click", function(e){ var t;
   if (e.target.closest("[data-seenew]")){ var b = banner; banner = null; var nb = body.querySelector(".or-new"); nb && nb.remove(); detail(b); return; }
 });
 body.addEventListener("input", function(e){ if (e.target.id === "or-q"){ view.q = e.target.value; drawList(); } });
+body.addEventListener("change", function(e){ if (e.target.id !== "or-st") return; view.t = e.target.value; A.setHash(Object.assign({}, A.st ? {st:A.st} : {}, view.t !== "work" ? {s:view.t} : {}, view.ch ? {ch:view.ch} : {})); drawList(); var n = body.querySelector("#or-st"); n && n.focus({preventScroll:true}); });
 
 /* ---------- детайл в лист ---------- */
 function sheet(o){ var h = document.querySelector("sa-pen-ui"), fab = h && h.shadowRoot && h.shadowRoot.querySelector(".fab"), oc = o.onClose;
