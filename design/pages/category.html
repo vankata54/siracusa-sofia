@@ -284,7 +284,7 @@ function chipsHTML(){ var h = '<button class="chip" type="button" data-allergens
 function cardHTML(x){ var h = SC.dishCard(x);
   if (SC.isOut(x)) h = h.replace('<div class="dcard"', '<div class="dcard is-out"');
   if (x.comp) h = h.replace('</a><div class="rowp">', '<span class="cp">'+esc(cap(x.comp))+'</span></a><div class="rowp">');
-  if (state.no.length && !x.comp) h = h.replace(/<\/div><\/div>$/, '</div><p class="nodata">'+ic("warning-circle",16)+'<span>Няма данни за алергени. Попитайте ни.</span></p></div>');
+  if (state.no.length && !x.comp) h = h.replace(/<\/div><\/div>$/, '</div><p class="nodata">'+ic("warning-circle",16)+'<span>Нямаме пълен състав, попитайте ни.</span></p></div>');
   if (bfClosed() && !SC.isOut(x)) h = h.replace(/<\/div><\/div>$/, '<span class="later">Утре<br>от 10:00</span></div></div>');
   return h; }
 function bfClosed(){ var s = SC.state(); return cat.id==="zakuski" && !s.breakfast; }

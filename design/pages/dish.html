@@ -234,7 +234,7 @@ function allergenBlock(d){ var al = d.al || [], diet = [];
   var h = '<div class="fblk"><h2 class="h3">Алергени</h2>';
   if (!d.comp){
     h += (al.length ? '<p class="algnone" style="margin-bottom:8px">Съдържа поне:</p><ul class="algs" style="list-style:none;padding:0">'+items+'</ul>' : '')+
-      '<p class="algnone">'+(al.length?'Пълни данни за алергените още нямаме.':'Няма данни за алергени, попитайте ни.')+'</p>'+
+      '<p class="algnone">'+(al.length?'Пълни данни за алергените още нямаме.':'Нямаме пълен състав, попитайте ни.')+'</p>'+
       '<p class="note-auto" style="margin:0">'+ic("info",18)+'<span>Кухнята въвежда състава и алергените на това ястие. Дотогава ви казваме по телефона.</span></p>'+
       '<div class="ask"><a class="pill pill-line" href="tel:+359894365577">'+ic("phone",20)+'Попитай: 0894 36 55 77</a></div>';
   } else {
