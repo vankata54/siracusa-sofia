@@ -153,7 +153,7 @@ var K = [
 /* обърната е само плочката, която иска действие сега: изчерпани днес (и нови бележки, ако няма изчерпани) */
 K.forEach(function(k){ k[7] = k[0] === "menu" && k[6]; });
 /* оборотът днес: само собственик и главен админ (решение 15.11, „Админът, допълнения“ 5) */
-if (me.role === "admin" || me.role === "owner"){ var sales = A.todaySales(); K.unshift(["dashboard","Днес","wallet", '<span class="sum">' + SC.fmt(sales.sum) + '</span>', "от " + A.plural(sales.n, "поръчка", "поръчки") + " · " + SAMPLE, "reports.html#p=today"]); }
+if (me.role === "admin" || me.role === "owner"){ var sales = A.todaySales(); K.unshift(["dashboard","Днес","wallet", '<span class="sum">' + SC.fmt(sales.sum) + '</span>', "от " + A.plural(sales.n, "поръчка", "поръчки") + " " + SAMPLE, "reports.html#p=today"]); }
 function kpis(){ if (st === "loading") return A.skel(2, "Зареждаме таблото …");
   if (st === "error") return A.error("Не успяхме да заредим числата за днес. Модулите и разделите работят.");
   if (!K.length) return "";

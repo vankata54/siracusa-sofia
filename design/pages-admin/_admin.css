@@ -37,7 +37,7 @@ body{background:var(--bg)}
 .sa-i[aria-current="page"] .ic{color:var(--ember)}
 .sa-i .lb{flex:1; min-width:0}
 .sa-i .sh{display:none}
-.sa-n{min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
+.sa-n{white-space:nowrap; min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
 .sa-i .soon{flex:none; min-height:26px; padding:0 9px}
 .sa-sidefoot{flex:none; padding:8px 10px 10px; border-top:1px solid var(--line)}
 .sa-collapse .ic{color:var(--muted)}
@@ -263,7 +263,7 @@ select.input{appearance:none; -webkit-appearance:none; padding-right:44px; backg
 .missing{font-size:inherit}
 
 /* ---------- toast (one at a time; phone: under the top bar, wider: bottom centre) ---------- */
-.sa-toast{position:absolute; z-index:70; left:50%; bottom:92px; transform:translate(-50%,160%); opacity:0; display:flex; align-items:center; gap:10px; min-height:56px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); width:max-content; max-width:calc(100% - 24px); line-height:1.3; pointer-events:none}
+.sa-toast{position:absolute; z-index:70; left:50%; bottom:164px; /* над долната лента и над кръглия „Молив“ */ transform:translate(-50%,160%); opacity:0; display:flex; align-items:center; gap:10px; min-height:56px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); width:max-content; max-width:calc(100% - 24px); line-height:1.3; pointer-events:none}
 .sa-toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}
 .sa-toast .tx{min-width:0}
 .sa-toast button, .sa-toast a{flex:none; min-height:44px; padding:0 16px; border:0; border-radius:999px; background:color-mix(in srgb, var(--bg) 18%, transparent); color:inherit; font-weight:800; font-size:16px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px}
@@ -323,9 +323,15 @@ select.input{appearance:none; -webkit-appearance:none; padding-right:44px; backg
 /* ключът „Звук“ (нови онлайн поръчки) */
 .sa-snd .sm{display:none}
 .sa-snd[aria-pressed="false"] .ic{color:var(--muted)}
-.sa-snd.wait{box-shadow:inset 0 0 0 1.5px var(--ember)}
+.sa-snd[aria-pressed="true"]{background:transparent; color:var(--ink)}
+.sa-snd[aria-pressed="true"]:hover{background:var(--surface-2)}
+.sa-snd[aria-pressed="true"] .ic{color:var(--ok)}
+.sa-snd.wait{background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.sa-snd.wait .ic{color:var(--ink)}
 @container app (max-width:1279px){ .sa-snd .lg{display:none} .sa-snd .sm{display:inline} }
 /* нова поръчка: значката мига спокойно 2 минути; при „намалено движение“ само цвят и дума „Нова“ */
 @keyframes sa-fresh{0%,100%{transform:scale(1); opacity:1} 50%{transform:scale(1.18); opacity:.75}}
 .sa-n.fresh, .fresh .sa-n{background:var(--ember); color:var(--on-ember); animation:sa-fresh 1.6s var(--ease) infinite}
 @media (prefers-reduced-motion: reduce){ .sa-n.fresh, .fresh .sa-n{animation:none} .sa-n.fresh::after, .fresh .sa-n::after{content:" Нова"; font-weight:800} }
+/* компютър до 1500: по-тясно търсене, темата е в профила, за да има място за името на раздела и „Звук“ */
+@container app (min-width:1100px) and (max-width:1499px){ .sa-top .sa-search input{width:240px} .sa-top [data-sa="theme"]{display:none !important} .sa-me .who small{display:none} }
