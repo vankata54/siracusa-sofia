@@ -152,6 +152,7 @@ K.src = function(o){
   if (o.kind === "delivery") return {ic:"moped", k:"Доставка", t:"№ " + o.num, who:"шофьора"};
   return {ic:"storefront", k:"Вземане" + (o.sched ? "" : " в " + (o.pickupAt || "")), t:"№ " + o.num, who:"клиента", pick:true};
 };
+K.keyOf = function(o){ return (o.kind === "table" ? "t" : o.kind === "delivery" ? "d" : "p") + o.num; }; /* за „Търси“ и #go= */
 K.srcText = function(o){ return o.kind === "table" ? "Маса " + o.num : (o.kind === "delivery" ? "Доставка № " : "Вземане № ") + o.num; };
 
 /* ---------- ticket ---------- */
@@ -239,15 +240,33 @@ K.mount = function(opt){
         var n = t[0] === "queue" ? '<span class="n" data-qn>' + qn + '</span>' : t[0] === "item-out" && outN ? '<span class="n warn">' + outN + '</span>' : "";
         return '<a href="' + K.link(t[0]) + '"' + (opt.page === t[0] ? ' aria-current="page"' : '') + '>' + ic(t[2],22) + t[1] + n + '</a>'; }).join("") + '</nav>' +
       '<div class="kclock"><span class="net' + (off ? " off" : "") + '" role="status"><i></i><span>' + (off ? "Няма връзка" : "Онлайн") + '</span></span><b data-clock>' + K.hm(K.now()) + '</b></div>' +
-    proto(opt.page) + '</header><div class="kstripw"><div class="kstrip" data-strip></div><div class="ktoasts" aria-live="polite"></div></div><main class="kmain" id="main"></main>';
+    proto(opt.page) + '</header><div class="kstripw"><div class="kstrip" data-strip></div>' +
+    '<div class="ktools"><button class="kpill" type="button" data-kfind aria-label="Търси в чакащите поръчки: номер, маса, ястие">' + ic("magnifying-glass",22) + 'Търси</button><span class="kpenslot" data-penslot></span></div>' +
+    '<div class="ktoasts" aria-live="polite"></div></div><main class="kmain" id="main"></main>';
   document.body.appendChild(d);
   var clock = d.querySelector("[data-clock]"); setInterval(function(){ clock.textContent = K.hm(K.now()); }, 1000);
   K.protoBind(d);
   K.strip = d.querySelector("[data-strip]");
   if (off) K.strip.innerHTML = K.offlineHTML(opt.page);
+  d.querySelector("[data-kfind]").addEventListener("click", function(){ K.openFind(); });
+  mountPen(d, opt);
   return d.querySelector("main"); };
+
+/* ---------- pencil for recommendations (решение 15.11): only for a signed-in kitchen member ----------
+   ../pages-admin/_pen-mount.js (data-auto="false") reads "sa-session" and writes to "sa-notes" with the source.
+   The button is moved into the row of the buttons under the top bar (next to „Търси“), in the flow:
+   it never covers „Започни“ / „Готово“ on the cards, the counters, the toast or „Нова поръчка“. */
+function mountPen(d, opt){ if (!window.SAPenMount || opt.page === "login" || opt.page === "index") return;
+  K.pen = SAPenMount.mount({module:"kuhnya"});
+  var slot = d.querySelector("[data-penslot]"); if (K.pen && K.pen.button && slot) slot.appendChild(K.pen.button); }
+K.signIn = function(sec){ try{ localStorage.setItem("sa-session", JSON.stringify({user:"kitchen", name:sec === "all" ? "Главен готвач" : "Кухня · " + (K.shortSec[sec] || "Скара"), role:"kitchen"})); }catch(e){} };
+K.signedIn = function(){ try{ var s = JSON.parse(localStorage.getItem("sa-session") || "null"); return !!(s && s.role); }catch(e){ return false; } };
+/* the search: loaded on first use (_find.js + ../ds/search.js for the dish names) */
+function loadJs(src, cb){ var el = document.createElement("script"); el.src = src; el.onload = cb; document.head.appendChild(el); }
+K.openFind = function(){ if (K.find){ K.find(); return; } var go = function(){ loadJs("_find.js", function(){ K.find && K.find(); }); }; if (window.SCSearch) go(); else loadJs("../ds/search.js", go); };
 K.protoBind = function(d){
   var pb = d.querySelector(".kproto > button"); pb.addEventListener("click", function(){ var p = d.querySelector(".kproto .pp"); p.hidden = !p.hidden; pb.setAttribute("aria-expanded", String(!p.hidden)); });
+  d.querySelectorAll("[data-sess]").forEach(function(b){ b.addEventListener("click", function(){ if (b.getAttribute("data-sess") === "1") K.signIn(K.secId); else { try{ localStorage.removeItem("sa-session"); }catch(e){} } location.reload(); }); });
   d.querySelectorAll("[data-theme-set]").forEach(function(b){ b.addEventListener("click", function(){ store("theme", b.getAttribute("data-theme-set")); K.hash.t = b.getAttribute("data-theme-set"); location.hash = hashStr(); location.reload(); }); }); };
 K.proto = function(page){ return proto(page); };
 function hashStr(){ return Object.keys(K.hash).filter(function(k){ return K.hash[k]; }).map(function(k){ return k + "=" + K.hash[k]; }).join("&"); }
@@ -258,6 +277,7 @@ function proto(page){
     (page === "login" ? "" : '<div class="opts">' + states.map(function(s){ var h = Object.assign({}, K.hash, {st:s[0]});
       return '<a href="' + page + '.html#' + Object.keys(h).filter(function(k){ return h[k]; }).map(function(k){ return k + "=" + h[k]; }).join("&") + '" aria-pressed="' + (K.st === s[0]) + '" onclick="setTimeout(function(){location.reload()},0)">' + s[1] + '</a>'; }).join("") + '</div>') +
     '<div class="opts"><button type="button" data-theme-set="dark" aria-pressed="' + (K.theme !== "light") + '">Тъмна тема</button><button type="button" data-theme-set="light" aria-pressed="' + (K.theme === "light") + '">Светла тема</button></div>' +
+    (page === "login" ? "" : '<h3>Влязъл служител (за молива)</h3><div class="opts"><button type="button" data-sess="1" aria-pressed="' + K.signedIn() + '">С молив</button><button type="button" data-sess="0" aria-pressed="' + !K.signedIn() + '">Без молив</button></div>') +
     '<div class="opts"><a href="index.html">Всички екрани</a></div></div></div>'; }
 K.offlineHTML = function(page){
   var p = page === "queue" ? 'Данните са от <b class="num">19:41</b>. Таймерите вървят по часовника на таблета. „Готово“ се запазва и се изпраща, щом връзката се върне.'

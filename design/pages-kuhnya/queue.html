@@ -14,6 +14,8 @@
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
 <script src="_kitchen.js"></script>
 <script>
 (function(){
@@ -142,6 +144,12 @@ function arriveO(o){ newO = o; orders.push(o); orders.sort(function(a, b){ retur
 function arrive(){ arriveO(K.newOrder()); }
 render();
 if (K.st === "new") setTimeout(arrive, 250);
+/* „Търси“: отива на картата и я отбелязва за миг (и от другите екрани през #go=t12 / d1042 / p1043) */
+K.goTo = function(k){ var i = -1; orders.forEach(function(o, j){ if (K.keyOf(o) === k) i = j; }); if (i < 0) return false;
+  var q = main.querySelector("[data-q]"), card = q && q.querySelector('[data-o="' + i + '"]'); if (!card) return false;
+  lastTouch = Date.now(); q.scrollTo({left:Math.max(0, card.offsetLeft - 16), behavior:SC.reduce ? "auto" : "smooth"});
+  card.classList.add("found"); setTimeout(function(){ card.classList.remove("found"); }, 2600); return true; };
+if (K.hash.go) setTimeout(function(){ K.goTo(K.hash.go); }, 400);
 })();
 </script>
 </body>

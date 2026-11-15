@@ -41,7 +41,8 @@ function search(raw){ var q = lat(raw), words = q.split(" ").filter(function(w){
   /* dishes (not for numbers and times only) */
   var dishQ = txt.filter(function(w){ return !wordHit(w, ["изчерпано","изчерпани","резервация","резервации","моите","салон","градина"]) && !Object.keys(SW).some(function(k){ return wordHit(w, SW[k]); }); });
   var dq = raw.replace(/\d+(:\d+)?/g, " ").trim();
-  if (dishQ.length && dq) r.dish = S.searchDishes(DL, dq);
+  if (dishQ.length && dq){ var sd = S.searchDishes(DL, dq), back = function(l){ return l.map(function(d){ return SC.byId[d.id]; }); };
+    r.dish = {query:sd.query, band:sd.band, name:back(sd.name), comp:back(sd.comp), rest:back(sd.rest), unknown:back(sd.unknown)}; }
   /* orders: by number, or the dishes found by name */
   var ids = r.dish ? r.dish.name.map(function(d){ return d.id; }) : [];
   ST.db.orders.forEach(function(o){ var hit = nums.some(function(n){ return n.length >= 3 && o.id.indexOf(n) > -1; }) || (ids.length && o.lines.some(function(l){ return ids.indexOf(l.id) > -1; }));
@@ -50,7 +51,7 @@ function search(raw){ var q = lat(raw), words = q.split(" ").filter(function(w){
   /* reservations */
   ST.resAll().forEach(function(x){ var hit = kRes;
     if (!hit && time) hit = ST.hm(x.at) === (time[1].length < 2 ? "0" : "") + time[1] + ":" + time[2];
-    if (!hit) hit = nums.some(function(n){ return n.length >= 3 ? x.phone.replace(/\s/g, "").indexOf(n) > -1 : String(x.t) === n || ST.hm(x.at).indexOf(n + ":") === 0; });
+    if (!hit && !time) hit = nums.some(function(n){ return n.length >= 3 ? x.phone.replace(/\s/g, "").indexOf(n) > -1 : String(x.t) === n || ST.hm(x.at).indexOf(n + ":") === 0; });
     if (!hit && txt.length) hit = txt.every(function(w){ return lat(x.name + " " + x.note).split(" ").some(function(p){ return p.indexOf(w) === 0; }); });
     if (hit) r.res.push(x); });
   /* out of stock today */
@@ -66,7 +67,7 @@ function oRow(o){ var lines = o.lines.map(function(l){ return l.q+'× '+esc(ST.l
   return '<a class="frow" href="table.html#'+o.t+'"><span class="fi">'+ic("receipt",22)+'</span><span><b>№ '+o.id+' · Маса '+o.t+(o.bill?' · '+esc(o.bill):'')+'</b><small>'+lines+' · '+ST.clock(o.at)+'</small></span><span class="fr">'+stx+'</span></a>'; }
 function rRow(x){ return '<a class="frow" href="tables.html#res"><span class="fi">'+ic("calendar-check",22)+'</span><span><b>'+ST.hm(x.at)+' · Маса '+x.t+' · '+SC.plural(x.n,"човек","души")+'</b><small>'+esc(x.name)+' · '+esc(x.phone)+' · '+ST.dayText(x.day)+(x.note?' · '+esc(x.note):'')+'</small></span><span class="fr">'+ic("caret-right",20)+'</span></a>'; }
 function dRow(x){ var out = SC.isOut(x);
-  return '<a class="frow" href="order.html#q='+encodeURIComponent(x.n)+'">'+SC.pic(x)+'<span><b>'+esc(x.n)+'</b><small>'+esc(CAT[x.cat]||"")+' · '+(x.per100?'за 100 гр.':esc(x.g))+'</small></span><span class="fr">'+(out?'<span class="out-b">'+ic("clock",16)+'Изчерпано днес</span>':'<span class="price">'+fmt(x.p)+'</span>')+'</span></a>'; }
+  return '<a class="frow" href="order.html#q='+encodeURIComponent(x.n)+'">'+SC.pic(x)+'<span><b>'+esc(x.n)+'</b><small>'+[esc(CAT[x.cat]||""), x.per100?'за 100 гр.':esc(x.g||"")].filter(Boolean).join(" · ")+'</small></span><span class="fr">'+(out?'<span class="out-b">'+ic("clock",16)+'Изчерпано днес</span>':'<span class="price">'+fmt(x.p)+'</span>')+'</span></a>'; }
 function grp(title, list, row, key, max){ if (!list.length) return ""; max = max || 5; var open = more[key];
   return '<section class="fgrp"><h3>'+title+'<span class="muted">'+list.length+'</span></h3>'+list.slice(0, open ? 99 : max).map(row).join("")+(list.length > max && !open ? '<button class="link fmore" type="button" data-more="'+key+'">Още '+(list.length - max)+ic("caret-down",18)+'</button>' : '')+'</section>'; }
 var more = {};

@@ -57,7 +57,7 @@ render();
 main.addEventListener("submit", function(e){ e.preventDefault(); });
 document.addEventListener("submit", function(e){ e.preventDefault(); var u = main.querySelector("#u"), p = main.querySelector("#p"); uv = u.value;
   uErr = u.value.trim() ? "" : "Въведете потребител."; pErr = p.value ? "" : "Въведете парола.";
-  if (uErr || pErr){ render(); main.querySelector(uErr?"#u":"#p").focus(); return; } view = "car"; render(); window.scrollTo(0,0); });
+  if (uErr || pErr){ render(); main.querySelector(uErr?"#u":"#p").focus(); return; } DR.signIn(); view = "car"; render(); window.scrollTo(0,0); });
 main.addEventListener("input", function(e){ if (e.target.id==="kmnow") kmv = e.target.value; if (e.target.id==="fl") flv = e.target.value; if (e.target.id==="u") uv = e.target.value; });
 document.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b || b.closest(".proto")) return;
   if (b.hasAttribute("data-show")){ var p = main.querySelector("#p"); shown = p.type==="password"; p.type = shown ? "text" : "password"; b.setAttribute("aria-pressed", shown); b.innerHTML = ic("eye",20)+(shown?"Скрий":"Покажи"); return; }

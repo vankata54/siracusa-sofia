@@ -14,9 +14,23 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .st-top .tt b{font-size:20px; font-weight:800; letter-spacing:-.025em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .st-top .tt span{font-size:14px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .st-back{display:inline-flex; align-items:center; gap:4px; min-height:48px; padding:0 14px 0 8px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; text-decoration:none; cursor:pointer; flex:none}
-.st-me{display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:0 14px 0 12px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:15px; cursor:pointer; flex:none; white-space:nowrap}
-.st-me .dot{width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+/* right side of the top bar: compact icon + word buttons (Търси · Молив · Смяна), 56 x 56, in the flow: nothing floats over the page */
+.st-tools{display:flex; align-items:center; gap:4px; flex:none}
+.st-penslot{display:contents}
+.st-tb,.st-top .sa-pen-btn{position:static; display:grid; justify-items:center; align-content:center; gap:3px; width:auto; min-width:56px; height:56px; min-height:56px; padding:0 6px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:14px; line-height:1; cursor:pointer; flex:none; white-space:nowrap; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; -webkit-tap-highlight-color:transparent}
+.st-tb:hover,.st-top .sa-pen-btn:hover{background:var(--surface-2)}
+.st-tb:active,.st-top .sa-pen-btn:active{transform:scale(.95)}
+.st-tb > .ic,.st-tb .tbi .ic{width:22px; height:22px; color:var(--red)}
+.st-tb .tbi{position:relative; display:block; height:22px}
+.st-me .dot{position:absolute; right:-5px; top:-3px; width:11px; height:11px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 2px var(--bg)}
 .st-me.off .dot{background:var(--warn)}
+.st-me .tbi .ic{color:var(--ink)}
+/* the pencil button comes from ../pages-admin/_pen-mount.js; here it sits in the top bar like the other two */
+.st-top .sa-pen-btn{background:transparent !important; color:var(--ink) !important}
+.st-top .sa-pen-btn svg{width:22px; height:22px; color:var(--red)}
+.st-top .sa-pen-btn[aria-pressed="true"]{background:var(--ember) !important; color:var(--on-ember) !important}
+.st-top .sa-pen-btn[aria-pressed="true"] svg{color:var(--on-ember)}
+@media (min-width:700px){ .st-top .sa-pen-btn{min-height:56px; padding:0 6px; font-size:14px} }
 .st-word{font-weight:800; font-size:22px; letter-spacing:-.05em}
 
 /* offline strip under the top bar */
@@ -286,8 +300,9 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .car[aria-pressed="true"] .ii{background:var(--bg); color:var(--ink)}
 
 @container app (max-width:370px){
+  .st-top{padding-left:12px; gap:6px}
+  .st-tb,.st-top .sa-pen-btn{min-width:52px; padding:0 4px}
   .st-top .tt b{font-size:18px}
-  .st-me{padding:0 12px 0 10px}
   .addr b{font-size:23px}
   .dsum b{font-size:22px} .dsum b.sm{font-size:18px}
   .dsum > *{padding:10px 10px}
@@ -329,3 +344,55 @@ a.chip{text-decoration:none; color:var(--ink)}
 .owe{border-radius:24px; padding:16px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn)}
 .owe b{display:block; font-size:36px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
 @media (max-width:370px){ .st-bar .pill .ic{display:none} .st-bar .pill{padding:0 10px} }
+
+.search{position:relative}
+.search .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.search .input{min-height:56px; padding-left:50px; padding-right:56px; border-radius:999px; font-size:17px}
+.search .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.search .clr .ic{position:static; transform:none; color:var(--ink)}
+/* one clear button only: the browser's own × of type=search is hidden */
+.search input[type="search"]::-webkit-search-cancel-button,.search input[type="search"]::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}
+.search input[type="search"]::-ms-clear{display:none}
+
+/* ---------- the driver's search (own deliveries: number, address); same as the waiter's ---------- */
+.st-findfield{display:flex; align-items:center; gap:10px; width:100%; min-height:56px; padding:0 18px; border:0; border-radius:999px; background:var(--surface); color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line-strong); font:inherit; font-size:16px; font-weight:600; text-align:left; cursor:text}
+.st-findfield .ic{color:var(--muted); flex:none}
+.st-findfield span{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.st-find{position:fixed; inset:0; z-index:85; display:flex; justify-content:center; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity var(--t-base) var(--ease)}
+.st-find.on{opacity:1; pointer-events:auto}
+.st-find .fwin{position:relative; width:min(100%, 430px); height:100%; display:flex; flex-direction:column; background:var(--bg); transform:translateY(-16px); transition:transform var(--t-slow) var(--ease)}
+.st-find.on .fwin{transform:none}
+.st-find .fhead{flex:none; display:flex; align-items:center; gap:6px; padding:8px 8px 10px 12px; box-shadow:0 1px 0 var(--line)}
+.st-find .fhead .search{flex:1; min-width:0}
+.st-find .fhead .search .input{min-height:56px}
+.st-find .fx{min-height:56px; padding:0 10px; border:0; border-radius:16px; background:transparent; color:var(--ink); font-weight:800; font-size:15px; cursor:pointer; display:grid; justify-items:center; align-content:center; gap:3px; line-height:1}
+.st-find .fx .ic{width:22px; height:22px}
+.st-find .fbody{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:4px 16px 40px}
+.st-find .fscope{margin:12px 0 0; font-size:14px; color:var(--muted); font-weight:600}
+.st-find .fchips{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0}
+.st-find .fchips .chip{min-height:48px}
+.st-find .fchips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
+.fgrp{margin-top:20px}
+.fgrp > h3{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 6px; font-size:18px; font-weight:800; letter-spacing:-.02em}
+.fgrp > h3 .muted{font-size:14px; font-weight:700}
+.fband{display:flex; align-items:center; gap:8px; margin:16px 0 4px; padding:10px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; font-weight:800}
+.fband .ic{color:var(--red); flex:none}
+.fband.unk{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.fband.unk .ic{color:var(--warn)}
+.fband small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-top:2px}
+.frow{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; min-height:64px; padding:8px 4px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink); text-decoration:none; text-align:left; width:100%; font:inherit; cursor:pointer}
+.frow .fi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--ink); flex:none; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.frow .fi.call,.frow .fi.bill{background:var(--red); color:var(--on-red)}
+.frow .fi.ready{background:var(--ember); color:var(--on-ember)}
+.frow .fi.free{background:var(--surface); color:var(--ok); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.frow .pic{width:44px; height:44px; border-radius:14px}
+.frow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.frow small{display:block; font-size:14px; font-weight:600; color:var(--muted); line-height:1.3; margin-top:2px}
+.frow .fr{font-size:15px; font-weight:800; white-space:nowrap; text-align:right}
+.frow .fr .out-b{display:inline-flex; align-items:center; gap:4px; color:var(--warn); font-size:14px}
+.frow mark{background:var(--ember-soft); color:inherit; border-radius:4px; padding:0 2px}
+.fmore{min-height:48px; margin-top:4px}
+.fempty{display:grid; justify-items:center; gap:8px; text-align:center; padding:40px 12px 0}
+.fempty .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
+.fempty h3{margin:4px 0 0; font-size:22px; font-weight:800; letter-spacing:-.02em}
+.fempty p{margin:0; color:var(--muted); max-width:32ch}

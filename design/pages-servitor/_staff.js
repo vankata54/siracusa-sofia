@@ -43,7 +43,7 @@ function seedRes(kind){ if (kind === "empty") return [];
   var now = new Date(), m = now.getHours()*60 + now.getMinutes(), day = ST.dayKey(now);
   var free = ST.SLOTS.filter(function(x){ return x > m + 45; });
   if (free.length < 3){ var t = new Date(now.getTime() + 864e5); day = ST.dayKey(t); free = ST.SLOTS.filter(function(x){ return x >= 1110; }); }
-  return [[free[0],6,4,"Клиент 1",""],[free[1],10,6,"Клиент 2","Рожден ден, торта от тях"],[free[2],19,2,"Клиент 3","Маса в градината"]].map(function(r, i){
+  return [[free[0],6,4,"Клиент 1",""],[free[1],10,6,"Клиент 2","Детско столче"],[free[2],19,2,"Клиент 3","Маса в градината"]].map(function(r, i){
     return {id:"r"+(i+1), day:day, at:r[0], t:r[1], n:r[2], name:r[3], phone:"0888 12 34 5"+(i+6), note:r[4], by:i===1?"сайт":"телефон"}; }); }
 ST.resOn = function(day){ return (ST.db.res||[]).filter(function(r){ return r.day === day; }).sort(function(a,b){ return a.at - b.at; }); };
 ST.resAll = function(){ return (ST.db.res||[]).slice().sort(function(a,b){ return a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at; }); };
@@ -256,16 +256,6 @@ ST.openFind = function(q){ if (ST.find){ ST.find(q); return; }
   var go = function(){ loadScript("_find.js", function(){ ST.find && ST.find(q); }); };
   if (window.SCSearch) go(); else loadScript("../ds/search.js", go); };
 
-/* ---------- search (Latin or Cyrillic, forgiving) ---------- */
-var TR = {"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sht","ъ":"a","ь":"y","ю":"yu","я":"ya"};
-ST.translit = function(s){ return String(s).toLowerCase().split("").map(function(c){ return TR[c] != null ? TR[c] : c; }).join(""); };
-var SYN = [[/pizz?a/g,"pica"],[/kebab/g,"kebap"],[/cheese ?burger|chizburger/g,"ciizburger"],[/angus/g,"angas"],[/steak/g,"stek"],[/ribeye/g,"ribai"]];
-ST.norm = function(s){ var t = String(s).toLowerCase(); SYN.forEach(function(r){ t = t.replace(r[0], r[1]); }); return ST.translit(t).replace(/sht/g,"st").replace(/zh/g,"z").replace(/ch/g,"c").replace(/sh/g,"s").replace(/ts/g,"c").replace(/yu/g,"u").replace(/ya/g,"a").replace(/[yj]/g,"i").replace(/w/g,"v").replace(/x/g,"ks").replace(/q/g,"k").replace(/zz/g,"c").replace(/ck/g,"k").replace(/ee/g,"i").replace(/[^a-z0-9 ]/g," ").replace(/([a-z])\1+/g,"$1").replace(/\s+/g," ").trim(); };
-var IDX = SC.items.map(function(x){ return {x:x, k:ST.norm(x.n)}; });
-ST.search = function(q){ var n = ST.norm(q); if (!n) return []; var parts = n.split(" ");
-  return IDX.filter(function(r){ return parts.every(function(p){ return r.k.indexOf(p) > -1; }); })
-    .sort(function(a,b){ var fa = FREQ()[a.x.id]||0, fb = FREQ()[b.x.id]||0; return (fb - fa) || (b.k.indexOf(parts[0])===0) - (a.k.indexOf(parts[0])===0) || a.x.n.length - b.x.n.length; }).map(function(r){ return r.x; }); };
-var _freq = null; function FREQ(){ if (_freq) return _freq; _freq = {}; ST.db.orders.forEach(function(o){ o.lines.forEach(function(l){ _freq[l.id] = (_freq[l.id]||0) + l.q; }); }); ["pitsa-margarita","kebapcheta","gratska-salata","pitsa-kaprichoza"].forEach(function(id,i){ _freq[id] = (_freq[id]||0) + 4 - i; }); return _freq; }
 /* "last ordered" (mock: from the tables' orders, most frequent first) */
 ST.recent = function(){ var c = {}; ST.db.orders.forEach(function(o){ o.lines.forEach(function(l){ c[l.id] = (c[l.id]||0) + l.q; }); });
   var ids = Object.keys(c).sort(function(a,b){ return c[b]-c[a]; });

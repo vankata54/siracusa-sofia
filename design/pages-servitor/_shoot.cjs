@@ -1,5 +1,6 @@
 /* Screenshots for the staff app (modelled on tools/shoot.js; the staff pages use their own chrome, no SC.mount).
-   Usage (from design/): node pages-servitor/_shoot.cjs pages-servitor/tables.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--scroll=600] [--only=390-light,390-dark]
+   Usage (from design/): node pages-servitor/_shoot.cjs pages-servitor/tables.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--type="#fq=лук"] [--scroll=600] [--session=1] [--only=390-light,390-dark]
+   --session=1: влязъл „Сервитьор 1“ (sa-session), за да се вижда моливът.
    Shots: 390-light, 390-dark, 360-dark (viewport) and 390-full (whole page, light). Prints console errors. */
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
@@ -9,17 +10,17 @@ fs.mkdirSync(out, {recursive:true});
 const file = page.split('#')[0]; const hash = page.includes('#') ? '#'+page.split('#')[1] : '';
 const url = 'file://' + path.resolve(__dirname, '..', file) + hash;
 const name = path.basename(file, '.html') + (opt.tag ? '-'+opt.tag : '');
-const runs = [['390-light',390,844,'light',false],['390-dark',390,844,'dark',false],['360-dark',360,740,'dark',false],['390-full',390,844,'light',true]]
+const runs = [['390-light',390,844,'light',false],['390-dark',390,844,'dark',false],['360-light',360,740,'light',false],['360-dark',360,740,'dark',false],['390-full',390,844,'light',true]]
   .filter(r => !opt.only || opt.only.split(',').includes(r[0]));
 (async () => {
   const b = await chromium.launch(); const errors = [];
   for (const [tag, w, h, theme, full] of runs) {
     const ctx = await b.newContext({viewport:{width:w, height:h}, deviceScaleFactor:1}); const p = await ctx.newPage();
     p.on('pageerror', e=>errors.push(tag+': '+e.message)); p.on('console', m=>{ if (m.type()==='error') errors.push(tag+': '+m.text()); });
-    await p.addInitScript(([theme,state,time]) => { localStorage.setItem('st-prefs', JSON.stringify({theme, state:state||'normal'})); localStorage.setItem('sc-prefs', JSON.stringify({theme, view:'phone', time:time||'now'})); }, [theme, opt.state, opt.time]);
+    await p.addInitScript(([theme,state,time,ses]) => { if (sessionStorage.getItem('shot-init')) return; sessionStorage.setItem('shot-init','1'); localStorage.setItem('st-prefs', JSON.stringify({theme, state:state||'normal'})); localStorage.setItem('sc-prefs', JSON.stringify({theme, view:'phone', time:time||'now'})); if (ses) localStorage.setItem('sa-session', JSON.stringify({user:'waiter', name:'Сервитьор 1', role:'waiter'})); else localStorage.removeItem('sa-session'); }, [theme, opt.state, opt.time, opt.session]);
     await p.goto(url); await p.waitForTimeout(700);
     if (opt.click) { for (const sel of opt.click.split('|')) { await p.click(sel, {timeout:3000}).catch(()=>errors.push('click failed: '+sel)); await p.waitForTimeout(500); } }
-    if (opt.type) { const [sel, txt] = opt.type.split('='); await p.fill(sel, txt).catch(()=>errors.push('type failed: '+sel)); await p.waitForTimeout(400); }
+    if (opt.type) { const i = opt.type.indexOf('='), sel = opt.type.slice(0,i), txt = opt.type.slice(i+1); await p.fill(sel, txt).catch(()=>errors.push('type failed: '+sel)); await p.waitForTimeout(400); }
     if (opt.scroll) { await p.evaluate(y=>window.scrollTo(0,+y), opt.scroll); await p.waitForTimeout(500); }
     const over = await p.evaluate(()=>document.documentElement.scrollWidth - window.innerWidth);
     if (over > 0) errors.push(tag+': horizontal overflow '+over+'px');

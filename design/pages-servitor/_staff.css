@@ -197,6 +197,7 @@ body.st{background:var(--pv-bg); min-height:100%; height:auto}
 .search input[type="search"]::-webkit-search-cancel-button,.search input[type="search"]::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}
 .search input[type="search"]::-ms-clear{display:none}
 .search .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.search .clr .ic{position:static; transform:none; color:var(--ink)}
 .guests{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:10px -16px 0; padding:2px 16px}
 .guests::-webkit-scrollbar{display:none}
 .guests .chip{min-height:48px}

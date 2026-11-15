@@ -13,6 +13,8 @@
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
 <script src="_driver.js"></script>
 <script>
 var main = DR.mount({page:"shift", title:"Край на смяната", nav:"shift", bar:true});
@@ -56,7 +58,7 @@ bar.addEventListener("click", function(e){ if (!e.target.closest("[data-end]")) 
   err = !ke ? "Въведете километража от таблото." : ke <= DR.lastKm() ? "Трябва да е повече от последно записания ("+DR.lastKm().toLocaleString("bg-BG")+" км)." : "";
   if (err){ render(); main.querySelector("#ke").focus(); return; }
   if (!handed){ DR.toast("Отбележете, че сте предали парите."); main.querySelector("#hd").focus(); return; }
-  ended = true; render(); window.scrollTo({top:0}); });
+  ended = true; DR.signOut(); render(); window.scrollTo({top:0}); });
 </script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 /* Screenshots for the driver app (copy of pages-servitor/_shoot.cjs) (modelled on tools/shoot.js; the staff pages use their own chrome, no SC.mount).
-   Usage (from design/): node pages-shofyor/_shoot.cjs pages-shofyor/list.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--scroll=600] [--only=390-light,390-dark]
+   Usage (from design/): node pages-shofyor/_shoot.cjs pages-shofyor/list.html outDir [--state=rush] [--time=21:30] [--click="sel|sel"] [--type="#fq=1042"] [--scroll=600] [--session=1] [--only=390-light,390-dark]
+   --session=1: влязъл „Шофьор 1“ (sa-session), за да се вижда моливът.
    Shots: 390-light, 390-dark, 360-light, 360-dark (viewport) and 390-full (whole page, light). Prints console errors. */
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
@@ -16,10 +17,10 @@ const runs = [['390-light',390,844,'light',false],['390-dark',390,844,'dark',fal
   for (const [tag, w, h, theme, full] of runs) {
     const ctx = await b.newContext({viewport:{width:w, height:h}, deviceScaleFactor:1}); const p = await ctx.newPage();
     p.on('pageerror', e=>errors.push(tag+': '+e.message)); p.on('console', m=>{ if (m.type()==='error') errors.push(tag+': '+m.text()); });
-    await p.addInitScript(([theme,state,time]) => { localStorage.setItem('dr-prefs', JSON.stringify({theme, state:state||'normal'})); localStorage.setItem('sc-prefs', JSON.stringify({theme, view:'phone', time:time||'now'})); }, [theme, opt.state, opt.time]);
+    await p.addInitScript(([theme,state,time,ses]) => { if (sessionStorage.getItem('shot-init')) return; sessionStorage.setItem('shot-init','1'); localStorage.setItem('dr-prefs', JSON.stringify({theme, state:state||'normal'})); localStorage.setItem('sc-prefs', JSON.stringify({theme, view:'phone', time:time||'now'})); if (ses) localStorage.setItem('sa-session', JSON.stringify({user:'driver', name:'Шофьор 1', role:'driver'})); else localStorage.removeItem('sa-session'); }, [theme, opt.state, opt.time, opt.session]);
     await p.goto(url); await p.waitForTimeout(700);
     if (opt.click) { for (const sel of opt.click.split('|')) { await p.click(sel, {timeout:3000}).catch(()=>errors.push('click failed: '+sel)); await p.waitForTimeout(500); } }
-    if (opt.type) { const [sel, txt] = opt.type.split('='); await p.fill(sel, txt).catch(()=>errors.push('type failed: '+sel)); await p.waitForTimeout(400); }
+    if (opt.type) { const i = opt.type.indexOf('='), sel = opt.type.slice(0,i), txt = opt.type.slice(i+1); await p.fill(sel, txt).catch(()=>errors.push('type failed: '+sel)); await p.waitForTimeout(400); }
     if (opt.scroll) { await p.evaluate(y=>window.scrollTo(0,+y), opt.scroll); await p.waitForTimeout(500); }
     const over = await p.evaluate(()=>document.documentElement.scrollWidth - window.innerWidth);
     if (over > 0) errors.push(tag+': horizontal overflow '+over+'px');

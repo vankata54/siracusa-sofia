@@ -187,11 +187,15 @@ function nav(cur){ var n = DR.active().length;
 DR.queued = function(){ return DR.db.outbox.length + DR.db.fuel.filter(function(x){ return x.q; }).length; };
 function netStrip(){ var q = DR.queued();
   return '<div class="st-net" role="status">'+ic("warning",22)+'<span>Няма връзка. '+(q ? SC.plural(q,"запис чака","записа чакат")+' и тръгват сами.' : 'Записите се пазят тук.')+'</span><button type="button" data-act="queue">Виж</button></div>'; }
+function tools(o){ /* compact icon + word buttons on the right: Търси, Молив (only with a signed-in driver), Смяна; in the flow, nothing floats over the page */
+  return '<div class="st-tools">'+(o.find ? '<button class="st-tb" type="button" data-act="find" aria-label="Търси в моите доставки: номер, адрес">'+ic("magnifying-glass",22)+'<span>Търси</span></button>' : '')+
+    '<span class="st-penslot" data-penslot></span>'+
+    '<button class="st-tb st-me'+(DR.offline?' off':'')+'" type="button" data-act="menu" aria-label="Смяна и настройки, '+(DR.offline?'няма връзка':'свързано')+'"><span class="tbi">'+ic("user",22)+'<span class="dot"></span></span><span>Смяна</span></button></div>'; }
 function topbar(o){ var since = DR.clock(DR.db.shiftStart);
   if (o.bare) return '<header class="st-top"><div class="tt"><b class="st-word">Siracusa</b><span>Шофьор</span></div>'+(o.right||'')+'</header>';
   var left = o.back ? '<a class="st-back" href="'+o.back.href+'">'+ic("caret-left",22)+esc(o.back.label)+'</a>' : '';
   return '<header class="st-top'+(o.back?' back':'')+'">'+left+'<div class="tt"><b>'+esc(o.title)+'</b><span>'+esc(o.sub || (DR.ME+" · "+DR.car().n))+'</span></div>'+
-    '<button class="st-me'+(DR.offline?' off':'')+'" type="button" data-act="menu" aria-label="Смяна и настройки, '+(DR.offline?'няма връзка':'свързано')+'"><span class="dot"></span>'+(DR.offline?'Без връзка':'Смяна')+'</button></header>'+
+    tools(o)+'</header>'+
     (DR.offline ? netStrip() : ''); }
 DR.netStrip = function(){ var s = document.querySelector(".st-net"); if (s) s.outerHTML = netStrip(); };
 
@@ -206,6 +210,7 @@ function movingOverlay(){ if (!DR.moving || DR.db.parked) return;
 
 /* DR.mount({page, title, sub, back:{href,label}, nav:"list"|"route"|"fuel"|"shift"|null, bar:true}) -> <main> */
 DR.mount = function(o){ o = o || {};
+  if (o.find === undefined) o.find = !!o.nav && !o.homeFind && !o.back; /* „Моите доставки“ има полето в страницата */
   document.body.classList.add("st");
   var app = document.createElement("div"); app.className = "st-app" + (o.nav===null ? " nonav" : "") + (o.bar ? " withbar" : ""); app.dataset.page = o.page||"";
   app.innerHTML = topbar(o) + '<main id="main"></main>' + (o.proto===false ? '' : protoPanel());
@@ -213,7 +218,19 @@ DR.mount = function(o){ o = o || {};
   if (o.nav !== null) document.body.insertAdjacentHTML("beforeend", nav(o.nav));
   document.title = o.title + " | Siracusa · Шофьор";
   if (o.page !== "login" && o.page !== "index") setTimeout(movingOverlay, 0);
-  DR.app = app; return app.querySelector("main"); };
+  DR.app = app; mountPen(o); return app.querySelector("main"); };
+
+/* ---------- pencil for recommendations (решение 15.11): only for a signed-in driver ----------
+   ../pages-admin/_pen-mount.js (data-auto="false") reads "sa-session" and writes to "sa-notes" with the source;
+   its button is moved into the top bar: it never covers the bottom bar, the action bar or the toasts. */
+function mountPen(o){ if (o.bare || o.page === "index" || !window.SAPenMount) return;
+  DR.pen = SAPenMount.mount({module:"shofyor", bottom:o.bar ? 100 : 96});
+  var slot = DR.app.querySelector("[data-penslot]"); if (DR.pen && DR.pen.button && slot) slot.appendChild(DR.pen.button); }
+DR.signIn = function(){ store("sa-session", {user:"driver", name:DR.ME, role:"driver"}); };
+DR.signOut = function(){ try{ localStorage.removeItem("sa-session"); }catch(e){} };
+DR.signedIn = function(){ var s = load("sa-session", null); return !!(s && s.role); };
+/* the search: loaded on first use (../ds/search.js is not needed: only numbers and addresses) */
+DR.openFind = function(q){ if (DR.find){ DR.find(q); return; } var el = document.createElement("script"); el.src = "_find.js"; el.onload = function(){ DR.find && DR.find(q); }; el.onerror = function(){ DR.toast("Търсенето не се зареди. Опитайте пак."); }; document.head.appendChild(el); };
 
 /* ---------- settings sheet ---------- */
 function themeSeg(){ var t = DR.prefs.theme; return '<div class="st-seg" role="group" aria-label="Тема">'+[["system","Авто"],["light","Светла"],["dark","Тъмна"],["hour","По часа"]].map(function(x){ return '<button type="button" data-act="theme" data-v="'+x[0]+'" aria-pressed="'+(t===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'; }
@@ -249,6 +266,7 @@ DR.carSheet = function(onDone){ var pick = DR.db.car;
 /* ---------- prototype panel ---------- */
 function protoPanel(){ return '<section class="proto" aria-label="Само в прототипа"><h2>Само в прототипа</h2><p>Състояние на смяната (данните са условни за макета):</p><div class="row">'+
   DR.STATES.map(function(s){ return '<button class="chip" type="button" data-act="state" data-v="'+s[0]+'" aria-pressed="'+(DR.state===s[0])+'">'+s[1]+'</button>'; }).join("")+'</div><p>Тема:</p>'+themeSeg()+
+  '<p>Влязъл служител (за молива):</p><div class="row"><button class="chip" type="button" data-act="sess" data-v="1" aria-pressed="'+DR.signedIn()+'">'+ic("pencil-simple",18)+'Шофьор 1, с молив</button><button class="chip" type="button" data-act="sess" data-v="0" aria-pressed="'+!DR.signedIn()+'">Никой, без молив</button></div>'+
   '<div class="row"><button class="chip" type="button" data-act="reset">'+ic("arrow-counter-clockwise",18)+'Върни данните в начало</button><a class="chip" href="index.html" style="text-decoration:none">'+ic("list",18)+'Всички екрани</a></div></section>'; }
 
 /* ---------- global delegation ---------- */
@@ -260,6 +278,8 @@ document.addEventListener("click", function(e){ var t = e.target.closest("[data-
   if (a==="navapp"){ DR.prefs.nav = t.dataset.v; savePrefs(); document.querySelectorAll('[data-act="navapp"]').forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.v===DR.prefs.nav); }); DR.emit(); return; }
   if (a==="state"){ DR.prefs.state = t.dataset.v; savePrefs(); var h = location.hash.replace(/(^#|&)s=[a-z]+/,""); location.hash = h; location.reload(); return; }
   if (a==="reset"){ DR.reset(); location.reload(); return; }
+  if (a==="sess"){ if (t.dataset.v==="1") DR.signIn(); else DR.signOut(); location.reload(); return; }
+  if (a==="find"){ DR.openFind(); return; }
   if (a==="retry"){ t.disabled = true; var old = t.innerHTML; t.textContent = "Проверяваме…"; setTimeout(function(){ t.disabled = false; t.innerHTML = old; DR.toast("Още няма връзка. Опитваме сами на всеки 10 сек."); }, 900); return; }
 });
 

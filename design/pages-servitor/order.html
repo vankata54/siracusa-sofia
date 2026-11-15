@@ -23,6 +23,8 @@
 .done .ill{width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:pop var(--t-spring) var(--ease)}
 @keyframes pop{from{transform:scale(.6); opacity:0}to{transform:none; opacity:1}}
 .done .btns{display:grid; gap:8px; width:100%; margin-top:16px}
+.schips{display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 8px}
+.schips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
 .res-h{font-size:14px; font-weight:800; color:var(--muted); margin:6px 0 0}
 .out-b{display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 10px; border-radius:999px; background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor; font-size:14px; font-weight:800; white-space:nowrap}
 .grams{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
@@ -33,6 +35,7 @@
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
+<script src="../ds/search.js"></script>
 <script src="../pages-admin/_pencil.js"></script>
 <script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
 <script src="_staff.js"></script>
@@ -45,19 +48,20 @@ var SHORT = {bill:"Сметка", qr:"QR поръчка", ready:"Готово", 
 
 /* ---------- step 0: which table ---------- */
 if (!N){
-  main = ST.mount({page:"order", title:"Нова поръчка", sub:"За коя маса?", nav:"order"});
+  main = ST.mount({page:"order", title:"Нова поръчка", sub:"На маса: за коя маса?", nav:"order"});
   var tileFor = function(n){ var t = ST.tableByN[n], s = ST.tStatus(n);
-    return '<a class="tile '+s.k+'" href="order.html#'+n+'" aria-label="Маса '+n+', '+ST.ZONE[t.zone]+', '+s.w+'"><span class="no">'+n+'</span><span class="w">'+ic(s.i,18)+(s.k==="call"?s.short:SHORT[s.k])+'</span></a>'; };
-  main.innerHTML = '<div class="pick"><section class="st-sec"><div class="st-h"><h2>Моите маси</h2></div><div class="tgrid">'+ST.MINE.map(tileFor).join("")+'</div></section>'+
+    return '<a class="tile '+s.k+'" href="order.html#'+n+(ST.hash.q?'&q='+encodeURIComponent(ST.hash.q):'')+'" aria-label="Маса '+n+', '+ST.ZONE[t.zone]+', '+s.w+'"><span class="no">'+n+'</span><span class="w">'+ic(s.i,18)+(s.k==="call"?s.short:SHORT[s.k])+'</span></a>'; };
+  main.innerHTML = '<div class="pick">'+(ST.hash.q?'<section class="st-sec"><div class="notice">'+ic("magnifying-glass",22)+'<span>Избери маса, после добави „'+esc(ST.hash.q)+'“.</span></div></section>':'')+'<section class="st-sec"><div class="st-h"><h2>Моите маси</h2></div><div class="tgrid">'+ST.MINE.map(tileFor).join("")+'</div></section>'+
     ["salon","garden"].map(function(z){ return '<section class="st-sec"><div class="st-h"><h2>Други маси · '+ST.ZONE[z]+'</h2></div><div class="tgrid">'+SC.TABLES.filter(function(t){ return t.zone===z && ST.MINE.indexOf(t.n)<0; }).map(function(t){ return tileFor(t.n); }).join("")+'</div></section>'; }).join("")+'</div>';
 } else {
-  main = ST.mount({page:"order", title:"Маса "+N, sub:"Нова поръчка · "+ST.ZONE[ST.tableByN[N].zone], back:{href:"table.html#"+N, label:"Маса"}, nav:null, bar:true});
+  main = ST.mount({page:"order", title:"Маса "+N, sub:"Нова поръчка", back:{href:"table.html#"+N, label:"Маса"}, nav:null, bar:true});
   main.parentNode.classList.add("tall");
   initOrder();
 }
 
 function initOrder(){
-  var CK = "st-cart-"+ST.state+"-"+N;
+  /* чернова на поръчката за масата (не е клиентска количка): пази се на телефона до „Към кухнята“ */
+  var CK = "st-draft-"+ST.state+"-"+N;
   function loadCart(){ try{ return JSON.parse(localStorage.getItem(CK)) || null; }catch(e){ return null; } }
   var saved = loadCart();
   var split0 = ST.ordersOf(N).some(function(o){ return o.bill; });
@@ -66,7 +70,7 @@ function initOrder(){
   var kitchenOpen = SC.state().kitchen;
   function persist(){ try{ if (count()) localStorage.setItem(CK, JSON.stringify(st)); else localStorage.removeItem(CK); }catch(e){} }
 
-  main.innerHTML = '<div class="osticky"><div class="search"><label class="vh" for="q">Търси ястие</label>'+ic("magnifying-glass",22)+'<input class="input" id="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Търси: kebap, пица, cezar…"><button class="clr" type="button" data-clr aria-label="Изчисти търсенето" hidden>'+ic("x",22)+'</button></div>'+
+  main.innerHTML = '<div class="osticky"><div class="search"><label class="vh" for="q">Търси ястие</label>'+ic("magnifying-glass",22)+'<input class="input" id="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Търси: kebap, пица, без лук…" spellcheck="false"><button class="clr" type="button" data-clr aria-label="Изчисти търсенето" hidden>'+ic("x",22)+'</button></div>'+
     '<div class="billrow"><div class="st-seg" role="group" aria-label="Сметка"><button type="button" data-split="0">Една сметка</button><button type="button" data-split="1">Поотделно</button></div></div><div class="guests" id="guests"></div></div><div id="body"></div>';
   document.body.insertAdjacentHTML("beforeend", '<div class="st-bar nonav stack" id="bar"></div>');
   var body = document.getElementById("body"), bar = document.getElementById("bar"), inp = document.getElementById("q");
@@ -99,6 +103,14 @@ function initOrder(){
     return '<div class="qrow'+(out?" out":"")+'">'+SC.pic(x)+'<div><div class="nm">'+esc(x.n)+'</div><div class="mt"><span class="price">'+fmt(x.p)+'</span><span class="g">'+(x.per100?"за 100 гр.":esc(x.g))+'</span>'+(out?'<span class="out-b">'+ic("clock",16)+'Изчерпано днес</span>':'')+'</div></div>'+
       (out ? '' : n ? '<div class="qcount"><button type="button" data-dec="'+x.id+'" aria-label="Едно по-малко '+esc(x.n)+'">'+ic("minus",22)+'</button><output aria-live="polite">'+n+'</output><button type="button" data-inc="'+x.id+'" aria-label="Още едно '+esc(x.n)+'">'+ic("plus",22)+'</button></div>' : '<button class="bigplus" type="button" data-inc="'+x.id+'" aria-label="Добави '+esc(x.n)+'">'+ic("plus",26)+'</button>')+'</div>'; }
 
+  /* едно търсене за всички (src/lib/search.ts → ../ds/search.js): по име горе (подредено по честота при еднакво начало), „Съдържат …“, „без …“, без състав най-долу */
+  var CATN = {}; SC.cats.forEach(function(c){ CATN[c.id] = c.n; });
+  var DL = SC.items.map(function(x){ var k = CATN[x.cat]||""; if (/бургер/i.test(x.n)) k += " burger cheeseburger"; if (/стек/i.test(x.n)) k += " steak"; if (/Ангъс/i.test(x.n)) k += " black angus"; if (/Рибай/i.test(x.n)) k += " ribeye"; return {id:x.id, n:x.n, comp:x.comp, al:x.al, t:x.t, kw:k}; });
+  function back(l){ return l.map(function(d){ return SC.byId[d.id]; }); }
+  function searchDishes(qq){ var r = SCSearch.searchDishes(DL, qq), fq = ST.recent(), first = (r.query.inc[0] && r.query.inc[0].v[0]) || "";
+    var starts = function(x){ return SCSearch.latin(x.n).replace(/[^a-z0-9]+/g," ").trim().split(" ").some(function(w,i){ return i===0 && first && w.indexOf(first)===0; }) ? 0 : 1; };
+    var name = back(r.name).map(function(x,i){ return [x,i]; }).sort(function(a,b){ var fa = fq.indexOf(a[0].id), fb = fq.indexOf(b[0].id); fa = fa<0?99:fa; fb = fb<0?99:fb; return starts(a[0])-starts(b[0]) || fa-fb || a[1]-b[1]; }).map(function(z){ return z[0]; });
+    return {query:r.query, name:name, comp:back(r.comp), band:r.band, rest:back(r.rest), unknown:back(r.unknown)}; }
   function draw(){
     main.querySelectorAll("[data-split]").forEach(function(b){ b.setAttribute("aria-pressed", (b.dataset.split==="1")===st.split); });
     var gEl = document.getElementById("guests");
@@ -106,9 +118,13 @@ function initOrder(){
     gEl.hidden = !st.split;
     var h = "";
     if (!kitchenOpen) h += '<section class="st-sec"><div class="notice warn">'+ic("clock",22)+'<span>Кухнята приема поръчки до 22:30, затова изпращането е спряно. За нещо по изключение: управителят.</span></div></section>';
-    if (q){ var res = ST.search(q);
-      h += '<section class="st-sec" style="padding-top:8px"><p class="res-h">'+(res.length?SC.plural(res.length,"резултат","резултата"):'')+'</p>'+(res.length ? res.slice(0,30).map(row).join("") :
-        '<div class="st-empty" style="padding-top:24px"><div class="ill" style="color:var(--muted)">'+ic("magnifying-glass",44)+'</div><h2>Няма „'+esc(q)+'“</h2><p>Може на кирилица или латиница, например „kebap“ или „цезар“. Или по категория.</p><button class="pill pill-line" type="button" data-clr>Покажи категориите</button></div>')+'</section>';
+    if (q){ var R = searchDishes(q), any = R.name.length + R.comp.length + R.rest.length + R.unknown.length, chips = SCSearch.chips(q);
+      h += '<section class="st-sec" style="padding-top:8px">'+(chips.length ? '<div class="schips" role="group" aria-label="Съставки и алергени">'+chips.map(function(c){ return '<button class="chip'+(c.without?' without':'')+'" type="button" data-tog="'+esc(c.word)+'" aria-pressed="'+c.without+'">'+(c.without ? ic("minus",18)+'без '+esc(c.label) : esc(c.label)+' '+ic("x",16))+'</button>'; }).join("")+'</div>' : '')+
+        (any ? '<p class="res-h">'+SC.plural(any,"резултат","резултата")+'</p>' : '')+
+        (R.query.inc.length ? R.name : R.rest).map(row).join("")+
+        (R.comp.length ? '<div class="fband">'+ic("bowl-food",20)+'<span>'+esc(R.band)+'</span></div>'+R.comp.map(row).join("") : '')+
+        (R.unknown.length ? '<div class="fband unk">'+ic("warning",20)+'<span>Нямаме пълен състав, попитайте ни<small>Питай кухнята, преди да кажеш на госта.</small></span></div>'+R.unknown.map(row).join("") : '')+
+        (any ? '' : '<div class="st-empty" style="padding-top:24px"><div class="ill" style="color:var(--muted)">'+ic("magnifying-glass",44)+'</div><h2>Няма „'+esc(q)+'“</h2><p>Може на кирилица или латиница, например „kebap“ или „цезар“, и „без лук“. Или по категория.</p><button class="pill pill-line" type="button" data-clr>Покажи категориите</button></div>')+'</section>';
     } else if (cat){ var c = SC.catById[cat];
       h += '<section class="st-sec" style="padding-top:12px"><button class="backchip" type="button" data-cat="">'+ic("caret-left",20)+'Всички категории</button><div class="st-h" style="margin-top:12px"><h2>'+esc(c.n)+'</h2><span class="muted">'+SC.inCat(cat).length+'</span></div>'+SC.inCat(cat).map(row).join("")+'</section>';
     } else {
@@ -120,7 +136,7 @@ function initOrder(){
   }
   function drawBar(){ var n = count();
     bar.innerHTML = '<button class="sumbtn" type="button" data-review'+(n?'':' disabled')+'>'+ic("list-checks",22)+(n?SC.plural(n,"артикул","артикула")+' · Преглед':'Няма добавени ястия')+'</button>'+
-      '<button class="pill pill-red" type="button" data-send'+(n&&kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Изпрати в кухнята')+(n?' · <span class="price">'+fmt(sum())+'</span>':'')+'</button>'; }
+      '<button class="pill pill-red" type="button" data-send'+(n&&kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Към кухнята')+(n?' · <span class="price">'+fmt(sum())+'</span>':'')+'</button>'; }
 
   function noteSheet(k, after){ var l = st.cart[k];
     var sh = ST.sheet({title:"Бележка към кухнята", html:'<p style="margin:0 0 12px;font-weight:700">'+l.q+'× '+esc(ST.lineName(l))+'</p><div class="notechips">'+["Без лук","Без сирене","Сосът отделно","Добре изпечено","Първо за детето"].map(function(t){ return '<button class="chip" type="button" data-nt="'+t+'">'+t+'</button>'; }).join("")+'</div>'+
@@ -141,7 +157,7 @@ function initOrder(){
       rv.innerHTML = Object.keys(by).map(function(b){ return (st.split?'<p class="st-cap" style="margin:12px 0 0">'+esc(b)+'</p>':'')+by[b].map(function(l){ var nm = esc(ST.lineName(l));
         return '<div class="sum-line"><div class="counter"><button type="button" data-rdec="'+esc(l.k)+'" aria-label="Едно по-малко '+nm+'">'+ic("minus",20)+'</button><output>'+l.q+'</output><button type="button" data-rinc="'+esc(l.k)+'" aria-label="Още едно '+nm+'">'+ic("plus",20)+'</button></div><div><div class="nm">'+nm+'</div>'+(l.note?'<div class="nb">'+ic("note",16)+esc(l.note)+'</div>':'')+'<button class="notebtn" type="button" data-note="'+esc(l.k)+'" aria-label="Бележка към '+nm+'">'+ic("pencil-simple",18)+(l.note?'Промени бележката':'Бележка')+'</button></div><span class="price">'+fmt(ST.linePrice(l))+'</span></div>'; }).join(""); }).join("")+
         '<div class="field" style="margin-top:14px"><label for="gn">Бележка за цялата поръчка</label><input class="input" id="gn" value="'+esc(st.note)+'" placeholder="Например: двете пици заедно"></div>';
-      rf.innerHTML = '<button class="pill pill-red pill-lg pill-block" type="button" data-send'+(kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Изпрати в кухнята')+' · <span class="price">'+fmt(sum())+'</span></button>'+(ST.offline?'<p class="small muted" style="margin:0;text-align:center">Няма връзка: поръчката тръгва към кухнята сама, щом се върне.</p>':'')+(kitchenOpen?'':'<p class="small muted" style="margin:0;text-align:center">Кухнята приема поръчки до 22:30.</p>');
+      rf.innerHTML = '<button class="pill pill-red pill-lg pill-block" type="button" data-send'+(kitchenOpen?'':' disabled')+'>'+ic("paper-plane-right",22)+(ST.offline?'Запази на телефона':'Към кухнята')+' · <span class="price">'+fmt(sum())+'</span></button><p class="small muted" style="margin:0;text-align:center">Добавя се към сметката на Маса '+N+'. Плащането е от „Сметка“ на масата.</p>'+(ST.offline?'<p class="small muted" style="margin:0;text-align:center">Няма връзка: поръчката тръгва към кухнята сама, щом се върне.</p>':'')+(kitchenOpen?'':'<p class="small muted" style="margin:0;text-align:center">Кухнята приема поръчки до 22:30.</p>');
       rv.querySelector("#gn").addEventListener("input", function(e){ st.note = e.target.value; persist(); });
       if (focusSel){ var f = rv.querySelector(focusSel); f && f.focus(); }
     }
@@ -154,9 +170,9 @@ function initOrder(){
   function send(){ var groups = {}; lines().forEach(function(l){ (groups[l.bill] = groups[l.bill] || []).push(l); });
     var n = count(), total = sum(), ids = ST.sendOrder(N, groups, st.note); st.cart = {}; st.note = ""; persist();
     bar.remove(); main.parentNode.classList.remove("withbar"); window.scrollTo(0,0);
-    main.innerHTML = '<div class="done"><div class="ill" style="'+(ST.offline?'background:var(--ember);color:var(--on-ember)':'')+'">'+ic(ST.offline?"clock":"check",56)+'</div><h1 class="h2">'+(ST.offline?'Запазено на телефона':'Изпратено в кухнята')+'</h1>'+
+    main.innerHTML = '<div class="done"><div class="ill" style="'+(ST.offline?'background:var(--ember);color:var(--on-ember)':'')+'">'+ic(ST.offline?"clock":"check",56)+'</div><h1 class="h2">'+(ST.offline?'Запазено на телефона':'Поръчката е в кухнята')+'</h1>'+
       '<p class="lead">'+(ST.offline?'Няма връзка. Поръчката тръгва сама към кухнята, щом връзката се върне.':'Маса '+N+' · '+SC.plural(n,"артикул","артикула")+' · <span class="price" style="color:var(--ink)">'+fmt(total)+'</span>')+'</p>'+
-      '<p class="muted" style="margin:0">'+(ST.offline?'Номерът на поръчката идва, щом има връзка.':ids.map(function(i){ return '№ '+i; }).join(", ")+(ids.length>1?' · отделни сметки':''))+'</p>'+
+      '<p class="muted" style="margin:0">'+(ST.offline?'Номерът на поръчката идва, щом има връзка.':ids.map(function(i){ return '№ '+i; }).join(", ")+(ids.length>1?' · отделни сметки':'')+' · в сметката на масата')+'</p>'+
       '<div class="btns"><a class="pill pill-red pill-lg pill-block" href="table.html#'+N+'">Към Маса '+N+'</a><a class="pill pill-line pill-lg pill-block" href="order.html">'+ic("plus",22)+'Нова поръчка за друга маса</a></div></div>';
   }
 
@@ -165,6 +181,7 @@ function initOrder(){
     if (b.dataset.dec){ add(b.dataset.dec, -1); return; }
     if (b.dataset.cat !== undefined){ cat = b.dataset.cat || null; draw(); window.scrollTo(0,0); return; }
     if (b.hasAttribute("data-clr")){ q = ""; inp.value = ""; main.querySelector(".clr").hidden = true; draw(); inp.focus(); return; }
+    if (b.dataset.tog){ q = SCSearch.toggle(q, b.dataset.tog); inp.value = q; main.querySelector(".clr").hidden = !q; draw(); return; }
     if (b.dataset.split){ var sp = b.dataset.split==="1";
       if (!sp && st.split){ /* back to one bill: merge everything into "all" */ lines().forEach(function(l){ var k2 = "all|"+l.id+(l.g?"|"+l.g:""); var t = st.cart[k2]; if (t && t!==l){ t.q += l.q; } else { st.cart[k2] = {id:l.id, q:l.q, g:l.g, note:l.note, bill:"all"}; } if (l.k !== k2) delete st.cart[l.k]; });
         if (count()) ST.toast("Сметките са обединени в една"); }
