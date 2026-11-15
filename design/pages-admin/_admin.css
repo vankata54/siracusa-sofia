@@ -91,22 +91,39 @@ body{background:var(--bg)}
 .sa-me .who b{font-size:15px; font-weight:800; white-space:nowrap}
 .sa-me .who small{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
 .sa-search{position:relative; flex:none}
-.sa-search .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
-.sa-search input{width:300px; min-height:48px; padding:0 48px 0 46px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line); font-size:16px; outline:none}
+.sa-search > .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sa-top .sa-search input{width:300px; min-height:48px; padding:0 48px 0 46px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line); font-size:16px; outline:none}
 .sa-search input:focus{box-shadow:inset 0 0 0 2px var(--red)}
 .sa-search input::placeholder{color:var(--muted)}
 .sa-search .k{position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:800; min-width:26px; height:26px; border-radius:8px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; place-items:center; color:var(--muted); pointer-events:none}
-.sa-sres{position:absolute; top:calc(100% + 8px); left:0; right:0; z-index:5; padding:6px; border-radius:24px; background:var(--surface); box-shadow:var(--shadow-lg); display:grid; gap:2px; max-height:60vh; overflow-y:auto}
-.sa-sres a{display:flex; align-items:center; gap:12px; min-height:48px; padding:0 12px; border-radius:18px; text-decoration:none; color:var(--ink); font-weight:700}
-.sa-sres a small{margin-left:auto; font-size:14px; color:var(--muted); font-weight:700}
-.sa-sres a[aria-selected="true"], .sa-sres a:hover{background:var(--surface-2)}
-.sa-sres .none{padding:12px 14px; color:var(--muted)}
+.sa-sres{position:absolute; top:calc(100% + 8px); left:0; width:min(560px, calc(100vw - 420px)); min-width:100%; z-index:5; padding:8px; border-radius:24px; background:var(--surface); box-shadow:var(--shadow-lg); max-height:70vh; overflow-y:auto; overscroll-behavior:contain}
+.sa-search input::-webkit-search-cancel-button{-webkit-appearance:none; display:none}
+.sa-clear{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:0; border-radius:50%; background:transparent; color:var(--muted); display:grid; place-items:center; cursor:pointer}
+.sa-clear:hover{background:var(--surface-2); color:var(--ink)}
+.sa-clear .ic{position:static; transform:none}
+.sa-field-s .sa-clear{right:6px}
+.sa-field-s .input{padding-right:52px}
+.sa-search .k[hidden]{display:none}
+.sa-rg + .sa-rg{margin-top:6px; padding-top:6px; border-top:1px solid var(--line)}
+.sa-rg h3{margin:6px 12px 4px; font-size:14px; font-weight:800; color:var(--muted)}
+.sa-rg h3 small{font-weight:600}
+.sa-rg a, .sa-rg button, .sa-ask{display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:6px 12px; border:0; border-radius:18px; background:transparent; color:var(--ink); text-decoration:none; text-align:left; font:inherit; cursor:pointer}
+.sa-rg a .ic, .sa-rg button .ic{color:var(--muted); flex:none}
+.sa-rg span, .sa-ask span{min-width:0; display:grid; line-height:1.3}
+.sa-rg b, .sa-ask b{font-weight:700; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sa-rg small, .sa-ask small{font-size:14px; font-weight:600; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sa-rg [aria-selected="true"], .sa-rg a:hover, .sa-rg button:hover, .sa-ask:hover, .sa-ask[aria-selected="true"]{background:var(--surface-2)}
+.sa-ask{margin-top:6px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.sa-ask .ic{color:var(--ember); flex:none}
+.sa-rg .more, .sa-sres .hint, [data-list] .none, .sa-sres .none{margin:2px 12px 6px; font-size:15px; color:var(--muted)}
+.sheetwrap.sa-tall .sheet{height:92%}
+@container app (min-width:900px){ .sheetwrap.sa-tall .sheet{height:auto} }
 /* which controls show where */
 .sa-only-d, .sa-only-t, .sa-only-td{display:none !important}
 @container app (min-width:700px){ .sa-only-td{display:inline-flex !important} .sa-only-p{display:none !important} .sa-top{left:12px; right:12px; top:12px; padding-left:22px} }
 @container app (min-width:700px) and (max-width:1099px){ .sa-only-t{display:inline-flex !important} }
 @container app (min-width:1100px){ .sa-only-d{display:inline-flex !important} .sa-top{min-height:64px} }
-@container app (max-width:1279px) and (min-width:1100px){ .sa-search input{width:220px} .sa-me .who small{display:none} }
+@container app (max-width:1279px) and (min-width:1100px){ .sa-top .sa-search input{width:220px} .sa-me .who small{display:none} }
 @container app (max-width:370px){ .sa-top{padding-left:14px} .sa-tb{padding:0 10px} }
 
 /* ---------- bottom bar (phone) ---------- */
@@ -294,3 +311,9 @@ select.input{appearance:none; -webkit-appearance:none; padding-right:44px; backg
 @keyframes sa-rise{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
 .sa-rise{animation:sa-rise 520ms var(--ease) both}
 .sa-rise.d1{animation-delay:60ms} .sa-rise.d2{animation-delay:120ms} .sa-rise.d3{animation-delay:180ms} .sa-rise.d4{animation-delay:240ms}
+
+/* служител (сервитьор, кухня, шофьор) в „Моите препоръки“: на цял екран, без лентата и търсачката на админа */
+.sa-app.staffmode .sa-side, .sa-app.staffmode .sa-bnav, .sa-app.staffmode .sa-search, .sa-app.staffmode [data-sa="sections"], .sa-app.staffmode .sa-proto .row:has([data-sa="viewas"]){display:none !important}
+.sa-app.staffmode .sa-end{height:96px}
+.sa-app.staffmode .sa-top .sm{display:none}
+@container app (max-width:699px){ .sa-app.staffmode .sa-crumb{display:none} .sa-app.staffmode .sa-top .lg{display:none} .sa-app.staffmode .sa-top .sm{display:inline} .sa-app.staffmode .sa-top{justify-content:space-between} }

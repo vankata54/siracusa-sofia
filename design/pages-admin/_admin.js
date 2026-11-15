@@ -121,7 +121,7 @@ A.DEFAULT_ROLES = [
   {id:"admin", n:"Главен админ", desc:"Всичко; прави директни промени по сайта. Агенцията, която държи и ролята Маркетинг.", sections:A.ALL.slice()},
   {id:"owner", n:"Собственик", desc:"Всичко, включително финанси, гориво и отчети.", sections:A.ALL.filter(function(s){ return s !== "roles"; })},
   {id:"manager", n:"Управител", desc:"Почти всичко като собственика: меню, цени, промоции, събития, резервации, персонал, отчети.", sections:A.ALL.filter(function(s){ return ["roles","finance","audit"].indexOf(s) < 0; })},
-  {id:"waiter", n:"Сервитьор", desc:"Повиквания, статус на масите, въвеждане на поръчки, потвърждаване на QR поръчки, сметки.", sections:["dashboard","waiter","orders","reservations","site"]},
+  {id:"waiter", n:"Сервитьор", desc:"Повиквания, статус на масите, въвеждане на поръчки, потвърждаване на QR поръчки, сметки.", sections:["dashboard","waiter","orders","reservations"]},
   {id:"kitchen", n:"Кухня", desc:"Кухненски екран на своята секция с опашката от поръчки.", sections:["dashboard","kitchen"]},
   {id:"driver", n:"Шофьор", desc:"Своите доставки, навигация, статуси, зареждане с гориво, избор на автомобил.", sections:["dashboard","driver"]},
   {id:"marketing", n:"Маркетинг", desc:"Събития, поводи, оферти, снимки, текстове, SEO полета.", sections:["dashboard","notes","offers","events","site"]}
@@ -146,6 +146,10 @@ A.viewAs = function(role){ var a = A.ACCOUNTS.filter(function(x){ return x[1] ==
 A.roleName = function(id){ var r = A.role(id); return r ? r.n : id; };
 A.who = function(){ return A.me ? A.me.name + " (" + A.roleName(A.me.role) + ")" : "?"; };
 /* A.can("menu") -> може ли влязлата роля да вижда раздела. Главният админ: винаги. */
+/* вход според ролята (решение 15.11): сервитьор, кухня и шофьор работят в своя модул на цял екран, без админа */
+A.STAFF_HOME = {waiter:"../pages-servitor/tables.html", kitchen:"../pages-kuhnya/queue.html#s=skara", driver:"../pages-shofyor/list.html"};
+A.isStaffApp = function(role){ role = role || (A.me && A.me.role); return !!A.STAFF_HOME[role]; };
+A.homeOf = function(role){ return A.STAFF_HOME[role] || "dashboard.html"; };
 A.can = function(section, role){ role = role || (A.me && A.me.role); if (!role) return false; if (role === "admin") return true; var r = A.role(role); return !!r && r.sections.indexOf(section) > -1; };
 
 /* ---------- audit (дневник) ---------- */
@@ -161,7 +165,7 @@ A.applyTheme();
 var THEMES = [["system","Авто","circles-three"],["light","Светла","sun"],["dark","Тъмна","moon"]];
 
 /* ---------- notes (бележките от молива: полетата са като в src/core/notes.ts) ---------- */
-A.MODULE_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", watch:"Часовник", kitchen:"Кухня", driver:"Шофьор", admin:"Админ"};
+A.MODULE_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", admin:"Админ"};
 /* статуси (решение на Поли 15.11): нова → одобрена → в изпълнение → за преглед → публикувана, или отхвърлена (с причина) */
 A.NOTE_STATUSES = [["new","Нови","Нова"],["approved","Одобрени","Одобрена"],["doing","В изпълнение","В изпълнение"],["review","За преглед","За преглед"],["published","Публикувани","Публикувана"],["rejected","Отхвърлени","Отхвърлена"]];
 A.noteStatusName = function(st){ var x = A.NOTE_STATUSES.filter(function(s){ return s[0] === st; })[0]; return x ? x[2] : st; };
@@ -246,6 +250,8 @@ A.MODULES = [
     S("staff","Персонал","staff.html"), S("audit","Дневник","audit.html"), S("settings","Настройки","settings.html")]}
 ];
 A.MOD = {}; A.MODULES.forEach(function(m){ A.MOD[m.id] = m; });
+/* модулите пишат бележки с module "servitor" / "kuhnya" / "shofyor" (_pen-mount.js) */
+A.MOD.servitor = A.MOD.waiter; A.MOD.kuhnya = A.MOD.kitchen; A.MOD.shofyor = A.MOD.driver;
 /* кой вижда плочката на модула: по раздела му, а Управител, Собственик и Админ по роля */
 A.modCan = function(m){ if (!A.me) return false; if (m.roles) return A.me.role === "admin" || m.roles.indexOf(A.me.role) > -1; return A.can(m.sec); };
 /* модул и екран по адрес (за бележките): "/pages-kuhnya/queue.html#s=skara" -> {m, s} */
@@ -375,9 +381,9 @@ function sideHTML(cur){
         return '<a class="sa-i" href="' + s.href + '" title="' + esc(s.n) + '">' + ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + ': приложението</span><span class="sh">' + esc(s.short) + '</span></a>'; }).join("") + '</div>' : '') + '</nav>' +
     '<div class="sa-sidefoot"><button class="sa-i sa-collapse" type="button" data-sa="side" aria-expanded="' + (A.prefs.side !== "mini") + '">' + ic(A.prefs.side === "mini" ? "caret-right" : "caret-left", 22) + '<span class="lb">Свий лентата</span><span class="sh">Разгъни</span></button></div>'; }
 function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = THEMES.filter(function(t){ return t[0] === A.prefs.theme; })[0] || THEMES[0], pen = !!A.me && (o.pencil !== false || o.penButton) && !A.inPreview;
-  return '<header class="sa-top">' +
+  return '<header class="sa-top">' + (A.isStaffApp() ? '<a class="sa-tb" href="' + A.homeOf(A.me.role) + '">' + ic("caret-left", 20) + '<span class="lg">Към приложението</span><span class="sm">Приложение</span></a>' : '') +
     '<div class="sa-crumb"><small class="sa-only-td">' + esc(o.crumb || g || "Админ") + '</small><b>' + esc(o.barTitle || (s && s.n) || o.title || "") + '</b></div>' +
-    '<div class="sa-search sa-only-d" role="search"><label class="vh" for="sa-q">Търси раздел</label>' + ic("magnifying-glass", 20) + '<input id="sa-q" type="search" placeholder="Търси раздел" autocomplete="off" aria-controls="sa-sres" aria-expanded="false"><span class="k" aria-hidden="true">/</span><div class="sa-sres" id="sa-sres" role="listbox" hidden></div></div>' +
+    '<div class="sa-search sa-only-d" role="search"><label class="vh" for="sa-q">Търсене: раздели, ястия, поръчки, резервации</label>' + ic("magnifying-glass", 20) + '<input id="sa-q" type="search" placeholder="Търси навсякъде" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sa-sres" aria-expanded="false"><span class="k" aria-hidden="true">/</span><button class="sa-clear" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button><div class="sa-sres" id="sa-sres" role="listbox" aria-label="Резултати" hidden></div></div>' +
     '<button class="sa-tb sa-only-t" type="button" data-sa="sections">' + ic("magnifying-glass", 20) + 'Търси</button>' +
     (pen ? '<button class="sa-tb" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + 'Молив</button>' : '') +
     '<button class="sa-tb sa-only-d" type="button" data-sa="theme" aria-label="Тема: ' + th[1] + '. Смени">' + ic(th[2], 20) + 'Тема: ' + th[1] + '</button>' +
@@ -402,9 +408,12 @@ function protoHTML(o){ var role = A.me ? A.me.role : "";
    opts: {section, title, sub, eyebrow, crumb, actions (HTML), states:[[st, "Име"]], wide, head:false, pencil:false, public:true, immersive:true, protoExtra} */
 A.mount = function(o){ o = o || {};
   if (!A.me && !o.public){ location.replace("login.html#next=" + encodeURIComponent(location.pathname.split("/").pop() + location.hash)); return null; }
+  /* служител на адрес на админа: в своя модул; само „Моите препоръки“ остава тук, на цял екран, без лентата */
+  var staff = !!A.me && A.isStaffApp() && !o.public;
+  if (staff && o.section !== "notes"){ location.replace(A.homeOf(A.me.role)); return null; }
   document.title = (o.docTitle || o.title || (A.SEC[o.section] && A.SEC[o.section].n) || "Админ") + " | Siracusa · Админ";
   A.computeBadges();
-  var app = document.createElement("div"); app.className = "sa-app" + (o.immersive ? " immersive" : ""); app.dataset.side = o.immersive ? "mini" : (A.prefs.side === "mini" ? "mini" : "open"); app.dataset.page = o.section || "";
+  var app = document.createElement("div"); app.className = "sa-app" + (o.immersive ? " immersive" : "") + (staff ? " staffmode" : ""); app.dataset.side = o.immersive ? "mini" : (A.prefs.side === "mini" ? "mini" : "open"); app.dataset.page = o.section || "";
   var allowed = !o.section || A.can(o.section) || o.anyRole;
   var s = A.SEC[o.section] || {};
   var head = o.head === false ? '' : '<div class="sa-head" data-edit-id="admin.' + (o.section || "page") + '.head"><div>' + (o.eyebrow !== false ? '<span class="sa-eye">' + ic(s.ic || "squares-four", 18) + esc(o.eyebrow || A.groupOf(o.section) || "Админ") + '</span>' : '') + '<h1 class="sa-h1">' + esc(o.title || s.n || "") + '</h1>' + (o.sub ? '<p class="sa-sub">' + o.sub + '</p>' : '') + '</div>' + (o.actions ? '<div class="sa-acts">' + o.actions + '</div>' : '') + '</div>';
@@ -442,10 +451,13 @@ function secTile(s, cur){ var meta = s.soon ? 'Скоро' : A.groupOf(s.id);
   if (s.soon) return '<button type="button" data-sa="soon" data-id="' + s.id + '">' + ic(s.ic, 24) + esc(s.n) + '<small>' + meta + '</small></button>';
   return '<a href="' + s.href + '"' + (cur === s.id ? ' aria-current="page"' : '') + '>' + ic(s.ic, 24) + esc(s.n) + '<small>' + esc(meta) + '</small>' + (s.id === "notes" ? badge("notes") : '') + '</a>'; }
 function openSections(){ var cur = A.app.dataset.page;
-  var sh = A.sheet({title:"Раздели", html:'<div class="sa-field-s" style="margin:4px 0 6px"><label class="vh" for="sa-q2">Търси раздел</label>' + ic("magnifying-glass", 20) + '<input class="input" id="sa-q2" type="search" placeholder="Търси раздел" autocomplete="off"></div><div data-list>' + A.sectionsHTML(cur) + '</div>'});
-  var inp = sh.body.querySelector("#sa-q2"), box = sh.body.querySelector("[data-list]");
-  inp.addEventListener("input", function(){ box.innerHTML = A.sectionsHTML(cur, inp.value.trim()); });
-  inp.addEventListener("keydown", function(e){ if (e.key === "Enter"){ var a = box.querySelector("a"); if (a) location.href = a.getAttribute("href"); } }); }
+  var sh = A.sheet({title:"Търсене и раздели", focus:"#sa-q2", html:'<div class="sa-search sa-field-s" role="search" style="margin:4px 0 6px"><label class="vh" for="sa-q2">Търсене: раздели, ястия, поръчки, резервации</label>' + ic("magnifying-glass", 20) + '<input class="input" id="sa-q2" type="search" placeholder="Търси навсякъде" autocomplete="off" aria-controls="sa-q2r"><button class="sa-clear" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button></div><div data-list id="sa-q2r" role="listbox" aria-label="Резултати">' + A.sectionsHTML(cur) + '</div>'});
+  sh.el.classList.add("sa-tall");
+  var inp = sh.body.querySelector("#sa-q2"), box = sh.body.querySelector("[data-list]"), clr = sh.body.querySelector(".sa-clear");
+  function draw(){ var q = inp.value.trim(); clr.hidden = !q; box.innerHTML = q ? A.searchHTML(q, "q2") : A.sectionsHTML(cur); }
+  inp.addEventListener("input", draw); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
+  A.onSearchReady = function(){ if (inp.isConnected && inp.value.trim()) draw(); };
+  inp.addEventListener("keydown", function(e){ if (e.key === "Enter"){ var a = box.querySelector("a[href], button[data-ask]"); if (a){ e.preventDefault(); a.click(); } } }); }
 function openProfile(){ var r = A.role(A.me.role);
   var sh = A.sheet({title:"Профил", html:'<div class="sa-prof"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><span class="muted">' + esc(r.n) + ' · потребител ' + esc(A.me.user) + '</span></div></div><p class="muted" style="margin:0 0 16px">' + esc(r.desc) + '</p>' +
     '<p class="label" style="margin:0 0 8px">Тема</p><div class="seg" role="group" aria-label="Тема">' + THEMES.map(function(t){ return '<button type="button" data-sa="settheme" data-v="' + t[0] + '" aria-pressed="' + (A.prefs.theme === t[0]) + '">' + ic(t[2], 20) + t[1] + '</button>'; }).join("") + '</div>',
@@ -453,20 +465,70 @@ function openProfile(){ var r = A.role(A.me.role);
 function soonSheet(id){ var s = A.SEC[id]; A.sheet({title:s.n, html:'<p style="margin:0 0 12px">' + A.soonTag() + '</p><p style="margin:0 0 8px">' + esc(s.desc) + '</p><p class="muted" style="margin:0">Разделът ще се появи след модулите на управителя и собственика. Сега е видим, за да е пълна картата на правата.</p>'}); }
 A.soonSheet = soonSheet;
 
-/* ---------- desktop search ---------- */
-function bindSearch(){ var inp = A.app.querySelector("#sa-q"); if (!inp) return; var box = A.app.querySelector("#sa-sres"), sel = 0, list = [];
-  function draw(){ var q = inp.value.trim(); list = q ? A.searchSections(q) : A.visibleSections().slice(0, 6); sel = Math.min(sel, Math.max(0, list.length - 1));
-    box.innerHTML = list.length ? list.map(function(s, i){ return '<a href="' + (s.soon ? '#' : s.href) + '" role="option" id="sa-o' + i + '" aria-selected="' + (i === sel) + '"' + (s.soon ? ' data-sa="soon" data-id="' + s.id + '"' : '') + '>' + ic(s.ic, 20) + esc(s.n) + '<small>' + (s.soon ? 'Скоро' : esc(A.groupOf(s.id))) + '</small></a>'; }).join("") : '<div class="none">Няма раздел с „' + esc(q) + '“.</div>';
-    box.hidden = false; inp.setAttribute("aria-expanded", "true"); if (list.length) inp.setAttribute("aria-activedescendant", "sa-o" + sel); }
+/* ---------- умната търсачка (решение 15.11: „Умна търсачка = асистентът“) ----------
+   Едно поле: разделите, ястията (../ds/search.js, зарежда се при първа употреба), поръчки (№, телефон), резервации, клиенти, бележки.
+   Само каквото ролята има право да вижда. Обикновеното търсене работи веднага; „Попитай AI“ е примерен поток (етап E). */
+var OST = {accepted:"Приета", cooking:"Готви се", ready:"Готова", on_way:"На път", delivered:"Доставена", picked_up:"Взета", served:"Сервирана", cancelled:"Отказана"};
+var RST = {"new":"Нова", confirmed:"Потвърдена", seated:"Дошли", no_show:"Неявили се", cancelled:"Отказана", waitlist:"Чака маса"};
+A.loadSearch = function(cb){ if (window.SCSearch) return cb && cb(); if (A._sl){ A._sl.push(cb); return; } A._sl = [cb];
+  var sc = document.createElement("script"); sc.src = "../ds/search.js"; sc.onload = function(){ var l = A._sl; A._sl = null; l.forEach(function(f){ f && f(); }); A.onSearchReady && A.onSearchReady(); }; document.head.appendChild(sc); };
+function digits(x){ return String(x || "").replace(/\D/g, ""); }
+A.search = function(q){ var out = [], nq = norm(q), dq = digits(q), cut = 5, txt = nq.replace(/[^a-z ]/g, "").trim().length >= 3;
+  function grp(key, title, items, extra){ if (items.length) out.push({key:key, title:title, items:items.slice(0, cut), more:Math.max(0, items.length - cut), extra:extra || ""}); }
+  grp("sec", "Раздели", A.searchSections(q).map(function(s0){ return {href:s0.soon ? "" : s0.href, soon:s0.soon ? s0.id : "", icon:s0.ic, title:s0.n, meta:s0.soon ? "Скоро" : A.groupOf(s0.id)}; }));
+  if (A.can("menu") || A.can("lunch")){
+    if (window.SCSearch){ var r = SCSearch.searchDishes(SC.items, q), dish = function(x){ return {href:"menu.html#d=" + x.id, icon:"fork-knife", title:x.n, meta:(SC.catById[x.cat] ? SC.catById[x.cat].n + " · " : "") + SC.fmt(x.p)}; };
+      grp("dish", "Ястия", r.name.map(dish));
+      if (r.comp.length) grp("dishc", r.band || "Съдържат", r.comp.map(dish));
+      if (r.rest.length && !r.name.length && !r.comp.length) grp("dishr", "Ястия", r.rest.map(dish));
+      if (r.unknown.length) grp("dishu", "Нямаме пълен състав, попитайте ни", r.unknown.map(dish)); }
+    else out.push({key:"wait", title:"Ястия", items:[], wait:true}); }
+  if (A.can("orders")) grp("ord", "Поръчки", A.orders().filter(function(o){ return (dq && (o.no === dq || (dq.length >= 3 && (digits(o.phone).indexOf(dq) > -1 || o.no.indexOf(dq) === 0)))) || (txt && norm(o.name || "").indexOf(nq) > -1); })
+    .map(function(o){ return {href:"orders.html#n=" + o.no, icon:"receipt", title:"№ " + o.no + " · " + (OST[o.status] || o.status), meta:(o.name || "") + (o.phone ? " · " + A.maskPhone(o.phone) : "")}; }));
+  if (A.can("reservations")) grp("res", "Резервации", A.reservations().filter(function(r0){ return (dq.length >= 3 && digits(r0.phone).indexOf(dq) > -1) || (txt && norm((r0.name || "") + " " + (r0.occasion || "")).indexOf(nq) > -1); })
+    .sort(function(a0, b0){ return a0.date < b0.date ? 1 : -1; }).map(function(r0){ return {href:"reservations.html#d=" + r0.date, icon:"calendar-check", title:(r0.name || "Резервация") + " · " + r0.time, meta:A.fmtDate(new Date(r0.date + "T12:00:00"), true) + " · " + (r0.people || "") + " души · " + (RST[r0.status] || r0.status)}; }));
+  if (A.can("customers")) grp("cus", "Клиенти", listOf(get("customers", [])).filter(function(c){ return (dq.length >= 3 && digits(c.phone).indexOf(dq) > -1) || (txt && norm(c.name || "").indexOf(nq) > -1); })
+    .map(function(c){ return {href:"customers.html", icon:"user", title:c.name || "Клиент", meta:c.phone ? A.maskPhone(c.phone) : ""}; }));
+  var notes = A.can("notes") ? A.notes.list() : A.notes.mine();
+  if (nq.length >= 3) grp("note", A.can("notes") ? "Бележки" : "Моите препоръки", notes.filter(function(n){ return norm(n.text + " " + (n.elementText || "")).indexOf(nq) > -1; })
+    .map(function(n){ return {href:"notes.html#s=" + n.status, icon:"pencil-simple", title:n.text, meta:A.noteStatusName(n.status) + " · " + (A.MODULE_NAMES[n.module] || n.module)}; }));
+  return out; };
+A.searchHTML = function(q, pre){ var g = A.search(q), i = 0, any = false;
+  if (!window.SCSearch && (A.can("menu") || A.can("lunch"))) A.loadSearch();
+  var h = g.map(function(gr){ if (gr.wait) return '<div class="sa-rg"><h3>Ястия</h3><p class="none" role="status">Зареждаме търсенето на ястия …</p></div>';
+    any = true; return '<div class="sa-rg"><h3>' + esc(gr.title) + (gr.extra ? ' <small>' + esc(gr.extra) + '</small>' : '') + '</h3>' + gr.items.map(function(it){ var id = "sa-" + pre + "-" + (i++);
+      return it.soon ? '<button type="button" role="option" id="' + id + '" data-sa="soon" data-id="' + it.soon + '">' + ic(it.icon, 20) + '<span><b>' + esc(it.title) + '</b><small>' + esc(it.meta) + '</small></span></button>'
+        : '<a href="' + it.href + '" role="option" id="' + id + '">' + ic(it.icon, 20) + '<span><b>' + esc(it.title) + '</b>' + (it.meta ? '<small>' + esc(it.meta) + '</small>' : '') + '</span></a>'; }).join("") + (gr.more ? '<p class="more">и още ' + gr.more + '</p>' : '') + '</div>'; }).join("");
+  return (any ? h : '<p class="none">Нищо не намерихме за „' + esc(q) + '“. Опитайте с друга дума, № на поръчка или последните цифри на телефон.</p>' + h) +
+    '<button class="sa-ask" type="button" role="option" id="sa-' + pre + '-ai" data-ask="' + esc(q) + '">' + ic("sparkle", 20) + '<span><b>Попитай AI: „' + esc(q) + '“</b><small>Пример в прототипа</small></span></button>'; };
+/* „Попитай AI“: примерен поток, отговорът е само от намереното по-горе */
+function askAI(q){ var g = A.search(q).filter(function(x){ return !x.wait; }), parts = g.map(function(gr){ return gr.title + ": " + gr.items.slice(0, 3).map(function(it){ return it.title; }).join(", ") + (gr.items.length > 3 || gr.more ? " …" : ""); });
+  var s0 = A.sheet({title:"Попитай AI", html:'<p class="sa-tag sample" style="margin:0 0 12px">' + ic("info", 16) + 'Пример: свързването с Claude е етап E</p>' +
+    '<div class="msg me" style="margin-left:auto">' + esc(q) + '</div><div class="msg bot" data-ans><span class="typing" aria-label="Мисли"><span></span><span></span><span></span></span></div>'});
+  setTimeout(function(){ var a = s0.el.querySelector("[data-ans]"); if (!a) return;
+    a.innerHTML = parts.length ? '<p>Ето какво намерих в данните, до които имате достъп:</p><ul class="ailist">' + parts.map(function(p0){ return '<li>' + esc(p0) + '</li>'; }).join("") + '</ul><p>Отговарям само от тях; каквото липсва, казвам „попитайте ни“.</p>'
+      : '<p>Не намерих нищо по този въпрос в данните, до които имате достъп. Опитайте с № на поръчка, телефон или име на ястие.</p>'; }, 900); }
+A.askAI = askAI;
+function bindSearch(){ var inp = A.app.querySelector("#sa-q"); if (!inp) return; var box = A.app.querySelector("#sa-sres"), clr = A.app.querySelector(".sa-top .sa-clear"), kbd = A.app.querySelector(".sa-top .sa-search .k"), sel = -1;
+  function opts(){ return Array.prototype.slice.call(box.querySelectorAll("[role=option]")); }
+  function mark(){ var o = opts(); o.forEach(function(el, i){ el.setAttribute("aria-selected", String(i === sel)); }); if (o[sel]){ inp.setAttribute("aria-activedescendant", o[sel].id); o[sel].scrollIntoView({block:"nearest"}); } else inp.removeAttribute("aria-activedescendant"); }
+  function draw(){ var q = inp.value.trim(); clr.hidden = !q; kbd.hidden = !!q; sel = -1;
+    box.innerHTML = q ? A.searchHTML(q, "q") : '<div class="sa-rg"><h3>Раздели</h3>' + A.visibleSections().slice(0, 6).map(function(s0, i){ return '<a href="' + (s0.soon ? '#' : s0.href) + '" role="option" id="sa-q-s' + i + '"' + (s0.soon ? ' data-sa="soon" data-id="' + s0.id + '"' : '') + '>' + ic(s0.ic, 20) + '<span><b>' + esc(s0.n) + '</b><small>' + esc(s0.soon ? "Скоро" : A.groupOf(s0.id)) + '</small></span></a>'; }).join("") + '</div><p class="hint">Търсете раздел, ястие („без лук“, „пиле“), № на поръчка или телефон.</p>';
+    box.hidden = false; inp.setAttribute("aria-expanded", "true"); mark(); }
   function hide(){ box.hidden = true; inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); }
-  inp.addEventListener("focus", draw); inp.addEventListener("input", function(){ sel = 0; draw(); });
-  inp.addEventListener("keydown", function(e){ if (e.key === "ArrowDown"){ e.preventDefault(); sel = Math.min(list.length - 1, sel + 1); draw(); } else if (e.key === "ArrowUp"){ e.preventDefault(); sel = Math.max(0, sel - 1); draw(); }
-    else if (e.key === "Enter"){ var s = list[sel]; if (s){ e.preventDefault(); if (s.soon){ hide(); soonSheet(s.id); } else location.href = s.href; } } else if (e.key === "Escape"){ inp.value = ""; hide(); inp.blur(); } });
+  A.onSearchReady = function(){ if (!box.hidden) draw(); };
+  inp.addEventListener("focus", function(){ draw(); A.loadSearch(); }); inp.addEventListener("input", draw);
+  clr.addEventListener("mousedown", function(e){ e.preventDefault(); }); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
+  inp.addEventListener("keydown", function(e){ var o = opts();
+    if (e.key === "ArrowDown"){ e.preventDefault(); sel = Math.min(o.length - 1, sel + 1); mark(); } else if (e.key === "ArrowUp"){ e.preventDefault(); sel = Math.max(0, sel - 1); mark(); }
+    else if (e.key === "Enter"){ var t = o[sel >= 0 ? sel : 0]; if (t){ e.preventDefault(); t.click(); } } else if (e.key === "Escape"){ if (inp.value){ inp.value = ""; draw(); } else { hide(); inp.blur(); } } });
+  box.addEventListener("mousedown", function(e){ e.preventDefault(); });
   inp.addEventListener("blur", function(){ setTimeout(hide, 150); });
   document.addEventListener("keydown", function(e){ if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "") && !document.querySelector(".sa-ov .sheetwrap.on") && inp.offsetParent){ e.preventDefault(); inp.focus(); } }); }
 
 /* ---------- delegation ---------- */
-document.addEventListener("click", function(e){ var t = e.target.closest("[data-sa]"); if (!t) return; var a = t.dataset.sa;
+document.addEventListener("click", function(e){ var ask = e.target.closest("[data-ask]"); if (ask){ e.preventDefault(); askAI(ask.dataset.ask); return; }
+  var t = e.target.closest("[data-sa]"); if (!t) return; var a = t.dataset.sa;
   if (a === "sections"){ openSections(); return; }
   if (a === "profile"){ openProfile(); return; }
   if (a === "logout"){ A.logout(); return; }

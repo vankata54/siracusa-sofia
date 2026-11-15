@@ -108,7 +108,7 @@ var NOTE = H.n ? A.notes.list().filter(function(x){ return x.id === H.n; })[0] :
 var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); }).map(function(m){ if (m.id !== "admin") return m; var c = Object.assign({}, m); c.screens = m.screens.filter(function(x){ return x.k === "login" || !A.SEC[x.k] || A.can(x.k); }); return c; });
 var MODS = {}; mods.forEach(function(m){ MODS[m.id] = m; });
 var CANPEN = !!A.me; /* моливът е за всички роли (решение 15.11): без „Бележки“ пише препоръки */
-var want = (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
+var want = {servitor:"waiter", kuhnya:"kitchen", shofyor:"driver"}[(NOTE && NOTE.module) || H.m] || (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
 if (denied && NOTE) NOTE = null;
 var DEV = {phone:[390,844,"Телефон"], tablet:[820,1180,"Таблет"], desktop:[1440,900,"Компютър"]};
 var TIMES = [["now","Сега (истинският час)"],["08:30","08:30 · преди отваряне"],["12:30","12:30 · обед"],["16:30","16:30 · -30% обедно"],["21:30","21:30 · без доставка"],["23:30","23:30 · затворено"]];

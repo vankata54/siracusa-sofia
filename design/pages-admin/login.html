@@ -92,8 +92,8 @@ d.innerHTML = '<div class="lg-in">' +
   '<div class="lg-main"><div class="lg-box">' +
     '<div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>' +
     (offline ? '<div class="lg-off">' + A.banner({tone:"warn", icon:"warning-circle", title:"Няма връзка с интернет", text:"Проверете връзката и опитайте пак.", action:'<button class="pill pill-line" type="button" data-sa="retry">' + ic("arrow-clockwise",20) + 'Опитай пак</button>'}) + '</div>' : '') +
-    (A.me && st !== "locked" && st !== "error" ? '<div class="lg-in-as">' + A.banner({tone:"ok", icon:"check-circle", title:"Вече сте влезли като " + A.me.name + " (" + A.roleName(A.me.role) + ").", text:"", action:'<a class="pill pill-ink" href="dashboard.html">Към таблото</a>'}) + '</div>' : '') +
-    '<h1 data-edit-id="admin.login.title">Вход</h1><p class="lead muted">За собственика, управителя, персонала и агенцията.</p>' +
+    (A.me && st !== "locked" && st !== "error" ? '<div class="lg-in-as">' + A.banner({tone:"ok", icon:"check-circle", title:"Вече сте влезли като " + A.me.name + " (" + A.roleName(A.me.role) + ").", text:"", action:'<a class="pill pill-ink" href="' + A.homeOf(A.me.role) + '">' + (A.isStaffApp() ? 'Към приложението' : 'Към таблото') + '</a>'}) + '</div>' : '') +
+    '<h1 data-edit-id="admin.login.title">Вход</h1><p class="lead muted">За собственика, управителя, персонала и агенцията. Сервитьорът, кухнята и шофьорът влизат направо в своето приложение.</p>' +
     '<form class="lg-form" novalidate data-edit-id="admin.login.form">' +
       '<div class="field"><label for="u">Потребител</label><input class="input" id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
       '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" name="password" type="password" autocomplete="current-password" required><button class="show" type="button" data-show aria-controls="p" aria-pressed="false">' + ic("eye",20) + '<span>Покажи</span></button></div></div>' +
@@ -131,10 +131,10 @@ f.addEventListener("submit", function(e){ e.preventDefault(); if (locked()) retu
       if (locked()){ lockUI(); clearInterval(timer); timer = setInterval(lockUI, 1000); err.focus(); return; }
       u.setAttribute("aria-invalid","true"); p.setAttribute("aria-invalid","true"); p.value = "";
       showErr("Грешен потребител или парола.", MAX - L.fails <= 3 ? "Остават " + A.plural(MAX - L.fails, "опит", "опита") + ", после входът се заключва за 15 минути." : "", true); return; }
-    A.data.set("login", {fails:0, until:0}); A.login(user); A.audit("staff.login", "Вход"); location.href = allowed(next); }, 650); });
+    A.data.set("login", {fails:0, until:0}); A.login(user); A.audit("staff.login", "Вход"); location.href = A.isStaffApp() ? A.homeOf(A.me.role) : allowed(next); }, 650); });
 [u, p].forEach(function(i){ i.addEventListener("input", function(){ u.removeAttribute("aria-invalid"); p.removeAttribute("aria-invalid"); if (!locked()) err.hidden = true; }); });
 d.addEventListener("click", function(e){ var t = e.target.closest("[data-as],[data-unlock],[data-state]"); if (!t) return;
-  if (t.dataset.as){ A.data.set("login", {fails:0, until:0}); A.login(t.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = allowed(next); return; }
+  if (t.dataset.as){ A.data.set("login", {fails:0, until:0}); A.login(t.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = A.isStaffApp() ? A.homeOf(A.me.role) : allowed(next); return; }
   if (t.hasAttribute("data-unlock")){ A.data.set("login", {fails:0, until:0}); location.href = "login.html"; location.reload(); return; }
   if (t.dataset.state != null){ e.preventDefault(); if (t.dataset.state !== "locked") A.data.set("login", {fails:0, until:0}); location.hash = t.dataset.state ? "st=" + t.dataset.state : ""; location.reload(); } });
 if (!locked() && st !== "error") setTimeout(function(){ u.focus({preventScroll:true}); }, 60);

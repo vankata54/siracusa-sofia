@@ -83,7 +83,7 @@ function card(s){ return '<section class="sc2 sa-card"><a class="main" href="' +
 function sec(s){ var x = A.SEC[s[0]]; return [s[0], s[1], s[2], s[3], x ? x.desc : "", s[4]]; }
 var el = document.createElement("div"); el.className = "ix";
 el.innerHTML = '<header><div class="brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div><h1>Админ панел: всички екрани</h1>' +
-  '<p class="lead muted">Жив прототип. Телефон (390) и компютър (1440) са еднакво важни. Влизането е с пробни акаунти; всяка страница без вход води към „Вход“.</p>' +
+  '<p class="lead muted">Жив прототип. Телефон (390) и компютър (1440) са еднакво важни. Влизането е с пробни акаунти; всяка страница без вход води към „Вход“. Сервитьор, кухня и шофьор влизат направо в своето приложение.</p>' +
   '<p class="label" style="margin:6px 0 0">Влез като:</p><div class="who">' + A.ACCOUNTS.map(function(a){ return '<button class="chip" type="button" data-as="' + a[0] + '">' + esc(A.roleName(a[1])) + '</button>'; }).join("") + '</div></header>' +
   '<h2>Рамка, вход, табло, преглед, бележки, роли ' + '<span class="sa-tag">автор 1</span></h2><p>Общата рамка (<code>_admin.css</code>, <code>_admin.js</code>, <code>_pencil.js</code>) е описана в README.md.</p><div class="grid">' + S1.map(card).join("") + '</div>' +
   '<h2>Меню, продажби, поръчки <span class="sa-tag">автор 2</span></h2><p>Меню, обедно меню, зони, оферти, събития и поръчки.</p><div class="grid">' + S2.map(function(s){ return card(sec(s)); }).join("") + '</div>' +
@@ -94,7 +94,7 @@ el.innerHTML = '<header><div class="brand"><span class="word">Siracusa</span><sp
   '<li>Прегледът на живо зарежда истинските прототипи от <code>../pages/</code>, <code>../pages-masa/</code>, <code>../pages-servitor/</code>, <code>../pages-kuhnya/</code>, <code>../pages-shofyor/</code>. Работи от http сървър (не <code>file://</code>), за да може моливът да огражда в рамката.</li></ul></section>';
 document.body.appendChild(el);
 if (window.SAPen && A.me) A.pen = A.mountPen({module:"admin"});
-el.addEventListener("click", function(e){ var b = e.target.closest("[data-as]"); if (!b) return; A.login(b.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = "dashboard.html"; });
+el.addEventListener("click", function(e){ var b = e.target.closest("[data-as]"); if (!b) return; A.login(b.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = A.homeOf(A.me.role); });
 })();
 </script>
 </body>
