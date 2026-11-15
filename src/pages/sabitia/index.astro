@@ -161,6 +161,8 @@ const description = "Тематична вечер всяка последна �
 
 /* the photo slot: the one look of the site (lib/ui.ts photoSlot), filling the media box under the date tile */
 .ev-media > .ph-slot{position:absolute; inset:0; border-radius:0}
+/* on a narrow card the date tile (76 px + 14 px) stands where the centred [ЛИПСВА] mark would be: the mark goes to its right */
+@container app (max-width:699px){ .ev-media > .ph-slot{padding-left:104px} .ev-media > .ph-slot > .ic{display:none} }
 
 /* calendar tile */
 .ctile{position:absolute; top:14px; left:14px; z-index:2; width:76px; border-radius:18px; overflow:hidden; display:grid; text-align:center; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
