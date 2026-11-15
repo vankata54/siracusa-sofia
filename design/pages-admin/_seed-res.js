@@ -1,7 +1,7 @@
 /* Siracusa · Админ: примерни резервации, блокирани номера и настройки (автор 3). Зарежда се след _admin.js и _res-lib.js на всяка страница.
    Един източник за таблото, лентата и разделите. Всеки ключ се попълва само ако липсва, по часа на прототипа A.now().
    A.seed.reservations(force) -> sa-reservations (+ sa-blocks)    A.seed.settings(force) -> sa-settings
-   A.seed.feedback(force) -> sa-feedback (обратна връзка). Помощниците (A.rl) са в _res-lib.js; този файл само попълва ключовете.
+   A.seed.feedback(force) -> sa-feedback (обратна връзка), A.seed.customers(force) -> sa-customers. Помощниците (A.rl) са в _res-lib.js; този файл само попълва ключовете.
 
    Форма на данните (описана и в README-3.md):
    sa-reservations: [{id, date:"2026-11-15", time:"19:30", people:4, table:"S3"|null, zone:"salon"|"garden"|null, name:"Клиент 7",
@@ -64,5 +64,18 @@ S.feedback = function(force){ if (!force && A.data.get("feedback", null)) return
     {id:"f6", topic:"rating", name:"Клиент 30", contact:R.phoneOf(29), orderNo:"1031", message:"Примерен отговор на „Как да подобрим обслужването?“.", status:"done", createdAt:at(9, 1270)}];
   A.data.set("feedback", v); return v; };
 
-S.settings(); S.reservations(); S.feedback();
+/* клиенти: 36 профила „Клиент N“ с поръчки от истинските ястия, в работно време, до часа на прототипа
+   sa-customers: [{id:"c1", name, phone, email, since:ISO, consent:{marketing, birthday, bday:"8.6"}, orders:[{no, at:ISO, ch:"Доставка"|"Вземане"|"Маса"|"Офис", lines:[[брой, id]]}], bonusUsed, sample:true}] */
+S.customers = function(force){ if (!force && A.data.get("customers", null)) return A.data.get("customers");
+  var DAY = 864e5, NOW = (A.now ? A.now() : new Date()).getTime(), CH = ["Доставка","Вземане","Маса","Офис"], phoneOf = R.phoneOf, out = [];
+  var MAIN = SC.items.filter(function(x){ return ["pitsi","skara-bertha","osnovni-yastia","burgeri","pasta-i-rizoto"].indexOf(x.cat) > -1 && !x.per100; }), SIDE = SC.items.filter(function(x){ return ["salati","deserti","garnituri"].indexOf(x.cat) > -1; });
+  for (var i = 0; i < 36; i++){ var r = rng("cu" + i), since = NOW - Math.floor(r() * r() * 300 + 3) * DAY, n = Math.floor(r() * 9), orders = [];
+    for (var k = 0; k < n; k++){ var day = R.addDays(R.today(), -Math.max(1, Math.floor(r() * (NOW - since) / DAY))), at = isoAt(day, 600 + Math.floor(r() * 690)), lines = [[1 + Math.floor(r() * 2), MAIN[Math.floor(r() * MAIN.length)].id], [1, SIDE[Math.floor(r() * SIDE.length)].id]];
+      orders.push({no:String(1000 + Math.floor(r() * 60) + k * 7 + i), at:at, ch:CH[Math.floor(r() * (r() < .6 ? 2 : 4))], lines:lines}); }
+    orders.sort(function(a, b){ return a.at < b.at ? 1 : -1; });
+    var mk = r() < .32, bd = r() < .2;
+    out.push({id:"c" + (i + 1), name:"Клиент " + (i + 1), phone:phoneOf(i), email:r() < .55 ? "klient" + (i + 1) + "@primer.bg" : "", since:new Date(since).toISOString(), consent:{marketing:mk, birthday:bd, bday:bd ? (1 + Math.floor(r() * 28)) + "." + (1 + Math.floor(r() * 12)) : ""}, orders:orders, bonusUsed:n > 0 && r() < .7, sample:true}); }
+  A.data.set("customers", out); return out; };
+
+S.settings(); S.reservations(); S.feedback(); S.customers();
 })();

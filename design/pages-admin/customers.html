@@ -96,21 +96,11 @@ var body = A.mount({section:"customers", title:"Клиенти",
 if (!body) return;
 
 /* ---------- примерни данни: „Клиент N“, телефоните от резервациите, истинските ястия и цени ---------- */
-function rng(seed){ var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-var phoneOf = A.rl.phoneOf, fmtPh = A.rl.fmtPhone, maskPh = A.rl.maskPhone; /* _seed-res.js */
+var phoneOf = A.rl.phoneOf, fmtPh = A.rl.fmtPhone, maskPh = A.rl.maskPhone; /* _res-lib.js */
 var now = A.now || function(){ return new Date(); };
 function maskMail(m){ var a = m.split("@"); return a[0][0] + "***@" + a[1]; }
 var DAY = 864e5, NOW = now().getTime(), CH = ["Доставка","Вземане","Маса","Офис"];
-var MAIN = SC.items.filter(function(x){ return ["pitsi","skara-bertha","osnovni-yastia","burgeri","pasta-i-rizoto"].indexOf(x.cat) > -1 && !x.per100; }), SIDE = SC.items.filter(function(x){ return ["salati","deserti","garnituri"].indexOf(x.cat) > -1; });
-function seed(){ var out = [];
-  for (var i = 0; i < 36; i++){ var r = rng("cu" + i), since = NOW - Math.floor(r() * r() * 300 + 3) * DAY, n = Math.floor(r() * 9), orders = [];
-    for (var k = 0; k < n; k++){ var dd = new Date(since + Math.floor(r() * (NOW - since - DAY))); dd.setUTCHours(8 + Math.floor(r() * 11), Math.floor(r() * 60)); var at = dd.getTime(), lines = [[1 + Math.floor(r() * 2), MAIN[Math.floor(r() * MAIN.length)].id], [1, SIDE[Math.floor(r() * SIDE.length)].id]];
-      orders.push({no:String(1000 + Math.floor(r() * 60) + k * 7 + i), at:new Date(at).toISOString(), ch:CH[Math.floor(r() * (r() < .6 ? 2 : 4))], lines:lines}); }
-    orders.sort(function(a, b){ return a.at < b.at ? 1 : -1; });
-    var mk = r() < .32, bd = r() < .2;
-    out.push({id:"c" + (i + 1), name:"Клиент " + (i + 1), phone:phoneOf(i), email:r() < .55 ? "klient" + (i + 1) + "@primer.bg" : "", since:new Date(since).toISOString(), consent:{marketing:mk, birthday:bd && true, bday:bd ? (1 + Math.floor(r() * 28)) + "." + (1 + Math.floor(r() * 12)) : ""}, orders:orders, bonusUsed:n > 0 && r() < .7, sample:true}); }
-  return out; }
-var CU = A.data.get("customers", null); if (!CU){ CU = seed(); A.data.set("customers", CU); }
+var CU = A.data.get("customers", []) || []; /* примерите: _seed-res.js (A.seed.customers) */
 var BL = A.data.get("blocks", {}); /* _seed-res.js */
 var RES = A.data.get("reservations", []);
 var FB = A.data.get("feedback", []) || []; /* примерите: _seed-res.js */
