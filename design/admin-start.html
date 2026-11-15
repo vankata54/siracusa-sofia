@@ -1,0 +1,50 @@
+<title>Siracusa Админ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="ds/sc.css">
+<style>
+/* Входна страница на публикувания прототип. Токените са от ds/sc.css (светла и тъмна тема); тук няма свои цветове.
+   Оформление: една колона, името, едно главно действие, после пътищата към екраните. */
+body{background:var(--bg); color:var(--ink); padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:48px 72px}
+.st{max-width:720px; margin:0 auto; display:grid; gap:32px}
+.st-h{display:grid; gap:14px}
+.st-h .meta{display:flex; flex-wrap:wrap; gap:8px}
+.st-h h1{margin:0; font-size:clamp(40px, 9vw, 72px); line-height:.95; letter-spacing:-.055em; font-weight:800; text-wrap:balance}
+.st-h p{margin:0; max-width:60ch; font-size:17px; line-height:1.5; color:var(--muted)}
+.st-go{display:flex; flex-wrap:wrap; gap:10px}
+.st-go .pill{min-height:56px}
+.st-list{display:grid; gap:10px}
+.st-list a{display:grid; grid-template-columns:1fr auto; gap:4px 12px; align-items:center; padding:16px 18px; min-height:48px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); text-decoration:none}
+.st-list b{font-size:17px; letter-spacing:-.01em}
+.st-list span{grid-column:1; font-size:15px; color:var(--muted); line-height:1.4}
+.st-list .ic{grid-row:1 / span 2; grid-column:2; color:var(--red)}
+.st-note{display:grid; gap:8px; padding:18px; border-radius:22px; background:var(--surface-2); font-size:15px; line-height:1.5}
+.st-note b{font-size:16px}
+.st-note code{font-weight:800}
+</style>
+
+<main class="st">
+  <header class="st-h">
+    <div class="meta"><span class="badge new">Прототип · етап C</span><span class="badge">Само за преглед</span></div>
+    <h1>Siracusa · Админ</h1>
+    <p>Жив прототип на админ панела: табло с всички модули, преглед на живо в рамка телефон, таблет или компютър, роли и права, моливът за бележки и разделите на ресторанта. Данните са примерни и живеят само в този браузър.</p>
+  </header>
+
+  <div class="st-go">
+    <a class="pill pill-red pill-lg" href="pages-admin/login.html">Влез в админа</a>
+    <a class="pill pill-line pill-lg" href="pages-admin/index.html">Всички екрани</a>
+  </div>
+
+  <section class="st-note" aria-label="Пробни акаунти">
+    <b>Пробни акаунти (само в прототипа)</b>
+    <span>Потребител <code>admin</code> (главен админ), <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code> или <code>marketing</code>, парола <code>demo-demo-1</code>. Истинските пароли за кода не са тук.</span>
+  </section>
+
+  <nav class="st-list" aria-label="Модулите">
+    <a href="pages-admin/dashboard.html"><b>Табло</b><span>Всички модули като плочки, „Днес“ и разделите</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="pages-admin/preview.html#m=site&amp;p=home&amp;d=phone"><b>Преглед на живо</b><span>Клиентският сайт и модулите на персонала в рамка</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="pages-admin/notes.html"><b>Бележки от молива</b><span>Нови, в работа, готови; износ в NOTES.json</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="index.html"><b>Клиентският сайт</b><span>Одобреният прототип на 21-те страници</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+  </nav>
+</main>
