@@ -135,6 +135,13 @@
 .mn-pin .input{padding-right:44px; font-weight:800; font-variant-numeric:tabular-nums}
 .mn-pin .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
 
+.mn-bar .sa-field-s{position:relative}
+.mn-bar .sa-field-s .input{padding-right:120px}
+.mn-clr{position:absolute; right:4px; top:2px; min-height:48px; padding:0 12px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:700; font-size:15px; display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+.mn-clr[hidden]{display:none}
+.mn-clr .ic{position:static !important; transform:none !important; color:inherit !important}
+.mn-schips:empty{display:none}
+.mn-sch{display:flex; flex-wrap:wrap; gap:8px}
 /* ---------- редактор (15.11): табове, чернова, категории, „Добави“ и „Смени“ ---------- */
 .mn-tabs{margin:24px 0 0}
 .mn-tsel{display:none}
@@ -220,6 +227,7 @@
 <script src="../ds/icons.js"></script>
 <script src="../data/menu.js"></script>
 <script src="../ds/sc.js"></script>
+<script src="../ds/search.js"></script>
 <script src="_admin.js"></script>
 <script src="_seed-orders.js"></script><script src="_res-lib.js"></script><script src="_seed-res.js"></script>
 <script src="_pencil.js"></script>
@@ -305,7 +313,7 @@ function rowHTML(x){ var out = isOut(x.id), s = state(x.id), base = SC.byId[x.id
     '<div class="mn-nm"><button class="mn-open" type="button" data-edit aria-label="Редактирай: ' + esc(x.n) + '">' + esc(x.n) + ic("caret-right",20) + '</button>' +
       (x.desc ? '<span class="mn-desc">' + esc(x.desc) + '</span>' : '') +
       '<span class="meta">' + (x.per100 ? '<span>за 100 гр.</span>' : x.g ? '<span>' + esc(x.g) + '</span>' : '') +
-      '<span class="al">' + ic("info",16) + (al ? A.plural(al, "алерген", "алергена") : (x.comp ? 'Без алергени по състава' : 'Алергени: ' + A.missing("състав"))) + '</span>' +
+      '<span class="al">' + ic("info",16) + (al ? A.plural(al, "алерген", "алергена") : (x.comp ? 'Без алергени по състава' : 'Без състав: в сайта „Нямаме пълен състав, попитайте ни“')) + '</span>' +
       (addonOn(x) ? '<span class="al">' + ic("plus",16) + 'Добави</span>' : '') + tagsHTML(x) + '</span></div>' +
     '<div class="mn-ctl">' + (s === "del" ? '<button class="pill pill-line" type="button" data-undel>' + ic("arrow-counter-clockwise",20) + 'Върни в менюто</button>' :
       '<div class="mn-pr"><label class="mn-pf' + (was != null ? ' chg' : '') + '"><span class="vh">Цена на „' + esc(x.n) + '“ в евро' + (x.per100 ? ', за 100 гр.' : '') + '</span><input type="text" inputmode="decimal" autocomplete="off" value="' + num(x.p) + '" data-price aria-describedby="pe-' + x.id + '"><span aria-hidden="true">€</span></label>' +
@@ -330,8 +338,10 @@ function tabsHTML(){ var df = diff();
   return '<div class="mn-tabs" data-edit-id="admin.menu.tabs"><div class="sa-tabs" role="tablist" aria-label="Редактор на менюто">' + [["","Ястия", all().length],["cats","Категории", cats().length],["opts","Добави и Смени", null]].map(function(t){
     return '<button type="button" role="tab" id="mt-' + (t[0] || "dishes") + '" aria-controls="mn-tp" aria-selected="' + (view.t === t[0]) + '" tabindex="' + (view.t === t[0] ? 0 : -1) + '" data-tab="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="c">' + t[2] + '</span>' : '') + '</button>'; }).join("") + '</div><div class="mn-tsel"><label class="vh" for="mn-ts">Част от редактора</label><select class="input" id="mn-ts">' + [["","Ястия (" + all().length + ")"],["cats","Категории (" + cats().length + ")"],["opts","Добави и Смени"]].map(function(t){ return '<option value="' + t[0] + '"' + (view.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join("") + '</select></div></div>'; }
 
+function schipsHTML(){ var S = window.SCSearch; if (!S || !view.q.trim()) return ""; var ch = S.chips(view.q); if (!ch.length) return "";
+  return '<div class="mn-sch" role="group" aria-label="Съставки в търсенето">' + ch.map(function(c){ return '<button class="chip" type="button" data-qtog="' + esc(c.word) + '" aria-pressed="' + c.without + '">' + (c.without ? 'без ' + esc(c.label) : esc(c.label) + ' ' + ic("x",16)) + '<span class="vh">' + (c.without ? ', смени на „' + esc(c.label) + '“' : ', смени на „без ' + esc(c.label) + '“') + '</span></button>'; }).join("") + '</div>'; }
 function toolbar(){ var list = all(true);
-  return '<div class="mn-bar" data-edit-id="admin.menu.toolbar"><div class="sa-field-s"><label class="vh" for="mn-q">Търси ястие</label>' + ic("magnifying-glass",20) + '<input class="input" id="mn-q" type="search" placeholder="Търси ястие (и на латиница)" autocomplete="off" value="' + esc(view.q) + '"></div>' +
+  return '<div class="mn-bar" data-edit-id="admin.menu.toolbar"><div class="sa-field-s"><label class="vh" for="mn-q">Търси ястие</label>' + ic("magnifying-glass",20) + '<input class="input" id="mn-q" type="search" placeholder="Име или съставка, например „лук“, „без глутен“" autocomplete="off" value="' + esc(view.q) + '"><button class="mn-clr" type="button" data-qclr' + (view.q ? '' : ' hidden') + '>' + ic("x",18) + 'Изчисти</button></div><div class="mn-schips" data-schips>' + schipsHTML() + '</div>' +
     '<div class="mn-flt" role="group" aria-label="Покажи">' + FILTERS.map(function(f){ var n = list.filter(function(x){ return pass(x, f[0]); }).length;
       return '<button class="chip" type="button" data-f="' + f[0] + '" aria-pressed="' + (view.f === f[0]) + '">' + ic(f[2],18) + f[1] + ' <span class="n">' + n + '</span></button>'; }).join("") + '</div>' +
     '<div class="mn-cats" role="group" aria-label="Категория"><button class="chip" type="button" data-c="" aria-pressed="' + (!view.c) + '">Всички категории</button>' + cats().map(function(c){ return '<button class="chip" type="button" data-c="' + c + '" aria-pressed="' + (view.c === c) + '">' + esc(catName(c)) + ' <span class="n">' + list.filter(function(x){ return x.cat === c && !x._del; }).length + '</span></button>'; }).join("") + '</div></div>'; }
@@ -341,7 +351,18 @@ function rail(){ var list = all();
     cats().map(function(c){ var items = list.filter(function(x){ return x.cat === c; }), o = items.filter(function(x){ return isOut(x.id); }).length;
       return '<button type="button" data-c="' + c + '" aria-pressed="' + (view.c === c) + '"><span>' + esc(catName(c)) + '</span><span class="n">' + (o ? '<span class="o">' + ic("clock",14) + o + '</span> · ' : '') + items.length + '</span></button>'; }).join("") + '</nav>'; }
 
-function groups(){ var list = all(view.f === "draft").filter(function(x){ return pass(x) && match(x) && (!view.c || x.cat === view.c); });
+/* същите думи като в сайта: SC.searchable (думите на категорията, „пица“, „бургер“), ако го има */
+function search(pool, q){ var by = {}, P = pool.map(function(x){ by[x.id] = x; return SC.searchable ? Object.assign({}, SC.searchable(x), {comp:x.comp || "", al:x.al || [], t:x.t || [], n:x.n}) : x; }), r = window.SCSearch.searchDishes(P, q);
+  ["name","comp","rest","unknown"].forEach(function(k){ r[k] = r[k].map(function(y){ return by[y.id]; }).filter(Boolean); }); return r; }
+function sect(title, sub, items, id){ return items.length ? '<section class="mn-g" aria-labelledby="h-s-' + id + '" data-edit-id="admin.menu.results"><div class="mn-gh"><h2 id="h-s-' + id + '">' + esc(title) + '</h2><small>' + (sub || A.plural(items.length, "ястие", "ястия")) + '</small></div>' + items.map(rowHTML).join("") + '</section>' : ''; }
+/* търсенето е едно (../ds/search.js): по име горе, „Съдържат …“ отдолу, без състав никога не минава „без …“ */
+function searchView(){ var pool = all(view.f === "draft").filter(function(x){ return pass(x) && (!view.c || x.cat === view.c); }), r = search(pool, view.q);
+  var n = r.name.length + r.comp.length + r.rest.length + r.unknown.length;
+  if (!n) return '<div class="sa-card">' + A.empty({icon:"magnifying-glass", title:"Няма ястие с „" + view.q + "“.", text:"Търсете по име или съставка, и на латиница: „pitsa“, „onion“, „без лук“.", action:'<button class="pill pill-line pill-lg" type="button" data-clear>' + ic("x",20) + 'Изчисти търсенето</button>'}) + '</div>';
+  return '<div class="mn-groups">' + sect("По име", "", r.name, "name") + sect(r.band || "Съдържат", "", r.comp, "comp") + sect(r.query && r.query.exc.length ? "Без " + r.query.exc.map(function(w){ return w.label; }).join(", ") : "Резултати", "", r.rest, "rest") +
+    sect("Нямаме пълен състав", A.plural(r.unknown.length, "ястие", "ястия") + " · не минават „без …“", r.unknown, "unk") + '</div>'; }
+function groups(){ if (view.q.trim() && window.SCSearch) return searchView();
+  var list = all(view.f === "draft").filter(function(x){ return pass(x) && match(x) && (!view.c || x.cat === view.c); });
   /* махнатите в черновата се виждат в своята категория, за да могат да се върнат */
   if (view.f !== "draft") list = list.concat(all(true).filter(function(x){ return x._del && state(x.id) === "del" && match(x) && (!view.c || x.cat === view.c) && !view.f; }));
   if (!list.length){
@@ -400,6 +421,7 @@ function refreshRow(id, focusSel){ var r = body.querySelector('.mn-row[data-id="
   var rl = body.querySelector(".mn-rail"); if (rl) rl.outerHTML = rail(); setBar();
   if (focusSel){ var f = n.querySelector(focusSel); f && f.focus({preventScroll:true}); } return n; }
 function drawList(){ var box = body.querySelector("[data-list]"); if (!box) return draw(true); box.innerHTML = groups();
+  var sc = body.querySelector("[data-schips]"); if (sc) sc.innerHTML = schipsHTML(); var cl = body.querySelector("[data-qclr]"); if (cl) cl.hidden = !view.q;
   body.querySelectorAll(".mn-flt [data-f]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.f === view.f)); });
   body.querySelectorAll("[data-c]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.c === view.c)); }); }
 
@@ -455,6 +477,8 @@ body.addEventListener("click", function(e){ var t;
   if ((t = e.target.closest("[data-f]"))){ view.f = t.dataset.f; if (view.t){ view.t = ""; } syncHash(); if (t.classList.contains("mn-k") || !body.querySelector("[data-list]")){ draw(true); var l = body.querySelector(".mn-bar"); l && l.scrollIntoView({block:"start", behavior:SC.reduce ? "auto" : "smooth"}); } else drawList(); return; }
   if ((t = e.target.closest("[data-c]"))){ view.c = t.dataset.c; syncHash(); drawList(); if (t.closest(".mn-rail")){ var g = body.querySelector("[data-list]"); A.scroller.scrollTo({top:Math.max(0, g.offsetTop - 110), behavior:SC.reduce ? "auto" : "smooth"}); } return; }
   if ((t = e.target.closest("[data-back]"))){ toggleOut(t.dataset.back, false); return; }
+  if (e.target.closest("[data-qclr]")){ view.q = ""; var qi = body.querySelector("#mn-q"); qi.value = ""; syncHash(); drawList(); qi.focus(); return; }
+  if ((t = e.target.closest("[data-qtog]"))){ view.q = window.SCSearch.toggle(view.q, t.dataset.qtog); body.querySelector("#mn-q").value = view.q; syncHash(); drawList(); var nq = body.querySelector('[data-qtog="' + t.dataset.qtog + '"]'); nq && nq.focus(); return; }
   if (e.target.closest("[data-clear]")){ view.q = ""; view.f = ""; view.c = ""; syncHash(); draw(true); return; }
   if ((t = e.target.closest("[data-undel]"))){ var id = rowOf(t), x = dishIn(D().menu, id), before = edit(function(d){ var m = d.menu[id]; delete m._del; if (!Object.keys(m).length) delete d.menu[id]; });
     draw(true); flash(id); draftToast("„" + x.n + "“ остава в менюто", before); return; }
@@ -523,7 +547,7 @@ function openDish(id){ hideToast(); var x = id ? dish(id) : {id:null, n:"", desc
     '<div class="field"><label for="mf-n">Име</label><input class="input" id="mf-n" name="n" value="' + esc(x.n) + '" autocomplete="off" aria-describedby="mf-n-e"><span class="err" id="mf-n-e" hidden></span></div>' +
     '<div class="field"><label for="mf-desc">Описание <span class="muted" style="font-weight:600">(по желание)</span></label><textarea class="input" id="mf-desc" name="desc" rows="2" placeholder="Едно-две изречения за сайта">' + esc(x.desc || "") + '</textarea></div>' +
     '<div class="field"><label for="mf-cat">Категория</label><select class="input" id="mf-cat" name="cat">' + catOpts + '</select></div>' +
-    '<div class="field"><label for="mf-comp">Състав</label><textarea class="input" id="mf-comp" name="comp" rows="3" placeholder="Например: домат, краставица, сирене">' + esc(x.comp || "") + '</textarea>' + (x.comp ? '' : '<span class="help">' + A.missing("състав от ресторанта") + '. Без него алергените не се проверяват.</span>') + '</div>' +
+    '<div class="field"><label for="mf-comp">Състав</label><textarea class="input" id="mf-comp" name="comp" rows="3" placeholder="Например: домат, краставица, сирене">' + esc(x.comp || "") + '</textarea>' + '<span class="help">Не е задължително и не спира „Публикувай“. Без състав и алергени ястието е в сайта с бележка „Нямаме пълен състав, попитайте ни“ и не излиза във филтрите „без …“.</span>' + '</div>' +
     '<div class="two"><div class="field"><label for="mf-p">Цена' + (x.per100 ? ' за 100 гр.' : '') + '</label><div class="mn-pin"><input class="input" id="mf-p" name="p" inputmode="decimal" autocomplete="off" value="' + (x.p ? num(x.p) : '') + '" placeholder="10,22" aria-describedby="mf-p-e"><span class="u" aria-hidden="true">€</span></div><span class="err" id="mf-p-e" hidden></span></div>' +
       '<div class="field"><label for="mf-g">Грамаж</label><input class="input" id="mf-g" name="g" value="' + esc(x.per100 ? "за 100 гр." : (x.g || "")) + '" placeholder="350 гр."' + (x.per100 ? ' disabled' : '') + '></div></div>' +
     '<div class="grp"><span class="label">Етикети</span><div class="mn-chips" role="group" aria-label="Етикети">' + TAGS.map(function(t){ return '<button class="chip" type="button" data-tag="' + t[0] + '" aria-pressed="' + (x.t.indexOf(t[0]) > -1) + '">' + ic(t[2],18) + t[1] + '</button>'; }).join("") + '</div>' +
@@ -587,6 +611,7 @@ function reviewSheet(){ hideToast(); var df = diff(); if (!df || !df.n){ var e =
     return '<li><span>' + esc(x.n) + '<small>' + sub + '</small></span></li>'; }
   function part(title, icn, arr, kind){ return arr.length ? '<div><h3>' + ic(icn,20) + title + ' · ' + arr.length + '</h3><ul>' + arr.map(function(id){ return li(id, kind); }).join("") + '</ul></div>' : ''; }
   var html = '<div class="mn-sum2" data-edit-id="admin.menu.review"><div class="what">' + ic("arrow-clockwise",22) + '<span><b>Сайтът се пресглобява сам:</b> ' + A.plural(pages, "страница", "страници") + ' (ястията, категориите и менюто), sitemap.xml, JSON-LD и адресите.</span></div>' +
+    (function(){ var nc = df.nw.concat(df.chg).filter(function(id){ var x = dishIn(d.menu, id); return x && !x._del && !x.comp; }).length; return nc ? '<div class="what">' + ic("info",22) + '<span>' + A.plural(nc, "ястие", "ястия") + ' без състав: в сайта с бележка „Нямаме пълен състав, попитайте ни“; не излизат във филтрите „без …“. Не спира публикуването.</span></div>' : ''; })() +
     part("Нови ястия", "plus", df.nw, "new") + part("Променени", "pencil-simple", df.chg, "chg") + part("Махнати", "trash", df.del, "del") +
     (df.cats ? '<div><h3>' + ic("list",20) + 'Категории</h3><ul><li><span>Ред и имена<small>' + esc(cats(d).map(function(c){ return catName(c, d); }).join(" · ")) + '</small></span></li></ul></div>' : '') +
     (df.opts ? '<div><h3>' + ic("plus",20) + '„Добави“ и „Смени“</h3><ul><li><span>„Добави“ при: ' + esc((d.opts.addon.cats || []).map(function(c){ return catName(c, d); }).join(", ") || "никоя категория") + '<small>' + Object.keys(d.opts.addon.dishes || {}).length + ' ястия по изключение; „Смени“ остава скрито</small></span></li></ul></div>' : '') +
