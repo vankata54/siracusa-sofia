@@ -202,7 +202,7 @@ test("axe: no serious on the sign-in, the dashboard, a section, „Нямате 
   expect(await serious(page)).toEqual([]);
   await page.goto("/admin/roles/"); await expect(page.locator(".sa-noperm")).toBeVisible();
   expect(await serious(page)).toEqual([]);
-  await page.goto("/admin/menu/"); await expect(page.locator(".sa-empty")).toBeVisible();
+  await page.goto("/admin/menu/"); await expect(page.locator(".mn-sum")).toBeVisible();
   expect(await serious(page)).toEqual([]);
   await page.goto("/kuhnya/"); await expect(page.locator("h1")).toBeVisible();
   expect(await serious(page)).toEqual([]);

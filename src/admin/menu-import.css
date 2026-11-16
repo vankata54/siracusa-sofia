@@ -1,0 +1,61 @@
+/* /admin/menu/vnos/: „Внос на меню“ (1:1 от <style> на design/pages-admin/menu-import.html, версия 4). Само токени.
+   В кода автоматичното четене е етап E: вместо примерната чернова честна бележка и таблица за бързо въвеждане (.im-rows). */
+.im-steps{margin:0 0 20px; max-width:560px}
+.im-drop{display:grid; justify-items:center; gap:14px; padding:36px 20px; border-radius:var(--r-core); border:2px dashed var(--line-strong); background:var(--surface); text-align:center; transition:border-color var(--t-base) var(--ease), background-color var(--t-base) var(--ease)}
+.im-drop.over{border-color:var(--ember); background:var(--ember-soft)}
+.im-drop .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.im-drop h2{margin:0; font-size:24px; letter-spacing:-.03em}
+.im-drop p{margin:0; color:var(--muted); max-width:52ch}
+.im-drop input[type=file]{font-size:15px; max-width:100%}
+.im-drop input[type=file]::file-selector-button{min-height:52px; padding:0 20px; border:0; border-radius:999px; background:var(--ink); color:var(--bg); font:700 16px var(--font); cursor:pointer; margin-right:12px}
+.im-in:focus-visible + label{outline:3px solid var(--red); outline-offset:2px}
+.im-file{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:12px 14px; border-radius:20px; background:var(--surface-2); font-weight:700}
+.im-file .ic{color:var(--muted)}
+.im-file small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.im-mode{display:grid; gap:8px; margin-top:16px}
+.im-mode .seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.im-warn{display:flex; gap:8px; align-items:flex-start; font-size:15px; font-weight:700; color:var(--ink)}
+.im-warn .ic{color:var(--warn); margin-top:2px}
+.im-mode .seg button{font-size:15px; min-height:52px; white-space:normal; line-height:1.15; padding:0 8px}
+.im-go{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
+.im-read{display:grid; gap:16px; padding:28px 22px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.im-read h2{margin:0; font-size:24px; letter-spacing:-.03em; display:flex; align-items:center; gap:10px}
+.im-read h2 .ic{color:var(--ember)}
+.im-bar{height:10px; border-radius:5px; background:var(--surface-3); overflow:hidden}
+.im-bar span{display:block; height:100%; width:100%; background:var(--ember); transform-origin:left; transform:scaleX(0); transition:transform 2400ms var(--ease)}
+.im-bar.go span{transform:scaleX(1)}
+.im-note{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:15px}
+.im-note .ic{color:var(--muted); margin-top:2px}
+.im-sum{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:16px 0}
+@container page (min-width:760px){ .im-sum{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.im-k{display:grid; gap:2px; padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.im-k .lb{font-size:14px; font-weight:700; color:var(--muted)}
+.im-k .v{font-size:30px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+.im-rows{display:grid; gap:10px}
+.im-r{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding:14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.im-r.skip{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); opacity:.75}
+.im-r.bad{box-shadow:inset 0 0 0 2px var(--warn), var(--shadow)}
+.im-r .im-top{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px}
+.im-r .im-top b{font-size:15px; color:var(--muted)}
+.im-r .flag{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:700; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.im-r .flag .ic{color:var(--warn)}
+.im-r .sp{flex:1}
+.im-f{display:grid; gap:8px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:760px){ .im-f{grid-template-columns:minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr)} }
+.im-f .field label{font-size:14px}
+.im-eu{position:relative}
+.im-eu .input{padding-right:40px; font-weight:800}
+.im-eu .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
+.im-skip{display:inline-flex; align-items:center; gap:2px; min-height:48px; padding:0 0 0 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; cursor:pointer}
+.im-r.skip .im-skip{background:var(--surface)}
+.im-bottom{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:16px}
+.im-bottom .err{flex:1 1 100%; color:var(--danger); font-weight:700}
+
+/* ---------- в кода ---------- */
+.im-ok{display:grid; gap:12px; margin-top:12px; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.im-ok .im-file{margin:0}
+.im-ok p{margin:0}
+.im-ok .acts{display:flex; flex-wrap:wrap; gap:10px}
+.im-r .im-top .iconbtn{width:48px; height:48px; border-radius:50%}
+.im-more{margin-top:10px}
+.im-hint{margin:0 0 12px; color:var(--muted)}

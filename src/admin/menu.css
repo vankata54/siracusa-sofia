@@ -1,0 +1,230 @@
+/* /admin/menu/: „Меню“, пълен редактор (1:1 от <style> на design/pages-admin/menu.html, версия 4). Само токени;
+   ширините само с @container. В кода: лентата на черновата е .sa-pbar на рамката (data-pbar), състоянието на
+   пресглобяването и „Върни предишното меню“ (.mn-pubinfo), снимката от „Избери снимка“ (.mn-ph). */
+/* ---------- summary ---------- */
+.mn-sum{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+@container page (min-width:760px){ .mn-sum{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.mn-k{display:grid; gap:2px; align-content:start; min-height:104px; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; border:0; text-align:left; cursor:pointer; font:inherit; transition:transform var(--t-fast) var(--ease)}
+.mn-k:active{transform:scale(.98)}
+.mn-k .lb{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.mn-k .lb .ic{color:var(--red)}
+.mn-k .v{font-size:34px; font-weight:800; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.mn-k .ft{font-size:14px; color:var(--muted); font-weight:600; line-height:1.35}
+.mn-k.out{background:var(--ink); color:var(--bg)}
+.mn-k.out .lb, .mn-k.out .ft{color:var(--bg); opacity:.8}
+.mn-k.out .lb .ic{color:var(--ember)}
+
+/* ---------- rule note ---------- */
+.mn-rule{display:flex; gap:12px; align-items:flex-start; margin:16px 0 0; padding:14px 16px; border-radius:20px; background:var(--surface-2); font-size:16px; line-height:1.45}
+.mn-rule > .ic{color:var(--warn); margin-top:2px}
+.mn-rule b{font-weight:800}
+
+/* ---------- toolbar ---------- */
+.mn-bar{display:grid; gap:10px; margin:28px 0 14px}
+.mn-bar .sa-field-s .input{min-height:52px}
+.mn-flt{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; margin:0 -2px}
+.mn-flt::-webkit-scrollbar{display:none}
+.mn-flt .chip .ic{color:var(--muted)}
+.mn-flt .chip[aria-pressed="true"] .ic{color:var(--ember)}
+.mn-cats{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; margin:0 -2px}
+.mn-cats::-webkit-scrollbar{display:none}
+@container page (min-width:1100px){ .mn-cats{display:none} .mn-bar .sa-field-s{max-width:460px} .mn-flt{flex-wrap:wrap; overflow:visible} }
+
+/* ---------- layout: category rail (wide) + list ---------- */
+.mn-lay{display:grid; gap:20px; grid-template-columns:minmax(0,1fr)}
+.mn-rail{display:none}
+@container page (min-width:1100px){
+  .mn-lay{grid-template-columns:232px minmax(0,1fr); align-items:start}
+  .mn-rail{display:grid; gap:2px; position:sticky; top:96px; padding:8px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+}
+.mn-rail button{display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ink); font-weight:700; font-size:15px; text-align:left; cursor:pointer}
+.mn-rail button:hover{background:var(--surface)}
+.mn-rail button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.mn-rail .n{font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.mn-rail button[aria-pressed="true"] .n{color:var(--bg); opacity:.7}
+.mn-rail .o{display:inline-flex; align-items:center; gap:4px; color:var(--ink); font-weight:800}
+.mn-rail button[aria-pressed="true"] .o{color:var(--bg)}
+
+/* ---------- groups & rows ---------- */
+.mn-groups{display:grid; gap:20px}
+.mn-g{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden; scroll-margin-top:96px}
+.mn-gh{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:18px 18px 12px; border-bottom:1px solid var(--line)}
+.mn-gh h2{margin:0; font-size:22px; letter-spacing:-.03em; line-height:1.15; font-weight:800}
+.mn-gh small{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.mn-row{display:grid; grid-template-columns:56px minmax(0,1fr); gap:6px 14px; align-items:center; padding:14px 16px; border-top:1px solid var(--line); transition:background-color var(--t-base) var(--ease)}
+.mn-row:first-of-type{border-top:0}
+.mn-row.flash{background:var(--ember-soft)}
+.mn-row .pic{width:56px; height:56px; border-radius:16px; grid-row:span 1}
+.mn-nm{min-width:0}
+.mn-open{display:flex; align-items:center; gap:6px; width:100%; min-height:48px; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; font-size:17px; line-height:1.3; letter-spacing:-.01em; font-weight:800}
+.mn-open:hover{text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:3px}
+.mn-open .ic{display:none; margin-left:auto; color:var(--muted)}
+.mn-nm .meta{display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; margin-top:4px; font-size:14px; font-weight:600; color:var(--muted)}
+.mn-nm .meta .al{display:inline-flex; align-items:center; gap:4px}
+.mn-nm .meta .badge{font-size:14px; padding:4px 9px 4px 7px}
+.mn-row.out .mn-open{color:var(--muted)}
+.mn-ctl{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px}
+@container page (min-width:760px){
+  .mn-row{grid-template-columns:56px minmax(0,1fr) auto; padding:12px 18px}
+  .mn-ctl{grid-column:auto; flex-wrap:nowrap}
+}
+
+/* price editor (на място) */
+.mn-pr{display:grid; gap:2px; justify-items:end}
+.mn-pf{display:inline-flex; align-items:center; gap:4px; min-height:48px; padding:0 16px 0 10px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); cursor:text}
+.mn-pf:focus-within{box-shadow:inset 0 0 0 2px var(--red)}
+.mn-pf input{width:76px; min-height:48px; border:0; background:transparent; padding:0; text-align:right; font-weight:800; font-size:17px; font-variant-numeric:tabular-nums; outline:none; color:var(--ink)}
+.mn-pf span{font-weight:800; color:var(--muted)}
+.mn-pf.chg{box-shadow:inset 0 0 0 2px var(--ember); background:var(--ember-soft)}
+.mn-pf[aria-invalid="true"]{box-shadow:inset 0 0 0 2px var(--danger)}
+.mn-pr small{font-size:14px; font-weight:600; color:var(--muted); white-space:nowrap}
+.mn-pr small.err{color:var(--danger); white-space:normal; text-align:right; max-width:200px}
+.mn-out{display:inline-flex; align-items:center; gap:2px; min-height:48px; padding:0 0 0 14px; border-radius:999px; background:var(--surface-2); font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap}
+.mn-out .sa-switch input:checked + .tr{background:var(--warn)}
+.mn-out.on{background:color-mix(in srgb, var(--warn) 14%, var(--surface))}
+.mn-ctl .pill{padding:0 16px}
+@container page (max-width:759px){
+  .mn-ctl{justify-content:space-between; flex-wrap:nowrap}
+  .mn-pr{justify-items:start}
+  .mn-pr small.err{text-align:left}
+  .mn-ctl .ed{display:none}
+  .mn-open .ic{display:block}
+}
+@container page (max-width:400px){ .mn-out{padding-left:12px; font-size:14px} .mn-pf{padding:0 12px 0 6px} .mn-pf input{width:60px} }
+
+/* today's sold-out strip */
+.mn-today{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:12px 0 0; padding:10px 10px 10px 16px; border-radius:24px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--warn)}
+.mn-today > b{display:inline-flex; align-items:center; gap:8px; color:var(--warn); font-size:15px; margin-right:4px}
+.mn-today .chip{min-height:48px; font-size:15px}
+.mn-today .chip .ic{color:var(--muted)}
+
+/* ---------- dish sheet ---------- */
+.mn-form{display:grid; gap:18px; padding:4px 0 8px}
+.mn-form .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+.mn-form .grp{display:grid; gap:8px}
+.mn-form .grp > .label{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.mn-chips{display:flex; flex-wrap:wrap; gap:6px}
+.mn-chips .chip{min-height:48px; padding:0 14px}
+.mn-chips .chip .ic{color:var(--muted)}
+.mn-chips .chip[aria-pressed="true"] .ic{color:var(--ember)}
+.mn-alg{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.mn-alg .chip{justify-content:flex-start; min-height:48px; padding:0 12px; white-space:normal; text-align:left; line-height:1.15}
+.mn-wait{display:flex; gap:8px; align-items:flex-start; font-size:14px; color:var(--muted); font-weight:600}
+.mn-wait .ic{color:var(--warn); margin-top:1px}
+.mn-photo{display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; align-items:center; padding:12px; border-radius:20px; background:var(--surface-2)}
+.mn-photo .pic{width:96px; height:96px; border-radius:18px}
+.mn-photo p{margin:0; font-size:15px}
+.mn-addons{display:flex; flex-wrap:wrap; gap:6px}
+.mn-addons span{display:inline-flex; gap:6px; align-items:center; min-height:36px; padding:0 12px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700}
+.mn-addons span .price{font-weight:800}
+.mn-3d{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:20px; box-shadow:inset 0 0 0 1.5px var(--line)}
+.mn-3d b{display:flex; align-items:center; gap:8px}
+.mn-sw{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:4px 4px 4px 14px; border-radius:20px; background:var(--surface-2)}
+.mn-sw .sa-switch input:checked + .tr{background:var(--warn)}
+.mn-pin{position:relative}
+.mn-pin .input{padding-right:44px; font-weight:800; font-variant-numeric:tabular-nums}
+.mn-pin .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
+
+.mn-bar .sa-field-s{position:relative}
+.mn-bar .sa-field-s .input{padding-right:120px}
+.mn-clr{position:absolute; right:4px; top:2px; min-height:48px; padding:0 12px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:700; font-size:15px; display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+.mn-clr[hidden]{display:none}
+.mn-clr .ic{position:static !important; transform:none !important; color:inherit !important}
+.mn-schips:empty{display:none}
+.mn-sch{display:flex; flex-wrap:wrap; gap:8px}
+/* ---------- редактор (15.11): табове, чернова, категории, „Добави“ и „Смени“ ---------- */
+.mn-tabs{margin:24px 0 0}
+.mn-tsel{display:none}
+@container page (max-width:559px){ .mn-tabs .sa-tabs{display:none} .mn-tsel{display:block} .mn-ci .acts .pill, .mn-ci .acts .mn-on{flex:1 1 auto; justify-content:center} }
+@container page (min-width:700px){ .mn-tabs .sa-tabs{display:inline-flex} }
+.mn-pubinfo{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:12px 0 0; font-size:15px; font-weight:600; color:var(--muted)}
+.mn-pubinfo .ic{color:var(--ok)}
+.mn-row.del{background:color-mix(in srgb, var(--danger) 6%, var(--surface))}
+.mn-row.del .mn-open{text-decoration:line-through; color:var(--muted)}
+.mn-dt{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.mn-dt.new{background:var(--ember); color:var(--on-ember)}
+.mn-dt.chg{background:var(--surface-2); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.mn-dt.del{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--danger)}
+.mn-dt.del .ic{color:var(--danger)}
+.mn-desc{display:block; margin-top:2px; font-size:15px; color:var(--muted); line-height:1.4}
+
+/* draft bar (как „Публикувай“ в обедното: точно над долната лента на телефон) */
+.mn-pub{position:absolute; z-index:25; left:10px; right:10px; bottom:88px; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 18px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.mn-pub[hidden]{display:flex !important; transform:translateY(24px); opacity:0; pointer-events:none}
+.mn-pub .tx{flex:1; min-width:0; font-weight:700; font-size:15px; line-height:1.3}
+.mn-pub .pill{flex:none; padding:0 16px}
+@container app (max-width:420px){ .mn-pub{padding-left:14px} .mn-pub .pill{padding:0 12px} .mn-pub [data-discard] .ic{display:none} }
+@container app (min-width:700px){ .mn-pub{left:50%; right:auto; bottom:24px; transform:translateX(-50%); width:min(680px, calc(100% - 48px))} .mn-pub[hidden]{transform:translate(-50%,24px)} .sa-app:has(.mn-pub:not([hidden])) .sa-toast{bottom:100px} }
+.mn-pad{height:96px}
+
+/* categories tab */
+.mn-cl{display:grid; gap:8px}
+.mn-ci{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px 14px; align-items:center; padding:12px 14px 12px 12px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); cursor:grab}
+.mn-ci.dragging{opacity:.45}
+.mn-ci.drop{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
+.mn-ci .hd{display:inline-flex; align-items:center; gap:6px; color:var(--muted); cursor:grab}
+.mn-ci .no{color:var(--ink); width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-variant-numeric:tabular-nums}
+.mn-ci b{display:block; font-size:18px; letter-spacing:-.02em; line-height:1.25}
+.mn-ci small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.mn-ci .acts{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.mn-ci .acts .pill{padding:0 14px}
+.mn-ci .acts .sp{flex:1}
+@container page (min-width:900px){ .mn-ci{grid-template-columns:auto minmax(0,1fr) auto} .mn-ci .acts{grid-column:auto; flex-wrap:nowrap} }
+.mn-ci .mn-on{display:inline-flex; align-items:center; gap:2px; min-height:48px; padding:0 0 0 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; cursor:pointer}
+.mn-ci.gone{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+
+/* add-ons and swaps tab */
+.mn-two{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .mn-two{grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start} }
+.mn-box{display:grid; gap:12px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start}
+.mn-box h3{margin:0; font-size:20px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.mn-box h3 .ic{color:var(--red)}
+.mn-box p{margin:0}
+.mn-box .lst{display:grid}
+.mn-box .li{display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:56px; border-top:1px solid var(--line)}
+.mn-box .li:first-child{border-top:0}
+.mn-box .li b{font-weight:700}
+.mn-box .li small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.mn-box .li .mn-pf input{width:64px}
+.mn-box.off{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mn-hid{display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:16px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-weight:700}
+.mn-hid .ic{color:var(--muted)}
+.mn-grp{padding:12px 14px; border-radius:18px; background:var(--surface); display:grid; gap:6px}
+.mn-grp .opt{display:flex; justify-content:space-between; gap:8px; font-size:15px}
+
+/* sheets */
+.mn-seg button{font-size:15px; min-height:48px; padding:0 6px; white-space:normal; line-height:1.15}
+.mn-file{display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; align-items:center; padding:12px; border-radius:20px; background:var(--surface-2)}
+.mn-file .pic, .mn-file .ph{width:96px; height:96px; border-radius:18px}
+.mn-file .ph{object-fit:cover; display:block}
+.mn-file .in{display:grid; gap:6px}
+.mn-in:focus-visible + label{outline:3px solid var(--red); outline-offset:2px}
+.mn-file input[type=file]::file-selector-button{min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--ink); color:var(--bg); font:700 15px var(--font); cursor:pointer; margin-right:10px}
+.mn-sum2{display:grid; gap:14px}
+.mn-sum2 .what{display:flex; gap:12px; align-items:flex-start; padding:14px; border-radius:18px; background:var(--surface-2)}
+.mn-sum2 .what .ic{color:var(--ok); margin-top:2px}
+.mn-sum2 h3{margin:0 0 4px; font-size:17px; display:flex; align-items:center; gap:8px}
+.mn-sum2 ul{margin:0; padding:0; list-style:none; display:grid; gap:4px}
+.mn-sum2 li{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:15px}
+.mn-sum2 li:first-child{border-top:0}
+.mn-sum2 li small{display:block; color:var(--muted); font-weight:600; font-size:14px}
+.mn-opts{display:grid; gap:8px}
+.mn-optrow{display:grid; grid-template-columns:minmax(0,1fr) 120px 48px; gap:8px; align-items:end}
+.mn-optrow .iconbtn{width:48px; height:52px; border-radius:16px}
+
+/* ---------- в кода ---------- */
+/* снимката от „Избери снимка“ (uploadMedia) на мястото на илюстрацията */
+img.pic{display:block; object-fit:cover; background:var(--surface-2)}
+/* „Публикувано … от …“, пресглобяването и „Върни предишното меню“ */
+.mn-pubinfo .st{display:inline-flex; align-items:center; gap:6px; color:var(--ink)}
+.mn-pubinfo .st.bad .ic{color:var(--danger)}
+.mn-pubinfo .st.wait .ic{color:var(--ember)}
+.mn-pubinfo .pill{min-height:48px; padding:0 14px; font-size:15px}
+.mn-pubinfo .pill .ic{color:inherit}
+.mn-conf{margin:0 0 16px}
+.mn-wait.err{color:var(--danger)}
+.mn-wait.err .ic{color:var(--danger)}
+.mn-file .err{font-size:14px; font-weight:700; color:var(--danger)}
+.mn-sum2 .what.bad .ic{color:var(--danger)}
+/* един бутон за изчистване („Изчисти“), без вградения на браузъра */
+#mn-q::-webkit-search-cancel-button, #mn-q::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}

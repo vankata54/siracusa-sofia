@@ -1,0 +1,12 @@
+---
+/* /admin/menu/: „Меню“, пълен редактор (design/pages-admin/menu.html, версия 4). Всичко идва от браузъра, след като
+   сесията е ясна (src/admin/menu.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/menu.css";
+---
+<Admin title="Меню" page="admin-menu">
+<script>
+import { initMenu } from "../../../admin/menu.ts";
+initMenu();
+</script>
+</Admin>

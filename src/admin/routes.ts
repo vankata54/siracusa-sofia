@@ -25,6 +25,8 @@ export const aurl = {
   login: (next?: string) => go("admin/vhod/", next ? "next=" + encodeURIComponent(next) : undefined),
   /** a section by its key in SECTIONS; "dashboard" is /admin/ */
   section: (key: string, hash?: string) => (key === "dashboard" ? go("admin/", hash) : go("admin/" + key + "/", hash)),
+  /** "Внос на меню" (a screen of the section "Меню"; its rights are those of "Меню") */
+  menuImport: (hash?: string) => go("admin/menu/vnos/", hash),
   /** the live preview ("Отвори на живо"): #m=<module>&p=<screen>&d=<device> */
   preview: (hash?: string) => go("admin/preview/", hash),
   /** the module of a staff role */
@@ -35,7 +37,7 @@ export const aurl = {
   fromLogical(l: string | null | undefined): string | null {
     const v = String(l || ""), app = /^\/(servitor|kuhnya|shofyor)\/$/.exec(v);
     if (app) return go(app[1] + "/");
-    const m = /^\/admin\/((?:[a-z-]+\/)?)(#[^\s]*)?$/.exec(v);
+    const m = /^\/admin\/((?:[a-z-]+\/){0,2})(#[^\s]*)?$/.exec(v);
     if (!m || m[1] === "vhod/") return null;
     return go("admin/" + m[1], m[2] ? m[2].slice(1) : undefined);
   },

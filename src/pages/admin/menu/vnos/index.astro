@@ -1,0 +1,12 @@
+---
+/* /admin/menu/vnos/: „Внос на меню“ (design/pages-admin/menu-import.html, версия 4) в раздел „Меню“
+   (src/admin/menu-import.ts). Автоматичното четене на файла е етап E. */
+import Admin from "../../../../layouts/Admin.astro";
+import "../../../../admin/menu-import.css";
+---
+<Admin title="Внос на меню" page="admin-menu-import">
+<script>
+import { initMenuImport } from "../../../../admin/menu-import.ts";
+initMenuImport();
+</script>
+</Admin>
