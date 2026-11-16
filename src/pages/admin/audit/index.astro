@@ -1,0 +1,11 @@
+---
+/* /admin/audit/: "Дневник" (design/pages-admin/audit.html): who, when, what, in plain words; read-only. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/audit.css";
+---
+<Admin title="Дневник" page="admin-audit">
+<script>
+import { initAudit } from "../../../admin/audit.ts";
+initAudit();
+</script>
+</Admin>

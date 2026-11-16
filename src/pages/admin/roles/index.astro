@@ -1,0 +1,11 @@
+---
+/* /admin/roles/: "Роли и права" (design/pages-admin/roles.html, version 4): roles x sections, saved by the main admin. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/roles.css";
+---
+<Admin title="Роли и права" page="admin-roles">
+<script>
+import { initRoles } from "../../../admin/roles.ts";
+initRoles();
+</script>
+</Admin>

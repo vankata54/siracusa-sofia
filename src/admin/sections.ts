@@ -86,6 +86,6 @@ export const MODULES: Mod[] = [
 export const SOON: [string, string][] = [
   ["orders", "Поръчки"], ["reservations", "Резервации"], ["menu", "Меню"], ["lunch", "Обедно меню"], ["offers", "Оферти и ваучери"],
   ["events", "Събития"], ["zones", "Зони за доставка"], ["hall", "Залата и масите"], ["qr", "QR генератор"], ["customers", "Клиенти"],
-  ["staff", "Персонал"], ["roles", "Роли и права"], ["reports", "Отчети"], ["audit", "Дневник"], ["notes", "Бележки (молив)"],
+  ["staff", "Персонал"], ["reports", "Отчети"],
   ["settings", "Настройки"],
 ];

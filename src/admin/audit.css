@@ -1,0 +1,30 @@
+/* /admin/audit/: „Дневник“ (1:1 от <style> на design/pages-admin/audit.html). Само токени; ширините с @container.
+   В кода няма примерни записи (без пунктирния кръг и легендата). */
+.au-bar{display:grid; gap:10px; grid-template-columns:minmax(0,1fr); margin-bottom:16px}
+@container page (min-width:820px){ .au-bar{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr)} }
+.au-bar .chips{grid-column:1 / -1; margin:0; padding:2px 0; flex-wrap:wrap; overflow:visible}
+@container page (max-width:560px){ .au-bar .chips{flex-wrap:nowrap; overflow-x:auto; margin:0 -16px; padding:2px 16px} }
+.au-sum{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin:0 0 14px; color:var(--muted); font-weight:600; font-size:15px}
+.au-sum b{color:var(--ink)}
+.au-day{margin:0 0 18px}
+.au-day h2{position:sticky; top:76px; z-index:2; display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; padding:8px 14px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:16px; font-weight:800}
+@container app (min-width:700px){ .au-day h2{top:88px} }
+.au-day h2 small{font-size:14px; color:var(--muted); font-weight:700}
+.au-list{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.au-e{display:grid; grid-template-columns:64px 44px minmax(0,1fr); gap:12px; align-items:start; padding:14px 16px; border-bottom:1px solid var(--line); position:relative}
+.au-e:last-child{border-bottom:0}
+.au-e .t{font-weight:800; font-variant-numeric:tabular-nums; padding-top:10px}
+.au-e .dot{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.au-e.g-login .dot{color:var(--ok)}
+.au-e.g-fail .dot{background:var(--red); color:var(--on-red)}
+.au-e.g-roles .dot, .au-e.g-staff .dot{background:var(--ink); color:var(--bg)}
+.au-e.g-menu .dot, .au-e.g-lunch .dot{background:var(--ember); color:var(--on-ember)}
+.au-e .tx{min-width:0}
+.au-e .tx p{margin:0; font-weight:700; font-size:16px; overflow-wrap:anywhere; line-height:1.4}
+.au-e .meta{display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:4px; font-size:15px; color:var(--muted); font-weight:600}
+.au-e .meta code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; padding:1px 8px; border-radius:8px; background:var(--surface-2); color:var(--ink)}
+@container page (max-width:520px){ .au-e{grid-template-columns:44px minmax(0,1fr)} .au-e .t{grid-column:2; grid-row:1; padding:0; font-size:15px; color:var(--muted)} .au-e .dot{grid-row:1 / span 2} .au-e .tx{grid-column:2} }
+.au-more{display:flex; justify-content:center; margin-top:16px}
+.au-note{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); margin-bottom:16px; font-size:15px; color:var(--muted)}
+.au-note .ic{flex:none; margin-top:2px; color:var(--ink)}
+.au-note b{color:var(--ink)}

@@ -128,17 +128,24 @@ export function toastUp() {
   else t.style.bottom = "";
 }
 /** A.toast("Бележката е изтрита", {undo, undoLabel, action:{label, href} | {label, fn}, ms}) */
-export function toast(text: string, o: { undo?: () => void; undoLabel?: string; action?: { label: string; href?: string; fn?: () => void }; ms?: number } = {}) {
+/* one toast at a time: a toast that can be undone ("Отмени") is never replaced by a notice that came by itself (a new online
+   order): the notice waits until the "Отмени" toast is gone */
+let undoUntil = 0, waiting: (() => void) | null = null;
+export function toast(text: string, o: { undo?: () => void; undoLabel?: string; action?: { label: string; href?: string; fn?: () => void }; ms?: number; queue?: boolean } = {}) {
+  const left = undoUntil - Date.now();
+  if (o.queue && left > 0) { waiting = () => toast(text, o); setTimeout(() => { const w = waiting; waiting = null; if (w) w(); }, left + 400); return; }
   const col = A.col || document.body; let t = $(".sa-toast", col);
   if (!t) { t = document.createElement("div"); t.className = "sa-toast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); col.appendChild(t); }
   const tt = t;
   tt.innerHTML = '<span class="tx">' + esc(text) + "</span>" + (o.action ? (o.action.href ? '<a href="' + esc(o.action.href) + '">' + esc(o.action.label) + ic("caret-right", 18) + "</a>" : '<button type="button" data-ta>' + esc(o.action.label) + "</button>") : "") +
     (o.undo ? '<button type="button" data-tu>' + ic("arrow-counter-clockwise", 18) + esc(o.undoLabel || "Отмени") + "</button>" : "");
-  const u = $<HTMLButtonElement>("[data-tu]", tt); if (u) u.onclick = () => { tt.classList.remove("on"); o.undo!(); };
+  const ms = o.ms || (o.undo ? 6000 : 3200);
+  undoUntil = o.undo ? Date.now() + ms : 0;
+  const u = $<HTMLButtonElement>("[data-tu]", tt); if (u) u.onclick = () => { tt.classList.remove("on"); undoUntil = 0; o.undo!(); };
   const a = $<HTMLButtonElement>("[data-ta]", tt); if (a) a.onclick = () => { tt.classList.remove("on"); o.action!.fn && o.action!.fn(); };
   toastUp();
   requestAnimationFrame(() => tt.classList.add("on")); clearTimeout(toastT);
-  toastT = setTimeout(() => tt.classList.remove("on"), o.ms || (o.undo ? 6000 : 3200));
+  toastT = setTimeout(() => tt.classList.remove("on"), ms);
 }
 
 /* ---------- sheet (from components.css: from the bottom on the phone, on the right from 900 px) ---------- */
@@ -196,6 +203,8 @@ export function setBadge(id: string, n: number) {
 function badgesFrom(s: Summary) {
   const w = s.waiting;
   A.badges = { orders: w.orders || 0, reservations: w.reservations || 0, notes: w.notes.n };
+  /* the pencil's own badge: the person's recommendations with a new status (the main admin has none) */
+  if (A.pen) A.pen.setBadge(isMainAdmin() ? 0 : w.notes.changedN);
   A.badgeTitles = { notes: w.notes.title, orders: "Нови поръчки за приемане", reservations: "Резервации за потвърждаване днес" };
   Object.keys(A.badges).forEach((k) => setBadge(k, A.badges[k]));
   markFresh();
@@ -266,7 +275,7 @@ function watchOrders() {
     if (!d.no || (d.status && d.status !== "accepted") || !online) { refreshSoon(); return; }
     ssSet(ALERT, JSON.stringify({ no: d.no, at: Date.now() }));
     chime();
-    toast("Нова онлайн поръчка № " + d.no, { action: { label: "Виж", href: aurl.section("orders", "n=" + d.no) }, ms: 6000 });
+    toast("Нова онлайн поръчка № " + d.no, { action: { label: "Виж", href: aurl.section("orders", "n=" + d.no) }, ms: 6000, queue: true });
     if (A.onNewOrder) A.onNewOrder({ no: d.no });
     refreshSoon();
   });
@@ -376,7 +385,8 @@ export function mountPen(module: string, slot?: HTMLElement) {
   try { if (window.frameElement && window.frameElement.closest(".pv-dev")) return; } catch { /* another origin */ }
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
-      module, who: who(), sectionNotes: can("notes"), slot,
+      module, who: who(), sectionNotes: can("notes"), slot, notesHref: aurl.section("notes"),
+      badge: A.summary && !isMainAdmin() ? A.summary.waiting.notes.changedN : 0,
       /* the ember bar under the top bar of the admin (BRIEF, decision 3 of the chief); the staff apps have no top bar of the admin */
       barTop: APPS.includes(module) ? undefined : [8, 88],
       onSave: async (n) => { await adminApi.createNote(n); refreshSoon(); },

@@ -118,7 +118,7 @@ export const NOTE_FLOW: Record<NoteStatus, NoteStatus[]> = {
 };
 
 /** actor: the username (the log); extra.who: the name shown in the note's history */
-export async function setNoteStatus(ctx: Ctx, id: string, status: NoteStatus, actor: string, extra: { reason?: string; change?: FeedbackNote["change"]; who?: string } = {}): Promise<FeedbackNote> {
+export async function setNoteStatus(ctx: Ctx, id: string, status: NoteStatus, actor: string, extra: { reason?: string; change?: FeedbackNote["change"]; who?: string; fix?: string } = {}): Promise<FeedbackNote> {
   if (!NOTE_STATUSES.includes(status)) throw new CoreError("bad_status", "Невалиден статус.");
   const n = await ctx.repo.get<FeedbackNote>(COL.notes, id);
   if (!n) throw new CoreError("not_found", "Няма такава бележка.", 404);
@@ -128,6 +128,9 @@ export async function setNoteStatus(ctx: Ctx, id: string, status: NoteStatus, ac
   const at = iso(ctx);
   n.status = status; n.updatedAt = at;
   if (status === "rejected") n.reason = reason; else if (status === "new") delete n.reason;
+  /* "Върни за поправка" (review -> doing): what to fix, for the next session */
+  const fix = clean(extra.fix, 1000);
+  if (status === "doing" && fix) n.fix = fix; else if (status !== "doing") delete n.fix;
   if (extra.change !== undefined) n.change = extra.change ? { summary: clean(extra.change.summary, 2000), before: extra.change.before ? clean(extra.change.before, 2000) : undefined, after: extra.change.after ? clean(extra.change.after, 2000) : undefined } : null;
   (n.history ||= []).push({ status, at, who: String(extra.who || actor).slice(0, 80) });
   await ctx.repo.put(COL.notes, n);

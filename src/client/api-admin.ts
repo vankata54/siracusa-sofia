@@ -7,6 +7,7 @@ import type { Core, NoteInput, NoteStatus, OrderStatus, ReservationStatus, Order
 import type { SettingsPatch } from "../core/settings.ts";
 import { settingsAllowed } from "../core/settings-guard.ts";
 import type { PublicStaff, Summary, SearchAnswer, NoteFilter } from "../core/index.ts";
+import type { AuditFilter } from "../core/audit.ts";
 
 export { ApiError };
 export type Me = { user: PublicStaff; sections: string[]; home: string };
@@ -45,13 +46,14 @@ export const adminApi = {
   notesSeen: pick(async (c) => c.notes.seen(await g(c)), () => http<{ id: string; at: string }>("POST", "admin/notes/seen")),
   exportNotes: pick(async (c) => { await g(c, "notes"); return c.notes.approved(); }, () => http<FeedbackNote[]>("GET", "admin/notes/export")),
   createNote: pick(async (c, n: NoteInput) => c.notes.create(n, await g(c)), (n) => http<FeedbackNote>("POST", "admin/notes", n)),
-  setNoteStatus: pick(async (c, id: string, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"] } = {}) => { const s = await g(c, undefined, true); return c.notes.setStatus(id, status, s.user.username, { ...extra, who: s.user.name }); },
+  setNoteStatus: pick(async (c, id: string, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"]; fix?: string } = {}) => { const s = await g(c, undefined, true); return c.notes.setStatus(id, status, s.user.username, { ...extra, who: s.user.name }); },
     (id, status, extra = {}) => http<FeedbackNote>("PATCH", "admin/notes/" + encodeURIComponent(id), { status, ...extra })),
   deleteNote: pick(async (c, id: string) => { const s = await g(c, undefined, true); return { ok: true, note: await c.notes.remove(id, s.user.username) }; },
     (id) => http<{ ok: boolean; note: FeedbackNote | null }>("DELETE", "admin/notes/" + encodeURIComponent(id))),
   restoreNote: pick(async (c, note: FeedbackNote) => { const s = await g(c, undefined, true); return c.notes.restore(note, s.user.username); }, (note) => http<FeedbackNote>("POST", "admin/notes/restore", { note })),
 
-  audit: pick(async (c) => { await g(c, "audit"); return c.audit.list(); }, () => http<AuditEntry[]>("GET", "admin/audit")),
+  /** newest first; f.before (ISO) pages back; from / to "YYYY-MM-DD", who (username), action (prefix), q (text) */
+  audit: pick(async (c, f: AuditFilter = {}) => { await g(c, "audit"); return c.audit.list(f); }, (f = {}) => http<(AuditEntry & { role?: string })[]>("GET", "admin/audit" + q(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v == null ? undefined : String(v)]))))),
 
   /* the sections of part 3 use these (kept from api.ts, now with the same checks as the server) */
   orders: pick(async (c, s?: OrderStatus) => { await g(c, "orders"); return c.orders.list(s ? { status: s } : {}); }, (s) => http<Order[]>("GET", "admin/orders" + q({ status: s }))),

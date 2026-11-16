@@ -107,7 +107,7 @@ test("no session: every admin page and module -> /admin/vhod/#next=, and back af
   await expect(page).toHaveURL(/#next=%2Fadmin%2Fnotes%2F$/);
   await page.fill("#u", USER.admin[0]); await page.fill("#p", USER.admin[1]); await page.click("[data-go]");
   await expect(page).toHaveURL(/\/admin\/notes\/$/);
-  await expect(page.locator(".sa-h1")).toHaveText("Бележки (молив)");
+  await expect(page.locator(".sa-h1")).toHaveText("Бележки");
 });
 
 test("no rights: „Нямате права за този раздел.“ with „Към таблото“", async ({ page, context }) => {

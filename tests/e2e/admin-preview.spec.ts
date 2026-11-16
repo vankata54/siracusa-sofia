@@ -26,7 +26,8 @@ const frameInfo = (page: Page) => page.evaluate(() => {
   try { const w = f.contentWindow!; return { same: w.location.origin === location.origin, path: w.location.pathname, search: w.location.search, page: w.document.documentElement.dataset.page || "", ready: w.document.readyState }; }
   catch { return { same: false, path: "", search: "", page: "", ready: "" }; }
 });
-const loaded = (page: Page, path: string) => expect.poll(async () => { const i = await frameInfo(page); return i.ready === "complete" ? i.path : ""; }).toBe(path);
+/* a change of the hash reloads the preview (src/admin/preview.ts): a read during that reload is simply tried again */
+const loaded = (page: Page, path: string) => expect.poll(async () => { const i = await frameInfo(page).catch(() => null); return i && i.ready === "complete" ? i.path : ""; }).toBe(path);
 const hash = (page: Page) => page.evaluate(() => location.hash);
 /** a screen by the picker (the computer) or by the sheet "Екран" of the floating bar (the phone) */
 async function pick(page: Page, k: string) {

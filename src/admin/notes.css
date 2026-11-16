@@ -1,0 +1,92 @@
+/* /admin/notes/: „Бележки“ и „Моите препоръки“ (1:1 от <style> на design/pages-admin/notes.html, версия 4).
+   Само токени; ширините само с @container. Добавено за кода: „Технически данни“ (сгънато, решение 10 на шефа) и
+   „Моите препоръки“ на цял екран за сервитьор, кухня и шофьор (без лентата на админа, като staffmode в _admin.css). */
+
+/* „Как работи?“: сгънато по подразбиране в един ред (решение 15.11, „Админът, допълнения“ 6) */
+.nt-how{display:block; padding:0; overflow:hidden; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.nt-how summary{display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; min-height:56px; padding:8px 20px; cursor:pointer; list-style:none; font-weight:800; font-size:17px}
+.nt-how summary::-webkit-details-marker{display:none}
+.nt-how summary span{display:inline-flex; align-items:center; gap:10px}
+.nt-how summary .ic{color:var(--ember)}
+.nt-how summary small{font-size:15px; font-weight:600; opacity:.8}
+.nt-how summary::after{content:"+"; margin-left:auto; font-size:22px; font-weight:800}
+.nt-how[open] summary::after{content:"-"}
+.nt-how summary:focus-visible{outline:3px solid var(--ember); outline-offset:-3px; border-radius:var(--r-core)}
+.nt-how[open] ol{padding:4px 20px 20px}
+.nt-how ol{margin:0; padding:0; list-style:none; display:grid; gap:10px; counter-reset:s; align-items:start}
+.nt-how li{display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start; align-content:start; counter-increment:s; color:var(--on-chip-dark)}
+.nt-how li::before{content:counter(s); width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:15px}
+.nt-how code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; padding:2px 8px; border-radius:8px; background:color-mix(in srgb, var(--on-chip-dark) 12%, transparent); overflow-wrap:anywhere}
+@container page (min-width:900px){ .nt-how[open] ol{padding:4px 28px 24px} .nt-how ol{grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px} .nt-how li{grid-template-columns:1fr; gap:10px} }
+
+/* табове, източник, модул, търсене */
+.nt-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:28px 0 16px}
+.nt-bar .sa-tabs{flex:1 1 auto}
+.nt-bar .flt{display:flex; gap:10px; flex:1 1 420px}
+.nt-bar .flt > *{flex:1 1 180px; min-width:0}
+@container page (min-width:1100px){ .nt-bar .sa-tabs{flex:0 0 auto} }
+@container page (max-width:560px){ .nt-bar .sa-tabs{flex:1 1 100%} .nt-bar .flt{flex-wrap:wrap} .nt-bar .flt > *{flex:1 1 100%} }
+
+/* картите */
+.nt-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .nt-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.nt{display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.nt .nt-top{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.nt .when{margin-left:auto; font-size:15px; color:var(--muted); font-weight:600; white-space:nowrap}
+.nt h3{margin:0; font-size:19px; line-height:1.35; letter-spacing:-.015em; font-weight:800; overflow-wrap:anywhere}
+.nt .where{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:15px; color:var(--muted); font-weight:600; overflow-wrap:anywhere}
+.nt .where b{color:var(--ink); font-weight:700}
+.nt blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--red); font-size:16px; overflow-wrap:anywhere}
+.nt blockquote small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.nt .nt-p{margin:0}
+.nt .nt-foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--line)}
+.nt .nt-foot .by{flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:var(--muted); font-weight:600}
+.nt .nt-foot .by span{display:inline-flex; align-items:center; gap:6px}
+.nt .nt-foot .by b{color:var(--ink)}
+.nt .acts{display:flex; flex-wrap:wrap; gap:8px; flex:1 1 100%; align-items:center}
+.nt .acts .pill{padding:0 16px}
+.nt .acts:empty{display:none}
+.nt .del{margin-left:auto; padding:0 14px}
+.nt .del .ic{color:var(--danger)}
+@container page (max-width:520px){ .nt .acts .pill{flex:1 1 auto} .nt .del{margin-left:0} }
+
+/* „Технически данни“ (сгънато): адрес, селектор, data-edit-id, историята */
+.nt-tech{border-radius:16px; background:var(--surface-2)}
+.nt-tech summary{display:flex; align-items:center; gap:8px; min-height:48px; padding:0 14px; cursor:pointer; list-style:none; font-size:15px; font-weight:700; color:var(--muted)}
+.nt-tech summary::-webkit-details-marker{display:none}
+.nt-tech summary::after{content:"+"; margin-left:auto; font-size:20px; font-weight:800; color:var(--ink)}
+.nt-tech[open] summary::after{content:"-"}
+.nt-tech summary:focus-visible{outline:3px solid var(--red); outline-offset:2px; border-radius:16px}
+.nt-tech dl{margin:0; padding:0 14px 14px; display:grid; gap:4px}
+.nt-tech dt{font-size:14px; font-weight:700; color:var(--muted); margin-top:6px}
+.nt-tech dd{margin:0; font-size:15px; overflow-wrap:anywhere}
+.nt-tech code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; color:var(--ink)}
+.nt-hist{margin:0; padding:0 0 0 18px; display:grid; gap:2px}
+
+/* статусите */
+.sa-tag.st-new{background:var(--ink); color:var(--bg)}
+.sa-tag.st-doing{background:var(--ember); color:var(--on-ember)}
+.sa-tag.st-approved{background:var(--ember-soft); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.sa-tag.st-review{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.sa-tag.st-review .ic{color:var(--warn)}
+.sa-tag.st-published{background:var(--surface-2); color:var(--ink)}
+.sa-tag.st-published .ic{color:var(--ok)}
+.sa-tag.st-rejected{background:var(--surface-2); color:var(--muted)}
+.nt-steps{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px}
+.nt-steps i{height:6px; border-radius:3px; background:var(--surface-3)}
+.nt-steps i.on{background:var(--ink)}
+.nt-steps.rej i{background:var(--surface-3)}
+.nt-diff{display:grid; gap:8px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:520px){ .nt-diff{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.nt-diff div{padding:10px 14px; border-radius:16px; background:var(--surface-2); overflow-wrap:anywhere}
+.nt-diff div.after{box-shadow:inset 3px 0 0 var(--ok)}
+.nt-diff small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.nt-why{padding:10px 14px; border-radius:16px; background:var(--surface-2); font-size:16px; overflow-wrap:anywhere}
+.nt-why b{display:block; font-size:14px; color:var(--muted)}
+.nt-ro{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:20px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); margin-top:16px}
+.nt-ro .ic{color:var(--muted); flex:none; margin-top:2px}
+
+/* „Моите препоръки“ на цял екран (сервитьор, кухня, шофьор): без лентата на админа */
+.sa-app.nt-staffmode .sa-top .sm{display:none}
+.sa-app.nt-staffmode .sa-end{height:176px}
+@container app (max-width:699px){ .sa-app.nt-staffmode .sa-crumb{display:none} .sa-app.nt-staffmode .sa-top .lg{display:none} .sa-app.nt-staffmode .sa-top .sm{display:inline} .sa-app.nt-staffmode .sa-top{justify-content:space-between} }

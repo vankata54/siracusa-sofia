@@ -380,7 +380,7 @@ export function createApp(opts: AppOpts) {
   /* docs/NOTES.json: the approved ones only (what the next session works on) */
   app.get("/api/admin/notes/export", async (c) => { await staff(c, "notes"); c.header("Content-Disposition", 'attachment; filename="NOTES.json"'); return c.json(await core.notes.approved()); });
   app.post("/api/admin/notes", async (c) => { const s = await staff(c); return c.json(await core.notes.create(await body(c), s), 201); });
-  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); const b = await body(c); return c.json(await core.notes.setStatus(c.req.param("id"), b.status, s.user.username, { reason: b.reason, change: b.change, who: s.user.name })); });
+  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); const b = await body(c); return c.json(await core.notes.setStatus(c.req.param("id"), b.status, s.user.username, { reason: b.reason, change: b.change, who: s.user.name, fix: b.fix })); });
   app.delete("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); return c.json({ ok: true, note: await core.notes.remove(c.req.param("id"), s.user.username) }); });
   app.post("/api/admin/notes/restore", async (c) => { const s = await staff(c, undefined, true); return c.json(await core.notes.restore((await body(c)).note, s.user.username), 201); });
   /* "Предложи подобрение" on the site: no sign-in; only addresses of the site's own pages; personal data filtered in the
@@ -392,7 +392,11 @@ export function createApp(opts: AppOpts) {
     const undos = [limit("sug-ip:" + ip(c), 3, 60, msg), limit("sug-dev:" + dev, 3, 60, msg)];
     return c.json(await counted(undos, async () => core.notes.suggest(await body(c), siteRoutes())), 201);
   });
-  app.get("/api/admin/audit", async (c) => { await staff(c, "audit"); return c.json(await core.audit.list()); });
+  app.get("/api/admin/audit", async (c) => {
+    await staff(c, "audit");
+    const q = (k: string) => c.req.query(k) || undefined;
+    return c.json(await core.audit.list({ limit: q("limit") ? +q("limit")! : undefined, before: q("before"), from: q("from"), to: q("to"), who: q("who"), action: q("action"), q: q("q") }));
+  });
 
   /* ---------- real time ----------
      /api/stream?order=1042-k7f3m2pq&office=173012: public events (reservations freed/taken, kitchen minutes) + only the

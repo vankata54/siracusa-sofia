@@ -1,0 +1,12 @@
+---
+/* /admin/notes/: "Бележки (молив)" and "Моите препоръки" (design/pages-admin/notes.html, version 4). Everything comes from
+   the browser after the session is known (src/admin/notes.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/notes.css";
+---
+<Admin title="Бележки" page="admin-notes">
+<script>
+import { initNotes } from "../../../admin/notes.ts";
+initNotes();
+</script>
+</Admin>

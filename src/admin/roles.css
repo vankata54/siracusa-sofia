@@ -1,0 +1,55 @@
+/* /admin/roles/: „Роли и права“ (1:1 от <style> на design/pages-admin/roles.html, версия 4). Само токени; ширините с @container.
+   Добавено за кода: бележката „Само главният админ променя правата“ (друга роля с раздела вижда таблицата заключена). */
+.rl-q{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:22px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); margin-bottom:16px}
+.rl-q > .ic{color:var(--warn); flex:none; margin-top:2px}
+.rl-q b{display:block}
+.rl-q p{margin:2px 0 0}
+.rl-q.rl-info, .rl-q.rl-lock{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.rl-q.rl-lock > .ic{color:var(--ink)}
+/* таблицата (таблет и компютър) */
+.rl-wrap{display:none}
+@container page (min-width:700px){ .rl-wrap{display:block} .rl-ph{display:none !important} }
+.rl{width:100%; border-collapse:separate; border-spacing:0; font-size:16px}
+.rl th, .rl td{padding:0; border-bottom:1px solid var(--line); text-align:center; vertical-align:middle}
+.rl thead th{position:sticky; top:0; z-index:1; background:var(--surface); padding:16px 6px 12px; vertical-align:bottom; min-width:96px}
+.rl thead th .rn{display:block; font-size:15px; font-weight:800; line-height:1.2; color:var(--ink)}
+.rl thead th .rc{display:block; margin-top:4px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.rl thead th .rc .ic{display:inline-block; vertical-align:-2px}
+.rl thead th .sa-tag{margin-top:6px; min-height:26px; padding:0 8px}
+.rl thead th:first-child, .rl tbody th{text-align:left; padding-left:18px}
+.rl tbody th{font-weight:700; padding:6px 12px 6px 18px; min-width:220px; position:sticky; left:0; background:var(--surface); z-index:1}
+.rl tbody th .sn{display:flex; align-items:center; gap:10px}
+.rl tbody th .sn .ic{color:var(--muted)}
+.rl tbody th small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-left:32px}
+.rl tbody tr.gh th{padding:20px 18px 8px; font-size:14px; font-weight:800; color:var(--muted); background:var(--surface); border-bottom:1px solid var(--line); position:static}
+.rl td{height:56px}
+.rl td.adm{background:color-mix(in srgb, var(--surface-2) 55%, transparent)}
+.rl tbody tr:last-child th, .rl tbody tr:last-child td{border-bottom:0}
+.rl .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember)}
+.rl thead .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember), inset 0 2px 0 var(--ember)}
+.rl tbody tr:last-child .col-mgr{box-shadow:inset 2px 0 0 var(--ember), inset -2px 0 0 var(--ember), inset 0 -2px 0 var(--ember)}
+/* телефон: една роля и превключватели */
+.rl-ph{display:grid; gap:12px}
+.rl-ph .chips{padding-top:2px; padding-bottom:4px}
+.rl-ph .chip[aria-selected="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.rl-who{padding:16px 18px}
+.rl-who h2{margin:0; font-size:22px; letter-spacing:-.025em}
+.rl-who p{margin:6px 0 0; color:var(--muted)}
+.rl-who .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.rl-g h3{margin:16px 4px 8px; font-size:14px; font-weight:800; color:var(--muted)}
+.rl-g .sa-card{display:grid}
+.rl-sw{display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 8px 8px 16px}
+.rl-sw + .rl-sw{border-top:1px solid var(--line)}
+.rl-sw > .ic{color:var(--muted); flex:none}
+.rl-sw label{flex:1; min-width:0; font-weight:700; cursor:pointer}
+.rl-sw label small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.rl-sw.chg{background:var(--ember-soft)}
+/* описанията */
+.rl-desc{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:700px){ .rl-desc{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1100px){ .rl-desc{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.rl-desc article{padding:18px; display:grid; gap:8px; align-content:start}
+.rl-desc article > .sa-tag{justify-self:start}
+.rl-desc h3{margin:0; font-size:19px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.rl-desc p{margin:0; color:var(--muted)}
+.rl-last{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:15px; font-weight:600; margin:12px 2px 0}

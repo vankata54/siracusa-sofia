@@ -148,6 +148,8 @@ export interface FeedbackNote {
   source?: NoteSource;
   /** why it was rejected (required for "rejected") */
   reason?: string;
+  /** "Върни за поправка": what to fix (review -> doing) */
+  fix?: string;
   /** what was changed, shown in "За преглед" (filled by the session that did the work) */
   change?: { summary: string; before?: string; after?: string } | null;
   history?: { status: NoteStatus; at: Iso; who: string }[];
