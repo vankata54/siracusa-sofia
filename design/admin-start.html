@@ -26,9 +26,9 @@ body{background:var(--bg); color:var(--ink); padding-left:max(16px, env(safe-are
 
 <main class="st">
   <header class="st-h">
-    <div class="meta"><span class="badge new">Прототип · етап C</span><span class="badge">Само за преглед</span></div>
+    <div class="meta"><span class="badge new">Прототип · етапи C и D</span><span class="badge">Само за преглед</span></div>
     <h1>Siracusa · Админ</h1>
-    <p>Жив прототип на админ панела: табло с всички модули, преглед на живо в рамка телефон, таблет или компютър, роли и права, моливът за бележки и разделите на ресторанта. Данните са примерни и живеят само в този браузър.</p>
+    <p>Жив прототип на админ панела: табло с всички модули, преглед на живо в рамка телефон, таблет или компютър, роли и права, моливът за бележки и разделите на ресторанта. Плюс приложенията на управителя и собственика (телефонът е главният размер). Данните са примерни и живеят само в този браузър.</p>
   </header>
 
   <div class="st-go">
@@ -38,12 +38,15 @@ body{background:var(--bg); color:var(--ink); padding-left:max(16px, env(safe-are
 
   <section class="st-note" aria-label="Пробни акаунти">
     <b>Пробни акаунти (само в прототипа)</b>
-    <span>Потребител <code>admin</code> (главен админ), <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code> или <code>marketing</code>, парола <code>demo-demo-1</code>. Истинските пароли за кода не са тук.</span>
+    <span>Потребител <code>admin</code> (главен админ), <code>owner</code> (собственик), <code>manager</code> (управител), <code>waiter</code>, <code>kitchen</code>, <code>driver</code> или <code>marketing</code>, парола <code>demo-demo-1</code>. Управителят и собственикът след вход избират: приложението или админ панела. Истинските пароли за кода не са тук.</span>
   </section>
 
   <nav class="st-list" aria-label="Модулите">
     <a href="pages-admin/dashboard.html"><b>Табло</b><span>Всички модули като плочки, „Днес“ и разделите</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
     <a href="pages-admin/preview.html#m=site&amp;p=home&amp;d=phone"><b>Преглед на живо</b><span>Клиентският сайт и модулите на персонала в рамка</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="pages-upravitel/index.html"><b>Управител</b><span>Смяната на живо: Сега, Залата, Екипът, Още; състоянията</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="pages-sobstvenik/index.html"><b>Собственик</b><span>Днес, Тенденции, Финанси и гориво, Решения; състоянията</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
+    <a href="pages-admin/login.html#st=choose&amp;as=manager"><b>Вход с избора</b><span>Управител и собственик: „Къде продължаваш?“ и „Запомни избора на това устройство“</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
     <a href="pages-admin/notes.html"><b>Бележки от молива</b><span>Нови, в работа, готови; износ в NOTES.json</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
     <a href="site.html"><b>Клиентският сайт</b><span>Одобреният прототип на 21-те страници</span><svg class="ic" viewBox="0 0 256 256" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></svg></a>
   </nav>

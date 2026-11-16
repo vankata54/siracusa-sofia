@@ -108,7 +108,7 @@ var NOTE = H.n ? A.notes.list().filter(function(x){ return x.id === H.n; })[0] :
 var mods = A.MODULES.filter(function(m){ return !m.soon && A.modCan(m); }).map(function(m){ if (m.id !== "admin") return m; var c = Object.assign({}, m); c.screens = m.screens.filter(function(x){ return x.k === "login" || !A.SEC[x.k] || A.can(x.k); }); return c; });
 var MODS = {}; mods.forEach(function(m){ MODS[m.id] = m; });
 var CANPEN = !!A.me; /* моливът е за всички роли (решение 15.11): без „Бележки“ пише препоръки */
-var want = {servitor:"waiter", kuhnya:"kitchen", shofyor:"driver"}[(NOTE && NOTE.module) || H.m] || (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
+var want = {servitor:"waiter", kuhnya:"kitchen", shofyor:"driver", upravitel:"manager", sobstvenik:"owner"}[(NOTE && NOTE.module) || H.m] || (NOTE && NOTE.module) || H.m, mod = MODS[want] || mods[0] || null, denied = want && !MODS[want] && A.MOD[want] && mod ? A.MOD[want] : null;
 if (denied && NOTE) NOTE = null;
 var DEV = {phone:[390,844,"Телефон"], tablet:[820,1180,"Таблет"], desktop:[1440,900,"Компютър"]};
 var TIMES = [["now","Сега (истинският час)"],["08:30","08:30 · преди отваряне"],["12:30","12:30 · обед"],["16:30","16:30 · -30% обедно"],["21:30","21:30 · без доставка"],["23:30","23:30 · затворено"]];
@@ -206,7 +206,8 @@ function onLoad(){ disarm(); var win = frame.contentWindow, doc;
   try{ doc = frame.contentDocument; }catch(e){ return; }
   /* a link inside the frame: arm just before the next page of the frame reads its prefs, never while the preview itself is leaving */
   try{ win.addEventListener("pagehide", function(){ if (leaving) return; arm(); if (loadEl) loadEl.classList.remove("off"); setTimeout(disarm, 4000); }); }catch(e){}
-  try{ doc.head.insertAdjacentHTML("beforeend", '<style>.pv-bar{display:none!important}</style>'); doc.documentElement.classList.remove("pv-phone");
+  /* без втори молив в рамката (решение 16.11): моливът е на прегледа; бутонът на модула (_pen-mount.js) не се закача в рамката, а това е предпазител */
+  try{ doc.head.insertAdjacentHTML("beforeend", '<style>.pv-bar, .sa-pen-btn, sa-pen-ui{display:none!important}</style>'); doc.documentElement.classList.remove("pv-phone");
     if (st.th !== "system") doc.documentElement.setAttribute("data-theme", st.th); }catch(e){}
   loadEl && loadEl.classList.add("off");
   var u = box.querySelector("[data-url]"); if (u) u.textContent = addr();

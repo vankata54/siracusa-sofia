@@ -1,11 +1,11 @@
-/* Молив в модулите Сервитьор, Кухня и Шофьор (решения на Поли 15.11: „Моливът на телефон“, „Вход според ролята“).
+/* Молив в модулите Сервитьор, Кухня, Шофьор, Управител и Собственик (стъпка 5; решения на Поли 15.11: „Моливът на телефон“, „Вход според ролята“).
    Самостоятелен: не зависи от A (рамката на админа). Включва се след ../ds/icons.js и ../pages-admin/_pencil.js:
      <script src="../pages-admin/_pencil.js"></script>
      <script src="../pages-admin/_pen-mount.js" data-place="top" data-top="10" data-bottom="96" data-side="right"></script>
    Ако има влязъл служител (localStorage "sa-session" {user, name, role}), закача молива. Служителите пишат ПРЕПОРЪКИ:
    те не променят нищо, отиват в „Бележки“ на админа и главният админ ги одобрява.
    Запис в localStorage "sa-notes" (същият формат като в админа, полетата от src/core/notes.ts + source):
-   {id, module:"servitor"|"kuhnya"|"shofyor", url:"/pages-servitor/tables.html#…", selector, editId, text, elementText, viewport:{w,h},
+   {id, module:"servitor"|"kuhnya"|"shofyor"|"upravitel"|"sobstvenik" (по папката), url:"/pages-servitor/tables.html#…", selector, editId, text, elementText, viewport:{w,h},
     screenshot:null, author:"Сервитьор 1 (Сервитьор)", source:{type:"staff", role, user}, status:"new", createdAt, updatedAt}.
    Бутонът „Молив“ (икона и дума, 48 px) е собствен, не кръглият на админа:
    - data-place="top"    на телефон горе вдясно (data-top px от горния ръб), за модули, чиято горна лента има място;
@@ -19,7 +19,7 @@
 "use strict";
 if (window.SAPenMount) return;
 var ROLE = {admin:"Главен админ", owner:"Собственик", manager:"Управител", waiter:"Сервитьор", kitchen:"Кухня", driver:"Шофьор", marketing:"Маркетинг"};
-var MODS = {"pages-servitor":"servitor", "pages-kuhnya":"kuhnya", "pages-shofyor":"shofyor"};
+var MODS = {"pages-servitor":"servitor", "pages-kuhnya":"kuhnya", "pages-shofyor":"shofyor", "pages-upravitel":"upravitel", "pages-sobstvenik":"sobstvenik"};
 var script = document.currentScript;
 function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
 function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }

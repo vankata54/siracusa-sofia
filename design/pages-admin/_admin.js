@@ -12,6 +12,9 @@ var ic = SC.ic, esc = SC.esc;
 A.ic = ic; A.esc = esc; A.fmt = SC.fmt;
 /* inside the frame of preview.html: the pencil belongs to the preview, not to the framed page */
 A.inPreview = (function(){ try{ return window.parent !== window && !!window.parent.A_PREVIEW; }catch(e){ return false; } })();
+/* _admin.js се зарежда и в модулите Управител и Собственик (без A.mount): адресите на админа оттам са с ../pages-admin/ */
+A.IN_ADMIN = /\/pages-admin\//.test(location.pathname);
+A.adminHref = function(p){ p = String(p || ""); return A.IN_ADMIN || /^(\.\.\/|\/|[a-z]+:)/.test(p) ? p : "../pages-admin/" + p; };
 
 /* ---------- storage: всичко с префикс sa- ---------- */
 var P = "sa-";
@@ -141,7 +144,7 @@ A.session = function(){ var s = get("session", null); return s && s.role && A.ro
 A.me = A.session();
 A.login = function(user){ var a = A.ACCOUNTS.filter(function(x){ return x[0] === user; })[0]; if (!a) return null;
   var s = {user:a[0], name:a[2], role:a[1]}; set("session", s); A.me = s; return s; };
-A.logout = function(){ if (A.me) A.audit("staff.logout", "Изход"); del("session"); location.href = "login.html"; };
+A.logout = function(){ if (A.me) A.audit("staff.logout", "Изход"); del("session"); location.href = A.adminHref("login.html"); };
 A.viewAs = function(role){ var a = A.ACCOUNTS.filter(function(x){ return x[1] === role; })[0]; if (a) A.login(a[0]); location.reload(); };
 A.roleName = function(id){ var r = A.role(id); return r ? r.n : id; };
 A.who = function(){ return A.me ? A.me.name + " (" + A.roleName(A.me.role) + ")" : "?"; };
@@ -149,8 +152,36 @@ A.who = function(){ return A.me ? A.me.name + " (" + A.roleName(A.me.role) + ")"
 /* вход според ролята (решение 15.11): сервитьор, кухня и шофьор работят в своя модул на цял екран, без админа */
 A.STAFF_HOME = {waiter:"../pages-servitor/tables.html", kitchen:"../pages-kuhnya/queue.html#s=skara", driver:"../pages-shofyor/list.html"};
 A.isStaffApp = function(role){ role = role || (A.me && A.me.role); return !!A.STAFF_HOME[role]; };
-A.homeOf = function(role){ return A.STAFF_HOME[role] || "dashboard.html"; };
+/* управител и собственик (стъпка 5): след вход „Къде продължаваш?“ (приложението или админ панела); изборът може да се запомни
+   на устройството в localStorage "sa-home" = {<потребител>: "app" | "admin"}. #next= в адреса на входа печели над избора. */
+A.MODULE_HOME = {manager:"../pages-upravitel/now.html", owner:"../pages-sobstvenik/today.html"};
+A.hasApp = function(role){ role = role || (A.me && A.me.role); return !!A.MODULE_HOME[role]; };
+A.homeChoice = function(user){ user = user || (A.me && A.me.user); var h = get("home", {}); return h && typeof h === "object" && (h[user] === "app" || h[user] === "admin") ? h[user] : null; };
+A.setHomeChoice = function(v, user){ user = user || (A.me && A.me.user); if (!user) return;
+  A.data.update("home", {}, function(h){ if (!h || typeof h !== "object" || Array.isArray(h)) h = {}; if (v === "app" || v === "admin") h[user] = v; else delete h[user]; return h; }); };
+/* „Към админа“ / „Към приложението“: ако изборът е запомнен, той следва къде отива човекът (иначе нищо не се запомня) */
+A.switchHome = function(v){ if (A.me && A.hasApp() && A.homeChoice() && A.homeChoice() !== v) A.setHomeChoice(v); };
+/* началото на ролята; адресът е спрямо pages-admin/ (от модул: A.adminHref) */
+A.homeOf = function(role, user){ role = role || (A.me && A.me.role); if (A.STAFF_HOME[role]) return A.STAFF_HOME[role];
+  if (A.MODULE_HOME[role]){ if (!user && A.me && A.me.role === role) user = A.me.user; if (A.homeChoice(user) === "app") return A.MODULE_HOME[role]; }
+  return "dashboard.html"; };
 A.can = function(section, role){ role = role || (A.me && A.me.role); if (!role) return false; if (role === "admin") return true; var r = A.role(role); return !!r && r.sections.indexOf(section) > -1; };
+/* #next= от входа: само адрес на прототипа, който ролята може да отвори; иначе "" (тогава решава ролята) */
+var MOD_DIRS = {"pages-upravitel":"manager", "pages-sobstvenik":"owner", "pages-servitor":"waiter", "pages-kuhnya":"kitchen", "pages-shofyor":"driver"};
+A.safeNext = function(n, role){ n = String(n || ""); role = role || (A.me && A.me.role); if (!role) return "";
+  var m = n.match(/^(?:\.\.\/|\/)(pages-[a-z]+)\/([a-z0-9-]+\.html(?:#.*)?)$/);
+  if (m && m[1] === "pages-admin"){ n = m[2]; m = null; }
+  if (m){ var id = MOD_DIRS[m[1]], mod = id && A.MOD[id]; if (!mod) return "";
+    if (A.STAFF_HOME[role] && mod.sec !== role) return ""; /* служителят: само своя модул */
+    return A.modCan(mod, role) ? "../" + m[1] + "/" + m[2] : ""; }
+  if (!/^[a-z-]+\.html(#.*)?$/.test(n) || /^login\.html/.test(n) || A.STAFF_HOME[role]) return "";
+  var f = n.split("#")[0], sec = Object.keys(A.SEC).filter(function(k){ return A.SEC[k].href.split("#")[0] === f; })[0];
+  return !sec || A.can(sec, role) ? n : ""; };
+/* след вход: #next= печели; служителите в своя модул; управител и собственик по запомнения избор, иначе „Къде продължаваш?“ */
+A.afterLogin = function(next){ if (!A.me) return "login.html"; var n = A.safeNext(next); if (n) return n; var r = A.me.role;
+  if (A.STAFF_HOME[r]) return A.STAFF_HOME[r];
+  if (A.MODULE_HOME[r]){ var c = A.homeChoice(); return c === "app" ? A.MODULE_HOME[r] : c === "admin" ? "dashboard.html" : "login.html#st=choose"; }
+  return "dashboard.html"; };
 
 /* ---------- audit (дневник) ---------- */
 /* A.audit("menu.price", "Цена на „Кебапчета“: 3,50 € → 3,80 €", "kebapcheta") ; ключовете като в ядрото: staff.login, role.update, note.status ... */
@@ -165,7 +196,7 @@ A.applyTheme();
 var THEMES = [["system","Авто","circles-three"],["light","Светла","sun"],["dark","Тъмна","moon"]];
 
 /* ---------- notes (бележките от молива: полетата са като в src/core/notes.ts) ---------- */
-A.MODULE_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", admin:"Админ"};
+A.MODULE_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", manager:"Управител", upravitel:"Управител", owner:"Собственик", sobstvenik:"Собственик", admin:"Админ"};
 /* статуси (решение на Поли 15.11): нова → одобрена → в изпълнение → за преглед → публикувана, или отхвърлена (с причина) */
 A.NOTE_STATUSES = [["new","Нови","Нова"],["approved","Одобрени","Одобрена"],["doing","В изпълнение","В изпълнение"],["review","За преглед","За преглед"],["published","Публикувани","Публикувана"],["rejected","Отхвърлени","Отхвърлена"]];
 A.noteStatusName = function(st){ var x = A.NOTE_STATUSES.filter(function(s){ return s[0] === st; })[0]; return x ? x[2] : st; };
@@ -241,8 +272,13 @@ A.MODULES = [
     S("login","Вход и начало на смяната","login.html"), S("list","Моите доставки","list.html"), S("delivery","Една доставка","delivery.html#1042"), S("route","Маршрут","route.html"), S("fuel","Гориво","fuel.html"), S("shift","Край на смяната","shift.html")], states:[
     S("list-empty","Няма доставки","list.html#s=empty"), S("list-offline","Няма връзка","list.html#s=offline"), S("delivery-call","Обаждане до клиента","delivery.html#1042&call"),
     S("delivery-outzone","Извън зоните","delivery.html#1046&s=outzone"), S("delivery-road","Закъснява","delivery.html#1042&s=road"), S("list-moving","В движение","list.html#s=moving")]},
-  {id:"manager", n:"Управител", ic:"briefcase", soon:true, what:"Смяната на живо: зала, кухня, доставки, закъснения и известия към управителя.", who:"Управителя", roles:["owner","manager"]},
-  {id:"owner", n:"Собственик", ic:"chart-bar", soon:true, what:"Оборот и отчети, финанси и гориво, сравнение на периоди.", who:"Собственика", roles:["owner"]},
+  /* стъпка 5: имената на екраните и състоянията са фиксирани в design/BRIEF-STEP5.md, раздел 3 */
+  {id:"manager", n:"Управител", ic:"briefcase", what:"Смяната на живо: какво става сега, залата, екипът, какво чака управителя.", who:"Управителя и собственика", dev:"phone", roles:["owner","manager"], dir:"../pages-upravitel/", screens:[
+    S("now","Сега","now.html"), S("hall","Залата","hall.html"), S("team","Екипът","team.html"), S("more","Още","more.html")], states:[
+    S("now-rush","Вечерен пик","now.html#st=rush"), S("now-calm","Нищо не чака","now.html#st=calm"), S("now-offline","Няма връзка","now.html#st=offline"), S("now-loading","Зареждане","now.html#st=loading"), S("now-error","Грешка","now.html#st=error")]},
+  {id:"owner", n:"Собственик", ic:"chart-bar", what:"Оборот днес, тенденции, финанси и гориво, решения.", who:"Собственика", dev:"phone", roles:["owner"], dir:"../pages-sobstvenik/", screens:[
+    S("today","Днес","today.html"), S("trends","Тенденции","trends.html"), S("finance","Финанси и гориво","finance.html"), S("decisions","Решения","decisions.html")], states:[
+    S("today-drop","Известие за отклонение","today.html#st=drop"), S("today-empty","Нов ресторант, без история","today.html#st=empty"), S("today-offline","Няма връзка","today.html#st=offline"), S("today-loading","Зареждане","today.html#st=loading"), S("today-error","Грешка","today.html#st=error")]},
   {id:"admin", n:"Админ", ic:"shield-check", what:"Този панел: разделите, ролите и правата, моливът за бележки.", who:"Агенцията, собственика, управителя", dev:"desktop", roles:["owner","manager","marketing"], dir:"../pages-admin/", screens:[
     S("dashboard","Табло","dashboard.html"), S("notes","Бележки","notes.html"), S("roles","Роли и права","roles.html"), S("login","Вход","login.html"),
     S("menu","Меню","menu.html"), S("lunch","Обедно меню","lunch.html"), S("zones","Зони за доставка","zones.html"), S("offers","Оферти и ваучери","offers.html"), S("events","Събития","events.html"), S("orders","Поръчки","orders.html"),
@@ -252,8 +288,24 @@ A.MODULES = [
 A.MOD = {}; A.MODULES.forEach(function(m){ A.MOD[m.id] = m; });
 /* модулите пишат бележки с module "servitor" / "kuhnya" / "shofyor" (_pen-mount.js) */
 A.MOD.servitor = A.MOD.waiter; A.MOD.kuhnya = A.MOD.kitchen; A.MOD.shofyor = A.MOD.driver;
+/* и Управител / Собственик: module "upravitel" / "sobstvenik" (папката, _pen-mount.js) */
+A.MOD.upravitel = A.MOD.manager; A.MOD.sobstvenik = A.MOD.owner;
 /* кой вижда плочката на модула: по раздела му, а Управител, Собственик и Админ по роля */
-A.modCan = function(m){ if (!A.me) return false; if (m.roles) return A.me.role === "admin" || m.roles.indexOf(A.me.role) > -1; return A.can(m.sec); };
+A.modCan = function(m, role){ role = typeof role === "string" && role ? role : (A.me && A.me.role); if (!role || !m) return false; if (m.roles) return role === "admin" || m.roles.indexOf(role) > -1; return A.can(m.sec, role); };
+/* модулите Управител и Собственик в началото си: A.guardModule("upravitel") -> true, или води към входа (#next=) / към началото на ролята */
+A.selfHref = function(){ var m = location.pathname.match(/\/(pages-[a-z]+)\/([^\/]*)$/); return m ? "../" + m[1] + "/" + (m[2] || "index.html") + location.hash : location.pathname + location.hash; };
+A.guardModule = function(id){ var m = A.MOD[id]; if (!m) return true;
+  if (!A.me){ location.replace(A.adminHref("login.html#next=" + encodeURIComponent(A.selfHref()))); return false; }
+  if (A.modCan(m)) return true;
+  location.replace(A.adminHref(A.homeOf(A.me.role))); return false; };
+/* запомненият избор следва „Към приложението“ (от админа към началото на своя модул) и „Към админа“ (от модула към таблото).
+   Явно: data-home="app" | "admin" на връзката. Без запомнен избор нищо не се записва. */
+document.addEventListener("click", function(e){ var a = e.target && e.target.closest && e.target.closest("a[href], [data-home]"); if (!a || !A.me || !A.hasApp() || !A.homeChoice()) return;
+  if (a.dataset.home){ A.switchHome(a.dataset.home); return; }
+  var u; try{ u = new URL(a.getAttribute("href"), location.href); }catch(x){ return; }
+  var home = A.MODULE_HOME[A.me.role].slice(2), dir = home.slice(0, home.lastIndexOf("/") + 1), here = location.pathname;
+  if (here.indexOf(dir) < 0 && u.pathname.slice(-home.length) === home) A.switchHome("app");
+  else if (here.indexOf(dir) > -1 && /\/pages-admin\/dashboard\.html$/.test(u.pathname)) A.switchHome("admin"); }, true);
 /* модул и екран по адрес (за бележките): "/pages-kuhnya/queue.html#s=skara" -> {m, s} */
 A.screenOf = function(url){ url = String(url || ""); var best = null;
   A.MODULES.forEach(function(m){ if (!m.dir) return; var dir = m.dir.replace("../", "/"); if (url.indexOf(dir) !== 0) return;
@@ -435,8 +487,13 @@ function sideHTML(cur){
         if (s.soon) return '<button class="sa-i" type="button" data-sa="soon" data-id="' + id + '" title="' + esc(s.n) + ': скоро">' + inner + '</button>';
         return '<a class="sa-i" href="' + s.href + '"' + (cur === id ? ' aria-current="page"' : '') + ' title="' + esc(s.n) + '">' + inner + '</a>'; }).join("") + '</div>'; }).join("") +
       (A.APPS.some(function(id){ return A.can(id) && A.me.role !== "admin" && A.me.role !== "owner" && A.me.role !== "manager"; }) ? '<div class="sa-g"><h2>Приложение</h2>' + A.APPS.filter(function(id){ return A.can(id); }).map(function(id){ var s = A.SEC[id];
-        return '<a class="sa-i" href="' + s.href + '" title="' + esc(s.n) + '">' + ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + ': приложението</span><span class="sh">' + esc(s.short) + '</span></a>'; }).join("") + '</div>' : '') + '</nav>' +
+        return '<a class="sa-i" href="' + s.href + '" title="' + esc(s.n) + '">' + ic(s.ic, 22) + '<span class="lb">' + esc(s.n) + ': приложението</span><span class="sh">' + esc(s.short) + '</span></a>'; }).join("") + '</div>' : '') +
+      (A.hasApp() ? '<div class="sa-g"><h2>Приложение</h2>' + appLink("sa-i", 22) + '</div>' : '') + '</nav>' +
     '<div class="sa-sidefoot"><button class="sa-i sa-collapse" type="button" data-sa="side" aria-expanded="' + (A.prefs.side !== "mini") + '">' + ic(A.prefs.side === "mini" ? "caret-right" : "caret-left", 22) + '<span class="lb">Свий лентата</span><span class="sh">Разгъни</span></button></div>'; }
+/* управител и собственик: връзка към своето приложение (модула) */
+A.APP_INFO = {manager:{mod:"manager", n:"Смяната", sub:"Бързият екран за деня", side:"Смяната: приложението"}, owner:{mod:"owner", n:"Собственик", sub:"Оборот и решения", side:"Собственик: приложението"}};
+function appLink(cls, sz){ var i = A.APP_INFO[A.me.role], m = A.MOD[i.mod];
+  return '<a class="' + cls + '" href="' + A.MODULE_HOME[A.me.role] + '" data-home="app" title="' + esc(i.side) + '">' + ic(m.ic, sz) + '<span class="lb">' + esc(i.side) + '</span><span class="sh">' + esc(i.n) + '</span></a>'; }
 function topHTML(o){ var s = A.SEC[o.section], g = A.groupOf(o.section), th = THEMES.filter(function(t){ return t[0] === A.prefs.theme; })[0] || THEMES[0], pen = !!A.me && (o.pencil !== false || o.penButton) && !A.inPreview;
   return '<header class="sa-top">' + (A.isStaffApp() ? '<a class="sa-tb" href="' + A.homeOf(A.me.role) + '">' + ic("caret-left", 20) + '<span class="lg">Към приложението</span><span class="sm">Приложение</span></a>' : '') +
     '<div class="sa-crumb"><small class="sa-only-td">' + esc(o.crumb || g || "Админ") + '</small><b>' + esc(o.barTitle || (s && s.n) || o.title || "") + '</b></div>' +
@@ -520,11 +577,24 @@ function openSections(){ var cur = A.app.dataset.page;
   inp.addEventListener("input", draw); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
   A.onSearchReady = function(){ if (inp.isConnected && inp.value.trim()) draw(); };
   inp.addEventListener("keydown", function(e){ if (e.key === "Enter"){ var a = box.querySelector("a[href], button[data-ask]"); if (a){ e.preventDefault(); a.click(); } } }); }
+/* профилът на управителя и собственика: „Към приложението“ и къде води входът (запомненият избор от „Къде продължаваш?“) */
+function homeLine(){ var c = A.homeChoice(), i = A.APP_INFO[A.me.role];
+  return c === "app" ? 'Направо в приложението „' + esc(i.n) + '“ <span class="muted">(запомнено на това устройство)</span>' : c === "admin" ? 'Направо в админ панела <span class="muted">(запомнено на това устройство)</span>' : 'Питаме всеки път: „Къде продължаваш?“'; }
+/* стиловете на частта са тук (_admin.css е общ за авторите): само токените */
+var PAPP_CSS = ".sa-papp{display:grid; gap:8px; margin:0 0 20px; padding:0 0 20px; border-bottom:1px solid var(--line)} .sa-papp p{margin:0} .sa-papp .label{margin-top:10px} .sa-papp .sa-hl{font-size:16px; font-weight:700; line-height:1.4} .sa-papp .sa-hl .muted{font-weight:600} .sa-papp .sa-hrow{display:flex; flex-wrap:wrap; gap:8px} .sa-papp .sa-hrow .pill{min-height:48px} .sa-papp .sa-hnote{font-size:15px; line-height:1.4}";
+function appProfileHTML(){ if (!A.hasApp()) return ""; var i = A.APP_INFO[A.me.role], m = A.MOD[i.mod];
+  if (!document.getElementById("sa-papp-css")){ var c = document.createElement("style"); c.id = "sa-papp-css"; c.textContent = PAPP_CSS; document.head.appendChild(c); }
+  return '<div class="sa-papp"><a class="pill pill-red pill-lg pill-block" href="' + A.MODULE_HOME[A.me.role] + '" data-home="app">' + ic(m.ic, 22) + 'Към приложението</a><p class="muted">' + esc(i.n) + ' · ' + esc(i.sub.charAt(0).toLowerCase() + i.sub.slice(1)) + '</p>' +
+    '<p class="label">След вход</p><p class="sa-hl" data-homeline>' + homeLine() + '</p><div class="sa-hrow"><a class="pill pill-line" href="login.html#st=choose">' + ic("sliders-horizontal", 20) + 'Смени</a>' +
+    '<button class="pill pill-line" type="button" data-sa="forgethome"' + (A.homeChoice() ? '' : ' hidden') + '>' + ic("arrow-counter-clockwise", 20) + 'Питай всеки път</button></div>' +
+    '<p class="muted sa-hnote" data-homenote' + (A.homeChoice() ? '' : ' hidden') + '>Запомненото следва къде отивате: „Към приложението“ тук и „Към админа“ в приложението го сменят.</p></div>'; }
 function openProfile(){ var r = A.role(A.me.role);
-  var sh = A.sheet({title:"Профил", html:'<div class="sa-prof"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><span class="muted">' + esc(r.n) + ' · потребител ' + esc(A.me.user) + '</span></div></div><p class="muted" style="margin:0 0 16px">' + esc(r.desc) + '</p>' +
+  var sh = A.sheet({title:"Профил", html:'<div class="sa-prof"><span class="sa-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><span class="muted">' + esc(r.n) + ' · потребител ' + esc(A.me.user) + '</span></div></div><p class="muted" style="margin:0 0 16px">' + esc(r.desc) + '</p>' + appProfileHTML() +
     '<p class="label" style="margin:0 0 8px">Тема</p><div class="seg" role="group" aria-label="Тема">' + THEMES.map(function(t){ return '<button type="button" data-sa="settheme" data-v="' + t[0] + '" aria-pressed="' + (A.prefs.theme === t[0]) + '">' + ic(t[2], 20) + t[1] + '</button>'; }).join("") + '</div>',
     foot:'<button class="pill pill-line pill-lg pill-block" type="button" data-sa="logout">' + ic("sign-out", 22) + 'Изход</button>'}); return sh; }
-function soonSheet(id){ var s = A.SEC[id]; A.sheet({title:s.n, html:'<p style="margin:0 0 12px">' + A.soonTag() + '</p><p style="margin:0 0 8px">' + esc(s.desc) + '</p><p class="muted" style="margin:0">Разделът ще се появи след модулите на управителя и собственика. Сега е видим, за да е пълна картата на правата.</p>'}); }
+function soonSheet(id){ var s = A.SEC[id], own = id === "finance" && A.modCan(A.MOD.owner);
+  A.sheet({title:s.n, html:'<p style="margin:0 0 12px">' + A.soonTag() + '</p><p style="margin:0 0 8px">' + esc(s.desc) + '</p><p class="muted" style="margin:0">' + (id === "finance" ? 'Пълният раздел в админа идва по-късно. Сега финансите и горивото са в приложението на собственика, „Финанси и гориво“.' : 'Разделът идва по-късно. Сега е видим, за да е пълна картата на правата.') + '</p>' +
+    (own ? '<p style="margin:16px 0 0"><a class="pill pill-ink" href="../pages-sobstvenik/finance.html">' + ic("wallet", 20) + 'Финанси и гориво</a></p>' : '')}); }
 A.soonSheet = soonSheet;
 
 /* ---------- умната търсачка (решение 15.11: „Умна търсачка = асистентът“) ----------
@@ -616,6 +686,7 @@ document.addEventListener("click", function(e){ var ask = e.target.closest("[dat
   if (a === "pen"){ if (A.pen) A.pen.toggle(); return; }
   if (a === "soon"){ e.preventDefault(); soonSheet(t.dataset.id); return; }
   if (a === "viewas"){ A.viewAs(t.dataset.v); return; }
+  if (a === "forgethome"){ A.setHomeChoice(null); t.hidden = true; var hl = document.querySelector("[data-homeline]"), hn = document.querySelector("[data-homenote]"); if (hl) hl.innerHTML = homeLine(); if (hn) hn.hidden = true; A.toast("Изборът е забравен. След вход питаме къде продължавате."); return; }
   if (a === "sound"){ try{ localStorage.setItem("sa-sound", A.soundOn() ? "off" : "on"); }catch(x){} unlock(); syncSound(); if (A.soundOn()) A.chime(); A.toast(A.soundOn() ? "Звукът за нови поръчки е включен" : "Звукът за нови поръчки е изключен"); return; }
   if (a === "simorder"){ var so = A.simulateOrder(); A.toast("Симулирахме онлайн поръчка № " + so.no + ". След миг идва като нова."); return; }
   if (a === "ptime"){ A.setProtoTime(t.dataset.v); location.reload(); return; }

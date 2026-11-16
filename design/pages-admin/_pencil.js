@@ -16,7 +16,7 @@ if (window.SAPen) return;
 var SAPen = window.SAPen = {};
 var ZTOP = 2147483000;
 /* имената на модулите и извън админа (модулите на персонала нямат A.MODULE_NAMES) */
-var MOD_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", admin:"Админ"};
+var MOD_NAMES = {site:"Клиентски сайт", masa:"QR маса", waiter:"Сервитьор", servitor:"Сервитьор", watch:"Часовник", kitchen:"Кухня", kuhnya:"Кухня", driver:"Шофьор", shofyor:"Шофьор", manager:"Управител", upravitel:"Управител", owner:"Собственик", sobstvenik:"Собственик", admin:"Админ"};
 
 function svg(n, s){ var I = window.SC_ICONS || {}; return I[n] ? '<svg viewBox="0 0 256 256" width="' + (s || 20) + '" height="' + (s || 20) + '" fill="currentColor" aria-hidden="true">' + I[n] + '</svg>' : ''; }
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }

@@ -137,7 +137,9 @@ var staffApp = ["waiter","kitchen","driver"].indexOf(me.role) > -1;
 var status = A.status();
 var body = A.mount({section:"dashboard", title:hello + ", " + (staffApp || me.role === "kitchen" ? me.name : me.name.split(" ")[0]), eyebrow:"Днес · " + A.fmtDate(A.now()) + " · " + A.hm(A.now()), docTitle:"Табло",
   sub:'<span class="db-st" data-edit-id="admin.dashboard.status"><span class="dot ' + status[0] + '"></span><span>' + status[1] + '</span></span>',
-  actions: A.MOD.site && A.modCan(A.MOD.site) ? '<a class="pill pill-ink pill-lg" href="preview.html#m=site&p=home&d=phone">' + ic("eye",22) + 'Сайтът на живо</a>' : '',
+  /* управител и собственик: горе „Отвори приложението“ към своя модул (стъпка 5); сайтът на живо остава до него */
+  actions: (A.hasApp() ? '<a class="pill pill-red pill-lg" href="' + A.MODULE_HOME[me.role] + '" data-home="app" data-edit-id="admin.dashboard.openapp">' + ic(A.MOD[me.role].ic,22) + 'Отвори приложението</a>' : '') +
+    (A.MOD.site && A.modCan(A.MOD.site) ? '<a class="pill ' + (A.hasApp() ? 'pill-line' : 'pill-ink') + ' pill-lg" href="preview.html#m=site&p=home&d=phone">' + ic("eye",22) + 'Сайтът на живо</a>' : ''),
   states:[["","Обичайно"],["loading","Зареждане"],["empty","Без бележки"],["error","Грешка"],["offline","Без връзка"]]});
 if (!body) return;
 

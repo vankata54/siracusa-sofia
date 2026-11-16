@@ -32,7 +32,55 @@
 .lg-forgot .ic{margin-top:2px}
 .lg-off{margin:0 0 20px}
 .lg-in-as{margin:0 0 20px}
+.lg-acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
 .lg .sa-proto{margin-top:40px}
+/* „Къде продължаваш?“ (управител и собственик): на телефон модулът е първи и главен, от 960 двете карти са равни */
+.lg-box.wide{max-width:560px}
+.ch{display:grid; gap:20px; container-type:inline-size; container-name:ch}
+.ch .lead{margin:10px 0 0}
+.ch-cards{display:grid; gap:10px}
+.ch-card{position:relative; display:grid; grid-template-columns:56px minmax(0,1fr) 44px; gap:14px; align-items:center; min-height:76px; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line); text-decoration:none; transition:transform var(--t-base) var(--ease)}
+.ch-card:hover{transform:translateY(-2px)}
+.ch-card:active{transform:scale(.98)}
+.ch-card:focus-visible{outline:3px solid var(--red); outline-offset:3px}
+.ch-card .si{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.ch-card .tx{display:grid; gap:2px; min-width:0}
+.ch-card b{font-size:20px; letter-spacing:-.02em; line-height:1.2}
+.ch-card small{font-size:16px; color:var(--muted); font-weight:600; line-height:1.35}
+.ch-card .arr{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.ch-card .rem{grid-column:2 / -1; justify-self:start; margin-top:2px}
+.ch-card.main{min-height:112px; background:var(--ink); color:var(--bg); box-shadow:var(--shadow-lg)}
+.ch-card.main b{font-size:24px}
+.ch-card.main small{color:var(--bg); opacity:.8}
+.ch-card.main .si{background:var(--red); color:var(--on-red)}
+.ch-card.main .arr{background:var(--bg); color:var(--ink)}
+.ch-card.main .rem{color:var(--bg); box-shadow:inset 0 0 0 1.5px currentColor; background:transparent}
+.ch-also{display:flex; align-items:center; gap:10px; min-height:52px; padding:0 4px; color:var(--ink); font-weight:700; font-size:16px; text-decoration:underline; text-underline-offset:4px}
+.ch-also .ic{color:var(--red); flex:none}
+.ch-rem{display:flex; align-items:flex-start; gap:6px; margin-left:-6px}
+.ch-rem label.tx{display:grid; gap:2px; padding-top:12px; cursor:pointer; font-weight:700; font-size:16px; line-height:1.35}
+.ch-rem label.tx small{font-weight:600; font-size:15px; color:var(--muted)}
+.ch-foot{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding-top:4px; border-top:1px solid var(--line)}
+.ch-foot p{margin:0; flex:1 1 200px; color:var(--muted); font-size:15px; padding-top:12px}
+.ch-foot .pill{margin-top:12px}
+@container app (min-width:960px){
+  .ch-card.main{min-height:76px; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line)}
+  .ch-card.main b{font-size:20px}
+  .ch-card.main small{color:var(--muted); opacity:1}
+  .ch-card.main .si{background:var(--surface-2); color:var(--red)}
+  .ch-card.main .arr{background:var(--surface-2); color:var(--ink)}
+  .ch-card.main .rem{color:var(--ink)}
+}
+@container ch (min-width:520px){
+  .ch-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ch-card{grid-template-columns:minmax(0,1fr) 44px; grid-template-rows:auto 1fr; align-items:start; min-height:188px; padding:18px}
+  .ch-card .si{grid-column:1; grid-row:1}
+  .ch-card .arr{grid-column:2; grid-row:1}
+  .ch-card .tx{grid-column:1 / -1; grid-row:2; align-self:end}
+  .ch-card .rem{grid-column:1 / -1; grid-row:3}
+}
+.lg-why{display:grid; gap:6px; margin:0 0 4px; padding:12px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; line-height:1.45}
+.lg-why b{font-size:16px}
 /* desktop: editorial split, the dishes of the real menu on plates */
 @container app (min-width:960px){
   .lg-in{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}
@@ -74,70 +122,135 @@
 <script>
 (function(){
 var ic = A.ic, esc = A.esc, st = A.st;
-var LOCK_MIN = 15, MAX = 10;
-var L = A.data.get("login", {fails:0, until:0});
-if (st === "locked" && L.until < Date.now()){ L = {fails:MAX, until:Date.now() + LOCK_MIN*60000}; A.data.set("login", L); }
-if (st === "" && L.until && L.until < Date.now()){ L = {fails:0, until:0}; A.data.set("login", L); }
+/* Заключване по решение 16.11: по двойката „потребител + адрес (IP)“. 10 грешни опита на един потребител от един адрес за 15 мин
+   заключват тази двойка; адресът има и общ праг 50 (за всички потребители). В прототипа „адресът“ е този браузър.
+   sa-login = {v:2, users:{<потребител>:{fails:[ms], until:ms}}, addr:{fails:[ms], until:ms}} (истинското време, за обратното броене) */
+var WIN = 15*60000, USER_MAX = 10, ADDR_MAX = 50;
+function fresh(){ return {v:2, users:{}, addr:{fails:[], until:0}}; }
+function loadL(){ var l = A.data.get("login", null); if (!l || l.v !== 2 || !l.users || !l.addr) l = fresh(); var now = Date.now();
+  Object.keys(l.users).forEach(function(k){ var x = l.users[k]; x.fails = (x.fails || []).filter(function(t){ return now - t < WIN; }); if (x.until && x.until <= now) x.until = 0; if (!x.fails.length && !x.until) delete l.users[k]; });
+  l.addr.fails = (l.addr.fails || []).filter(function(t){ return now - t < WIN; }); if (l.addr.until && l.addr.until <= now) l.addr.until = 0; return l; }
+var L = loadL();
+function save(){ A.data.set("login", L); }
+function key(u){ return String(u || "").trim().toLowerCase(); }
+function lockOf(user){ var x = L.users[key(user)], u = Math.max(x && x.until || 0, L.addr.until || 0); return u > Date.now() ? u : 0; }
+function fail(user){ var now = Date.now(), k = key(user), x = L.users[k] || (L.users[k] = {fails:[], until:0});
+  x.fails.push(now); L.addr.fails.push(now); if (x.fails.length >= USER_MAX) x.until = now + WIN; if (L.addr.fails.length >= ADDR_MAX) L.addr.until = now + WIN; save(); }
+function left(user){ var x = L.users[key(user)]; return Math.min(USER_MAX - (x ? x.fails.length : 0), ADDR_MAX - L.addr.fails.length); }
+function many(n){ var a = []; for (var i = 0; i < n; i++) a.push(Date.now() - (n - i) * 20000); return a; }
+/* състоянията на прототипа: заключен е само „owner“ от този адрес / адресът е заключен за всички */
+var LOCK_USER = "owner";
+if (st === "locked"){ L = fresh(); L.users[LOCK_USER] = {fails:many(USER_MAX), until:Date.now() + WIN}; L.addr.fails = many(USER_MAX); save(); }
+if (st === "locked-ip"){ L = fresh(); L.addr = {fails:many(ADDR_MAX), until:Date.now() + WIN}; save(); }
+/* прототипът: „Избор“ и „Запомнен избор“ влизат като управител / собственик */
+var AS = A.hash.as === "manager" || A.hash.as === "owner" ? A.hash.as : "";
+if ((st === "choose" || st === "remembered") && AS && (!A.me || A.me.role !== AS)){ A.login(AS); A.audit("staff.login", "Вход (прототип)"); }
+if (st === "remembered" && A.me && A.hasApp()) A.setHomeChoice("app");
 var offline = st === "offline" || (navigator.onLine === false);
-var next = A.hash.next && /^[a-z-]+\.html/.test(A.hash.next) ? A.hash.next : "dashboard.html";
-/* след вход: само към раздел, който ролята вижда; иначе към таблото */
-function allowed(n){ var f = n.split("#")[0], sec = Object.keys(A.SEC).filter(function(k){ return A.SEC[k].href.split("#")[0] === f; })[0]; return !sec || A.can(sec) ? n : "dashboard.html"; }
-document.title = "Вход | Siracusa · Админ";
+var next = A.hash.next || "";
+var choosing = (st === "choose" || st === "remembered") && A.me && A.hasApp();
+document.title = (choosing ? "Къде продължаваш?" : "Вход") + " | Siracusa · Админ";
 
-var d = document.createElement("div"); d.className = "lg";
-d.innerHTML = '<div class="lg-in">' +
-  '<aside class="lg-art" aria-hidden="true"><div><span class="word">Siracusa</span><div class="tagl"><i></i>Админ панел</div></div>' +
-    '<div><h2>Ресторантът на едно място.</h2><p>Менюто, поръчките, залата и сайтът. Всяка роля вижда своето.</p></div>' +
-    '<div class="plates">' + SC.pic("pitsa-margarita", "p1") + SC.pic("kebapcheta", "p2") + SC.pic("shopska-salata", "p3") + '</div></aside>' +
-  '<div class="lg-main"><div class="lg-box">' +
-    '<div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>' +
-    (offline ? '<div class="lg-off">' + A.banner({tone:"warn", icon:"warning-circle", title:"Няма връзка с интернет", text:"Проверете връзката и опитайте пак.", action:'<button class="pill pill-line" type="button" data-sa="retry">' + ic("arrow-clockwise",20) + 'Опитай пак</button>'}) + '</div>' : '') +
-    (A.me && st !== "locked" && st !== "error" ? '<div class="lg-in-as">' + A.banner({tone:"ok", icon:"check-circle", title:"Вече сте влезли като " + A.me.name + " (" + A.roleName(A.me.role) + ").", text:"", action:'<a class="pill pill-ink" href="' + A.homeOf(A.me.role) + '">' + (A.isStaffApp() ? 'Към приложението' : 'Към таблото') + '</a>'}) + '</div>' : '') +
-    '<h1 data-edit-id="admin.login.title">Вход</h1><p class="lead muted">За собственика, управителя, персонала и агенцията. Сервитьорът, кухнята и шофьорът влизат направо в своето приложение.</p>' +
+function alreadyHTML(){ if (!A.me || /^(locked|locked-ip|error)$/.test(st) || choosing) return "";
+  var acts = A.isStaffApp() ? '<a class="pill pill-ink" href="' + A.homeOf(A.me.role) + '">Към приложението</a>'
+    : A.hasApp() ? '<a class="pill pill-ink" href="' + A.MODULE_HOME[A.me.role] + '" data-home="app">Към приложението</a><a class="pill pill-line" href="dashboard.html" data-home="admin">Към таблото</a>'
+    : '<a class="pill pill-ink" href="dashboard.html">Към таблото</a>';
+  /* два бутона (управител и собственик) са под текста, за да се съберат на 360 */
+  var two = A.hasApp() && !A.isStaffApp();
+  return '<div class="lg-in-as">' + A.banner({tone:"ok", icon:"check-circle", title:"Вече сте влезли като " + A.me.name + " (" + A.roleName(A.me.role) + ").", text:two ? '<span class="lg-acts">' + acts + '</span>' : "", action:two ? "" : acts}) + '</div>'; }
+function formHTML(){ return '<h1 data-edit-id="admin.login.title">Вход</h1><p class="lead muted">За собственика, управителя, персонала и агенцията. Сервитьорът, кухнята и шофьорът влизат направо в своето приложение; управителят и собственикът избират къде продължават.</p>' +
     '<form class="lg-form" novalidate data-edit-id="admin.login.form">' +
       '<div class="field"><label for="u">Потребител</label><input class="input" id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
       '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" name="password" type="password" autocomplete="current-password" required><button class="show" type="button" data-show aria-controls="p" aria-pressed="false">' + ic("eye",20) + '<span>Покажи</span></button></div></div>' +
       '<div data-err tabindex="-1" hidden></div>' +
       '<button class="pill pill-red pill-lg pill-block" type="submit" data-go>' + ic("sign-in",22) + 'Влез</button>' +
       '<p class="lg-forgot">' + ic("phone",20) + '<span>Забравена парола: обадете се на главния админ.</span></p>' +
-    '</form>' +
+    '</form>'; }
+/* „Къде продължаваш?“: две големи карти; на телефон модулът е първи и главен; „Запомни избора на това устройство“ (sa-home) */
+var CH = {manager:{app:["Смяната","Бързият екран за деня"], also:null}, owner:{app:["Собственик","Оборот и решения"], also:["../pages-upravitel/now.html","Смяната сега: екранът на управителя"]}};
+function chooseHTML(){ var r = A.me.role, c = CH[r], m = A.MOD[r], had = A.homeChoice(), REM = '<span class="rem sa-tag">' + ic("check",16) + 'Запомнено</span>';
+  return '<div class="ch" data-edit-id="admin.login.choose"><div><h1 id="ch-h" tabindex="-1">Къде продължаваш?</h1><p class="lead muted">Влезе като ' + esc(A.me.name) + ' (' + esc(A.roleName(r)) + ').</p></div>' +
+    '<div class="ch-cards">' +
+      '<a class="ch-card main" href="' + A.MODULE_HOME[r] + '" data-pick="app"><span class="si">' + ic(m.ic, 28) + '</span><span class="tx"><b>' + esc(c.app[0]) + '</b><small>' + esc(c.app[1]) + '</small></span><span class="arr">' + ic("arrow-right", 22) + '</span>' + (had === "app" ? REM : '') + '</a>' +
+      '<a class="ch-card" href="dashboard.html" data-pick="admin"><span class="si">' + ic("squares-four", 28) + '</span><span class="tx"><b>Админ панел</b><small>Пълната работа</small></span><span class="arr">' + ic("arrow-right", 22) + '</span>' + (had === "admin" ? REM : '') + '</a>' +
+    '</div>' +
+    (c.also ? '<a class="ch-also" href="' + c.also[0] + '">' + ic(A.MOD.manager.ic, 22) + esc(c.also[1]) + '</a>' : '') +
+    '<div class="ch-rem"><label class="sa-check"><input type="checkbox" id="ch-rem"' + (had ? ' checked' : '') + '><span class="bx">' + ic("check",18) + '</span></label><label class="tx" for="ch-rem">Запомни избора на това устройство<small>Следващия път входът те води направо там. Смяна: от профила, „Към админа“ или „Към приложението“.</small></label></div>' +
+    '<div class="ch-foot"><p>Не си ' + esc(A.me.name) + '?</p><button class="pill pill-line" type="button" data-out>' + ic("sign-out",20) + 'Изход</button></div></div>'; }
+function lockWhy(){ var users = Object.keys(L.users).filter(function(k){ return L.users[k].until > Date.now(); }), t = function(ms){ return A.hm(new Date(A.now().getTime() + ms - Date.now())); };
+  var now = L.addr.until > Date.now() ? '<b>Сега: адресът е заключен до ' + t(L.addr.until) + ' за всички потребители</b> (50 грешни опита за 15 минути).'
+    : users.length ? '<b>Сега: заключен е само „' + esc(users.join("“, „")) + '“ от този адрес до ' + t(L.users[users[0]].until) + '.</b> Друг потребител от същия адрес влиза нормално; същият потребител от друг адрес също.'
+    : '<b>Сега няма заключване.</b>';
+  return '<div class="lg-why" data-why>' + now + '<span>Грешни опита от този адрес за 15 минути: ' + L.addr.fails.length + ' от ' + ADDR_MAX + '.</span></div>'; }
+
+var d = document.createElement("div"); d.className = "lg";
+d.innerHTML = '<div class="lg-in">' +
+  '<aside class="lg-art" aria-hidden="true"><div><span class="word">Siracusa</span><div class="tagl"><i></i>Админ панел</div></div>' +
+    '<div><h2>Ресторантът на едно място.</h2><p>Менюто, поръчките, залата и сайтът. Всяка роля вижда своето.</p></div>' +
+    '<div class="plates">' + SC.pic("pitsa-margarita", "p1") + SC.pic("kebapcheta", "p2") + SC.pic("shopska-salata", "p3") + '</div></aside>' +
+  '<div class="lg-main"><div class="lg-box' + (choosing ? ' wide' : '') + '">' +
+    '<div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>' +
+    (offline && !choosing ? '<div class="lg-off">' + A.banner({tone:"warn", icon:"warning-circle", title:"Няма връзка с интернет", text:"Проверете връзката и опитайте пак.", action:'<button class="pill pill-line" type="button" data-sa="retry">' + ic("arrow-clockwise",20) + 'Опитай пак</button>'}) + '</div>' : '') +
+    alreadyHTML() + '<div data-main>' + (choosing ? chooseHTML() : formHTML()) + '</div>' +
     '<section class="sa-proto" aria-label="Само в прототипа"><h2>' + ic("sliders-horizontal",20) + 'Само в прототипа</h2>' +
       '<p>Пробни акаунти: <code>admin</code>, <code>owner</code>, <code>manager</code>, <code>waiter</code>, <code>kitchen</code>, <code>driver</code>, <code>marketing</code>, всички с парола <code>' + A.PASSWORD + '</code>. Истинските пароли са в <code>.env</code>, хеширани в базата и не са в git; дават се в чата.</p>' +
       '<p>Влез направо като:</p><div class="row">' + A.ACCOUNTS.map(function(a){ return '<button class="chip" type="button" data-as="' + a[0] + '">' + esc(A.roleName(a[1])) + '</button>'; }).join("") + '</div>' +
-      '<p>Състояние:</p><div class="row">' + [["","Обичайно"],["error","Грешна парола"],["locked","10 грешни опита"],["offline","Без връзка"]].map(function(s){ return '<a class="chip" href="login.html' + (s[0] ? '#st=' + s[0] : '') + '" data-state="' + s[0] + '" aria-pressed="' + (st === s[0]) + '" style="text-decoration:none">' + s[1] + '</a>'; }).join("") + '</div>' +
-      '<div class="row"><button class="chip" type="button" data-unlock>' + ic("arrow-counter-clockwise",18) + 'Нулирай опитите</button><a class="chip" href="index.html" style="text-decoration:none">' + ic("list",18) + 'Всички екрани</a></div></section>' +
+      '<p>След вход: сервитьор, кухня и шофьор отиват в своето приложение; управител и собственик виждат „Къде продължаваш?“ (или отиват направо, ако изборът е запомнен на устройството); останалите в таблото. <code>#next=</code> в адреса печели над избора.</p>' +
+      '<p>Заключване (решение 16.11): 10 грешни опита за един потребител от един адрес за 15 минути заключват само тази двойка „потребител + адрес“. Адресът има и общ праг: 50 грешни опита за всички потребители за 15 минути. Човекът вижда едно и също: „Твърде много опити. Опитайте след 15 минути.“ В прототипа „адресът“ е този браузър.</p>' + lockWhy() +
+      '<p>Състояние:</p><div class="row">' + [["","Обичайно"],["error","Грешна парола"],["locked","10 грешни опита (owner)"],["locked-ip","50 от адреса"],["offline","Без връзка"],["choose&as=manager","Избор: Управител"],["choose&as=owner","Избор: Собственик"],["remembered&as=owner","Запомнен избор"]].map(function(s){ var cur = s[0].split("&")[0] === st && (!AS || s[0].indexOf(AS) > -1 || s[0].indexOf("&") < 0);
+        return '<a class="chip" href="login.html' + (s[0] ? '#st=' + s[0] : '') + '" data-state="' + s[0] + '" aria-pressed="' + cur + '" style="text-decoration:none">' + s[1] + '</a>'; }).join("") + '</div>' +
+      '<div class="row"><button class="chip" type="button" data-unlock>' + ic("arrow-counter-clockwise",18) + 'Нулирай опитите</button><button class="chip" type="button" data-forget>' + ic("arrow-counter-clockwise",18) + 'Забрави избора на устройството</button><a class="chip" href="index.html" style="text-decoration:none">' + ic("list",18) + 'Всички екрани</a></div></section>' +
   '</div></div></div>';
 document.body.appendChild(d);
 
-var f = d.querySelector("form"), u = d.querySelector("#u"), p = d.querySelector("#p"), err = d.querySelector("[data-err]"), go = d.querySelector("[data-go]"), timer = 0;
+function go(dest){ if (dest === "login.html#st=choose"){ showChoose(); return; } location.href = dest; }
+function showChoose(){ choosing = true; history.replaceState(null, "", "login.html#st=choose"); d.querySelector(".lg-box").classList.add("wide"); var a = d.querySelector(".lg-in-as"); a && a.remove();
+  d.querySelector("[data-main]").innerHTML = chooseHTML(); document.title = "Къде продължаваш? | Siracusa · Админ"; bindChoose(); var h = d.querySelector("#ch-h"); h && h.focus({preventScroll:false}); }
+function bindChoose(){ var m = d.querySelector(".ch"); if (!m) return;
+  m.addEventListener("click", function(e){ var c = e.target.closest("[data-pick]"); if (c){ var rem = m.querySelector("#ch-rem").checked; A.setHomeChoice(rem ? c.dataset.pick : null);
+      A.audit("staff.home", rem ? "Запомнен избор след вход: " + (c.dataset.pick === "app" ? "приложението" : "админ панелът") : "Избор след вход: " + (c.dataset.pick === "app" ? "приложението" : "админ панелът")); return; }
+    if (e.target.closest("[data-out]")) A.logout(); }); }
+
+if (choosing){ bindChoose(); }
+else {
+var f = d.querySelector("form"), u = d.querySelector("#u"), p = d.querySelector("#p"), err = d.querySelector("[data-err]"), btn = d.querySelector("[data-go]"), timer = 0, lockedFor = null;
 function showErr(title, text, focus){ err.hidden = false; err.className = "lg-err"; err.setAttribute("role", "alert"); err.innerHTML = ic("warning",22) + '<div><b>' + esc(title) + '</b>' + (text ? '<span>' + text + '</span>' : '') + '</div>'; if (focus) err.focus({preventScroll:false}); }
-function locked(){ return L.until && L.until > Date.now(); }
-function lockUI(){ if (!locked()){ go.disabled = false; go.innerHTML = ic("sign-in",22) + 'Влез'; clearInterval(timer); if (!err.hidden && err.dataset.k === "lock") { err.hidden = true; } return; }
-  var s = Math.ceil((L.until - Date.now())/1000), mm = Math.floor(s/60), ss = String(s%60).padStart(2,"0");
-  go.disabled = true; go.innerHTML = ic("lock",22) + 'Заключено · ' + mm + ':' + ss;
+function refreshWhy(){ var w = d.querySelector("[data-why]"); if (w) w.outerHTML = lockWhy(); }
+/* заключването се показва за двойката, за която е опитано; друг потребител от същия адрес отключва бутона (освен ако адресът е заключен) */
+function lockUI(){ var until = lockedFor != null ? lockOf(lockedFor) : 0;
+  if (!until){ clearInterval(timer); timer = 0; btn.disabled = false; btn.innerHTML = ic("sign-in",22) + 'Влез'; if (err.dataset.k === "lock"){ err.hidden = true; err.dataset.k = ""; } lockedFor = null; return; }
+  var s = Math.ceil((until - Date.now())/1000), mm = Math.floor(s/60), ss = String(s%60).padStart(2,"0");
+  btn.disabled = true; btn.innerHTML = ic("lock",22) + 'Заключено · ' + mm + ':' + ss;
   err.dataset.k = "lock"; showErr("Твърде много опити. Опитайте след 15 минути.", 'Остават <span class="cd">' + mm + ':' + ss + '</span>.', false); }
-if (locked()){ lockUI(); timer = setInterval(lockUI, 1000); }
+function lockFor(user, focus){ lockedFor = key(user); lockUI(); if (!timer) timer = setInterval(lockUI, 1000); if (focus) err.focus(); }
+if (st === "locked"){ u.value = LOCK_USER; lockFor(LOCK_USER, false); }
+else if (st === "locked-ip"){ u.value = "admin"; lockFor("admin", false); }
 else if (st === "error"){ u.value = "admin"; showErr("Грешен потребител или парола.", "", false); u.setAttribute("aria-invalid","true"); p.setAttribute("aria-invalid","true"); }
 
 d.querySelector("[data-show]").addEventListener("click", function(){ var b = this, sh = p.type === "password"; p.type = sh ? "text" : "password"; b.setAttribute("aria-pressed", String(sh)); b.querySelector("span").textContent = sh ? "Скрий" : "Покажи"; });
-f.addEventListener("submit", function(e){ e.preventDefault(); if (locked()) return;
+f.addEventListener("submit", function(e){ e.preventDefault(); var user = key(u.value);
+  if (lockOf(user)){ lockFor(user, true); return; }
   if (offline){ showErr("Няма връзка с интернет", "Проверете връзката и опитайте пак.", true); return; }
-  var user = u.value.trim().toLowerCase(), ok = A.ACCOUNTS.some(function(a){ return a[0] === user; }) && p.value === A.PASSWORD;
+  var ok = A.ACCOUNTS.some(function(a){ return a[0] === user; }) && p.value === A.PASSWORD;
   if (!user || !p.value){ showErr("Грешен потребител или парола.", "", true); return; }
-  go.disabled = true; go.innerHTML = '<span class="vh" role="status">Проверяваме</span>Проверяваме …';
-  setTimeout(function(){ go.disabled = false; go.innerHTML = ic("sign-in",22) + 'Влез';
-    if (!ok){ L.fails = (L.fails||0) + 1; if (L.fails >= MAX){ L.until = Date.now() + LOCK_MIN*60000; } A.data.set("login", L);
+  btn.disabled = true; btn.innerHTML = '<span class="vh" role="status">Проверяваме</span>Проверяваме …';
+  setTimeout(function(){ btn.disabled = false; btn.innerHTML = ic("sign-in",22) + 'Влез';
+    if (!ok){ fail(user); refreshWhy();
       A.me = null; var known = A.ACCOUNTS.some(function(a){ return a[0] === user; }); A.audit("staff.login_failed", "Неуспешен вход: " + (known ? user : "непознат потребител"));
-      if (locked()){ lockUI(); clearInterval(timer); timer = setInterval(lockUI, 1000); err.focus(); return; }
+      if (lockOf(user)){ lockFor(user, true); return; }
       u.setAttribute("aria-invalid","true"); p.setAttribute("aria-invalid","true"); p.value = "";
-      showErr("Грешен потребител или парола.", MAX - L.fails <= 3 ? "Остават " + A.plural(MAX - L.fails, "опит", "опита") + ", после входът се заключва за 15 минути." : "", true); return; }
-    A.data.set("login", {fails:0, until:0}); A.login(user); A.audit("staff.login", "Вход"); location.href = A.isStaffApp() ? A.homeOf(A.me.role) : allowed(next); }, 650); });
-[u, p].forEach(function(i){ i.addEventListener("input", function(){ u.removeAttribute("aria-invalid"); p.removeAttribute("aria-invalid"); if (!locked()) err.hidden = true; }); });
-d.addEventListener("click", function(e){ var t = e.target.closest("[data-as],[data-unlock],[data-state]"); if (!t) return;
-  if (t.dataset.as){ A.data.set("login", {fails:0, until:0}); A.login(t.dataset.as); A.audit("staff.login", "Вход (прототип)"); location.href = A.isStaffApp() ? A.homeOf(A.me.role) : allowed(next); return; }
-  if (t.hasAttribute("data-unlock")){ A.data.set("login", {fails:0, until:0}); location.href = "login.html"; location.reload(); return; }
-  if (t.dataset.state != null){ e.preventDefault(); if (t.dataset.state !== "locked") A.data.set("login", {fails:0, until:0}); location.hash = t.dataset.state ? "st=" + t.dataset.state : ""; location.reload(); } });
-if (!locked() && st !== "error") setTimeout(function(){ u.focus({preventScroll:true}); }, 60);
+      var n = left(user); showErr("Грешен потребител или парола.", n <= 3 ? "Остават " + A.plural(n, "опит", "опита") + ", после входът се заключва за 15 минути." : "", true); return; }
+    delete L.users[user]; save(); A.login(user); A.audit("staff.login", "Вход"); go(A.afterLogin(next)); }, 650); });
+[u, p].forEach(function(i){ i.addEventListener("input", function(){ u.removeAttribute("aria-invalid"); p.removeAttribute("aria-invalid");
+  if (lockedFor != null && i === u && key(u.value) !== lockedFor){ lockedFor = null; lockUI(); }
+  if (lockedFor == null) err.hidden = true; }); });
+if (st !== "error" && st !== "locked" && st !== "locked-ip") setTimeout(function(){ u.focus({preventScroll:true}); }, 60);
+}
+d.addEventListener("click", function(e){ var t = e.target.closest("[data-as],[data-unlock],[data-forget],[data-state]"); if (!t) return;
+  if (t.dataset.as){ delete L.users[t.dataset.as]; save(); A.login(t.dataset.as); A.audit("staff.login", "Вход (прототип)"); go(A.afterLogin(next)); return; }
+  if (t.hasAttribute("data-unlock")){ A.data.set("login", fresh()); location.href = "login.html"; location.reload(); return; }
+  if (t.hasAttribute("data-forget")){ A.data.del("home"); location.reload(); return; }
+  if (t.dataset.state != null){ e.preventDefault(); if (!/^locked/.test(t.dataset.state)) A.data.set("login", fresh()); location.hash = t.dataset.state ? "st=" + t.dataset.state : ""; location.reload(); } });
 })();
 </script>
 </body>
