@@ -49,6 +49,7 @@ export const MENU_MSG = {
   conflictLive: "Менюто току-що беше публикувано от друг. Заредете го пак.",
   nothing: "Няма промени за публикуване.",
   noPrev: "Няма предишна версия за връщане.",
+  noVersion: "Заредете черновата пак и опитайте отново.",
   invalid: "Проверете полетата в менюто.",
   price: "Напишете цена като 10,22.",
 };
@@ -447,11 +448,13 @@ export async function saveDraft(ctx: Ctx, s: StaffCtx, menu: unknown, version: n
 }
 
 /** "Откажи": the draft goes away (the version still grows). */
-export async function discardDraft(ctx: Ctx, s: StaffCtx, version?: number): Promise<DraftView> {
+/** "Откажи": the version of the draft the screen shows is required (without it 422; someone else's newer draft: 409) */
+export async function discardDraft(ctx: Ctx, s: StaffCtx, version: number): Promise<DraftView> {
   need(s, "menu");
+  if (typeof version !== "number" || !Number.isInteger(version) || version < 0) throw Object.assign(new CoreError("invalid", MENU_MSG.noVersion, 422), { fields: { version: MENU_MSG.noVersion } });
   return serial(ctx, async () => {
     const d = await draftDoc(ctx);
-    if (version != null && version !== d.version) throw Object.assign(new CoreError("conflict", MENU_MSG.conflict, 409), { version: d.version });
+    if (version !== d.version) throw Object.assign(new CoreError("conflict", MENU_MSG.conflict, 409), { version: d.version });
     const next: MenuDoc = { id: "menu-draft", version: d.version + 1, menu: null };
     await ctx.repo.put(COL.settings, next);
     if (d.menu) await audit(ctx, s.user.username, "menu.discard", "menu", { version: next.version });

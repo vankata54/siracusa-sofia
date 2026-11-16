@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import { readEnv } from "../../scripts/env.mjs";
+import { assertPortFree } from "./_port.ts";
 
 /* /admin/lunch/ (design/pages-admin/lunch.html): a day of the schedule, adding with the button ("Добави", also on the phone
    in the sheet) and "Отмени", the rule "the same menu never two days in a row" stops publishing, "Публикувай" by day,
@@ -35,6 +36,7 @@ test.beforeAll(async ({}, info: TestInfo) => {
   BASE = "http://localhost:" + port; DIST = SRC + "-lunch-" + info.project.name; DB = "data/e2e-lunch-" + port + ".db";
   rmAll();
   fs.cpSync(SRC, DIST, { recursive: true });
+  await assertPortFree(port);
   srv = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", "server/index.ts"], {
     env: { ...process.env, PORT: String(port), DIST_DIR: DIST, DB_FILE: DB, SC_PREVIEW_API: "1", SMS_DEMO: "1" }, stdio: "ignore",
   });

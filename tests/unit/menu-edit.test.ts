@@ -1,3 +1,4 @@
+import { PIN_FAILS_DAY } from "../../src/core/lunch.ts";
 import { describe, it, expect, afterAll } from "vitest";
 import { createCore, MemoryRepo, type Ctx, type Hasher } from "../../src/core/index.ts";
 import { builtinMenu, cleanMenu, finalize, menuChanges } from "../../src/core/menu-edit.ts";
@@ -102,7 +103,10 @@ describe("menu editor: draft, 409, validation", async () => {
     ok.items[0].comp = ""; ok.items[0].photo = "/media/" + "a".repeat(64) + ".webp"; ok.items[0].p = 0;
     const r = await core.menuEdit.saveDraft(admin, ok, d.version);
     expect(r.changes.noComp.some((z) => z.id === ok.items[0].id)).toBe(true);
-    await core.menuEdit.discardDraft(admin);
+    /* "Откажи" needs the version on the screen: without it 422, an old one 409 */
+    await expect(core.menuEdit.discardDraft(admin, undefined as never)).rejects.toMatchObject({ code: "invalid", status: 422 });
+    await expect(core.menuEdit.discardDraft(admin, r.version - 1)).rejects.toMatchObject({ code: "conflict", status: 409 });
+    await core.menuEdit.discardDraft(admin, r.version);
   });
   it("demo: a photo as a data: URL is allowed only in the demo", () => {
     const m = builtinMenu();
@@ -333,6 +337,28 @@ describe("lunch menu: schedule, the rule, publishing, the PIN", async () => {
     /* a new PIN closes the open schedules */
     await core.lunch.setPin(boss, "3691");
     await expect(core.lunch.get(waiter, "phone-2")).rejects.toMatchObject({ code: "pin_required" });
+  });
+  it("a day's limit per person: 30 wrong in a day close the PIN until midnight (Sofia), also on new devices", async () => {
+    let t = new Date("2026-11-16T07:00:00Z").getTime(); /* 09:00 in Sofia */
+    const c2 = createCore({ repo: new MemoryRepo(), hasher: fast, now: () => new Date(t), clock: "09:00" });
+    const b2 = await as(c2 as never, "owner", "own2");
+    await as(c2 as never, "waiter", "srv2");
+    await c2.staff.setRole("waiter", ["dashboard", "waiter", "lunch"], "own2");
+    const w2 = await c2.staff.guard((await c2.staff.login("srv2", "test-password-123")).token);
+    await c2.lunch.setPin(b2, "2580");
+    let wrong = 0;
+    /* 4 wrong on a new device every 16 minutes: the 15-minute limits never trip */
+    while (wrong < PIN_FAILS_DAY - 1) {
+      for (let i = 0; i < 4 && wrong < PIN_FAILS_DAY - 1; i++, wrong++) await expect(c2.lunch.unlock(w2, "d" + wrong, "0000")).rejects.toMatchObject({ code: "bad_pin" });
+      t += 16 * 60_000;
+    }
+    const e = await c2.lunch.unlock(w2, "last", "0000").catch((x) => x);
+    expect(e).toMatchObject({ code: "throttled", status: 429, message: "Твърде много грешни опити днес. Опитайте утре или помолете управителя." });
+    const midnight = new Date("2026-11-16T22:00:00Z").getTime();
+    expect(e.retryIn).toBe(Math.ceil((midnight - t) / 1000));
+    await expect(c2.lunch.unlock(w2, "fresh", "2580")).rejects.toMatchObject({ code: "throttled" });
+    t = midnight + 60_000; /* the next day */
+    expect((await c2.lunch.unlock(w2, "fresh", "2580")).until).toBeGreaterThan(t);
   });
   it("rights: without the section 'Обедно меню' -> 403", async () => {
     const k = await as(core, "kitchen", "kit");

@@ -86,8 +86,11 @@ describe("menu editor API", async () => {
     const miss = await req("PUT", "/api/admin/menu/draft", admin, { menu: d.menu, version: d.version });
     expect(miss.status).toBe(422);
     d.menu.items[0].photo = j.url;
-    expect((await req("PUT", "/api/admin/menu/draft", admin, { menu: d.menu, version: d.version })).status).toBe(200);
-    await req("POST", "/api/admin/menu/draft/discard", admin, {});
+    const saved = await req("PUT", "/api/admin/menu/draft", admin, { menu: d.menu, version: d.version });
+    expect(saved.status).toBe(200);
+    /* "Откажи" without the version: 422 (someone else's draft is never thrown away blindly) */
+    expect((await req("POST", "/api/admin/menu/draft/discard", admin, {})).status).toBe(422);
+    expect((await req("POST", "/api/admin/menu/draft/discard", admin, { version: (await saved.json()).version })).status).toBe(200);
   });
   it("publish: the site rebuilds (queue), the folders change places, a removed dish answers 301 to its category, /api/menu is new", async () => {
     const d = await (await req("GET", "/api/admin/menu/draft", admin)).json();

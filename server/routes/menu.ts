@@ -3,11 +3,11 @@
    signed-in staff member and the device (cookie sc_dev). "Публикувай" / "Върни" rebuild the site (server/publish.ts).
      GET    /api/admin/menu/draft                 the shared draft {version, menu, changes}
      PUT    /api/admin/menu/draft                 {menu, version} -> the draft (409 conflict, 422 fields)
-     POST   /api/admin/menu/draft/discard         {version} -> no draft
+     POST   /api/admin/menu/draft/discard         {version} (required: 422 without it, 409 old) -> no draft
      POST   /api/admin/menu/publish               {version} -> the state (+ changes); the site rebuilds itself
      POST   /api/admin/menu/rollback              {version: the live one} -> the state
      GET    /api/admin/menu/publish               the state: version, who, when, one step back, the draft, the rebuild
-     POST   /api/admin/media                      a photo (the body is the file): {url: "/media/<sha256>.<ext>"}
+     POST   /api/admin/media                      a photo (the body is the file): {url: "/media/<sha256>.<ext>"}; 60 an hour per person (429)
      GET    /media/<sha256>.<webp|jpg|png>        the photo (long cache, nosniff)
      GET    /api/admin/lunch                      the schedule (403 pin_required / pin_unset without the PIN)
      PUT    /api/admin/lunch/days/:date           {ids}
@@ -27,6 +27,8 @@ import { CoreError, rid, type Core, type StaffCtx } from "../../src/core/index.t
 import type { Publisher } from "../publish.ts";
 
 export const MEDIA_MAX = 5 * 1024 * 1024;
+/** photos per person per hour (review admin-menu flows, minor 4): 429 with retryIn */
+export const MEDIA_PER_HOUR = 60;
 export const MEDIA_RE = /^([a-f0-9]{64})\.(webp|jpg|png)$/;
 const MEDIA_TYPE: Record<string, string> = { webp: "image/webp", jpg: "image/jpeg", png: "image/png" };
 
@@ -64,7 +66,7 @@ export function menuRoutes(app: Hono, d: MenuDeps): void {
   /* ---------- the menu editor ---------- */
   app.get("/api/admin/menu/draft", async (c) => c.json(await core.menuEdit.getDraft(await staff(c, "menu"))));
   app.put("/api/admin/menu/draft", async (c) => { const s = await staff(c, "menu"), b = await body(c); return c.json(await core.menuEdit.saveDraft(s, b.menu, num(b.version))); });
-  app.post("/api/admin/menu/draft/discard", async (c) => { const s = await staff(c, "menu"), b = await body(c); return c.json(await core.menuEdit.discardDraft(s, b.version == null ? undefined : num(b.version))); });
+  app.post("/api/admin/menu/draft/discard", async (c) => { const s = await staff(c, "menu"), b = await body(c); return c.json(await core.menuEdit.discardDraft(s, num(b.version))); });
   app.get("/api/admin/menu/publish", async (c) => c.json(await state(await staff(c, "menu"))));
   app.post("/api/admin/menu/publish", async (c) => {
     const s = await staff(c, "menu"), b = await body(c);
@@ -75,8 +77,13 @@ export function menuRoutes(app: Hono, d: MenuDeps): void {
   app.post("/api/admin/menu/rollback", async (c) => { const s = await staff(c, "menu"), b = await body(c); await core.menuEdit.rollback(s, num(b.version)); return c.json(await state(s)); });
 
   /* ---------- photos ---------- */
+  /* at most MEDIA_PER_HOUR photos an hour per person (a photo not used in the menu stays on the disk; see menu.ts) */
+  const uploads = new Map<string, number[]>();
   app.post("/api/admin/media", async (c) => {
     const s = await staff(c, "menu");
+    const t = Date.now(), mine = (uploads.get(s.user.id) || []).filter((x) => x > t - 3600_000);
+    uploads.set(s.user.id, mine);
+    if (mine.length >= MEDIA_PER_HOUR) throw Object.assign(new CoreError("throttled", "Качихте много снимки за кратко време. Опитайте след малко.", 429), { retryIn: Math.max(1, Math.ceil((mine[0] + 3600_000 - t) / 1000)) });
     const buf = new Uint8Array(await c.req.arrayBuffer());
     if (buf.length > MEDIA_MAX) throw new CoreError("too_large", "Снимката е до 5 MB.", 413);
     if (!buf.length) throw new CoreError("empty", "Изберете снимка.", 422);
@@ -86,6 +93,7 @@ export function menuRoutes(app: Hono, d: MenuDeps): void {
     fs.mkdirSync(d.mediaDir, { recursive: true });
     const file = path.join(d.mediaDir, name);
     if (!fs.existsSync(file)) { const tmp = file + "." + rid(4) + ".tmp"; fs.writeFileSync(tmp, buf); fs.renameSync(tmp, file); }
+    mine.push(t);
     await core.audit.log(s.user.username, "menu.media", name, { bytes: buf.length });
     return c.json({ url: "/media/" + name, type: MEDIA_TYPE[ext], bytes: buf.length }, 201);
   });

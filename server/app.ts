@@ -502,9 +502,13 @@ export function createApp(opts: AppOpts) {
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 
   /* ---------- static files from dist/ ---------- */
+  /* the folder the site is served from: <dist>; for the moment between the renames of a rebuild (server/publish.ts) <dist>
+     is missing and <dist>-prev has a whole site (the old one, or the one "Върни" brings back): no 404 in between */
+  const prevDir = dist + "-prev";
+  const root = (): string => (fs.existsSync(path.join(dist, "index.html")) || !fs.existsSync(path.join(prevDir, "index.html")) ? dist : prevDir);
   const file = (rel: string): string | null => {
-    const p = path.resolve(dist, "." + rel);
-    if (!p.startsWith(dist) || /\/\./.test(rel)) return null; /* never a dot file (.menu-hash of the rebuild) */
+    const r = root(), p = path.resolve(r, "." + rel);
+    if (!(p === r || p.startsWith(r + path.sep)) || /\/\./.test(rel)) return null; /* never a dot file (.menu-hash of the rebuild) */
     try { const st = fs.statSync(p); if (st.isFile()) return p; if (st.isDirectory() && fs.existsSync(path.join(p, "index.html"))) return path.join(p, "index.html"); } catch { /* missing */ }
     return null;
   };

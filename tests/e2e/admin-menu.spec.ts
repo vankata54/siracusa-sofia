@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import { readEnv } from "../../scripts/env.mjs";
+import { assertPortFree } from "./_port.ts";
 
 /* /admin/menu/ (design/pages-admin/menu.html, version 4): the menu editor with the shared draft.
    Every project starts ITS OWN server (port E2E_PORT + 100 desktop, + 101 phone, its own copy of the build and its own database):
@@ -37,6 +38,7 @@ test.beforeAll(async ({}, info) => {
   DIST = SRC + "-menu-" + info.project.name; DB = "data/e2e-menu-" + PORT + ".db"; BASE = "http://localhost:" + PORT;
   rmAll();
   fs.cpSync(SRC, DIST, { recursive: true });
+  await assertPortFree(PORT);
   srv = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", "server/index.ts"], {
     env: { ...process.env, PORT: String(PORT), DIST_DIR: DIST, DB_FILE: DB, SC_PREVIEW_API: "1", SMS_DEMO: "1" }, stdio: "ignore",
   });

@@ -19,7 +19,7 @@ import { CoreError } from "./types.ts";
 import { audit } from "./audit.ts";
 import type { StaffCtx } from "./staff.ts";
 import { MENU, type Menu, type LunchRaw } from "../data/menu.ts";
-import { sofiaYmd, addDaysYmd } from "../lib/time.ts";
+import { sofiaYmd, addDaysYmd, sofiaEpoch } from "../lib/time.ts";
 import { DAYS, MONTHS } from "../lib/format.ts";
 import { newSlug } from "../lib/slug.ts";
 import { refreshLive } from "./menu-edit.ts";
@@ -30,12 +30,16 @@ const BUILT_LUNCH: LunchRaw[] = JSON.parse(JSON.stringify(MENU.lunch.items));
 export const LUNCH_GROUPS = ["Супи", "Салати", "Скара на дървени въглища", "Основни", "Десерти"];
 export const LUNCH_BOSS = ["admin", "owner", "manager"];
 export const PIN_FAILS_DEVICE = 5, PIN_FAILS_PERSON = 10, PIN_LOCK_MIN = 15, LUNCH_OPEN_MIN = 15;
+/** a day's limit per person (review admin-menu flows, minor 7): 10 per 15 minutes would still allow ~960 tries a day;
+    after 30 wrong ones in a day (Sofia) the PIN is closed for that person until midnight */
+export const PIN_FAILS_DAY = 30;
 
 export const LUNCH_MSG = {
   pinRequired: "Графикът е заключен. Въведете ПИН.",
   pinUnset: "ПИН още не е зададен. Помолете управителя да го зададе.",
   badPin: "Грешен ПИН. Опитайте пак.",
   locked: "Твърде много грешни опити. Опитайте след 15 минути.",
+  lockedDay: "Твърде много грешни опити днес. Опитайте утре или помолете управителя.",
   pinBoss: "Само собственикът, управителят и главният админ сменят ПИН.",
   pinFormat: "ПИН-ът е от 4 цифри.",
   pinWeak: "Изберете по-труден ПИН (не четири еднакви цифри и не поред).",
@@ -145,9 +149,10 @@ export async function setPin(ctx: Ctx, s: StaffCtx, pin?: string): Promise<{ pin
   return { pin: p, at };
 }
 
-async function fails(ctx: Ctx, id: string): Promise<Fails> {
+/** windowMin: how long the wrong attempts count (15 min; the day's key carries the date in its id and counts all day) */
+async function fails(ctx: Ctx, id: string, windowMin = PIN_LOCK_MIN): Promise<Fails> {
   const now = nowDate(ctx).getTime(), f = await ctx.repo.get<Fails>(COL.loginFails, id);
-  return f && (f.until > now || f.first > now - PIN_LOCK_MIN * 60_000) ? f : { id, n: 0, first: now, until: 0 };
+  return f && (f.until > now || f.first > now - windowMin * 60_000) ? f : { id, n: 0, first: now, until: 0 };
 }
 const pinLocks = new WeakMap<object, Promise<unknown>>();
 async function serial<T>(ctx: Ctx, fn: () => Promise<T>): Promise<T> {
@@ -167,20 +172,29 @@ export async function unlock(ctx: Ctx, s: StaffCtx, device: string, pin: string)
   const p = await pinDoc(ctx);
   if (!p) throw Object.assign(new CoreError("pin_unset", LUNCH_MSG.pinUnset, 409), { pinSet: false });
   const now = nowDate(ctx).getTime(), d = dev(device);
-  const keys: [string, number][] = [["lunch-pin:" + s.user.id + ":" + d, PIN_FAILS_DEVICE], ["lunch-pin:" + s.user.id, PIN_FAILS_PERSON]];
+  /* the day's key: the Sofia date in the id, locked until midnight */
+  const day = sofiaYmd(nowDate(ctx)), midnight = sofiaEpoch(addDaysYmd(day, 1), 0);
+  const keys: [string, number, number, number][] = [
+    ["lunch-pin:" + s.user.id + ":" + d, PIN_FAILS_DEVICE, PIN_LOCK_MIN, now + PIN_LOCK_MIN * 60_000],
+    ["lunch-pin:" + s.user.id, PIN_FAILS_PERSON, PIN_LOCK_MIN, now + PIN_LOCK_MIN * 60_000],
+    ["lunch-pin-day:" + s.user.id + ":" + day, PIN_FAILS_DAY, 1440, midnight],
+  ];
+  const lockedMsg = (i: number) => (i === 2 ? LUNCH_MSG.lockedDay : LUNCH_MSG.locked);
   /* counted BEFORE the check, one at a time per store (parallel attempts cannot slip past the limit) */
   const fs = await serial(ctx, async () => {
-    const list = await Promise.all(keys.map(([k]) => fails(ctx, k)));
-    const lock = list.find((f) => f.until > now);
-    if (lock) throw Object.assign(new CoreError("throttled", LUNCH_MSG.locked, 429), { retryIn: Math.max(1, Math.ceil((lock.until - now) / 1000)) });
-    for (let i = 0; i < list.length; i++) { const f = list[i]; f.n += 1; if (f.n >= keys[i][1]) f.until = now + PIN_LOCK_MIN * 60_000; await ctx.repo.put(COL.loginFails, f); }
+    const list = await Promise.all(keys.map(([k, , w]) => fails(ctx, k, w)));
+    const li = list.findIndex((f) => f.until > now);
+    if (li > -1) throw Object.assign(new CoreError("throttled", lockedMsg(li), 429), { retryIn: Math.max(1, Math.ceil((list[li].until - now) / 1000)) });
+    for (let i = 0; i < list.length; i++) { const f = list[i]; f.n += 1; if (f.n >= keys[i][1]) f.until = keys[i][3]; await ctx.repo.put(COL.loginFails, f); }
     return list;
   });
   const ok = /^\d{4}$/.test(String(pin || "")) && await ctx.hasher.verify(String(pin), p.salt, p.hash, p.algo);
   if (!ok) {
     await audit(ctx, s.user.username, "lunch.pin_fail", "lunch");
     const left = Math.min(...fs.map((f, i) => keys[i][1] - f.n));
-    if (left <= 0) throw Object.assign(new CoreError("throttled", LUNCH_MSG.locked, 429), { retryIn: PIN_LOCK_MIN * 60 });
+    /* the limit that was reached with the longest lock says what to do */
+    const hit = fs.map((_, i) => i).filter((i) => keys[i][1] - fs[i].n <= 0).sort((a, b) => fs[b].until - fs[a].until)[0];
+    if (left <= 0) throw Object.assign(new CoreError("throttled", lockedMsg(hit), 429), { retryIn: Math.max(1, Math.ceil((fs[hit].until - now) / 1000)) });
     throw Object.assign(new CoreError("bad_pin", LUNCH_MSG.badPin, 401), left <= 3 ? { left } : {});
   }
   /* the right PIN: this device starts again; the person keeps the other devices' wrong attempts but gets this one back */

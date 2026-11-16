@@ -59,7 +59,8 @@ export const menuApi = {
   saveDraft: pick(async (c, menu: Menu, version: number) => c.menuEdit.saveDraft(await g(c, "menu"), menu, version),
     (menu, version) => http<DraftView>("PUT", "admin/menu/draft", { menu, version })),
   /** "Откажи" */
-  discardDraft: pick(async (c, version?: number) => c.menuEdit.discardDraft(await g(c, "menu"), version),
+  /** "Откажи": version of the draft on the screen is required (422 without it, 409 "conflict" when someone saved since) */
+  discardDraft: pick(async (c, version: number) => c.menuEdit.discardDraft(await g(c, "menu"), version),
     (version) => http<DraftView>("POST", "admin/menu/draft/discard", { version })),
   /** "Публикувай": 409 "conflict", 422 "nothing" / "invalid"; the server rebuilds the site (state.build) */
   publish: pick(async (c, version: number): Promise<MenuState & { changes: MenuChanges }> => ({ ...(await c.menuEdit.publish(await g(c, "menu"), version)), build: IDLE }),

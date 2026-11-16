@@ -8,7 +8,8 @@
       written from the menu (the same function as the build) and the server reloads it (onSwap);
    4. on an error the old site stays and the state says what went wrong.
    A menu that was already built (the previous folder, by its content hash in <folder>/.menu-hash) is not built again:
-   the folders only change places ("Върни" is instant). Several publishes while a build runs: only the newest is built.
+   the folders only change places ("Върни" is instant: the comparison ignores the date and the removed list, which every
+   commit changes, pagesHash). Several publishes while a build runs: only the newest is built.
    In the tests the build is replaced (opts.build), no real astro run. */
 import fs from "node:fs";
 import path from "node:path";
@@ -33,7 +34,7 @@ export interface BuildState {
   ms?: number;
 }
 
-const HASH_FILE = ".menu-hash";
+const HASH_FILE = ".menu-hash", PAGES_FILE = ".pages-hash";
 const stable = (v: unknown): string => (Array.isArray(v) ? "[" + v.map(stable).join(",") + "]" : v && typeof v === "object"
   ? "{" + Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => JSON.stringify(k) + ":" + stable((v as Record<string, unknown>)[k])).join(",") + "}" : JSON.stringify(v));
 /** what the pages depend on (not the redirects: they are written from the menu at every swap) */
@@ -48,6 +49,16 @@ export function buildHash(m: Menu, site?: SiteBuild | null): string {
   if (!site) return menuHash(m);
   const { redirects: _r, ...rest } = site;
   return crypto.createHash("sha256").update(menuHash(m) + ":" + stable(rest)).digest("hex");
+}
+
+/** The hash for "the same pages": like buildHash, but without what "Публикувай" / "Върни" (core/menu-edit.ts finalize)
+    change on every commit without a visible change of the dishes: the date `updated` (only the allergens page shows it)
+    and `removed` (dishes taken off the menu, kept for the cart's note; the core refuses them anyway with "removed").
+    "Върни" to the menu of the previous folder then only swaps the folders (no build); the swapped site keeps the date and
+    the removed list of its own build (a dish that lived only between the publish and "Върни" is refused by the core). */
+export function pagesHash(m: Menu, site?: SiteBuild | null): string {
+  const { updated: _u, removed: _rm, ...rest } = m;
+  return buildHash({ ...rest, updated: "", removed: [] } as Menu, site);
 }
 
 /** the real build: `astro build --outDir <out>` with MENU_FILE and SITE_FILE (the server build, never the demo) */
@@ -71,18 +82,34 @@ export function createPublisher(o: { distDir: string; dataDir: string; build: Bu
   let pending: { m: Menu; site: SiteBuild | null } | null = null, running: Promise<void> | null = null, n = 0;
   const now = () => new Date().toISOString();
   const hashOf = (dir: string) => { try { return fs.readFileSync(path.join(dir, HASH_FILE), "utf8").trim(); } catch { return ""; } };
+  const pagesOf = (dir: string) => { try { return fs.readFileSync(path.join(dir, PAGES_FILE), "utf8").trim(); } catch { return ""; } };
+  /* a crash during a build leaves its data files (the whole menu): cleaned at start. The folder can be shared by other
+     servers (the e2e servers of other agents): only the files of a process that is not running any more */
+  const alive = (pid: number) => { if (pid === process.pid) return false; try { process.kill(pid, 0); return true; } catch (e) { return (e as { code?: string }).code === "EPERM"; } };
+  try {
+    for (const f of fs.readdirSync(o.dataDir)) {
+      const m = /^(?:menu|site)-build-(\d+)-\d+\.json$/.exec(f);
+      if (m && !alive(+m[1])) fs.rmSync(path.join(o.dataDir, f), { force: true });
+    }
+  } catch { /* no data folder yet */ }
   /* the menu's 301 table + the site data's (a gone event -> /sabitia/) */
   const writeRedirects = (dir: string, m: Menu, site: SiteBuild | null) => fs.writeFileSync(path.join(dir, "redirects.json"), JSON.stringify({ ...(site ? site.redirects : {}), ...redirectMap(m) }, null, 1) + "\n");
   const rm = (dir: string) => fs.rmSync(dir, { recursive: true, force: true });
 
+  /* the folder now has the pages of this menu: its hashes say so (the boot check compares the full hash) */
+  const mark = (dir: string, h: string, ph: string) => { fs.writeFileSync(path.join(dir, HASH_FILE), h + "\n"); fs.writeFileSync(path.join(dir, PAGES_FILE), ph + "\n"); };
+  const same = (dir: string, h: string, ph: string) => fs.existsSync(path.join(dir, "index.html")) && (hashOf(dir) === h || pagesOf(dir) === ph);
+
   async function one(m: Menu, site: SiteBuild | null) {
-    const h = buildHash(m, site), t0 = Date.now();
+    const h = buildHash(m, site), ph = pagesHash(m, site), t0 = Date.now();
     st = { state: "building", at: now() };
     try {
-      if (hashOf(dist) === h) { writeRedirects(dist, m, site); o.onSwap(); st = { state: "done", at: now(), how: "swap", ms: 0 }; return; }
-      if (hashOf(prev) === h && fs.existsSync(path.join(prev, "index.html"))) {
-        /* the previous site has exactly this menu ("Върни"): the folders change places, no build */
+      if (same(dist, h, ph)) { writeRedirects(dist, m, site); mark(dist, h, ph); o.onSwap(); st = { state: "done", at: now(), how: "swap", ms: 0 }; return; }
+      if (same(prev, h, ph)) {
+        /* the previous site has the pages of this menu ("Върни"): the folders change places, no build. Between the renames
+           the server serves the folder that is there (server/app.ts: <dist>, else <dist>-prev), never a 404 */
         writeRedirects(prev, m, site);
+        mark(prev, h, ph);
         fs.renameSync(dist, next);
         fs.renameSync(prev, dist);
         fs.renameSync(next, prev);
@@ -99,7 +126,7 @@ export function createPublisher(o: { distDir: string; dataDir: string; build: Bu
       try { await o.build(file, next, sfile); } finally { fs.rmSync(file, { force: true }); if (sfile) fs.rmSync(sfile, { force: true }); }
       if (!fs.existsSync(path.join(next, "index.html"))) throw new Error("the build made no index.html");
       writeRedirects(next, m, site);
-      fs.writeFileSync(path.join(next, HASH_FILE), h + "\n");
+      mark(next, h, ph);
       rm(prev);
       if (fs.existsSync(dist)) fs.renameSync(dist, prev);
       fs.renameSync(next, dist);

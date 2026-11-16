@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import { readEnv } from "../../scripts/env.mjs";
+import { assertPortFree } from "./_port.ts";
 
 /* A dish taken off the menu in the admin (decision 15.11.2026), end to end with a REAL rebuild: this file starts its own
    server (port E2E_PORT + 1, its own copy of the build in <DIST_DIR>-cartrm and its own database), so "Публикувай" never
@@ -33,6 +34,7 @@ test.beforeAll(async () => {
   test.skip(!env.ADMIN_PASSWORD, "no .env with the admin password (node scripts/make-env.mjs)");
   rmAll();
   fs.cpSync(SRC, DIST, { recursive: true });
+  await assertPortFree(PORT);
   srv = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", "server/index.ts"], {
     env: { ...process.env, PORT: String(PORT), DIST_DIR: DIST, DB_FILE: DB, SC_PREVIEW_API: "1", SMS_DEMO: "1" }, stdio: "ignore",
   });
