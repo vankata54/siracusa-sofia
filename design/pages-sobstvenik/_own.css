@@ -1,0 +1,326 @@
+/* Siracusa · Собственик: рамката на модула (сестра на Управител, BRIEF-STEP5 раздел 4). Само токените от ../ds/sc.css.
+   Телефон (< 900, @container app): горна лента с името на екрана, „Търси“ и профила; долна лента с 4 раздела.
+   Компютър (>= 900): лява лента 104 px, решетка 2 колони (от 900) и 3 колони (от 1240), до 1240 px. Префикс ow-. */
+html,body{height:100%; overflow:hidden}
+body{background:var(--bg)}
+.ow-app{position:fixed; inset:0; container-type:inline-size; container-name:app; background:var(--bg); color:var(--ink); isolation:isolate}
+.ow-col{position:absolute; inset:0}
+.ow-scroller{position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:thin; background:var(--bg)}
+.ow-ov{position:absolute; inset:0; pointer-events:none; z-index:60}
+.ow-ov > *{pointer-events:auto}
+.ow-ov > .sheetwrap{pointer-events:none}
+.ow-ov > .sheetwrap.on{pointer-events:auto}
+
+/* ---------- горна лента ---------- */
+.ow-top{position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:8px; min-height:76px; padding:10px 10px 10px 18px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:0 1px 0 var(--glass-line)}
+.ow-ttl{flex:1; min-width:0; display:grid}
+.ow-ttl h1{margin:0; font-size:26px; line-height:1.1; letter-spacing:-.035em; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ow-ttl small{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ow-tb{display:grid; justify-items:center; align-content:center; gap:2px; width:56px; height:56px; padding:0; border:0; border-radius:18px; background:transparent; color:var(--ink); font-weight:700; font-size:14px; line-height:1; cursor:pointer; text-decoration:none; flex:none}
+.ow-tb:active{transform:scale(.95)}
+.ow-me{display:inline-flex; align-items:center; gap:10px; min-height:48px; padding:0; border:0; background:transparent; color:var(--ink); cursor:pointer; border-radius:999px; flex:none}
+.ow-av{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-weight:800; font-size:19px; flex:none}
+.ow-me .who{display:none; text-align:left; line-height:1.25}
+.ow-me .who b{display:block; font-size:15px} .ow-me .who small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.ow-tsearch, .ow-toadmin{display:none}
+.ow-net{position:sticky; top:76px; z-index:19; display:flex; align-items:center; gap:10px; padding:8px 10px 8px 16px; background:var(--surface-2); box-shadow:inset 0 -1px 0 var(--line); font-weight:700; font-size:15px}
+.ow-net .ic{color:var(--warn)}
+.ow-net span{flex:1; min-width:0}
+.ow-net .pill{min-height:48px; padding:0 14px; font-size:15px}
+
+/* ---------- страницата ---------- */
+.ow-page{padding:16px 16px 0; max-width:1240px; margin:0 auto}
+.ow-end{height:176px}
+.ow-grid{display:grid; gap:16px; grid-template-columns:minmax(0,1fr); align-items:start}
+.ow-grid + .ow-grid, .ow-grid + .ow-sh, .ow-sh + .ow-grid{margin-top:16px}
+.ow-sh{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin:28px 4px 12px}
+.ow-sh:first-child{margin-top:4px}
+.ow-sh h2{margin:0; font-size:22px; letter-spacing:-.03em; line-height:1.2}
+.ow-sh p{margin:0; color:var(--muted); font-weight:600; font-size:15px}
+.ow-card{min-width:0; grid-template-columns:minmax(0,1fr); scroll-margin-top:96px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; align-content:start}
+.ow-card > h2, .ow-card > header h2{margin:0; font-size:20px; letter-spacing:-.025em; line-height:1.25}
+.ow-card > header{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:8px 12px}
+.ow-card > header > div{min-width:0; flex:1 1 150px}
+.ow-card > header small, .ow-card h2 small{display:block; font-size:14px; font-weight:700; letter-spacing:0; color:var(--muted); margin-top:2px; line-height:1.35}
+.ow-card p{margin:0}
+.ow-shell{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); min-width:0}
+.ow-lead{margin:0 4px 16px; font-size:17px; color:var(--muted)}
+.ow-muted{color:var(--muted)}
+.ow-note{font-size:15px; color:var(--muted); font-weight:600; line-height:1.4}
+.ow-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.ow-num{font-variant-numeric:tabular-nums; white-space:nowrap}
+@container app (min-width:900px){
+  .ow-col{left:104px}
+  .ow-page{padding:24px 32px 0}
+  .ow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ow-grid > .w2, .ow-grid > .wall{grid-column:1 / -1}
+  .ow-end{height:104px}
+}
+@container app (min-width:1240px){
+  .ow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ow-grid > .w2{grid-column:span 2}
+}
+
+/* ---------- лява лента (компютър) и долна лента (телефон) ---------- */
+.ow-rail{display:none}
+.ow-bnav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; height:72px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.ow-bnav a, .ow-rail a{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:56px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; border-radius:999px; white-space:nowrap}
+.ow-bnav a[aria-current="page"], .ow-rail a[aria-current="page"]{color:var(--ink)}
+.ow-bnav a[aria-current="page"] .ic, .ow-rail a[aria-current="page"] .ic{color:var(--red)}
+.ow-n{position:absolute; top:4px; left:calc(50% + 6px); min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; line-height:22px; text-align:center; font-variant-numeric:tabular-nums}
+@container app (min-width:900px){
+  .ow-bnav{display:none}
+  .ow-rail{position:absolute; left:0; top:0; bottom:0; width:104px; z-index:5; display:flex; flex-direction:column; gap:6px; padding:16px 8px; background:var(--surface); box-shadow:inset -1px 0 0 var(--line); min-height:0; overflow-y:auto}
+  .ow-rail .brand{display:grid; justify-items:center; gap:2px; padding:6px 0 14px; text-decoration:none; color:var(--ink)}
+  .ow-rail .brand b{font-size:18px; letter-spacing:-.05em; font-weight:800}
+  .ow-rail .brand small{font-size:14px; color:var(--muted); font-weight:700}
+  .ow-rail a.it{min-height:76px; border-radius:22px; padding:6px 2px}
+  .ow-rail a.it:hover{background:var(--surface-2)}
+  .ow-rail a.it[aria-current="page"]{background:var(--surface-2)}
+  .ow-rail .ow-n{top:6px}
+  .ow-top{padding:12px 32px; min-height:84px; background:var(--bg); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:0 1px 0 var(--line)}
+  .ow-ttl h1{font-size:30px}
+  .ow-net{top:84px; padding-left:32px; padding-right:32px}
+  .ow-tb.ph{display:none}
+  .ow-tsearch{display:flex; position:relative; align-items:center; width:min(340px, 30vw); flex:none}
+  .ow-tsearch > .ic{position:absolute; left:16px; color:var(--muted); pointer-events:none}
+  .ow-tsearch input{width:100%; min-height:52px; padding:0 52px 0 46px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:16px; outline:none}
+  .ow-tsearch input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+  .ow-tsearch input::placeholder{color:var(--muted)}
+  .ow-tsearch .clr{position:absolute; right:2px; top:2px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+  .ow-toadmin{display:inline-flex}
+  .ow-me .who{display:block}
+}
+@container app (min-width:900px) and (max-width:1180px){ .ow-me .who{display:none} .ow-tsearch{width:min(280px, 28vw)} }
+
+/* ---------- кнопки и малки части ---------- */
+.ow-tag{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:3px 10px; border-radius:999px; font-size:14px; font-weight:700; line-height:1.25; color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line-strong); white-space:normal; width:fit-content; max-width:100%}
+.ow-tag.soon{background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:none}
+.ow-tag.soon .ic{color:var(--ember)}
+.ow-tag.ok{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ok)} .ow-tag.ok .ic{color:var(--ok)}
+.ow-tag.warn{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn)} .ow-tag.warn .ic{color:var(--warn)}
+.ow-d{display:inline-flex; align-items:center; gap:4px; font-size:15px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+.ow-d .ic{flex:none}
+.ow-d.up .ic{color:var(--ok)} .ow-d.down .ic{color:var(--danger)} .ow-d.flat .ic{color:var(--muted)}
+.ow-d small{font-size:14px; font-weight:600; color:var(--muted)}
+.ow-d.dchip{min-height:32px; padding:0 12px 0 8px; border-radius:999px; background:var(--surface-2)}
+.ow-banner{display:flex; align-items:center; gap:14px; min-height:60px; padding:12px 12px 12px 18px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); line-height:1.4}
+.ow-banner > .ic{flex:none}
+.ow-banner .tx{flex:1; min-width:0}
+.ow-banner .tx b{display:block; font-size:17px}
+.ow-banner.warn{box-shadow:inset 0 0 0 2px var(--warn)} .ow-banner.warn > .ic{color:var(--warn)}
+.ow-banner.danger{box-shadow:inset 0 0 0 2px var(--danger)} .ow-banner.danger > .ic{color:var(--danger)}
+.ow-banner.ok > .ic{color:var(--ok)}
+.ow-banner.ember{background:var(--ember); color:var(--on-ember)}
+.ow-banner .pill{flex:none}
+@container app (max-width:560px){ .ow-banner{flex-wrap:wrap} .ow-banner .pill{width:100%} }
+.ow-empty{display:grid; justify-items:center; gap:10px; padding:36px 16px; text-align:center}
+.ow-empty .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.ow-empty h3{margin:6px 0 0; font-size:22px; letter-spacing:-.02em; text-wrap:balance}
+.ow-empty p{margin:0; color:var(--muted); max-width:46ch}
+.ow-skel{display:grid; gap:12px}
+.ow-skel .skel{height:120px}
+.ow-skel .skel.s{height:56px; width:60%}
+.ow-noperm{max-width:560px; margin:32px auto}
+.ow-switch{position:relative; display:inline-grid; place-items:center; width:64px; height:48px; flex:none; cursor:pointer}
+.ow-switch input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
+.ow-switch .tr{width:52px; height:32px; border-radius:16px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line); position:relative; transition:background-color var(--t-base) var(--ease)}
+.ow-switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.ow-switch input:checked + .tr{background:var(--ok)}
+.ow-switch input:checked + .tr::after{transform:translateX(20px)}
+.ow-switch input:focus-visible + .tr{outline:3px solid var(--red); outline-offset:2px}
+.ow-li{display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 0; border-top:1px solid var(--line); color:inherit; text-decoration:none}
+.ow-li:first-child{border-top:0}
+.ow-li .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.ow-li .tx{flex:1; min-width:0; display:grid; gap:2px}
+.ow-li .tx b{font-size:16px; line-height:1.3}
+.ow-li .tx small{font-size:15px; color:var(--muted); font-weight:600; line-height:1.35}
+.ow-li .end{flex:none; display:flex; align-items:center; gap:6px}
+a.ow-li:hover .tx b{text-decoration:underline; text-underline-offset:3px}
+
+/* ---------- период и сравнение ---------- */
+.ow-per{display:grid; gap:10px; margin-bottom:16px}
+.ow-per .seg{grid-auto-flow:row; grid-template-columns:repeat(3,minmax(0,1fr))}
+.ow-per .seg button{min-height:52px; font-size:16px; padding:0 6px; text-align:center; line-height:1.15}
+.ow-per .cmp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ow-per .cmp button{font-size:15px; font-weight:700; padding:6px 8px}
+.ow-per .lbl{font-size:14px; font-weight:700; color:var(--muted); margin:0 4px}
+.ow-cust{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end}
+.ow-cust .field{flex:1 1 150px; max-width:220px}
+.ow-meta{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; margin:0 4px 16px; color:var(--muted); font-weight:600; font-size:15px}
+.ow-meta b{color:var(--ink)}
+@container app (min-width:900px){
+  .ow-per{grid-template-columns:auto minmax(0,1fr); align-items:end; gap:10px 16px}
+  .ow-per .seg{grid-template-columns:repeat(6,auto)}
+  .ow-per .seg button{padding:0 14px}
+  .ow-per .cmp{justify-self:end}
+}
+
+/* ---------- числа (KPI) ---------- */
+.ow-kpis{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.ow-kpi{min-width:0; display:grid; gap:4px; align-content:start; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); color:inherit; text-decoration:none}
+.ow-kpi .l{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.ow-kpi b{font-size:28px; line-height:1.1; letter-spacing:-.04em; white-space:nowrap}
+.ow-kpi b small{font-size:17px; color:var(--muted); letter-spacing:0}
+@container app (max-width:380px){ .ow-kpi b{font-size:24px} .ow-kpi{padding:14px} }
+@container app (min-width:900px){ .ow-kpis{grid-template-columns:repeat(auto-fit, minmax(150px,1fr))} }
+.ow-kpis > .ow-kpi:last-child:nth-child(odd){grid-column:1 / -1}
+@container app (min-width:900px){ .ow-kpis > .ow-kpi:last-child:nth-child(odd){grid-column:auto} }
+
+/* ---------- графики: прости SVG и HTML, текстът е в HTML с токените ---------- */
+.ow-plot{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 10px}
+.ow-plot .ya{display:grid; align-content:space-between; text-align:right; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; height:180px; margin-top:-8px}
+.ow-plot .ya span{line-height:16px; white-space:nowrap}
+.ow-plot .area{position:relative; height:180px}
+.ow-plot .grid{position:absolute; inset:0; display:grid; align-content:space-between; pointer-events:none}
+.ow-plot .grid i{display:block; height:1px; background:var(--line)}
+.ow-plot .grid i:last-child{background:var(--line-strong)}
+.ow-plot .cols{position:absolute; inset:0; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); align-items:end; gap:2px}
+.ow-plot .cols span{display:flex; justify-content:center; align-items:flex-end; height:100%}
+.ow-plot .cols i{display:block; width:100%; max-width:24px; border-radius:4px 4px 0 0; background:var(--ink); transition:opacity var(--t-fast) var(--ease)}
+.ow-plot .cols i.hi{background:var(--red)}
+.ow-plot .cols i.ns{background:var(--red); border-radius:4px 4px 0 0}
+.ow-plot .cols .st{flex-direction:column; justify-content:flex-end}
+.ow-plot .cols .st i + i{border-radius:0; margin-top:0}
+.ow-plot:hover .cols i{opacity:.55}
+.ow-plot .cols span.on i{opacity:1}
+.ow-plot svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none}
+.ow-plot svg .ln{fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke}
+.ow-plot svg .ln.cur{stroke:var(--ink)} .ow-plot svg .ln.prev{stroke:var(--off)} .ow-plot svg .wash{fill:var(--ink); opacity:.08}
+.ow-plot .dot{position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 2px var(--surface); pointer-events:none}
+.ow-plot .dot.prev{background:var(--off)}
+.ow-plot .now{position:absolute; top:0; bottom:0; width:0; border-left:1px solid var(--line-strong); pointer-events:none}
+.ow-plot .elab{position:absolute; transform:translate(8px,-50%); font-size:14px; font-weight:800; white-space:nowrap; background:var(--surface); padding:0 4px; border-radius:6px; pointer-events:none}
+.ow-plot .elab.l{transform:translate(calc(-100% - 8px),-50%)}
+.ow-plot .xa{grid-column:2; position:relative; height:22px; font-size:14px; color:var(--muted); font-weight:600; margin-top:8px; font-variant-numeric:tabular-nums}
+.ow-plot .xa span{position:absolute; top:0; white-space:nowrap}
+.ow-tip{position:absolute; z-index:3; pointer-events:none; padding:8px 12px; border-radius:14px; background:var(--ink); color:var(--bg); font-size:15px; font-weight:700; line-height:1.3; white-space:nowrap; transform:translate(-50%, calc(-100% - 10px)); box-shadow:var(--shadow-lg)}
+.ow-tip small{display:block; font-size:14px; font-weight:600; opacity:.85}
+.ow-lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.ow-lgd li{display:inline-flex; align-items:center; gap:6px}
+.ow-lgd i{width:12px; height:12px; border-radius:3px; background:var(--ink)}
+.ow-lgd i.ln{height:3px; width:18px; border-radius:2px}
+.ow-lgd i.prev{background:var(--off)} .ow-lgd i.r{background:var(--red)}
+.ow-hb{display:grid; gap:14px}
+.ow-hb .r{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:baseline}
+.ow-hb .r .n{display:flex; align-items:center; gap:8px; font-weight:700; min-width:0}
+.ow-hb .r .n .ic{color:var(--muted)}
+.ow-hb .r .n span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ow-hb .r .v{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
+.ow-hb .r .s{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:2px 10px; font-size:15px; font-weight:600; color:var(--muted); margin-top:-2px}
+.ow-hb .r .tr{grid-column:1 / -1; height:10px; border-radius:5px; background:var(--surface-2); overflow:hidden}
+.ow-hb .r .tr i{display:block; height:100%; border-radius:5px; background:var(--ink); transform-origin:left; animation:ow-grow 600ms var(--ease) both}
+@keyframes ow-grow{from{transform:scaleX(0)} to{transform:none}}
+.ow-top10{display:grid}
+.ow-top10 .r{display:grid; grid-template-columns:24px 44px minmax(0,1fr) auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line)}
+.ow-top10 .r:first-child{border-top:0}
+.ow-top10 .k{font-weight:800; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
+.ow-top10 .pic{width:44px; height:44px; border-radius:14px}
+.ow-top10 .n{min-width:0}
+.ow-top10 .n b{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:16px; line-height:1.3}
+.ow-top10 .n .tr{height:6px; border-radius:3px; background:var(--surface-2); margin-top:6px; overflow:hidden}
+.ow-top10 .n .tr i{display:block; height:100%; background:var(--ember); border-radius:3px}
+.ow-top10 .v{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.ow-top10 .v small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.ow-top10 .r.mark{background:var(--ember-soft); border-radius:14px; padding-left:6px; padding-right:6px}
+/* топлинна карта ден × час: една тоналност (мастило), по-тъмно = повече */
+.ow-heat{display:grid; grid-template-columns:34px repeat(13,minmax(0,1fr)); gap:2px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.ow-heat .c{height:26px; border-radius:4px; background:var(--surface-2)}
+@container app (min-width:900px){ .ow-heat .c{height:30px} .ow-heat{gap:3px} }
+.ow-heat .h{text-align:center; white-space:nowrap; overflow:visible}
+.ow-heat .d{display:flex; align-items:center}
+.ow-heat .c.l1{background:color-mix(in srgb, var(--ink) 14%, var(--surface-2))}
+.ow-heat .c.l2{background:color-mix(in srgb, var(--ink) 32%, var(--surface-2))}
+.ow-heat .c.l3{background:color-mix(in srgb, var(--ink) 52%, var(--surface-2))}
+.ow-heat .c.l4{background:color-mix(in srgb, var(--ink) 74%, var(--surface-2))}
+.ow-heat .c.l5{background:var(--ink)}
+.ow-scale{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted)}
+.ow-scale i{width:18px; height:14px; border-radius:3px; background:var(--surface-2)}
+.ow-scale i.l1{background:color-mix(in srgb, var(--ink) 14%, var(--surface-2))} .ow-scale i.l3{background:color-mix(in srgb, var(--ink) 52%, var(--surface-2))} .ow-scale i.l5{background:var(--ink)}
+/* сегментирана лента (дял) */
+.ow-segbar{display:flex; gap:2px; height:12px; border-radius:6px; overflow:hidden; background:var(--surface-2)}
+.ow-segbar i{display:block; height:100%; background:var(--ink)}
+.ow-segbar i.b{background:var(--off)}
+.ow-big{font-size:40px; line-height:1.05; letter-spacing:-.045em; font-weight:800; white-space:nowrap}
+@container app (max-width:380px){ .ow-big{font-size:34px} }
+.ow-tbtn{min-height:48px; font-size:15px; padding:0 14px}
+/* таблица (алтернатива на графиката); на телефон редовете стават карти */
+.ow-tablewrap{min-width:0; overflow-x:auto}
+.ow-table{width:100%; border-collapse:collapse; font-size:16px}
+.ow-table th{font-size:14px; font-weight:700; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap}
+.ow-table td{padding:10px 12px; border-bottom:1px solid var(--line)}
+.ow-table tbody tr:last-child td{border-bottom:0}
+.ow-table .r{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+@container app (max-width:640px){
+  .ow-table, .ow-table tbody, .ow-table tr, .ow-table td{display:block}
+  .ow-table thead{display:none}
+  .ow-table tbody tr{padding:10px 0; border-bottom:1px solid var(--line)}
+  .ow-table tbody tr:last-child{border-bottom:0}
+  .ow-table td{display:flex; justify-content:space-between; gap:12px; padding:4px 0; border:0; text-align:right}
+  .ow-table td::before{content:attr(data-label); font-size:14px; font-weight:700; color:var(--muted); text-align:left}
+  .ow-table td[data-main]{display:block; text-align:left; font-weight:800; font-size:17px}
+  .ow-table td[data-main]::before{display:none}
+}
+
+/* ---------- известие ---------- */
+.ow-toast{position:absolute; left:50%; top:88px; z-index:90; transform:translate(-50%,-160%); opacity:0; display:flex; align-items:center; gap:8px; min-height:56px; padding:4px 4px 4px 18px; border-radius:28px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); width:max-content; max-width:calc(100% - 20px); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); pointer-events:none}
+.ow-toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}
+.ow-toast .tx{flex:1; min-width:0; line-height:1.3; padding:6px 0}
+.ow-toast button, .ow-toast a{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:color-mix(in srgb, var(--bg) 16%, transparent); color:inherit; font-weight:800; cursor:pointer; text-decoration:none; white-space:nowrap}
+@container app (min-width:900px){ .ow-toast{top:auto; bottom:28px; transform:translate(-50%,160%)} .ow-toast.on{transform:translate(-50%,0)} }
+/* листът (sc.css) и моливът: докато листът или търсенето са отворени, кръглият „Молив“ се скрива */
+body.ow-sheet .sa-pen-btn, body.ow-find-on .sa-pen-btn{display:none!important}
+body.ow-toast-on .sa-pen-btn{opacity:0; pointer-events:none}
+@media (min-width:700px) and (max-width:899px){ .sa-pen-btn:not(.in-slot){bottom:100px!important} }
+.sa-sfoot, .ow-sfoot{flex:none; display:flex; gap:8px; padding-top:12px; border-top:1px solid var(--line); margin-top:8px}
+.ow-sfoot .pill{flex:1; white-space:normal; text-align:center; line-height:1.15; padding:0 12px}
+.sheet .body p{margin:0 0 12px}
+.ow-prof{display:flex; align-items:center; gap:14px; margin:4px 0 16px}
+.ow-prof b{display:block; font-size:18px}
+.ow-prof .ow-muted{font-size:15px}
+.ow-plinks{display:grid; gap:8px; margin:16px 0 4px}
+.ow-plinks .pill{justify-content:flex-start}
+
+/* ---------- търсачката: цял екран на телефон, панел на компютър ---------- */
+.ow-find{position:absolute; inset:0; z-index:70; background:var(--bg); display:flex; flex-direction:column; opacity:0; transform:translateY(12px); transition:opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease)}
+.ow-find.on{opacity:1; transform:none}
+.ow-find .fh{flex:none; display:flex; align-items:center; gap:6px; padding:10px 8px 10px 12px; box-shadow:0 1px 0 var(--line)}
+.ow-find .fh form{flex:1; min-width:0; position:relative}
+.ow-find .fh form > .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.ow-find .fh input{width:100%; min-height:56px; padding:0 54px 0 48px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:17px; outline:none}
+.ow-find .fh input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.ow-find .fh input::placeholder{color:var(--muted)}
+.ow-find .fh .clr{position:absolute; right:4px; top:4px; width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.ow-find .fx{display:grid; justify-items:center; align-content:center; gap:2px; width:64px; min-height:56px; border:0; background:transparent; color:var(--ink); font-weight:700; font-size:14px; cursor:pointer; border-radius:18px}
+.ow-find .fb{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:4px 16px 40px}
+.ow-fpanel{position:absolute; top:calc(100% + 8px); right:0; width:min(560px, 70vw); max-height:min(70vh, 640px); overflow-y:auto; z-index:40; padding:6px 18px 18px; border-radius:24px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line)}
+.ow-fscope{margin:14px 0 0; font-size:15px; color:var(--muted)}
+.ow-fchips{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0}
+.ow-fchips .chip{min-height:48px}
+.ow-fchips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
+.ow-fg{margin-top:18px}
+.ow-fg > h3{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 4px; font-size:17px; font-weight:800; letter-spacing:-.02em}
+.ow-fg > h3 small{font-size:14px; color:var(--muted); font-weight:700}
+.ow-fr{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:64px; padding:8px 4px; border-bottom:1px solid var(--line); color:var(--ink); text-decoration:none; border-radius:4px}
+.ow-fr:hover, .ow-fr.sel{background:var(--surface-2)}
+.ow-fr .fi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.ow-fr .pic{width:44px; height:44px; border-radius:14px}
+.ow-fr b{display:block; font-size:16px; line-height:1.25}
+.ow-fr small{display:block; font-size:14px; color:var(--muted); font-weight:600; line-height:1.3; margin-top:2px}
+.ow-fr .fv{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; font-size:15px}
+.ow-fr .fv small{font-weight:600}
+.ow-fband{display:flex; align-items:center; gap:8px; margin:18px 0 4px; min-height:44px; padding:6px 14px 6px 12px; border-radius:999px; background:var(--surface-2); font-size:15px; font-weight:800}
+.ow-fband .ic{color:var(--muted)}
+.ow-fband.unk{border-radius:18px; background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); align-items:flex-start; padding:10px 14px}
+.ow-fband.unk .ic{color:var(--warn); margin-top:2px}
+.ow-fband.unk small{display:block; font-weight:600; color:var(--muted); font-size:14px}
+.ow-fmore{margin-top:4px}
+.ow-fnone{padding:28px 8px; text-align:center; color:var(--muted)}
+.ow-fnone b{display:block; color:var(--ink); font-size:18px; margin-bottom:4px}
+
+/* ---------- „Само в прототипа“ ---------- */
+.ow-proto{margin:40px 0 0; padding:18px; border-radius:var(--r-core); box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; gap:10px}
+.ow-proto h2{margin:0; display:flex; align-items:center; gap:8px; font-size:18px}
+.ow-proto p{margin:4px 0 0; font-size:15px; color:var(--muted); font-weight:600}
+.ow-proto .ow-row .chip{text-decoration:none}
+.ow-proto code{font-size:14px}

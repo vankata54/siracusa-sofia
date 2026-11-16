@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Тенденции | Siracusa · Собственик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_own.css">
+<style>
+.tr-grid{grid-auto-flow:row dense}
+.tr-acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin:0 0 16px}
+.tr-acts .ow-meta{margin:0; flex:1 1 300px; min-width:0}
+.tr-acts .acts{display:flex; flex-wrap:wrap; gap:8px}
+@container app (max-width:560px){ .tr-acts .acts, .tr-acts .acts .pill{width:100%} }
+.tr-kpis{margin-bottom:16px}
+.tr-kpis .ow-d{white-space:normal}
+.tr-dish{display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; align-items:center}
+.tr-dish .pic{width:72px; height:72px; border-radius:20px}
+.tr-dish b{display:block; font-size:19px; line-height:1.25}
+.tr-pair{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line)}
+.tr-pair:first-child{border-top:0}
+.tr-pair .pp{display:flex; flex:none}
+.tr-pair .pp .pic{width:40px; height:40px; border-radius:12px; box-shadow:0 0 0 2px var(--surface)}
+.tr-pair .pp .pic + .pic{margin-left:-10px}
+.tr-pair .tx{flex:1; min-width:0; line-height:1.3; font-weight:700}
+.tr-pair .v{flex:none; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.tr-two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.tr-two > div{padding:12px 14px; border-radius:18px; background:var(--surface-2); display:grid; gap:2px; min-width:0}
+.tr-two .k{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.tr-two b{font-size:24px; letter-spacing:-.03em; white-space:nowrap}
+.tr-two .ow-d{white-space:normal}
+.tr-mail{display:grid; gap:4px}
+.tr-mail label{display:flex; align-items:center; gap:12px; min-height:56px; cursor:pointer}
+.tr-mail label span{flex:1; min-width:0; line-height:1.35}
+.tr-mail label small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.tr-miss{display:grid; gap:12px}
+.tr-miss > div{display:flex; gap:12px; align-items:flex-start}
+.tr-miss .ill{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); flex:none}
+.tr-miss b{display:block}
+.tr-seg{max-width:340px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_history.js"></script>
+<script src="_own.js"></script>
+<script>
+(function(){
+var ic = O.ic, esc = O.esc, st = O.st;
+var body = O.mount({page:"trends", title:"Тенденции", states:O.STATES});
+if (!body) return;
+A.liveHash = true;
+var topBy = "q", dishId = A.hash.dish && SC.byId[A.hash.dish] ? A.hash.dish : "";
+var DOW = ["пн","вт","ср","чт","пт","сб","нд"], DOWI = [1, 2, 3, 4, 5, 6, 0];
+var CHI = [0, 1, 2, 3], CHN = [["Доставка · Сайт","truck"],["Вземане · Сайт","storefront"],["Маса","chair"],["Офис","briefcase"]];
+
+function sumExtra(days){ var o = {newC:0, retC:0, prep:0, deliv:0, call:0, lunch30:0, code:0, nd:0};
+  days.forEach(function(d){ if (!d.orders) return; var e = H.extra(d.k); o.newC += e.newC; o.retC += e.retC; o.lunch30 += e.lunch30; o.code += e.code; if (e.prep){ o.prep += e.prep; o.deliv += e.deliv || 0; o.call += e.call; o.nd++; } });
+  if (o.nd){ o.prep /= o.nd; o.deliv /= o.nd; o.call /= o.nd; } return o; }
+function draw(){
+  if (st === "loading"){ body.innerHTML = O.skel(5, "Смятаме тенденциите …"); return; }
+  if (st === "error"){ body.innerHTML = O.periodHTML() + O.error("Не успяхме да сметнем тенденциите. Поръчките и оборотът са запазени; опитай пак."); return; }
+  var X = O.aggs(), g = X.g, cur = X.cur, prev = X.prev, one = g.one, vs = g.vs, empty = H.empty;
+  var avg = cur.orders ? cur.rev / cur.orders : 0, pavg = prev.orders ? prev.rev / prev.orders : 0, nsr = cur.res ? Math.round(cur.ns / cur.res * 100) : 0;
+  function dl(a, b, inv){ return empty ? '' : O.delta(a, b, {inv:inv}); }
+  var h = '';
+  if (st === "drop") h += O.banner({tone:"warn", icon:"warning", title:"Отклонение днес", text:'<span class="ow-muted">Поръчките днес са под обичайното за деня. Подробно в „Днес“.</span>', action:'<a class="pill pill-line" href="today.html#st=drop">' + ic("house", 20) + 'Към „Днес“</a>'}) + '<div style="height:16px"></div>';
+  h += O.periodHTML();
+  h += '<div class="tr-acts"><p class="ow-meta"><span><b>' + esc(g.label) + '</b> · спрямо ' + esc(g.cmpLabel) + '</span>' + O.sample(g.R[1] === H.TODAY ? "Днес като в „Поръчки“; по-старите дни са примерни" : "Примерни числа, истински ястия и цени") + '</p>' +
+    '<div class="acts"><button class="pill pill-red pill-lg" type="button" data-csv>' + ic("export", 22) + 'Изтегли CSV</button></div></div>';
+  if (empty || (!cur.orders && !cur.res)){
+    h += '<section class="ow-card" data-edit-id="own.trends.empty">' + (empty ? O.empty({icon:"hourglass", title:"Още събираме история.", text:"Тенденциите и сравнението идват след 4 седмици. Дотогава днешните числа са в „Днес“.", action:'<a class="pill pill-line pill-lg" href="today.html#st=empty">' + ic("house", 22) + 'Към „Днес“</a>'})
+      : O.empty({icon:"chart-bar", title:"Няма поръчки за този период.", text:O.per.per === "today" ? "Поръчките за днес се появяват тук от 10:00." : "Избери друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'})) + '</section>';
+    body.innerHTML = h; return; }
+  if (dishId) h += dishCard(cur, prev, g);
+  h += '<div class="ow-kpis tr-kpis" data-edit-id="own.trends.kpi">' +
+    kpi("Поръчки" + (cur.cancelled ? " (+" + cur.cancelled + " отказ" + (cur.cancelled === 1 ? "ана" : "ани") + ")" : ""), String(cur.orders), dl(cur.orders, prev.orders)) +
+    kpi("Оборот", SC.fmt(cur.rev), dl(cur.rev, prev.rev)) + kpi("Среден бон", SC.fmt(avg), dl(avg, pavg)) +
+    kpi("Резервации", String(cur.res), dl(cur.res, prev.res)) + kpi("Неявили се", cur.ns + (cur.res ? ' <small>(' + nsr + '%)</small>' : ''), dl(cur.ns, prev.ns, true)) + '</div>';
+  h += '<p class="ow-note" style="margin:-6px 4px 16px">Стрелката и думата казват посоката спрямо ' + esc(g.cmpLabel.split(":")[0]) + '. При „Неявили се“ по-малко е по-добре.</p>';
+  h += '<div class="ow-grid tr-grid">';
+  /* оборот по ден (или по час за един ден) */
+  if (one){ var hrs = H.hours(cur), ph = H.hours(prev);
+    h += O.card({page:"trends", id:"main", cls:"w2", title:"Оборот по час", sub:H.fd(g.R[0]) + (g.upTo ? " до " + g.upTo : "") + " · линията е " + (O.per.cmp === "year" ? "миналата година" : "сравнението"),
+      inner:O.cols("main", hrs.map(function(x){ var v = cur.hrev[+x[0]] || 0; return {l:x[0] + ":00", v:Math.round(v), t:x[0] + ":00 - " + x[0] + ":59", tv:SC.fmt(v) + " · " + A.plural(x[1], "поръчка", "поръчки")}; }), {fmt:O.eur0, xn:5, prev:ph.map(function(x){ return prev.hrev[+x[0]] || 0; }), prevTip:function(i){ return " · сравнение " + SC.fmt(prev.hrev[10 + i] || 0); }}) + O.legend([["Избраният ден"], ["Сравнението", "ln prev"]]),
+      table:{head:["Час","Оборот","Поръчки","Сравнение"], rows:hrs.map(function(x){ return [x[0] + ":00", SC.fmt(cur.hrev[+x[0]] || 0), x[1], SC.fmt(prev.hrev[+x[0]] || 0)]; })}}); }
+  else { var pd = prev.days;
+    h += O.card({page:"trends", id:"main", cls:"w2", title:"Оборот по ден", sub:(g.R[1] === H.TODAY ? "Днес (до " + A.hm(A.now()) + ") е в червено · " : "") + "линията е " + (O.per.cmp === "year" ? "миналата година" : "предишният период"),
+      inner:O.cols("main", cur.days.map(function(d){ return {l:H.fd(d.k, true).replace(/^.., /, ""), v:Math.round(d.rev), hi:d.k === H.TODAY, t:H.fd(d.k), tv:SC.fmt(d.rev) + " · " + A.plural(d.orders, "поръчка", "поръчки")}; }), {fmt:O.eur0, xn:6, prev:pd.map(function(d){ return d.rev; }), prevTip:function(i){ return pd[i] ? " · сравнение " + SC.fmt(pd[i].rev) : ""; }}) +
+        O.legend([["Избраният период"], [O.per.cmp === "year" ? "Миналата година" : "Предишният период", "ln prev"]]),
+      table:{head:["Ден","Оборот","Поръчки","Сравнение"], rows:cur.days.map(function(d, i){ return [H.fd(d.k, true), SC.fmt(d.rev), d.orders, pd[i] ? SC.fmt(pd[i].rev) : "-"]; })}}); }
+  /* по канал */
+  h += O.card({page:"trends", id:"ch", title:"По канал", sub:"Оборот, дял и разлика", inner:O.hbars(CHI.map(function(i){ var c = cur.ch[i], p = prev.ch[i], sh = cur.rev ? Math.round(c.rev / cur.rev * 100) : 0; return {n:CHN[i][0], icon:CHN[i][1], v:c.rev, vt:SC.fmt(c.rev), sub:sh + "% · " + A.plural(c.o, "поръчка", "поръчки") + " " + dl(c.rev, p.rev)}; })) +
+      '<p class="ow-note">Телефон: ' + A.missing("история на телефонните поръчки") + ' (в отчетите те са „Маса“ или „Вземане“; новите от админа са „Телефон“).</p>',
+    table:{head:["Канал","Оборот","Дял","Поръчки","Сравнение"], rows:CHI.map(function(i){ return [CHN[i][0], SC.fmt(cur.ch[i].rev), (cur.rev ? Math.round(cur.ch[i].rev / cur.rev * 100) : 0) + "%", cur.ch[i].o, SC.fmt(prev.ch[i].rev)]; })}});
+  /* топлинна карта ден × час */
+  h += heat(cur);
+  /* топ ястия */
+  var top = Object.keys(cur.dish).map(function(id){ var x = SC.byId[id]; return {x:x, q:cur.dish[id], r:cur.dish[id] * x.p}; }).sort(function(a, b){ return topBy === "q" ? b.q - a.q : b.r - a.r; }).slice(0, 8), tmax = top.length ? (topBy === "q" ? top[0].q : top[0].r) : 1;
+  h += O.card({page:"trends", id:"top", anchor:"top", title:"Най-поръчвани ястия", sub:"Истинските имена, примерни бройки",
+    inner:'<div class="seg tr-seg" role="group" aria-label="Подреди"><button type="button" data-top="q" aria-pressed="' + (topBy === "q") + '">По брой</button><button type="button" data-top="r" aria-pressed="' + (topBy === "r") + '">По оборот</button></div>' +
+      '<div class="ow-top10">' + top.map(function(t, i){ return '<a class="r' + (t.x.id === dishId ? ' mark' : '') + '" href="#dish=' + t.x.id + '" data-dish="' + t.x.id + '" style="color:inherit;text-decoration:none"><span class="k">' + (i + 1) + '</span>' + SC.pic(t.x) + '<span class="n"><b>' + esc(t.x.n) + '</b><span class="tr" aria-hidden="true"><i style="width:' + ((topBy === "q" ? t.q : t.r) / tmax * 100) + '%"></i></span></span><span class="v">' + (topBy === "q" ? A.plural(t.q, "брой", "броя") + '<small>' + O.eur0(t.r) + '</small>' : O.eur0(t.r) + '<small>' + A.plural(t.q, "брой", "броя") + '</small>') + '</span></a>'; }).join("") + '</div>',
+    table:{head:["Ястие","Брой","Оборот"], rows:top.map(function(t){ return [t.x.n, t.q, SC.fmt(t.r)]; })}});
+  /* често поръчвани заедно */
+  h += pairs(cur);
+  /* клиенти, времена, оферти */
+  var ex = sumExtra(cur.days), pex = sumExtra(prev.days), tot = ex.newC + ex.retC, ptot = pex.newC + pex.retC, rs = tot ? Math.round(ex.retC / tot * 100) : 0;
+  h += '<section class="ow-card" id="clients" aria-labelledby="h-cl" data-edit-id="own.trends.clients"><header><div><h2 id="h-cl">Нови и връщащи се клиенти<small>Онлайн поръчки (по телефона на клиента)</small></h2></div></header>' +
+    '<div class="tr-two"><div><span class="k">Връщащи се</span><b>' + ex.retC + '</b>' + dl(ex.retC, pex.retC) + '</div><div><span class="k">Нови</span><b>' + ex.newC + '</b>' + dl(ex.newC, pex.newC) + '</div></div>' +
+    '<div class="ow-segbar" role="img" aria-label="Връщащи се ' + rs + '%, нови ' + (100 - rs) + '%"><i style="width:' + rs + '%"></i><i class="b" style="width:' + (100 - rs) + '%"></i></div>' + O.legend([["Връщащи се " + rs + "%"], ["Нови " + (tot ? 100 - rs : 0) + "%", "prev"]]) + '<p>' + O.sample() + '</p></section>';
+  h += '<section class="ow-card" id="times" aria-labelledby="h-tm" data-edit-id="own.trends.times"><header><div><h2 id="h-tm">Средни времена<small>По-малко е по-добре</small></h2></div></header>' +
+    '<div class="tr-two"><div><span class="k">Приготвяне</span><b>' + Math.round(ex.prep) + ' мин</b>' + dl(ex.prep, pex.prep, true) + '</div><div><span class="k">Доставка (от приемане)</span><b>' + Math.round(ex.deliv) + ' мин</b>' + dl(ex.deliv, pex.deliv, true) + '</div>' +
+    '<div style="grid-column:1/-1"><span class="k">Отговор на повикване от масата</span><b>' + Math.floor(ex.call / 60) + ':' + String(Math.round(ex.call % 60)).padStart(2, "0") + ' мин</b>' + dl(ex.call, pex.call, true) + '</div></div><p>' + O.sample() + '</p></section>';
+  /* резервации и неявили се */
+  h += O.card({page:"trends", id:"res", anchor:"res", title:"Резервации и неявили се", sub:A.plural(cur.res, "резервация", "резервации") + ", " + cur.ns + " неявили се (" + nsr + "%)",
+    inner:(one ? O.hbars([{n:"Резервации", icon:"calendar-check", v:cur.res, vt:String(cur.res), sub:dl(cur.res, prev.res)}, {n:"Неявили се", icon:"warning-circle", v:cur.ns, vt:String(cur.ns), sub:dl(cur.ns, prev.ns, true)}])
+      : O.cols("res", cur.days.map(function(d){ return {l:H.fd(d.k, true).replace(/^.., /, ""), v:d.res - d.ns, v2:d.ns, t:H.fd(d.k), tv:A.plural(d.res, "резервация", "резервации") + (d.ns ? ", " + d.ns + " неявили се" : "")}; }), {xn:5}) + O.legend([["Дошли и предстоящи"], ["Неявили се", "r"]])) +
+      '<a class="link" href="decisions.html#noshow">Неявили се за блокиране' + ic("caret-right", 18) + '</a>',
+    table:{head:["Ден","Резервации","Неявили се"], rows:cur.days.map(function(d){ return [H.fd(d.k, true), d.res, d.ns]; })}});
+  h += '<section class="ow-card" id="offers" aria-labelledby="h-of" data-edit-id="own.trends.offers"><header><div><h2 id="h-of">Ефектът на офертите</h2></div></header>' +
+    '<div class="tr-two"><div><span class="k">Обедно -30% след 15:00 (вземане)</span><b>' + A.plural(ex.lunch30, "поръчка", "поръчки") + '</b>' + dl(ex.lunch30, pex.lunch30) + '</div><div><span class="k">С кода -10% от оценката</span><b>' + A.plural(ex.code, "поръчка", "поръчки") + '</b>' + dl(ex.code, pex.code) + '</div></div>' +
+    '<p class="ow-note">Колко поръчки са дошли с офертата. Колко оборот носят: ' + A.missing("себестойност на ястията") + '.</p><p>' + O.sample() + '</p></section>';
+  /* без данни още */
+  h += '<section class="ow-card" aria-labelledby="h-ms" data-edit-id="own.trends.missing"><header><div><h2 id="h-ms">Още без данни</h2></div></header><div class="tr-miss">' +
+    '<div><span class="ill">' + ic("eye", 22) + '</span><span><b>Разгледани, но не поръчани</b>' + A.missing("анализ на разглежданията") + '</span></div>' +
+    '<div><span class="ill">' + ic("scales", 22) + '</span><span><b>Матрица на менюто</b><span class="ow-muted">Популярност срещу печалба.</span> ' + A.missing("себестойност на ястията") + '</span></div></div></section>';
+  /* отчети по имейл */
+  var M = A.data.get("own-mail", {weekly:false, monthly:false});
+  h += '<section class="ow-card" aria-labelledby="h-ml" data-edit-id="own.trends.mail"><header><div><h2 id="h-ml">Отчети по имейл<small>PDF до ' + A.missing("имейл за отчетите") + '</small></h2></div></header><div class="tr-mail">' +
+    '<label><span>Всеки понеделник в 6:00<small>За миналата седмица</small></span><span class="ow-switch"><input type="checkbox" role="switch" data-mail="weekly"' + (M.weekly ? ' checked' : '') + '><span class="tr"></span></span></label>' +
+    '<label><span>На 1-во число<small>За миналия месец</small></span><span class="ow-switch"><input type="checkbox" role="switch" data-mail="monthly"' + (M.monthly ? ' checked' : '') + '><span class="tr"></span></span></label></div>' +
+    '<p class="ow-note">Изпращането тръгва, щом агенцията добави имейла. ' + O.soon() + '</p></section>';
+  h += '</div><p class="ow-note" style="margin:20px 4px 0">Пълните отчети с всички таблици са в админа: <a class="link" href="../pages-admin/reports.html' + (O.per.per === "7" ? '' : '#p=' + O.per.per) + '">Отчети' + ic("caret-right", 18) + '</a></p>';
+  body.innerHTML = h; O.bindTips(body);
+}
+function kpi(l, v, d){ return '<div class="ow-kpi"><span class="l">' + esc(l) + '</span><b>' + v + '</b>' + (d || '') + '</div>'; }
+function heat(cur){ var cnt = {}, nd = {}, mx = 0;
+  cur.days.forEach(function(d){ var w = H.dow(d.k); nd[w] = (nd[w] || 0) + 1; for (var hh = 10; hh <= 22; hh++){ var k = w + "-" + hh; cnt[k] = (cnt[k] || 0) + (d.hour[hh] || 0); } });
+  Object.keys(cnt).forEach(function(k){ var w = +k.split("-")[0]; cnt[k] = nd[w] ? cnt[k] / nd[w] : 0; if (cnt[k] > mx) mx = cnt[k]; });
+  function lv(v){ if (!v) return ""; var f = v / mx; return f < .2 ? "l1" : f < .4 ? "l2" : f < .6 ? "l3" : f < .8 ? "l4" : "l5"; }
+  var peak = {v:0}; Object.keys(cnt).forEach(function(k){ if (cnt[k] > peak.v) peak = {v:cnt[k], k:k}; });
+  var g = '<div class="ow-heat" role="img" aria-label="Поръчки по ден от седмицата и час. Най-натоварено: ' + (peak.k ? DOW[DOWI.indexOf(+peak.k.split("-")[0])] + " " + peak.k.split("-")[1] + ":00" : "няма") + '"><span></span>';
+  for (var hh = 10; hh <= 22; hh++) g += '<span class="h">' + (hh % 2 === 0 ? hh : "") + '</span>';
+  DOWI.forEach(function(w, i){ g += '<span class="d">' + DOW[i] + '</span>'; for (var hh2 = 10; hh2 <= 22; hh2++){ var v = cnt[w + "-" + hh2] || 0; g += '<span class="c ' + lv(v) + '" title="' + DOW[i] + ', ' + hh2 + ':00 · средно ' + O.f1(v) + ' поръчки"></span>'; } });
+  g += '</div><div class="ow-scale" aria-hidden="true">по-малко<i class="l0"></i><i class="l1"></i><i class="l3"></i><i class="l5"></i>повече</div>';
+  var few = cur.days.length < 7;
+  return O.card({page:"trends", id:"heat", anchor:"heat", cls:"w2", title:"Пикови часове", sub:"Средно поръчки по ден от седмицата и час" + (peak.k ? " · най-много: " + DOW[DOWI.indexOf(+peak.k.split("-")[0])] + " около " + peak.k.split("-")[1] + ":00" : ""),
+    inner:(few ? '<p class="ow-note">За пълната картина избери поне 7 дни.</p>' : '') + g,
+    table:{head:["Ден"].concat([10, 12, 14, 16, 18, 20, 22].map(function(x){ return x + ":00"; })), rows:DOWI.map(function(w, i){ return [DOW[i]].concat([10, 12, 14, 16, 18, 20, 22].map(function(x){ return O.f1(cnt[w + "-" + x] || 0); })); })}}); }
+function pairs(cur){ var c = {};
+  cur.baskets.forEach(function(b){ var u = b.filter(function(id, i){ return b.indexOf(id) === i; }).sort(); for (var i = 0; i < u.length; i++) for (var j = i + 1; j < u.length; j++){ var k = u[i] + "|" + u[j]; c[k] = (c[k] || 0) + 1; } });
+  var top = Object.keys(c).map(function(k){ return {a:SC.byId[k.split("|")[0]], b:SC.byId[k.split("|")[1]], n:c[k]}; }).filter(function(p){ return p.a && p.b; }).sort(function(x, y){ return y.n - x.n; }).slice(0, 5);
+  return '<section class="ow-card" aria-labelledby="h-pr" data-edit-id="own.trends.pairs"><header><div><h2 id="h-pr">Често поръчвани заедно<small>От примерните поръчки; за „Върви добре с“</small></h2></div></header>' +
+    (top.length ? '<div>' + top.map(function(p){ return '<div class="tr-pair"><span class="pp">' + SC.pic(p.a) + SC.pic(p.b) + '</span><span class="tx">' + esc(p.a.n) + ' + ' + esc(p.b.n) + '</span><span class="v">' + p.n + ' пъти</span></div>'; }).join("") + '</div>' : '<p class="ow-note">Още няма поръчки с повече от едно ястие.</p>') + '<p>' + O.sample() + '</p></section>'; }
+function dishCard(cur, prev, g){ var x = SC.byId[dishId], q = cur.dish[dishId] || 0, pq = prev.dish[dishId] || 0, cat = SC.catById[x.cat];
+  var items = cur.days.map(function(d){ return {l:H.fd(d.k, true).replace(/^.., /, ""), v:d.dish[dishId] || 0, t:H.fd(d.k), tv:A.plural(d.dish[dishId] || 0, "брой", "броя")}; });
+  return '<div class="ow-grid"><section class="ow-card wall" id="dish" aria-labelledby="h-ds" data-edit-id="own.trends.dish"><header><div class="tr-dish">' + SC.pic(x) + '<div><h2 id="h-ds">' + esc(x.n) + '</h2><span class="ow-note">' + esc(cat ? cat.n : "") + ' · ' + SC.fmt(x.p) + (SC.isOut(x) ? ' · Изчерпано днес' : '') + '</span></div></div>' +
+    '<button class="pill pill-soft ow-tbtn" type="button" data-undish>' + ic("x", 18) + 'Затвори</button></header>' +
+    '<div class="tr-two"><div><span class="k">Продадени · ' + esc(g.label) + '</span><b>' + A.plural(q, "брой", "броя") + '</b>' + O.delta(q, pq, {vs:H.empty ? "" : ""}) + '</div><div><span class="k">Оборот от ястието</span><b>' + SC.fmt(q * x.p) + '</b>' + O.delta(q * x.p, pq * x.p) + '</div></div>' +
+    (g.one ? '' : O.cols("dish", items, {xn:6})) + '<div class="ow-row" style="justify-content:space-between">' + O.sample() + '<a class="link" href="../pages-admin/menu.html#d=' + esc(dishId) + '">В менюто на админа' + ic("caret-right", 18) + '</a></div></section></div><div style="height:16px"></div>'; }
+
+O.redraw = draw;
+draw();
+O.bindPeriod(body, draw);
+if (dishId) setTimeout(function(){ var d = document.getElementById("dish"); d && d.scrollIntoView({block:"start"}); }, 60);
+else ["top","heat","res","clients","times","offers"].forEach(function(k){ if (location.hash.indexOf(k) > -1 && !/[?&#]p=/.test(location.hash)){ var t = document.getElementById(k); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); } });
+body.addEventListener("click", function(e){ var t;
+  if ((t = e.target.closest("[data-top]"))){ topBy = t.dataset.top; var y = O.scroller.scrollTop; draw(); O.scroller.scrollTop = y; var b = body.querySelector('[data-top="' + topBy + '"]'); b && b.focus({preventScroll:true}); return; }
+  if ((t = e.target.closest("[data-dish]"))){ e.preventDefault(); dishId = t.dataset.dish; O.periodHash({dish:dishId}); draw(); O.scroller.scrollTop = 0; return; }
+  if (e.target.closest("[data-undish]")){ dishId = ""; var hh = Object.assign({}, A.hash); delete hh.dish; A.setHash(hh); draw(); return; }
+  if (e.target.closest("[data-csv]")){ var R = O.ranges().R, o = H.agg(R[0], R[1]), rows = [["Ден","Поръчки","Оборот €","Среден бон €","Доставка","Вземане","Маса","Офис","Резервации","Неявили се"]].concat(o.days.map(function(d){ return [d.k, d.orders, d.rev.toFixed(2).replace(".", ","), (d.orders ? d.rev / d.orders : 0).toFixed(2).replace(".", ","), d.ch[0].o, d.ch[1].o, d.ch[2].o, d.ch[3].o, d.res, d.ns]; }));
+    var ok = A.download("siracusa-tendentsii-" + R[0] + "-" + R[1] + ".csv", "﻿# Примерни данни\n" + rows.map(function(r){ return r.join(";"); }).join("\n"), "text/csv");
+    O.toast(ok ? "Изтеглено: " + A.plural(o.days.length, "ден", "дни") + " в CSV" : "Файлът не се изтегли. Опитай пак."); return; }
+});
+body.addEventListener("change", function(e){ var t = e.target; if (!t.matches("[data-mail]")) return; var k = t.dataset.mail, M = A.data.get("own-mail", {weekly:false, monthly:false}), was = M[k]; M[k] = t.checked; A.data.set("own-mail", M);
+  A.audit("reports.mail", (t.checked ? "Включени" : "Изключени") + " отчети по имейл: " + (k === "weekly" ? "всеки понеделник" : "на 1-во число"));
+  O.toast((t.checked ? "Включено. " : "Изключено. ") + (k === "weekly" ? "Отчетът всеки понеделник в 6:00" : "Отчетът на 1-во число") + (st === "offline" ? ": записано на телефона, тръгва само, щом има връзка" : ""), {undo:function(){ var M2 = A.data.get("own-mail", {}); M2[k] = was; A.data.set("own-mail", M2); draw(); }}); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Собственик | Siracusa · Собственик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_own.css">
+<style>
+.ix-scr{display:grid; gap:10px}
+.ix-scr a.it{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:14px; align-items:center; padding:14px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink)}
+.ix-scr .ico{width:52px; height:52px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.ix-scr b{display:block; font-size:18px; letter-spacing:-.01em}
+.ix-scr .d{display:block; font-size:15px; color:var(--muted); line-height:1.4; margin-top:2px}
+.ix-st{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.ix-st a{text-decoration:none}
+.ix-who{display:flex; flex-wrap:wrap; gap:8px}
+@container app (min-width:900px){ .ix-scr{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_history.js"></script>
+<script src="_own.js"></script>
+<script>
+(function(){
+var ic = O.ic, esc = O.esc;
+var body = O.mount({page:"index", title:"Собственик", docTitle:"Всички екрани", public:true});
+if (!body) return;
+var S = [
+  ["today.html","house","Днес","„Днес: X € от N поръчки“ (същото число като таблото на админа), спрямо същия ден миналата седмица до същия час; среден бон; известие при отклонение; „Чака те“; на живо; оборот по час спрямо обичайното; по канал; последните 7 дни.",
+    [["","Обичайно"],["drop","Отклонение"],["empty","Без история"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"],["noperm","Без права (Управител)"]]],
+  ["trends.html","chart-bar","Тенденции","Период и сравнение (предишния период или миналата година, % до всеки показател), оборот по ден, канали, пикови часове ден × час, топ ястия, често заедно, клиенти, времена, резервации, офертите, „Изтегли CSV“, отчети по имейл.",
+    [["","7 дни"],["p=30","30 дни"],["p=today","Днес"],["p=month&c=year","Месец срещу миналата година"],["dish=pitsa-margarita","Ястие: Маргарита"],["empty","Без история"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]],
+  ["finance.html","wallet","Финанси и гориво","Приходи по начин на плащане, гориво по ден, шофьор и автомобил, цена на доставка спрямо таксата, спестено от по-краткия път, парите в брой от шофьорите, себестойност [ЛИПСВА].",
+    [["","7 дни"],["p=30","30 дни"],["p=today","Днес"],["empty","Без история"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]],
+  ["decisions.html","list-checks","Решения","Неявили се за блокиране; „Въпроси от агенцията“ (52, дословно от OPEN-QUESTIONS) със „Съгласен“ / „Друго“, отговорът отива в „Бележки“; Google профил „Скоро“.",
+    [["","Обичайно"],["f=done","Отговорени"],["q=m25","Въпрос: парите на шофьора"],["empty","Нищо не чака"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]]
+];
+function stHref(f, s){ if (!s) return f; return f + "#" + (/=/.test(s) ? s : "st=" + s); }
+var who = A.me ? 'Влязъл си като <b>' + esc(A.me.name) + '</b> (' + esc(A.roleName(A.me.role)) + ').' : 'Не си влязъл.';
+body.innerHTML = '<p class="ow-lead" style="color:var(--ink)">Модулът на собственика: оборот, тенденции, финанси и гориво, решения. Телефон (360, 390) като приложение и компютър (1024, 1440). Пълните отчети и работа са в админа.</p>' +
+  '<section class="ow-card" style="margin-bottom:16px"><h2>Влез като</h2><p>' + who + '</p><div class="ix-who">' +
+  [["owner","Собственик"],["admin","Главен админ"],["manager","Управител (отива в „Смяната“)"]].map(function(r){ return '<button class="pill ' + (A.me && A.me.role === r[0] ? 'pill-ink' : 'pill-line') + '" type="button" data-as="' + r[0] + '">' + ic("sign-in", 20) + esc(r[1]) + '</button>'; }).join("") +
+  '<a class="pill pill-line" href="../pages-admin/login.html#next=../pages-sobstvenik/today.html">' + ic("lock", 20) + 'Вход в админа</a></div></section>' +
+  '<div class="ix-scr">' + S.map(function(s){ return '<div><a class="it" href="' + s[0] + '"><span class="ico">' + ic(s[1], 26) + '</span><span><b>' + s[2] + '</b><span class="d">' + esc(s[3]) + '</span></span>' + ic("caret-right", 22) + '</a>' +
+    '<div class="ix-st">' + s[4].map(function(x){ return '<a class="chip" href="' + stHref(s[0], x[0]) + '">' + esc(x[1]) + '</a>'; }).join("") + '</div></div>'; }).join("") + '</div>' +
+  '<section class="ow-card" style="margin-top:24px"><h2>Връзки</h2><div class="ix-who"><a class="pill pill-line" href="../pages-admin/dashboard.html">' + ic("squares-four", 20) + 'Таблото на админа</a><a class="pill pill-line" href="../pages-admin/reports.html">' + ic("chart-bar", 20) + 'Отчети в админа</a><a class="pill pill-line" href="../pages-admin/notes.html">' + ic("pencil-simple", 20) + 'Бележки (отговорите)</a><a class="pill pill-line" href="../pages-upravitel/now.html">' + ic("users-three", 20) + 'Смяната сега</a></div></section>';
+body.addEventListener("click", function(e){ var t = e.target.closest("[data-as]"); if (!t) return; var a = A.ACCOUNTS.filter(function(x){ return x[1] === t.dataset.as; })[0]; if (a){ A.login(a[0]); location.reload(); } });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Днес | Siracusa · Собственик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_own.css">
+<style>
+.td-grid{grid-auto-flow:row dense}
+.td-hero{display:grid; gap:14px; padding:20px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.td-hero .l{display:flex; align-items:center; gap:8px; font-weight:700; color:var(--muted); font-size:15px}
+.td-hero .l .ic{color:var(--red)}
+.td-hero .sum{font-size:56px; line-height:1; letter-spacing:-.05em; font-weight:800; white-space:nowrap}
+.td-hero .of{font-size:19px; font-weight:700; margin-top:6px}
+.td-hero .cmp{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.td-hero .cmp .ow-d{white-space:normal}
+.td-hero .mini{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:4px}
+.td-hero .mini > div{padding:12px 14px; border-radius:18px; background:var(--surface-2); display:grid; gap:2px; min-width:0}
+.td-hero .mini .k{font-size:14px; font-weight:700; color:var(--muted)}
+.td-hero .mini b{font-size:22px; letter-spacing:-.03em; white-space:nowrap}
+.td-hero .ft{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
+@container app (max-width:380px){ .td-hero{padding:16px} .td-hero .sum{font-size:46px} }
+@container app (min-width:900px){ .td-hero .sum{font-size:72px} }
+.td-live{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
+.td-live a{display:grid; gap:2px; align-content:start; padding:12px; border-radius:18px; background:var(--surface-2); color:inherit; text-decoration:none; min-width:0; min-height:96px}
+.td-live a:hover{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.td-live b{font-size:30px; letter-spacing:-.04em; line-height:1.1; white-space:nowrap}
+.td-live b small{font-size:16px; color:var(--muted); letter-spacing:0}
+.td-live span{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.td-wait .pill{min-height:48px; padding:0 16px; flex:none}
+.td-wait .tx b{display:block}
+.td-wait .wcnt{flex:none; min-width:28px; height:28px; padding:0 8px; border-radius:14px; background:var(--red); color:var(--on-red); font-size:15px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums; margin-right:8px; vertical-align:1px}
+@container app (max-width:440px){ .td-wait .ow-li .si{display:none} .td-wait .pill{padding:0 12px} }
+.td-ok{display:flex; align-items:center; gap:12px; font-size:17px}
+.td-ok .ic{color:var(--ok); flex:none}
+.td-alert b{font-size:18px}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_history.js"></script>
+<script src="_own.js"></script>
+<script>
+(function(){
+var ic = O.ic, esc = O.esc, st = O.st;
+var body = O.mount({page:"today", title:"Днес", states:O.STATES});
+if (!body) return;
+var DAYS_FULL = ["неделя","понеделник","вторник","сряда","четвъртък","петък","събота"];
+var CHN = [["delivery","Доставка","truck","Сайт"],["pickup","Вземане","storefront","Сайт"],["phone","Телефон","phone",""],["table","Маса","chair",""],["office","Офис","briefcase",""]];
+
+/* „Днес: X € от N поръчки“: точно като таблото на админа (A.todaySales: sa-orders за днес без отказаните) */
+O.todaySales = function(){ if (!H.todayFilter) return A.todaySales();
+  var t = A.todayKey(), l = H.todayOrders().filter(function(o){ return o.status !== "cancelled" && A.todayKey(new Date(o.ts)) === t; });
+  var sum = l.reduce(function(a, o){ return a + (typeof o.total === "number" ? o.total : A.seed.sums(o).total); }, 0); return {sum:Math.round(sum * 100) / 100, n:l.length}; };
+
+function liveTables(){ var sh = A.data.get("shift", null);
+  if (sh && Array.isArray(sh.tables)) return {n:sh.tables.filter(function(x){ return x.st && x.st !== "free"; }).length, src:"смяната"};
+  var nowM = A.minutes(), set = {};
+  A.reservationsToday().forEach(function(r){ var p = r.time.split(":"), m = +p[0] * 60 + +p[1]; if (r.table && (r.status === "seated" || r.status === "confirmed") && m <= nowM && m + 120 > nowM) set[r.table] = 1; });
+  A.orders().forEach(function(o){ if (o.channel === "table" && o.table && A.FIN.indexOf(o.status) < 0 && o.status !== "cancelled") set["t" + o.table] = 1; });
+  return {n:Object.keys(set).length, src:"резервациите и поръчките"}; }
+
+function draw(){
+  if (st === "loading"){ body.innerHTML = O.skel(4, "Зареждаме деня …"); return; }
+  if (st === "error"){ body.innerHTML = O.error("Не успяхме да заредим числата за днес. Поръчките са запазени; опитай пак."); return; }
+  var now = A.now(), s0 = A.sofia(now), hm = A.hm(now), dayName = DAYS_FULL[s0.dow];
+  var sales = O.todaySales(), lastK = H.addD(H.TODAY, -7), lw = H.cutAt(H.day(lastK), s0.h, s0.m), td = H.day(H.TODAY);
+  var usual = H.usual(H.TODAY, 4), usualUp = H.cutAt(usual, s0.h, s0.m), dev = O.pct(td.orders, usualUp.orders);
+  var avg = sales.n ? sales.sum / sales.n : 0, lwAvg = lw.orders ? lw.rev / lw.orders : 0, empty = H.empty;
+  var vsLW = "от " + H.fd(lastK, true) + " до " + hm;
+  var h = '';
+  /* известие при отклонение (8.5): след като има история; праг 20% */
+  if (empty) h += '<div class="ow-grid"><div class="wall">' + O.banner({tone:"", icon:"hourglass", title:"Още събираме история.", text:"Сравнението идва след 4 седмици. Дотогава виждаш числата за днес."}) + '</div></div>';
+  else if (dev != null && Math.abs(dev) >= 20) h += '<div class="ow-grid"><div class="wall td-alert" data-edit-id="own.today.alert">' + O.banner({tone:dev < 0 ? "warn" : "ok", icon:dev < 0 ? "warning" : "check-circle",
+      title:"Поръчките днес са с " + Math.abs(dev) + "% " + (dev < 0 ? "под" : "над") + " обичайното за " + dayName + " до " + hm,
+      text:'<span class="ow-muted">Днес ' + A.plural(td.orders, "поръчка", "поръчки") + ', обичайно около ' + Math.round(usualUp.orders) + ' (средно от същия ден в последните 4 седмици).</span> ' + O.sample(),
+      action:'<button class="pill pill-line" type="button" data-goto="hourly">' + ic("chart-bar", 20) + 'Виж по час</button>'}) + '</div></div>';
+  h += '<div class="ow-grid td-grid">';
+  /* главното число */
+  h += '<section class="td-hero w2" aria-labelledby="td-h" data-edit-id="own.today.sales"><div class="l">' + ic("wallet", 20) + '<span id="td-h">Днес · ' + A.fmtDate(now) + ' · до ' + hm + '</span></div>' +
+    '<div><div class="sum">' + SC.fmt(sales.sum) + '</div><div class="of">от ' + A.plural(sales.n, "поръчка", "поръчки") + '</div></div>' +
+    '<div class="cmp">' + (empty ? '<span class="ow-note">Сравнението идва след 4 седмици.</span>' : O.delta(sales.sum, lw.rev, {chip:true, vs:vsLW, none:'<span class="ow-note">Няма данни за ' + H.fd(lastK, true) + '.</span>'})) + O.sample() + '</div>' +
+    '<div class="mini"><div><span class="k">Среден бон</span><b>' + SC.fmt(avg) + '</b>' + (empty ? '' : O.delta(avg, lwAvg)) + '</div><div><span class="k">Отказани днес</span><b>' + (td.cancelled || 0) + '</b><span class="ow-note">не влизат в оборота</span></div></div>' +
+    '<div class="ft"><span class="ow-note">Същото число като в таблото на админа.</span><a class="link" href="../pages-admin/reports.html#p=today">Пълният отчет в админа' + ic("caret-right", 18) + '</a></div></section>';
+  /* „Чака те“: само за собственика */
+  var W = O.waits();
+  h += '<section class="ow-card td-wait" aria-labelledby="td-w" data-edit-id="own.today.waiting"><header><div><h2 id="td-w">Чака те</h2></div></header>' +
+    (W.length ? '<div>' + W.map(function(x){ return '<a class="ow-li" href="' + x.href + '"><span class="si">' + ic(x.icon, 22) + '</span><span class="tx"><b><span class="wcnt">' + x.n + '</span>' + esc(x.title) + '</b>' + (x.sub ? '<small>' + esc(x.sub) + '</small>' : '') + '</span><span class="end"><span class="pill pill-ink">' + esc(x.go) + ic("caret-right", 18) + '</span></span></a>'; }).join("") + '</div>'
+      : '<p class="td-ok">' + ic("check-circle", 26) + '<span><b>Нищо не чака.</b> Всичко е наред.</span></p>') + '</section>';
+  /* оборот по час: натрупано днес спрямо обичайното за този ден (стъпка 15 мин) */
+  h += hourly(td, usual, empty, now, dayName);
+  /* на живо */
+  var inWork = A.ordersInWork().length, lt = liveTables(), allT = A.activeTables().length, nowM = A.minutes();
+  var later = A.reservationsToday().filter(function(r){ var p = r.time.split(":"); return (+p[0] * 60 + +p[1]) >= nowM && (r.status === "new" || r.status === "confirmed"); }), ppl = later.reduce(function(a, r){ return a + (+r.people || 0); }, 0);
+  h += '<section class="ow-card" aria-labelledby="td-l" data-edit-id="own.today.live"><header><div><h2 id="td-l">На живо</h2><small>' + (nowM >= 1350 || nowM < 600 ? "Кухнята не работи сега" : "Обновява се само") + '</small></div></header>' +
+    '<div class="td-live"><a href="../pages-admin/orders.html"><b>' + inWork + '</b><span>в работа</span></a><a href="../pages-admin/hall.html"><b>' + lt.n + '<small> от ' + allT + '</small></b><span>заети маси</span></a><a href="../pages-admin/reservations.html"><b>' + later.length + '</b><span>' + (nowM >= 1020 ? "резервации тази вечер" : "резервации до края на деня") + (ppl ? ', ' + A.plural(ppl, "човек", "души") : '') + '</span></a></div>' +
+    '<p class="ow-note">Масите са условни за макета (' + lt.src + ') ' + A.missing("истински маси") + '. ' + O.sample() + '</p>' +
+    '<a class="pill pill-red pill-lg pill-block" href="../pages-upravitel/now.html">' + ic("users-three", 22) + 'Смяната сега</a></section>';
+  /* по канал */
+  h += channels();
+  /* последните 7 дни: същото число като „Отчети“ на админа за 7 дни */
+  h += week(empty);
+  h += '</div>';
+  body.innerHTML = h; O.bindTips(body);
+}
+function hourly(td, usual, empty, now, dayName){ var STEP = 15, N = (23 - 10) * 60 / STEP + 1, s0 = A.sofia(now), nowMin = s0.h * 60 + s0.m, labels = [], cur = [], prev = [];
+  var orders = H.todayOrders().filter(function(o){ return o.status !== "cancelled"; }).map(function(o){ var s = A.sofia(new Date(o.ts)); return {m:s.h * 60 + s.m, v:H.orderSum(o)}; });
+  for (var i = 0; i < N; i++){ var t = 600 + i * STEP; labels.push(String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"));
+    cur.push(t <= nowMin + 0.5 ? orders.filter(function(o){ return o.m < t; }).reduce(function(a, o){ return a + o.v; }, 0) : null);
+    var u = 0; Object.keys(usual.hrev).forEach(function(hh){ var a = +hh * 60; u += usual.hrev[hh] * Math.max(0, Math.min(1, (t - a) / 60)); }); prev.push(empty ? null : u); }
+  /* последната точка на днес е сега (между две стъпки) */
+  var ni = (nowMin - 600) / STEP, nowX = nowMin >= 600 && nowMin <= 1380 ? ni / (N - 1) * 100 : null;
+  if (nowMin < 600) cur = cur.map(function(){ return null; });
+  var curNow = orders.reduce(function(a, o){ return a + (o.m <= nowMin ? o.v : 0); }, 0);
+  var rows = []; for (var hh = 10; hh <= 23; hh++){ var j = (hh - 10) * 60 / STEP; rows.push([labels[j], cur[j] == null ? "-" : SC.fmt(cur[j]), empty ? "-" : SC.fmt(prev[j])]); }
+  var inner = (nowMin < 600 ? '<p class="ow-note">Поръчките за днес ще се появят тук от 10:00.</p>' : '') + O.line("hour", labels, cur, empty ? null : prev, {fmt:O.eur0, ticks:[0, 16, 32, 48], curName:"Днес", prevName:"Обичайно", nowX:nowX, curLabel:nowMin >= 600 ? O.eur0(curNow) : ""}) +
+    O.legend(empty ? [["Днес, натрупано", "ln"]] : [["Днес, натрупано", "ln"], ["Обичайно за " + dayName + " (средно от 4 седмици)", "ln prev"]]) + (empty ? '<p class="ow-note">Обичайното идва след 4 седмици.</p>' : '');
+  return O.card({page:"today", id:"hour", anchor:"hourly", cls:"w2", title:"Оборот по час", sub:"Натрупано от 10:00 · по-светлата линия е обичайното", inner:inner,
+    table:{head:["Час","Днес","Обичайно"], rows:rows}, extra:'<p class="ow-note">' + O.sample("Обичайното: примерни числа, истински ястия и цени") + '</p>'}); }
+function channels(){ var by = {}; CHN.forEach(function(c){ by[c[0]] = {o:0, rev:0}; }); var tot = 0;
+  H.todayOrders().forEach(function(o){ if (o.status === "cancelled") return; var k = by[o.channel] ? o.channel : "pickup", v = H.orderSum(o); by[k].o++; by[k].rev += v; tot += v; });
+  var rows = CHN.map(function(c){ var x = by[c[0]], sh = tot ? Math.round(x.rev / tot * 100) : 0; return {n:c[1] + (c[3] ? " · " + c[3] : ""), icon:c[2], v:x.rev, vt:SC.fmt(x.rev), sub:A.plural(x.o, "поръчка", "поръчки") + " · " + sh + "%"}; });
+  return O.card({page:"today", id:"ch", anchor:"channels", title:"По канал", sub:"Оборот днес, брой поръчки и дял", inner:O.hbars(rows) + '<p class="ow-note">Каналите са като в ядрото: Сайт (доставка и вземане), Телефон, Маса, Офис. Телефонните поръчки от админа са „Телефон“.</p>',
+    table:{head:["Канал","Оборот","Поръчки","Дял"], rows:CHN.map(function(c){ var x = by[c[0]]; return [c[1], SC.fmt(x.rev), x.o, (tot ? Math.round(x.rev / tot * 100) : 0) + "%"]; })}}); }
+function week(empty){ var a = H.addD(H.TODAY, -6), cur = H.agg(a, H.TODAY), pa = H.addD(a, -7), prev = H.agg(pa, H.addD(a, -1));
+  var items = cur.days.map(function(d, i){ return {l:H.fd(d.k, true).slice(0, 2), v:Math.round(d.rev), hi:d.k === H.TODAY, t:H.fd(d.k) + (d.k === H.TODAY ? " (до " + A.hm(A.now()) + ")" : ""), tv:SC.fmt(d.rev) + " · " + A.plural(d.orders, "поръчка", "поръчки")}; });
+  var inner = '<div class="ow-row" style="align-items:baseline;gap:6px 14px"><span class="ow-big">' + SC.fmt(cur.rev) + '</span>' + (empty ? '' : O.delta(cur.rev, prev.rev, {vs:"от предишните 7 дни"})) + '</div>' +
+    '<p class="ow-note">' + A.plural(cur.orders, "поръчка", "поръчки") + ' · среден бон ' + SC.fmt(cur.orders ? cur.rev / cur.orders : 0) + ' · днес е в червено</p>' + O.cols("week", items, {fmt:O.eur0, prev:empty ? null : prev.days.map(function(d){ return d.rev; }), prevTip:function(i){ return " · седмица по-рано " + SC.fmt(prev.days[i].rev); }}) +
+    O.legend(empty ? [["Тази седмица"]] : [["Тази седмица"], ["Седмица по-рано", "ln prev"]]) + '<div class="ow-row" style="justify-content:space-between">' + O.sample() + '<a class="link" href="trends.html">Към тенденциите' + ic("caret-right", 18) + '</a></div>';
+  return O.card({page:"today", id:"week", cls:"w2", title:"Последните 7 дни", sub:H.fd(a, true) + " - " + H.fd(H.TODAY, true) + " · като в „Отчети“ на админа", inner:inner,
+    table:{head:["Ден","Оборот","Поръчки","Седмица по-рано"], rows:cur.days.map(function(d, i){ return [H.fd(d.k, true), SC.fmt(d.rev), d.orders, empty ? "-" : SC.fmt(prev.days[i].rev)]; })}}); }
+O.redraw = draw;
+A.liveHash = true;
+draw();
+body.addEventListener("click", function(e){ var g = e.target.closest("[data-goto]"); if (!g) return; var t = document.getElementById(g.dataset.goto); if (t){ t.scrollIntoView({block:"start", behavior:"smooth"}); var hh = t.querySelector("h2"); if (hh){ hh.setAttribute("tabindex", "-1"); hh.focus({preventScroll:true}); } } });
+/* нова онлайн поръчка от админа (друг раздел): числата се смятат наново */
+window.addEventListener("storage", function(e){ if (e.key === "sa-orders" || e.key === "sa-blocks" || e.key === "sa-notes"){ H.reset(); var y = O.scroller.scrollTop; draw(); O.scroller.scrollTop = y; } });
+if (location.hash.indexOf("channels") > -1 || location.hash.indexOf("hourly") > -1){ var t = document.getElementById(location.hash.indexOf("channels") > -1 ? "channels" : "hourly"); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); }
+})();
+</script>
+</body>
+</html>
