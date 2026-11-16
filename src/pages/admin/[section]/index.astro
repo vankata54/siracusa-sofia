@@ -1,0 +1,23 @@
+---
+/* /admin/<key of SECTIONS>/ and /admin/preview/: the sections without a screen in the code yet show the frame and
+   "Скоро" (src/admin/soon.ts). An author who makes a section adds its own src/pages/admin/<key>/index.astro and takes the
+   key out of SOON below (a static page wins over this route, but the list keeps the build without double routes). */
+import Admin from "../../../layouts/Admin.astro";
+import { SOON } from "../../../admin/sections.ts";
+
+export function getStaticPaths() {
+  return SOON.map(([section, title]) => ({ params: { section }, props: { title } }));
+}
+const { section } = Astro.params;
+const { title } = Astro.props;
+const key = section === "preview" ? "site" : section;
+const name = section === "preview" ? "Модулите на живо" : title;
+---
+<Admin title={name} page={"admin-" + section}>
+<div data-soon={key} data-title={section === "preview" ? name : ""} hidden></div>
+<script>
+import { initSoon } from "../../../admin/soon.ts";
+const el = document.querySelector<HTMLElement>("[data-soon]")!;
+initSoon(el.dataset.soon!, el.dataset.title || undefined);
+</script>
+</Admin>

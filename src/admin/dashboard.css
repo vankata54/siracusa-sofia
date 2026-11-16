@@ -1,0 +1,107 @@
+/* Таблото (/admin/): порт 1:1 на стиловете от design/pages-admin/dashboard.html (версия 4). Само токени, ширини само с @container. */
+/* status line under the greeting */
+.db-st{display:inline-flex; align-items:center; gap:10px; margin-top:14px; min-height:44px; padding:0 16px 0 14px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:16px; color:var(--muted); font-weight:600}
+.db-st b{color:var(--ink)}
+.db-st .dot{width:10px; height:10px; border-radius:50%; background:var(--off); flex:none}
+.db-st .dot.ok{background:var(--ok)} .db-st .dot.warn{background:var(--warn)}
+
+/* today: one shell, four cores */
+.kpis{display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr))}
+.kpis.n1{grid-template-columns:minmax(0,1fr)}
+@container page (max-width:899px){ .kpis.n3 > .kpi:last-child{grid-column:1/-1} }
+@container page (min-width:900px){ .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))} }
+.kpi .sm{display:none}
+@container page (max-width:520px){ .kpi .lg{display:none} .kpi .sm{display:inline} }
+.kpi{min-width:0; display:grid; align-content:space-between; gap:14px; min-height:168px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; transition:transform var(--t-base) var(--ease)}
+.kpi:hover{transform:translateY(-2px)}
+.kpi:active{transform:scale(.98)}
+.kpi .lb{display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; color:var(--muted); line-height:1.25}
+.kpi .lb .ic{color:var(--red)}
+.kpi .v{font-size:52px; line-height:.95; letter-spacing:-.05em; font-weight:800; font-variant-numeric:tabular-nums}
+.kpi .ft{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15px; color:var(--muted); font-weight:600; min-height:28px}
+.kpi .sa-tag{white-space:normal; text-align:left}
+.kpi.hot{background:var(--ink); color:var(--bg)}
+.kpi.hot .lb, .kpi.hot .ft{color:var(--bg); opacity:.85}
+.kpi.hot .sa-tag{color:inherit; box-shadow:inset 0 0 0 1.5px currentColor}
+.kpi.hot .lb .ic{color:inherit}
+@container page (max-width:420px){ .kpi{min-height:150px; padding:16px} .kpi .v{font-size:44px} }
+
+.db-wait{margin-bottom:8px}
+.waits{display:grid; gap:8px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .waits{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.wt{display:flex; align-items:center; gap:14px; min-height:76px; padding:12px 12px 12px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; transition:transform var(--t-base) var(--ease)}
+.wt:hover{transform:translateY(-2px)}
+.wt .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.wt .tx{flex:1; min-width:0; display:grid; gap:2px}
+.wt b{display:flex; align-items:center; gap:8px; font-size:17px; line-height:1.25}
+.wt b .sa-n{min-width:28px; height:28px; border-radius:14px; font-size:15px}
+.wt small{font-size:15px; color:var(--muted); font-weight:600}
+.wt .wgo{flex:none; min-height:48px; padding:0 14px 0 18px; font-size:16px; gap:4px}
+@container page (max-width:420px){ .wt{flex-wrap:wrap} .wt .wgo{width:100%; justify-content:center} }
+.wt-ok{display:flex; align-items:center; gap:12px; min-height:64px; padding:12px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line); font-size:17px}
+.wt-ok .ic{color:var(--ok); flex:none}
+.db-today{margin-top:28px}
+.kpi .sum{font-size:40px; letter-spacing:-.04em; white-space:nowrap}
+@container page (max-width:520px){ .kpi .sum{font-size:30px} }
+@container page (min-width:900px){ .db-today{margin-top:36px} }
+.no-rise .sa-rise{animation:none}
+/* modules */
+.mods{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:620px){ .mods{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1000px){ .mods{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.mod{display:flex; flex-direction:column; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mod .vis{position:relative; height:172px; border-radius:22px; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 120% at 70% 0%, var(--plate-1), var(--plate-2))}
+.mod .vis .cnt{position:absolute; left:12px; top:12px; width:max-content; display:inline-flex; align-items:center; min-height:30px; padding:0 11px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:800; color:var(--ink)}
+.mod .vis .dv{position:absolute; right:14px; top:16px; width:max-content; font-size:14px; font-weight:700; color:var(--muted)}
+.mod .body{flex:1; display:grid; gap:8px; align-content:start; padding:16px 14px 6px}
+.mod h3{margin:0; font-size:21px; letter-spacing:-.025em; font-weight:800; line-height:1.15; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.mod p{margin:0; color:var(--muted)}
+.mod .who{font-size:15px; font-weight:700; color:var(--ink)}
+.mod .who span{color:var(--muted); font-weight:600}
+.mod .act{padding:10px 8px 8px}
+.mod .open{width:100%; justify-content:space-between; padding:0 6px 0 20px; min-height:56px; font-size:17px}
+.mod .open .knob{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); transition:transform var(--t-slow) var(--ease)}
+.mod .open .sm{display:none}
+@container page (max-width:619px){
+  .mods{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .mod .vis{height:96px} .mod .g{transform:scale(.72)} .mod:hover .g{transform:scale(.72)} .mod .vis .dv{display:none}
+  .mod .body{padding:12px 10px 4px; gap:4px} .mod h3{font-size:18px} .mod .body p:not(.who){display:none} .mod .who{font-size:14px}
+  .mod .act{padding:8px 4px 4px} .mod .open{padding:0 4px 0 14px; min-height:52px; font-size:16px} .mod .open .lg{display:none} .mod .open .sm{display:inline} .mod .open .knob{width:40px; height:40px}
+  .mod.soon .note{display:none}
+}
+.mod .open:hover .knob{transform:translate(2px,-2px) scale(1.05)}
+.mod.soon .vis{background:transparent; box-shadow:inset 0 0 0 2px var(--line-strong); box-shadow:none; border:2px dashed var(--line-strong)}
+.mod.soon .note{padding:10px 14px 14px; font-size:15px; color:var(--muted); font-weight:600}
+/* device glyphs (pure CSS, token colours) */
+.g{position:relative; display:grid; place-items:center; color:var(--red); background:var(--surface); box-shadow:inset 0 0 0 3px var(--ink), var(--shadow); transition:transform var(--t-spring) var(--ease)}
+.mod:hover .g{transform:translateY(-4px) rotate(-2deg)}
+.g.phone{width:58px; height:104px; border-radius:16px}
+.g.phone::before{content:""; position:absolute; top:7px; width:16px; height:4px; border-radius:2px; background:var(--ink)}
+.g.tablet{width:132px; height:92px; border-radius:14px}
+.g.desktop{width:136px; height:84px; border-radius:10px; margin-bottom:14px}
+.g.desktop::after{content:""; position:absolute; bottom:-14px; width:44px; height:9px; border-radius:0 0 8px 8px; background:var(--ink)}
+.g.watch{width:74px; height:74px; border-radius:50%}
+.g.watch::before, .g.watch::after{content:""; position:absolute; left:50%; width:30px; height:16px; margin-left:-15px; background:var(--ink)}
+.g.watch::before{top:-14px; border-radius:6px 6px 0 0} .g.watch::after{bottom:-14px; border-radius:0 0 6px 6px}
+.soon .g{box-shadow:inset 0 0 0 3px var(--line-strong); color:var(--muted); background:transparent}
+.soon .g::before, .soon .g::after{background:var(--line-strong)}
+
+/* sections: bento of groups */
+.groups{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:700px){ .groups{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1100px){ .groups{grid-template-columns:repeat(3,minmax(0,1fr))} .groups > .grp:last-child:nth-child(3n+1){grid-column:1/-1} .groups > .grp:last-child:nth-child(3n+1) .core{grid-template-columns:repeat(3,minmax(0,1fr))} .groups > .grp:last-child:nth-child(3n+1) .srow + .srow{border-top:0; border-left:1px solid var(--line)} }
+.grp{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); align-self:start}
+.grp h3{margin:10px 14px 10px; font-size:15px; font-weight:800; color:var(--muted); display:flex; justify-content:space-between}
+.grp .core{display:grid}
+.srow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:72px; padding:12px 14px; text-decoration:none; color:inherit; border:0; background:transparent; width:100%; text-align:left; cursor:pointer; font:inherit}
+.srow + .srow{border-top:1px solid var(--line)}
+.srow:hover{background:color-mix(in srgb, var(--surface-2) 50%, transparent)}
+.srow .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.srow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.srow small{display:block; font-size:15px; color:var(--muted); font-weight:600; line-height:1.35; margin-top:2px}
+.srow .end{display:flex; align-items:center; gap:6px; color:var(--muted)}
+.srow.soon .si{color:var(--muted)}
+.mine{display:grid; gap:16px; padding:22px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.mine h2{margin:0; font-size:26px; letter-spacing:-.03em; line-height:1.15}
+.mine p{margin:0; color:var(--on-chip-dark); opacity:.85}
+@container page (min-width:700px){ .mine{grid-template-columns:1fr auto; align-items:center; padding:28px} }

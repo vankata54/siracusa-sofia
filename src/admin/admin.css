@@ -1,0 +1,330 @@
+/* Siracusa · Админ: обща рамка (порт 1:1 на design/pages-admin/_admin.css, версия 4).
+   Лява лента, горна лента, долна лента на телефон, листове, известия, състояния, таблица-карти.
+   Само токени от src/styles/tokens.css. Ширините само с @container: "app" е целият екран, "page" е колоната със съдържанието.
+   Телефон < 700 · таблет 700-1099 (лентата е с икони и дума) · компютър ≥ 1100 (лента 264, свиваема).
+   Без панела „Само в прототипа“ и без изгледа на служител (служителите работят в своя модул). */
+
+html,body{height:100%; overflow:hidden}
+body{background:var(--bg)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- app shell ---------- */
+.sa-app{position:fixed; inset:0; display:flex; background:var(--bg); color:var(--ink); container-type:inline-size; container-name:app; isolation:isolate}
+.sa-col{position:relative; flex:1; min-width:0; min-height:0}
+.sa-scroller{position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:thin; container-type:inline-size; container-name:page}
+.sa-ov{position:absolute; inset:0; z-index:60; pointer-events:none}
+.sa-ov > *{pointer-events:auto}
+.sa-ov > .sheetwrap{pointer-events:none}
+.sa-ov > .sheetwrap.on{pointer-events:auto}
+
+/* ---------- side bar ---------- */
+.sa-side{display:none}
+@container app (min-width:700px){
+  .sa-side{display:flex; flex:none; flex-direction:column; width:264px; margin:12px 0 12px 12px; border-radius:var(--r-shell); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-height:0; overflow:hidden}
+}
+.sa-brand{display:flex; align-items:center; gap:10px; min-height:64px; padding:12px 18px 6px; text-decoration:none; color:inherit; flex:none}
+.sa-brand .word{font-size:23px}
+.sa-mono{display:none; width:48px; height:48px; border-radius:50%; place-items:center; background:var(--ink); color:var(--bg); font-weight:800; font-size:22px; letter-spacing:-.05em}
+.sa-btag{display:inline-flex; align-items:center; min-height:26px; padding:0 10px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:14px; font-weight:800; letter-spacing:-.01em}
+.sa-btag::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ember); margin-right:7px}
+.sa-nav{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; padding:4px 10px 10px}
+.sa-nav::-webkit-scrollbar{display:none}
+.sa-g + .sa-g{margin-top:6px}
+.sa-g h2{margin:14px 12px 4px; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:.01em}
+.sa-i{position:relative; display:flex; align-items:center; gap:12px; min-height:48px; padding:0 12px; border-radius:999px; text-decoration:none; color:var(--ink); font-weight:700; font-size:15px; line-height:1.2; border:0; background:transparent; width:100%; text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease)}
+.sa-i .ic{color:var(--muted)}
+.sa-i:hover{background:var(--surface-2)}
+.sa-i:active{transform:scale(.98)}
+.sa-i[aria-current="page"]{background:var(--ink); color:var(--bg)}
+.sa-i[aria-current="page"] .ic{color:var(--ember)}
+.sa-i .lb{flex:1; min-width:0}
+.sa-i .sh{display:none}
+.sa-n{white-space:nowrap; min-width:24px; height:24px; padding:0 7px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums; flex:none}
+.sa-i .soon{flex:none; min-height:26px; padding:0 9px}
+.sa-sidefoot{flex:none; padding:8px 10px 10px; border-top:1px solid var(--line)}
+.sa-collapse .ic{color:var(--muted)}
+
+/* mini side bar (icons with a word under them): tablet always, desktop when collapsed. Same rules twice on purpose. */
+@container app (min-width:700px) and (max-width:1099px){
+  .sa-side{width:104px}
+  .sa-brand{flex-direction:column; justify-content:center; gap:6px; padding:12px 6px 6px}
+  .sa-brand .word{font-size:17px}
+  .sa-btag{padding:0 8px}
+  .sa-btag::before{display:none}
+  .sa-nav{padding:4px 6px 10px}
+  .sa-g h2{display:none}
+  .sa-g + .sa-g{margin-top:8px; padding-top:8px; border-top:1px solid var(--line)}
+  .sa-i{flex-direction:column; justify-content:center; gap:3px; min-height:62px; padding:6px 2px; border-radius:20px; font-size:14px; text-align:center}
+  .sa-i .lb{display:none}
+  .sa-i .sh{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .sa-i .sa-n{position:absolute; top:4px; right:10px; min-width:22px; height:22px}
+  .sa-i .soon{display:none}
+  .sa-sidefoot{display:none}
+}
+.sa-app[data-side="mini"] .sa-side{width:104px}
+.sa-app[data-side="mini"] .sa-brand{flex-direction:column; justify-content:center; gap:6px; padding:12px 6px 6px}
+.sa-app[data-side="mini"] .sa-brand .word{font-size:17px}
+.sa-app[data-side="mini"] .sa-btag{padding:0 8px}
+.sa-app[data-side="mini"] .sa-btag::before{display:none}
+.sa-app[data-side="mini"] .sa-nav{padding:4px 6px 10px}
+.sa-app[data-side="mini"] .sa-g h2{display:none}
+.sa-app[data-side="mini"] .sa-g + .sa-g{margin-top:8px; padding-top:8px; border-top:1px solid var(--line)}
+.sa-app[data-side="mini"] .sa-i{flex-direction:column; justify-content:center; gap:3px; min-height:62px; padding:6px 2px; border-radius:20px; font-size:14px; text-align:center}
+.sa-app[data-side="mini"] .sa-i .lb{display:none}
+.sa-app[data-side="mini"] .sa-i .sh{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sa-app[data-side="mini"] .sa-i .sa-n{position:absolute; top:4px; right:10px; min-width:22px; height:22px}
+.sa-app[data-side="mini"] .sa-i .soon{display:none}
+.sa-app[data-side="mini"] .sa-sidefoot{padding:8px 6px 10px}
+
+/* ---------- top bar ---------- */
+.sa-top{position:absolute; z-index:20; top:8px; left:8px; right:8px; display:flex; align-items:center; gap:4px; min-height:60px; padding:0 6px 0 18px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.sa-crumb{flex:1; min-width:0; display:grid; line-height:1.2}
+.sa-crumb small{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sa-crumb b{font-size:17px; font-weight:800; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sa-tb{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; min-width:48px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; white-space:nowrap; text-decoration:none; flex:none; transition:transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease)}
+.sa-tb:hover{background:var(--surface-2)}
+.sa-tb:active{transform:scale(.96)}
+.sa-tb[aria-pressed="true"]{background:var(--ember); color:var(--on-ember)}
+.sa-tb .k{font-size:14px; font-weight:800; min-width:24px; height:24px; padding:0 6px; border-radius:8px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:inline-grid; place-items:center; color:var(--muted)}
+.sa-me{display:inline-flex; align-items:center; gap:10px; min-height:48px; padding:0 12px 0 4px; border:0; border-radius:999px; background:transparent; color:inherit; cursor:pointer; text-align:left; flex:none}
+.sa-me:hover{background:var(--surface-2)}
+.sa-av{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-weight:800; font-size:16px; flex:none}
+.sa-me .who{display:grid; line-height:1.2; flex-direction:column; align-items:flex-start; text-align:left}
+.sa-me .who b{font-size:15px; font-weight:800; white-space:nowrap}
+.sa-me .who small{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.sa-search{position:relative; flex:none}
+.sa-search > .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sa-top .sa-search input{width:300px; min-height:48px; padding:0 48px 0 46px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line); font-size:16px; outline:none}
+.sa-search input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sa-search input::placeholder{color:var(--muted)}
+.sa-search .k{position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:800; min-width:26px; height:26px; border-radius:8px; box-shadow:inset 0 0 0 1.5px var(--line-strong); display:grid; place-items:center; color:var(--muted); pointer-events:none}
+.sa-sres{position:absolute; top:calc(100% + 8px); left:0; width:min(560px, calc(100vw - 420px)); min-width:100%; z-index:5; padding:8px; border-radius:24px; background:var(--surface); box-shadow:var(--shadow-lg); max-height:70vh; overflow-y:auto; overscroll-behavior:contain}
+.sa-search input::-webkit-search-cancel-button{-webkit-appearance:none; display:none}
+.sa-clear{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:0; border-radius:50%; background:transparent; color:var(--muted); display:grid; place-items:center; cursor:pointer}
+.sa-clear:hover{background:var(--surface-2); color:var(--ink)}
+.sa-clear .ic{position:static; transform:none}
+.sa-field-s .sa-clear{right:6px}
+.sa-field-s .input{padding-right:52px}
+.sa-search .k[hidden]{display:none}
+.sa-rg + .sa-rg{margin-top:6px; padding-top:6px; border-top:1px solid var(--line)}
+.sa-rg h3{margin:6px 12px 4px; font-size:14px; font-weight:800; color:var(--muted)}
+.sa-rg h3 small{font-weight:600}
+.sa-rg a, .sa-rg button, .sa-ask{display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:6px 12px; border:0; border-radius:18px; background:transparent; color:var(--ink); text-decoration:none; text-align:left; font:inherit; cursor:pointer}
+.sa-rg a .ic, .sa-rg button .ic{color:var(--muted); flex:none}
+.sa-rg span, .sa-ask span{min-width:0; display:grid; line-height:1.3}
+.sa-rg b, .sa-ask b{font-weight:700; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sa-rg small, .sa-ask small{font-size:14px; font-weight:600; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sa-rg [aria-selected="true"], .sa-rg a:hover, .sa-rg button:hover, .sa-ask:hover, .sa-ask[aria-selected="true"]{background:var(--surface-2)}
+.sa-rg .sa-more{display:inline-flex; width:auto; align-items:center; gap:6px; min-height:48px; margin:2px 6px 4px; padding:0 14px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:700; font-size:15px; cursor:pointer}
+.sa-rg .sa-more:hover{background:var(--surface-3)}
+.sa-ask{margin-top:6px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.sa-ask .ic{color:var(--ember); flex:none}
+.sa-rg .more, .sa-sres .hint, [data-list] .none, .sa-sres .none{margin:2px 12px 6px; font-size:15px; color:var(--muted)}
+.sheetwrap.sa-tall .sheet{height:92%}
+@container app (min-width:900px){ .sheetwrap.sa-tall .sheet{height:auto} }
+/* which controls show where */
+.sa-only-d, .sa-only-t, .sa-only-td{display:none !important}
+@container app (min-width:700px){ .sa-only-td{display:inline-flex !important} .sa-only-p{display:none !important} .sa-top{left:12px; right:12px; top:12px; padding-left:22px} }
+@container app (min-width:700px) and (max-width:1099px){ .sa-only-t{display:inline-flex !important} }
+@container app (min-width:1100px){ .sa-only-d{display:inline-flex !important} .sa-top{min-height:64px} }
+@container app (max-width:1279px) and (min-width:1100px){ .sa-top .sa-search input{width:220px} .sa-me .who small{display:none} }
+@container app (max-width:370px){ .sa-top{padding-left:14px} .sa-tb{padding:0 10px} }
+
+/* ---------- bottom bar (phone) ---------- */
+.sa-bnav{position:absolute; z-index:30; left:10px; right:10px; bottom:12px; height:68px; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.sa-bnav a, .sa-bnav button{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; min-height:48px; border:0; background:transparent; border-radius:999px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; cursor:pointer; padding:0}
+.sa-bnav [aria-current="page"]{color:var(--ink)}
+.sa-bnav [aria-current="page"] .ic{color:var(--red)}
+.sa-bnav .sa-n{position:absolute; top:6px; left:calc(50% + 6px); min-width:22px; height:22px}
+@container app (min-width:700px){ .sa-bnav{display:none} }
+
+/* ---------- page ---------- */
+.sa-page{max-width:1240px; margin:0 auto; padding:84px 16px 0}
+.sa-page.wide{max-width:none}
+@container app (min-width:700px){ .sa-page{padding:100px 24px 0} }
+@container app (min-width:1100px){ .sa-page{padding:108px 36px 0} }
+.sa-end{height:176px}
+@container app (min-width:700px){ .sa-end{height:120px} }
+.sa-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; margin:8px 0 28px}
+.sa-head > div:first-child{min-width:0; flex:1 1 420px}
+.sa-eye{display:inline-flex; align-items:center; gap:7px; min-height:30px; padding:0 12px 0 10px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:14px; font-weight:700; color:var(--muted); margin-bottom:14px}
+.sa-eye .ic{color:var(--red)}
+.sa-h1{font-size:32px; line-height:1.06; letter-spacing:-.045em; font-weight:800; margin:0; text-wrap:balance}
+.sa-sub{margin:10px 0 0; color:var(--muted); font-size:17px; line-height:1.45; max-width:64ch}
+.sa-acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+@container page (min-width:900px){ .sa-h1{font-size:46px} .sa-head{margin-bottom:36px} }
+.sa-sh{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:6px 16px; margin:44px 0 14px}
+.sa-sh h2{margin:0; font-size:24px; line-height:1.15; letter-spacing:-.03em; font-weight:800}
+.sa-sh p{margin:0; color:var(--muted); font-size:16px}
+@container page (min-width:900px){ .sa-sh{margin-top:56px} .sa-sh h2{font-size:28px} }
+
+/* ---------- cards & grids ---------- */
+.sa-card{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.sa-shell{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.sa-grid{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:620px){ .sa-grid.c2,.sa-grid.c3,.sa-grid.c4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:940px){ .sa-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))} .sa-grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.sa-tag{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:14px; font-weight:700; line-height:1.2; white-space:nowrap}
+.sa-tag.sample{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); border-radius:999px}
+.sa-tag.soon{background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:inset 0 0 0 1px var(--line-strong)}
+.sa-tag.soon .ic{color:var(--ember)}
+.sa-tag.ok{color:var(--ink)}
+.sa-tag.ok .ic{color:var(--ok)}
+.sa-tag.warn{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn); background:transparent}
+.sa-tag.warn .ic{color:var(--warn)}
+.sa-tag.new{background:var(--red); color:var(--on-red)}
+.sa-tag.ember{background:var(--ember); color:var(--on-ember)}
+
+/* ---------- table → cards on phone ---------- */
+.sa-tablewrap{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.sa-table{width:100%; border-collapse:collapse; font-size:16px}
+.sa-table th{font-size:14px; font-weight:700; color:var(--muted); text-align:left; padding:14px 16px; border-bottom:1px solid var(--line); white-space:nowrap; vertical-align:bottom}
+.sa-table td{padding:12px 16px; border-bottom:1px solid var(--line); vertical-align:middle}
+.sa-table tbody tr:last-child td{border-bottom:0}
+.sa-table .r{text-align:right; font-variant-numeric:tabular-nums}
+.sa-table tbody tr:hover td{background:color-mix(in srgb, var(--surface-2) 45%, transparent)}
+@container page (min-width:700px) and (max-width:1099px){
+  .sa-tablewrap.scroll{overflow-x:auto; scrollbar-width:thin;
+    background:linear-gradient(to right, var(--surface) 30%, transparent) left center / 40px 100% no-repeat local,
+               linear-gradient(to left, var(--surface) 30%, transparent) right center / 40px 100% no-repeat local,
+               radial-gradient(farthest-side at 0 50%, var(--line-strong), transparent) left center / 14px 100% no-repeat scroll,
+               radial-gradient(farthest-side at 100% 50%, var(--line-strong), transparent) right center / 14px 100% no-repeat scroll,
+               var(--surface)}
+}
+@container page (max-width:699px){
+  .sa-table, .sa-table tbody, .sa-table tr, .sa-table td{display:block}
+  .sa-table thead{display:none}
+  .sa-table tbody tr{padding:12px 16px; border-bottom:1px solid var(--line)}
+  .sa-table tbody tr:last-child{border-bottom:0}
+  .sa-table td{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 0; border:0; text-align:right}
+  .sa-table td::before{content:attr(data-label); font-size:14px; font-weight:700; color:var(--muted); text-align:left; flex:none}
+  .sa-table td[data-main]{display:block; text-align:left; font-weight:800; font-size:17px; padding-bottom:8px}
+  .sa-table td[data-main]::before{display:none}
+  .sa-table tbody tr:hover td{background:transparent}
+}
+
+/* ---------- controls ---------- */
+.sa-switch{position:relative; display:inline-grid; place-items:center; width:64px; height:48px; flex:none; cursor:pointer}
+.sa-switch input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
+.sa-switch .tr{width:52px; height:32px; border-radius:16px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line); position:relative; transition:background-color var(--t-base) var(--ease)}
+.sa-switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.sa-switch input:checked + .tr{background:var(--ok)}
+.sa-switch input:checked + .tr::after{transform:translateX(20px)}
+.sa-switch input:focus-visible + .tr{outline:3px solid var(--red); outline-offset:2px}
+.sa-switch input:disabled{cursor:not-allowed}
+.sa-switch input:disabled + .tr{opacity:.55}
+.sa-check{position:relative; display:inline-grid; place-items:center; width:48px; height:48px; border-radius:16px; flex:none; cursor:pointer}
+.sa-check input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
+.sa-check .bx{width:28px; height:28px; border-radius:9px; box-shadow:inset 0 0 0 2px var(--line-strong); display:grid; place-items:center; color:transparent; transition:transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease)}
+.sa-check input:checked + .bx{background:var(--ink); box-shadow:none; color:var(--bg)}
+.sa-check input:active + .bx{transform:scale(.9)}
+.sa-check input:focus-visible + .bx{outline:3px solid var(--red); outline-offset:3px}
+.sa-check input:disabled{cursor:not-allowed}
+.sa-check input:disabled + .bx{background:var(--surface-2); color:var(--muted); box-shadow:none}
+.sa-check.chg{background:var(--ember-soft); box-shadow:inset 0 0 0 2px var(--ember)}
+.sa-tabs{display:flex; gap:6px; padding:6px; border-radius:999px; background:var(--surface-2); max-width:100%; overflow-x:auto; scrollbar-width:none}
+.sa-tabs::-webkit-scrollbar{display:none}
+.sa-tabs.fr{-webkit-mask-image:linear-gradient(to right, var(--ink) calc(100% - 40px), transparent); mask-image:linear-gradient(to right, var(--ink) calc(100% - 40px), transparent)}
+.sa-tabs.fl{-webkit-mask-image:linear-gradient(to left, var(--ink) calc(100% - 40px), transparent); mask-image:linear-gradient(to left, var(--ink) calc(100% - 40px), transparent)}
+.sa-tabs.fl.fr{-webkit-mask-image:linear-gradient(to right, transparent, var(--ink) 40px, var(--ink) calc(100% - 40px), transparent); mask-image:linear-gradient(to right, transparent, var(--ink) 40px, var(--ink) calc(100% - 40px), transparent)}
+.sa-tabs button, .sa-tabs a{flex:1 1 auto; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 18px; border:0; border-radius:999px; background:transparent; color:var(--muted); font-weight:800; font-size:16px; cursor:pointer; text-decoration:none; white-space:nowrap}
+.sa-tabs [aria-selected="true"], .sa-tabs [aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+@container page (max-width:440px){ .sa-tabs{gap:2px; padding:4px} .sa-tabs button, .sa-tabs a{padding:0 10px; gap:6px; font-size:15px} }
+.sa-tabs .c{min-width:26px; height:26px; padding:0 7px; border-radius:13px; background:var(--surface-3); color:var(--ink); display:inline-grid; place-items:center; font-size:14px; font-variant-numeric:tabular-nums}
+.sa-tabs [aria-selected="true"] .c{background:var(--ink); color:var(--bg)}
+.sa-field-s{position:relative}
+.sa-field-s .ic{position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sa-field-s .input{padding-left:46px; border-radius:999px}
+select.input{appearance:none; -webkit-appearance:none; padding-right:44px; background-image:linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position:calc(100% - 22px) 52%, calc(100% - 16px) 52%; background-size:6px 6px; background-repeat:no-repeat; border-radius:999px; font-weight:700; cursor:pointer}
+.sa-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+
+/* ---------- banners & states ---------- */
+.sa-banner{display:flex; align-items:center; gap:14px; min-height:60px; padding:12px 12px 12px 18px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-size:16px; line-height:1.4}
+.sa-banner > .ic{flex:none}
+.sa-banner .tx{flex:1; min-width:0}
+.sa-banner .tx b{display:block}
+.sa-banner.ember{background:var(--ember); color:var(--on-ember); box-shadow:var(--shadow)}
+.sa-banner.warn{box-shadow:inset 0 0 0 2px var(--warn)}
+.sa-banner.warn > .ic{color:var(--warn)}
+.sa-banner.danger{box-shadow:inset 0 0 0 2px var(--danger)}
+.sa-banner.danger > .ic{color:var(--danger)}
+.sa-banner.ok > .ic{color:var(--ok)}
+.sa-banner .pill{flex:none}
+@container page (max-width:560px){ .sa-banner{flex-wrap:wrap} .sa-banner .pill{width:100%} }
+.sa-empty{padding:40px 20px; display:grid; justify-items:center; text-align:center; gap:12px}
+.sa-empty .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.sa-empty h3{margin:4px 0 0; font-size:22px; letter-spacing:-.02em; font-weight:800; text-wrap:balance}
+.sa-empty p{margin:0; color:var(--muted); max-width:46ch}
+.sa-skel{display:grid; gap:10px}
+.sa-skel .skel{height:76px; border-radius:22px}
+.sa-skel .skel.s{height:24px; width:40%; border-radius:12px}
+.sa-noperm{max-width:560px; margin:24px auto 0; padding:40px 24px; text-align:center; display:grid; justify-items:center; gap:12px}
+.sa-noperm .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.sa-noperm h1{margin:6px 0 0; font-size:28px; letter-spacing:-.035em; line-height:1.1; font-weight:800; text-wrap:balance}
+.sa-noperm p{margin:0; color:var(--muted)}
+.missing{font-size:inherit}
+
+/* ---------- toast (one at a time; phone: under the top bar, wider: bottom centre) ---------- */
+.sa-toast{position:absolute; z-index:70; left:50%; bottom:164px; /* над долната лента и над кръглия „Молив“ */ transform:translate(-50%,160%); opacity:0; display:flex; align-items:center; gap:10px; min-height:56px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-weight:700; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); width:max-content; max-width:calc(100% - 24px); line-height:1.3; pointer-events:none}
+.sa-toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}
+.sa-toast .tx{min-width:0}
+.sa-toast button, .sa-toast a{flex:none; min-height:44px; padding:0 16px; border:0; border-radius:999px; background:color-mix(in srgb, var(--bg) 18%, transparent); color:inherit; font-weight:800; font-size:16px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px}
+.sa-toast .ic{flex:none}
+@container app (min-width:700px){ .sa-toast{bottom:28px} }
+.sa-toast.up{bottom:160px}
+@container app (min-width:700px){ .sa-toast.up{bottom:100px} }
+/* page bar (Запази / Публикувай): exactly above the bottom bar on phone, centred at the bottom from 700px. Toasts go above it. */
+.sa-pbar{position:absolute; z-index:25; left:10px; right:10px; bottom:88px; display:flex; align-items:center; gap:8px; min-height:60px; padding:6px 6px 6px 20px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow-lg); transform:translateY(40px); opacity:0; pointer-events:none; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.sa-pbar.on{transform:none; opacity:1; pointer-events:auto}
+.sa-pbar .n{flex:1; min-width:0; font-weight:800; line-height:1.25}
+.sa-pbar .n small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.sa-pbar .pill{flex:none}
+@container app (min-width:700px){ .sa-pbar{left:50%; right:auto; bottom:24px; width:min(640px, calc(100% - 48px)); transform:translate(-50%,40px)} .sa-pbar.on{transform:translate(-50%,0)} }
+@container app (max-width:699px){ .sa-pbar .lg, .sa-pbar .n .lg{display:none} .sa-pbar .pill{padding:0 16px} }
+@container app (min-width:700px){ .sa-pbar .sm{display:none} }
+
+/* ---------- sheets (sc.css .sheetwrap / .sheet; footer added) ---------- */
+.sa-ov .sheet-h h2:focus{outline:none}
+@container app (min-width:900px){ .sa-ov .sheet .handle{display:none} .sa-ov .sheet{padding-top:18px} }
+.sa-sfoot{flex:none; display:flex; gap:8px; padding-top:12px; margin-top:8px; border-top:1px solid var(--line)}
+.sa-sfoot .pill{flex:1}
+.sheet .body{padding-bottom:4px}
+.sheet .body > p:first-child{margin-top:0}
+.sa-secgrid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+.sa-secgrid a, .sa-secgrid button{display:grid; gap:4px; align-content:start; min-height:88px; padding:14px; border:0; border-radius:20px; background:var(--surface-2); color:var(--ink); text-decoration:none; text-align:left; font-weight:800; font-size:16px; line-height:1.2; cursor:pointer; position:relative}
+.sa-secgrid .ic{color:var(--red)}
+.sa-secgrid small{font-size:14px; font-weight:700; color:var(--muted)}
+.sa-secgrid [aria-current="page"]{background:var(--ink); color:var(--bg)}
+.sa-secgrid [aria-current="page"] .ic{color:var(--ember)}
+.sa-secgrid [aria-current="page"] small{color:var(--bg); opacity:.75}
+.sa-secgrid .sa-n{position:absolute; top:12px; right:12px}
+.sa-sgh{margin:18px 2px 8px; font-size:14px; font-weight:700; color:var(--muted)}
+.sa-prof{display:flex; align-items:center; gap:14px; padding:6px 0 14px}
+.sa-prof .sa-av{width:56px; height:56px; font-size:22px}
+.sa-prof b{display:block; font-size:20px; letter-spacing:-.02em}
+
+/* ---------- motion on load (one gentle rise) ---------- */
+@keyframes sa-rise{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
+.sa-rise{animation:sa-rise 520ms var(--ease) both}
+.sa-rise.d1{animation-delay:60ms} .sa-rise.d2{animation-delay:120ms} .sa-rise.d3{animation-delay:180ms} .sa-rise.d4{animation-delay:240ms}
+
+/* ключът „Звук“ (нови онлайн поръчки) */
+.sa-snd .sm{display:none}
+.sa-snd[aria-pressed="false"] .ic{color:var(--muted)}
+.sa-snd[aria-pressed="true"]{background:transparent; color:var(--ink)}
+.sa-snd[aria-pressed="true"]:hover{background:var(--surface-2)}
+.sa-snd[aria-pressed="true"] .ic{color:var(--ok)}
+.sa-snd.wait{background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.sa-snd.wait .ic{color:var(--ink)}
+@container app (max-width:1279px){ .sa-snd .lg{display:none} .sa-snd .sm{display:inline} }
+/* нова поръчка: значката мига спокойно, докато поръчките не са видени; при „намалено движение“ само цвят и дума „Нова“ */
+@keyframes sa-fresh{0%,100%{transform:scale(1); opacity:1} 50%{transform:scale(1.18); opacity:.75}}
+.sa-n.fresh, .fresh .sa-n{background:var(--ember); color:var(--on-ember); animation:sa-fresh 1.6s var(--ease) infinite}
+@media (prefers-reduced-motion: reduce){ .sa-n.fresh, .fresh .sa-n{animation:none} .sa-n.fresh::after, .fresh .sa-n::after{content:" Нова"; font-weight:800} }
+/* компютър до 1500: по-тясно търсене, темата е в профила, за да има място за името на раздела и „Звук“ */
+@container app (min-width:1100px) and (max-width:1499px){ .sa-top .sa-search input{width:240px} .sa-top [data-sa="theme"]{display:none !important} .sa-me .who small{display:none} }
+
+/* ---------- код: до прочитане на сесията (тих фон, без мигане) ---------- */
+.sa-boot{position:fixed; inset:0; display:grid; place-items:center; background:var(--bg)}
+/* the name in the profile button: visible from 1100 px, below only for the screen reader (the button keeps its name) */
+@container app (max-width:1099px){ .sa-me .who{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap} }

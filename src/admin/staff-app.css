@@ -1,0 +1,14 @@
+/* Модулите на персонала до етап D (/servitor/, /kuhnya/, /shofyor/): „Модулът ти идва скоро“ на цял екран, без лентата
+   на админа. Само токени; ширините само с @container. Отдолу място за кръглия „Молив“ (56 px + отстояние). */
+.sm-app{position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; background:var(--bg); color:var(--ink); container-type:inline-size; container-name:app}
+.sm-top{position:sticky; top:8px; z-index:5; display:flex; align-items:center; gap:8px; min-height:60px; margin:8px 8px 0; padding:0 6px 0 18px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.sm-top .brand{flex:1; min-width:0; display:flex; align-items:center; gap:10px}
+.sm-top .word{font-size:22px}
+.sm-main{max-width:640px; margin:0 auto; padding:40px 16px 0}
+.sm-card{display:grid; justify-items:center; gap:14px; padding:36px 22px 30px; text-align:center; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.sm-card .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.sm-card h1{margin:4px 0 0; font-size:32px; line-height:1.08; letter-spacing:-.04em; font-weight:800; text-wrap:balance}
+.sm-card p{margin:0; color:var(--muted); max-width:44ch}
+.sm-card .who{color:var(--ink); font-weight:700}
+.sm-end{height:120px}
+@container app (min-width:700px){ .sm-top{margin:12px 12px 0; top:12px; padding-left:22px} .sm-main{padding-top:72px} .sm-card{padding:48px 40px 40px} .sm-card h1{font-size:40px} }

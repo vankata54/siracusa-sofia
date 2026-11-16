@@ -63,7 +63,10 @@ export function footer(year: number = new Date().getFullYear()): string {
     "<div><h3>Поръчай</h3>" + a("menu", "Меню") + a("lunch", "Обедно меню") + a("delivery", "Доставка") + a("pickup", "Вземи от място") + a("office", "Обща поръчка за офиса") + "</div>" +
     "<div><h3>Елате при нас</h3>" + a("reservation", "Резервирай маса") + a("events", "Събития и поводи") + a("celebration", "Празник при нас") + a("bertha", "Фурната Bertha") + a("gallery", "Галерия") + "</div>" +
     "<div><h3>Информация</h3>" + a("about", "За нас") + a("contacts", "Контакти") + a("allergens", "Алергени") + a("terms", "Общи условия") + a("privacy", "Поверителност") + a("cookies", "Бисквитки") + '<button class="flink" type="button" data-cookie-settings>Настройки на бисквитките</button></div></div>' +
-    '<p class="legal">© ' + year + " Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p></footer>";
+    '<p class="legal">© ' + year + " Siracusa Bar &amp; Grill. Цените са в евро с ДДС.</p>" +
+    /* "Предложи подобрение" (decision 15.11.2026): src/client/suggest.ts loads at the first tap. Without the icon of the
+       prototype here: the inline SVG is 508 B on every page (the allergens page has a 120 000 B budget); "Още" has it */
+    '<p style="margin:0"><button class="pill pill-line" type="button" data-suggest>Предложи подобрение</button></p></footer>';
 }
 
 export function cookieBanner(): string {

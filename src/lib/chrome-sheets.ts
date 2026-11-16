@@ -2,7 +2,7 @@
    the runtime chunk on every page does not carry them: src/client/sc-ui.ts imports this file at the first opening.
    The server and pages can import them from here or from lib/index.ts. */
 import { ic } from "./icons.ts";
-import "sc-icons:caret-right,phone"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
+import "sc-icons:caret-right,chat-circle-dots,phone"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 import { RESTAURANT } from "./consts.ts";
 import { url, type PageKey } from "./routes.ts";
 
@@ -17,5 +17,7 @@ export function cookieSettings(prefs: CookiePrefs = { analytics: false, marketin
 }
 
 export function morePanel(): string {
-  return '<div class="stack" style="gap:2px">' + MORE_PAGES.map((p) => '<a class="kv" href="' + url.page(p[0]) + '" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">' + p[1] + ic("caret-right", 18) + "</a>").join("") + '</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:' + RESTAURANT.phoneIntl + '">' + ic("phone", 20) + RESTAURANT.phone + '</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div>';
+  return '<div class="stack" style="gap:2px">' + MORE_PAGES.map((p) => '<a class="kv" href="' + url.page(p[0]) + '" style="text-decoration:none;font-weight:700;min-height:52px;align-items:center">' + p[1] + ic("caret-right", 18) + "</a>").join("") + '</div><div class="row" style="margin-top:14px"><a class="pill pill-line" href="tel:' + RESTAURANT.phoneIntl + '">' + ic("phone", 20) + RESTAURANT.phone + '</a><button class="pill pill-soft" type="button" data-lang>BG / EN</button></div>' +
+    /* "Предложи подобрение" (decision 15.11.2026), the same as in the footer */
+    '<button class="pill pill-line pill-block" type="button" data-suggest style="margin-top:8px">' + ic("chat-circle-dots", 20) + "Предложи подобрение</button>";
 }

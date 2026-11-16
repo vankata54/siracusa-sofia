@@ -1,0 +1,11 @@
+---
+/* /shofyor/: the module "Шофьор" until stage D: "Модулът ти идва скоро" (src/admin/staff-app.ts). */
+import Admin from "../../layouts/Admin.astro";
+import "../../admin/staff-app.css";
+---
+<Admin title="Шофьор" page="app-driver">
+<script>
+import { initStaffApp } from "../../admin/staff-app.ts";
+initStaffApp("driver");
+</script>
+</Admin>

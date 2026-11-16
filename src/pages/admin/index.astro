@@ -1,0 +1,14 @@
+---
+/* /admin/: the dashboard (design/pages-admin/dashboard.html, version 4). The frame and the numbers come from the
+   browser (the session, adminApi.summary); the static facts of the menu come from the build. */
+import Admin from "../../layouts/Admin.astro";
+import "../../admin/dashboard.css";
+import { items, MENU_LUNCH_DATE } from "../../lib/data.ts";
+---
+<Admin title="Табло" page="admin-dashboard">
+<script is:inline define:vars={{ n: items.length, d: MENU_LUNCH_DATE }}>document.documentElement.dataset.menuN = n; document.documentElement.dataset.lunchDate = d;</script>
+<script>
+import { initDashboard } from "../../admin/dashboard.ts";
+initDashboard();
+</script>
+</Admin>

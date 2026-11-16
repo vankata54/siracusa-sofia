@@ -308,6 +308,8 @@ const uiChunk = () => import("./sc-ui.ts");
 const ui = () => loadModule(uiChunk);
 const aiAsk = (text: string, kind: AiKind) => { ui().then((m) => m.aiAsk(text, kind)); };
 const openAI = () => ui().then((m) => m.openAI());
+/* "Предложи подобрение" (footer, "Още"): src/client/suggest.ts only at the first tap (decision 15.11.2026) */
+const sgChunk = () => import("./suggest.ts");
 /* start loading it as soon as a finger / the keyboard is on such a button: no wait on the tap */
 const UI_SEL = "[data-more], [data-ai], [data-cookie], [data-share], [data-aiq], [data-cookie-settings]";
 const warm = (e: Event) => { if ((e.target as Element | null)?.closest?.(UI_SEL)) { ui(); document.removeEventListener("pointerdown", warm, true); document.removeEventListener("focusin", warm, true); } };
@@ -338,6 +340,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.aiq) { aiAsk(t.textContent || "", t.dataset.aiq as AiKind); return; }
   if (t.dataset.aiadd) { ui().then((m) => m.aiAdd(t)); return; }
   if (t.hasAttribute("data-more")) { ui().then((m) => m.openMore()); return; }
+  if (t.hasAttribute("data-suggest")) { loadModule(sgChunk).then((m) => m.openSuggest(t)); return; }
   if (t.hasAttribute("data-lang")) { toast("Английската версия идва след българската."); return; }
   if (t.hasAttribute("data-share")) { ui().then((m) => m.share()); return; }
   if (t.dataset.cookie) { cookieChoice(t.dataset.cookie); return; }

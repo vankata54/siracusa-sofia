@@ -1,0 +1,34 @@
+---
+/* /admin/vhod/: the sign-in of the admin and the staff (design/pages-admin/login.html, version 4, 1:1).
+   Rendered here; src/admin/login.ts wires it to staffApi. The form never submits by itself (no password in an address
+   while the script is still loading). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/login.css";
+import { ic, pic } from "../../../lib/render.ts";
+---
+<Admin title="Вход" page="admin-login" boot={false}>
+<div class="lg"><div class="lg-in">
+  <aside class="lg-art" aria-hidden="true">
+    <div><span class="word">Siracusa</span><div class="tagl"><i></i>Админ панел</div></div>
+    <div><h2>Ресторантът на едно място.</h2><p>Менюто, поръчките, залата и сайтът. Всяка роля вижда своето.</p></div>
+    <div class="plates" set:html={pic("pitsa-margarita", "p1") + pic("kebapcheta", "p2") + pic("shopska-salata", "p3")}></div>
+  </aside>
+  <main class="lg-main" id="main" tabindex="-1"><div class="lg-box">
+    <div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>
+    <div data-pre></div>
+    <h1 data-edit-id="admin.login.title">Вход</h1>
+    <p class="lead muted">За собственика, управителя, персонала и агенцията. Сервитьорът, кухнята и шофьорът влизат направо в своето приложение.</p>
+    <form class="lg-form" method="post" novalidate data-edit-id="admin.login.form" onsubmit="return false">
+      <div class="field"><label for="u">Потребител</label><input class="input" id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+      <div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" name="password" type="password" autocomplete="current-password" required><button class="show" type="button" data-show aria-controls="p" aria-pressed="false"><Fragment set:html={ic("eye", 20)} /><span>Покажи</span></button></div></div>
+      <div data-err tabindex="-1" hidden></div>
+      <button class="pill pill-red pill-lg pill-block" type="submit" data-go><Fragment set:html={ic("sign-in", 22)} />Влез</button>
+      <p class="lg-forgot"><Fragment set:html={ic("phone", 20)} /><span>Забравена парола: обадете се на главния админ.</span></p>
+    </form>
+  </div></main>
+</div></div>
+<script>
+import { initLogin } from "../../../admin/login.ts";
+initLogin();
+</script>
+</Admin>
