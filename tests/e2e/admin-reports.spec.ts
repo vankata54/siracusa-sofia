@@ -22,7 +22,9 @@ function errors(page: Page) {
 }
 const isPhone = (page: Page) => (page.viewportSize()?.width || 1440) < 700;
 const eur = (v: number) => v.toFixed(2).replace(".", ",") + " €";
-type Rep = { orders: number; revenue: number; avg: number; reservations: number; top: { name: string }[] };
+type Rep = { orders: number; revenue: number; avg: number; reservations: number; top: { name: string }[]; prev: { orders: number; cancelled: number; reservations: number } | null };
+/** a short month ("16 ное") in a text: the rule is "пн, 16 ноември" (CLAUDE.md) */
+const SHORT = /\d (яну|фев|мар|апр|юни|юли|авг|сеп|окт|ное|дек)(?![а-я])/;
 async function open(page: Page, hash = "") {
   await page.goto("/admin/reports/" + hash);
   await expect(page.locator(".sa-h1")).toHaveText("Отчети");
@@ -42,6 +44,10 @@ test("the numbers are the core's; the sums „10,22 €“, the axis ticks whole
   await expect(kp.locator("> div").nth(1).locator("b")).toHaveText(eur(r.revenue).replace(".", ","));
   await expect(kp.locator("> div").nth(2).locator("b")).toHaveText(eur(r.avg));
   await expect(page.locator(".rp-top")).toContainText(r.top[0].name);
+  /* the dates in full; with nothing in the period before, one line says why there is no comparison */
+  expect(await page.locator(".rp-meta").innerText()).not.toMatch(SHORT);
+  if (r.prev && !r.prev.orders && !r.prev.cancelled && !r.prev.reservations) await expect(page.locator(".rp-meta")).toContainText("Предишният период няма данни");
+  else await expect(page.locator(".dl").first()).toBeVisible();
   /* the ticks of the axes are whole numbers */
   const ticks = await page.locator(".plot .ya span").allTextContents();
   for (const t of ticks) expect(t.replace(/\s|€/g, ""), t).toMatch(/^\d+$/);

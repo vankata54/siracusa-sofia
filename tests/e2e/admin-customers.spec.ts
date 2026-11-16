@@ -49,6 +49,7 @@ test("the phone is hidden; „Покажи“ shows it and writes the log; the c
   await expect(row).toContainText(masked(c.phone));
   await expect(row).not.toContainText(c.phone.slice(4, 8));
   await expect(row.locator(".cu-tags")).toContainText("Без съгласия");
+  expect(await row.innerText()).not.toMatch(/\d (яну|фев|мар|апр|юни|юли|авг|сеп|окт|ное|дек)(?![а-я])/); /* "пн, 16 ноември" */
   await row.locator("[data-open]").click();
   const sheet = page.locator(".sheetwrap.on");
   await expect(sheet.locator("h2")).toHaveText("Профил");

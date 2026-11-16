@@ -24,7 +24,7 @@ const isOffline = (e: unknown) => e instanceof ApiError && e.code === "offline";
 const toLogin = () => location.replace(aurl.login(aurl.here()));
 /** "0888 12 34 56" */
 export const fmtPhone = (p: string) => { const d = String(p || "").replace(/\D/g, ""); return d.length === 10 ? d.slice(0, 4) + " " + d.slice(4, 6) + " " + d.slice(6, 8) + " " + d.slice(8) : p; };
-const dShort = (iso: string) => dateLong(new Date(iso), true);
+const dShort = (iso: string) => dateLong(new Date(iso));
 function download(name: string, text: string, type = "application/json") {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type + ";charset=utf-8" })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);

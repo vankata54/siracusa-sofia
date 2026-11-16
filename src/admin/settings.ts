@@ -69,7 +69,8 @@ export async function initSettings(): Promise<void> {
   const counter = (key: string, val: number, min: number, max: number, step: number, unit: string, label: string) =>
     '<div class="counter" role="group" aria-label="' + esc(label) + '"><button type="button" data-inc="' + key + '" data-d="-' + step + '" aria-label="' + esc(label) + ': по-малко"' + (val <= min ? " disabled" : "") + ">" + ic("minus", 20) + "</button>" +
     '<output aria-live="polite">' + val + " <small>" + unit + '</small></output><button type="button" data-inc="' + key + '" data-d="' + step + '" aria-label="' + esc(label) + ': повече"' + (val >= max ? " disabled" : "") + ">" + ic("plus", 20) + "</button></div>";
-  const qTag = (n: string | number) => '<span class="sa-tag warn">' + ic("question", 16) + "Въпрос " + n + "</span>";
+  /* an open question to the owner (docs/OPEN-QUESTIONS.md); on the screen without its number */
+  const qTag = (_n?: string | number) => '<span class="sa-tag warn">' + ic("question", 16) + "Отворен въпрос</span>";
   const err = (k: string) => (errs[k] ? '<p class="err" role="alert">' + esc(errs[k]) + "</p>" : "");
 
   function draw() {
@@ -96,7 +97,7 @@ export async function initSettings(): Promise<void> {
     '<section class="sa-card card" id="s-celeb" data-edit-id="admin.settings.celebration" aria-labelledby="h-c"><header><span class="ill">' + ic("confetti", 24) + '</span><div><h2 id="h-c">Празник при нас</h2><p>Какво показва калкулаторът на празник в сайта.</p></div></header>' +
       '<div class="row-s" style="grid-template-columns:minmax(0,1fr)"><div class="l"><b>Цена в калкулатора' + ch("celebrationPrice") + "</b><span>" + (w.celebrationPrice === "offer" ? "Гостът вижда „Ще ви изпратим оферта“, без сума." : "Гостът вижда ориентировъчна цена; точната е в офертата.") + '</span><span class="tags">' + qTag(3) + "</span></div>" +
         '<div class="seg2" role="group" aria-label="Цена в калкулатора"><button type="button" data-cp="offer" aria-pressed="' + (w.celebrationPrice === "offer") + '">Само оферта</button><button type="button" data-cp="estimate" aria-pressed="' + (w.celebrationPrice === "estimate") + '">Ориентировъчна цена</button></div>' + err("celebrationPrice") + "</div>" +
-      '<div class="row-s"><div class="l"><b>-5% за ранна резервация' + ch("earlyDays") + "</b><span>" + (w.earlyDays == null ? "Изключено: колко дни по-рано е „ранна“ " + missing("брой дни") + ". Без числото -5% не се дава." : w.earlyDays ? "Празник, запазен поне " + plural(w.earlyDays, "ден", "дни") + " по-рано, получава -5%. Само за празник, не за тематични вечери." : "Напишете броя дни. Дотогава -5% не се дава.") + '</span><span class="tags">' + qTag(13) + qTag(14) + "</span></div>" +
+      '<div class="row-s"><div class="l"><b>-5% за ранна резервация' + ch("earlyDays") + "</b><span>" + (w.earlyDays == null ? "Изключено: колко дни по-рано е „ранна“ " + missing("брой дни") + ". Без числото -5% не се дава." : w.earlyDays ? "Празник, запазен поне " + plural(w.earlyDays, "ден", "дни") + " по-рано, получава -5%. Само за празник, не за тематични вечери." : "Напишете броя дни. Дотогава -5% не се дава.") + '</span><span class="tags">' + qTag(13) + "</span></div>" +
         '<label class="sa-switch"><input type="checkbox" role="switch" data-early aria-label="-5% за ранна резервация"' + (w.earlyDays != null ? " checked" : "") + '><span class="tr"></span></label>' +
         (w.earlyDays != null ? '<div class="field" style="grid-column:1/-1"><label for="ed">Колко дни по-рано</label><input class="input days-in" id="ed" type="number" inputmode="numeric" min="1" max="365" value="' + (w.earlyDays || "") + '" aria-describedby="edh"><span class="help" id="edh">От 1 до 365.</span></div>' : "") + err("earlyDays") + "</div></section>" +
     /* hours */
@@ -110,7 +111,7 @@ export async function initSettings(): Promise<void> {
     /* open questions */
     '<section class="sa-card card" id="s-open" data-edit-id="admin.settings.open" aria-labelledby="h-o"><header><span class="ill">' + ic("question", 24) + '</span><div><h2 id="h-o">Отворени въпроси, които стават настройки</h2><p>Докато собственикът не реши, системата прави варианта по подразбиране.</p></div></header>' +
       '<div class="oq">' + ([["2", "Депозит за резервации и празници", "Няма"], ["7", "Права на управителя", "Като собственика без финанси, роли и дневник"], ["16", "Ваучери: валидност; комбинират ли се отстъпките", "Не се комбинират; валидност " + missing("срок")], ["17а", "Горна граница на една онлайн поръчка", "60 порции и 500 €"], ["23", "„Изчерпано днес“", "Нулира се в полунощ по София"], ["Кухня 15", "Кой включва „Натоварено“", "Всяка секция, с напомняне след 60 мин"]] as [string, string, string][])
-        .map((x) => "<div><p><small>Въпрос " + x[0] + "</small>" + x[1] + "</p><b>" + (x[2].includes("ЛИПСВА") ? x[2] : esc(x[2])) + "</b></div>").join("") + "</div></section>" +
+        .map((x) => "<div><p>" + x[1] + "</p><b>" + (x[2].includes("ЛИПСВА") ? x[2] : esc(x[2])) + "</b></div>").join("") + "</div></section>" +
     "</div></div>";
     if (A.scroller) A.scroller.scrollTop = y;
     syncBar(); markNav();

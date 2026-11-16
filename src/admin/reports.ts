@@ -120,8 +120,9 @@ export async function initReports(): Promise<void> {
         '<div class="rp-psel"><label class="vh" for="rp-p">Период</label><select class="input" id="rp-p" data-psel>' + P.map((p) => '<option value="' + p[0] + '"' + (per === p[0] ? " selected" : "") + ">" + p[1] + "</option>").join("") + "</select></div>" +
         '<label class="cmp">Сравни с предишния<span class="sa-switch"><input type="checkbox" role="switch" data-cmp' + (cmp ? " checked" : "") + '><span class="tr"></span></span></label></div>' +
       (per === "custom" ? '<div class="rp-custom"><div class="field"><label for="rp-a">От</label><input class="input" id="rp-a" type="date" max="' + TODAY + '" value="' + cust.a + '" data-ca></div><div class="field"><label for="rp-b">До</label><input class="input" id="rp-b" type="date" max="' + TODAY + '" value="' + cust.b + '" data-cb></div><p class="muted" style="margin:0 0 12px;font-size:15px">До 92 дни.</p></div>' : "") +
-      '<p class="rp-meta"><span><b>' + esc(one ? fd(r.from) : fd(r.from, true) + " - " + fd(r.to, true)) + "</b>" +
-        (cmp && pr ? " · спрямо " + esc(pr.from === pr.to ? fd(pr.from, true) + (upTo ? " до " + upTo : "") : fd(pr.from, true) + " - " + fd(pr.to, true)) : "") + "</span>" + (r.sample ? sample("Има примерни поръчки") : "") + "</p>";
+      '<p class="rp-meta"><span><b>' + esc(one ? fd(r.from) : fd(r.from) + " - " + fd(r.to)) + "</b>" +
+        (cmp && pr ? " · спрямо " + esc(pr.from === pr.to ? fd(pr.from) + (upTo ? " до " + upTo : "") : fd(pr.from) + " - " + fd(pr.to)) : "") + "</span>" +
+        (cmp && pr && !pr.orders && !pr.cancelled && !pr.reservations ? "<span>Предишният период няма данни за сравнение.</span>" : "") + (r.sample ? sample("Има примерни поръчки") : "") + "</p>";
     const off = offlineNote ? offline("Показваме последно сметнатия отчет. Числата се обновяват, щом връзката се върне.") + '<div style="height:16px"></div>' : "";
     if (!r.orders && !r.reservations && !r.cancelled) {
       root.innerHTML = off + head + '<div class="sa-card">' + empty({ icon: "chart-bar", title: "Няма поръчки за този период.", text: per === "today" ? "Поръчките за днес ще се появят тук от 10:00." : "Изберете друг период.",
@@ -148,7 +149,7 @@ export async function initReports(): Promise<void> {
         '<div><span class="l">Неявили се</span><b>' + r.noShows + (r.reservations ? ' <span style="font-size:18px;color:var(--muted)">(' + nsr + "%)</span>" : "") + "</b>" + delta(r.noShows, pr?.noShows, true) + "</div></div>" +
       '<div class="rp-g two">' +
         chartCard("main", one ? "Оборот по час" : "Оборот по ден", one ? fd(r.from) : todayRed ? "Днес" + (r.to === TODAY ? " (до " + hhNow() + ")" : "") + " е в червено" : "", colChart("main", main, { money: true, xn: one ? 7 : 6 }),
-          { head: one ? ["Час", "Оборот", "Поръчки"] : ["Ден", "Оборот", "Поръчки"], rows: one ? hrs.map((h) => [hh(h.hour), fmt(h.revenue), h.orders]) : r.byDay.map((d) => [fd(d.date, true), fmt(d.revenue), d.orders]) }) +
+          { head: one ? ["Час", "Оборот", "Поръчки"] : ["Ден", "Оборот", "Поръчки"], rows: one ? hrs.map((h) => [hh(h.hour), fmt(h.revenue), h.orders]) : r.byDay.map((d) => [fd(d.date), fmt(d.revenue), d.orders]) }) +
         chartCard("ch", "По канал", "Оборот и дял", '<div class="rp-hb">' + r.byChannel.slice().sort((a, b) => b.revenue - a.revenue).map((c) =>
           '<div class="r"><span class="n">' + ic(CH_IC[c.channel] || "globe", 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + esc(c.label) + '</span><span class="v">' + fmt(c.revenue) + "<small>" + c.share + "% · " + c.orders + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.revenue / chMax) * 100 + '%"></i></span></div>').join("") + "</div>",
           { head: ["Канал", "Оборот", "Дял", "Поръчки"], rows: r.byChannel.map((c) => [c.label, fmt(c.revenue), c.share + "%", c.orders]) },
@@ -162,7 +163,7 @@ export async function initReports(): Promise<void> {
           { head: ["Час", "Поръчки"], rows: hrs.map((h) => [hh(h.hour), h.orders]) }) +
         chartCard("res", "Резервации и неявили се", "", one ? '<div class="rp-hb"><div class="r"><span class="n">Резервации</span><span class="v">' + r.reservations + '</span></div><div class="r"><span class="n">Неявили се</span><span class="v">' + r.noShows + "</span></div></div>" :
           colChart("res", r.byDay.map((d) => ({ l: fd(d.date, true).replace(/^.., /, ""), v: d.reservations - d.noShows, v2: d.noShows, t: "", tv: "" })), { xn: 6 }) + '<ul class="lgd"><li><i></i>Дошли и предстоящи</li><li><i class="r"></i>Неявили се</li></ul>',
-          { head: ["Ден", "Резервации", "Неявили се"], rows: r.byDay.map((d) => [fd(d.date, true), d.reservations, d.noShows]) }) +
+          { head: ["Ден", "Резервации", "Неявили се"], rows: r.byDay.map((d) => [fd(d.date), d.reservations, d.noShows]) }) +
         "</div></div>" +
       '<div style="height:16px"></div><section class="ch cost" data-edit-id="admin.reports.cost"><span class="ill">' + ic("scales", 30) + '</span><h2>Печалба по ястие</h2><p class="muted" style="margin:0">Матрицата „популярност срещу печалба“ и марж на ястие искат себестойност: ' + missing("себестойност на ястията") + ". Щом се въведе в менюто, отчетът се появява тук.</p></section>" +
       '<div style="height:16px"></div><div class="rp-soon">' + soonTag() + "<span><b>Отчети по имейл</b> всеки понеделник в 6:00 и на 1-во число (PDF), известие при отклонение.</span></div>";
@@ -206,7 +207,7 @@ export async function initReports(): Promise<void> {
       let a = root.querySelector<HTMLInputElement>("[data-ca]")!.value, b = root.querySelector<HTMLInputElement>("[data-cb]")!.value; if (!a || !b) return;
       if (a > b) [a, b] = [b, a];
       if (b > TODAY) b = TODAY;
-      if (span(a, b) > 92) { a = addD(b, -91); toast("До 92 дни: началото е преместено на " + fd(a, true)); }
+      if (span(a, b) > 92) { a = addD(b, -91); toast("До 92 дни: началото е преместено на " + fd(a)); }
       cust = { a, b }; hashSync(); load();
     }
   });
