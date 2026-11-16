@@ -17,7 +17,7 @@ import { COL, iso, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, type Customer, type Order, type Reservation, type Session } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
 import { need, maskPhone, maskEmail } from "./rights.ts";
-import { exportCustomer } from "./customers.ts";
+import { exportCustomer, forgetCustomerData } from "./customers.ts";
 import { blockOf } from "./reservations-admin.ts";
 import { FEEDBACK_TOPICS, type Feedback } from "./feedback.ts";
 import { PROFILE_COUPON } from "./orders.ts";
@@ -38,15 +38,7 @@ export async function customersPurge(ctx: Ctx): Promise<number> {
   for (const c of await ctx.repo.list<Customer>(COL.customers)) {
     if (!c.deleting || c.deleting.until > now) continue;
     for (const s of await ctx.repo.list<Session>(COL.sessions, { userId: c.id })) await ctx.repo.del(COL.sessions, s.id);
-    /* the orders of the profile: by its phone AND by the account (an order with another phone made while signed in) */
-    for (const o of (await ctx.repo.list<Order>(COL.orders)).filter((x) => (c.phone && x.phone === c.phone) || x.userId === c.id)) {
-      Object.assign(o, { name: "Изтрит клиент", phone: "", email: undefined, addr: o.addr ? o.zone || "" : "", note: undefined, userId: null, updatedAt: iso(ctx) });
-      await ctx.repo.put(COL.orders, o);
-    }
-    for (const r of await ctx.repo.list<Reservation>(COL.reservations, { phone: c.phone })) {
-      Object.assign(r, { name: "Изтрит клиент", phone: "", email: undefined, note: undefined, updatedAt: iso(ctx) });
-      await ctx.repo.put(COL.reservations, r);
-    }
+    await forgetCustomerData(ctx, c);
     await ctx.repo.del(COL.customers, c.id);
     await audit(ctx, c.deleting.by, "customer.delete", c.id);
     n++;

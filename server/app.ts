@@ -511,6 +511,12 @@ export function createApp(opts: AppOpts) {
     const r = root(), p = path.resolve(r, "." + rel);
     if (!(p === r || p.startsWith(r + path.sep)) || /\/\./.test(rel)) return null; /* never a dot file (.menu-hash of the rebuild) */
     try { const st = fs.statSync(p); if (st.isFile()) return p; if (st.isDirectory() && fs.existsSync(path.join(p, "index.html"))) return path.join(p, "index.html"); } catch { /* missing */ }
+    /* a page opened just before a rebuild still asks for the scripts and styles of its own build: those (hashed, never
+       changed) come from the previous build until the page is opened again */
+    if (rel.startsWith("/_astro/") && r === dist) {
+      const q = path.resolve(prevDir, "." + rel);
+      if (q.startsWith(prevDir + path.sep)) { try { if (fs.statSync(q).isFile()) return q; } catch { /* missing */ } }
+    }
     return null;
   };
   const zcache = new Map<string, { mtime: number; br?: Buffer; gzip?: Buffer }>();

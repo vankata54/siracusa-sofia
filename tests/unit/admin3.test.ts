@@ -561,7 +561,24 @@ describe("part 3, flows review round 1", () => {
   });
   it("offers: 'G00gle' and spaced letters are refused too", async () => {
     const core = mk(); const { s } = await people(core);
-    for (const title of ["-10% за G00gle", "Оставете о т з и в", "Ревю = подарък"]) await expect(core.offersAdmin.create(s.manager, { title, text: "", pct: 10 } as never)).rejects.toMatchObject({ code: "invalid" });
+    for (const title of ["-10% за G00gle", "Оставете о т з и в", "Ревю = подарък"]) await expect(core.offersAdmin.create(s.manager, { title, text: "", pct: 10, r: { days: [2], from: "12:00", to: "16:00", ch: ["pickup"], dish: "all" } } as never)).rejects.toMatchObject({ fields: { title: expect.stringContaining("Google") } });
+  });
+});
+
+describe("part 3, flows review round 2", () => {
+  it("'Изтрий профила' by the customer clears the personal data in the orders too", async () => {
+    const core = mk();
+    const { demoCode } = await core.customers.requestCode("0888123456");
+    const { customer } = await core.customers.verifyCode("0888123456", demoCode!, { name: "Иван", marketing: false });
+    await web(core, { note: "звънец 3", userId: customer.id });
+    await web(core, { phone: "0899555444", userId: customer.id });
+    await core.customers.remove(customer.id);
+    for (const o of await core.orders.list()) expect(o).toMatchObject({ name: "Изтрит клиент", phone: "", userId: null });
+  });
+  it("offers: the review words only as words", async () => {
+    const core = mk(); const { s } = await people(core);
+    for (const title of ["Отзивчив персонал", "Preview на новото меню"]) expect((await core.offersAdmin.create(s.manager, { title, text: "", pct: 10, r: { days: [2], from: "12:00", to: "16:00", ch: ["pickup"], dish: "all" } } as never)).id).toBeTruthy();
+    for (const title of ["За отзив -10%", "Отзиви в Google", "Р е в ю"]) await expect(core.offersAdmin.create(s.manager, { title, text: "", pct: 10, r: { days: [2], from: "12:00", to: "16:00", ch: ["pickup"], dish: "all" } } as never)).rejects.toMatchObject({ fields: { title: expect.stringContaining("Google") } });
   });
 });
 });

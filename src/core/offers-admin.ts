@@ -47,9 +47,15 @@ export const OFFER_MSG = {
   vUnknown: "Няма такъв код. Проверете цифрите, например SCV-4829163057.",
   vUsed: "Този код вече е използван.",
 };
-const GOOGLE = /google|гугъл|гугл|отзив|ревю|review/i;
-/* "G00gle", "G o o g l e", "гуг ъл": letters only, 0 -> o, 1 -> l, 3 -> e before the check */
-const looksGoogle = (t: string) => GOOGLE.test(t) || GOOGLE.test(String(t).toLowerCase().replace(/0/g, "o").replace(/1/g, "l").replace(/3/g, "e").replace(/[^a-zа-я]/g, ""));
+/* a word about Google or a review (decision 30), also written "G00gle" or "о т з и в"; never inside another word
+   ("Отзивчив персонал", "Preview на новото меню" are fine) */
+const GOOGLE_WORD = /(^|[^a-zа-яё])(google|гугъл|гугл|отзив(а|и|ът|ите)?|ревю(та|то|тата)?|reviews?)(?=[^a-zа-яё]|$)/i;
+const looksGoogle = (t: string): boolean => {
+  let x = String(t || "").toLowerCase().replace(/0/g, "o").replace(/1/g, "l").replace(/3/g, "e");
+  /* spaced single letters become one word: "о т з и в" -> "отзив" */
+  x = x.replace(/(?<![a-zа-яё])(?:[a-zа-яё][\s.\-_*]+){2,}[a-zа-яё](?![a-zа-яё])/g, (m) => m.replace(/[^a-zа-яё]/g, ""));
+  return GOOGLE_WORD.test(x);
+};
 const CH: OfferChannel[] = ["delivery", "pickup", "table", "office"];
 
 export interface OffersView { version: number; offers: (OfferRow & { blocked: string | null })[]; settings: { celebrationPrice: "estimate" | "offer"; earlyDays: number | null }; at: string | null; by: string | null }

@@ -1,7 +1,7 @@
 /* Customers: sign-in with phone + SMS code (v1/demo: the code is returned and shown on screen), profile, consents
    (marketing always false by default), favourites, addresses, internal rating (-10% code; Google link always). */
 import { COL, iso, nowDate, phoneHash, rid, randomDigits, type Ctx } from "./ctx.ts";
-import { CoreError, type Customer, type Order, type Rating, type Session, type SmsCode } from "./types.ts";
+import { CoreError, type Customer, type Order, type Rating, type Reservation, type Session, type SmsCode } from "./types.ts";
 import { normPhone } from "../lib/format.ts";
 import { byId } from "../lib/data.ts";
 import { BLOCKED_DEMO_PHONE } from "./reservations.ts";
@@ -148,10 +148,26 @@ export async function exportCustomer(ctx: Ctx, c: Customer) {
   return { exportedAt: iso(ctx), profile: c, orders, reservations };
 }
 
-/** GDPR: delete the profile and sessions (orders stay for the fiscal record, without the link to the profile). */
+/** GDPR: the personal data in the customer's orders (by phone and by the account) and reservations go; the orders stay
+    for the fiscal record as "Изтрит клиент" with only the zone. One function for "Изтрий профила" (the customer) and the
+    admin's "Изтрий" (customers-admin.ts customersPurge). */
+export async function forgetCustomerData(ctx: Ctx, c: Pick<Customer, "id" | "phone">): Promise<void> {
+  for (const o of (await ctx.repo.list<Order>(COL.orders)).filter((x) => (c.phone && x.phone === c.phone) || x.userId === c.id)) {
+    Object.assign(o, { name: "Изтрит клиент", phone: "", email: undefined, addr: o.addr ? o.zone || "" : "", note: undefined, userId: null, updatedAt: iso(ctx) });
+    await ctx.repo.put(COL.orders, o);
+  }
+  if (c.phone) for (const r of await ctx.repo.list<Reservation>(COL.reservations, { phone: c.phone })) {
+    Object.assign(r, { name: "Изтрит клиент", phone: "", email: undefined, note: undefined, updatedAt: iso(ctx) });
+    await ctx.repo.put(COL.reservations, r);
+  }
+}
+
+/** GDPR: delete the profile and sessions, and the personal data in the orders and reservations (forgetCustomerData). */
 export async function deleteCustomer(ctx: Ctx, id: string): Promise<void> {
+  const c = await ctx.repo.get<Customer>(COL.customers, id);
   const sessions = await ctx.repo.list<Session>(COL.sessions, { userId: id });
   for (const s of sessions) await ctx.repo.del(COL.sessions, s.id);
+  if (c) await forgetCustomerData(ctx, c);
   await ctx.repo.del(COL.customers, id);
 }
 
