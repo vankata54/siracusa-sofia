@@ -206,7 +206,7 @@ body{background:var(--bg)}
 /* ---------- controls ---------- */
 .sa-switch{position:relative; display:inline-grid; place-items:center; width:64px; height:48px; flex:none; cursor:pointer}
 .sa-switch input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
-.sa-switch .tr{width:52px; height:32px; border-radius:16px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line); position:relative; transition:background-color var(--t-base) var(--ease)}
+.sa-switch .tr{width:52px; height:32px; border-radius:16px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line); position:relative; pointer-events:none; transition:background-color var(--t-base) var(--ease)}
 .sa-switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
 .sa-switch input:checked + .tr{background:var(--ok)}
 .sa-switch input:checked + .tr::after{transform:translateX(20px)}

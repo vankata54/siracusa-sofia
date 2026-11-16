@@ -1,0 +1,70 @@
+/* /admin/customers/: „Клиенти“ (1:1 от <style> на design/pages-admin/customers.html, версия 4). Само токени; ширините с @container.
+   Добавено за кода: ред „Изтрива се“ в прозореца за „Отмени“ (10 сек), показаният контакт в картата на съобщение. */
+.cu-gdpr{display:grid; gap:12px; padding:18px 20px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow); margin-bottom:22px}
+.cu-gdpr summary{list-style:none; cursor:pointer; min-height:48px; display:flex; align-items:center}
+.cu-gdpr summary h2{flex:1}
+.cu-gdpr summary::-webkit-details-marker{display:none}
+.cu-gdpr h2{margin:0; font-size:19px; letter-spacing:-.02em; display:flex; align-items:center; gap:10px}
+.cu-gdpr h2 .more{margin-left:auto; display:grid; place-items:center; transition:transform var(--t-base) var(--ease)}
+.cu-gdpr[open] h2 .more{transform:rotate(180deg)}
+.cu-gdpr:not([open]){padding-top:14px; padding-bottom:14px}
+.cu-gdpr h2 .ic{color:var(--ember)}
+.cu-gdpr ul{margin:0; padding:0; list-style:none; display:grid; gap:8px}
+.cu-gdpr li{display:flex; gap:10px; align-items:flex-start; font-size:16px}
+.cu-gdpr li .ic{flex:none; margin-top:3px; color:var(--ember)}
+@container page (min-width:900px){ .cu-gdpr[open]{grid-template-columns:240px minmax(0,1fr); align-items:start; padding:22px 26px} .cu-gdpr ul{grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px} .cu-gdpr h2 .more{display:none} }
+.cu-top{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.cu-top .sa-tabs{flex:1 1 auto}
+@container page (min-width:1000px){ .cu-top .sa-tabs{flex:0 0 auto} }
+@container page (max-width:620px){ .cu-top .sa-tabs{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); flex:1 1 100%; border-radius:28px} .cu-top .sa-tabs button{white-space:normal; text-align:center; line-height:1.15; padding:4px 6px; font-size:15px; min-height:56px; border-radius:22px; flex-wrap:wrap; gap:4px} .cu-top .sa-tabs button .ic{display:none} }
+.cu-flt{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.cu-flt .sa-field-s{flex:1 1 260px}
+.cu-flt .chips{flex:1 1 100%; margin:0; padding:2px 0}
+@container page (min-width:1000px){ .cu-flt .chips{flex:0 1 auto} }
+.cu-name{display:flex; align-items:center; gap:12px; min-width:0}
+.cu-av{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; flex:none; font-variant-numeric:tabular-nums}
+.cu-av.bl{background:var(--red); color:var(--on-red)}
+.cu-name b{display:block; font-size:16px}
+.cu-name small{display:block; white-space:nowrap; font-size:14px; color:var(--muted); font-weight:600}
+.cu-tags{display:flex; flex-wrap:wrap; gap:4px}
+@container page (max-width:699px){ .cu-tags{justify-content:flex-end} }
+.cu-page .sa-table tbody tr[data-c]{cursor:pointer}
+.cu-page .sa-table .ph{font-variant-numeric:tabular-nums; white-space:nowrap}
+.cu-page .ph-only, .cu-page .cu-name small.ph-only, .cu-page .ph-l{display:none}
+@container page (max-width:699px){ .cu-page .ph-l{display:inline} .cu-page .dt-l{display:none} .cu-page .ph-only{display:revert} .cu-page .cu-name small.ph-only{display:block} .cu-page .sa-table td.ph-only{display:flex} .cu-page .sa-table td.dt-only{display:none} .cu-page .sa-table td.cu-act{display:block; padding-top:8px} .cu-page .sa-table td.cu-act::before{display:none} .cu-act .cu-open{width:100%} }
+.cu-open{min-height:48px}
+.sa-tag.tg-mk{color:var(--ink)}
+.sa-tag.tg-mk .ic{color:var(--ok)}
+.sa-tag.tg-bl{background:var(--red); color:var(--on-red)}
+.cu-page tr.del td{opacity:.6}
+/* обратна връзка */
+.fb-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .fb-list{grid-template-columns:repeat(2, minmax(0,1fr))} }
+.fb{display:flex; flex-direction:column; gap:10px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.fb.done{opacity:.78}
+.fb .tp{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.fb .when{margin-left:auto; font-size:15px; color:var(--muted); font-weight:600}
+.fb blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--red); font-size:16px; overflow-wrap:anywhere}
+.fb .who{font-size:15px; color:var(--muted); font-weight:600; display:flex; flex-wrap:wrap; gap:4px 12px}
+.fb .who b{color:var(--ink)}
+.fb .who a{color:var(--ink); font-variant-numeric:tabular-nums}
+.fb .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:10px; border-top:1px solid var(--line)}
+.fb .acts .pill{flex:1 1 auto; padding:0 14px}
+/* лист на клиента */
+.cp-h{display:flex; align-items:center; gap:14px; margin-bottom:8px}
+.cp-h .cu-av{width:56px; height:56px; font-size:20px}
+.cp-h b{font-size:20px; display:block; letter-spacing:-.02em}
+.cp-sec{margin:18px 0 8px; font-size:15px; font-weight:800}
+.cp-ord{display:grid; gap:2px; padding:10px 0; border-top:1px solid var(--line)}
+.cp-ord .l1{display:flex; justify-content:space-between; gap:10px; font-weight:800}
+.cp-ord .l2{font-size:15px; color:var(--muted)}
+.cp-note{font-size:15px; color:var(--muted); margin:6px 0 0; display:flex; gap:8px; align-items:flex-start}
+.cp-note .ic{flex:none; margin-top:2px}
+.cp-danger{display:grid; gap:8px; margin-top:18px; padding:14px; border-radius:20px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.cp-danger .row{display:flex; flex-wrap:wrap; gap:8px}
+.cp-danger .row .pill{flex:1 1 auto}
+.cp-page .kv span{text-align:right; overflow-wrap:anywhere}
+.cp-page .link{min-height:48px; display:inline-flex; align-items:center; padding:0 4px}
+.pill-dline{background:transparent; color:var(--danger); box-shadow:inset 0 0 0 1.5px currentColor}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}

@@ -1,0 +1,11 @@
+---
+/* /admin/reports/: „Отчети“ (design/pages-admin/reports.html, version 4): src/admin/reports.ts. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/reports.css";
+---
+<Admin title="Отчети" page="admin-reports">
+<script>
+import { initReports } from "../../../admin/reports.ts";
+initReports();
+</script>
+</Admin>

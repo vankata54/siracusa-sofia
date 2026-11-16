@@ -1,0 +1,11 @@
+---
+/* /admin/staff/: „Персонал“ (design/pages-admin/staff.html, version 4): src/admin/staff.ts. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/staff.css";
+---
+<Admin title="Персонал" page="admin-staff">
+<script>
+import { initStaff } from "../../../admin/staff.ts";
+initStaff();
+</script>
+</Admin>

@@ -1,0 +1,11 @@
+---
+/* /admin/settings/: „Настройки“ (design/pages-admin/settings.html, version 4): src/admin/settings.ts. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/settings.css";
+---
+<Admin title="Настройки" page="admin-settings">
+<script>
+import { initSettings } from "../../../admin/settings.ts";
+initSettings();
+</script>
+</Admin>

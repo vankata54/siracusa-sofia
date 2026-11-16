@@ -1,0 +1,51 @@
+/* /admin/staff/: „Персонал“ (1:1 от <style> на design/pages-admin/staff.html, версия 4). Само токени; ширините с @container.
+   Добавено за кода: ПИН-ът, показан веднъж след запис (.pin-once). */
+.sf-sum{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:18px}
+@container page (min-width:760px){ .sf-sum{grid-template-columns:repeat(4, minmax(0,1fr))} }
+.sf-sum div{padding:14px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:2px}
+.sf-sum b{font-size:28px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.sf-sum span{font-size:14px; font-weight:700; color:var(--muted)}
+.sf-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.sf-bar .sa-tabs{flex:0 1 auto}
+.sf-bar .sa-field-s{flex:1 1 240px}
+@container page (max-width:560px){ .sf-bar .sa-tabs{flex:1 1 100%} }
+.sf-u{display:flex; align-items:center; gap:12px; min-width:0}
+.sf-u .sa-av{width:44px; height:44px}
+.sf-u .sa-av.off{background:var(--surface-3); color:var(--muted)}
+.sf-u b{display:block}
+.sf-u code{display:block; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; color:var(--muted); font-weight:600}
+.sf-u .me{display:inline-flex; align-items:center; min-height:24px; padding:0 8px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:800; color:var(--ink); margin-left:8px; white-space:nowrap}
+.sf-u b{white-space:nowrap}
+.sa-table td[data-label="Последен вход"]{white-space:nowrap}
+.sf-man{white-space:nowrap}
+.sf-u .rl2{display:none; font-size:14px; font-weight:700; color:var(--muted)}
+@container page (min-width:700px) and (max-width:1023px){ .sa-table .c-rl{display:none} .sf-u .rl2{display:block} }
+.sa-table td[data-label="Роля"], .sa-table td[data-label="ПИН"]{white-space:nowrap}
+tr.off td{color:var(--muted)}
+.sf-acts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+.sf-acts .pill{padding:0 14px}
+@container page (max-width:699px){ .sa-table td[data-label="Действия"]{display:block} .sa-table td[data-label="Действия"]::before{display:none} .sf-acts{justify-content:stretch; padding-top:6px} .sf-acts .pill{flex:1 1 auto} }
+.sf-mlist{display:grid; gap:8px}
+.pin{font-variant-numeric:tabular-nums; letter-spacing:.2em; font-weight:800}
+.form{display:grid; gap:14px}
+.form .err{font-size:14px; color:var(--danger); font-weight:700}
+.pw{position:relative}
+.pw .input{padding-right:110px}
+.pw .show{position:absolute; right:4px; top:50%; transform:translateY(-50%); min-height:48px}
+.meter{display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; margin-top:4px}
+.meter i{height:6px; border-radius:3px; background:var(--surface-3)}
+.meter.s1 i:nth-child(-n+1), .meter.s2 i:nth-child(-n+2){background:var(--warn)}
+.meter.s3 i:nth-child(-n+3), .meter.s4 i{background:var(--ok)}
+.genpw{display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:16px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.genpw code{flex:1; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:17px; font-weight:700; overflow-wrap:anywhere}
+.pin-once{display:grid; gap:10px; justify-items:center; text-align:center; padding:20px 16px; border-radius:20px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember)}
+.pin-once b{font-size:40px; letter-spacing:.3em; font-variant-numeric:tabular-nums; line-height:1.1; padding-left:.3em}
+.pin-once p{margin:0}
+.sf-pinmode{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; padding:6px; border-radius:22px; background:var(--surface-2)}
+.sf-pinmode button{min-height:48px; border:0; border-radius:16px; background:transparent; font:inherit; font-weight:800; font-size:15px; cursor:pointer; color:var(--ink); padding:0 6px; line-height:1.15}
+.sf-pinmode button[aria-pressed="true"]{background:var(--surface); box-shadow:var(--shadow)}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
+.sf-note{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted); margin:0}
+.sf-note .ic{flex:none; margin-top:2px}
+.pinin{font-size:28px; letter-spacing:.5em; text-align:center; font-weight:800; font-variant-numeric:tabular-nums}

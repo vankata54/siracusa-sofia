@@ -85,7 +85,5 @@ export const MODULES: Mod[] = [
    The author of a section takes its key out of this list when the section gets its own page. */
 export const SOON: [string, string][] = [
   ["reservations", "Резервации"], ["offers", "Оферти и ваучери"],
-  ["events", "Събития"], ["zones", "Зони за доставка"], ["hall", "Залата и масите"], ["qr", "QR генератор"], ["customers", "Клиенти"],
-  ["staff", "Персонал"], ["reports", "Отчети"],
-  ["settings", "Настройки"],
+  ["events", "Събития"], ["zones", "Зони за доставка"], ["hall", "Залата и масите"], ["qr", "QR генератор"],
 ];

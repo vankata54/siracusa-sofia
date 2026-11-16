@@ -1,0 +1,80 @@
+/* /admin/reports/: „Отчети“ (1:1 от <style> на design/pages-admin/reports.html, версия 4). Само токени; ширините с @container.
+   Плотът е SVG, надписите по осите са HTML (поне 14px на телефон). */
+.rp-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px}
+.rp-bar .sa-tabs{flex:0 1 auto}
+.rp-bar .cmp{display:flex; align-items:center; gap:4px; min-height:60px; padding:0 4px 0 16px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-weight:700}
+.rp-psel{display:none; flex:1 1 100%}
+@container page (max-width:720px){ .rp-bar .sa-tabs{display:none} .rp-psel{display:block} .rp-bar .cmp{flex:1 1 100%; justify-content:space-between} }
+.rp-custom{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:12px}
+.rp-custom .field{flex:1 1 160px; max-width:220px}
+.rp-meta{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin:0 0 16px; color:var(--muted); font-weight:600; font-size:15px}
+.rp-meta b{color:var(--ink)}
+.rp-meta .sa-tag{white-space:normal; height:auto; min-height:28px; padding-top:3px; padding-bottom:3px}
+.kp{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden; margin-bottom:16px}
+@container page (min-width:900px){ .kp{grid-template-columns:repeat(5, minmax(0,1fr))} }
+@container page (max-width:899px){ .kp > div:last-child{grid-column:1 / -1} }
+.kp > div{padding:16px 18px; display:grid; gap:4px; box-shadow:inset -1px -1px 0 var(--line); min-width:0}
+.kp .l{font-size:14px; font-weight:700; color:var(--muted)}
+.kp b{font-size:30px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap}
+@container page (max-width:420px){ .kp b{font-size:24px} }
+.dl{display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+.dl.up{color:var(--ok)} .dl.down{color:var(--danger)} .dl.flat{color:var(--muted)}
+.dl small{font-size:14px; font-weight:600; color:var(--muted)}
+@container page (max-width:600px){ .dl small{display:none} }
+.rp-g{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .rp-g.two{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} }
+.ch{padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; min-width:0; align-content:start}
+.ch > header{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 12px}
+.ch h2{margin:0; font-size:20px; letter-spacing:-.025em}
+.ch h2 small{display:block; font-size:14px; letter-spacing:0; color:var(--muted); font-weight:700; margin-top:2px}
+.ch .tg{min-height:48px; font-size:15px; padding:0 14px}
+/* колонна графика: SVG за плота, текстът в HTML */
+.plot{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 8px}
+.plot .ya{display:grid; align-content:space-between; text-align:right; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; height:180px; margin-top:-8px; padding-bottom:0}
+.plot .ya span{line-height:16px}
+.plot svg{display:block; width:100%; height:180px; overflow:visible}
+.plot .grid line{stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke}
+.plot .base{stroke:var(--line-strong); stroke-width:1.5; vector-effect:non-scaling-stroke}
+.plot .bar{fill:var(--ink); transition:opacity var(--t-fast) var(--ease)}
+.plot .bar.hi{fill:var(--red)}
+.plot .bar.ns{fill:var(--red)}
+.plot .bar.prev{fill:var(--surface-3)}
+.plot:hover .bar{opacity:.55}
+.plot .bar.on{opacity:1 !important}
+.plot .xa{grid-column:2; position:relative; height:22px; font-size:14px; color:var(--muted); font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums}
+.plot .xa span{position:absolute; top:0; white-space:nowrap}
+.tip{position:absolute; z-index:3; pointer-events:none; padding:8px 12px; border-radius:14px; background:var(--ink); color:var(--bg); font-size:15px; font-weight:700; line-height:1.3; white-space:nowrap; transform:translate(-50%, calc(-100% - 10px)); box-shadow:var(--shadow-lg)}
+.tip small{display:block; font-size:14px; font-weight:600; opacity:.8}
+.lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.lgd li{display:inline-flex; align-items:center; gap:6px}
+.lgd i{width:12px; height:12px; border-radius:3px; background:var(--ink)}
+.lgd i.r{background:var(--red)} .lgd i.p{background:var(--surface-3)}
+/* хоризонтални ленти */
+.rp-hb{display:grid; gap:12px}
+.rp-hb .r{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:baseline}
+.rp-hb .r .n{font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rp-hb .r .v{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.rp-hb .r .v small{font-weight:600; color:var(--muted); font-size:14px; margin-left:6px}
+.rp-hb .r .tr{grid-column:1 / -1; height:10px; border-radius:5px; background:var(--surface-2); overflow:hidden}
+.rp-hb .r .tr i{display:block; height:100%; border-radius:5px; background:var(--ink); transform-origin:left; animation:grow 700ms var(--ease) both}
+.rp-hb .r:first-child .tr i{background:var(--red)}
+@keyframes grow{from{transform:scaleX(0)} to{transform:none}}
+.rp-top{display:grid; gap:2px}
+.rp-top .r{display:grid; grid-template-columns:28px 44px minmax(0,1fr) auto; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--line)}
+.rp-top .r:first-child{border-top:0}
+.rp-top .k{font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right}
+.rp-top .pic{width:44px; height:44px; border-radius:14px}
+.rp-top .n{min-width:0}
+.rp-top .n b{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:16px; line-height:1.3}
+.rp-top .n .tr{height:6px; border-radius:3px; background:var(--surface-2); margin-top:6px; overflow:hidden}
+.rp-top .n .tr i{display:block; height:100%; background:var(--ember); border-radius:3px}
+.rp-top .v{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.rp-top .v small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.tbl-alt{font-size:15px}
+.tbl-alt .sa-table{font-size:15px}
+.cost{display:grid; gap:10px; justify-items:start}
+.cost .ill{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.rp-soon{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 18px; border-radius:22px; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted); font-weight:600}
+.rp-soon b{color:var(--ink)}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}

@@ -1,0 +1,11 @@
+---
+/* /admin/customers/: „Клиенти“ (design/pages-admin/customers.html, version 4): src/admin/customers.ts. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/customers.css";
+---
+<Admin title="Клиенти" page="admin-customers">
+<script>
+import { initCustomers } from "../../../admin/customers.ts";
+initCustomers();
+</script>
+</Admin>
