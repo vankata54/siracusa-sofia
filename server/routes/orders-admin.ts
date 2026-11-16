@@ -13,8 +13,8 @@ import type { OrderStatus, OrdersQuery, PhoneOrderInput } from "../../src/core/i
 
 export function ordersAdminRoutes(app: Hono, d: AdminDeps): void {
   const { core, staff, body } = d;
-  app.get("/api/admin/orders/list", async (c) => c.json(await core.ordersAdmin.list(await staff(c), { status: qv(c, "status") as OrdersQuery["status"], channel: qv(c, "channel") as OrdersQuery["channel"], day: qv(c, "day"), q: qv(c, "q") })));
-  app.post("/api/admin/orders/phone", async (c) => { const s = await staff(c); return c.json(await core.ordersAdmin.phoneOrder(s, (await body(c)) as PhoneOrderInput), 201); });
+  app.get("/api/admin/orders/list", async (c) => c.json(await (d.coreFor ? d.coreFor(c) : core).ordersAdmin.list(await staff(c), { status: qv(c, "status") as OrdersQuery["status"], channel: qv(c, "channel") as OrdersQuery["channel"], day: qv(c, "day"), q: qv(c, "q") })));
+  app.post("/api/admin/orders/phone", async (c) => { const s = await staff(c); return c.json(await (d.coreFor ? d.coreFor(c) : core).ordersAdmin.phoneOrder(s, (await body(c)) as PhoneOrderInput), 201); });
   app.get("/api/admin/orders/:no/detail", async (c) => c.json(await core.ordersAdmin.get(await staff(c), c.req.param("no"))));
   app.post("/api/admin/orders/:no/phone", async (c) => c.json(await core.ordersAdmin.phone(await staff(c), c.req.param("no"))));
   app.post("/api/admin/orders/:no/cancel", async (c) => { const s = await staff(c); return c.json(await core.ordersAdmin.cancel(s, c.req.param("no"), String((await body(c)).reason || ""))); });

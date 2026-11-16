@@ -1,0 +1,12 @@
+---
+/* /admin/orders/: "Поръчки" (design/pages-admin/orders.html, version 4). Everything comes from the browser after the
+   session is known (src/admin/orders.ts); the form "Нова поръчка по телефон" is its own chunk (src/admin/orders-phone.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/orders.css";
+---
+<Admin title="Поръчки" page="admin-orders">
+<script>
+import { initOrders } from "../../../admin/orders.ts";
+initOrders();
+</script>
+</Admin>

@@ -1,0 +1,133 @@
+/* /admin/orders/: „Поръчки“ (1:1 от <style> на design/pages-admin/orders.html, версия 4). Само токени; ширините само с
+   @container (page: колоната със съдържанието, app: листовете). Добавено за кода: брояч „− 1 +“ в резултатите на поръчката по
+   телефон (REVIEW-1, дребна 1), грешка на цялата форма, причината за отказ в картата. */
+.or-live{display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:0 16px 0 14px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-weight:700; font-size:15px}
+.or-live .pulse{position:relative; width:10px; height:10px; border-radius:50%; background:var(--ok)}
+.or-live .pulse::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--ok); animation:or-pulse 2s var(--ease) infinite}
+@keyframes or-pulse{0%{transform:scale(1); opacity:.6}100%{transform:scale(2.6); opacity:0}}
+.or-live.lost .pulse, .or-live.lost .pulse::after{background:var(--warn)}
+.or-sm{display:flex; gap:8px; align-items:flex-start; margin:0 0 14px; font-size:15px; font-weight:600; color:var(--muted)}
+.or-sm .ic{margin-top:2px}
+.or-sel{display:none}
+@container page (max-width:1099px){ .or-bar .sa-tabs{display:none} .or-sel{display:block; flex:1 1 100%} }
+.or-new{margin:0 0 16px; animation:or-in var(--t-slow) var(--ease)}
+@keyframes or-in{from{transform:translateY(-10px); opacity:0} to{transform:none; opacity:1}}
+.or-new .pill{background:var(--on-ember); color:var(--ember)}
+
+.or-bar{display:grid; gap:10px; margin:0 0 16px; grid-template-columns:minmax(0,1fr)}
+.or-bar .row1{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.or-bar .sa-tabs{flex:1 1 auto; min-width:0}
+@container page (min-width:1100px){ .or-bar .sa-tabs{flex:0 1 auto} }
+.or-bar .row2{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.or-ch{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; margin:0 -2px; flex:1 1 360px; min-width:0}
+.or-ch::-webkit-scrollbar{display:none}
+.or-ch .chip .ic{color:var(--muted)}
+.or-ch .chip[aria-pressed="true"] .ic{color:var(--ember)}
+.or-bar .sa-field-s{flex:0 1 300px; min-width:220px}
+@container page (max-width:1099px){ .or-bar .sa-field-s{flex:1 1 100%; order:-1} }
+
+/* board (wide, „В работа“) */
+.or-board{display:grid; gap:12px; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:start}
+.or-colm{display:grid; gap:8px; padding:8px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); min-height:220px; align-content:start}
+.or-colh{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px 4px}
+.or-colh h2{margin:0; font-size:17px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.or-colh .n{min-width:28px; height:28px; padding:0 8px; border-radius:14px; display:inline-grid; place-items:center; background:var(--surface); font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+.or-colh .dot{width:10px; height:10px; border-radius:50%}
+.or-none{padding:16px 10px; text-align:center; color:var(--muted); font-size:15px; font-weight:600}
+.or-grid{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:760px){ .or-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1100px){ .or-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+.oc{display:grid; gap:10px; padding:14px 14px 12px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start; transition:transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease)}
+.oc.fresh{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
+.oc.late{box-shadow:inset 0 0 0 2px var(--warn), var(--shadow)}
+.oc.done{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.oc-t{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.oc-t b{font-size:21px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.oc-t .ago{margin-left:auto; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+.oc-tags{display:flex; flex-wrap:wrap; gap:6px}
+.oc-tags .ic{color:var(--muted)}
+.oc-items{margin:0; padding:0; list-style:none; display:grid; gap:2px; font-size:15px; line-height:1.35}
+.oc-items li{display:flex; gap:8px} .oc-items .q{font-weight:800; font-variant-numeric:tabular-nums; flex:none; min-width:28px}
+.oc-items .more{color:var(--muted); font-weight:600}
+.oc-sum{display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--line)}
+.oc-sum .price{font-size:19px}
+.oc-sum small{font-size:14px; color:var(--muted); font-weight:700}
+.oc-f{display:flex; flex-wrap:wrap; gap:8px}
+.oc-f .pill{flex:1 1 auto; padding:0 14px}
+.oc-f .nx{flex:2 1 auto}
+.stt{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.stt .dot, .or-colh .dot{background:currentColor}
+.s-accepted{background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong)} .s-cooking{background:var(--ember); color:var(--on-ember)} .s-ready{background:var(--ok); color:var(--on-ok)}
+.s-on_way{background:var(--ink); color:var(--bg)} .s-done{background:var(--surface-3); color:var(--ink)} .s-cancelled{background:transparent; color:var(--danger); box-shadow:inset 0 0 0 1.5px currentColor}
+.c-accepted{color:var(--muted)} .c-cooking{color:var(--ember)} .c-ready{color:var(--ok)} .c-on_way{color:var(--ink)}
+.late-t{color:var(--warn); background:transparent; box-shadow:inset 0 0 0 1.5px currentColor}
+.late-t .ic{color:var(--warn) !important}
+
+/* detail sheet */
+.od{display:grid; gap:18px; padding:4px 0 8px}
+.od-steps{margin:0; padding:0; list-style:none; display:grid; gap:0}
+.od-steps li{display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:10px; align-items:center; min-height:40px; position:relative; color:var(--muted); font-weight:700}
+.od-steps li::before{content:""; width:14px; height:14px; border-radius:50%; justify-self:center; box-shadow:inset 0 0 0 2px var(--line-strong); background:var(--surface)}
+.od-steps li:not(:last-child)::after{content:""; position:absolute; left:13px; top:28px; height:calc(100% - 16px); width:2px; background:var(--line)}
+.od-steps li.done{color:var(--ink)}
+.od-steps li.done::before{background:var(--ok); box-shadow:none}
+.od-steps li.cur::before{background:var(--red); box-shadow:0 0 0 4px color-mix(in srgb, var(--red) 22%, transparent)}
+.od-steps li.cur{color:var(--ink); font-weight:800}
+.od-steps time{font-variant-numeric:tabular-nums; font-size:15px}
+.od-box{display:grid; gap:4px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.od-box .lb{font-size:14px; font-weight:700; color:var(--muted)}
+.od-who{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.od-who .tel{font-weight:800; font-variant-numeric:tabular-nums}
+.od-lines{display:grid}
+.od-line{display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:10px; align-items:start; padding:10px 0; border-top:1px solid var(--line)}
+.od-line:first-child{border-top:0}
+.od-line .q{font-weight:800; font-variant-numeric:tabular-nums}
+.od-line small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.od-tot .kv{padding:6px 0}
+.od-tot .kv.big{font-size:19px; font-weight:800; border-top:1px solid var(--line-strong); padding-top:10px}
+.od-tot dd{margin:0; font-weight:800; text-align:right}
+.od-tot dt{color:var(--muted); font-weight:600}
+.od-tot .big dt{color:var(--ink); font-weight:800}
+.od-reason{display:grid; gap:6px}
+/* поръчка по телефон */
+.po{display:grid; gap:18px; padding:4px 0 8px}
+.po .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+@container app (max-width:420px){ .po .two{grid-template-columns:minmax(0,1fr)} }
+.po-sec{border:0; margin:0; padding:0; display:grid; gap:10px; min-width:0}
+.po-sec legend{padding:0; margin:0 0 8px; font-weight:800; font-size:17px}
+.po .seg button{font-size:15px; min-height:48px; padding:0 6px; white-space:normal; line-height:1.15}
+.po-note{display:flex; gap:8px; align-items:flex-start; margin:0; font-size:15px; color:var(--muted); font-weight:600}
+.po-note .ic{margin-top:2px}
+.po-s{position:relative}
+.po-s .input{padding-right:118px}
+.po-clr{position:absolute; right:4px; top:2px; min-height:48px; padding:0 12px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:700; font-size:15px; display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+.po-clr[hidden]{display:none}
+.po-clr .ic{position:static !important; transform:none !important; color:inherit !important}
+.po-res{display:grid; gap:2px; max-height:340px; overflow-y:auto; overscroll-behavior:contain}
+.po-it{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:10px; align-items:center; min-height:56px; padding:4px 0; border-top:1px solid var(--line)}
+.po-it .nm{font-weight:700; line-height:1.3}
+.po-it .nm small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.po-it .pill{min-height:48px; padding:0 14px; font-size:15px}
+.po-out{color:var(--warn)}
+.po-band{margin:10px 0 2px; font-size:14px; font-weight:800; color:var(--muted)}
+.po-more{margin:4px 0; font-size:14px; color:var(--muted); font-weight:600}
+.po-chips{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 6px}
+.po-lines{display:grid; gap:0; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.po-lines h3{margin:0 0 6px; font-size:15px; font-weight:800; color:var(--muted)}
+.po-line{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:10px; align-items:center; min-height:56px; border-top:1px solid var(--line)}
+.po-line:first-of-type{border-top:0}
+.po-line .nm{font-weight:700; line-height:1.3}
+.po-line .nm small{display:block; font-size:14px; color:var(--ok); font-weight:700}
+.po-line .counter{background:var(--surface)}
+.po-sum .po-tot{font-size:19px; font-weight:800; border-top:1px solid var(--line-strong); padding-top:10px}
+.po-sum .po-tot dt{color:var(--ink); font-weight:800}
+@container app (max-width:420px){ .po-pay{grid-auto-flow:row} }
+/* в кода: причината за отказ в картата (клиентът я вижда в проследяването) */
+.oc-why{margin:0; padding:8px 12px; border-radius:14px; background:var(--surface-2); font-size:15px; line-height:1.35; color:var(--ink); overflow-wrap:anywhere}
+.oc-why b{font-weight:800}
+.po-it .counter{background:var(--surface-2)}
+[data-off] .sa-banner{margin:0 0 16px}
+/* „Към кухнята · 15,79 €“ на 360: бутонът се пренася, не излиза от листа */
+.or-po .sa-sfoot [data-x]{flex:0 1 auto}
+.or-po .sa-sfoot [data-ok]{flex:1 1 auto; min-width:0; white-space:normal; text-align:center}

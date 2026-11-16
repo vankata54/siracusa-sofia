@@ -487,7 +487,7 @@ export function createApp(opts: AppOpts) {
   menuRoutes(app, { core, staff, body, cookieOpts, mediaDir, publisher: (publisher = makePublisher()),
     rebuild: async () => { if (publisher) { const [m, site] = await Promise.all([core.menuEdit.effective(), siteFor()]); publisher.enqueue(m, site); } } });
   /* the admin, part 3 (server/routes/*.ts): the rights are in the core, a route passes the signed-in staff member */
-  const adm = { core, staff: (c: Context) => staff(c), body };
+  const adm = { core, staff: (c: Context) => staff(c), body, coreFor };
   ordersAdminRoutes(app, adm);
   reservationsAdminRoutes(app, adm);
   hallRoutes(app, adm);

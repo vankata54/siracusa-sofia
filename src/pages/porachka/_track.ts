@@ -410,8 +410,12 @@ export function startTracking(main: HTMLElement) {
       "<p>" + (closed ? hourTitle(SC.state()) + ". " + hourLine(SC.state()) + "." : "Щом поръчате, тук ще виждате на кой етап е поръчката и кога пристига.") + "</p>" +
       '<div class="acts"><a class="pill pill-red pill-lg pill-block" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + (closed ? "Поръчай за утре" : "Към менюто") + "</a></div></div></div>";
   }
+  /* the reason from the restaurant ("Откажи" in the admin asks for it, decision 16.11.2026); without one, the old text */
   function cancelledHTML() {
-    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2" tabindex="-1">Поръчката е отказана</h2><p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p><div class="acts">' + callBtn("pill pill-red pill-lg pill-block") + "</div></div></div>";
+    const why = (o() as { reason?: string }).reason;
+    return '<div class="shell"><div class="core empty state err"><span class="ill">' + ic("warning-circle", 44) + '</span><h2 class="h2" tabindex="-1">Поръчката е отказана</h2>' +
+      (why ? '<p class="why"><b>Причина:</b> ' + esc(why) + "</p><p>Съжаляваме. Ако имате въпрос, обадете ни се.</p>" : "<p>Съжаляваме. Обадете ни се и ще ви кажем какво се е случило.</p>") +
+      '<div class="acts">' + callBtn("pill pill-red pill-lg pill-block") + "</div></div></div>";
   }
 
   /* ---------- render ----------

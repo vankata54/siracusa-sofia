@@ -9,6 +9,8 @@ export interface AdminDeps {
   /** the signed-in staff member (no section: the core checks it) */
   staff: (c: Context) => Promise<StaffCtx>;
   body: (c: Context) => Promise<Record<string, any>>;
+  /** the core for this request: the preview clock of the page in the test mode (SC_PREVIEW_API=1), else `core` */
+  coreFor?: (c: Context) => Core;
 }
 /** a query value or undefined */
 export const qv = (c: Context, k: string): string | undefined => c.req.query(k) || undefined;
