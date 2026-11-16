@@ -144,7 +144,9 @@ test("@phone 360: no horizontal scroll, the cards and the profile", async ({ pag
 test("axe: no serious on „Клиенти“ (profiles, feedback, the profile sheet)", async ({ page, context }) => {
   await signIn(context, "admin");
   await open(page);
-  const serious = async () => (await new AxeBuilder({ page }).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id + ": " + v.nodes.map((n) => n.target.join(" ")).join(", "));
+  /* after the running transitions (a toast of a new online order from another test may be fading in: axe would read a half-transparent colour) */
+  const settle = () => page.waitForFunction(() => !document.getAnimations().some((a) => a.playState === "running"), undefined, { timeout: 5000 }).catch(() => undefined);
+  const serious = async () => (await settle(), await new AxeBuilder({ page }).analyze()).violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id + ": " + v.nodes.map((n) => n.target.join(" ")).join(", "));
   expect(await serious()).toEqual([]);
   await page.locator("[data-tab=feedback]").click();
   expect(await serious()).toEqual([]);
