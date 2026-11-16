@@ -33,9 +33,23 @@ export interface Dish {
   /* lunch-only fields */
   group?: string;
   lunch?: boolean;
+  /** menu editor (15.11.2026): a description under the title, a photo uploaded in the admin (/media/<sha256>.webp|jpg|png;
+      a data: URL only in the demo) */
+  desc?: string;
+  photo?: string;
+  /** only in Menu.removed: taken off the menu */
+  removed?: boolean;
 }
 
 export interface LunchRaw { id: string; group: string; n: string; p: number | null; /** live menu only (api.menu): sold out today */ out?: boolean }
+
+/** "Смени" (a side dish swap, e.g. at the Bertha oven): groups of options with a surcharge or none; hidden until the new menu */
+export interface SwapGroup { id: string; n: string; opts: { n: string; p: number }[]; cats: string[] }
+/** "Добави" and "Смени" per category and per dish (decision 15.11.2026): the dish wins over its category */
+export interface MenuOpts {
+  addon: { cats: string[]; dishes: Record<string, boolean> };
+  swap: { on: false; groups: SwapGroup[]; dishes: Record<string, string[]> };
+}
 
 export interface Menu {
   updated: string;
@@ -43,6 +57,12 @@ export interface Menu {
   cats: Category[];
   items: Dish[];
   lunch: { date: string; dayName: string; items: LunchRaw[] };
+  /** the admin's menu settings (missing in the generated menu.json: "Добави" for pizzas and burgers, ORDER_RULES.addonCats) */
+  opts?: MenuOpts;
+  /** dishes taken off the menu: kept for reference (old orders, the kitchen, a cart), never listed, searched or ordered */
+  removed?: Dish[];
+  /** old public addresses of the menu -> where they lead now (301), kept by the core on every publish */
+  redirects?: Record<string, string>;
 }
 
 export const MENU = raw as unknown as Menu;

@@ -1,6 +1,6 @@
 /* Menu filters, allergen exclusion and search (PAGES.md "Логика за менютата и филтрите"; port of menu.html).
    Search: lib/search.ts (by name, then „Съдържат ...“ by composition, English and Latin, „без ...“; decision 15.11.2026). */
-import { FILTERS, catById, isOut, type Dish, type Filter } from "./data.ts";
+import { FILTERS, catById, isOut, onMenuChange, type Dish, type Filter } from "./data.ts";
 
 /* nouns per category: [one, "Всички ..." (plural), count form after a number] (decision 12.11.2026: "10 предястия",
    "3 бургера", "3 хлебчета"; categories without a noun count as "ястия", never "вида"). [0] also feeds the search. */
@@ -30,6 +30,7 @@ import { scores, latin, qVariants, dl, searchDishes, type Searchable } from "./s
 export { latin, qVariants, dl };
 /** The dish as the search sees it: the category name and its noun also count as „name“ words („бургер“ finds „Чийзбургер ...“ in „Бургери“). */
 const SX = new Map<string, Searchable>();
+onMenuChange(() => SX.clear());
 export function searchable(x: Dish): Searchable {
   let s = SX.get(x.id);
   if (!s) { const c = catById[x.cat]; s = { id: x.id, n: x.n, comp: x.comp, al: x.al, t: x.t, kw: (c ? c.n : "") + " " + (NOUN[x.cat] && x.cat !== "hlebcheta" ? NOUN[x.cat][0] : "") + " " + (x.group || "") }; SX.set(x.id, s); }

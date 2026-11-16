@@ -26,6 +26,10 @@ export interface Ctx {
   noLimits?: boolean;
   /** Web Push sender (the server with VAPID keys in .env); missing in the demo and the tests: no push */
   push?: import("./push.ts").PushSender;
+  /** the menu editor (core/menu-edit.ts): the live menu changed (publish, rollback, today's lunch menu); the server rebuilds the site */
+  onMenu?: (menu: import("../data/menu.ts").Menu, kind: "publish" | "rollback" | "lunch" | "tick") => void;
+  /** the server: does an uploaded photo (/media/<sha256>.<ext>) exist; missing in the demo and the tests */
+  mediaExists?: (url: string) => boolean;
   /** the tracking address must carry the order's key (/porachka/1042-k7f3m2pq/); off until the pages pass it */
   requireTrackKey?: boolean;
 }

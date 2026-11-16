@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { readEnv, staffFromEnv } from "./scripts/env.mjs";
 import { iconGroups } from "./scripts/icon-groups.mjs";
 import { buildChecks } from "./scripts/build-checks.mjs";
+import fs from "node:fs";
 
 const DEMO = process.env.DEMO === "1";
 /* modules of the shared runtime (keep in sync with the imports of src/client/sc.ts) */
@@ -24,6 +25,26 @@ function demoStaff() {
 
 const SITE = env.SITE_URL || "https://siracusa-sofia.com";
 
+/* MENU_FILE (the server's rebuild after "Публикувай" in the admin, server/publish.ts): the published menu takes the place of
+   src/data/menu.json and src/lib/lunch-date.ts in this build; scripts/build-checks.mjs reads the same file. */
+function menuFile() {
+  const f = process.env.MENU_FILE;
+  return {
+    name: "siracusa-menu-file",
+    enforce: "pre",
+    load(id) {
+      if (!f) return null;
+      const p = id.split("?")[0].replace(/\\/g, "/");
+      if (p.endsWith("/src/data/menu.json")) return fs.readFileSync(f, "utf8");
+      if (p.endsWith("/src/lib/lunch-date.ts")) {
+        const m = JSON.parse(fs.readFileSync(f, "utf8"));
+        return "export const LUNCH_DATE = " + JSON.stringify(m.lunch.date) + ";\nexport const LUNCH_DAY_NAME = " + JSON.stringify(m.lunch.dayName || "") + ";\n";
+      }
+      return null;
+    },
+  };
+}
+
 export default defineConfig({
   site: SITE,
   /* after the build: the runtime budget (30 000 B) and robots.txt + sitemap.xml (scripts/build-checks.mjs) */
@@ -35,7 +56,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
   vite: {
     /* import "sc-icons:moon,truck,info": the page's icons in ONE module inside the page's own chunk (scripts/icon-groups.mjs) */
-    plugins: [iconGroups()],
+    plugins: [menuFile(), iconGroups()],
     /* the shared runtime (src/client/sc.ts and the small lib modules it needs) is ONE chunk on every page */
     build: {
       rollupOptions: {

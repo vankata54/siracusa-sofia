@@ -8,7 +8,8 @@ import { hourNote, type HourState } from "../../../lib/ui.ts";
 import "sc-icons:caret-right,clock,heart,minus,plus,sliders-horizontal"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 /** What the browser needs about the dish (embedded in the page as JSON). */
-export interface DishLite { id: string; n: string; p: number; cat: string; comp: string; g: string; per100?: boolean; out?: boolean }
+/** add: "Добави" for this dish from the admin's menu settings (lib/pricing.ts takesAddons, set at build) */
+export interface DishLite { id: string; n: string; p: number; cat: string; comp: string; g: string; per100?: boolean; out?: boolean; add?: boolean }
 /** A paid add-on (category "dobavki"). */
 export interface Addon { id: string; n: string; p: number }
 
@@ -16,8 +17,9 @@ export interface Addon { id: string; n: string; p: number }
 export const endDot = (s: string): string => (/[.!?…]$/.test(s.trim()) ? s.trim() : s.trim() + ".");
 export const compList = (d: { comp: string }): string[] => (d.comp ? d.comp.split(",").map((s) => s.trim()).filter(Boolean) : []);
 export const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-/** Categories where "Добави" makes sense: one list for the page, the cart and the core (ORDER_RULES.addonCats). */
-export const canAdd = (d: { cat: string }): boolean => (ORDER_RULES.addonCats as readonly string[]).indexOf(d.cat) > -1;
+/** "Добави" for the dish: the flag from the build (the admin's menu settings, the same rule as the cart and the core:
+    lib/pricing.ts takesAddons); without it the default categories (ORDER_RULES.addonCats). */
+export const canAdd = (d: { cat: string; add?: boolean }): boolean => (typeof d.add === "boolean" ? d.add : (ORDER_RULES.addonCats as readonly string[]).indexOf(d.cat) > -1);
 
 /* ---------- modifiers: rem = {index of the ingredient: true}, add = {addon id: true} ---------- */
 export type Rem = Record<string, boolean>;

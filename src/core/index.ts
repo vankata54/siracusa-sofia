@@ -13,6 +13,8 @@ import * as feedback from "./feedback.ts";
 import * as menu from "./menu.ts";
 import * as push from "./push.ts";
 import * as adminMod from "./admin.ts";
+import * as menuEdit from "./menu-edit.ts";
+import * as lunchMod from "./lunch.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -23,6 +25,9 @@ export { publicOffice, officeDue, officeDueAt, OFFICE_MSG, type PublicOffice } f
 export { normCode, CODE_MSG } from "./codes.ts";
 export { DEFAULT_SETTINGS } from "./settings.ts";
 export { outNow, type SoldOutToday, type SoldOutDoc } from "./menu.ts";
+export { MENU_MSG, DEMO_PHOTO_MAX, menuPages, type DraftView, type MenuChanges, type FieldChange, type PublishState } from "./menu-edit.ts";
+export { LUNCH_MSG, LUNCH_GROUPS, LUNCH_BOSS, PIN_FAILS_DEVICE, PIN_FAILS_PERSON, type LunchView, type LunchItem, type LunchFav } from "./lunch.ts";
+export { removedMsg } from "./orders.ts";
 export { FEEDBACK_MSG, type Feedback, type FeedbackInput } from "./feedback.ts";
 export { SECTIONS, ALL_SECTIONS, DEFAULT_ROLES, ROLE_IDS, STAFF_APP, homeOf, LOGIN_MAX_FAILS, type StaffCtx, type PublicStaff } from "./staff.ts";
 export { NOTE_MSG, scrubPersonal, isSiteUrl, type NoteInput, type NoteFilter } from "./notes.ts";
@@ -50,6 +55,17 @@ export function createCore(ctx: Ctx) {
     codes: bind(ctx, { check: codes.checkCode }),
     settings: bind(ctx, { get: settings.getSettings, update: settings.updateSettings }),
     menu: bind(ctx, { soldOutToday: menu.soldOutToday, setSoldOut: menu.setSoldOut }),
+    /* the menu editor: the live menu, one shared draft with a version, publish / rollback (core/menu-edit.ts) */
+    menuEdit: bind(ctx, {
+      boot: menuEdit.boot, live: menuEdit.getLive, effective: menuEdit.effectiveMenu, site: menuEdit.siteMenu, refresh: menuEdit.refreshLive,
+      getDraft: menuEdit.getDraft, saveDraft: menuEdit.saveDraft, discardDraft: menuEdit.discardDraft, publish: menuEdit.publish,
+      rollback: menuEdit.rollback, publishState: menuEdit.publishState,
+    }),
+    /* the lunch menu: weekly schedule, publishing by day, favourites, the PIN (core/lunch.ts) */
+    lunch: bind(ctx, {
+      get: lunchMod.getLunch, saveDay: lunchMod.saveDay, publish: lunchMod.publishDays, saveFav: lunchMod.saveFav, removeFav: lunchMod.removeFav,
+      addDish: lunchMod.addDish, setPin: lunchMod.setPin, unlock: lunchMod.unlock, lock: lunchMod.lock, pinState: lunchMod.pinState,
+    }),
     feedback: bind(ctx, { create: feedback.createFeedback, list: feedback.listFeedback }),
     subscriptions: bind(ctx, { subscribe: res.subscribe }),
     customers: bind(ctx, {

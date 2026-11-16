@@ -1,7 +1,7 @@
 /* Dish page (/menu/<кат>/<ястие>/): HTML pieces that need the menu. The server ([yastie].astro frontmatter) uses all of it;
    the browser loads this module only later, for "Върви добре с" when the cart is not empty (the light part is _dish-ui.ts).
    Port of design/pages/dish.html (design/PAGES.md "dish.html"). Pure string renderers: no DOM. */
-import { items, byId, catById, inCat, isOut, ALLERGENS, allergenName, COURSE_NAME, RESTAURANT, type Dish } from "../../../lib/data.ts";
+import { items, byId, catById, inCat, isOut, takesAddons, ALLERGENS, allergenName, COURSE_NAME, RESTAURANT, type Dish } from "../../../lib/data.ts";
 import { pic, plusBtn } from "../../../lib/render.ts";
 import { ic } from "../../../lib/icons.ts";
 import { callBtn } from "../../../lib/ui.ts";
@@ -9,7 +9,7 @@ import { esc, fmt } from "../../../lib/format.ts";
 import { url } from "../../../lib/routes.ts";
 import { suggest, type ManualPairs } from "../../../lib/suggest.ts";
 import { ORDER_RULES } from "../../../lib/consts.ts";
-import { compList, cap, canAdd, endDot, type Addon, type DishLite } from "./_dish-ui.ts";
+import { compList, cap, endDot, type Addon, type DishLite } from "./_dish-ui.ts";
 import "sc-icons:caret-down,caret-right,info,phone"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 
 export * from "./_dish-ui.ts";
@@ -26,10 +26,10 @@ export function catOf(d: Dish): CatRef {
   const c = catById[d.cat] || { id: d.cat, n: "Меню" };
   return { id: c.id, n: c.n, href: url.cat(c.id), back: url.menu(c.id) };
 }
-export const hasMods = (d: Dish): boolean => !isOut(d) && (compList(d).length > 0 || canAdd(d));
+export const hasMods = (d: Dish): boolean => !isOut(d) && (compList(d).length > 0 || takesAddons(d));
 /** What the page script needs (JSON in the page), so the browser does not load the whole menu at start. */
 export function dishLite(d: Dish): DishLite {
-  return { id: d.id, n: d.n, p: d.p, cat: d.cat, comp: d.comp, g: d.g, ...(d.per100 ? { per100: true } : {}), ...(isOut(d) ? { out: true } : {}) };
+  return { id: d.id, n: d.n, p: d.p, cat: d.cat, comp: d.comp, g: d.g, ...(d.per100 ? { per100: true } : {}), ...(isOut(d) ? { out: true } : {}), add: takesAddons(d) };
 }
 
 /* ---------- pairing / similar cards ---------- */

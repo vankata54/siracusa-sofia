@@ -3,7 +3,7 @@
    The price ALWAYS comes from the menu: the unit price is the dish price + the add-ons named in `mods`
    ("+ Кашкавал" -> the dish "Кашкавал" of the "dobavki" category). `extra`, `p` and `n` saved in a cart line are
    never used for the order (they are only a hint for the runtime without the menu). */
-import { byId, isOut, items, ORDER_RULES, type Dish, type Zone } from "./data.ts";
+import { byId, findDish, isOut, items, onMenuChange, takesAddons, ORDER_RULES, type Dish, type Zone } from "./data.ts";
 import { state, eta, busyExtra } from "./status.ts";
 import { minutes, type ClockInput } from "./time.ts";
 import { hhmm } from "./format.ts";
@@ -15,7 +15,9 @@ import { leadMin } from "./slots.ts";
 export { LUNCH_PICKUP_DISCOUNT };
 export const FEE_MISSING = "[ЛИПСВА: такса в €]";
 
-export interface PricedRow { key: string; x: Dish; q: number; mods: string[]; unit: number; tot: number; out: boolean; disc: number; badMod: string | null }
+/** removed: the dish was taken off the menu (kept for reference): the line is shown with "… вече не е в менюто", never counted
+    or sent (out is true for it too) */
+export interface PricedRow { key: string; x: Dish; q: number; mods: string[]; unit: number; tot: number; out: boolean; disc: number; badMod: string | null; removed?: boolean }
 export interface Priced {
   mode: Mode; rows: PricedRow[]; n: number; outN: number; sub: number; disc: number; fee: number | null; feeUnknown: boolean;
   total: number; hasLunch: boolean; hasTrad: boolean; deliveryOk: boolean; closed: boolean;
@@ -46,6 +48,7 @@ export function zoneFee(z: Zone | null): number | null {
 /* ---------- add-ons and removals ---------- */
 const norm = (s: string) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
 let addonIdx: Record<string, Dish> | null = null;
+onMenuChange(() => { addonIdx = null; });
 /** Add-ons by id and by name (lower case): only the "dobavki" category. */
 export function addonLookup(): Record<string, Dish> {
   if (addonIdx) return addonIdx;
@@ -54,7 +57,7 @@ export function addonLookup(): Record<string, Dish> {
   return (addonIdx = m);
 }
 export const ingredients = (x: Dish): string[] => (x.comp ? x.comp.split(",").map((s) => s.trim()).filter(Boolean) : []);
-export const takesAddons = (x: Dish): boolean => (ORDER_RULES.addonCats as readonly string[]).indexOf(x.cat) > -1;
+export { takesAddons };
 
 /** Checks the modifications of one line against the menu. extra = the add-ons' prices from the menu.
     bad = the first modification that is not allowed (unknown add-on, an ingredient the dish does not have, a duplicate). */
@@ -92,11 +95,12 @@ export function price(cart: Cart, opts: PriceOpts = {}): Priced {
   const rows: PricedRow[] = [];
   let sub = 0, n = 0, outN = 0, hasLunch = false, hasTrad = false;
   for (const l of cart.lines) {
-    const x = byId[l.id];
+    const x = findDish(l.id);
     if (!x) continue;
+    const gone = !Object.prototype.hasOwnProperty.call(byId, l.id);
     const pm = parseMods(x, l.mods || []);
     const unit = round2(x.p + pm.extra);
-    const r: PricedRow = { key: l.key, x, q: l.q, mods: l.mods, unit, tot: round2(unit * l.q), out: isOut(x), disc: 0, badMod: pm.bad };
+    const r: PricedRow = { key: l.key, x, q: l.q, mods: l.mods, unit, tot: round2(unit * l.q), out: gone || isOut(x), disc: 0, badMod: pm.bad, ...(gone ? { removed: true } : {}) };
     rows.push(r);
     if (r.out) { outN++; continue; }
     n += l.q; sub += r.tot;

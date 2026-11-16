@@ -8,7 +8,9 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
 import { bodyLimit } from "hono/body-limit";
 import { getConnInfo } from "@hono/node-server/conninfo";
-import { openDb, seedMenu, readMenu } from "./db/index.ts";
+import { openDb, seedMenu } from "./db/index.ts";
+import { menuRoutes } from "./routes/menu.ts";
+import { createPublisher, astroBuild, menuHash, type BuildFn, type Publisher } from "./publish.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { webPushSender, type Vapid } from "./push.ts";
 import { scryptHasher } from "./hasher.ts";
@@ -39,6 +41,11 @@ export interface AppOpts {
   /** Web Push: the VAPID keys from .env (server/push.ts vapidFromEnv); without them push is off. pushSender: tests only. */
   vapid?: Vapid | null;
   pushSender?: PushSender;
+  /** the rebuild of the site after "Публикувай" of the menu (server/publish.ts): default `astro build` in this folder;
+      tests pass their own function (no real build); null = no rebuild */
+  build?: BuildFn | null;
+  /** uploaded photos (default: data/media next to the database) */
+  mediaDir?: string;
 }
 
 /* a real-time subscriber: staff (cookie) get everything; others only public events and the order / office they asked for */
@@ -68,12 +75,19 @@ export function createApp(opts: AppOpts) {
   const { sqlite, db } = openDb(opts.dbFile);
   seedMenu(db);
   const clients = new Set<Sub>();
+  const dataDir = opts.dbFile === ":memory:" ? path.resolve("data") : path.dirname(path.resolve(opts.dbFile));
+  const mediaDir = path.resolve(opts.mediaDir || path.join(dataDir, "media"));
+  let publisher: Publisher | null = null;
   const ctx: Ctx = {
     repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
     emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
     push: opts.pushSender || (opts.vapid ? webPushSender(opts.vapid) : undefined),
+    /* the live menu changed (publish, rollback, today's lunch menu): rebuild the site, one build at a time */
+    onMenu: (m) => { if (publisher) publisher.enqueue(m); },
+    mediaExists: (u) => { const m = /^\/media\/([a-f0-9]{64}\.(?:webp|jpg|png))$/.exec(u); return !!m && fs.existsSync(path.join(mediaDir, m[1])); },
   };
   const core = createCore(ctx);
+  const booted = core.menuEdit.boot(); /* the published menu into this process (src/lib/data.ts) */
   void core.settings.get(); /* kitchen minutes and "Натоварено" into this process */
   /* preview core for one request (tests only): the page's clock, the lunch menu as today's */
   const coreFor = (c: Context): Core => {
@@ -128,7 +142,11 @@ export function createApp(opts: AppOpts) {
   };
 
   app.onError((err, c) => {
-    if (err instanceof CoreError) { const x = err as CoreError & { fields?: unknown; retryIn?: number; left?: number }; return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}), ...(x.left != null ? { left: x.left } : {}) }, err.status as 400); }
+    if (err instanceof CoreError) {
+      const x = err as CoreError & { fields?: unknown; retryIn?: number; left?: number; lines?: string[]; pinSet?: boolean; version?: number };
+      return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}), ...(x.left != null ? { left: x.left } : {}),
+        ...(x.lines ? { lines: x.lines } : {}), ...(x.pinSet != null ? { pinSet: x.pinSet } : {}), ...(x.version != null ? { version: x.version } : {}) }, err.status as 400);
+    }
     console.error(err);
     return c.json({ error: "server", message: "Нещо се обърка. Опитайте пак." }, 500);
   });
@@ -141,7 +159,8 @@ export function createApp(opts: AppOpts) {
       try { host = origin ? new URL(origin).host : ""; } catch { host = "?"; }
       if (origin && host !== c.req.header("host")) return c.json({ error: "origin", message: "Забранен адрес." }, 403);
       /* body size: 2 MB for a note with a screenshot, 64 KB for everything else (never a 2 MB password through scrypt) */
-      const max = /^\/api\/admin\/notes/.test(c.req.path) ? 2_100_000 : /^\/api\/admin\/media/.test(c.req.path) ? 5_300_000 : 65_536, len = +(c.req.header("content-length") || 0);
+      /* a photo of the menu up to 5 MB, the whole draft of the menu up to 2 MB */
+      const max = c.req.path === "/api/admin/media" ? 5 * 1024 * 1024 + 1024 : /^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? 2_100_000 : 65_536, len = +(c.req.header("content-length") || 0);
       if (len > max) return c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
     }
     c.header("Cache-Control", "no-store");
@@ -162,11 +181,12 @@ export function createApp(opts: AppOpts) {
      2 MB for a note with a screenshot, 5 MB for a photo of the menu, 64 KB for everything else */
   const tooLarge = (c: Context) => c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
   const LIMITS = { small: bodyLimit({ maxSize: 65_536, onError: tooLarge }), notes: bodyLimit({ maxSize: 2_100_000, onError: tooLarge }), media: bodyLimit({ maxSize: 5_300_000, onError: tooLarge }) };
-  app.use("/api/*", (c, next) => (["GET", "HEAD", "OPTIONS"].includes(c.req.method) ? next() : (/^\/api\/admin\/notes/.test(c.req.path) ? LIMITS.notes : /^\/api\/admin\/media/.test(c.req.path) ? LIMITS.media : LIMITS.small)(c, next)));
+  app.use("/api/*", (c, next) => (["GET", "HEAD", "OPTIONS"].includes(c.req.method) ? next() : (/^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? LIMITS.notes : /^\/api\/admin\/media/.test(c.req.path) ? LIMITS.media : LIMITS.small)(c, next)));
 
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
-  app.get("/api/menu", async (c) => c.json(readMenu(db, await core.menu.soldOutToday())));
+  /* the live menu from the core (published in the admin, else the built-in one) with today's "Изчерпано днес" */
+  app.get("/api/menu", async (c) => c.json(await core.menuEdit.site()));
   app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), ...publicSettings(st) }); });
   app.get("/api/offers", (c) => c.json(offers()));
   app.get("/api/events", (c) => c.json(eventsJson()));
@@ -442,12 +462,15 @@ export function createApp(opts: AppOpts) {
     setInterval(sweep, 60_000).unref();
   }
 
+  /* the menu editor, photos, the lunch menu (server/routes/menu.ts) */
+  menuRoutes(app, { core, staff, body, cookieOpts, mediaDir, publisher: (publisher = makePublisher()) });
+
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 
   /* ---------- static files from dist/ ---------- */
   const file = (rel: string): string | null => {
     const p = path.resolve(dist, "." + rel);
-    if (!p.startsWith(dist)) return null;
+    if (!p.startsWith(dist) || /\/\./.test(rel)) return null; /* never a dot file (.menu-hash of the rebuild) */
     try { const st = fs.statSync(p); if (st.isFile()) return p; if (st.isDirectory() && fs.existsSync(path.join(p, "index.html"))) return path.join(p, "index.html"); } catch { /* missing */ }
     return null;
   };
@@ -463,14 +486,16 @@ export function createApp(opts: AppOpts) {
     if (!enc) return c.body(fs.readFileSync(p), code as 200);
     /* compressed once per file version, kept in memory (the build is a few MB) */
     let z = zcache.get(p);
-    if (!z || z.mtime !== st.mtimeMs) { z = { mtime: st.mtimeMs }; zcache.set(p, z); }
+    if (!z || z.mtime !== st.mtimeMs + st.size) { z = { mtime: st.mtimeMs + st.size }; zcache.set(p, z); }
     const buf = z[enc] || (z[enc] = compressBuf(fs.readFileSync(p), enc));
     c.header("Content-Encoding", enc);
     return c.body(new Uint8Array(buf), code as 200);
   };
   /* old dish addresses (cut ids) -> the new ones: the table comes from the build (scripts/build-checks.mjs, decision 12.11.2026) */
+  /* read again after a rebuild of the menu (server/publish.ts onSwap): removed dishes -> their category (decision 15.11.2026) */
   let moved: Record<string, string> = {};
-  try { moved = JSON.parse(fs.readFileSync(path.join(dist, "redirects.json"), "utf8")); } catch { /* no table: nothing moved */ }
+  const loadMoved = () => { try { moved = JSON.parse(fs.readFileSync(path.join(dist, "redirects.json"), "utf8")); } catch { moved = {}; /* no table: nothing moved */ } };
+  loadMoved();
   app.get("*", (c) => {
     const u = new URL(c.req.url);
     let rel = decodeURIComponent(u.pathname);
@@ -488,5 +513,20 @@ export function createApp(opts: AppOpts) {
     return nf ? send(c, nf, 404) : c.text("Not found", 404);
   });
 
-  return { app, core, sqlite, db, sweep };
+  /* the rebuild queue (server/publish.ts); a new dist: the 301 table, the site's pages and the compressed files again */
+  function makePublisher(): Publisher | null {
+    const build = opts.build === null ? null : opts.build || (process.env.VITEST ? null : astroBuild(process.cwd()));
+    if (!build) return null;
+    return createPublisher({ distDir: opts.distDir, dataDir, build, onSwap: () => { loadMoved(); routesCache = null; zcache.clear(); } });
+  }
+  /* a published menu that the site on disk was not built with (e.g. a fresh `npm run build` after a deploy): rebuild once */
+  void booted.then(async () => {
+    if (!publisher) return;
+    const live = await core.menuEdit.live(), eff = await core.menuEdit.effective();
+    if ((live.version > 0 || eff.lunch.date !== live.menu.lunch.date) && publisher.builtHash() !== menuHash(eff)) publisher.enqueue(eff);
+  }).catch((e) => console.error("menu boot", e));
+  /* today's published lunch menu starts at midnight (Sofia): checked every 5 minutes, the site rebuilds when it changed */
+  if (opts.timers !== false) setInterval(() => { core.menuEdit.refresh("tick").catch((e) => console.error("menu refresh", e)); }, 5 * 60_000).unref();
+
+  return { app, core, sqlite, db, sweep, publisher: () => publisher };
 }

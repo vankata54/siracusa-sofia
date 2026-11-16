@@ -25,7 +25,7 @@ export { hasStreet };
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 import { outNow, soldOutToday, type SoldOutToday } from "./menu.ts";
 import { state } from "../lib/status.ts";
-import { byId, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
+import { byId, removedById, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
 import { hhmm, normPhone } from "../lib/format.ts";
 
 export const FIRST_ORDER_NO = 1042;
@@ -76,6 +76,12 @@ export const MSG = {
   addrStreet: "Добавете улица или блок, например „Дружба 2, бл. 311“, за да ви намери шофьорът.",
 };
 
+/** "Шкембе вече не е в менюто." / "Шкембе и Таратор вече не са в менюто." */
+export function removedMsg(names: string[]): string {
+  const u = [...new Set(names)];
+  return u.length === 1 ? u[0] + " вече не е в менюто." : u.slice(0, -1).join(", ") + " и " + u[u.length - 1] + " вече не са в менюто.";
+}
+
 function invalid(fields: Record<string, string>): never {
   throw Object.assign(new CoreError("invalid", "Проверете полетата.", 422), { fields });
 }
@@ -92,9 +98,16 @@ export function checkLines(ctx: Ctx, raw: unknown, mode: Mode, today: SoldOutTod
   if (!lines.length) throw new CoreError("empty", MSG.empty);
   if (lines.length > ORDER_RULES.maxLines) throw new CoreError("too_many", MSG.lines, 422);
   const out: Cart["lines"] = [];
+  /* a dish taken off the menu (decision 15.11.2026): refused by name; `lines` / `fields` tell the cart which line it is */
+  const gone = lines.map((l0, i) => ({ i, id: l0 && typeof l0 === "object" ? (l0 as { id?: unknown }).id : undefined }))
+    .filter((g) => typeof g.id === "string" && !Object.prototype.hasOwnProperty.call(byId, g.id) && Object.prototype.hasOwnProperty.call(removedById, g.id));
+  if (gone.length) {
+    const names = gone.map((g) => removedById[g.id as string].n), msg = removedMsg(names);
+    throw Object.assign(new CoreError("removed", msg, 409), { lines: gone.map((g) => g.id as string), fields: Object.fromEntries(gone.map((g) => ["lines." + g.i, removedById[g.id as string].n + " вече не е в менюто."])) });
+  }
   for (const l0 of lines) {
     const l = (l0 && typeof l0 === "object" ? l0 : {}) as { id?: unknown; q?: unknown; mods?: unknown };
-    const x = typeof l.id === "string" ? byId[l.id] : undefined;
+    const x = typeof l.id === "string" && Object.prototype.hasOwnProperty.call(byId, l.id) ? byId[l.id] : undefined;
     if (!x) throw new CoreError("unknown_item", MSG.unknown, 422);
     const q = typeof l.q === "string" && /^\d+$/.test(l.q) ? +l.q : l.q;
     if (typeof q !== "number" || !Number.isInteger(q) || q < 1 || q > ORDER_RULES.maxQty) throw new CoreError("bad_qty", MSG.qty, 422);
@@ -287,8 +300,8 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
   if (by && !stepAllowed(o, status, by)) throw new CoreError("bad_step", "Тази стъпка не е позволена за поръчката сега. Опреснете страницата.", 409);
-  /* the same status again (two people pressed it): nothing to write, no line in the log */
-  if (o.status === status) return o;
+  /* the same status again (two people pressed it): nothing to write, no line in the log; the pages still hear it once more */
+  if (o.status === status) { emit(ctx, "order.status", { no: o.no, status, at: (o.times && o.times[status]) || o.updatedAt }, { order: o.no }); return o; }
   const now = iso(ctx);
   if (status === "cancelled" && o.status !== "cancelled") o.prevStatus = o.status;
   else if (status !== "cancelled") delete o.prevStatus;

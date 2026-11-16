@@ -9,7 +9,7 @@ import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { price, pickupSlots, pickupToday, slotBusy, type Priced, type PricedRow } from "../../lib/pricing.ts";
 import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
-import type { Dish } from "../../lib/data.ts";
+import { removedById, type Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { LUNCH_DATE } from "../../lib/lunch.ts";
@@ -201,7 +201,9 @@ export function start(): void {
       '<div class="ln-info"><a class="ln-name" href="' + lineHref(x) + '">' + esc(x.n) + '</a><span class="ln-sub">' + sub + "</span>" + (tags ? '<div class="ln-tags">' + tags + "</div>" : "") + "</div>" +
       '<div class="ln-act">' + (out ? "" : counter) + '<button class="ln-rm" type="button" data-act="rm" data-key="' + k + '" data-fk="rm-' + k + '">' + ic("trash", 18) + 'Махни<span class="vh"> ' + esc(x.n) + '</span></button><span class="ln-tot">' + pr + "</span></div>" +
       (stale ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Не се брои.</b> Менюто е от " + lunchDay() + ", днес не го предлагаме.</span></div>" : "") +
-      (out && !stale ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Изчерпано днес.</b> Няма да го включим в поръчката." + (sim ? " Подобно: " + esc(sim.n) + ', <span class="price">' + fmt(sim.p) + "</span>." : "") + "</span>" + (sim ? '<button class="pill pill-ink" type="button" data-act="swap" data-key="' + k + '" data-id="' + sim.id + '">' + ic("arrow-right", 18) + "Смени с " + esc(sim.n) + "</button>" : "") + "</div>" : "") +
+      /* a dish taken off the menu (decision 15.11.2026): never counted or sent; the core refuses it with "removed" */
+      (r.removed ? '<div class="ln-outmsg">' + ic("info", 18) + "<span><b>" + esc(x.n) + " вече не е в менюто.</b> Няма да го включим в поръчката.</span></div>" : "") +
+      (out && !stale && !r.removed ? '<div class="ln-outmsg">' + ic("clock", 18) + "<span><b>Изчерпано днес.</b> Няма да го включим в поръчката." + (sim ? " Подобно: " + esc(sim.n) + ', <span class="price">' + fmt(sim.p) + "</span>." : "") + "</span>" + (sim ? '<button class="pill pill-ink" type="button" data-act="swap" data-key="' + k + '" data-id="' + sim.id + '">' + ic("arrow-right", 18) + "Смени с " + esc(sim.n) + "</button>" : "") + "</div>" : "") +
       "</li>";
   }
 
@@ -642,7 +644,7 @@ export function start(): void {
     try {
       const o = await api.orders.create({
         /* sold-out lines are shown as "Не се брои" and are not sent (the core refuses them with sold_out) */
-        cart: { ...SC.cart.get(), lines: SC.cart.lines().filter((l) => { const x = SC.byId[l.id]; return !x || !(SC.isOut(x) || (x.lunch && I.stale.length)); }), mode: I.mode },
+        cart: { ...SC.cart.get(), lines: SC.cart.lines().filter((l) => { const x = SC.byId[l.id]; return !removedById[l.id] && (!x || !(SC.isOut(x) || (x.lunch && I.stale.length))); }), mode: I.mode },
         zone: deliv ? D.zone : undefined,
         addr: deliv ? D.addr + (D.addrMore ? ", " + D.addrMore : "") : undefined,
         pay: D.pay, name: String(D.name).trim(), phone: D.phone,
@@ -691,7 +693,7 @@ export function start(): void {
         P.err = ""; go(1); return true; /* step 1 shows the limit with the phone (the cart itself is over it) */
       case "throttled":
         P.err = "throttled"; P.errMsg = e.message; render({ keepScroll: true }); focusErr(); return true;
-      case "sold_out": case "unknown_item": case "bad_qty": case "bad_mod": case "too_many": case "empty":
+      case "sold_out": case "removed": case "unknown_item": case "bad_qty": case "bad_mod": case "too_many": case "empty":
         P.err = ""; P.flash = { step: 1, kind: "warn", title: "Проверете количката", text: esc(e.message) }; SC.toast(e.message); go(1); return true;
     }
     return false;

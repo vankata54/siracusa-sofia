@@ -65,18 +65,39 @@ export function seoFiles(dir, site, demo) {
   return { urls: uniq.length };
 }
 
-/** Old dish addresses (cut ids) -> new ones (slug), decision 12.11.2026. Server build: writes redirects.json for the 301s
-    of server/app.ts and checks that every new address was built and no old one was. Demo build (no server): checks
-    that every old address is a copy with canonical to the new one. */
-export function dishRedirects(dir, site, demo) {
-  const menu = JSON.parse(fs.readFileSync(fileURLToPath(new URL("../src/data/menu.json", import.meta.url)), "utf8"));
+/** the menu the build used: MENU_FILE (the server's rebuild after "Публикувай", server/publish.ts) or src/data/menu.json */
+export function buildMenu() {
+  const f = process.env.MENU_FILE || fileURLToPath(new URL("../src/data/menu.json", import.meta.url));
+  return JSON.parse(fs.readFileSync(f, "utf8"));
+}
+
+/** The 301 table of the menu (redirects.json): old dish addresses (cut ids) -> new ones (slug), decision 12.11.2026, and the
+    addresses the menu editor took off the site (menu.redirects: a removed dish -> its category or /menu/, a moved dish ->
+    its new address, an emptied category -> /menu/; decision 15.11.2026). Only dishes in a shown category have a page.
+    @returns {Record<string, string>} */
+export function redirectMap(menu) {
+  const used = new Set(menu.items.map((x) => x.cat)), known = new Set(menu.cats.map((c) => c.id));
+  /** @type {Record<string, string>} */
   const map = {};
-  for (const x of menu.items) if (x.slug) map["/menu/" + x.cat + "/" + x.id + "/"] = "/menu/" + x.cat + "/" + x.slug + "/";
+  for (const x of menu.items) if (x.slug && known.has(x.cat) && used.has(x.cat)) map["/menu/" + x.cat + "/" + x.id + "/"] = "/menu/" + x.cat + "/" + x.slug + "/";
+  for (const [from, to] of Object.entries(menu.redirects || {})) if (!map[from]) map[from] = to;
+  return map;
+}
+
+/** Server build: writes redirects.json for the 301s of server/app.ts and checks that every new address was built and no old
+    one was. Demo build (no server): checks that every old address of a cut id is a copy with canonical to the new one.
+    Both: an empty category has no page (decision 15.11.2026). */
+export function dishRedirects(dir, site, demo) {
+  const menu = buildMenu();
+  const map = redirectMap(menu);
   const html = (p) => path.join(dir, p, "index.html");
+  const used = new Set(menu.items.map((x) => x.cat));
+  for (const c of menu.cats) if (!used.has(c.id) && fs.existsSync(html("/menu/" + c.id + "/"))) throw new Error("build-checks: the empty category /menu/" + c.id + "/ was built");
+  const slugs = new Set(menu.items.filter((x) => x.slug).map((x) => "/menu/" + x.cat + "/" + x.id + "/"));
   for (const [from, to] of Object.entries(map)) {
-    if (!fs.existsSync(html(to))) throw new Error("build-checks: the dish page " + to + " was not built");
+    if (!fs.existsSync(html(to))) throw new Error("build-checks: the page " + to + " (the target of " + from + ") was not built");
     if (!demo && fs.existsSync(html(from))) throw new Error("build-checks: the old address " + from + " was built; the server answers it with 301");
-    if (demo) {
+    if (demo && slugs.has(from)) {
       const h = fs.existsSync(html(from)) ? fs.readFileSync(html(from), "utf8") : "";
       if (!h.includes('<link rel="canonical" href="' + site.replace(/\/$/, "") + to + '"')) throw new Error("build-checks: the demo copy " + from + " has no canonical to " + to);
     }

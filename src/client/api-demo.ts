@@ -31,6 +31,8 @@ async function core(): Promise<Core> {
     emit: (type, data, to) => { busFire(type, data, to); demoChannel()?.postMessage({ type, data, to }); },
   });
   await demoCore.settings.get();
+  /* the menu published in the demo's admin into this page (prices, "Добави", removed dishes in the cart check) */
+  await demoCore.menuEdit.boot().catch(() => undefined);
   /* staff accounts: PBKDF2 hashes built from .env at `npm run build:demo` (never the passwords) */
   const list = typeof __DEMO_STAFF__ !== "undefined" ? __DEMO_STAFF__ : [];
   for (const s of list) {
@@ -53,19 +55,10 @@ export async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
   }
 }
 
-/** The menu with today's "Изчерпано днес" switches from the core (the same shape as the server's /api/menu). */
+/** The live menu (published in the demo's admin, else the built-in one) with today's "Изчерпано днес" switches from the core:
+    the same as the server's /api/menu (core/menu-edit.ts siteMenu). The static pages of the demo are not rebuilt. */
 export async function menuLive(): Promise<Menu> {
-  const today = await (await core()).menu.soldOutToday();
-  if (!Object.keys(today).length) return MENU;
-  const flag = (id: string, base: boolean) => (Object.prototype.hasOwnProperty.call(today, id) ? !!today[id] : base);
-  return {
-    ...MENU,
-    items: MENU.items.map((x) => {
-      const was = x.t.includes("out"), now = flag(x.id, was);
-      return now === was ? x : { ...x, t: now ? [...x.t, "out"] : x.t.filter((t) => t !== "out") };
-    }),
-    lunch: { ...MENU.lunch, items: MENU.lunch.items.map((x) => ({ ...x, out: flag(x.id, !!x.out) })) },
-  };
+  return (await core()).menuEdit.site();
 }
 
 export async function statusInfo() {

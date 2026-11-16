@@ -30,7 +30,7 @@ if (x.cat === "skara-bertha") facts.push('<span class="badge">' + ic("fire", 16)
 const simHTML = out ? similar(x).map((z) => pairCard(z, catById[z.cat] ? catById[z.cat].n : "")).join("") : "";
 const jsonld = dishLd(x, Astro.site);
 /* what the page script needs, so the browser does not load the whole menu at start (speed) */
-const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] }).replace(/</g, "\\u003c");
+const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(dishLite(x)) ? ADDONS : [] }).replace(/</g, "\\u003c");
 ---
 <Base page="dish" nav="menu" back={{ href: cat.href, label: cat.n }} title={x.n} docTitle={docTitle(x)} actionBar
   description={metaDescription(x)} jsonld={jsonld} alias={Astro.props.alias ? url.dish(x) : undefined}>
@@ -62,7 +62,7 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(x) ? ADDONS : [] })
           </Fragment>
         ) : (
           <Fragment>
-            {hasMods(x) && <button class="modbtn" type="button" data-mods aria-haspopup="dialog" set:html={modBtnInner(x, ADDONS)}></button>}
+            {hasMods(x) && <button class="modbtn" type="button" data-mods aria-haspopup="dialog" set:html={modBtnInner(dishLite(x), ADDONS)}></button>}
             <div class="buy" data-buybox set:html={buyHTML(x)}></div>
           </Fragment>
         )}
