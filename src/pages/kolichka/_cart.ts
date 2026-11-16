@@ -8,7 +8,9 @@
 import { SC } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { price, pickupSlots, pickupToday, slotBusy, type Priced, type PricedRow } from "../../lib/pricing.ts";
-import { findAddress, zoneOfAddress, zoneByName, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
+import { findAddress, zoneOfAddress, zoneByName, zoneBySlug, zoneMin, SAMPLE_ADDRESSES, hasStreet } from "../../lib/zones.ts";
+import type { Zone } from "../../lib/consts.ts";
+import { pick, http } from "../../client/api.ts";
 import { removedById, type Dish } from "../../lib/data.ts";
 import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
@@ -33,6 +35,8 @@ interface Info extends Priced {
   /** lunch lines from a day without a lunch menu: shown as "Не се брои", never priced, never sent */
   stale: PricedRow[]; profilePct: number;
   s: State; m: number; sched: Sched; today: boolean; delivOK: boolean; dMin: number; slots: Slot[]; ok1: boolean; ok2: boolean;
+  /** the admin's rules of the chosen quarter (core/zones.ts), when the data has them: "Доставяме" off, the minimum order */
+  zoneOff: boolean; minOrder: number | null; minShort: number;
 }
 interface AddrOpt { a: string; z: string; hint?: string }
 
@@ -105,7 +109,10 @@ export function start(): void {
     const I = { ...p, stale, profilePct, closed, s, m: s.m, sched, today, delivOK: p.deliveryOk, dMin: p.etaMin, slots: [] as Slot[], ok1: false, ok2: false } as Info;
     I.slots = slotList(I);
     I.ok1 = I.n > 0 && !I.conflict && !I.closed && !tooBig(I);
-    I.ok2 = I.ok1 && (I.mode === "delivery" ? (D.zk === "free" || D.zk === "paid") && !!D.addr && (today || validSlot(I)) : validSlot(I));
+    const zr = D.zk === "free" || D.zk === "paid" ? zoneByName(D.zone) : null;
+    I.zoneOff = !!zr && zr.on === false; I.minOrder = zr && zr.min != null ? zr.min : null;
+    I.minShort = I.minOrder != null && I.mode === "delivery" && I.sub < I.minOrder ? Math.round((I.minOrder - I.sub) * 100) / 100 : 0;
+    I.ok2 = I.ok1 && (I.mode === "delivery" ? (D.zk === "free" || D.zk === "paid") && !I.zoneOff && !I.minShort && !!D.addr && (today || validSlot(I)) : validSlot(I));
     return I;
   }
 
@@ -249,7 +256,7 @@ export function start(): void {
     const cls = "pill pill-red pill-lg js-next" + (block ? " pill-block" : "");
     if (step === 3 && P.sending) return '<button class="pill pill-red pill-lg' + (block ? " pill-block" : "") + '" type="button" aria-busy="true" aria-disabled="true">' + esc(lbl) + '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
     if (step === 1 && I.conflict === "delivery") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Смени на вземане · " + fmt(pickupTotal(I)) + "</button>";
-    if (step === 2 && I.mode === "delivery" && D.zk === "out") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
+    if (step === 2 && I.mode === "delivery" && (D.zk === "out" || I.zoneOff)) return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
     if (step === 1 && tooBig(I)) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>";
     /* too many orders from this phone / place: trying again is refused too, so the main action is the call (as in the reservation) */
     if (step === 3 && P.err === "throttled") return callBtn(cls.replace(" js-next", "") + " js-next");
@@ -276,7 +283,7 @@ export function start(): void {
       '<div class="kv tot"><span>Общо</span><span><span class="price" data-total>' + fmt(I.total) + "</span>" + (I.feeUnknown ? "<small>+ таксата за доставка</small>" : "") + "</span></div>" +
       /* over the online limits the order cannot go through the site: no promise of a time */
       (e.big && !tooBig(I) ? '<div class="eta-row">' + ic(I.conflict === "delivery" ? "storefront" : I.mode === "delivery" ? "moped" : "clock", 24) + "<span><b>" + esc(e.big) + "</b><span>" + esc(e.small) + "</span></span></div>" : "") +
-      '<p class="fine">Плащане при получаване: ' + PAY_METHODS.join(" · ") + ". Минимална поръчка: " + miss("minOrder") + ". Опаковка: " + miss("packaging") + "</p>" +
+      '<p class="fine">Плащане при получаване: ' + PAY_METHODS.join(" · ") + ". Минимална поръчка: " + (I.mode === "delivery" && I.minOrder != null ? fmt(I.minOrder) + (D.zone ? " за " + esc(D.zone) : "") : miss("minOrder")) + ". Опаковка: " + miss("packaging") + "</p>" +
       '<div class="sum-cta">' + ctaBtn(I, step, true) + (step > 1 ? '<button class="link flow-back" type="button" data-act="go" data-n="' + (step - 1) + '" aria-label="' + BACK + ": " + STEPS[step - 2][1] + '">' + ic("arrow-left", 18) + BACK + "</button>" : "") + "</div>" +
       "</div></section>";
   }
@@ -330,6 +337,8 @@ export function start(): void {
     if (!D.addr || !D.zk) return "";
     const z = zoneByName(D.zone);
     if (D.zk === "out" || !z) return note("bad", "warning-circle", "Извън зоната ни", "Не доставяме до този адрес. Можете да я вземете от ресторанта.", '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + 'Вземи от място</button><a class="pill pill-line" href="' + SC.url.page("delivery") + '">' + ic("map-trifold", 20) + "Виж зоните</a>");
+    if (I.zoneOff) return note("bad", "warning-circle", "Временно не доставяме до " + esc(z.n), "Можете да я вземете от ресторанта или да изберете друг адрес.", '<button class="pill pill-ink" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + 'Вземи от място</button><a class="pill pill-line" href="' + SC.url.page("delivery") + '">' + ic("map-trifold", 20) + "Виж зоните</a>");
+    if (I.minShort) return note("warn", "receipt", "Минималната поръчка за " + esc(z.n) + " е " + fmt(I.minOrder!), "Добавете още " + fmt(I.minShort) + " от менюто или изберете „Вземи от място“.", '<a class="pill pill-ink" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + 'Към менюто</a><button class="pill pill-line" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Вземи от място</button>");
     const mins = zoneMin(z) + (I.busy ? 20 : 0), when = I.today ? "\u00a0· около\u00a0" + mins + "\u00a0мин" : "";
     if (D.zk === "free") return note("ok", "check-circle", "Безплатна доставка" + when, esc(D.zone) + " е в нашата зона." + (I.busy && I.today ? " Кухнята е натоварена, затова времето е по-дълго." : ""));
     return note("info", "moped", "Доставка " + miss("fee") + when, esc(D.zone) + " е в зоната по тарифа. Таксата ще се вижда тук, преди да поръчате.");
@@ -743,8 +752,8 @@ export function start(): void {
         /* a typed address the parser is sure of: check it and go on in the same press (one press, not two) */
         if (!I.ok2 && autoResolve(() => { if (info().ok2) go(3); })) return;
         if (!I.ok2) {
-          SC.toast(I.mode === "delivery" ? (D.zk === "out" ? "Този адрес е извън зоната ни" : P.needStreet ? "Добавете улица или блок" : "Изберете адрес от списъка") : "Изберете час за вземане");
-          const t = main.querySelector<HTMLElement>(I.mode === "delivery" ? (D.zk && D.zk !== "out" ? ".slots" : "#addr") : ".opts input, .slots .slot:not([disabled])");
+          SC.toast(I.mode === "delivery" ? (D.zk === "out" ? "Този адрес е извън зоната ни" : I.zoneOff ? "Временно не доставяме до " + D.zone : I.minShort ? "Добавете още " + fmt(I.minShort) + " до минималната поръчка" : P.needStreet ? "Добавете улица или блок" : "Изберете адрес от списъка") : "Изберете час за вземане");
+          const t = main.querySelector<HTMLElement>(I.mode === "delivery" ? (I.zoneOff || I.minShort ? "#addr" : D.zk && D.zk !== "out" ? ".slots" : "#addr") : ".opts input, .slots .slot:not([disabled])");
           if (t) { scrollToEl(t); t.focus({ preventScroll: true }); }
           return;
         }
@@ -829,4 +838,14 @@ export function start(): void {
     }).catch(() => { /* offline: keep what we know, the core decides at the order */ });
   }
   render();
+  /* the live zones (the admin's "Доставяме", minimum order, fee and minutes before the next rebuild), into the zone
+     objects of this page in place; the core checks the same rules at the order */
+  pick(async (c) => c.zones.public(), () => http<Zone[]>("GET", "zones"))().then((list) => {
+    let ch = false;
+    for (const l of list) {
+      const z = zoneBySlug(l.slug) as unknown as Record<string, unknown> | null; if (!z) continue;
+      for (const k of ["free", "fee", "etaMin", "eta", "on", "min", "from", "to"]) { const v = (l as unknown as Record<string, unknown>)[k]; if (v !== undefined && JSON.stringify(z[k]) !== JSON.stringify(v)) { z[k] = v; ch = true; } }
+    }
+    if (ch) render({ keepScroll: true });
+  }).catch(() => { /* offline: the zones of the last rebuild stay */ });
 }

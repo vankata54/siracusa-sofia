@@ -67,9 +67,10 @@ const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k)
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const str = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v)).replace(/\s+/g, " ").trim();
 
-function need(s: StaffCtx, section: string) {
+function need(s: StaffCtx, section: string | string[]) {
   if (!s || !s.user) throw new CoreError("auth", "Влезте отново.", 401);
-  if (s.user.role !== "admin" && !s.sections.includes(section)) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+  const list = Array.isArray(section) ? section : [section];
+  if (s.user.role !== "admin" && !list.some((x) => s.sections.includes(x))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
 }
 function invalid(fields: Record<string, string>): never {
   throw Object.assign(new CoreError("invalid", MENU_MSG.invalid, 422), { fields });
@@ -512,8 +513,10 @@ export async function rollback(ctx: Ctx, s: StaffCtx, version: number): Promise<
 
 /** What the screen shows next to "Публикувай": the live version, who and when, one step back, the draft. In the demo
     mode "demo" (the static site is not rebuilt there; the server adds the rebuild state). */
+/** the state of the site's rebuild: every section whose data is on the site may read it (menu, zones, offers, events, hall) */
+export const SITE_SECTIONS = ["menu", "zones", "offers", "events", "hall"];
 export async function publishState(ctx: Ctx, s: StaffCtx): Promise<PublishState> {
-  need(s, "menu");
+  need(s, SITE_SECTIONS);
   const live = await liveDoc(ctx), prev = await ctx.repo.get<MenuDoc>(COL.settings, "menu-prev"), d = await draftDoc(ctx);
   return {
     mode: ctx.demo ? "demo" : "server", version: live.version, at: live.at || null, by: live.by || null, count: live.count || 0,

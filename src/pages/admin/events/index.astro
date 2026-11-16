@@ -1,0 +1,12 @@
+---
+/* /admin/events/: "Събития" (design/pages-admin/events.html): upcoming / past, new event, preview, publish (src/admin/events.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/sales.css";
+import "../../../admin/events.css";
+---
+<Admin title="Събития" page="admin-events">
+<script>
+import { initEvents } from "../../../admin/events.ts";
+initEvents();
+</script>
+</Admin>

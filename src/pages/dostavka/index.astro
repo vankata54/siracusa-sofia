@@ -134,6 +134,13 @@ const description = "Доставка на пица и скара от Siracusa:
 .map .z.free .zl{stroke:var(--z-free)}
 .map .z.on .zl{fill:var(--on-ok); stroke:none}
 .map .z.paid.on .zl{fill:var(--on-ember)}
+/* a quarter switched off in the admin ("Доставяме" off): grey, no hatch */
+.map .z.off path.f,.map .z.off:hover path.f{fill:var(--surface-2)}
+.map .z.off path.h{opacity:0}
+.map .z.off path.sel{fill:var(--ink)}
+.map .z.off .zl{stroke:var(--surface-2); fill:var(--muted)}
+.map .z.off.on .zl{fill:var(--bg); stroke:none}
+.fees tr.offrow td{font-weight:700; color:var(--muted); white-space:normal}
 .map .air path{fill:var(--surface-2); stroke:var(--surface); stroke-width:6; stroke-linejoin:round}
 .map .air text{font:700 14px var(--font); fill:var(--muted); text-anchor:middle}
 .map .route{fill:none; stroke:var(--ink); stroke-width:2.5; stroke-dasharray:1 7; stroke-linecap:round; opacity:0; transition:opacity var(--t-slow) var(--ease)}
@@ -290,8 +297,9 @@ const description = "Доставка на пица и скара от Siracusa:
   import { zoneOfAddress } from "../../lib/zones.ts";
   import type { Zone } from "../../lib/consts.ts";
   import {
-    liveHTML, zoneCardHTML, timelineHTML, endHTML, etaText, resultHTML, riderTarget, LOADING_HTML, PIN, BY_SLUG, type View, type CheckResult,
+    liveHTML, zoneCardHTML, timelineHTML, endHTML, etaText, resultHTML, riderTarget, LOADING_HTML, PIN, BY_SLUG, feesHTML, mergeZones, minAnswerHTML, isOff, type View, type CheckResult,
   } from "./_delivery.ts";
+  import { pick, http } from "../../client/api.ts";
 
   const main = SC.mount({ docTitle: "Доставка на храна в Дружба" });
   const root = main.querySelector<HTMLElement>("[data-dl]")!;
@@ -402,7 +410,7 @@ const description = "Доставка на пица и скара от Siracusa:
     $("[data-tl]").innerHTML = timelineHTML(v);
     $("[data-end]").innerHTML = endHTML(v);
     root.querySelectorAll<HTMLElement>("[data-eta]").forEach((el) => {
-      const z = BY_SLUG[el.dataset.eta!]; if (z) el.textContent = "около " + (z.etaMin + (v.busy ? v.extra : 0)) + " мин";
+      const z = BY_SLUG[el.dataset.eta!]; if (z) el.textContent = isOff(z) ? "временно" : "около " + (z.etaMin + (v.busy ? v.extra : 0)) + " мин";
     });
   }
   function renderAll() {
@@ -442,4 +450,15 @@ const description = "Доставка на пица и скара от Siracusa:
   window.addEventListener("online", () => { if (last && last.type === "offline" && force !== "offline") check(false); });
   root.dataset.ready = "1";
   SC.reveal();
+
+  /* ---------- the live zones (the admin's changes before the next rebuild: off, minimum order, fee, minutes) ---------- */
+  const liveZones = pick(async (c) => c.zones.public(), () => http<Zone[]>("GET", "zones"));
+  liveZones().then((list) => {
+    if (!mergeZones(list)) return;
+    const fees = root.querySelector<HTMLElement>("[data-fees]"); if (fees) fees.innerHTML = feesHTML(view());
+    svg.querySelectorAll<SVGGElement>(".z").forEach((g) => { const z = BY_SLUG[g.dataset.zone!]; if (z) g.classList.toggle("off", isOff(z)); });
+    root.querySelectorAll<HTMLElement>("[data-minans]").forEach((el) => { el.innerHTML = minAnswerHTML(); });
+    renderAll();
+    if (current) select(current.slug, { quiet: true });
+  }).catch(() => { /* offline: the zones of the last rebuild stay */ });
 </script>

@@ -1,0 +1,12 @@
+---
+/* /admin/zones/: "Зони за доставка" (design/pages-admin/zones.html): the quarters, fee, minimum order, time, hours (src/admin/zones.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/sales.css";
+import "../../../admin/zones.css";
+---
+<Admin title="Зони за доставка" page="admin-zones">
+<script>
+import { initZones } from "../../../admin/zones.ts";
+initZones();
+</script>
+</Admin>

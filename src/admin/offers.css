@@ -1,0 +1,102 @@
+/* /admin/offers/: „Оферти и ваучери“ (1:1 от <style> на design/pages-admin/offers.html). Само токени; ширините с @container.
+   Добавено за кода: бележката за заключеното -30% (.of-lock, .lockr), „сайтът го чете веднага“ (.of-live), „Изтрий“ на
+   добавена оферта, „Използван“ до „Копирай“ (.of-acts), редът за пресглобяването (src/admin/sales.css). */
+.of-policy{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:var(--r-core); background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:var(--shadow)}
+.of-policy > .ic{color:var(--ember); margin-top:2px}
+.of-policy b{display:block; font-size:18px; letter-spacing:-.02em; margin-bottom:2px}
+.of-policy p{margin:0; opacity:.9}
+.of-tabs{margin:24px 0 16px}
+@container page (max-width:560px){ .of-sh-p{flex:1 1 100%} }
+@container page (min-width:700px){ .of-tabs .sa-tabs{display:inline-flex} }
+
+/* offer cards */
+.of-list{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .of-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.of{display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px 16px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start}
+.of.off{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.of-num{width:76px; min-height:76px; border-radius:22px; display:grid; place-items:center; align-content:center; gap:0; padding:6px; background:var(--ember); color:var(--on-ember); text-align:center}
+.of-num b{font-size:24px; letter-spacing:-.04em; line-height:1.05}
+.of-num small{font-size:14px; font-weight:700; line-height:1.15}
+.of-num .ic{color:var(--on-ember)}
+.of.off .of-num{background:var(--surface-3); color:var(--ink)}
+.of.off .of-num .ic{color:var(--ink)}
+.of-h h3{margin:0; font-size:20px; letter-spacing:-.02em; line-height:1.2}
+.of-h p{margin:4px 0 0; color:var(--muted)}
+.of-rules{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px}
+.of-rules span{display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px 0 10px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; line-height:1.2}
+.of.off .of-rules span{background:var(--surface)}
+.of-rules .ic{color:var(--muted)}
+.of-rules .warn{color:var(--warn); background:transparent; box-shadow:inset 0 0 0 1.5px currentColor}
+.of-rules .warn .ic{color:var(--warn)}
+.of-f{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:12px; border-top:1px solid var(--line)}
+.of-f .sp{flex:1}
+.of-sw{display:inline-flex; align-items:center; gap:2px; min-height:48px; padding:0 0 0 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; cursor:pointer}
+.of.off .of-sw{background:var(--surface)}
+.of-sw input:disabled{cursor:not-allowed}
+
+/* celebration settings */
+.of-set{display:grid; gap:14px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); margin-top:12px}
+.of-set h3{margin:0; font-size:20px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.of-set h3 .ic{color:var(--red)}
+.of-set .grid{display:grid; gap:14px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:820px){ .of-set .grid{grid-template-columns:minmax(0,3fr) minmax(0,2fr)} }
+.of-set .seg button{font-size:15px; min-height:52px; padding:0 8px; white-space:normal; line-height:1.15}
+.of-days{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.of-days .input{width:120px; font-weight:800}
+
+/* codes */
+.of-cols{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .of-cols{grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start} }
+.of-box{display:grid; gap:12px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start}
+.of-box h3{margin:0; font-size:20px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.of-box h3 .ic{color:var(--red)}
+.of-box p{margin:0}
+.of-chk{display:flex; gap:8px; flex-wrap:wrap}
+.of-chk .input{flex:1 1 220px; font-weight:800; letter-spacing:.02em; font-variant-numeric:tabular-nums; text-transform:uppercase}
+.of-chk .input::placeholder{text-transform:none; font-weight:600; letter-spacing:0}
+.of-res .sa-banner{min-height:0}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; letter-spacing:.01em; font-size:15px}
+.of-st{display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:15px}
+.of-st.ok{color:var(--ok)} .of-st.used{color:var(--muted)}
+.of-codes{margin-top:12px}
+.of-codes .pill{min-height:48px; padding:0 14px; font-size:15px}
+
+/* inquiries */
+.of-iq{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:900px){ .of-iq{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.iq{display:grid; gap:10px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); align-content:start}
+.iq.done{background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.iq-t{display:flex; flex-wrap:wrap; align-items:center; gap:6px}
+.iq-t .when{margin-left:auto; font-size:15px; color:var(--muted); font-weight:600}
+.iq h3{margin:0; font-size:20px; letter-spacing:-.02em}
+.iq .who{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; font-weight:600}
+.iq .tel{font-variant-numeric:tabular-nums; font-weight:800}
+.iq blockquote{margin:0; padding:10px 14px; border-radius:16px; background:var(--surface-2); box-shadow:inset 3px 0 0 var(--ember)}
+.iq.done blockquote{background:var(--surface)}
+.iq-f{display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid var(--line)}
+.sa-tag.st-new{background:var(--ink); color:var(--bg)}
+.sa-tag.st-call{background:var(--ember); color:var(--on-ember)}
+
+/* sheet form */
+.of-form{display:grid; gap:18px; padding:4px 0 8px}
+.of-form .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+.of-form .grp{display:grid; gap:8px}
+.of-cx{display:flex; flex-wrap:wrap; gap:6px}
+.of-cx .chip{min-height:48px; padding:0 14px}
+.of-pct{position:relative}
+.of-pct .input{padding-right:40px; font-weight:800}
+.of-pct .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
+.of-new{display:grid; gap:8px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.of-new .mono{font-size:16px}
+
+.of-help{font-size:14px; color:var(--muted)}
+.of-live{display:flex; gap:8px; align-items:flex-start; margin:0; font-size:15px; color:var(--muted); font-weight:600}
+.of-live .ic{flex:none; margin-top:2px}
+.of-lock{display:flex; gap:10px; align-items:flex-start; margin:0 0 14px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.of-lock .ic{flex:none; margin-top:2px}
+.of-rules .lockr{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.of-rules .lockr .ic{color:var(--ink)}
+.of-f .del .ic{color:var(--danger)}
+.of-acts{display:inline-flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+.of-new .pill{justify-self:start; margin-top:4px}
+.of-policy + .ss-line{margin-top:14px}

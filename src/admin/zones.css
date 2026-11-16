@@ -1,0 +1,102 @@
+/* /admin/zones/: „Зони за доставка“ (1:1 от <style> на design/pages-admin/zones.html). Само токени; ширините с @container.
+   Добавено за кода: .zn-help и мястото на реда за пресглобяването (src/admin/sales.css). */
+.zn{--z-free:color-mix(in srgb, var(--ok) 22%, var(--surface)); --z-free-2:color-mix(in srgb, var(--ok) 36%, var(--surface));
+  --z-paid:color-mix(in srgb, var(--ember) 26%, var(--surface)); --z-hatch:color-mix(in srgb, var(--ember) 75%, var(--surface))}
+.zn-sum{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+@container page (min-width:760px){ .zn-sum{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.zn-k{display:grid; gap:2px; align-content:start; min-height:96px; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.zn-k .lb{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.zn-k .lb .ic{color:var(--red)}
+.zn-k .v{font-size:28px; font-weight:800; letter-spacing:-.04em; line-height:1.15; font-variant-numeric:tabular-nums}
+@container page (max-width:520px){ .zn-k .v{font-size:24px} .zn-k{padding:14px} }
+.zn-k .ft{font-size:14px; color:var(--muted); font-weight:600}
+.zn-note{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin:14px 0 0; padding:12px 12px 12px 16px; border-radius:22px; background:var(--surface-2)}
+.zn-note > span{flex:1 1 300px; display:flex; gap:10px; align-items:flex-start}
+.zn-note > span .ic{color:var(--muted); margin-top:2px}
+
+.zn-lay{display:grid; gap:16px; grid-template-columns:minmax(0,1fr); margin-top:24px}
+@container page (min-width:980px){ .zn-mapc{display:grid; grid-template-columns:minmax(0,1fr) 300px; grid-template-areas:"h h" "m l" "m n"; align-items:start} .zn-mh{grid-area:h} .zn-mapc .map{grid-area:m; max-height:560px} .zn-mapc .legend{grid-area:l; flex-direction:column; padding:16px 18px} .zn-mapnote{grid-area:n; border-top:0} }
+.zn-mapc{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.zn-mh{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px 6px}
+.zn-mh h2{margin:0; font-size:22px; letter-spacing:-.03em; font-weight:800}
+.zn-draw{display:inline-flex; align-items:center; gap:8px}
+.legend{display:flex; flex-wrap:wrap; gap:8px 18px; margin:0; padding:6px 18px 10px; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.legend li{display:inline-flex; align-items:center; gap:8px}
+.sw{width:18px; height:18px; border-radius:6px; flex:none}
+.sw.free{background:var(--z-free-2); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.sw.paid{background:repeating-linear-gradient(45deg, var(--z-hatch) 0 2px, var(--z-paid) 2px 6px); box-shadow:inset 0 0 0 1.5px var(--z-hatch)}
+.sw.off{background:var(--surface-2); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.map{display:block; width:100%; height:auto; touch-action:manipulation; user-select:none; -webkit-user-select:none}
+.map .grid-dot{fill:var(--line-strong); opacity:.45}
+.map .edge{fill:none; stroke:var(--line-strong); stroke-width:1.5; stroke-dasharray:2 6; stroke-linecap:round}
+.map .z{cursor:pointer; transform-box:fill-box; transform-origin:center; transition:transform var(--t-slow) var(--ease); outline:none}
+.map .z path{stroke:var(--surface); stroke-width:6; stroke-linejoin:round; transition:opacity var(--t-base) var(--ease)}
+.map .z.free path.f{fill:var(--z-free)}
+.map .z.paid path.f{fill:var(--z-paid)}
+.map .z.paid path.h{fill:url(#zn-hatch); stroke:none; pointer-events:none}
+.map .z.off path.f{fill:var(--surface-2)}
+.map .z.off path.h{opacity:0}
+.map .z path.sel{fill:var(--ok); stroke:none; opacity:0; pointer-events:none}
+.map .z.paid path.sel{fill:var(--ember)}
+.map .z.off path.sel{fill:var(--ink)}
+.map .z.on{transform:scale(1.035)}
+.map .z.on path.sel{opacity:1}
+.map .z:hover path.f, .map .z:focus-visible path.f{fill:var(--z-free-2)}
+.map .z.paid:hover path.f, .map .z.paid:focus-visible path.f{fill:color-mix(in srgb, var(--ember) 40%, var(--surface))}
+.map .z:focus-visible path.f{stroke:var(--red)}
+@container page (max-width:600px){ .map .zs{display:none} .map .zl{font-size:21px !important} .map .air text{font-size:17px} }
+.map .zl{font:800 17px var(--font); letter-spacing:-.02em; fill:var(--ink); stroke:var(--surface); stroke-width:4px; stroke-linejoin:round; paint-order:stroke; pointer-events:none; text-anchor:middle}
+.map .zs{font:700 14px var(--font); fill:var(--muted); stroke:var(--surface); stroke-width:4px; paint-order:stroke; pointer-events:none; text-anchor:middle}
+.map .z.on .zl{fill:var(--on-ok); stroke:none}
+.map .z.on .zs{fill:var(--on-ok); stroke:none}
+.map .z.paid.on .zl, .map .z.paid.on .zs{fill:var(--on-ember)}
+.map .z.off.on .zl, .map .z.off.on .zs{fill:var(--bg)}
+.map .air path{fill:var(--surface-2); stroke:var(--surface); stroke-width:6; stroke-linejoin:round}
+.map .air text{font:700 14px var(--font); fill:var(--muted); text-anchor:middle}
+.map .pin .dotp{fill:var(--ink); stroke:var(--surface); stroke-width:3}
+.map .pin .tag rect{fill:var(--ink)}
+.map .pin .tag text{font:800 14px var(--font); fill:var(--bg); text-anchor:middle}
+.zn-mapnote{display:flex; gap:8px; align-items:flex-start; padding:10px 18px 14px; font-size:14px; color:var(--muted); font-weight:600; border-top:1px solid var(--line)}
+
+/* zone list */
+.zn-list{display:grid; gap:10px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:700px){ .zn-list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container page (min-width:1060px){ .zn-list{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.zn-z{padding:16px 16px 14px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; scroll-margin-top:100px; transition:box-shadow var(--t-base) var(--ease)}
+.zn-z.on{box-shadow:inset 0 0 0 2px var(--ink), var(--shadow)}
+.zn-z.off{background:var(--surface-2)}
+.zn-zh{display:flex; align-items:center; gap:10px}
+.zn-zh h3{margin:0; flex:1; min-width:0; font-size:21px; letter-spacing:-.03em; line-height:1.15}
+.zn-zh h3 button{border:0; background:transparent; padding:0; font:inherit; color:inherit; cursor:pointer; text-align:left; min-height:48px}
+.ztag{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.ztag.free{background:var(--ok); color:var(--on-ok)}
+.ztag.paid{background:var(--ember); color:var(--on-ember)}
+.ztag.off{background:var(--surface-3); color:var(--ink)}
+.zn-facts{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:0}
+.zn-facts div{display:grid; gap:0; padding:10px 12px; border-radius:16px; background:var(--surface-2); min-width:0}
+.zn-z.off .zn-facts div{background:var(--surface)}
+.zn-facts dt{font-size:14px; font-weight:700; color:var(--muted)}
+.zn-facts dd{margin:0; font-weight:800; font-size:16px; line-height:1.3; overflow-wrap:anywhere}
+.zn-facts dd .missing{font-weight:600; font-size:15px}
+.zn-zf{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+.zn-on{display:inline-flex; align-items:center; gap:2px; min-height:48px; padding:0 0 0 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; cursor:pointer}
+.zn-z.off .zn-on{background:var(--surface)}
+
+/* sheet */
+.zn-form{display:grid; gap:18px; padding:4px 0 8px}
+.zn-form .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+.zn-sw{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:6px 4px 6px 16px; border-radius:20px; background:var(--surface-2)}
+.zn-sw small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.zn-eu{position:relative}
+.zn-eu .input{padding-right:44px; font-weight:800; font-variant-numeric:tabular-nums}
+.zn-eu .u{position:absolute; right:16px; top:15px; font-weight:800; color:var(--muted); pointer-events:none}
+.zn-prev{display:grid; gap:10px; padding:16px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line)}
+.zn-prev .t{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.zn-prev .t b{font-size:22px; letter-spacing:-.03em}
+.zn-prev .kv dt{color:var(--muted); font-weight:600}
+.zn-prev .kv dd{margin:0; font-weight:800; text-align:right}
+.zn-prevh{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--muted); margin:0}
+
+.zn-help{font-size:14px; color:var(--muted)}
+.zn .ss-line{margin-top:14px}
+

@@ -13,6 +13,7 @@ import { ic, url, esc, events, EVENT_SLUGS, byId, dishCard, RESTAURANT as R } fr
 import { ticketHTML, factsHTML, rulesHTML, nextInner, barHTML, cta } from "./_event.ts";
 import { eventLd, crumbsLd, sofiaToday } from "../_ld.ts";
 import { crumbs, miss, photoSlot } from "../../../lib/ui.ts";
+import { EVENT_EXTRA } from "../../../lib/events-extra.ts";
 
 export const getStaticPaths = (() => EVENT_SLUGS.map((slug) => ({ params: { slug }, props: { slug } }))) satisfies GetStaticPaths;
 
@@ -20,6 +21,12 @@ const ev = events(sofiaToday()).find((e) => e.id === Astro.props.slug)!;
 const site = String(Astro.site || "https://siracusa-sofia.com");
 const pageUrl = new URL(url.event(ev.id), site).href;
 const gs = byId["gratska-salata"];
+/* the program and the menu of the evening from the admin (lib/events-extra.ts, the rebuild); empty: [ЛИПСВА] (lib/miss.ts).
+   The program: one step per line, "20:00 Жива музика" puts the hour in the time column. */
+const extra = EVENT_EXTRA[ev.id] || { prog: "", menu: "" };
+const lines = (t: string) => String(t || "").split(/\r?\n/).map((x) => x.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+const prog = lines(extra.prog).map((x) => { const m = /^(\d{1,2}[:.]\d{2})\s*[-·:]?\s*(.+)$/.exec(x); return m ? { t: m[1].replace(".", ":").padStart(5, "0"), d: m[2] } : { t: "", d: x }; });
+const evMenu = lines(extra.menu);
 /* one mention of "последна събота" (ev.text already says it), under 160 characters */
 const description = ev.n + " от " + ev.time + " в Siracusa, Дружба 2. " + ev.text + " Запазете място: " + R.phone + ".";
 const evLd = JSON.stringify(eventLd(ev, site)).replace(/</g, "\\u003c");
@@ -46,16 +53,18 @@ const evLd = JSON.stringify(eventLd(ev, site)).replace(/</g, "\\u003c");
         <div>
           <div class="sec-h"><h2 class="h2">Програма</h2></div>
           <ol class="tl">
-            <li><span class="t">{ev.time}</span><span class="dot em"></span><div><b>Начало на вечерта</b></div></li>
-            <li><span class="t muted">...</span><span class="dot miss"></span><div set:html={miss("program")}></div></li>
+            {!(prog[0] && prog[0].t === ev.time) && <li><span class="t">{ev.time}</span><span class="dot em"></span><div><b>Начало на вечерта</b></div></li>}
+            {prog.length ? prog.map((x, i) => <li><span class={"t" + (x.t ? "" : " muted")}>{x.t || "·"}</span><span class={"dot" + (i === 0 && x.t === ev.time ? " em" : "")}></span><div><b>{x.d}</b></div></li>)
+              : <li><span class="t muted">...</span><span class="dot miss"></span><div set:html={miss("program")}></div></li>}
             <li><span class="t">{R.kitchen}</span><span class="dot"></span><div><b>Последни поръчки от кухнята</b></div></li>
             <li><span class="t">{R.close}</span><span class="dot"></span><div><b>Ресторантът затваря</b></div></li>
           </ol>
         </div>
         <div>
           <div class="sec-h"><h2 class="h2">Меню на вечерта</h2></div>
-          <div class="card slot-menu"><Fragment set:html={ic("fork-knife", 24)} /><Fragment set:html={miss("eveningMenu")} /></div>
-          {gs && <Fragment>
+          {evMenu.length ? <ul class="card ev-menu" data-evmenu>{evMenu.map((x) => <li><Fragment set:html={ic("fork-knife", 20)} /><span>{x}</span></li>)}</ul>
+            : <div class="card slot-menu"><Fragment set:html={ic("fork-knife", 24)} /><Fragment set:html={miss("eveningMenu")} /></div>}
+          {gs && /гръц/i.test(ev.n) && <Fragment>
             <p class="ev-also">За гръцко настроение и у дома, от основното меню:</p>
             <div class="card ev-dish" set:html={dishCard(gs, "row")}></div>
           </Fragment>}
@@ -150,6 +159,11 @@ const evLd = JSON.stringify(eventLd(ev, site)).replace(/</g, "\\u003c");
 /* ---------- missing content: the menu of the evening (the photos are the one photo slot of the site) ---------- */
 .slot-menu{min-height:120px; display:flex; align-items:center; gap:12px; padding:20px; color:var(--muted)}
 .ev-also{margin:18px 0 4px; font-weight:700}
+/* the menu of the evening from the admin, one dish per line */
+.ev-menu{list-style:none; margin:0; padding:8px 20px; display:grid}
+.ev-menu li{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-top:1px solid var(--line); font-weight:700; line-height:1.4}
+.ev-menu li:first-child{border-top:0}
+.ev-menu .ic{flex:none; margin-top:2px; color:var(--muted)}
 .ev-dish{padding:0 16px}
 .ev-mosaic{display:grid; grid-template-columns:1fr 1fr; grid-template-areas:"a a" "b c"; gap:10px}
 .ev-mosaic .ph-slot:nth-child(1){grid-area:a; aspect-ratio:16/10}

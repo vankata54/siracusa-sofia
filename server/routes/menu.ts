@@ -73,7 +73,8 @@ export function menuRoutes(app: Hono, d: MenuDeps): void {
     const r = await core.menuEdit.publish(s, num(b.version));
     return c.json({ ...r, build: d.publisher ? d.publisher.state() : { state: "idle", at: null, waiting: false } });
   });
-  app.post("/api/admin/menu/rebuild", async (c) => { const s = await staff(c, "menu"); await core.audit.log(s.user.username, "menu.rebuild"); await d.rebuild(); return c.json(await state(s)); });
+  /* any section whose data is on the site may rebuild it again (menu, zones, offers, events, the hall) */
+  app.post("/api/admin/menu/rebuild", async (c) => { const s = await staff(c, ["menu", "zones", "offers", "events", "hall"]); await core.audit.log(s.user.username, "menu.rebuild"); await d.rebuild(); return c.json(await state(s)); });
   app.post("/api/admin/menu/rollback", async (c) => { const s = await staff(c, "menu"), b = await body(c); await core.menuEdit.rollback(s, num(b.version)); return c.json(await state(s)); });
 
   /* ---------- photos ---------- */

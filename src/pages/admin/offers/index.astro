@@ -1,0 +1,12 @@
+---
+/* /admin/offers/: "Оферти и ваучери" (design/pages-admin/offers.html): offers with rules, codes, inquiries (src/admin/offers.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/sales.css";
+import "../../../admin/offers.css";
+---
+<Admin title="Оферти и ваучери" page="admin-offers">
+<script>
+import { initOffers } from "../../../admin/offers.ts";
+initOffers();
+</script>
+</Admin>

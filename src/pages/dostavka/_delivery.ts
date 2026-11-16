@@ -49,6 +49,29 @@ export const BY_SLUG: Record<string, Zone> = {};
 ZONES.forEach((z) => { BY_SLUG[z.slug] = z; });
 /** free zones first, then the paid ones */
 export const ORDER: Zone[] = ZONES.filter((z) => z.free).concat(ZONES.filter((z) => !z.free));
+const order = (): Zone[] => ZONES.filter((z) => z.free).concat(ZONES.filter((z) => !z.free));
+/* the admin's rules of a quarter (core/zones.ts), when the data has them: "Доставяме" off and the minimum order */
+export const isOff = (z: Zone): boolean => z.on === false;
+const minTxt = (z: Zone): string => (z.min != null ? fmt(z.min) : MISS_MIN);
+/** the minimum order: by quarter where the data has it, otherwise [ЛИПСВА] */
+export function minAnswerHTML(): string {
+  const on = ZONES.filter((z) => !isOff(z)), k = on.filter((z) => z.min != null);
+  if (!k.length) return '<span class="missing">' + MISS_MIN + "</span>";
+  return k.map((z) => esc(z.n) + " " + fmt(z.min as number)).join(", ") + "." + (k.length < on.length ? ' За останалите квартали: <span class="missing">' + MISS_MIN + "</span>." : "");
+}
+/** the live zones from the core (/api/zones; the demo: its own core) into the zone objects of this page, in place: the
+    rules, the fee and the minutes the admin changed after the last rebuild. true when anything changed. */
+export function mergeZones(live: Zone[]): boolean {
+  let ch = false;
+  for (const l of live) {
+    const z = BY_SLUG[l.slug] as unknown as Record<string, unknown>; if (!z) continue;
+    for (const k of ["free", "fee", "etaMin", "eta", "on", "min", "from", "to"]) {
+      const v = (l as unknown as Record<string, unknown>)[k];
+      if (v !== undefined && JSON.stringify(z[k]) !== JSON.stringify(v)) { z[k] = v; ch = true; }
+    }
+  }
+  return ch;
+}
 const FREE_NAMES = ZONES.filter((z) => z.free).map((z) => z.n);
 const PAID_NAMES = ZONES.filter((z) => !z.free).map((z) => z.n);
 const and = (a: string[]) => (a.length > 1 ? a.slice(0, -1).join(", ") + " и " + a[a.length - 1] : a.join(""));
@@ -108,7 +131,7 @@ export function mapSVG(): string {
     const s = SHAPES[z.slug];
     const label = s.two ? '<text class="zl" x="' + s.lx + '" y="' + (s.ly - 4) + '">' + s.two[0] + '</text><text class="zl" x="' + s.lx + '" y="' + (s.ly + 16) + '">' + s.two[1] + "</text>"
       : '<text class="zl" x="' + s.lx + '" y="' + (s.ly + 6) + '">' + esc(z.n) + "</text>";
-    return '<g class="z ' + (z.free ? "free" : "paid") + '" data-zone="' + z.slug + '"><path class="f" d="' + s.d + '"/>' + (z.free ? "" : '<path class="h" d="' + s.d + '"/>') + '<path class="sel" d="' + s.d + '"/>' + label + "</g>";
+    return '<g class="z ' + (z.free ? "free" : "paid") + (isOff(z) ? " off" : "") + '" data-zone="' + z.slug + '"><path class="f" d="' + s.d + '"/>' + (z.free ? "" : '<path class="h" d="' + s.d + '"/>') + '<path class="sel" d="' + s.d + '"/>' + label + "</g>";
   }).join("");
   return '<svg class="map" viewBox="0 0 420 304" role="img" aria-labelledby="mapT mapD">' +
     '<title id="mapT">Схема на зоните за доставка</title><desc id="mapD">Безплатна доставка: ' + and(FREE_NAMES) + ". По тарифа: " + and(PAID_NAMES) + ". Ресторантът е в Дружба 2, мястото на схемата е приблизително. Същото е описано в таблицата под картата.</desc>" +
@@ -133,11 +156,11 @@ export function riderTarget(z: Zone): { x: number; y: number } {
 /* ---------- fees table (also the list alternative to the map) ---------- */
 export function feesHTML(v: View): string {
   return '<table class="fees"><caption>Такси и време по квартали</caption><thead><tr><th scope="col">Квартал</th><th scope="col">Доставка</th></tr></thead><tbody>' +
-    ORDER.map((z) => '<tr data-row="' + z.slug + '"><th scope="row"><button class="zbtn" type="button" data-pick="' + z.slug + '" aria-pressed="false"><span class="sw ' + (z.free ? "free" : "paid") + '"></span><b>' + esc(z.n) + '</b><small data-eta="' + z.slug + '">' + etaText(z, v) + "</small></button></th>" +
-      "<td" + (z.free || z.fee != null ? "" : ' class="missing"') + ">" + (z.free ? '<span class="okt">' + ic("check-circle", 20) + "Безплатно</span>" : feeText(z)) + "</td></tr>").join("") +
+    order().map((z) => '<tr data-row="' + z.slug + '"' + (isOff(z) ? ' class="offrow"' : "") + '><th scope="row"><button class="zbtn" type="button" data-pick="' + z.slug + '" aria-pressed="false"><span class="sw ' + (isOff(z) ? "out" : z.free ? "free" : "paid") + '"></span><b>' + esc(z.n) + '</b><small data-eta="' + z.slug + '">' + (isOff(z) ? "временно" : etaText(z, v)) + "</small></button></th>" +
+      "<td" + (isOff(z) || z.free || z.fee != null ? "" : ' class="missing"') + ">" + (isOff(z) ? "Временно не доставяме" : z.free ? '<span class="okt">' + ic("check-circle", 20) + "Безплатно</span>" : feeText(z)) + "</td></tr>").join("") +
     '<tr class="outrow"><th scope="row"><span class="row"><span class="sw out"></span><b>Извън зоните</b></span></th><td>Не доставяме</td></tr>' +
     "</tbody></table>" +
-    '<div class="minline">' + ic("receipt", 20) + '<span>Минимална поръчка: <span class="missing">' + MISS_MIN + "</span></span></div>";
+    '<div class="minline">' + ic("receipt", 20) + "<span>Минимална поръчка: " + minAnswerHTML() + "</span></div>";
 }
 
 /* ---------- selected zone card ---------- */
@@ -146,7 +169,10 @@ export function zoneCardHTML(z: Zone | null, v: View): string {
   if (!z) return '<div class="zt"><h3 class="h3">Извън зоните</h3><span class="ztag out">' + ic("x", 16) + "Не доставяме</span></div>" +
     '<p class="note" style="margin-top:8px">Не доставяме до този адрес. Можете да я вземете от ресторанта.</p>' +
     '<div class="zbtns"><a class="pill pill-red pill-lg pill-block" href="' + url.page("pickup") + '" data-mode="pickup">' + ic("storefront", 20) + 'Вземи от място</a>' + callBtn("pill pill-line pill-block") + "</div>";
-  const a = action(z, v), mins = etaMin(z, v);
+  if (isOff(z)) return '<div class="zswap"><div class="zt"><h3 class="h3">' + esc(z.n) + '</h3><span class="ztag out">' + ic("x", 16) + "Временно не доставяме</span></div>" +
+    '<p class="note" style="margin-top:8px">Временно не доставяме до ' + esc(z.n) + '. Можете да я вземете от ресторанта.</p>' +
+    '<div class="zbtns"><a class="pill pill-red pill-lg pill-block" href="' + url.page("pickup") + '" data-mode="pickup">' + ic("storefront", 20) + "Вземи от място</a>" + callBtn("pill pill-line pill-block") + "</div></div>";
+  const a = action(z, v), mins = etaMin(z, v), from = z.from || "10:00", to = z.to || "21:00";
   const time = !S.delivery ? '<span class="busy idle">около ' + mins + NB + 'мин<small class="muted">' + (S.m < 600 ? "днес от 10:00" : "утре от 10:00") + "</small></span>"
     : v.busy ? '<span class="busy">около ' + mins + NB + "мин<small>натоварено сега</small></span>" : "около " + mins + NB + "мин";
   return '<div class="zswap"><div class="zt"><h3 class="h3">' + esc(z.n) + "</h3>" + (z.free ? '<span class="ztag free">' + ic("check", 16) + "Безплатна доставка</span>" : '<span class="ztag paid">' + ic("tag", 16) + "По тарифа</span>") + "</div>" +
@@ -154,8 +180,8 @@ export function zoneCardHTML(z: Zone | null, v: View): string {
     "<dl>" +
     '<div class="kv"><dt>Време до вас</dt><dd>' + time + "</dd></div>" +
     '<div class="kv"><dt>Такса</dt><dd' + (z.free || z.fee != null ? "" : ' class="missing"') + ">" + feeText(z) + "</dd></div>" +
-    '<div class="kv"><dt>Минимална поръчка</dt><dd class="missing">' + MISS_MIN + '</dd></div>' +
-    '<div class="kv"><dt>Днес</dt><dd>' + (S.delivery ? "до 21:00" : S.m < 600 ? "от 10:00 до 21:00" : "не доставяме") + "</dd></div>" +
+    '<div class="kv"><dt>Минимална поръчка</dt><dd' + (z.min != null ? "" : ' class="missing"') + ">" + minTxt(z) + "</dd></div>" +
+    '<div class="kv"><dt>Днес</dt><dd>' + (S.delivery ? "до " + to : S.m < 600 ? "от " + from + " до " + to : "не доставяме") + "</dd></div>" +
     "</dl>" + ctaHTML(a) + (a.note ? '<p class="note">' + a.note + "</p>" : "") + "</div>";
 }
 
@@ -199,7 +225,7 @@ export const FAQ: Faq[] = [
       (FEES_KNOWN ? ": " + ZONES.filter((z) => !z.free).map((z) => esc(z.n) + " " + fmt(z.fee as number)).join(", ") + ". Таксата се вижда в количката, преди да поръчате." : ': <span class="missing">' + MISS_FEE + "</span>."),
     /* the cart can show the fee only once it is in the data; until then no promise about it */
     ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа." + (FEES_KNOWN ? " Таксата се вижда в количката, преди да поръчате." : "") },
-  { q: "Има ли минимална поръчка?", a: '<span class="missing">' + MISS_MIN + "</span>", ld: null },
+  { q: "Има ли минимална поръчка?", a: '<span data-minans>' + minAnswerHTML() + "</span>", ld: null },
   { q: "До колко часа доставяте?", a: "Всеки ден от 10:00 до 21:00. След 21:00: поръчки за вземане до 22:30, готови най-късно в 23:00.", ld: "" },
   { q: "Доставяте ли обедното меню?", a: 'Да, до 15:00. След 15:00 обедното меню е само за вземане от място, с -30%. Вижте как работи <a class="link" href="' + url.page("pickup") + '">Вземи от място</a>.', ld: "" },
   { q: "Колко бързо пристига поръчката?", a: "Обикновено " + eta(undefined, false).text + ", според квартала. Времето за всеки квартал е в таблицата по-горе. Когато кухнята е натоварена, виждате честното време в количката, още преди да поръчате.", ld: "" },
@@ -232,11 +258,13 @@ export function resultHTML(r: CheckResult, v: View): string {
   const S = v.S;
   if (r.type === "zone") {
     const z = r.zone, a = action(z, v), mins = etaMin(z, v);
+    if (isOff(z)) return '<div class="rcard out"><div class="rh"><span class="ri">' + ic("storefront", 24) + "</span><div><h3>Временно не доставяме до " + esc(z.n) + ".</h3><p>Можете да я вземете от ресторанта: " + esc(R.address) + ".</p></div></div>" +
+      '<a class="pill pill-red pill-lg pill-block" href="' + url.page("pickup") + '" data-mode="pickup">' + ic("storefront", 20) + "Вземи от място</a></div>";
     return '<div class="rcard ' + (z.free ? "free" : "paid") + '"><div class="rh"><span class="ri">' + ic(z.free ? "check" : "tag", 24) + "</span><div><h3>" + (z.free ? "Доставяме безплатно до " + esc(z.n) : "Доставяме до " + esc(z.n) + " по тарифа") + "</h3>" +
       (S.delivery ? "" : '<p class="muted">' + esc(a.note || "") + "</p>") + "</div></div>" +
       '<div class="rfacts">' + (S.delivery ? '<span class="fact">' + ic("clock", 18) + "около " + mins + NB + "мин" + (v.busy ? " · натоварено" : "") + "</span>" : "") +
       (z.free ? '<span class="fact">' + ic("moped", 18) + "Без такса</span>" : z.fee != null ? '<span class="fact">' + ic("moped", 18) + fmt(z.fee) + "</span>" : '<span class="fact missing">' + ic("moped", 18) + MISS_FEE + "</span>") +
-      '<span class="fact missing">' + ic("receipt", 18) + MISS_MIN + "</span></div>" +
+      (z.min != null ? '<span class="fact">' + ic("receipt", 18) + "Минимална поръчка " + fmt(z.min) + "</span>" : '<span class="fact missing">' + ic("receipt", 18) + MISS_MIN + "</span>") + "</div>" +
       ctaHTML(a) + '<a class="link" href="#karta" data-tomap>' + ic("map-trifold", 20) + "Виж " + esc(z.n) + " на картата</a></div>";
   }
   if (r.type === "ask") return '<div class="rcard"><div class="rh"><span class="ri">' + ic("question", 24) + "</span><div><h3>" + esc(r.q) + '</h3><p class="muted">Изберете, за да ви кажем точното време.</p></div></div>' +

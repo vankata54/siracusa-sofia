@@ -16,7 +16,7 @@ export type MenuState = PublishState & { build: BuildState };
 export interface Media { url: string; type: string; bytes: number }
 
 const IDLE: BuildState = { state: "idle", at: null, waiting: false };
-const g = (c: Core, need: string): Promise<StaffCtx> => c.staff.guard(demoTok("staff"), need);
+const g = (c: Core, need: string | string[]): Promise<StaffCtx> => c.staff.guard(demoTok("staff"), need);
 /** the lunch PIN is per person and device; the demo is one device */
 const DEV = "demo";
 export const MEDIA_MAX = 5 * 1024 * 1024;
@@ -70,7 +70,7 @@ export const menuApi = {
     (version) => http<MenuState>("POST", "admin/menu/rollback", { version })),
   /** the live version, who and when, one step back, the draft, the rebuild; mode "demo": the static site is not rebuilt */
   /** the site again with the live menu (after a failed rebuild); the demo has no rebuild */
-  rebuild: pick(async (c): Promise<MenuState> => ({ ...(await c.menuEdit.publishState(await g(c, "menu"))), build: IDLE }), () => http<MenuState>("POST", "admin/menu/rebuild")),
+  rebuild: pick(async (c): Promise<MenuState> => ({ ...(await c.menuEdit.publishState(await g(c, ["menu", "zones", "offers", "events", "hall"]))), build: IDLE }), () => http<MenuState>("POST", "admin/menu/rebuild")),
   state: pick(async (c): Promise<MenuState> => ({ ...(await c.menuEdit.publishState(await g(c, "menu"))), build: IDLE }), () => http<MenuState>("GET", "admin/menu/publish")),
   /** a photo for a dish: {url} goes into dish.photo (server: /media/<sha256>.<ext>; demo: a data: URL) */
   uploadMedia: pick(async (c, file: Blob) => uploadDemo(c, file), (file) => uploadServer(file)),
