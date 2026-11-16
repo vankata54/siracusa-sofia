@@ -23,7 +23,7 @@ export async function initStaffApp(module: "waiter" | "kitchen" | "driver"): Pro
   document.title = m.n + " | Siracusa · Админ";
   const app = document.createElement("div"); app.className = "sm-app";
   app.innerHTML = '<header class="sm-top"><div class="brand"><span class="word">Siracusa</span><span class="sa-btag">' + esc(m.n) + "</span></div>" +
-    (boss ? '<a class="sa-tb" href="' + aurl.home() + '">' + ic("squares-four", 20) + "Към таблото</a>" : "") +
+    (boss ? '<a class="sa-tb" href="' + aurl.home() + '">' + ic("squares-four", 20) + '<span class="lg">Към таблото</span><span class="sm">Табло</span></a>' : "") +
     '<button class="sa-tb" type="button" data-out>' + ic("sign-out", 20) + "Изход</button></header>" +
     '<main id="main" class="sm-main" tabindex="-1"><section class="sm-card" data-edit-id="' + module + '.soon"><div class="ill">' + ic(m.ic, 44) + "</div>" +
     "<h1>Модулът ти идва скоро</h1><p>" + esc(m.title) + ": " + esc(m.what.charAt(0).toLowerCase() + m.what.slice(1)) + "</p>" +

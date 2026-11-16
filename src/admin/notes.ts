@@ -148,7 +148,7 @@ export async function initNotes(): Promise<void> {
       '<div class="nt-top"><span class="sa-tag st-' + n.status + '">' + ic(ICO[n.status] || "info", 16) + esc(statusName(n.status)) + '</span><span class="sa-tag">' + esc(modName(n.module)) + "</span>" +
       (changed.has(n.id) ? '<span class="sa-tag ember">' + ic("sparkle", 16) + "Нов статус</span>" : "") + '<span class="when">' + esc(ago(n.createdAt)) + "</span></div>" +
       steps(n) + "<h3>" + esc(n.text) + "</h3>" +
-      '<div class="where"><b>' + esc(modName(n.module)) + " · " + esc(pageName(n.url)) + "</b><span>" + esc(n.url) + "</span></div>" +
+      '<div class="where"><b>' + esc(modName(n.module) === pageName(n.url) ? modName(n.module) : modName(n.module) + " · " + pageName(n.url)) + "</b><span>" + esc(n.url) + "</span></div>" +
       (et ? "<blockquote><small>Текстът на елемента</small>„" + esc(et.length > 220 ? et.slice(0, 218) + " …" : et) + "“</blockquote>" : "") + extra + tech(n) +
       '<div class="nt-foot"><div class="by"><span>' + ic(so.key === "client" ? "globe" : "user", 18) + "<b>" + esc(so.label) + "</b></span>" +
       (n.viewport && n.viewport.w ? "<span>" + ic("squares-four", 18) + '<span class="num">' + n.viewport.w + " × " + n.viewport.h + "</span></span>" : "") +
@@ -299,7 +299,7 @@ function staffShell(me: Me, sub: string): HTMLElement {
   document.title = "Моите препоръки | Siracusa · Админ";
   const app = document.createElement("div"); app.className = "sa-app nt-staffmode"; app.dataset.page = "notes";
   app.innerHTML = '<div class="sa-col"><header class="sa-top">' +
-    '<a class="sa-tb nt-back" href="' + aurl.app(role) + '">' + ic("caret-left", 20) + '<span class="lg">Към приложението</span><span class="sm">Назад</span></a>' +
+    '<a class="sa-tb nt-back" href="' + aurl.app(role) + '">' + ic("caret-left", 20) + '<span class="lg">Към приложението</span><span class="sm">Приложение</span></a>' +
     '<div class="sa-crumb"><small class="sa-only-td">Работа по сайта</small><b>Моите препоръки</b></div>' +
     '<button class="sa-tb" type="button" data-sa="pen" aria-pressed="false">' + ic("pencil-simple", 20) + "Молив</button>" +
     '<button class="sa-me" type="button" data-sa="profile"><span class="vh">Профил: </span><span class="sa-av" aria-hidden="true">' + esc(initials(me.user.name)) + '</span><span class="who"><b>' + esc(me.user.name) + "</b>" + (me.user.name === roleName(role) ? "" : '<small><span class="vh">, </span>' + esc(roleName(role)) + "</small>") + "</span></button>" +

@@ -123,7 +123,10 @@ export async function initAudit(): Promise<void> {
     const L = list(), who = [...new Set(L0.map(whoName))].filter((x) => x && x !== "Непознат").sort((a, b) => a.localeCompare(b, "bg"));
     const days: { k: string; at: string; items: AuditEntry[] }[] = [];
     L.slice(0, shown).forEach((e) => { const k = ymdOf(e.at), cur = days[days.length - 1]; if (!cur || cur.k !== k) days.push({ k, at: e.at, items: [e] }); else cur.items.push(e); });
-    const kinds = G.filter((g) => L0.some((e) => group(e.action) === g[0]));
+    /* all the kinds, as in the prototype (an empty one gives "Нищо за този филтър.") */
+    const kinds = G;
+    /* the count of a day is the whole day in the filter, not only the shown part */
+    const perDay: Record<string, number> = {}; L.forEach((e) => { const k = ymdOf(e.at); perDay[k] = (perDay[k] || 0) + 1; });
     const isQ = document.activeElement && (document.activeElement as HTMLElement).id === "au-q";
     root.innerHTML = (fail && loaded ? offline("Показваме последно заредените записи. Новите се появяват, щом връзката се върне.") + '<div style="height:16px"></div>' : "") +
       '<div class="au-note" data-edit-id="admin.audit.note">' + ic("lock", 20) + "<span><b>Само за четене.</b> Записите не се трият и не се променят; пазят се " + missing("срок на пазене") + ". Паролите и ПИН кодовете никога не влизат в дневника, само че са сменени.</span></div>" +
@@ -134,7 +137,7 @@ export async function initAudit(): Promise<void> {
       '<p class="au-sum"><span><b>' + plural(L.length, "запис", "записа") + "</b> · " + PER.find((p) => p[0] === f.p)![1].toLowerCase() + "</span>" + (more ? '<button class="pill pill-line" type="button" data-older>' + ic("clock", 20) + "Зареди по-стари</button>" : "") + "</p>" +
       (!L.length ? '<div class="sa-card">' + (!L0.length ? empty({ icon: "list-bullets", title: "Дневникът е празен.", text: "Всеки вход и всяка промяна в панела се записва тук: кой, кога и какво." })
         : empty({ icon: "funnel", title: "Нищо за този филтър.", text: "Изберете по-дълъг период или „Всичко“.", action: '<button class="pill pill-line pill-lg" type="button" data-clear>' + ic("x", 20) + "Махни филтрите</button>" })) + "</div>"
-        : days.map((d) => '<section class="au-day" aria-label="' + esc(dayTitle(d.at)) + '"><h2>' + esc(dayTitle(d.at)) + "<small>" + d.items.length + '</small></h2><div class="au-list" role="list">' + d.items.map(row).join("") + "</div></section>").join("") +
+        : days.map((d) => '<section class="au-day" aria-label="' + esc(dayTitle(d.at)) + '"><h2>' + esc(dayTitle(d.at)) + "<small>" + (perDay[d.k] || d.items.length) + '</small></h2><div class="au-list" role="list">' + d.items.map(row).join("") + "</div></section>").join("") +
           (L.length > shown ? '<div class="au-more"><button class="pill pill-line pill-lg" type="button" data-more>Покажи още ' + Math.min(60, L.length - shown) + "</button></div>" : ""));
     if (sc) sc.scrollTop = y;
     if (isQ) { const i = root.querySelector<HTMLInputElement>("#au-q"); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch { /* ignore */ } } }
