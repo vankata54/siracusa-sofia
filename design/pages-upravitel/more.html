@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Още | Siracusa · Управител</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_mgr.css">
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="_seed-shift.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_mgr.js"></script>
+<script>
+(function(){
+"use strict";
+var main = MG.mount({page:"more", title:"Още", section:"dashboard"});
+if (!main) return;
+var ic = MG.ic, esc = MG.esc, ADM = MG.ADMIN;
+if (MG.st === "loading"){ main.innerHTML = MG.skel(5, "Зареждаме разделите …"); return; }
+if (MG.st === "error"){ main.innerHTML = MG.error("Разделите на админа не се заредиха. Опитай пак след малко."); return; }
+
+/* разделите на админа, които ролята вижда (пълната работа е там; тук само връзки, без копия) */
+var SECS = [["orders","Поръчки","orders.html","Всички поръчки по статус и канал, детайл, смяна на статус"],
+  ["reservations","Резервации","reservations.html","Денят по часове, маси, неявили се, блокиране"],
+  ["menu","Меню и изчерпано","menu.html#f=out","Ястия, цени, „Изчерпано днес“ и „Върни“"],
+  ["lunch","Обедно меню","lunch.html","Седмичният график пн-пт и ПИН за персонала"],
+  ["reports","Отчети","reports.html#p=today","Поръчки, канали, часове, топ ястия"],
+  ["staff","Персонал","staff.html","Потребители, роли, пароли и ПИН"],
+  ["settings","Настройки","settings.html","„Натоварено“ и минутите, задържане на маса, часове"]];
+function render(){ var list = SECS.filter(function(s){ return A.can(s[0]); }), ph = A.can("orders");
+  main.innerHTML = '<div class="mg-grid">' +
+    '<section class="mg-blk" aria-labelledby="h-a"><div class="mg-h"><h2 id="h-a">Бързо</h2></div>' +
+      (ph ? '<a class="mg-hero" href="' + ADM + 'orders.html#st=phone"><span class="hi">' + ic("phone", 28) + '</span><span><b>Нова поръчка по телефон</b><small>Телефон на клиента, доставка или вземане, час. Формата е в админа.</small></span>' + ic("caret-right", 24) + '</a>' : '') +
+      '<div class="mg-card mg-list" style="margin-top:12px">' +
+        '<a class="mg-setrow" href="' + ADM + 'reservations.html#d=' + A.todayKey() + '&new=1"><span class="si">' + ic("calendar-check", 22) + '</span><span><b>Нова резервация</b><small>Формата е в „Резервации“ на админа</small></span>' + ic("caret-right", 20) + '</a>' +
+        '<a class="mg-setrow" href="' + ADM + 'notes.html#src=' + esc(A.me.role) + '"><span class="si">' + ic("pencil-simple", 22) + '</span><span><b>Моите препоръки</b><small>Какво предложи с молива и докъде е стигнало</small></span>' + ic("caret-right", 20) + '</a>' +
+        '<a class="mg-setrow" href="' + ADM + 'dashboard.html" data-home="admin"><span class="si">' + ic("squares-four", 22) + '</span><span><b>Към админа</b><small>Таблото и пълната работа на компютър</small></span>' + ic("caret-right", 20) + '</a></div></section>' +
+    '<section class="mg-blk" aria-labelledby="h-s"><div class="mg-h"><h2 id="h-s">Разделите на админа</h2><span class="cnt">' + list.length + '</span></div>' +
+      (list.length ? '<div class="mg-tiles2">' + list.map(function(s){ var x = A.SEC[s[0]]; return '<a class="mg-sect" href="' + ADM + s[2] + '"><span class="si">' + ic(x.ic, 24) + '</span><span><b>' + esc(s[1]) + '</b><small>' + esc(s[3]) + '</small></span><span class="go">' + ic("arrow-up-right", 20) + '</span></a>'; }).join("") + '</div>'
+        : MG.empty({icon:"lock", lock:true, title:"Няма раздели за тази роля", text:"Помоли главния админ за права."})) + '</section>' +
+    '<section class="mg-blk all" aria-labelledby="h-v"><div class="mg-h"><h2 id="h-v">Изглед и звук</h2></div><div class="mg-card pad">' +
+      '<p class="label" style="margin:0 0 8px">Тема</p>' + MG.themesHTML() +
+      (A.can("orders") ? '<label class="mg-setrow" style="padding:16px 0 4px"><span class="si">' + ic("bell-ringing", 22) + '</span><span><b>Звук за нова онлайн поръчка</b><small>Двоен тон и известие. Помни се на това устройство.</small></span><span class="mg-switch"><input type="checkbox" role="switch" data-snd data-keep="snd" aria-label="Звук за нова онлайн поръчка"' + (A.soundOn() ? ' checked' : '') + '><span class="tr"></span></span></label>' : '') +
+      '</div><button class="pill pill-line pill-lg pill-block" type="button" data-mg="logout" style="margin-top:14px">' + ic("sign-out", 22) + 'Изход</button></section></div>'; }
+MG.onRender(render);
+main.addEventListener("change", function(e){ if (e.target.matches("[data-snd]")){ try{ localStorage.setItem("sa-sound", e.target.checked ? "on" : "off"); }catch(x){} MG.syncSound(); if (A.soundOn()) A.chime(); MG.toast(A.soundOn() ? "Звукът за нови онлайн поръчки е включен" : "Звукът за нови онлайн поръчки е изключен"); } });
+})();
+</script>
+</body>
+</html>

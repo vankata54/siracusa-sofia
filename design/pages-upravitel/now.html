@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Сега | Siracusa · Управител</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_mgr.css">
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="_seed-shift.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_mgr.js"></script>
+<script>
+(function(){
+"use strict";
+var main = MG.mount({page:"now", title:"Сега", section:"orders"});
+if (!main) return;
+var ic = MG.ic, esc = MG.esc, fmt = MG.fmt, SH = A.sh, ADM = MG.ADMIN;
+
+if (MG.st === "loading"){ main.innerHTML = MG.statusLine() + MG.skel(4, "Зареждаме смяната …"); return; }
+if (MG.st === "error"){ main.innerHTML = MG.statusLine() + MG.error("Поръчките и повикванията не се заредиха. Админът и кухнята работят; опитай пак след малко."); return; }
+
+/* ---------- пулсът на смяната: 5 числа, всяко води към мястото си ---------- */
+function pulse(c){ var pct = c.tables ? Math.round(c.seated / c.tables * 100) : 0, a = c.tables ? c.salon / c.tables * 100 : 0, b = c.tables ? c.garden / c.tables * 100 : 0;
+  return '<div class="mg-pulse" role="group" aria-label="Пулсът на смяната"><div class="in">' +
+    '<a class="mg-kpi wide" href="hall.html"><span class="lb">' + ic("chair", 20) + 'Маси заети</span><span class="v tnum">' + c.seated + '<small>от ' + c.tables + '</small></span><span class="go">' + ic("caret-right", 20) + '</span>' +
+      '<span class="bar"><span class="mg-occ" aria-hidden="true"><i style="width:' + a + '%"></i><i style="width:' + b + '%"></i></span><span class="mg-occl"><span><i></i>Салон ' + c.salon + '</span><span><i></i>Градина ' + c.garden + '</span><span>' + pct + '% заети</span></span></span></a>' +
+    '<a class="mg-kpi" href="' + ADM + 'orders.html#s=work"><span class="lb">' + ic("receipt", 20) + 'В работа</span><span class="v tnum">' + c.inWork + '</span><span class="ft">' + (c.inWork === 1 ? "поръчка" : "поръчки") + ' · в админа</span></a>' +
+    '<a class="mg-kpi' + (c.late ? ' hot' : '') + '" href="#problems" data-jump="problems"><span class="lb">' + ic(c.late ? "warning" : "check-circle", 20) + 'Закъсняват</span><span class="v tnum">' + c.late + '</span><span class="ft">' + (c.late ? "виж проблемите" : "нищо не закъснява") + '</span></a>' +
+    '<a class="mg-kpi' + (c.calls ? '' : '') + '" href="team.html#go=waiters"><span class="lb">' + ic("hand-waving", 20) + 'Повиквания</span><span class="v tnum">' + c.calls + '</span><span class="ft">' + (c.calls === 1 ? "чака сервитьор" : "чакат сервитьор") + '</span></a>' +
+    '<a class="mg-kpi" href="hall.html#go=res"><span class="lb">' + ic("calendar-check", 20) + 'Резервации</span><span class="v tnum">' + c.res2 + '</span><span class="ft">до ' + A.hm(new Date(A.now().getTime() + 120 * 60000)) + '</span></a>' +
+  '</div></div>'; }
+
+/* ---------- „Проблеми сега“ ---------- */
+function probCard(p, i){ var first = i === 0, prim = first ? "pill-red" : "pill-ink", acts = "";
+  if (p.kind === "call") acts = '<button class="pill ' + prim + ' grow" type="button" data-a="go" data-id="' + p.id + '">' + ic("arrow-right", 20) + 'Отивам</button><button class="pill pill-line" type="button" data-a="assign" data-id="' + p.id + '">' + ic("user", 20) + 'Възложи на …</button>';
+  if (p.kind === "qr") acts = '<button class="pill ' + prim + ' grow" type="button" data-a="qr" data-id="' + p.id + '">' + ic("check", 20) + 'Потвърди и прати</button><button class="pill pill-line" type="button" data-a="qrassign" data-id="' + p.id + '">' + ic("user", 20) + 'Възложи на …</button>';
+  if (p.kind === "ask") acts = '<button class="pill ' + prim + ' grow" type="button" data-a="ask" data-id="' + p.id + '">' + ic("map-pin", 20) + 'Реши</button>';
+  if (p.kind === "out") acts = '<button class="pill ' + prim + ' grow" type="button" data-a="callc" data-no="' + p.no + '" data-why="out">' + ic("phone", 20) + 'Обади се на клиента</button>';
+  if (p.kind === "late") acts = p.table ? '<a class="pill ' + prim + ' grow" href="../pages-kuhnya/summary.html#s=all">' + ic("chef-hat", 20) + 'Виж в кухнята</a><button class="pill pill-line" type="button" data-a="seen" data-no="' + p.no + '">' + ic("check", 20) + 'Видях</button>'
+    : '<button class="pill ' + prim + ' grow" type="button" data-a="callc" data-no="' + p.no + '" data-why="late">' + ic("phone", 20) + 'Обади се на клиента</button>';
+  return '<article class="mg-prob ' + p.cls + '" data-key="' + esc(p.key) + '">' + (first ? '<span class="rank">' + ic("warning", 14) + 'Първо това</span>' : '') +
+    '<span class="pi">' + ic(p.icon, 24) + '</span><div class="pt"><b>' + esc(p.title) + '</b><small>' + esc(p.meta) + '</small></div>' +
+    '<div class="tm"><b class="tnum" data-since="' + new Date(p.since).toISOString() + '">' + MG.mmss(MG.secSince(p.since)) + '</b><span>' + esc(p.tl) + '</span></div><div class="pa">' + acts + '</div></article>'; }
+function problems(list){ return '<section class="mg-blk" id="problems" aria-labelledby="h-p"><div class="mg-h"><h2 id="h-p">Проблеми сега</h2>' + (list.length ? '<span class="cnt hot">' + list.length + '</span>' : '') + '</div>' +
+  (list.length ? '<div class="mg-probs">' + list.slice(0, showAll ? 99 : 5).map(probCard).join("") + (list.length > 5 && !showAll ? '<button class="pill pill-line pill-lg" type="button" data-a="allp">' + ic("caret-down", 20) + 'Покажи още ' + (list.length - 5) + '</button>' : '') + '</div>' : '<div class="mg-allok">' + ic("check-circle", 32) + '<div><b>Няма проблеми сега</b><span>Повикванията над ' + MG.callMgr() + ' мин, закъсненията и въпросите на шофьорите идват тук сами.</span></div></div>') + '</section>'; }
+
+/* ---------- „Чака те“ (като таблото на админа) ---------- */
+function waits(W){ var alert = A.data.get("order-alert", null), rows = "";
+  if (W.orders.length){ rows += '<div class="mg-wgrp">' + ic("receipt", 18) + 'Поръчки за приемане · ' + W.orders.length + '</div>' + W.orders.map(function(o){ var c = SH.CH[o.channel] || SH.CH.delivery, nw = alert && alert.no === o.no;
+      return '<div class="mg-wrow" data-wno="' + o.no + '"><span class="wi">' + ic(c[1], 22) + '</span><div class="wt"><b>№ ' + esc(o.no) + ' · ' + c[0] + (o.channel === "table" ? " " + esc(o.table) : "") + (nw ? ' ' + MG.tag("ember", "bell-ringing", "Нова") : '') + '</b><small>' + (o.channel !== "table" ? esc(o.name) + ' · ' : '') + A.plural(SH.items(o), "ястие", "ястия") + ' · <span class="price">' + fmt(SH.total(o)) + '</span> · ' + MG.agoMin(o.ts) + '</small></div>' +
+        '<div class="wa"><button class="pill pill-ink" type="button" data-a="accept" data-no="' + o.no + '" aria-label="Приеми № ' + o.no + '">' + ic("check", 20) + 'Приеми</button></div></div>'; }).join(""); }
+  if (W.res.length){ rows += '<div class="mg-wgrp">' + ic("calendar-check", 18) + 'Резервации за потвърждаване · ' + W.res.length + '</div>' + W.res.map(function(r){ var t = A.tables().filter(function(x){ return x.id === r.table; })[0];
+      return '<div class="mg-wrow"><span class="wi tnum">' + esc(r.time) + '</span><div class="wt"><b>' + esc(r.name) + ' · ' + A.plural(+r.people, "човек", "души") + '</b><small>Днес в ' + esc(r.time) + (t ? ' · Маса ' + t.n : ' · без маса') + (r.occasion ? ' · ' + esc(r.occasion) : '') + '</small></div>' +
+        '<div class="wa"><button class="pill pill-ink" type="button" data-a="confirm" data-id="' + r.id + '" aria-label="Потвърди резервацията на ' + esc(r.name) + ' в ' + esc(r.time) + '">' + ic("check", 20) + 'Потвърди</button></div></div>'; }).join(""); }
+  if (W.blocks.length){ rows += '<div class="mg-wgrp">' + ic("warning-circle", 18) + 'Неявили се за решение · ' + W.blocks.length + '</div>' + W.blocks.map(function(x){
+      return '<div class="mg-wrow"><span class="wi">' + ic("user", 22) + '</span><div class="wt"><b>' + esc(x.b.name || "Клиент") + ' · ' + A.plural(x.b.count || 2, "неявяване", "неявявания") + '</b><small>' + esc(A.maskPhone(x.phone)) + ' · последно ' + esc(A.fmtDate(new Date(x.b.at), true)) + '</small></div>' +
+        '<div class="wa"><button class="pill pill-ink" type="button" data-a="block" data-ph="' + esc(x.phone) + '">' + ic("scales", 20) + 'Реши</button></div></div>'; }).join(""); }
+  if (W.notes){ rows += '<div class="mg-wgrp">' + ic("pencil-simple", 18) + 'Вашите препоръки · ' + W.notes.n + '</div><div class="mg-wrow"><span class="wi">' + ic("pencil-simple", 22) + '</span><div class="wt"><b>' + esc(W.notes.title || "С нов статус") + '</b><small>От молива, в „Бележки“ на админа</small></div><div class="wa"><a class="pill pill-line" href="' + ADM + 'notes.html#src=' + esc(A.me.role) + '">Виж</a></div></div>'; }
+  return '<section class="mg-blk" id="wait" aria-labelledby="h-w"><div class="mg-h"><h2 id="h-w">Чака те</h2>' + (W.n ? '<span class="cnt">' + W.n + '</span>' : '') + '</div>' +
+    (W.n ? '<div class="mg-card mg-list">' + rows + '</div>' : '<div class="mg-allok">' + ic("check-circle", 32) + '<div><b>Нищо не чака.</b><span>Всичко е наред. Новите онлайн поръчки идват тук със звук.</span></div></div>') + '</section>'; }
+
+/* ---------- кухнята ---------- */
+function kitchen(){ var k = A.settings().kitchen, secs = MG.kitchen(), out = A.soldOutToday().map(function(id){ return SC.byId[id]; }).filter(Boolean), open = A.minutes() >= 600 && A.minutes() < 1350;
+  var busy = '<label class="mg-busy' + (k.busy ? ' on' : '') + '"><b>' + ic("hourglass", 24) + 'Натоварено</b><span class="mg-switch"><input type="checkbox" role="switch" data-busy data-keep="busy" aria-label="Натоварено"' + (k.busy ? ' checked' : '') + '><span class="tr"></span></span>' +
+    '<span class="sub">' + (k.busy ? 'Включено' + (k.busyBy ? ' от ' + esc(k.busyBy) : '') + (k.busyAt ? ' в ' + MG.hm(k.busyAt) : '') + '. Гостите виждат <q>Възможни са закъснения · около ' + k.etaBusyMin + ' мин</q>.' : 'Изключено. Гостите виждат <q>около ' + k.etaMin + ' мин</q> за доставка.') + '</span></label>';
+  var sh = '<div class="mg-card mg-list mg-secs">' + secs.map(function(s){ return '<div class="mg-sec"><span class="si">' + ic(s.sec.ic, 22) + '</span><div class="sn"><b>' + esc(s.sec.n) + '</b>' +
+      (s.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът е на линия</small>' : '<small class="off"><span class="mg-dot off" aria-hidden="true"></span>' + ic("warning-circle", 16) + 'Таблетът няма връзка от ' + MG.hm(s.seen) + '</small>') + '</div>' +
+      '<div class="sc"><span><b>' + s.wait + '</b>' + (s.wait === 1 ? 'чака' : 'чакат') + '</span>' + (s.late ? '<span class="late">' + ic("warning", 14) + '<b>' + s.late + '</b>' + (s.late === 1 ? 'закъснява' : 'закъсняват') + '</span>' : '') + '</div></div>'; }).join("") + '</div>';
+  var so = '<div class="mg-h" style="margin:22px 0 10px"><h2 style="font-size:19px">Изчерпано днес</h2><span class="cnt">' + out.length + '</span></div>' +
+    (out.length ? '<div class="mg-card mg-list">' + out.map(function(x){ var c = SC.catById[x.cat]; return '<div class="mg-orow">' + SC.pic(x) + '<div><b>' + esc(x.n) + '</b><small>' + (c ? esc(c.n) : '') + ' · скрито с „Изчерпано днес“</small></div><button class="pill pill-line" type="button" data-a="back" data-id="' + x.id + '" aria-label="Върни в менюто: ' + esc(x.n) + '">' + ic("arrow-counter-clockwise", 20) + 'Върни</button></div>'; }).join("") + '</div>'
+      : '<div class="mg-allok">' + ic("check-circle", 28) + '<div><b>Всичко е в менюто</b><span>Кухнята отбелязва изчерпаното от своя екран.</span></div></div>');
+  return '<section class="mg-blk" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухнята</h2><a class="mg-link more" href="../pages-kuhnya/summary.html#s=all">Екранът ' + ic("arrow-up-right", 18) + '</a></div>' +
+    (open ? '' : '<p class="mg-note" style="margin:0 2px 12px">' + ic("info", 16) + 'Кухнята приема поръчки от 10:00 до 22:30.</p>') + busy + sh + so + '</section>'; }
+
+var showAll = false;
+function render(){ var c = MG.counts(), P = MG.problems(), W = MG.waits();
+  main.innerHTML = MG.statusLine() + pulse(c) + '<div class="mg-grid c3">' + problems(P) + waits(W) + kitchen() + '</div>'; }
+MG.onRender(render);
+
+/* ---------- действия ---------- */
+function callByNo(no, why){ var o = MG.order(no); if (!o) return;
+  if (why === "out"){ var out = A.soldOutToday(), bad = o.lines.filter(function(l){ return out.indexOf(l.id) > -1; }).map(function(l){ return SC.byId[l.id].n; });
+    MG.callSheet(o, "Изчерпано днес: " + bad.join(", ") + ". Предложи друго ястие или откажи само него.", "out:" + o.no); }
+  else MG.callSheet(o, "Закъснява " + SH.lateMin(o) + " мин" + (o.status === "on_way" ? ", на път с " + (o.driver || "шофьор") : ", още в кухнята") + ". Кажи на клиента новото време.", "late:" + o.no); }
+function askSheet(id){ var s = MG.shift(), a = (s.asks || []).filter(function(x){ return x.id === id; })[0]; if (!a) return; var o = MG.order(a.no);
+  var sh = MG.sheet({title:"Адрес извън зоните", html:'<p>' + esc(a.driver) + ' пита какво да прави с <b>№ ' + esc(a.no) + '</b>. Адресът е извън зоните за доставка.</p>' +
+    (o ? '<div class="mg-kv"><span>Адрес</span><b>' + esc(o.addr || "") + '</b></div><div class="mg-kv"><span>Клиент</span><b>' + esc(o.name || "") + '</b></div><div class="mg-kv"><span>Плащане</span><b>' + esc({cash:"В брой", card:"Карта при получаване", voucher:"Ваучер"}[o.pay] || "") + '</b></div>' : '') +
+    '<p class="mg-note">' + ic("info", 16) + 'Шофьорът вижда отговора веднага в своето приложение.</p>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-r="back">' + ic("storefront", 22) + 'Върни я в ресторанта</button><button class="pill pill-red pill-lg" type="button" data-r="go">' + ic("moped", 22) + 'Да я достави</button>'});
+  sh.foot.addEventListener("click", function(e){ var b = e.target.closest("[data-r]"); if (!b) return; sh.close(); MG.answerAsk(id, b.dataset.r === "go" ? "да достави поръчката" : "да върне поръчката в ресторанта"); }); }
+function blockSheet(ph){ var bl = A.data.get("blocks", {}) || {}, b = bl[ph]; if (!b) return;
+  var sh = MG.sheet({title:"Неявили се: реши", html:'<p><b>' + esc(b.name || "Клиент") + '</b> не дойде ' + (b.count || 2) + ' пъти без да се обади (' + esc(A.maskPhone(ph)) + ').</p><p>Ако блокираш номера, резервацията от сайта иска обаждане до ресторанта. Отблокира се от „Резервации“ в админа.</p>',
+    foot:'<button class="pill pill-line pill-lg" type="button" data-b="no">Не блокирай</button><button class="pill pill-red pill-lg" type="button" data-b="yes">' + ic("lock", 22) + 'Блокирай номера</button>'});
+  sh.foot.addEventListener("click", function(e){ var x = e.target.closest("[data-b]"); if (!x) return; sh.close(); MG.decideBlock(ph, x.dataset.b === "yes"); }); }
+function busySheet(){ var k = A.settings().kitchen;
+  MG.confirm({title:"Да включа ли „Натоварено“?", ok:"Включи „Натоварено“", icon:"hourglass",
+    html:'<p>Новите поръчки за доставка получават +' + (k.etaBusyMin - k.etaMin) + ' мин. Приетите пазят своя час. Кухнята и сайтът го виждат веднага.</p><div class="mg-cmp"><div><span>Сега гостите виждат</span><b>около ' + k.etaMin + ' мин</b></div><div class="now"><span>След включване</span><b>Възможни са закъснения · около ' + k.etaBusyMin + ' мин</b></div></div>'},
+    function(){ MG.setBusy(true); }); }
+
+main.addEventListener("click", function(e){ var j = e.target.closest("[data-jump]"); if (j){ e.preventDefault(); var t = document.getElementById(j.dataset.jump); t && t.scrollIntoView({behavior:"smooth", block:"start"}); return; }
+  var b = e.target.closest("[data-a]"); if (!b) return; var a = b.dataset.a;
+  if (a === "allp"){ showAll = true; render(); MG.tick(); return; }
+  if (a === "go") MG.takeCall(b.dataset.id, MG.who());
+  if (a === "assign"){ var c = MG.shift().calls.filter(function(x){ return x.id === b.dataset.id; })[0]; if (c) MG.pickWaiter("Маса " + c.n + ": кой отива?", null, function(name){ MG.takeCall(c.id, name); }); }
+  if (a === "qr") MG.confirmQR(b.dataset.id);
+  if (a === "qrassign"){ var q = MG.shift().qr.filter(function(x){ return x.id === b.dataset.id; })[0]; if (q) MG.pickWaiter("QR поръчка на Маса " + q.n + ": кой потвърждава?", null, function(name){ if (name === MG.who()) MG.confirmQR(q.id); else MG.assignQR(q.id, name); }); }
+  if (a === "ask") askSheet(b.dataset.id);
+  if (a === "callc") callByNo(b.dataset.no, b.dataset.why);
+  if (a === "seen") MG.ack("late:" + b.dataset.no, "№ " + b.dataset.no + ": видяно, кухнята е предупредена", "order.note", b.dataset.no);
+  if (a === "accept") MG.accept(b.dataset.no);
+  if (a === "confirm") MG.confirmRes(b.dataset.id);
+  if (a === "block") blockSheet(b.dataset.ph);
+  if (a === "back") MG.backIn(b.dataset.id);
+});
+main.addEventListener("change", function(e){ var t = e.target; if (!t.matches("[data-busy]")) return;
+  if (t.checked){ t.checked = false; busySheet(); } else MG.setBusy(false); });
+
+MG.onHash = function(h){ if (h.n) setTimeout(function(){ MG.see(h.n); }, 60); if (h.go){ var el = document.getElementById(h.go); el && setTimeout(function(){ el.scrollIntoView({block:"start"}); }, 60); } };
+MG.onHash(A.hash);
+})();
+</script>
+</body>
+</html>

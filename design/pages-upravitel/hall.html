@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Залата | Siracusa · Управител</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_mgr.css">
+<style>
+.hl-sum{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:14px 2px 0; font-size:15px; font-weight:700; color:var(--muted)}
+.hl-sum b{color:var(--ink); font-size:17px; font-weight:800}
+.hl-zone-d{display:none}
+.hl-grid{display:grid; gap:0 24px; align-items:start}
+@container app (min-width:900px){
+  .hl-seg{display:none}
+  .hl-zone-d{display:block}
+  .hl-zone-p{display:none}
+  .hl-grid .mg-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@container app (min-width:1240px){
+  .hl-grid{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<script src="../pages-admin/_seed-orders.js"></script>
+<script src="../pages-admin/_res-lib.js"></script>
+<script src="../pages-admin/_seed-res.js"></script>
+<script src="_seed-shift.js"></script>
+<script src="../pages-admin/_pencil.js"></script>
+<script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
+<script src="_mgr.js"></script>
+<script>
+(function(){
+"use strict";
+var main = MG.mount({page:"hall", title:"Залата", section:"hall"});
+if (!main) return;
+var ic = MG.ic, esc = MG.esc, fmt = MG.fmt, SH = A.sh, ADM = MG.ADMIN;
+if (!A.can("hall") && !A.can("reservations")){ main.innerHTML = MG.noperm("hall"); return; }
+if (MG.st === "loading"){ main.innerHTML = MG.skel(5, "Зареждаме залата …"); return; }
+if (MG.st === "error"){ main.innerHTML = MG.error("Масите и резервациите не се заредиха. Опитай пак след малко."); return; }
+
+var zone = A.hash.z === "garden" ? "garden" : "salon";
+var TCLS = {call:"call", bill:"bill", qr:"qr", ready:"ready", wait:"wait", busy:"busy", res:"res", free:"free"};
+function tile(x){ var s = MG.TST[x.st], tm = "";
+  if (x.call) tm = '<b class="tnum" data-since="' + x.call.at + '">' + MG.mmss(MG.secSince(x.call.at)) + '</b><small>чака</small>';
+  else if (x.qr) tm = '<b class="tnum" data-since="' + x.qr.at + '">' + MG.mmss(MG.secSince(x.qr.at)) + '</b><small>чака</small>';
+  else if (x.seated) tm = 'от ' + MG.hm(x.seated.since) + '<small>' + Math.max(1, Math.round(MG.secSince(x.seated.since) / 60)) + ' мин</small>';
+  else if (x.next) tm = esc(x.next.time) + '<small>' + A.plural(+x.next.people, "човек", "души") + '</small>';
+  var aria = "Маса " + x.n + ", " + s[0] + (x.waiter ? ", " + x.waiter.name : "") + (x.seated ? ", заета от " + MG.hm(x.seated.since) : "") + (x.walkin ? "" : ", само с резервация");
+  return '<button class="mg-tile ' + TCLS[x.st] + '" type="button" data-t="' + x.n + '" aria-label="' + esc(aria) + '"><span class="no">' + x.n + '</span><span class="tm">' + tm + '</span>' +
+    '<span class="w">' + ic(s[1], 18) + esc(s[0]) + '</span><span class="who">' + ic("user", 16) + '<span>' + esc(x.waiter ? x.waiter.name : "без сервитьор") + '</span></span>' + (x.walkin ? '' : '<span class="lock" title="Само с резервация">' + ic("lock", 18) + '</span>') + '</button>'; }
+function zoneHTML(z, list){ var busy = list.filter(function(x){ return x.seated; }).length;
+  return '<div class="mg-zone"><h3>' + MG.ZONE[z] + ' <span class="muted">' + busy + ' от ' + list.length + ' заети</span></h3><div class="mg-tiles">' + list.map(tile).join("") + '</div></div>'; }
+var RS = {"new":["warn","hourglass","Нова"], confirmed:["","check","Потвърдена"]};
+function resHTML(){ var nm = A.minutes(), list = MG.resAhead(), wl = A.reservations().filter(function(r){ return r.date === A.todayKey() && r.status === "waitlist"; });
+  var rows = list.map(function(r){ var t = A.tables().filter(function(x){ return x.id === r.table; })[0], m = MG.resMin(r), late = m < nm && r.status === "confirmed";
+    return '<div class="mg-rrow"><span class="rt">' + esc(r.time) + '</span><div><b>' + esc(r.name) + ' · ' + A.plural(+r.people, "човек", "души") + '</b><small>' + (t ? 'Маса ' + t.n + ' · ' + MG.ZONE[t.zone] : 'без маса') + (r.occasion ? ' · ' + esc(r.occasion) : '') + '</small>' +
+      (late ? '<span style="display:inline-flex;margin-top:6px">' + MG.tag("warn", "clock", "Закъснява " + (nm - m) + " мин") + '</span>' : '') + '</div>' +
+      (r.status === "new" ? '<button class="pill pill-ink" type="button" data-confirm="' + r.id + '" aria-label="Потвърди ' + esc(r.name) + ' в ' + esc(r.time) + '">' + ic("check", 20) + 'Потвърди</button>' : MG.tag(RS[r.status][0], RS[r.status][1], RS[r.status][2])) + '</div>'; }).join("");
+  var wrows = wl.map(function(r){ return '<div class="mg-rrow"><span class="rt">' + esc(r.time) + '</span><div><b>' + esc(r.name) + ' · ' + A.plural(+r.people, "човек", "души") + '</b><small>Чака маса · ' + esc(A.maskPhone(r.phone)) + '</small></div>' + MG.tag("line", "hourglass", "Чака маса") + '</div>'; }).join("");
+  return '<section class="mg-blk" id="res" aria-labelledby="h-r"><div class="mg-h"><h2 id="h-r">До края на вечерта</h2>' + (list.length ? '<span class="cnt">' + list.length + '</span>' : '') + '</div>' +
+    (list.length ? '<div class="mg-card mg-list">' + rows + '</div>' : '<div class="mg-allok">' + ic("calendar-check", 28) + '<div><b>Няма още резервации днес</b><span>Новите от сайта и по телефона идват тук.</span></div></div>') +
+    (wrows ? '<div class="mg-h" style="margin:22px 0 10px"><h2 style="font-size:19px">Чакат маса</h2><span class="cnt">' + wl.length + '</span></div><div class="mg-card mg-list">' + wrows + '</div>' : '') +
+    '<div class="mg-acts"><a class="pill pill-red pill-lg" href="' + ADM + 'reservations.html#d=' + A.todayKey() + '&new=1">' + ic("plus", 22) + 'Нова резервация</a><a class="pill pill-line pill-lg" href="' + ADM + 'reservations.html#d=' + A.todayKey() + '">' + ic("calendar-check", 22) + 'Всички резервации</a></div>' +
+    '<div class="mg-acts" style="margin-top:8px"><a class="pill pill-line" href="' + ADM + 'hall.html#v=plan">' + ic("chair", 20) + 'Планът на залата</a><a class="pill pill-line" href="' + ADM + 'qr.html">' + ic("qr-code", 20) + 'QR кодовете</a></div></section>'; }
+
+function render(){ var T = MG.tableStates(), sal = T.filter(function(x){ return x.zone === "salon"; }), gar = T.filter(function(x){ return x.zone === "garden"; }), c = MG.counts();
+  var leg = ["call","bill","qr","ready","wait","busy","res","free"].map(function(k){ var s = MG.TST[k]; return MG.tag(k === "call" || k === "bill" ? "red" : k === "ready" ? "ember" : k === "free" ? "ok" : k === "wait" ? "warn" : "line", s[1], s[0]); }).join("");
+  main.innerHTML = '<p class="hl-sum"><b>' + c.seated + ' от ' + c.tables + ' маси заети</b><span>' + A.hm(A.now()) + ' · ' + A.status()[1].replace(/<\/?b>/g, "") + '</span></p>' +
+    '<div class="hl-grid"><section class="mg-blk" aria-labelledby="h-t"><div class="mg-h"><h2 id="h-t">Масите</h2><span class="mg-sample" title="Масите са условни">' + ic("info", 16) + 'Условен план</span></div>' +
+      '<div class="mg-seg hl-seg" role="group" aria-label="Зона"><button type="button" data-z="salon" aria-pressed="' + (zone === "salon") + '">Салон <span class="n">' + c.salon + '/' + sal.length + '</span></button><button type="button" data-z="garden" aria-pressed="' + (zone === "garden") + '">Градина <span class="n">' + c.garden + '/' + gar.length + '</span></button></div>' +
+      '<div class="hl-zone-p" style="margin-top:14px">' + zoneHTML(zone, zone === "salon" ? sal : gar) + '</div>' +
+      '<div class="hl-zone-d">' + zoneHTML("salon", sal) + zoneHTML("garden", gar) + '</div>' +
+      '<div class="mg-legend" aria-label="Какво значат цветовете">' + leg + '</div>' +
+      '<p class="mg-note">' + ic("info", 16) + '<span>Масите и номерата са условни ' + MG.missing("истински маси и план") + '. Докосни маса за сервитьора, сумата и блокирането.</span></p></section>' +
+    resHTML() + '</div>'; }
+MG.onRender(render);
+
+/* ---------- лист на маса ---------- */
+function tableSheet(n){ var x = MG.tableStates().filter(function(z){ return z.n === +n; })[0]; if (!x) return; var s = MG.TST[x.st];
+  var orders = x.orders.map(function(o){ return '<div class="mg-kv"><span>№ ' + esc(o.no) + ' · ' + esc(SH.LABEL[o.status]) + ' · ' + esc(o.placedAt) + '</span><b class="price">' + fmt(SH.total(o)) + '</b></div>'; }).join("");
+  var html = '<p style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px">' + MG.tag(x.st === "call" || x.st === "bill" ? "red" : x.st === "ready" ? "ember" : x.st === "free" ? "ok" : x.st === "wait" ? "warn" : "", s[1], s[0]) + (x.walkin ? '' : MG.tag("line", "lock", "Само с резервация")) + '</p>' +
+    '<h3>Обслужва</h3><div class="mg-pick" role="group" aria-label="Смени сервитьора">' + MG.shift().waiters.map(function(w){ return '<button type="button" data-sw="' + w.id + '" aria-pressed="' + (x.waiter && x.waiter.id === w.id) + '">' + ic("user", 22) + esc(w.name) + '<small>' + (x.waiter && x.waiter.id === w.id ? "сега" : "смени на него") + '</small></button>'; }).join("") + '</div>' +
+    '<h3>Сега</h3>' +
+    (x.seated ? '<div class="mg-kv"><span>Заета от</span><b>' + MG.hm(x.seated.since) + ' · ' + Math.max(1, Math.round(MG.secSince(x.seated.since) / 60)) + ' мин</b></div>' + (x.seated.guests ? '<div class="mg-kv"><span>Гости</span><b>' + A.plural(x.seated.guests, "човек", "души") + '</b></div>' : '') +
+      (orders || '<div class="mg-kv"><span>Поръчки</span><b>още няма</b></div>') + '<div class="mg-kv"><span>Сума на масата</span><b class="price" style="font-size:20px">' + fmt(x.sum) + '</b></div>'
+      : '<div class="mg-kv"><span>Масата</span><b>свободна</b></div>') +
+    (x.call ? '<div class="mg-kv"><span>Повикване</span><b>' + esc(MG.WHY[x.call.why][0]) + ' · чака ' + MG.mmss(MG.secSince(x.call.at)) + '</b></div>' : '') +
+    (x.qr ? '<div class="mg-kv"><span>QR поръчка</span><b>чака потвърждение</b></div>' : '') +
+    '<div class="mg-kv"><span>Следваща резервация</span><b>' + (x.next ? esc(x.next.time) + ' · ' + A.plural(+x.next.people, "човек", "души") + ' · ' + esc(x.next.name) : 'няма до края на вечерта') + '</b></div>' +
+    '<h3>Гости без резервация</h3><label class="mg-busy" style="box-shadow:inset 0 0 0 1.5px var(--line-strong);padding:12px 12px 12px 16px"><b style="font-size:17px">' + ic("lock", 22) + 'Блокирай за гости без резервация</b><span class="mg-switch"><input type="checkbox" role="switch" data-walk aria-label="Блокирай маса ' + x.n + ' за гости без резервация"' + (x.walkin ? '' : ' checked') + '><span class="tr"></span></span><span class="sub">Масата се дава само по резервация. Сменя се и в плана на админа.</span></label>';
+  var sh = MG.sheet({title:"Маса " + x.n + " · " + MG.ZONE[x.zone], html:html, foot:'<a class="pill pill-line pill-lg" href="' + ADM + 'hall.html#v=plan&z=' + x.zone + '">' + ic("chair", 22) + 'В плана на админа</a>' + (x.call ? '<button class="pill pill-red pill-lg" type="button" data-go>' + ic("arrow-right", 22) + 'Отивам</button>' : '')});
+  sh.body.addEventListener("click", function(e){ var b = e.target.closest("[data-sw]"); if (!b || b.getAttribute("aria-pressed") === "true") return; var w = MG.shift().waiters.filter(function(z){ return z.id === b.dataset.sw; })[0];
+    sh.close(); var list = w.tables.concat([x.n]); MG.setTables(w.id, list); });
+  sh.body.addEventListener("change", function(e){ if (e.target.matches("[data-walk]")){ MG.setWalkin(x.n, !e.target.checked); } });
+  var g = sh.foot.querySelector("[data-go]"); if (g) g.onclick = function(){ sh.close(); MG.takeCall(x.call.id, MG.who()); }; }
+
+main.addEventListener("click", function(e){ var t = e.target.closest("[data-t]"); if (t){ tableSheet(t.dataset.t); return; }
+  var z = e.target.closest("[data-z]"); if (z){ zone = z.dataset.z; render(); MG.tick(); var nb = main.querySelector('[data-z="' + zone + '"]'); nb && nb.focus({preventScroll:true}); return; }
+  var c = e.target.closest("[data-confirm]"); if (c) MG.confirmRes(c.dataset.confirm); });
+MG.onHash = function(h){ if (h.t) setTimeout(function(){ tableSheet(h.t); }, 80); if (h.go){ var el = document.getElementById(h.go); el && setTimeout(function(){ el.scrollIntoView({block:"start"}); }, 60); } };
+MG.onHash(A.hash);
+})();
+</script>
+</body>
+</html>

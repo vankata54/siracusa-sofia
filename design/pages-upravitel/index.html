@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Управител | Siracusa · екраните</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap">
+<link rel="stylesheet" href="../ds/sc.css">
+<link rel="stylesheet" href="_mgr.css">
+<style>
+.ix{max-width:1040px; margin:0 auto; padding:28px 16px 64px}
+.ix .eye{display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:0 12px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:800; color:var(--muted)}
+.ix h1{margin:14px 0 8px; font-size:40px; font-weight:800; letter-spacing:-.045em; line-height:1.05}
+.ix .lead{color:var(--ink); max-width:62ch}
+.ix .who{display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 0}
+.ix .who .pill{flex:1 1 220px}
+.scr{display:grid; gap:12px; margin-top:12px}
+.scr article{padding:16px 16px 14px; border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.scr .hd{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:14px; align-items:center; color:var(--ink); text-decoration:none}
+.scr .ico{width:52px; height:52px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.scr b{display:block; font-size:19px; letter-spacing:-.02em}
+.scr .d{display:block; font-size:15px; color:var(--muted); line-height:1.4; margin-top:2px; font-weight:600}
+.scr .st{display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0 66px}
+.scr .st a{text-decoration:none; min-height:44px; font-size:14px}
+@container app (max-width:520px){ .scr .st{margin-left:0} .ix h1{font-size:32px} }
+@container app (min-width:900px){ .scr{grid-template-columns:1fr 1fr} .ix{padding-top:48px} }
+</style>
+</head>
+<body class="mg">
+<script src="../ds/icons.js"></script>
+<script src="../data/menu.js"></script>
+<script src="../ds/sc.js"></script>
+<script src="../pages-admin/_admin.js"></script>
+<div class="mg-app"><main class="ix" id="main"></main></div>
+<script>
+(function(){
+"use strict";
+var ic = SC.ic, esc = SC.esc;
+var ST = [["","Обичайно"],["rush","Вечерен пик"],["calm","Нищо не чака"],["offline","Без връзка"],["loading","Зареждане"],["error","Грешка"],["noperm","Без права"]];
+var S = [
+  ["now.html","clock","Сега","Началният екран: пулсът на смяната (5 числа), „Проблеми сега“ по спешност с едно действие, „Чака те“ с „Приеми“, „Потвърди“ и „Реши“, кухнята с „Натоварено“, секциите и „Върни“ изчерпано. Звук за нова онлайн поръчка.", [["n=1068","Нова поръчка, отбелязана"],["go=kitchen","Кухнята"]]],
+  ["hall.html","chair","Залата","Салон и Градина: плочки с номер, статус с дума и икона, сервитьор и от кога. Лист на маса: смени сервитьора, сума, следваща резервация, „Блокирай за гости без резервация“. Резервациите до края на вечерта и чакащите.", [["t=12","Лист на Маса 12"],["z=garden","Градина"],["go=res","Резервациите"]]],
+  ["team.html","users-three","Екипът","Сервитьорите (масите, чакащи повиквания, средно време за отговор, „Смени масите“), секциите на кухнята и таблетите, шофьорите (статус, курсът, схема на живо при доставка, за предаване в брой).", [["go=drivers","Шофьорите"]]],
+  ["more.html","dots-three","Още","„Нова поръчка по телефон“, разделите на админа, които ролята вижда, „Моите препоръки“, „Към админа“, тема, звук, изход.", []]
+];
+function login(role){ var a = A.ACCOUNTS.filter(function(x){ return x[1] === role; })[0]; A.login(a[0]); A.audit("staff.login", "Вход (прототип, модул „Управител“)"); location.href = "now.html"; }
+document.getElementById("main").innerHTML = '<span class="eye">' + ic("briefcase", 18) + 'Етап D · жив прототип · Управител</span><h1>Смяната на телефона</h1>' +
+  '<p class="lead">Бързият екран за деня: какво става сега, кой къде е, кое закъснява и какво чака мен. На телефон като приложение (360, 390), на компютър в 2-3 колони (1024, 1440). Пълната работа е в админа; оттук водят връзки към същия раздел. Данните са ключовете на админа (sa-), смяната е sa-shift. Часът на прототипа е 19:42.</p>' +
+  '<div class="who"><button class="pill pill-red pill-lg" type="button" data-as="manager">' + ic("sign-in", 22) + 'Влез като Управител</button><button class="pill pill-ink pill-lg" type="button" data-as="owner">' + ic("sign-in", 22) + 'Влез като Собственик</button><button class="pill pill-line pill-lg" type="button" data-as="admin">' + ic("sign-in", 22) + 'Влез като Главен админ</button></div>' +
+  (A.me ? '<p class="mg-note" style="font-size:15px">' + ic("user", 16) + '<span>Влязъл: ' + esc(A.who()) + '</span></p>' : '') +
+  '<div class="mg-h" style="margin-top:36px"><h2>Екраните и състоянията</h2></div><div class="scr">' + S.map(function(s){ return '<article><a class="hd" href="' + s[0] + '"><span class="ico">' + ic(s[1], 26) + '</span><span><b>' + s[2] + '</b><span class="d">' + s[3] + '</span></span>' + ic("caret-right", 22) + '</a>' +
+    '<div class="st">' + ST.map(function(x){ return '<a class="chip" href="' + s[0] + (x[0] ? '#st=' + x[0] : '#st=normal') + '">' + esc(x[1]) + '</a>'; }).join("") + s[4].map(function(x){ return '<a class="chip" href="' + s[0] + '#' + x[0] + '">' + esc(x[1]) + '</a>'; }).join("") + '</div></article>'; }).join("") + '</div>' +
+  '<p class="mg-note" style="margin-top:24px">' + ic("info", 16) + '<span>Без вход екраните водят към входа на админа. „Вечерен пик“ и „Нищо не чака“ пресъздават примерните поръчки и резервации и за админа; „Обичайно“ ги връща. Описание и [ЛИПСВА]: README.md в папката.</span></p>';
+document.addEventListener("click", function(e){ var b = e.target.closest("[data-as]"); if (b) login(b.dataset.as); });
+})();
+</script>
+</body>
+</html>
