@@ -5,9 +5,9 @@
    - siteLine(sec): one line under the summary (demo / waits / builds / done at 19:42 / error), with polling while it builds;
    - rebuildNote(): the end of a toast after a change (" Сайтът се пресглобява." / " В демото сайтът не се пресглобява.").
    Own file of the three screens (no change to the frame a.ts). */
-import { siteApi, type SiteBuildState } from "../client/api-admin-3.ts";
+import { siteApi, staffAdminApi, type SiteBuildState } from "../client/api-admin-3.ts";
 import { menuApi } from "../client/api-menu.ts";
-import { can, toast, esc, ic } from "./a.ts";
+import { A, can, toast, esc, ic } from "./a.ts";
 import { ago, hmOf } from "./when.ts";
 
 type Sec = "zones" | "hall" | "events" | "offers";
@@ -16,9 +16,21 @@ type St = { mode: "server" | "demo"; sections: Record<Sec, { version: number; at
 export const DEMO = typeof document !== "undefined" && document.documentElement.dataset.demo === "1";
 let S: St | null = null, T: ReturnType<typeof setTimeout> | undefined, onPaint: (() => void) | null = null;
 
+/* who changed it: the person's name ("Поли"), as the other screens say it, never the user name ("admin");
+   the signed-in person from the session, the others from "Персонал" (when the role sees it), else the role-less user name */
+const NAMES: Record<string, string> = {};
+let namesP: Promise<void> | null = null;
+function names(): Promise<void> {
+  if (A.me) NAMES[A.me.user.username] = A.me.user.name;
+  const need = S ? Object.values(S.sections).some((x) => x.by && !NAMES[x.by]) : false;
+  if (!need || !can("staff")) return Promise.resolve();
+  if (!namesP) namesP = staffAdminApi.list().then((r) => { r.rows.forEach((u) => { NAMES[u.username] = u.name; }); }, () => { /* the user name stays */ });
+  return namesP;
+}
+const whoName = (by: string) => NAMES[by] || by;
 /** the state (null when it cannot be read: the screens still work, only the line is missing) */
 export async function loadSite(): Promise<St | null> {
-  try { S = await siteApi.state(); } catch { S = S || null; }
+  try { S = await siteApi.state(); await names(); } catch { S = S || null; }
   return S;
 }
 /** the end of a toast after a change that the site shows */
@@ -39,7 +51,7 @@ export function siteLine(sec: Sec, repaint?: () => void): string {
   if (repaint) { onPaint = repaint; poll(); }
   const demo = S ? S.mode === "demo" : DEMO;
   const me = S ? S.sections[sec] : null;
-  const who = me && me.at ? '<span class="who">' + ic("check-circle", 18) + "<span>Последна промяна " + esc(ago(me.at)) + (me.by ? " от " + esc(me.by) : "") + "</span></span>" : "";
+  const who = me && me.at ? '<span class="who">' + ic("check-circle", 18) + "<span>Последна промяна " + esc(ago(me.at)) + (me.by ? " от " + esc(whoName(me.by)) : "") + "</span></span>" : "";
   let st = "";
   if (demo) st = '<span class="st">' + ic("info", 18) + "<span>В демото сайтът не се пресглобява; на сървъра се пресглобява сам след всяка промяна.</span></span>";
   else if (S) {

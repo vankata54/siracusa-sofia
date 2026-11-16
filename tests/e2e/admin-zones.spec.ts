@@ -74,6 +74,8 @@ test("the sheet: fee and minimum order, the check of the hours, „Отмени�
   await undo(page);
   await expect(card(page, "gorublyane").locator(".zn-facts dd").first()).toHaveText("[ЛИПСВА: в €]");
   await expect(page.locator("[data-site-line]")).toContainText("Последна промяна");
+  /* the person's name, never the user name */
+  if (env.ADMIN_NAME && env.ADMIN_NAME !== (env.ADMIN_USER || "admin")) await expect(page.locator("[data-site-line]")).toContainText("от " + env.ADMIN_NAME);
   expect(errs).toEqual([]);
 });
 
@@ -91,6 +93,11 @@ test("the site follows: minimum order and a quarter that is off on /dostavka/ an
   await page.goto(S.base + "/dostavka/?preview=1&t=12:30#busmantsi");
   await expect(page.locator("[data-zcard]")).toContainText("Временно не доставяме до Бусманци");
   await expect(page.locator('[data-row="busmantsi"]')).toContainText("Временно не доставяме");
+  await expect(page.locator('[data-row="busmantsi"] small')).toHaveText("");
+  /* the head and the answers follow the live zones: the quarter that is off is never promised as free */
+  await expect(page.locator("[data-lead]")).toHaveText("Безплатно до Дружба 1 и 2 и НПЗ Искър. До Горубляне и Гара Искър по тарифа. Временно не доставяме до Бусманци. Всеки ден от 10:00 до 21:00.");
+  await expect(page.locator("[data-feeans]")).toContainText("Временно не доставяме до Бусманци.");
+  await expect(page.locator("[data-feeans]")).not.toContainText("НПЗ Искър и Бусманци");
   await expect(page.locator(".minline")).toContainText("Горубляне 50,00 €");
   await tap(page.locator('[data-pick="gorublyane"]'));
   await expect(page.locator("[data-zcard]")).toContainText("50,00 €");
@@ -107,7 +114,12 @@ test("the site follows: minimum order and a quarter that is off on /dostavka/ an
   await page.locator("#addr-list li[data-i]").first().click();
   await expect(page.locator("#addr-res")).toContainText("Минималната поръчка за Горубляне е 50,00 €");
   await expect(page.locator(".fine").filter({ hasText: "Минимална поръчка: 50,00 € за Горубляне" })).toHaveCount(1);
+  /* the main action says what is missing and leads to the menu */
+  const main = isPhone(page) ? page.locator(".ck-bar .js-next") : page.locator(".sum-cta .js-next");
+  await expect(main).toHaveText(/^Добавете още \d+,\d{2} €$/);
+  await expect(main).toHaveAttribute("href", /\/menu\//);
   await page.locator("#addr").fill("Бусманци, ул. Липа 5");
+  await expect(page.locator("#addr-list li[data-i]").first()).toContainText("Временно не доставяме");
   await page.locator("#addr-list li[data-i]").first().click();
   await expect(page.locator("#addr-res")).toContainText("Временно не доставяме до Бусманци");
   expect((await context.request.patch(S.base + "/api/admin/zones/busmantsi", { data: { on: true } })).status()).toBe(200);

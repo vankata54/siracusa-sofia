@@ -19,7 +19,7 @@ const description = "Доставка на пица и скара от Siracusa:
     <section class="sec dl-hero"><div class="hero-grid">
       <div>
         <h1 class="h1">Доставка на храна в Дружба</h1>
-        <p class="lead">{LEAD}</p>
+        <p class="lead" data-lead>{LEAD}</p>
         <div class="live" data-live set:html={liveHTML(v)}></div>
       </div>
       <Fragment set:html={checkHTML()} />
@@ -297,7 +297,7 @@ const description = "Доставка на пица и скара от Siracusa:
   import { zoneOfAddress } from "../../lib/zones.ts";
   import type { Zone } from "../../lib/consts.ts";
   import {
-    liveHTML, zoneCardHTML, timelineHTML, endHTML, etaText, resultHTML, riderTarget, LOADING_HTML, PIN, BY_SLUG, feesHTML, mergeZones, minAnswerHTML, isOff, type View, type CheckResult,
+    liveHTML, zoneCardHTML, timelineHTML, endHTML, etaText, resultHTML, riderTarget, LOADING_HTML, PIN, BY_SLUG, feesHTML, mergeZones, minAnswerHTML, feeAnswerHTML, leadText, mapDesc, isOff, type View, type CheckResult,
   } from "./_delivery.ts";
   import { pick, http } from "../../client/api.ts";
 
@@ -410,7 +410,7 @@ const description = "Доставка на пица и скара от Siracusa:
     $("[data-tl]").innerHTML = timelineHTML(v);
     $("[data-end]").innerHTML = endHTML(v);
     root.querySelectorAll<HTMLElement>("[data-eta]").forEach((el) => {
-      const z = BY_SLUG[el.dataset.eta!]; if (z) el.textContent = isOff(z) ? "временно" : "около " + (z.etaMin + (v.busy ? v.extra : 0)) + " мин";
+      const z = BY_SLUG[el.dataset.eta!]; if (z) el.textContent = isOff(z) ? "" : "около " + (z.etaMin + (v.busy ? v.extra : 0)) + " мин";
     });
   }
   function renderAll() {
@@ -458,6 +458,9 @@ const description = "Доставка на пица и скара от Siracusa:
     const fees = root.querySelector<HTMLElement>("[data-fees]"); if (fees) fees.innerHTML = feesHTML(view());
     svg.querySelectorAll<SVGGElement>(".z").forEach((g) => { const z = BY_SLUG[g.dataset.zone!]; if (z) g.classList.toggle("off", isOff(z)); });
     root.querySelectorAll<HTMLElement>("[data-minans]").forEach((el) => { el.innerHTML = minAnswerHTML(); });
+    root.querySelectorAll<HTMLElement>("[data-feeans]").forEach((el) => { el.innerHTML = feeAnswerHTML(); });
+    const lead = root.querySelector<HTMLElement>("[data-lead]"); if (lead) lead.textContent = leadText();
+    const md = svg.querySelector("#mapD"); if (md) md.textContent = mapDesc();
     renderAll();
     if (current) select(current.slug, { quiet: true });
   }).catch(() => { /* offline: the zones of the last rebuild stay */ });

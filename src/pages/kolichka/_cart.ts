@@ -16,7 +16,7 @@ import type { State } from "../../lib/status.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { LUNCH_DATE } from "../../lib/lunch.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
-import { ORDER_RULES } from "../../lib/consts.ts";
+import { ORDER_RULES, ZONES } from "../../lib/consts.ts";
 import { PAY_METHODS } from "../../lib/pay.ts";
 import { callBtn, miss, previewPanel, pvToggle, PV, BACK, OFFLINE, offlineKeep, MKT_TITLE, MKT_SUB } from "../../lib/ui.ts";
 
@@ -257,6 +257,8 @@ export function start(): void {
     if (step === 3 && P.sending) return '<button class="pill pill-red pill-lg' + (block ? " pill-block" : "") + '" type="button" aria-busy="true" aria-disabled="true">' + esc(lbl) + '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="vh">Изпращаме поръчката</span></button>';
     if (step === 1 && I.conflict === "delivery") return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">' + ic("storefront", 20) + "Смени на вземане · " + fmt(pickupTotal(I)) + "</button>";
     if (step === 2 && I.mode === "delivery" && (D.zk === "out" || I.zoneOff)) return '<button class="' + cls + '" type="button" data-act="mode" data-v="pickup">Вземи от място · ' + fmt(I.total) + "</button>";
+    /* below the minimum order of the quarter: the main action says what is missing and leads to the menu (no dead end) */
+    if (step === 2 && I.mode === "delivery" && I.minShort) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + SC.url.menu() + '">' + ic("fork-knife", 20) + "Добавете още " + fmt(I.minShort) + "</a>";
     if (step === 1 && tooBig(I)) return '<a class="' + cls.replace(" js-next", "") + ' js-next" href="' + TEL + '">' + ic("phone", 20) + "Обади се · " + R.phone + "</a>";
     /* too many orders from this phone / place: trying again is refused too, so the main action is the call (as in the reservation) */
     if (step === 3 && P.err === "throttled") return callBtn(cls.replace(" js-next", "") + " js-next");
@@ -272,7 +274,7 @@ export function start(): void {
     const del = I.mode === "pickup" ? ["Вземане от място", "<small>Дружба 2, срещу бл. 311</small>", "Без такса"]
       : D.zk === "free" ? ["Доставка", "<small>" + esc(zoneName) + ", в зоната ни</small>", "Безплатна"]
         : D.zk === "paid" ? ["Доставка", "<small>" + esc(zoneName) + ", по тарифа</small>", miss("fee")]
-          : ["Доставка", "<small>Безплатна в Дружба 1 и 2, НПЗ Искър и Бусманци. Горубляне и Гара Искър по тарифа.</small>", '<span class="muted">Според адреса</span>'];
+          : ["Доставка", "<small>" + zonesLine() + "</small>", '<span class="muted">Според адреса</span>'];
     const list = step > 1 ? "<details><summary>" + ic("receipt", 20) + "Виж ястията (" + I.n + ")" + ic("caret-down", 18) + "</summary><ul>" + I.rows.filter((r) => !r.out).map((r) => "<li><span>" + r.q + " × " + esc(r.x.n) + '</span><span class="price">' + fmt(r.tot - r.disc) + "</span></li>").join("") + "</ul></details>" : "";
     return '<section class="sum shell" aria-labelledby="sumh"><div class="core"><h2 class="h3" id="sumh">Вашата поръчка</h2>' + list +
       '<div class="kv"><span>Ястия · ' + I.n + '</span><span class="price">' + fmt(I.sub) + "</span></div>" +
@@ -516,7 +518,15 @@ export function start(): void {
 
   /* ---------- step 2: address combobox (sample addresses + the quarter parser for any typed address) ---------- */
   let aIdx = -1, aOpts: AddrOpt[] = [];
-  function zoneSmall(n: string) { const z = n ? zoneByName(n) : null; return z ? (z.free ? "Безплатна доставка" : "Доставка по тарифа") : "Извън зоната ни"; }
+  function zoneSmall(n: string) { const z = n ? zoneByName(n) : null; return z ? (z.on === false ? "Временно не доставяме" : z.free ? "Безплатна доставка" : "Доставка по тарифа") : "Извън зоната ни"; }
+  /* the quarters in one line, from the (live) zones: a quarter that is off is never promised */
+  function zonesLine() {
+    const and = (a: string[]) => (a.length > 1 ? a.slice(0, -1).join(", ") + " и " + a[a.length - 1] : a.join(""));
+    const on = (free: boolean) => ZONES.filter((z) => z.on !== false && z.free === free).map((z) => z.n), o = ZONES.filter((z) => z.on === false).map((z) => z.n);
+    const fr = on(true), pd = on(false);
+    const frT = fr.includes("Дружба 1") && fr.includes("Дружба 2") ? ["Дружба 1 и 2", ...fr.filter((n) => n !== "Дружба 1" && n !== "Дружба 2")] : fr;
+    return [fr.length ? "Безплатна в " + and(frT) + "." : "", pd.length ? and(pd) + " по тарифа." : "", o.length ? "Временно не доставяме до " + and(o) + "." : ""].filter(Boolean).join(" ");
+  }
   function addrOptions(q: string): { opts: AddrOpt[]; none: string } {
     const typed = q.trim(), r = zoneOfAddress(typed), opts: AddrOpt[] = [];
     if (r.type === "zone") opts.push({ a: typed, z: r.zone.n, hint: r.zone.n });

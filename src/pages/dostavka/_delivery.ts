@@ -110,7 +110,29 @@ export function liveHTML(v: View): string {
   return '<span class="dot' + (S.kitchen ? " warn" : "") + '"></span><span><b>' + hourTitle(S) + "</b> · " + hourLine(S) + "</span>";
 }
 
-export const LEAD = "Безплатно до Дружба 1 и 2, НПЗ Искър и Бусманци. До Горубляне и Гара Искър по тарифа. Всеки ден от 10:00 до 21:00.";
+/* the sentences about the quarters are built from the zones (the live ones after mergeZones): a quarter that is off is
+   never promised as free or paid, it gets its own "Временно не доставяме до …" */
+const onNames = (free: boolean) => ZONES.filter((z) => !isOff(z) && z.free === free).map((z) => z.n);
+const offNames = () => ZONES.filter(isOff).map((z) => z.n);
+/** "Безплатно до Дружба 1 и 2, НПЗ Искър и Бусманци. До Горубляне и Гара Искър по тарифа. Всеки ден от 10:00 до 21:00." */
+export function leadText(): string {
+  const fl = onNames(true), p = onNames(false), o = offNames();
+  const free = fl.length ? "Безплатно до " + (fl.includes("Дружба 1") && fl.includes("Дружба 2") ? and(["Дружба 1 и 2", ...fl.filter((n) => n !== "Дружба 1" && n !== "Дружба 2")]) : and(fl)) + ". " : "";
+  return free + (p.length ? "До " + and(p) + " по тарифа. " : "") + (o.length ? "Временно не доставяме до " + and(o) + ". " : "") + "Всеки ден от 10:00 до 21:00.";
+}
+export const LEAD = leadText();
+/** the text alternative of the map */
+export function mapDesc(): string {
+  const o = offNames();
+  return "Безплатна доставка: " + and(onNames(true)) + ". По тарифа: " + and(onNames(false)) + "." + (o.length ? " Временно не доставяме: " + and(o) + "." : "") + " Ресторантът е в Дружба 2, мястото на схемата е приблизително. Същото е описано в таблицата под картата.";
+}
+/** the answer "Колко струва доставката?" (a visible one; the JSON-LD keeps the published data) */
+export function feeAnswerHTML(): string {
+  const fr = onNames(true), pd = ZONES.filter((z) => !isOff(z) && !z.free), o = offNames(), known = pd.every((z) => z.fee != null);
+  return (fr.length ? "До " + and(fr) + " доставката е безплатна. " : "") +
+    (pd.length ? "До " + and(pd.map((z) => z.n)) + " е по тарифа" + (known ? ": " + pd.map((z) => esc(z.n) + " " + fmt(z.fee as number)).join(", ") + ". Таксата се вижда в количката, преди да поръчате." : ': <span class="missing">' + MISS_FEE + "</span>.") : "") +
+    (o.length ? " Временно не доставяме до " + and(o) + "." : "");
+}
 
 export function checkHTML(): string {
   return '<div class="chk shell" id="proverka"><div class="core">' +
@@ -134,7 +156,7 @@ export function mapSVG(): string {
     return '<g class="z ' + (z.free ? "free" : "paid") + (isOff(z) ? " off" : "") + '" data-zone="' + z.slug + '"><path class="f" d="' + s.d + '"/>' + (z.free ? "" : '<path class="h" d="' + s.d + '"/>') + '<path class="sel" d="' + s.d + '"/>' + label + "</g>";
   }).join("");
   return '<svg class="map" viewBox="0 0 420 304" role="img" aria-labelledby="mapT mapD">' +
-    '<title id="mapT">Схема на зоните за доставка</title><desc id="mapD">Безплатна доставка: ' + and(FREE_NAMES) + ". По тарифа: " + and(PAID_NAMES) + ". Ресторантът е в Дружба 2, мястото на схемата е приблизително. Същото е описано в таблицата под картата.</desc>" +
+    '<title id="mapT">Схема на зоните за доставка</title><desc id="mapD">' + mapDesc() + "</desc>" +
     '<defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="7" style="fill:var(--z-hatch)"/></pattern></defs>' +
     dots +
     '<g class="air" aria-hidden="true"><path d="M246 6 L414 6 L414 112 L344 110 L314 60 L248 52 Z"/><text x="352" y="44">Летище</text><text x="352" y="62">София</text></g>' +
@@ -156,7 +178,7 @@ export function riderTarget(z: Zone): { x: number; y: number } {
 /* ---------- fees table (also the list alternative to the map) ---------- */
 export function feesHTML(v: View): string {
   return '<table class="fees"><caption>Такси и време по квартали</caption><thead><tr><th scope="col">Квартал</th><th scope="col">Доставка</th></tr></thead><tbody>' +
-    order().map((z) => '<tr data-row="' + z.slug + '"' + (isOff(z) ? ' class="offrow"' : "") + '><th scope="row"><button class="zbtn" type="button" data-pick="' + z.slug + '" aria-pressed="false"><span class="sw ' + (isOff(z) ? "out" : z.free ? "free" : "paid") + '"></span><b>' + esc(z.n) + '</b><small data-eta="' + z.slug + '">' + (isOff(z) ? "временно" : etaText(z, v)) + "</small></button></th>" +
+    order().map((z) => '<tr data-row="' + z.slug + '"' + (isOff(z) ? ' class="offrow"' : "") + '><th scope="row"><button class="zbtn" type="button" data-pick="' + z.slug + '" aria-pressed="false"><span class="sw ' + (isOff(z) ? "out" : z.free ? "free" : "paid") + '"></span><b>' + esc(z.n) + '</b><small data-eta="' + z.slug + '">' + (isOff(z) ? "" : etaText(z, v)) + "</small></button></th>" +
       "<td" + (isOff(z) || z.free || z.fee != null ? "" : ' class="missing"') + ">" + (isOff(z) ? "Временно не доставяме" : z.free ? '<span class="okt">' + ic("check-circle", 20) + "Безплатно</span>" : feeText(z)) + "</td></tr>").join("") +
     '<tr class="outrow"><th scope="row"><span class="row"><span class="sw out"></span><b>Извън зоните</b></span></th><td>Не доставяме</td></tr>' +
     "</tbody></table>" +
@@ -221,8 +243,7 @@ const plain = (h: string) => h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim
 interface Faq { q: string; a: string; ld: string | null }
 export const FAQ: Faq[] = [
   { q: "Колко струва доставката?",
-    a: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа" +
-      (FEES_KNOWN ? ": " + ZONES.filter((z) => !z.free).map((z) => esc(z.n) + " " + fmt(z.fee as number)).join(", ") + ". Таксата се вижда в количката, преди да поръчате." : ': <span class="missing">' + MISS_FEE + "</span>."),
+    a: "<span data-feeans>" + feeAnswerHTML() + "</span>",
     /* the cart can show the fee only once it is in the data; until then no promise about it */
     ld: "До " + and(FREE_NAMES) + " доставката е безплатна. До " + and(PAID_NAMES) + " е по тарифа." + (FEES_KNOWN ? " Таксата се вижда в количката, преди да поръчате." : "") },
   { q: "Има ли минимална поръчка?", a: '<span data-minans>' + minAnswerHTML() + "</span>", ld: null },
