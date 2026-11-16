@@ -87,10 +87,11 @@ export async function upsertStaff(ctx: Ctx, u: { username: string; name: string;
 export type PublicStaff = Omit<StaffUser, "salt" | "hash" | "algo" | "pin">;
 export function publicStaff(u: StaffUser): PublicStaff { const { salt: _s, hash: _h, algo: _a, pin: _p, ...rest } = u; return rest; }
 
-/* sign-in lockout (decision 15.11.2026): 10 wrong attempts per username in 15 minutes lock that username for 15 minutes;
-   the address has a higher second limit (50: in the restaurant everyone signs in from one address, REVIEW-2 "За кода" 3).
-   In the core, so the demo locks too. Every attempt is counted BEFORE the password check (no await on real I/O between
-   reading and writing the counter), so parallel attempts cannot slip past the limit; a right password gives it back. */
+/* sign-in lockout (decisions 15.11 and 16.11.2026): 10 wrong attempts of one username FROM ONE ADDRESS in 15 minutes lock
+   that pair for 15 minutes; the address has a higher second limit (50, many usernames from one place). In the core, so
+   the demo locks too. Every attempt is counted BEFORE the password check (no await on real I/O between reading and
+   writing the counter), so parallel attempts cannot slip past the limit; a right password gives it back. Two-factor
+   sign-in (TOTP) for the main admin and the owner is stage E (BUILD-TODO). */
 export const LOGIN_MAX_FAILS = 10, LOGIN_MAX_FAILS_ADDR = 50, LOGIN_LOCK_MIN = 15, PASSWORD_MAX = 256;
 type Fails = { id: string; n: number; first: number; until: number };
 const LOCKED_MSG = "Твърде много опити. Опитайте след 15 минути.";
@@ -113,7 +114,10 @@ export async function staffLogin(ctx: Ctx, username: string, password: string, a
   if (!ctx.hasher) throw new Error("hasher missing");
   const uname = String(username || "").trim().toLowerCase().slice(0, 64), now = nowDate(ctx).getTime();
   const pw = String(password || "").slice(0, PASSWORD_MAX);
-  const keys: [string, number][] = [["u:" + uname, LOGIN_MAX_FAILS], ["a:" + String(addr || "local").slice(0, 80), LOGIN_MAX_FAILS_ADDR]];
+  /* the username together with the address (decision 16.11.2026, Поли): someone elsewhere cannot lock a colleague out;
+     the address alone has the second, higher limit (many usernames tried from one place) */
+  const a = String(addr || "local").slice(0, 80);
+  const keys: [string, number][] = [["u:" + uname + "|a:" + a, LOGIN_MAX_FAILS], ["a:" + a, LOGIN_MAX_FAILS_ADDR]];
   /* read, check and count in one step per store (the demo and the tests run attempts in parallel in one event loop) */
   const fails = await serial(ctx, async () => {
     const fs = await Promise.all(keys.map(([k]) => failsOf(ctx, k)));

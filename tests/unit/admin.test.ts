@@ -39,10 +39,14 @@ describe("admin: roles, sign-in, guard", () => {
     const core = mk(); await people(core);
     expect((await core.staff.login("waiter", PW, "9.9.9.9")).home).toBe("app:waiter");
     expect((await core.staff.login("Owner", PW, "9.9.9.9")).home).toBe("dashboard");
-    /* per username: 10 wrong from different addresses lock the username, also from a new address */
-    for (let i = 0; i < 9; i++) await expect(core.staff.login("manager", "x", "2.0.0." + i)).rejects.toMatchObject({ code: "bad_login" });
-    await expect(core.staff.login("manager", "x", "2.0.0.9")).rejects.toMatchObject({ code: "throttled", status: 429 });
-    await expect(core.staff.login("manager", PW, "3.3.3.3")).rejects.toMatchObject({ code: "throttled" });
+    /* username + address (decision 16.11): 10 wrong from one address lock that pair; the same username from another address still signs in */
+    for (let i = 0; i < 9; i++) await expect(core.staff.login("manager", "x", "2.0.0.1")).rejects.toMatchObject({ code: "bad_login" });
+    await expect(core.staff.login("manager", "x", "2.0.0.1")).rejects.toMatchObject({ code: "throttled", status: 429 });
+    await expect(core.staff.login("manager", PW, "2.0.0.1")).rejects.toMatchObject({ code: "throttled" });
+    expect((await core.staff.login("manager", PW, "3.3.3.3")).user.username).toBe("manager");
+    /* wrong ones from many addresses never lock the username itself (someone elsewhere cannot lock the main admin out) */
+    for (let i = 0; i < 12; i++) await core.staff.login("admin", "x", "8.0.0." + i).catch(() => undefined);
+    expect((await core.staff.login("admin", PW, "8.0.0.99")).user.username).toBe("admin");
     /* per address: a higher second limit (50), so 10 wrong of colleagues do not lock the restaurant */
     for (let i = 0; i < 10; i++) await core.staff.login("ghost" + i, "x", "4.4.4.4").catch(() => undefined);
     expect((await core.staff.login("owner", PW, "4.4.4.4")).user.username).toBe("owner");
@@ -52,9 +56,9 @@ describe("admin: roles, sign-in, guard", () => {
     /* the last attempts say how many are left */
     const e = await core.staff.login("kitchen", "x", "6.0.0.1").catch((x) => x);
     expect(e).toMatchObject({ code: "bad_login", message: "Грешен потребител или парола." });
-    /* 15 minutes later the username works again */
+    /* 15 minutes later the pair works again */
     NOW = new Date(NOW.getTime() + 16 * 60_000);
-    expect((await core.staff.login("manager", PW, "3.3.3.3")).user.username).toBe("manager");
+    expect((await core.staff.login("manager", PW, "2.0.0.1")).user.username).toBe("manager");
     NOW = new Date("2026-11-15T17:42:00Z");
     expect((await core.audit.list(500)).filter((a) => a.action === "staff.login_failed").length).toBeGreaterThan(10);
   });
@@ -210,10 +214,11 @@ describe("admin: server routes", async () => {
     expect(all.every((n) => n.text.includes("[телефон]"))).toBe(true);
   });
 
-  it("sign-in lockout per username works through the server", async () => {
+  it("sign-in lockout per username and address works through the server", async () => {
     await core.staff.upsert({ username: "lock", name: "x", role: "manager", password: PW });
-    for (let i = 0; i < 10; i++) await app.request("/api/auth/login", json("POST", { username: "lock", password: "x" }, undefined, "30.0.0." + i));
-    const r = await app.request("/api/auth/login", json("POST", { username: "lock", password: PW }, undefined, "31.0.0.1"));
+    for (let i = 0; i < 10; i++) await app.request("/api/auth/login", json("POST", { username: "lock", password: "x" }, undefined, "30.0.0.1"));
+    expect((await app.request("/api/auth/login", json("POST", { username: "lock", password: PW }, undefined, "31.0.0.1"))).status).toBe(200);
+    const r = await app.request("/api/auth/login", json("POST", { username: "lock", password: PW }, undefined, "30.0.0.1"));
     expect(r.status).toBe(429);
     expect((await r.json()).message).toBe("Твърде много опити. Опитайте след 15 минути.");
   });
@@ -222,7 +227,7 @@ describe("admin: server routes", async () => {
 describe("admin: after the flows review (round 1)", () => {
   it("parallel wrong attempts cannot slip past the lockout", async () => {
     const core = mk(); await people(core);
-    const r = await Promise.allSettled(Array.from({ length: 30 }, (_, i) => core.staff.login("kitchen", "wrong-" + i, "7.0.0." + i)));
+    const r = await Promise.allSettled(Array.from({ length: 30 }, (_, i) => core.staff.login("kitchen", "wrong-" + i, "7.0.0.1")));
     const codes = r.map((x) => (x.status === "rejected" ? (x.reason as { code: string }).code : "ok"));
     expect(codes.filter((c) => c === "bad_login").length).toBeLessThanOrEqual(9);
     expect(codes.filter((c) => c === "throttled").length).toBeGreaterThanOrEqual(21);

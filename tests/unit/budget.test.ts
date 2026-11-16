@@ -17,7 +17,8 @@ describe("runtime budget and SEO files", () => {
   });
   it("the latest build on disk (DIST_DIR, else the newest dist* folder) keeps the runtime under the budget", () => {
     /* old folders of other builds may be stale: the folder named by DIST_DIR and the newest build are checked */
-    const all = fs.readdirSync(root).filter((d) => /^dist/.test(d) && fs.existsSync(path.join(root, d, "_astro")))
+    /* not the folders other tests build at the same time (the menu fixture, the rebuild's -next / -prev, the e2e servers) */
+    const all = fs.readdirSync(root).filter((d) => /^dist/.test(d) && !/^dist-menu-new|-next$|-prev$|^dist-e2e-/.test(d) && fs.existsSync(path.join(root, d, "_astro")))
       .sort((a, b) => fs.statSync(path.join(root, b, "_astro")).mtimeMs - fs.statSync(path.join(root, a, "_astro")).mtimeMs);
     const dirs = Array.from(new Set([process.env.DIST_DIR, all[0]].filter((d): d is string => !!d && all.includes(d))));
     /* a fresh checkout has no build yet: then the build hook (first test) and the e2e smoke test are the check */
