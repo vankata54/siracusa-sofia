@@ -1,0 +1,99 @@
+/* /admin/hall/: „Залата и масите“ (1:1 от <style> на design/pages-admin/hall.html, версия 4). Само токени; ширините с @container.
+   В кода лентата „N промени · Откажи · Запази плана“ е общата .sa-pbar на рамката (искане 2 на автор 3 в README-3), а не копие. */
+.hl-warn{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:22px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); margin-bottom:18px}
+.hl-warn > .ic{color:var(--warn); flex:none; margin-top:2px}
+.hl-warn b{display:block}
+.hl-warn p{margin:2px 0 0}
+.hl-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+.hl-bar .sa-tabs{flex:0 1 auto}
+.hl-bar .grow{flex:1}
+.hl-garden{display:flex; align-items:center; gap:4px; padding:0 4px 0 16px; min-height:60px; border-radius:999px; background:var(--surface); box-shadow:var(--hi), var(--shadow); font-weight:700}
+@container page (max-width:640px){ .hl-bar .sa-tabs{flex:1 1 100%} .hl-garden{flex:1 1 100%; justify-content:space-between} .hl-bar .grow{display:none} }
+
+.hl-grid{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1060px){ .hl-grid{grid-template-columns:minmax(0,1fr) 360px; align-items:start} .hl-panel{position:sticky; top:96px} }
+.hl-canvas{position:relative; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.hl-canvas .core{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.hl-canvas.closed .core{opacity:.55}
+.hl-lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 10px; padding:0 4px; list-style:none; font-size:15px; font-weight:600; color:var(--muted)}
+.hl-lgd li{display:inline-flex; align-items:center; gap:6px}
+.hl-lgd .ic{color:var(--ink)}
+.hl-lgd .sw{width:18px; height:14px; border-radius:5px; background:var(--ember-soft); box-shadow:inset 0 0 0 2px var(--ember)}
+.hl-help{display:flex; gap:10px; align-items:flex-start; margin:10px 6px 4px; font-size:15px; color:var(--muted)}
+.hl-help .ic{flex:none; margin-top:2px}
+.fp{display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none}
+.fp .grid{fill:var(--line-strong); opacity:.5}
+.fp .floor{fill:var(--surface)}
+.fp .lawn{fill:var(--ok); opacity:.07}
+.fp .bush{fill:var(--ok); opacity:.28}
+.fp .wall{fill:none; stroke:var(--line-strong); stroke-width:4}
+.fp .gap{stroke:var(--surface); stroke-width:9}
+.fp .win{fill:var(--surface); stroke:var(--muted); stroke-width:2}
+.fp .lbl{fill:var(--muted); font-size:22px; font-weight:700; font-family:var(--font)}
+.tb{cursor:grab; outline:none}
+.tb.drag{cursor:grabbing}
+.tb .hit{fill:transparent}
+.tb .ring{fill:none; stroke:var(--red); stroke-width:3; stroke-dasharray:8 6; opacity:0}
+.tb:focus-visible .ring{opacity:1}
+.tb .shp{transform-box:fill-box; transform-origin:center; transition:transform var(--t-base) var(--ease)}
+.tb.drag .shp{transform:scale(1.06)}
+.tb .ch{fill:var(--line-strong)}
+.tb .tt{fill:var(--surface); stroke:var(--ink); stroke-width:3}
+.tb .no{fill:var(--ink); font-family:var(--font); font-size:30px; font-weight:800; text-anchor:middle}
+.tb .lb{fill:var(--muted); font-family:var(--font); font-size:20px; font-weight:700; text-anchor:middle}
+.tb .fi{color:var(--muted)}
+/* телефон: планът е на 0,45 от размера; без надписите под масите, по-едри номера (местата се виждат по столовете) */
+@container page (max-width:620px){ .tb .lb, .tb .fi{display:none} .tb .no{font-size:48px} .fp .lbl{font-size:40px} .fp .jlb, .fp .jpill{display:none} }
+.tb.sel .tt{fill:var(--red); stroke:var(--red)}
+.tb.sel .ch{fill:var(--red); opacity:.45}
+.tb.sel .no{fill:var(--on-red)}
+.tb.sel .lb{fill:var(--red)}
+.tb.sel .ring{opacity:1; stroke-dasharray:none}
+.tb.chg:not(.sel) .tt{stroke:var(--ember); stroke-width:5}
+.tb .hatch{pointer-events:none}
+.fp .hatch-l line{stroke:var(--ink); stroke-width:2; opacity:.28}
+.fp .join{fill:var(--ember-soft); stroke:var(--ember); stroke-width:3; stroke-dasharray:10 7}
+.fp .jlb{fill:var(--ink); font-family:var(--font); font-size:20px; font-weight:800}
+.fp .jpill{fill:var(--ember)}
+
+.hl-panel{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:18px 18px 22px; display:grid; gap:14px}
+@container page (min-width:1060px){ .hl-panel{margin-bottom:88px} }
+.hl-panel h2{margin:0; font-size:24px; letter-spacing:-.03em; display:flex; align-items:center; gap:12px}
+.hl-panel h2 .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--ink); color:var(--bg); font-size:22px; flex:none}
+.hl-panel h2 small{display:block; font-size:15px; color:var(--muted); font-weight:700; letter-spacing:0}
+.hl-panel .lab{font-weight:700; font-size:15px; margin:0 0 6px}
+.hl-sw{display:flex; align-items:center; gap:10px; justify-content:space-between; min-height:56px; border-top:1px solid var(--line); padding:12px 0}
+.hl-sw span.t{display:flex; align-items:center; gap:10px; font-weight:700}
+.hl-sw span.t .ic{color:var(--muted)}
+.hl-sw small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.hl-seats{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.hl-seats .counter output{min-width:44px}
+.hl-move{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; max-width:300px}
+.hl-move .pill{padding:0 8px; gap:4px; font-size:15px}
+.hl-join{display:grid; gap:8px}
+.hl-join .row{flex-wrap:wrap; gap:6px}
+.hl-panel .hl-foot{display:flex; flex-wrap:wrap; gap:8px; border-top:1px solid var(--line); padding-top:14px}
+.hl-panel .hl-foot .pill{flex:1 1 auto}
+.hl-panel .del .ic{color:var(--danger)}
+.hl-none{text-align:center; display:grid; gap:10px; justify-items:center; padding:20px 10px; color:var(--muted)}
+.hl-none .ill{width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.hl-none b{color:var(--ink); font-size:18px}
+
+.hl-list{display:grid; gap:12px}
+.hl-li{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 10px 10px 12px; border-bottom:1px solid var(--line)}
+.hl-li:last-child{border-bottom:0}
+.hl-li[aria-current="true"]{background:var(--ember-soft)}
+.hl-li .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:20px}
+.hl-li[aria-current="true"] .no{background:var(--ink); color:var(--bg)}
+.hl-li b{display:block}
+.hl-li .ft{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:15px; color:var(--muted); font-weight:600}
+.hl-li .ft span{display:inline-flex; align-items:center; gap:4px}
+@container page (max-width:460px){ .hl-li{grid-template-columns:52px minmax(0,1fr)} .hl-li .pill{grid-column:1 / -1} }
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
+.hl-conf{margin-bottom:16px}
+.hl-site{display:flex; gap:10px; align-items:flex-start; margin:0 0 14px; font-size:15px; color:var(--muted)}
+.hl-site .ic{flex:none; margin-top:2px}
+.hl-site.wait .ic{color:var(--warn)}
+.hl-site.bad{color:var(--danger)}
+.hl-cap{display:flex; gap:10px; align-items:flex-start; margin:0 0 14px; font-size:15px; color:var(--muted)}
+.hl-cap .ic{flex:none; margin-top:2px}

@@ -1,0 +1,14 @@
+---
+/* /admin/qr/: "QR генератор" (design/pages-admin/qr.html, version 4): a label for every table, "Печат" (A4, 8 per sheet),
+   "Нов код". The QR code is drawn in the page (src/admin/qr-code.ts) for the address of the site (SITE_URL) + /masa/<код>/. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/qr.css";
+const site = String(Astro.site || "https://siracusa-sofia.com").replace(/\/+$/, "");
+---
+<Admin title="QR генератор" page="admin-qr">
+<div data-qr-site={site} hidden></div>
+<script>
+import { initQr } from "../../../admin/qr.ts";
+initQr(document.querySelector<HTMLElement>("[data-qr-site]")!.dataset.qrSite!);
+</script>
+</Admin>

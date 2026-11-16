@@ -1,0 +1,12 @@
+---
+/* /admin/reservations/: "Резервации" (design/pages-admin/reservations.html, version 4): the day, the waiting list, the
+   staff's "Нова резервация", blocking no-shows (#blocks). Everything comes from the browser after the session is known. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/reservations.css";
+---
+<Admin title="Резервации" page="admin-reservations">
+<script>
+import { initReservations } from "../../../admin/reservations.ts";
+initReservations();
+</script>
+</Admin>

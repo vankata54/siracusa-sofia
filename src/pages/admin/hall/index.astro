@@ -1,0 +1,12 @@
+---
+/* /admin/hall/: "Залата и масите" (design/pages-admin/hall.html, version 4): the plan of the salon and the garden, the tables,
+   joining, "Само с резервация", saved with a version (the server rebuilds the site). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/hall.css";
+---
+<Admin title="Залата и масите" page="admin-hall">
+<script>
+import { initHall } from "../../../admin/hall.ts";
+initHall();
+</script>
+</Admin>

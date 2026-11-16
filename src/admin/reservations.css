@@ -1,0 +1,134 @@
+/* /admin/reservations/: „Резервации“ (1:1 от <style> на design/pages-admin/reservations.html, версия 4). Само токени; ширините с @container.
+   Добавено за кода: бутоните на статуса, които ядрото още не позволява („Дошли“ / „Неявили се“ по-рано от 30 мин), са изключени с обяснение. */
+.rs{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1000px){ .rs{grid-template-columns:372px minmax(0,1fr); align-items:start} }
+.rs-side{display:grid; gap:12px; min-width:0}
+.rs-main{min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; align-content:start}
+/* календар */
+.cal{padding:14px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.cal-h{display:flex; align-items:center; gap:4px; margin-bottom:6px}
+.cal-h b{flex:1; font-size:18px; letter-spacing:-.02em; padding-left:6px}
+.cal-h .iconbtn{background:transparent}
+.cal-g{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:0; text-align:center}
+.cal-g .dw{font-size:14px; font-weight:700; color:var(--muted); padding:4px 0}
+.cal-g button{position:relative; min-height:48px; min-width:48px; border:0; border-radius:16px; background:transparent; color:var(--ink); font-weight:700; font-size:16px; cursor:pointer; font-variant-numeric:tabular-nums; display:grid; place-items:center; padding:0}
+.cal-g button:hover{background:var(--surface-2)}
+.cal-g button.out{color:var(--muted); opacity:.55}
+.cal-g button.today{box-shadow:inset 0 0 0 2px var(--red)}
+.cal-g button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.cal-g button .dots{position:absolute; bottom:5px; left:50%; transform:translateX(-50%); display:flex; gap:2px}
+.cal-g button .dots i{width:5px; height:5px; border-radius:50%; background:var(--red)}
+.cal-g button[aria-pressed="true"] .dots i{background:var(--ember)}
+.cal-g button.past .dots i{background:var(--muted)}
+.cal-foot{display:flex; gap:8px; margin-top:8px}
+.cal-foot .pill{flex:1}
+/* лента с дни (телефон) */
+.days{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:6px 16px 22px; -webkit-mask-image:linear-gradient(to right, var(--ink) calc(100% - 40px), transparent); mask-image:linear-gradient(to right, var(--ink) calc(100% - 40px), transparent); margin:0 -16px; scroll-padding:0 16px}
+.days::-webkit-scrollbar{display:none}
+.days button{flex:none; width:66px; min-height:84px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); cursor:pointer; display:grid; place-items:center; align-content:center; gap:0; font-weight:800; font-size:20px; font-variant-numeric:tabular-nums; position:relative}
+.days button small{font-size:14px; font-weight:700; color:var(--muted)}
+.days button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.days button[aria-pressed="true"] small{color:var(--bg); opacity:.75}
+.days button .n{font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.days button[aria-pressed="true"] .n{color:var(--bg); opacity:.75}
+.days button .nw{position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:50%; background:var(--red)}
+.days button.cal{width:auto; padding:0 16px; font-size:15px; grid-auto-flow:row}
+.cal-wrap{display:none}
+.rs-phone{display:grid; grid-template-columns:minmax(0,1fr); gap:10px}
+@container page (min-width:1000px){ .rs-phone{display:none} .cal-wrap{display:block} }
+/* ден */
+.dayh{display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px 16px}
+.dayh h2{margin:0; font-size:28px; letter-spacing:-.035em; line-height:1.1; flex:1 1 auto}
+.dayh h2 small{display:block; font-size:15px; letter-spacing:0; color:var(--muted); font-weight:700; margin-bottom:4px}
+.kpis{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+@container page (min-width:720px){ .kpis{grid-template-columns:repeat(4, minmax(0,1fr))} }
+.kpi{padding:14px 16px; display:grid; gap:2px; box-shadow:inset -1px -1px 0 var(--line)}
+.kpi b{font-size:30px; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.kpi span{font-size:14px; font-weight:700; color:var(--muted)}
+.kpi.hot b{color:var(--red)}
+/* натоварване по час */
+.load{padding:14px 16px 10px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.load-h{display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; align-items:baseline; margin-bottom:10px}
+.load-h b{font-size:16px}
+.load-h small{font-size:14px; color:var(--muted); font-weight:600}
+.bars{display:grid; grid-template-columns:repeat(22, minmax(0,1fr)); gap:3px; align-items:end; height:84px}
+.bars span{display:block; border-radius:4px 4px 2px 2px; background:var(--surface-3); min-height:4px; position:relative}
+.bars span.now{background:var(--red)}
+.bars span.pk{background:var(--ink)}
+.bars-x{display:grid; grid-template-columns:repeat(22, minmax(0,1fr)); gap:3px; margin-top:6px; font-size:14px; color:var(--muted); font-weight:700}
+.bars-x span{grid-column:span 4; white-space:nowrap}
+.bars-x span:last-child{grid-column:span 2; text-align:right}
+/* филтри и списък */
+.rs-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.rs-bar .sa-tabs{flex:1 1 520px; flex-wrap:wrap; border-radius:28px; overflow:visible}
+.rs-bar .sa-tabs button{flex:0 1 auto}
+.rs-sel{display:none; flex:1 1 160px}
+@container page (max-width:699px){ .rs-bar .sa-tabs{display:none} .rs-sel{display:block} }
+.rs-bar .sa-field-s{flex:1 1 220px}
+.hr{display:grid; grid-template-columns:76px minmax(0,1fr); gap:10px; align-items:start}
+.hr > .t{position:sticky; top:84px; padding-top:14px; font-size:20px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.hr > .t small{display:block; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0}
+@container page (max-width:560px){ .hr{grid-template-columns:minmax(0,1fr)} .hr > .t{position:static; padding:6px 2px 0; display:flex; align-items:baseline; gap:10px} }
+.hr + .hr{margin-top:6px}
+.rlist{display:grid; gap:10px}
+.rsv{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 14px; align-items:center; padding:14px 14px 14px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); position:relative; overflow:hidden}
+.rsv::before{content:""; position:absolute; left:0; top:12px; bottom:12px; width:4px; border-radius:0 4px 4px 0; background:var(--line-strong)}
+.rsv.s-new::before{background:var(--ember)}
+.rsv.s-confirmed::before{background:var(--ink)}
+.rsv.s-seated::before{background:var(--ok)}
+.rsv.s-no_show::before{background:var(--red)}
+.rsv.s-cancelled{opacity:.72}
+.rsv.s-cancelled .who{text-decoration:line-through; text-decoration-color:var(--line-strong)}
+.rsv .who{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px}
+.rsv .who b{font-size:18px; letter-spacing:-.015em}
+.rsv .who .ph{font-size:15px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.rsv .meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.rsv .meta .sa-tag .ic{color:var(--ink)}
+.rsv .note{margin:8px 0 0; font-size:15px; color:var(--muted); display:flex; gap:6px; align-items:flex-start}
+.rsv .note .ic{flex:none; margin-top:2px}
+.rsv .acts{display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end}
+.rsv .acts .pill{padding:0 14px}
+@container page (max-width:640px){ .rsv{grid-template-columns:minmax(0,1fr)} .rsv .acts{justify-content:stretch} .rsv .acts .pill{flex:1 1 auto} .rsv.compact{grid-template-columns:minmax(0,1fr) auto; align-items:start} .rsv.compact .acts .pill{flex:none} }
+.rs .side-only{display:none} .rs .main-only{display:grid}
+@container page (min-width:1000px){ .rs .side-only{display:grid} .rs .main-only{display:none} }
+.st{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; font-size:14px; font-weight:800; white-space:nowrap}
+.st-new{background:var(--ember); color:var(--on-ember)}
+.st-confirmed{background:var(--ink); color:var(--bg)}
+.st-seated{background:var(--ok); color:var(--on-ok)}
+.st-no_show{background:var(--red); color:var(--on-red)}
+.st-cancelled{background:var(--surface-2); color:var(--muted)}
+.st-waitlist{box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--ink)}
+.late{color:var(--warn); font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:4px}
+/* странични карти */
+.box{scroll-margin-top:96px}
+.box.flash{animation:bl-flash 2.2s var(--ease) both}
+@keyframes bl-flash{0%,70%{box-shadow:0 0 0 3px var(--ember), var(--shadow)} 100%{box-shadow:var(--hi), var(--shadow)}}
+.box h3:focus{outline:none}
+.box h3:focus-visible{outline:3px solid var(--red); outline-offset:4px; border-radius:8px}
+.box{padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:10px}
+.box h3{margin:0; font-size:18px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.box h3 .ic{color:var(--red)}
+.box h3 .c{margin-left:auto; min-width:26px; height:26px; padding:0 7px; border-radius:13px; background:var(--surface-2); font-size:14px; display:grid; place-items:center}
+.box p{margin:0; font-size:15px; color:var(--muted)}
+.bi{display:grid; gap:8px; padding:12px 0 0; border-top:1px solid var(--line)}
+.bi .l1{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline}
+.bi .l1 b{font-size:16px}
+.bi .l1 span{font-size:15px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.bi .row{flex-wrap:wrap; gap:6px}
+.bi .row .pill{flex:1 1 auto; padding:0 14px}
+/* лист */
+.kvs .kv b{font-weight:700; white-space:nowrap}
+.kvs .kv span{color:var(--muted); text-align:right}
+.seg-st{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px}
+.seg-st button{min-height:52px; border:0; border-radius:16px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px}
+.seg-st button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.form{display:grid; gap:14px}
+.form .two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@container app (max-width:440px){ .form .two{grid-template-columns:1fr} }
+.form input[type=date]{min-height:52px}
+.form .err{font-size:14px; color:var(--danger); font-weight:700}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
+.seg-st button:disabled{opacity:.5; cursor:not-allowed}
+.form .err{display:block}
+.rs-help{font-size:15px; color:var(--muted); margin:8px 0 0}

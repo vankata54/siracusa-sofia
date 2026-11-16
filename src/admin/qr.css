@@ -1,0 +1,85 @@
+/* /admin/qr/: „QR генератор“ (1:1 от <style> на design/pages-admin/qr.html, версия 4). Само токени; ширините с @container.
+   Етикетът е „хартия“: светъл с тъмен код и в тъмна тема. Печатът: A4, 8 на лист, линии за рязане, винаги светла тема. */
+/* Етикетът е „хартия“: винаги светъл с тъмен код (и в тъмна тема), само с токените: в тъмна тема фонът е --ink, а кодът --bg. */
+.qrl{--lab-bg:var(--surface); --lab-ink:var(--ink); --lab-mute:var(--muted)}
+:root[data-theme="dark"] .qrl{--lab-bg:var(--ink); --lab-ink:var(--bg); --lab-mute:var(--surface-3)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .qrl{--lab-bg:var(--ink); --lab-ink:var(--bg); --lab-mute:var(--surface-3)} }
+.qrl svg{display:block; width:100%; height:auto}
+.qrl .bg{fill:var(--lab-bg)}
+.qrl .ink{fill:var(--lab-ink)}
+.qrl .mute{fill:var(--lab-mute)}
+.qrl .rule{stroke:var(--lab-mute); stroke-width:2; opacity:.5}
+.qrl text{font-family:var(--font); font-feature-settings:"locl" 0}
+.qrl .mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+
+.qr-top{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:980px){ .qr-top{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); align-items:start} .qr-prev{position:sticky; top:96px} }
+.qr-prev{display:grid; gap:12px}
+.qr-stage{padding:28px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); display:grid; place-items:center; position:relative; overflow:hidden}
+.qr-stage::before{content:""; position:absolute; inset:0; background:radial-gradient(70% 60% at 50% 40%, var(--surface-3), transparent 70%); opacity:.7}
+.qr-stage .qrl{position:relative; width:100%; max-width:560px; border-radius:18px; box-shadow:var(--shadow-lg); transform:rotate(-1.2deg); transition:transform var(--t-slow) var(--ease)}
+.qr-stage:hover .qrl{transform:none}
+@container page (max-width:520px){ .qr-stage{padding:16px} .qr-stage .qrl{transform:none} }
+.qr-pick{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.qr-pick .input{flex:1 1 220px; min-width:0}
+.qr-ok{display:flex; gap:10px; align-items:flex-start; margin:0; font-weight:600}
+.qr-ok .ic{flex:none; color:var(--ok); margin-top:2px}
+.qr-det{border-radius:18px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.qr-det summary{display:flex; align-items:center; gap:8px; min-height:48px; padding:0 16px; font-weight:700; cursor:pointer; list-style:none}
+.qr-det summary::-webkit-details-marker{display:none}
+.qr-det summary .ic{transition:transform var(--t-base) var(--ease); color:var(--muted)}
+.qr-det[open] summary .ic{transform:rotate(180deg)}
+.qr-det p{margin:0; padding:0 16px 14px; color:var(--muted); font-size:15px}
+.qr-url{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 14px; border-radius:18px; background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.qr-url code{flex:1 1 220px; min-width:0; overflow-wrap:normal; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:15px; font-weight:600; overflow-wrap:anywhere}
+.qr-acts{display:flex; flex-wrap:wrap; gap:8px}
+.qr-acts .pill{flex:1 1 auto}
+.qr-note{display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted); margin:0}
+.qr-note .ic{flex:none; margin-top:2px}
+
+.qr-list{display:grid; gap:12px}
+.qr-zone{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.qr-zone > header{display:flex; align-items:center; gap:10px; padding:10px 10px 10px 18px; border-bottom:1px solid var(--line)}
+.qr-zone > header h3{margin:0; flex:1; font-size:18px; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.qr-zone > header h3 .ic{color:var(--red)}
+.qr-zone > header small{font-size:14px; color:var(--muted); font-weight:700}
+.qr-row{display:grid; grid-template-columns:48px minmax(0,1fr); gap:4px; align-items:center; padding:4px 8px 4px 6px; border-bottom:1px solid var(--line)}
+.qr-row:last-child{border-bottom:0}
+.qr-row[aria-current="true"]{background:var(--ember-soft)}
+.qr-show{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:64px; padding:6px 6px 6px 4px; border:0; border-radius:18px; background:transparent; color:inherit; text-align:left; cursor:pointer; min-width:0}
+.qr-show:hover{background:color-mix(in srgb, var(--surface-2) 55%, transparent)}
+.qr-show .no{width:52px; height:52px; border-radius:16px; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:20px; font-variant-numeric:tabular-nums}
+.qr-row[aria-current="true"] .no{background:var(--ink); color:var(--bg)}
+.qr-show .tx{min-width:0; display:grid}
+.qr-show .tx b{font-size:16px}
+.qr-show .tx code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; color:var(--muted); font-weight:600; overflow-wrap:anywhere}
+.qr-show .qr-go{display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:700; color:var(--muted)}
+.qr-row[aria-current="true"] .qr-go{color:var(--ink)}
+.qr-row .tag-new{font-size:14px; font-weight:800; color:var(--ok)}
+
+.qr-sheets{display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr))}
+.qr-a4{aspect-ratio:210/297; border-radius:10px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:5%; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(4,1fr); gap:3%}
+.qr-a4 .cell{border-radius:4px; box-shadow:inset 0 0 0 1px var(--line); display:grid; grid-template-columns:1fr 1fr; align-items:center; padding:8%; gap:6%}
+.qr-a4 .cell.vac{box-shadow:inset 0 0 0 1px var(--line); background:repeating-linear-gradient(45deg, transparent 0 6px, var(--surface-2) 6px 7px)}
+.qr-a4 .cell b{font-size:14px; line-height:1; font-variant-numeric:tabular-nums}
+.qr-a4 .cell i{display:block; aspect-ratio:1; border-radius:2px; background:var(--ink); opacity:.85; mask:var(--qrm); -webkit-mask:var(--qrm)}
+.qr-a4cap{font-size:14px; color:var(--muted); font-weight:700; text-align:center; margin-top:8px}
+.qr-bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px}
+.qr-bar .grow{flex:1 1 auto}
+@container page (max-width:520px){ .qr-bar .grow{flex:1 1 100%} .qr-bar .pill{flex:1} }
+
+/* печат: A4, 8 етикета на лист (2 × 4), линии за рязане */
+#qr-print{display:none}
+@media print{
+  @page{size:A4; margin:0}
+  html, body{height:auto !important; overflow:visible !important; background:var(--surface) !important}
+  body > *:not(#qr-print){display:none !important}
+  #qr-print{display:block}
+  #qr-print .pg{width:210mm; height:297mm; display:grid; grid-template-columns:105mm 105mm; grid-template-rows:repeat(4, 74.25mm); break-after:page; page-break-after:always}
+  #qr-print .pg:last-child{break-after:auto; page-break-after:auto}
+  #qr-print .qrl{outline:0.2mm dashed var(--line-strong); outline-offset:-0.1mm}
+  #qr-print .qrl svg{width:105mm; height:74.25mm}
+  #qr-print .qrl .bg{fill:var(--surface)}
+}
+/* листове: дългите думи в долните бутони се пренасят, не излизат извън листа */
+.sa-sfoot .pill{white-space:normal; text-align:center; line-height:1.15; padding:0 14px}
