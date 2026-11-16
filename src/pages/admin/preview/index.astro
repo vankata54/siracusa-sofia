@@ -1,0 +1,50 @@
+---
+/* /admin/preview/: "Модулите на живо" (design/pages-admin/preview.html, version 4). The real pages of the code in a frame
+   of a phone, a tablet or a computer; the choice stays in the address (#m=site&p=home&d=phone). The script is
+   src/admin/preview.ts. The addresses of the client site are made here with url.* (src/lib/routes.ts, the only place
+   for the addresses) and given to the script as logical paths ("/menu/pitsi/"): importing lib/routes.ts in the browser
+   would add exports to the shared runtime chunk. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/preview.css";
+import { url, byId, catById, EVENT_SLUGS } from "../../../lib/index.ts";
+
+const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
+const dish = byId["pitsa-s-burata-i-proshuto-krudo"];
+const cat = catById["pitsi"];
+const ev = EVENT_SLUGS[0];
+/* [key, name, logical address]: the screens of the prototype's site, in its order */
+const site: [string, string, string][] = [
+  ["home", "Начало", url.home()],
+  ["menu", "Меню", url.menu()],
+  ["category", "Категория: " + (cat ? cat.n : "Пици на пещ"), url.cat("pitsi")],
+  ["dish", "Ястие", dish ? url.dish(dish) : url.menu()],
+  ["lunch", "Обедно меню", url.lunch()],
+  ["cart", "Количка и поръчка", url.cart()],
+  /* the server serves /porachka/<no>/; the demo has one page with the number after # (url.tracking in the browser) */
+  ["tracking", "Проследяване", demo ? url.page("tracking", "1042") : url.tracking(1042)],
+  ["office", "Обща поръчка за офиса", url.page("office")],
+  ["reservation", "Резервирай маса", url.reservation()],
+  ["events", "Събития и поводи", url.events()],
+  ["event", "Събитие: Гръцка вечер", ev ? url.event(ev) : url.events()],
+  ["celebration", "Празник при нас", url.page("celebration")],
+  ["offers", "Оферти", url.offers()],
+  ["login", "Вход", url.login()],
+  ["profile", "Профил", url.profile()],
+  ["delivery", "Доставка", url.page("delivery")],
+  ["pickup", "Вземи от място", url.page("pickup")],
+  ["bertha", "Фурната Bertha", url.page("bertha")],
+  ["about", "За нас", url.page("about")],
+  ["gallery", "Галерия", url.page("gallery")],
+  ["contacts", "Контакти", url.page("contacts")],
+  ["allergens", "Алергени", url.page("allergens")],
+  ["404", "404", url.notFound()],
+];
+---
+<Admin title="Модулите на живо" page="admin-preview">
+<div data-pv-site={JSON.stringify(site)} hidden></div>
+<script>
+import { initPreview } from "../../../admin/preview.ts";
+const el = document.querySelector<HTMLElement>("[data-pv-site]")!;
+initPreview(JSON.parse(el.dataset.pvSite || "[]"));
+</script>
+</Admin>

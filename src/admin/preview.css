@@ -1,0 +1,89 @@
+/* "Модулите на живо" (/admin/preview/): 1:1 with the <style> of design/pages-admin/preview.html (version 4). Tokens only.
+   "immersive" is the class the script puts on .sa-app: the side bar narrow, and on the phone the device is the whole
+   screen with a floating bar below (Табло · Екран · Устройство · Молив). */
+.sa-app.immersive .sa-page{padding-bottom:0}
+.pv{display:grid; gap:12px; grid-template-columns:minmax(0,1fr)}
+@container page (min-width:1000px){ .pv{grid-template-columns:320px minmax(0,1fr)} }
+/* tools */
+.pv-tools{display:flex; flex-wrap:wrap; gap:12px 10px; align-items:flex-end; padding:14px; border-radius:var(--r-shell); background:var(--surface); box-shadow:var(--hi), var(--shadow); min-width:0}
+.pv-tools .grp{display:grid; gap:6px; min-width:0}
+.pv-lb{font-size:14px; font-weight:700; color:var(--muted)}
+.pv-tools .input{min-height:48px}
+.pv-tools .seg{padding:4px; gap:4px; border-radius:999px}
+.pv-tools .seg button, .pv-sh .seg button{min-height:44px; border-radius:999px; font-size:15px; padding:0 6px; white-space:nowrap; min-width:0; color:var(--ink)}
+.pv-sh .seg{padding:4px; gap:4px; border-radius:999px}
+.pv-steps{display:flex; gap:6px}
+.pv-steps .pill{flex:1; padding:0 12px; font-size:15px}
+.pv-acts{display:flex; flex-wrap:wrap; gap:6px}
+.pv-acts .pill{padding:0 14px; font-size:15px}
+.pv-hint{display:flex; gap:10px; align-items:flex-start; margin:0; padding:12px 14px; border-radius:18px; background:var(--surface-2); font-size:15px; color:var(--muted); line-height:1.4}
+.pv-hint .ic{color:var(--red); margin-top:1px; flex:none}
+.pv-hint b{color:var(--ink)}
+@container page (min-width:1000px){
+  .pv-tools{flex-direction:column; flex-wrap:nowrap; align-items:stretch; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; gap:16px; padding:18px 18px 28px}
+  .pv-tools > *{flex:none}
+  .pv-tools .seg{display:grid}
+}
+@container page (min-width:1000px){ .pv-tools .grp.nw{display:none} }
+@container page (max-width:999px){ .pv-tools .grp.ww{display:none} .pv-tools .grp.scr, .pv-tools .grp.dv{display:flex; flex-wrap:wrap; gap:6px; align-items:center} .pv-tools .grp .pv-lb{flex:1 1 100%} .pv-tools .grp.scr{flex:2 1 360px} .pv-tools .grp.scr select{flex:1 1 150px; width:auto} .pv-steps{flex:none} .pv-tools .grp.mod{flex:1 1 180px} .pv-hint{display:none} }
+/* stage */
+.pv-stage{position:relative; min-height:360px; border-radius:var(--r-shell); overflow:hidden; display:grid; place-items:center;
+  background:radial-gradient(var(--line-strong) 1px, transparent 1.4px) 0 0 / 22px 22px, var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.pv-stage.z100{overflow:auto; place-items:start center; overscroll-behavior:contain}
+.pv-fit{position:relative; flex:none; margin:16px}
+.pv-dev{position:absolute; left:0; top:0; transform-origin:0 0; transition:transform var(--t-slow) var(--ease)}
+.pv-dev iframe{display:block; border:0; background:var(--bg)}
+.pv-dev.phone{padding:12px; border-radius:58px; background:var(--chip-dark); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg)}
+.pv-dev.phone iframe{border-radius:46px}
+.pv-dev.tablet{padding:18px; border-radius:42px; background:var(--chip-dark); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg)}
+.pv-dev.tablet iframe{border-radius:24px}
+.pv-dev.desktop{border-radius:16px; background:var(--surface); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg); overflow:hidden}
+.pv-chrome{height:44px; display:flex; align-items:center; gap:14px; padding:0 16px; background:var(--surface); border-bottom:1px solid var(--line)}
+.pv-chrome .dots{display:flex; gap:7px} .pv-chrome .dots i{width:12px; height:12px; border-radius:50%; background:var(--line-strong)}
+.pv-chrome .url{flex:1; max-width:560px; margin:0 auto; min-height:28px; display:flex; align-items:center; gap:8px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pv-dev.bare{padding:0; border-radius:0; background:var(--bg); box-shadow:none}
+.pv-load{position:absolute; inset:0; display:grid; place-items:center; background:var(--bg); transition:opacity var(--t-slow) var(--ease); pointer-events:none}
+.pv-load.off{opacity:0}
+.pv-load span{display:inline-flex; align-items:center; gap:10px; font-weight:700; color:var(--muted); font-size:18px}
+.pv-load .spin{width:26px; height:26px; border-radius:50%; border:3px solid var(--line-strong); border-top-color:var(--red); animation:pvs .8s linear infinite}
+@keyframes pvs{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){ .pv-load .spin{animation:none} .pv-dev{transition:none} }
+.pv-cap{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 14px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; pointer-events:none}
+.pv-nb{position:absolute; left:12px; right:12px; top:12px; z-index:2; display:flex; align-items:center; gap:10px; padding:8px 8px 8px 16px; border-radius:24px; background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:16px; line-height:1.35}
+.pv-nb .ic{color:var(--red); flex:none}
+.pv-nb .tx{flex:1; min-width:0; overflow-wrap:anywhere}
+.pv-nb .pill{flex:none; min-height:48px; padding:0 14px; font-size:15px}
+.pv-nb.warn .ic{color:var(--warn)}
+/* a module that has no screen in the code yet (QR маса, Часовник: stage D) */
+.pv-plate{width:min(520px, calc(100% - 32px)); margin:16px; padding:28px 24px; border-radius:var(--r-shell); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-align:center}
+.pv-plate .ill{display:grid; place-items:center; width:84px; height:84px; margin:0 auto 14px; border-radius:50%; background:var(--surface-2); color:var(--red)}
+.pv-plate h2{margin:0 0 8px; font-size:24px; line-height:1.2; letter-spacing:-.02em}
+.pv-plate p{margin:0 0 10px; font-size:16px; line-height:1.5; color:var(--muted)}
+.pv-plate .scr{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:14px 0 18px; padding:0; list-style:none}
+.pv-plate .scr li{display:inline-flex; align-items:center; min-height:32px; padding:0 12px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:700; color:var(--ink)}
+/* phone: the device is the whole screen, a floating bar below */
+.pv-fbar{display:none}
+@container app (max-width:699px){
+  .sa-app.immersive .sa-top, .sa-app.immersive .sa-bnav{display:none}
+  .sa-app.immersive .sa-page{padding:0}
+  .sa-app.immersive .sa-end{display:none}
+  .pv{gap:0}
+  .pv-tools{display:none}
+  .pv-stage{border-radius:0; box-shadow:none; background:var(--bg); min-height:0}
+  .pv-fit{margin:0}
+  .pv-cap{display:none}
+  .pv-fbar{display:grid; position:absolute; z-index:30; left:8px; right:8px; bottom:10px; height:68px; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+  .pv-fbar.c3{grid-template-columns:repeat(3,1fr)}
+  .pv-fbar a, .pv-fbar button{display:grid; justify-items:center; align-content:center; gap:2px; min-height:48px; border:0; background:transparent; border-radius:999px; font:inherit; font-size:14px; font-weight:700; color:var(--ink); text-decoration:none; cursor:pointer; padding:0}
+  .pv-fbar .ic{color:var(--muted)}
+  .pv-fbar [aria-pressed="true"]{background:var(--ember); color:var(--on-ember)}
+  .pv-fbar [aria-pressed="true"] .ic{color:var(--on-ember)}
+  .pv-nb{top:8px; left:8px; right:8px; flex-wrap:wrap} .pv-nb .tx{flex:1 1 calc(100% - 40px)} .pv-nb .pill{flex:1 1 auto}
+}
+.pv-list{display:grid; gap:4px; margin:6px 0 0}
+.pv-list button{display:flex; align-items:center; gap:12px; min-height:52px; padding:0 14px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:700; font-size:16px; text-align:left; cursor:pointer}
+.pv-list button:hover{background:var(--surface-2)}
+.pv-list button[aria-current="true"]{background:var(--ink); color:var(--bg)}
+.pv-list button small{margin-left:auto; font-size:14px; color:var(--muted); font-weight:700}
+.pv-list button[aria-current="true"] small{color:var(--bg); opacity:.7}
+.pv-sh{display:grid; gap:16px}

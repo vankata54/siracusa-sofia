@@ -1,6 +1,7 @@
 /* The admin frame (stage C, part 1): its data stay equal to the core (section names, roles), every section key has an
    address, and the addresses come from one place (src/admin/routes.ts). */
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
 import { SECTIONS, DEFAULT_ROLES } from "../../src/core/index.ts";
 import { SEC, GROUPS, APPS, ROLES, SOON, secHref } from "../../src/admin/sections.ts";
 import { aurl } from "../../src/admin/routes.ts";
@@ -43,7 +44,8 @@ describe("admin frame: data and addresses", () => {
   });
   it("every section with a screen has an address until its page comes (\"Скоро\")", () => {
     const keys = SOON.map((s) => s[0]);
-    for (const k of Object.keys(SEC)) if (!["dashboard", "site", "finance", ...APPS].includes(k)) expect(keys, k).toContain(k);
-    expect(keys).toContain("preview");
+    /* "Скоро" (src/pages/admin/[section]/) or its own page, never both (the build would have the route twice) */
+    const page = (k: string) => fs.existsSync("src/pages/admin/" + k + "/index.astro");
+    for (const k of [...Object.keys(SEC), "preview"]) if (!["dashboard", "site", "finance", ...APPS].includes(k)) expect(keys.includes(k) !== page(k), k).toBe(true);
   });
 });

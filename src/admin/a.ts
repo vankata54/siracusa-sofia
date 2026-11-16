@@ -223,7 +223,10 @@ function unlock(e?: Event) {
   /* the first touch on "Звук" itself: its click redraws it (redrawing now would take the node under the finger away and lose the click) */
   const t = e && (e.target as Element | null);
   if (t && t.closest && t.closest('[data-sa="sound"]')) return;
-  syncSound();
+  /* redraw only after this touch / key is done: "Звук: докоснете" -> "Звук вкл." changes the width of the button, and the
+     buttons beside it would move away under the finger before the click lands (the first click on "Молив" was lost) */
+  const later = () => { removeEventListener("click", later, true); removeEventListener("keyup", later, true); removeEventListener("pointercancel", later, true); setTimeout(syncSound, 0); };
+  addEventListener("click", later, true); addEventListener("keyup", later, true); addEventListener("pointercancel", later, true);
 }
 document.addEventListener("pointerdown", unlock, { capture: true }); document.addEventListener("keydown", unlock, { capture: true });
 /** two calm tones */
@@ -369,6 +372,8 @@ export function bootFail(e: unknown) {
 /* ---------- the pencil (src/admin/pencil.ts, its own author): loaded after sign-in ---------- */
 export function mountPen(module: string, slot?: HTMLElement) {
   if (!A.me) return;
+  /* inside the frame of "Модулите на живо" the pencil of the preview points here; no second one */
+  try { if (window.frameElement && window.frameElement.closest(".pv-dev")) return; } catch { /* another origin */ }
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
       module, who: who(), sectionNotes: can("notes"), slot,
