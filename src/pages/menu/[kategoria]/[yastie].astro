@@ -243,6 +243,7 @@ details.nutr .kv span:first-child{font-weight:600}
   /* Speed: only the shared runtime (sc.ts) and the light renderers (_dish-ui.ts) load at start. The menu, the illustrations
      and "Върви добре с" (_dish.ts) load only when the cart is not empty (the server already drew them for an empty cart). */
   import { SC } from "../../../client/sc.ts";
+  import "../../../client/sc-sheet.ts"; /* SC.sheet() */
   import {
     compList, canAdd, extra, modsList, modBtnInner, buyHTML, buyLabel, closedNote, favHTML, type Rem, type Add, type DishLite, type Addon,
   } from "./_dish-ui.ts";

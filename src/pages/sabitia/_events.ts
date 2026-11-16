@@ -3,7 +3,7 @@
    Pure string renderers, no DOM, no menu (the menu is only needed for the "Празник при нас" art, see _party.ts).
    Everything that depends on the date takes `today`: the server draws with the build date, the browser redraws
    with the date in Sofia. Real events come from events() / api.events(); the rest are honest "Скоро" cards. */
-import { EVENT_CATS } from "../../lib/consts.ts";
+import { EVENT_CATS } from "../../lib/event-cats.ts";
 import type { SiteEvent } from "../../lib/events.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, plural, MON, MONTHS, DAYS_SHORT } from "../../lib/format.ts";

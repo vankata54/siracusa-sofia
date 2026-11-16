@@ -9,6 +9,7 @@
    #<type> (from /sabitia/) preselects the occasion. Only in preview (?preview=1): the panel "Само в прегледа"
    (price for the guest, -5% example, send error / offline) and the review states #demo-2, #demo-custom, #demo-3, #demo-sent. */
 import { SC } from "../../client/sc.ts";
+import "../../client/sc-sheet.ts"; /* SC.sheet() */
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { previewPanel, callBtn, OFFLINE } from "../../lib/ui.ts";

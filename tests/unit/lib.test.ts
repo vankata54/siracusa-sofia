@@ -9,7 +9,8 @@ import { price, lunchDiscountActive } from "../../src/lib/pricing.ts";
 import { zoneOfAddress, findAddress, zoneByName } from "../../src/lib/zones.ts";
 import { addLine, setQty, removeLine, count, subtotal, emptyCart, lineKey, sanitize } from "../../src/lib/cart.ts";
 import { search, passes, filterChips, readHash, writeHash } from "../../src/lib/filters.ts";
-import { url, fromProto, configureRoutes } from "../../src/lib/routes.ts";
+import { url, configureRoutes } from "../../src/lib/routes.ts";
+import { fromProto } from "../../src/lib/routes-proto.ts";
 import { dishCard, header, ic } from "../../src/lib/render.ts";
 
 describe("format", () => {

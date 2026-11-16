@@ -10,6 +10,8 @@ import { ApiError, http, pick } from "./api.ts";
 import { elementText, kindOf, resolve, selectorFor } from "../admin/pen-core.ts";
 import type { NoteInput } from "./api-types.ts";
 import type { SCType } from "./sc.ts";
+/* SC.sheet() comes with ./suggest-open.ts, the browser entry of this file (this file imports no DOM code of the runtime,
+   so the unit tests can import it) */
 
 const sc = (): SCType => window.SC;
 const LIMIT = 3, HOUR = 3600e3;

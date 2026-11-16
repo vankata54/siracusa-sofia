@@ -11,8 +11,9 @@ import { url, type PageKey } from "./routes.ts";
 import type { ClockInput } from "./time.ts";
 
 export { ic, registerIcons, loadAllIcons } from "./icons.ts";
-/* the two renderers the browser runtime needs live in chrome-core.ts (small); the rest here is mostly for the server */
-export { statusHTML, sheetHTML } from "./chrome-core.ts";
+/* the renderer the browser runtime needs lives in chrome-core.ts (small); the rest here is mostly for the server.
+   The frame of the bottom sheet is drawn only in the browser: src/client/sc-sheet.ts */
+export { statusHTML } from "./chrome-core.ts";
 
 /* ---------- chrome ---------- */
 export type NavKey = "menu" | "reserve" | "offers" | "profile";
