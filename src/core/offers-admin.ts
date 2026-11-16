@@ -48,6 +48,8 @@ export const OFFER_MSG = {
   vUsed: "Този код вече е използван.",
 };
 const GOOGLE = /google|гугъл|гугл|отзив|ревю|review/i;
+/* "G00gle", "G o o g l e", "гуг ъл": letters only, 0 -> o, 1 -> l, 3 -> e before the check */
+const looksGoogle = (t: string) => GOOGLE.test(t) || GOOGLE.test(String(t).toLowerCase().replace(/0/g, "o").replace(/1/g, "l").replace(/3/g, "e").replace(/[^a-zа-я]/g, ""));
 const CH: OfferChannel[] = ["delivery", "pickup", "table", "office"];
 
 export interface OffersView { version: number; offers: (OfferRow & { blocked: string | null })[]; settings: { celebrationPrice: "estimate" | "offer"; earlyDays: number | null }; at: string | null; by: string | null }
@@ -108,7 +110,7 @@ export async function offerSave(ctx: Ctx, s: StaffCtx, id: string, p: OfferPatch
     if (q.text !== undefined) { next.text = txt(q.text, 300); if (next.text.length > 300) f.text = OFFER_MSG.text; }
     if (q.pct !== undefined && o.custom) { const v = Number(q.pct); if (!Number.isInteger(v) || v < 1 || v > 50) f.pct = OFFER_MSG.pct; else next.pct = v; }
     if (q.r !== undefined) next.r = checkRule(q.r, f);
-    if (GOOGLE.test(next.title + " " + next.sub + " " + next.text)) f.title = OFFER_MSG.google;
+    if (looksGoogle(next.title + " " + next.sub + " " + next.text)) f.title = OFFER_MSG.google;
     if (Object.keys(f).length) invalid(f);
     Object.assign(o, next);
     await audit(ctx, s.user.username, "offer.update", id, { title: o.title, r: o.r });
@@ -127,7 +129,7 @@ export async function offerCreate(ctx: Ctx, s: StaffCtx, p: OfferPatch & { title
   if (text.length > 300) f.text = OFFER_MSG.text;
   if (!Number.isInteger(pct) || pct < 1 || pct > 50) f.pct = OFFER_MSG.pct;
   const r = checkRule(q.r, f);
-  if (GOOGLE.test(title + " " + text + " " + (q.sub || ""))) f.title = OFFER_MSG.google;
+  if (looksGoogle(title + " " + text + " " + (q.sub || ""))) f.title = OFFER_MSG.google;
   if (Object.keys(f).length) invalid(f);
   const id = "of-" + randomKey(6);
   await writeSection(ctx, "offers", s.user.username, undefined, async (cur) => {
@@ -157,7 +159,7 @@ export async function offerRestore(ctx: Ctx, s: StaffCtx, row: OfferRow): Promis
   if (!/^of-[a-z2-9]{6}$/.test(String(r.id))) throw new CoreError("not_found", OFFER_MSG.unknown, 404);
   const f: Record<string, string> = {};
   const rule = checkRule(r.r, f), title = txt(r.title, 60), pct = Number(r.pct);
-  if (!title || !Number.isInteger(pct) || pct < 1 || pct > 50 || GOOGLE.test(title + " " + r.text)) f.title = OFFER_MSG.title;
+  if (!title || !Number.isInteger(pct) || pct < 1 || pct > 50 || looksGoogle(title + " " + r.text)) f.title = OFFER_MSG.title;
   if (Object.keys(f).length) invalid(f);
   await writeSection(ctx, "offers", s.user.username, undefined, async (cur) => {
     if (!cur.some((x) => x.id === r.id)) cur.push({ id: r.id, kind: "pct", pct, ic: "seal-percent", title, sub: "-" + pct + "%", text: txt(r.text, 300) || "[ЛИПСВА: текст]", on: r.on === true, r: rule, custom: true });

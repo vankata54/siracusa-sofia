@@ -191,7 +191,7 @@ describe("admin: server routes", async () => {
     await core.staff.upsert({ username: "kitchen", name: "Кухня", role: "kitchen", password: PW });
     const k = await login("kitchen");
     const o = await core.orders.create({ cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] } as never, name: "Клиент 4", phone: "0888123499", pay: "cash", sched: "утре", slot: "12:00" });
-    expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cancelled" }, k.cookie))).status).toBe(409);
+    expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cancelled", reason: "x" }, k.cookie))).status).toBe(409);
     expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cooking" }, k.cookie))).status).toBe(200);
   });
 

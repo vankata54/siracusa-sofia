@@ -38,7 +38,8 @@ export async function customersPurge(ctx: Ctx): Promise<number> {
   for (const c of await ctx.repo.list<Customer>(COL.customers)) {
     if (!c.deleting || c.deleting.until > now) continue;
     for (const s of await ctx.repo.list<Session>(COL.sessions, { userId: c.id })) await ctx.repo.del(COL.sessions, s.id);
-    for (const o of await ctx.repo.list<Order>(COL.orders, { phone: c.phone })) {
+    /* the orders of the profile: by its phone AND by the account (an order with another phone made while signed in) */
+    for (const o of (await ctx.repo.list<Order>(COL.orders)).filter((x) => (c.phone && x.phone === c.phone) || x.userId === c.id)) {
       Object.assign(o, { name: "Изтрит клиент", phone: "", email: undefined, addr: o.addr ? o.zone || "" : "", note: undefined, userId: null, updatedAt: iso(ctx) });
       await ctx.repo.put(COL.orders, o);
     }
@@ -59,10 +60,13 @@ export async function customersList(ctx: Ctx, s: StaffCtx, q: { q?: string; filt
   const all = await ctx.repo.list<Customer>(COL.customers), orders = await ctx.repo.list<Order>(COL.orders);
   const by = new Map<string, Order[]>();
   for (const o of orders) { if (!o.phone) continue; const l = by.get(o.phone) || []; l.push(o); by.set(o.phone, l); }
+  /* + the orders made while signed in with another phone */
+  const byUser = new Map<string, Order[]>();
+  for (const o of orders) { if (!o.userId) continue; const l = byUser.get(o.userId) || []; l.push(o); byUser.set(o.userId, l); }
   const now = nowDate(ctx).getTime(), text = String(q.q || "").trim().toLowerCase(), dg = text.replace(/\D/g, "");
   const rows: CustomerRow[] = [];
   for (const c of all) {
-    const l = by.get(c.phone) || [], block = c.blocked ? "blocked" : await blockOf(ctx, c.phone);
+    const l = [...new Set([...(by.get(c.phone) || []), ...(byUser.get(c.id) || [])])], block = c.blocked ? "blocked" : await blockOf(ctx, c.phone);
     const isNew = now - Date.parse(c.createdAt) < 30 * 864e5;
     if (text && !(c.name.toLowerCase().includes(text) || (dg.length >= 3 && c.phone.endsWith(dg)))) continue;
     if (q.filter === "offers" && !c.consent.marketing) continue;

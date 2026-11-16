@@ -33,7 +33,7 @@ async function staffCtx(playwright: { request: { newContext: (o: { baseURL?: str
   const E = env();
   const staff = await playwright.request.newContext({ baseURL });
   expect((await staff.post("/api/auth/login", { data: { username: "manager", password: E.MANAGER_PASSWORD } })).ok()).toBe(true);
-  return { staff, set: async (no: string, status: string) => expect((await staff.patch("/api/admin/orders/" + no, { data: { status } })).ok()).toBe(true) };
+  return { staff, set: async (no: string, status: string) => expect((await staff.patch("/api/admin/orders/" + no, { data: status === "cancelled" ? { status, reason: "Изчерпано ястие" } : { status } })).ok()).toBe(true) };
 }
 const sofia = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
 const noHScroll = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);

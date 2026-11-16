@@ -123,6 +123,9 @@ export async function resSetStatus(ctx: Ctx, s: StaffCtx, id: string, status: Re
   const undo = !!r.prevStatus && status === r.prevStatus;
   if (!undo && (status === "seated" || status === "no_show") && r.status !== status && minutesUntil(ctx, r.date, r.time) > 30) throw new CoreError("too_early", RESA_MSG.early, 409);
   if (status === "waitlist" && r.status !== "waitlist" && !undo) throw new CoreError("bad_status", RESA_MSG.status, 422);
+  /* back to a status that holds the table (from "Отказана" / "Неявили се"): only if nobody got that table meanwhile */
+  const holds = (x: ReservationStatus) => x === "new" || x === "confirmed" || x === "seated";
+  if (r.table && holds(status) && !holds(r.status) && (await takenTables(ctx, r.date, r.time, r.id)).includes(r.table)) throw new CoreError("taken", RESA_MSG.table, 409);
   const out = await setReservationStatus(ctx, r.id, status, s.user.username);
   return rowFor(ctx, out);
 }

@@ -264,9 +264,10 @@ export function createApp(opts: AppOpts) {
   /* the raw list (the screens use /api/admin/orders/list): the phone masked, no tracking key */
   app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(maskList(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {}))); });
   /* the status by section and step (core/orders.ts stepAllowed): "Поръчки" one step, the kitchen and the driver their own */
-  /* {status, reason?}: the reason of "Отказана" is kept when sent (the admin's screen sends it through /cancel, which requires it) */
+  /* {status, reason}: "Отказана" needs a reason here too (the customer sees it), the same as /cancel */
   app.patch("/api/admin/orders/:no", async (c) => {
     const s = await staff(c, ["orders", "kitchen", "driver"]), b = await body(c);
+    if (b.status === "cancelled" && !(typeof b.reason === "string" && b.reason.trim())) throw Object.assign(new CoreError("invalid", "Напишете причината за отказа.", 422), { fields: { reason: "Напишете причината за отказа." } });
     return c.json(await core.orders.setStatus(c.req.param("no"), b.status as OrderStatus, s.user.username, s, typeof b.reason === "string" ? b.reason : undefined));
   });
 

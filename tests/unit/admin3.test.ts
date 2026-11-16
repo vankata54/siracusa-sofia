@@ -538,4 +538,30 @@ describe("settings: the open questions that are settings", () => {
     expect(() => settingsAllowed(s.marketing, { callCooldown: 3 })).toThrow();
     expect(() => settingsAllowed(s.manager, { noShowLimit: 3, callManager: 6 })).not.toThrow();
   });
+
+describe("part 3, flows review round 1", () => {
+  it("GDPR also clears an order made with another phone while signed in", async () => {
+    const core = mk(); const { s } = await people(core);
+    const { demoCode } = await core.customers.requestCode("0888123456");
+    const { customer } = await core.customers.verifyCode("0888123456", demoCode!, { name: "Иван", marketing: false });
+    await web(core, { phone: "0899555444", name: "Иван Другият", note: "звънец 3", userId: customer.id });
+    expect((await core.customersAdmin.list(s.manager)).rows[0].orders).toBe(1);
+    await core.customersAdmin.remove(s.manager, customer.id);
+    const t0 = NOW; NOW = new Date(t0.getTime() + 11_000);
+    await core.customersAdmin.purge();
+    NOW = t0;
+    expect((await core.orders.list())[0]).toMatchObject({ name: "Изтрит клиент", phone: "", userId: null });
+  });
+  it("a cancelled reservation does not come back on a table given to someone else meanwhile", async () => {
+    const core = mk(); const { s } = await people(core);
+    const a = await core.reservations.create({ date: "2026-11-20", time: "19:00", people: 2, table: "S1", name: "А", phone: "0888111222" });
+    await core.resAdmin.setStatus(s.manager, a.id, "cancelled");
+    await core.reservations.create({ date: "2026-11-20", time: "19:00", people: 2, table: "S1", name: "Б", phone: "0888333444" });
+    await expect(core.resAdmin.setStatus(s.manager, a.id, "confirmed")).rejects.toMatchObject({ code: "taken", status: 409 });
+  });
+  it("offers: 'G00gle' and spaced letters are refused too", async () => {
+    const core = mk(); const { s } = await people(core);
+    for (const title of ["-10% за G00gle", "Оставете о т з и в", "Ревю = подарък"]) await expect(core.offersAdmin.create(s.manager, { title, text: "", pct: 10 } as never)).rejects.toMatchObject({ code: "invalid" });
+  });
+});
 });
