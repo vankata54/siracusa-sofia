@@ -26,10 +26,12 @@ export function catOf(d: Dish): CatRef {
   const c = catById[d.cat] || { id: d.cat, n: "Меню" };
   return { id: c.id, n: c.n, href: url.cat(c.id), back: url.menu(c.id) };
 }
-export const hasMods = (d: Dish): boolean => !isOut(d) && (compList(d).length > 0 || takesAddons(d));
+/** "Добави" only while the menu has add-ons (the "Добавки" category; a published new menu may not) */
+const addable = (d: Dish): boolean => takesAddons(d) && ADDONS.length > 0;
+export const hasMods = (d: Dish): boolean => !isOut(d) && (compList(d).length > 0 || addable(d));
 /** What the page script needs (JSON in the page), so the browser does not load the whole menu at start. */
 export function dishLite(d: Dish): DishLite {
-  return { id: d.id, n: d.n, p: d.p, cat: d.cat, comp: d.comp, g: d.g, ...(d.per100 ? { per100: true } : {}), ...(isOut(d) ? { out: true } : {}), add: takesAddons(d) };
+  return { id: d.id, n: d.n, p: d.p, cat: d.cat, comp: d.comp, g: d.g, ...(d.per100 ? { per100: true } : {}), ...(isOut(d) ? { out: true } : {}), add: addable(d) };
 }
 
 /* ---------- pairing / similar cards ---------- */
@@ -136,7 +138,9 @@ export function dishLd(d: Dish, site: URL | undefined): object[] {
   const item: Record<string, unknown> = {
     "@context": "https://schema.org", "@type": "MenuItem", name: d.n, url: abs(url.dish(d)), offers: offer,
   };
-  if (d.comp) item.description = d.comp;
+  if (d.desc || d.comp) item.description = d.desc || d.comp;
+  /* the admin's photo (a server address; never a demo data: URL) */
+  if (d.photo && d.photo.startsWith("/media/")) item.image = abs(d.photo);
   if (d.t.indexOf("veg") > -1) item.suitableForDiet = "https://schema.org/VegetarianDiet";
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList",

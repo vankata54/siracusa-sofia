@@ -4,7 +4,7 @@
    оферти, събития, бележката за доставка) are drawn here for the build moment and redrawn in the browser from _home.ts. */
 import Base from "../layouts/Base.astro";
 import { miss, mapSlot, callBtn } from "../lib/ui.ts";
-import { url, ic, art, dishCard, byId, isOut, inCat, lunchIsToday, offers, events, state, eta, lastSaturday, ZONES, RESTAURANT } from "../lib/index.ts";
+import { url, ic, art, dishCard, byId, items, cats, anyDish, isOut, inCat, lunchIsToday, offers, events, state, eta, lastSaturday, ZONES, RESTAURANT } from "../lib/index.ts";
 import { NEUTRAL_HOUR } from "../lib/status.ts";
 import { MENU } from "../data/menu.ts";
 import { popErrHTML, goHTML, lunchTileText, etaInner, slideHTML, dotHTML, firstOfferKey, eventsHTML, deliveryNote, restaurantLd } from "./_home.ts";
@@ -33,8 +33,15 @@ const variantsHTML = Object.entries(variants).map(([k, o]) => slideHTML(o, k).re
 
 /* ---------- popular ([ЛИПСВА]: real best sellers from the till) ---------- */
 const POP = ["pitsa-s-burata-i-proshuto-krudo", "svinski-rebra", "pitsa-s-proshuto-koto-i-tryufel", "pitsa-margarita", "kebapcheta", "pitsa-dyavolo", "ribay-stek-ot-blek-angas", "pitsa-vegetariana"];
-const popItems = POP.map((id) => byId[id]).filter((x) => x && !isOut(x));
+let popItems = POP.map((id) => byId[id]).filter((x) => x && !isOut(x));
+/* a published new menu without these dishes: its hits, then one dish per category (still a sample until the till data) */
+if (!popItems.length) {
+  const ok = items.filter((x) => !isOut(x));
+  popItems = [...new Set([...ok.filter((x) => x.t.indexOf("hit") > -1), ...cats.map((c) => ok.find((x) => x.cat === c.id)!).filter(Boolean)])].slice(0, 8);
+}
+/* the Bertha section speaks of the oven (the restaurant's); the count and the link only while the menu has the category */
 const berthaN = inCat("skara-bertha").length;
+const heroDish = anyDish("pitsa-dyavolo");
 
 /* ---------- hero film: sparks ---------- */
 const sparks = [[58, "5px", "4.8s", "0s", "-22px", "34%"], [66, "4px", "5.6s", "1.1s", "10px", "30%"], [74, "6px", "4.2s", "2.2s", "-30px", "38%"], [82, "4px", "6s", "0.6s", "14px", "32%"],
@@ -56,7 +63,7 @@ const jsonld = restaurantLd(Astro.site);
   <!-- ---------- hero: simulated 8 - 15 s clip ([ЛИПСВА: видео]) under the floating header ---------- -->
   <section class="hero" aria-labelledby="hero-h">
     <div class="stage">
-      <div class="film" data-film aria-hidden="true"><div class="cam"><span class="glow"></span><span class="shade"></span><span class="spin" set:html={art("pitsa-dyavolo")}></span><Fragment set:html={sparks} /></div><span class="veil"></span></div>
+      <div class="film" data-film aria-hidden="true"><div class="cam"><span class="glow"></span><span class="shade"></span><span class="spin" set:html={heroDish ? art(heroDish) : ""}></span><Fragment set:html={sparks} /></div><span class="veil"></span></div>
       <div class="htxt"><p class="eyebrow" hidden>Siracusa Bar &amp; Grill</p><h1 class="h1" id="hero-h">Пица на пещ и скара на дървени въглища</h1><p>В Дружба 2. Всеки ден до 23:00.</p></div>
       <div class="vctl"><button class="vbtn" type="button" data-vid aria-pressed="false"><Fragment set:html={ic("pause", 20)} /><span>Пауза</span></button><span class="vtag">[ЛИПСВА: видео 8 - 15 сек.]</span></div>
     </div>
@@ -96,10 +103,10 @@ const jsonld = restaurantLd(Astro.site);
   <section class="sec" aria-labelledby="bertha-h"><div class="shell rv"><div class="core bcore">
     <div class="btxt"><p class="eyebrow">Нашата фурна</p><h2 class="h2" id="bertha-h">Фурната Bertha</h2>
       <p class="lead">Затворена фурна на дървени въглища. Огънят нагрява стените и тавана, затова месото се пече равномерно и хваща опушен вкус.</p>
-      <ul class="facts" style="margin-top:20px"><li><Fragment set:html={ic("fire", 22)} /><span>Истински дървени въглища</span></li><li><Fragment set:html={ic("thermometer", 22)} /><span>Равномерна топлина отвсякъде</span></li><li><Fragment set:html={ic("fork-knife", 22)} /><span>{berthaN} ястия от скарата в менюто</span></li></ul></div>
+      <ul class="facts" style="margin-top:20px"><li><Fragment set:html={ic("fire", 22)} /><span>Истински дървени въглища</span></li><li><Fragment set:html={ic("thermometer", 22)} /><span>Равномерна топлина отвсякъде</span></li>{berthaN > 0 && <li><Fragment set:html={ic("fork-knife", 22)} /><span>{berthaN} ястия от скарата в менюто</span></li>}</ul></div>
     <div class="temp" data-temp><div class="deg" role="img" aria-label="до 350 градуса">350<small>°C</small></div><p class="deg-cap">Толкова става в затворената камера. Работим между 250 и 350 °C.</p>
       <div class="scale" aria-hidden="true"><span class="band"></span><span class="mk"></span></div><div class="scale-l" aria-hidden="true"><span style="left:0">0</span><span class="on" style="left:62.5%">250</span><span class="on" style="left:87.5%">350</span></div></div>
-    <div class="bact"><a class="pill pill-light" href={url.cat("skara-bertha")}>Ястията от Bertha<Fragment set:html={ic("arrow-right", 20)} /></a><a class="pill pill-ghost" href={url.page("bertha")}>Как работи фурната</a></div>
+    <div class="bact">{berthaN > 0 && <a class="pill pill-light" href={url.cat("skara-bertha")}>Ястията от Bertha<Fragment set:html={ic("arrow-right", 20)} /></a>}<a class="pill pill-ghost" href={url.page("bertha")}>Как работи фурната</a></div>
   </div></div></section>
 
   <!-- ---------- come visit (long video slot) ---------- -->

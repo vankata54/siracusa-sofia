@@ -4,15 +4,15 @@
    so the menu is not in the page's first JS. Packages only from the real dishes, prices from the menu. */
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural } from "../../lib/format.ts";
-import { byId, inCat, catById, RESTAURANT as R, type Dish } from "../../lib/data.ts";
-import { art, badges } from "../../lib/render.ts";
+import { byId, cats, inCat, catById, anyDish, RESTAURANT as R, type Dish, type Course } from "../../lib/data.ts";
+import { art as artOf, thumb, badges } from "../../lib/render.ts";
 import { GROUP_IDS, GROUP_NAMES, SHARE_PER, TEL, type Group, type PkgInfo, type St } from "./_calc.ts";
 import { callBtn } from "../../lib/ui.ts";
 
 /* [id, share]: "share" dishes are counted 1 portion per SHARE_PER guests (prototype rule until the admin sets the logic) */
 type PkgDish = [string, 1?];
 interface Pkg { id: string; n: string; d: string; g: Record<Group, PkgDish[]> }
-const PKGS: Pkg[] = [
+const PKGS_ALL: Pkg[] = [
   { id: "klasicheski", n: "Класически", d: "Българска трапеза: колбаси, шопска салата и кебапчета от скарата.",
     g: { app: [["set-ot-balgarski-kolbasi", 1], ["urnabes-razyadka-s-brusketi", 1]], starter: [["shopska-salata"]], main: [["kebapcheta"]], dessert: [["tiramisu"]] } },
   { id: "pesht-i-skara", n: "Пещ и скара", d: "Пици от пещта за споделяне и свински ребра от фурната Bertha.",
@@ -20,6 +20,11 @@ const PKGS: Pkg[] = [
   { id: "butikov", n: "Бутиков", d: "Скариди, френски сирена, капрезе с бурата и патешко магре.",
     g: { app: [["skaridi-s-maslo-chesan-byalo-vino-sovinyon-blan", 1], ["plato-frenski-sirena", 1]], starter: [["kapreze-s-burata-i-avokado"]], main: [["pateshko-magre-s-pyure-ot-tselina-i-sladko-ot-vi"]], dessert: [["sufle"]] } },
 ];
+/* a package is offered only while every dish of it is on the menu (its price comes from the menu; a published new menu
+   may not have them) */
+const PKGS = PKGS_ALL.filter((p) => GROUP_IDS.every((g) => p.g[g].every((z) => !!byId[z[0]] && !byId[z[0]].lunch)));
+/* a hero plate: the dish, else one of the same category, else a hit (never an empty plate) */
+const art = (id: string, cat = ""): string => { const d = anyDish(id, ...inCat(cat).map((x) => x.id)); return d ? artOf(d) : ""; };
 interface PkgItem { g: Group; x: Dish; share: boolean }
 function pkgItems(p: Pkg): PkgItem[] {
   const out: PkgItem[] = [];
@@ -38,7 +43,7 @@ export function feastHTML(): string {
     '<span class="cf e" style="left:8%;top:14%;transform:rotate(24deg)"></span><span class="cf r c" style="left:20%;top:80%"></span><span class="cf o" style="left:47%;top:7%;transform:rotate(-30deg)"></span>' +
     '<span class="cf i" style="left:63%;top:86%;transform:rotate(50deg)"></span><span class="cf e c" style="left:86%;top:12%"></span><span class="cf r" style="left:93%;top:66%;transform:rotate(-14deg)"></span>' +
     '<span class="cf o c" style="left:4%;top:56%"></span><span class="cf e" style="left:34%;top:88%;transform:rotate(70deg)"></span>' +
-    '<span class="pl p1">' + art("pitsa-s-burata-i-proshuto-krudo") + '</span><span class="pl p2">' + art("svinski-rebra") + '</span><span class="pl p3">' + art("gratska-salata") + '</span><span class="pl p4">' + art("sufle") + "</span></div>";
+    '<span class="pl p1">' + art("pitsa-s-burata-i-proshuto-krudo", "pitsi") + '</span><span class="pl p2">' + art("svinski-rebra", "skara-bertha") + '</span><span class="pl p3">' + art("gratska-salata", "salati") + '</span><span class="pl p4">' + art("sufle", "deserti") + "</span></div>";
 }
 
 /* ---------- package cards (server; the browser marks the chosen one and fills the price footers) ---------- */
@@ -46,7 +51,7 @@ export function pkgCardsHTML(): string {
   return PKGS.map((p) => { const items = pkgItems(p), firsts = GROUP_IDS.map((g) => p.g[g][0][0]);
     return '<label class="pkg"><input class="vh" type="radio" name="cmenu" value="' + p.id + '">' +
       '<span class="pkg-h"><span><span class="h3">' + p.n + "</span><p>" + p.d + '</p></span><span class="radio">' + ic("check", 16) + "</span></span>" +
-      '<span class="minis" aria-hidden="true">' + firsts.map((id) => '<span class="pl">' + art(id) + "</span>").join("") + "</span>" +
+      '<span class="minis" aria-hidden="true">' + firsts.map((id) => '<span class="pl">' + thumb(id) + "</span>").join("") + "</span>" +
       "<dl>" + GROUP_IDS.map((g) => { const list = items.filter((it) => it.g === g);
         return "<div><dt>" + GROUP_NAMES[g] + (list.every((it) => it.share) ? " <i>· за споделяне</i>" : "") + "</dt><dd>" + list.map((it) => esc(it.x.n)).join(", ") + "</dd></div>"; }).join("") + "</dl>" +
       '<span class="pkg-f" data-pkgf="' + p.id + '"></span></label>'; }).join("") +
@@ -57,12 +62,20 @@ export function pkgCardsHTML(): string {
 }
 
 /* ---------- own menu: the dish picker ---------- */
-export const GROUPS: { id: Group; cats: string[] }[] = [
+const GROUPS_BASE: { id: Group; cats: string[] }[] = [
   { id: "app", cats: ["studeni-predyastia", "topli-predyastia", "hlebcheta"] },
   { id: "starter", cats: ["salati", "supi"] },
   { id: "main", cats: ["skara-bertha", "pitsi", "osnovni-yastia", "pasta-i-rizoto", "burgeri", "garnituri"] },
   { id: "dessert", cats: ["deserti", "pitsi"] },
 ];
+/* a category of a new menu goes to the group of its kind (sauces, add-ons, drinks and breakfast stay out, as now) */
+const BY_COURSE: Partial<Record<Course, Group>> = { starter: "starter", salad: "starter", main: "main", side: "main", dessert: "dessert" };
+const listed = new Set(GROUPS_BASE.flatMap((g) => g.cats));
+/** the groups of the picker: only the categories this menu has, a group without any is not shown */
+export const GROUPS: { id: Group; cats: string[] }[] = GROUPS_BASE.map((g) => ({
+  id: g.id,
+  cats: [...g.cats, ...cats.filter((c) => !listed.has(c.id) && BY_COURSE[c.course] === g.id).map((c) => c.id)].filter((c) => catById[c] && itemsFor(g.id, c).length),
+})).filter((g) => g.cats.length);
 /* "Изчерпано днес" is about today, not the party date */
 const cleanTags = (x: Dish): Dish => ({ ...x, t: x.t.filter((k) => k !== "out") });
 function itemsFor(g: Group, cat: string): Dish[] {
@@ -78,13 +91,13 @@ export const known = (id: string) => !!byId[id];
 export const picksIn = (S: St, g: Group) => S.picks.filter((id) => byId[id] && groupOf(id) === g);
 const errHTML = (id: string) => '<p class="err" id="' + id + '" hidden></p>';
 export function pickerHTML(S: St): string {
-  const g = S.pg, gr = GROUPS.find((x) => x.id === g)!, cat = S.pc[g] || gr.cats[0];
+  const gr = GROUPS.find((x) => x.id === S.pg) || GROUPS[0] || { id: S.pg, cats: [] }, g = gr.id, pc = S.pc[g], cat = (pc && gr.cats.includes(pc) ? pc : gr.cats[0]) || "";
   return '<div class="picker" id="b-picker"><div class="blk-h"><h3 class="h3">Вашето меню</h3><span class="opt">изберете от всяка група</span></div>' +
     '<div class="gtabs" role="tablist" aria-label="Групи ястия">' + GROUPS.map((x) => { const n = picksIn(S, x.id).length;
       return '<button type="button" role="tab" data-pg="' + x.id + '" aria-selected="' + (x.id === g) + '">' + GROUP_NAMES[x.id] + (n ? '<span class="n" aria-label="' + n + ' избрани">' + n + "</span>" : "") + "</button>"; }).join("") + "</div>" +
     '<div class="chips" role="group" aria-label="Категории">' + gr.cats.map((c) => '<button class="chip" type="button" data-pc="' + c + '" aria-pressed="' + (c === cat) + '">' + catLabel(g, c) + ' <span class="n">' + itemsFor(g, c).length + "</span></button>").join("") + "</div>" +
     '<div class="plist" role="tabpanel">' + itemsFor(g, cat).map((x) => { const on = S.picks.includes(x.id), cx = cleanTags(x);
-      return '<button class="pk" type="button" data-pick="' + x.id + '" aria-pressed="' + on + '"><span class="pic" aria-hidden="true">' + art(x) + "</span><span><b>" + esc(x.n) + '</b><span class="m"><span class="price">' + fmt(x.p) + "</span>" + (x.g ? "<span>" + esc(x.g) + "</span>" : "") + '<span class="yes">' + ic("check", 14).replace('class="ic"', 'class="ic" style="display:inline;vertical-align:-2px"') + " Избрано</span></span>" + (cx.t.length ? '<span style="display:block;margin-top:6px">' + badges(cx) + "</span>" : "") + '</span><span class="tk">' + ic("check", 18) + "</span></button>"; }).join("") + "</div>" +
+      return '<button class="pk" type="button" data-pick="' + x.id + '" aria-pressed="' + on + '"><span class="pic" aria-hidden="true">' + thumb(x) + "</span><span><b>" + esc(x.n) + '</b><span class="m"><span class="price">' + fmt(x.p) + "</span>" + (x.g ? "<span>" + esc(x.g) + "</span>" : "") + '<span class="yes">' + ic("check", 14).replace('class="ic"', 'class="ic" style="display:inline;vertical-align:-2px"') + " Избрано</span></span>" + (cx.t.length ? '<span style="display:block;margin-top:6px">' + badges(cx) + "</span>" : "") + '</span><span class="tk">' + ic("check", 18) + "</span></button>"; }).join("") + "</div>" +
     errHTML("e-picks") + '<div class="mine shell" data-mine><div class="core">' + mineHTML(S) + "</div></div>" +
     '<div class="callbox"><h4>Свържете се с нас за оферта</h4><p>Собственото меню го смятаме на ръка. Изпратете запитването или ни се обадете.</p>' + callBtn("pill pill-line") + "</div></div>";
 }

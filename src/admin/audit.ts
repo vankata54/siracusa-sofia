@@ -9,7 +9,7 @@ import "sc-icons:clock,export,lock,magnifying-glass,funnel,x,sign-in,sign-out,wa
 import { api } from "../client/api.ts";
 import { adminApi, ApiError } from "../client/api-admin.ts";
 import type { AuditEntry, FeedbackNote } from "../client/api-types.ts";
-import { A, mount, can, isMainAdmin, toast, skel, failHTML, offline, empty, missing, norm, esc, ic, plural, SEC, roleName } from "./a.ts";
+import { A, mount, can, isMainAdmin, toast, skel, failHTML, offline, empty, missing, norm, esc, ic, plural, SEC, roleName, fmtYmd } from "./a.ts";
 import { aurl } from "./routes.ts";
 import { hmOf, ymdOf, dayDiff, dayTitle } from "./when.ts";
 import { statusName } from "./notes-names.ts";
@@ -30,6 +30,8 @@ const OST: Record<string, string> = { accepted: "Приета", cooking: "Гот
 const RST: Record<string, string> = { new: "Нова", confirmed: "Потвърдена", seated: "Дошли", no_show: "Неявили се", cancelled: "Отказана", waitlist: "Чака маса" };
 export interface Names { dish?: Record<string, string>; note?: Record<string, string> }
 const q = (s: string) => "„" + s + "“";
+/* "YYYY-MM-DD" -> "ср, 18 ноември" */
+const fmtDay = (ymd: string) => (/^\d{4}-\d{2}-\d{2}$/.test(ymd) ? fmtYmd(ymd) : ymd);
 const cut = (s: string, n = 80) => (s.length > n ? s.slice(0, n - 2) + " …" : s);
 /** an entry in plain words (pure: the names of dishes and notes come in `names`, when the screen could load them) */
 export function auditText(e: AuditEntry, names: Names = {}): string {
@@ -57,6 +59,20 @@ export function auditText(e: AuditEntry, names: Names = {}): string {
     case "reservation.cancel": return "Резервация: отказана от госта";
     case "menu.sold_out": return "Изчерпано днес: " + dish();
     case "menu.back": return "Върнато в менюто: " + dish();
+    case "menu.draft": return "Меню: промяна в черновата";
+    case "menu.publish": return "Меню: публикувано" + (d.version != null ? " (версия " + String(d.version) + ")" : "") + " · сайтът се пресглобява";
+    case "menu.rollback": return "Меню: върнато предишното" + (d.version != null ? " (версия " + String(d.version) + ")" : "");
+    case "menu.discard": return "Меню: черновата е отказана";
+    case "menu.media": return "Меню: качена снимка";
+    case "lunch.update": return /^\d{4}-\d{2}-\d{2}$/.test(t) ? (d.n ? "Обедно меню, " + fmtDay(t) + ": " + String(d.n) + " ястия" : "Обедно меню: изчистен ден " + fmtDay(t)) : "Обедно меню: графикът е променен";
+    case "lunch.publish": return "Обедно меню: публикувано" + (Array.isArray(d.days) ? " за " + d.days.map((x) => fmtDay(String(x))).join(", ") : t ? " за " + fmtDay(t) : "");
+    case "lunch.fav": return "Обедно меню: нова любима комбинация" + (t ? " " + q(cut(t, 60)) : "");
+    case "lunch.fav_remove": return "Обедно меню: махната любима комбинация";
+    case "lunch.dish": return "Обедно меню: ново ястие" + (d.n ? " " + q(String(d.n)) : "");
+    case "lunch.pin": return d.changed === false ? "ПИН за обедното меню: зададен" : "ПИН за обедното меню: сменен";
+    case "lunch.unlock": return "Обедно меню: отключено с ПИН";
+    case "lunch.lock": return "Обедно меню: заключено";
+    case "lunch.pin_fail": return "Обедно меню: грешен ПИН";
     case "settings.update": return settingsText(d) || "Настройки: променени";
     default: return "Действие: " + e.action;
   }

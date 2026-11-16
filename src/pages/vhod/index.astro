@@ -6,7 +6,9 @@
    noindex: a personal page, nothing to find in search. */
 import Base from "../../layouts/Base.astro";
 import "../../lib/icons-all.ts";
-import { ic, url, art } from "../../lib/index.ts";
+import { ic, url, art, anyDish } from "../../lib/index.ts";
+/* the plate of the bonus card: this dish, else a hit of the published menu (decoration) */
+const bonusDish = anyDish("pitsa-s-burata-i-proshuto-krudo");
 import { HERO, DESCRIPTION, perksHTML, phoneHTML } from "./_views.ts";
 
 const abs = (p: string) => new URL(p, Astro.site).href;
@@ -21,7 +23,7 @@ const jsonld = { "@context": "https://schema.org", "@type": "BreadcrumbList", it
       <p class="eyebrow" data-eyebrow>{HERO.eyebrow}</p>
       <h1 class="h1" data-h1>{HERO.h1}</h1>
       <p class="lead" data-lead>{HERO.lead}</p>
-      <div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам на следващата ви поръчка.</span></span><span class="art" aria-hidden="true" set:html={art("pitsa-s-burata-i-proshuto-krudo")}></span></div>
+      <div class="bonus ember-card"><span class="big">-10%</span><span class="tx"><b>от следващата поръчка</b><span class="s">Подарък за нов профил. Прилага се сам на следващата ви поръчка.</span></span><span class="art" aria-hidden="true" set:html={bonusDish ? art(bonusDish) : ""}></span></div>
     </div>
     <div class="lg-f"><div class="shell"><div class="core box" data-box aria-live="polite"><div class="view" set:html={phoneHTML()}></div></div></div></div>
     <div class="lg-p">

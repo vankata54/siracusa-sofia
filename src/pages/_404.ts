@@ -4,7 +4,7 @@
    as catsHTML in menu/[kategoria]/_cat.ts, copied here so that file stays untouched) and a missing event under
    /sabitia/... (the invalid-event state of design/pages/event.html with the "Предстои" card).
    Every variant is in the HTML; a small inline script in 404.astro shows the right one (data-v). */
-import { cats, inCat, isOut, events, lastSaturday, noun, RESTAURANT as R, MON, DAYS_SHORT, art, esc, ic, url, dateLong, type Dish } from "../lib/index.ts";
+import { cats, inCat, isOut, events, lastSaturday, noun, RESTAURANT as R, MON, DAYS_SHORT, art, photo, esc, ic, url, dateLong, type Dish } from "../lib/index.ts";
 
 export type Variant = "gen" | "cat" | "dish" | "ev";
 /** Wrapper attribute: the element is shown only for these variants (the general one is visible in the raw HTML). */
@@ -15,7 +15,8 @@ export function emptyPlate(): string {
   const fake = { id: "prazna-chinia", n: "", comp: "", cat: "supi", t: [] } as unknown as Dish;
   const soup = art(fake);
   const plate = (soup.match(/<circle cx="100" cy="100" r="94"[^>]*\/><circle cx="100" cy="100" r="78"[^>]*\/>/) || [""])[0];
-  const pz = art("pitsa-margarita");
+  /* a stand-in pizza (not a dish of the menu): the colours stay the same whatever the published menu has */
+  const pz = art({ id: "pitsa-margarita", n: "", comp: "", cat: "pitsi", t: [] } as unknown as Dish);
   /* colours taken from the pizza illustration (art, not interface tokens); fallbacks only if the art changes */
   const crust = (pz.match(/r="92" fill="(#[0-9A-Fa-f]{6})"/) || [0, "#D9A262"])[1];
   const sauce = (pz.match(/r="76" fill="(#[0-9A-Fa-f]{6})"/) || [0, "#C23A22"])[1];
@@ -64,7 +65,7 @@ function heroDish(list: Dish[]): Dish {
 export function catsHTML(): string {
   return '<ul class="nf-cats">' + cats.filter((c) => inCat(c.id).length).map((c) => {
     const its = inCat(c.id), h = heroDish(its);
-    return '<li><a class="cat" href="' + url.cat(c.id) + '" data-cat="' + c.id + '" data-name="' + esc(c.n) + '"><span class="pic" aria-hidden="true">' + art(h) + "</span><span><b>" + esc(c.n) + "</b><small>" +
+    return '<li><a class="cat" href="' + url.cat(c.id) + '" data-cat="' + c.id + '" data-name="' + esc(c.n) + '"><span class="pic" aria-hidden="true">' + (h.photo ? photo(h, { alt: "" }) : art(h)) + "</span><span><b>" + esc(c.n) + "</b><small>" +
       (c.id === "zakuski" ? noun(c.id, its.length) + " · до 11:30" : noun(c.id, its.length)) + "</small></span></a></li>";
   }).join("") + "</ul>";
 }

@@ -14,11 +14,25 @@ type DishRef = Dish | string;
 const D = (x: DishRef): Dish => (typeof x === "string" ? byId[x] : x);
 
 
-export function art(x: DishRef, attrs?: string): string { return artSvg(D(x), attrs); }
+/** The illustration; "" when the dish is not in this menu (a decoration of a page whose dish the new menu does not have). */
+export function art(x: DishRef, attrs?: string): string { const d = D(x); return d ? artSvg(d, attrs) : ""; }
 
-export function pic(x: DishRef, cls?: string): string {
+/** The dish photo from the admin (/media/<sha256>.<ext>, a data: URL in the demo); square box, lazy unless `eager`
+    (the first photo in the first screen). alt "" when the picture is a decoration next to the name. */
+export function photo(d: Dish, o: { eager?: boolean; alt?: string; w?: number; h?: number } = {}): string {
+  return '<img src="' + esc(d.photo || "") + '" alt="' + esc(o.alt ?? d.n) + '" width="' + (o.w || 600) + '" height="' + (o.h || 600) + '" decoding="async"' + (o.eager ? ' fetchpriority="high"' : ' loading="lazy"') + ">";
+}
+
+/** The picture alone, as a decoration next to the dish name (aria-hidden box): the photo (alt "") or the illustration. */
+export function thumb(x: DishRef): string { const d = D(x); return d && d.photo ? photo(d, { alt: "" }) : art(d); }
+
+/** The dish picture: the photo when the admin uploaded one, else the illustration (until the new photo shoot). */
+export function pic(x: DishRef, cls?: string, eager?: boolean): string {
   const d = D(x);
-  return '<div class="pic ' + (cls || "") + (isOut(d) ? " out" : "") + '" role="img" aria-label="' + esc(d.n) + ' (илюстрация до новата фотосесия)">' + art(d) + "</div>";
+  if (!d) return ""; /* a decoration naming a dish the published menu does not have */
+  const c = '<div class="pic ' + (cls || "") + (isOut(d) ? " out" : "") + '"';
+  if (d.photo) return c + ">" + photo(d, { eager }) + "</div>";
+  return c + ' role="img" aria-label="' + esc(d.n) + ' (илюстрация до новата фотосесия)">' + art(d) + "</div>";
 }
 
 export function badges(x: DishRef, onpic?: boolean): string {
@@ -35,9 +49,9 @@ export function plusBtn(x: DishRef): string {
 }
 
 /** variant "card" (rail / grid) or "row" */
-export function dishCard(x: DishRef, variant: "card" | "row" = "card"): string {
+export function dishCard(x: DishRef, variant: "card" | "row" = "card", eager?: boolean): string {
   const d = D(x), href = url.dish(d), unit = d.per100 ? "за 100 гр." : d.g;
-  if (variant === "row") return '<div class="drow"><a class="open" href="' + href + '">' + pic(d) + '<span><span class="nm">' + esc(d.n) + '</span><span class="meta"><span class="price">' + fmt(d.p) + '</span><span class="muted small">' + unit + "</span></span>" + (d.t.length ? '<span style="display:block;margin-top:6px">' + badges(d) + "</span>" : "") + "</span></a>" + plusBtn(d) + "</div>";
-  return '<div class="dcard"><a class="open" href="' + href + '"><span class="pw">' + pic(d) + badges(d, true) + '</span><span class="nm">' + esc(d.n) + '</span></a><div class="rowp"><span><span class="price">' + fmt(d.p) + "</span><small>" + unit + "</small></span>" + plusBtn(d) + "</div></div>";
+  if (variant === "row") return '<div class="drow"><a class="open" href="' + href + '">' + pic(d, "", eager) + '<span><span class="nm">' + esc(d.n) + '</span><span class="meta"><span class="price">' + fmt(d.p) + '</span><span class="muted small">' + unit + "</span></span>" + (d.t.length ? '<span style="display:block;margin-top:6px">' + badges(d) + "</span>" : "") + "</span></a>" + plusBtn(d) + "</div>";
+  return '<div class="dcard"><a class="open" href="' + href + '"><span class="pw">' + pic(d, "", eager) + badges(d, true) + '</span><span class="nm">' + esc(d.n) + '</span></a><div class="rowp"><span><span class="price">' + fmt(d.p) + "</span><small>" + unit + "</small></span>" + plusBtn(d) + "</div></div>";
 }
 

@@ -31,8 +31,9 @@ function zonesText(): string {
 }
 
 /** FAQ (visible answers and FAQPage JSON-LD from the same array). names: the dishes of "Скара Bertha". */
+/** The questions; the two about the dishes only while the menu has the "Скара Bertha" category (names not empty). */
 export function faq(names: string[]): [string, string][] {
-  return [
+  const q: [string, string][] = [
     ["Какво е фурната Bertha?", "Bertha е британска затворена фурна на дървени въглища. Огънят гори в затворена камера, която нагрява стените и тавана. Така топлината идва отвсякъде, а не само отдолу."],
     ["До колко градуса се нагрява?", "Скарата работи при около 250 - 350 °C. Камерата е затворена, затова температурата е равномерна."],
     ["Откъде идва опушеният вкус?", "От дървените въглища. Те горят в същата затворена фурна, в която се пече месото."],
@@ -40,6 +41,7 @@ export function faq(names: string[]): [string, string][] {
     ["Мога ли да поръчам скара за вкъщи?", "Да. Доставяме всеки ден до " + R.delivery + ": " + zonesText() + ". Поръчки за вземане до " + R.kitchen + ", готови най-късно в " + R.close + "."],
     ["Къде е ресторантът?", R.name + " е в " + R.address + ". Отворено всеки ден " + R.open + " - " + R.close + ", кухнята приема до " + R.kitchen + "."],
   ];
+  return names.length ? q : q.filter((x) => !/^(Кои ястия|Мога ли да поръчам скара)/.test(x[0]));
 }
 
 export function faqHTML(q: [string, string][]): string {

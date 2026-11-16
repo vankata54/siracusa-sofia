@@ -13,7 +13,12 @@ export const TEAM: { n: string; picks: Record<string, number> }[] = [
   { n: "Иван", picks: { "l-kyufteta-s-parzheni-kartofi-zele-i-morkov-lyuten": 1, "l-supa-topcheta": 1 } },
   { n: "Петя", picks: { "l-svezha-s-pile-i-parmezan": 1, "l-tikven-chiyzkeyk": 1 } },
   { n: "Георги", picks: { "l-lazanya-boloneze": 1, "l-pechena-tikva-s-med-i-orehi": 1 } },
-].map((t) => ({ n: t.n, picks: Object.fromEntries(Object.entries(t.picks).filter(([k]) => byId[k])) }));
+].map((t, i) => {
+  const picks: Record<string, number> = Object.fromEntries(Object.entries(t.picks).filter(([k]) => byId[k]));
+  /* another day's lunch menu (the admin publishes a new one every day): two dishes of today's list instead */
+  if (!Object.keys(picks).length) for (const x of lunch.slice(i * 2, i * 2 + 2)) picks[x.id] = 1;
+  return { n: t.n, picks };
+}).filter((t) => Object.keys(t.picks).length);
 
 const sum = (p: Record<string, number>) => Math.round(Object.keys(p).reduce((s, k) => s + (byId[k] ? byId[k].p * p[k] : 0), 0) * 100) / 100;
 const cnt = (p: Record<string, number>) => Object.values(p).reduce((s, q) => s + q, 0);
@@ -46,7 +51,7 @@ export function heroHTML(site: string): string {
       `<div class="o-demo-h"><span><b>Обяд в офиса</b><span class="small">Чатът на офиса</span></span><span class="o-avas"><span class="o-ava me">М</span><span class="o-ava a1">И</span><span class="o-ava a2">П</span><span class="o-ava a3">Г</span></span></div>` +
       `<div class="o-bubble"><span class="who">Мария</span>Поръчваме обяд от Siracusa. Изберете си до 11:30.<br><span class="o-linkchip">${ic("arrow-up-right", 16)}<span>${esc(exampleLink(site, "482913"))}</span></span></div>` +
       `<div class="o-joins">${rows}</div>` +
-      `<div class="o-demo-f" style="animation-delay:1050ms"><span>${souls(3)} · ${dishes(count)}</span><span class="price">${fmt(total)}</span></div>` +
+      `<div class="o-demo-f" style="animation-delay:1050ms"><span>${souls(TEAM.length)} · ${dishes(count)}</span><span class="price">${fmt(total)}</span></div>` +
     `</div></figure></div></section>`;
 }
 

@@ -6,17 +6,18 @@
    would add exports to the shared runtime chunk. */
 import Admin from "../../../layouts/Admin.astro";
 import "../../../admin/preview.css";
-import { url, byId, catById, EVENT_SLUGS } from "../../../lib/index.ts";
+import { url, catById, cats, inCat, anyDish, EVENT_SLUGS } from "../../../lib/index.ts";
 
 const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
-const dish = byId["pitsa-s-burata-i-proshuto-krudo"];
-const cat = catById["pitsi"];
+/* the prototype's examples when the menu has them, else the first ones of the live menu (any menu builds) */
+const dish = anyDish("pitsa-s-burata-i-proshuto-krudo");
+const cat = catById["pitsi"] || cats.find((c) => inCat(c.id).length > 0);
 const ev = EVENT_SLUGS[0];
 /* [key, name, logical address]: the screens of the prototype's site, in its order */
 const site: [string, string, string][] = [
   ["home", "Начало", url.home()],
   ["menu", "Меню", url.menu()],
-  ["category", "Категория: " + (cat ? cat.n : "Пици на пещ"), url.cat("pitsi")],
+  ["category", "Категория: " + (cat ? cat.n : "Меню"), cat ? url.cat(cat.id) : url.menu()],
   ["dish", "Ястие", dish ? url.dish(dish) : url.menu()],
   ["lunch", "Обедно меню", url.lunch()],
   ["cart", "Количка и поръчка", url.cart()],

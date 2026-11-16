@@ -5,7 +5,7 @@
 import { crumbs, hourNote, hourTitle, hourLine, faqHead, offlineKeep } from "../../../lib/ui.ts";
 import { cats, catById, inCat, isOut, FILTERS, ZONES, RESTAURANT, type Dish, type Category } from "../../../lib/data.ts";
 import type { State, Eta } from "../../../lib/status.ts";
-import { art } from "../../../lib/render.ts";
+import { art, photo } from "../../../lib/render.ts";
 import { kind } from "../../../lib/art.ts";
 import { ic } from "../../../lib/icons.ts";
 import { esc, fmt } from "../../../lib/format.ts";
@@ -156,7 +156,7 @@ export function introHTML(c: Category): string {
 export function heroHTML(c: Category): string {
   const h = hero(inCat(c.id)), hit = h.t.indexOf("hit") > -1, nw = h.t.indexOf("new") > -1;
   return '<section class="ch" aria-labelledby="cat-h1">' +
-    '<div class="ch-plate' + (kind(h) === "platter" ? " square" : "") + '"><span class="sh" aria-hidden="true"></span><div class="ch-spin" aria-hidden="true">' + art(h) + "</div>" +
+    '<div class="ch-plate' + (kind(h) === "platter" ? " square" : "") + '"><span class="sh" aria-hidden="true"></span><div class="ch-spin' + (h.photo ? " ph" : "") + '" aria-hidden="true">' + (h.photo ? photo(h, { eager: true, alt: "" }) : art(h)) + "</div>" +
     '<a class="hit-tag" href="' + url.dish(h) + '"><span class="bd">' + ic(hit ? "fire" : nw ? "sparkle" : "star", 22) + "</span><span><small>" + (hit ? "Хит" : nw ? "Ново" : "Препоръчваме") + " · " + fmt(h.p) + "</small><b>" + esc(h.n) + "</b></span></a></div>" +
     '<div class="ch-text">' + crumbsHTML(c) + '<h1 class="h1" id="cat-h1">' + esc(c.n) + "</h1>" + factsHTML(c) + "</div>" +
     '<div class="ch-intro">' + introHTML(c) + "</div></section>";
@@ -235,7 +235,7 @@ export function resultsHTML(c: Category, st: CatState, S: State | null): string 
 export function catsHTML(current: string | null): string {
   return '<ul class="cats">' + CATS.filter((c) => c.id !== current).map((c) => {
     const its = inCat(c.id), h = hero(its);
-    return '<li><a class="cat" href="' + url.cat(c.id) + '"><span class="pic" aria-hidden="true" data-art="' + h.id + '"></span><span><b>' + esc(c.n) + "</b><small>" +
+    return '<li><a class="cat" href="' + url.cat(c.id) + '">' + (h.photo ? '<span class="pic" aria-hidden="true">' + photo(h, { alt: "" }) + "</span>" : '<span class="pic" aria-hidden="true" data-art="' + h.id + '"></span>') + '<span><b>' + esc(c.n) + "</b><small>" +
       count(c.id, its.length) + (c.id === "zakuski" ? " · до 11:30" : "") + "</small></span></a></li>";
   }).join("") + "</ul>";
 }

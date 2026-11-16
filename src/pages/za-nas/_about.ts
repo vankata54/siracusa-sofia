@@ -5,14 +5,18 @@ import { photoSlot, miss, faqHead } from "../../lib/ui.ts";
 import "sc-icons:image,video-camera"; /* the icons of the shared components it draws (lib/ui.ts) */
 import { url, restaurantId } from "../../lib/routes.ts";
 import { RESTAURANT, ZONES } from "../../lib/consts.ts";
-import { items, cats, inCat, lunch } from "../../lib/data.ts";
-import { art } from "../../lib/render.ts";
+import { items, cats, inCat, lunch, byId, catById, anyDish, type Dish } from "../../lib/data.ts";
+import { art as artOf } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
 import { status, NEUTRAL_HOUR } from "../../lib/status.ts";
 import { endCta, lunchLinkText } from "./_cta.ts";
 
 const R = RESTAURANT;
+/* the pictures name dishes of the current menu; a published new menu may not have them: a dish of the same category,
+   else a hit (lib/data.ts anyDish), never a crash */
+const art = (id: string, cat = ""): string => { const d: Dish | undefined = anyDish(id, ...inCat(cat).map((x) => x.id)); return d ? artOf(d) : ""; };
+const nPizza = inCat("pitsi").length, nBertha = inCat("skara-bertha").length;
 /* the main menu is the 14 categories (breakfast is a separate menu) */
 export const mainCats = cats.filter((c) => c.id !== "zakuski");
 export const mainItems = items.filter((x) => x.cat !== "zakuski");
@@ -40,17 +44,18 @@ export function heroHTML(): string {
       '<ul class="ab-facts"><li>' + ic("clock", 20) + "Всеки ден " + hours + "</li><li>" + ic("tree", 20) + "Салон и градина</li><li>" + ic("truck", 20) + "Доставка до " + R.delivery + "</li></ul>" +
     "</div>" +
     '<div class="ab-vis">' + slot("storefront", "ресторанта", "ab-hero-slot") +
-      '<div class="ab-plate" aria-hidden="true">' + art("svinski-rebra") + "</div></div>" +
+      '<div class="ab-plate" aria-hidden="true">' + art("svinski-rebra", "skara-bertha") + "</div></div>" +
   "</section>";
 }
 
 /* 2. what matters to us */
 export function valuesHTML(): string {
   const vals = [
-    { art: art("pitsa-margarita"), h: "Пещта", p: "Пиците се пекат на пещ. В менюто има " + inCat("pitsi").length + " вида, от Маргарита до сладката Нутела.", a: "Пиците на пещ", href: url.cat("pitsi"), data: "" },
-    { art: art("t-bon-stek-ot-blek-angas"), h: "Дървените въглища", p: "Месата и рибата се пекат във Bertha, затворена фурна на дървени въглища. Огънят нагрява стените и тавана, затова топлината е равномерна, а вкусът е опушен.", a: "Как работи фурната", href: url.page("bertha"), data: "" },
-    { art: art(lunch[0] || "kebapcheta"), h: "Кварталът", p: "Готвим за съседите от Дружба 1 и 2 и за офисите наоколо: обедно меню всеки ден и безплатна доставка до " + andList(freeZones.map((z) => z.n)) + ".", a: lunchLinkText(false), href: url.lunch(), data: " data-lunchlink" },
-    { art: art("tiramisu"), h: "Семейните празници", p: "Рожден ден, кръщене, юбилей или фирмено парти, в салона или в градината. При ранна резервация -5%.", a: "Празник при нас", href: url.page("celebration"), data: "" },
+    /* "Пещта" speaks of the pizzas of the menu: only while it has them (the names only while those dishes are on it) */
+    ...(nPizza ? [{ art: art("pitsa-margarita", "pitsi"), h: "Пещта", p: "Пиците се пекат на пещ. В менюто има " + nPizza + " вида" + (byId["pitsa-margarita"] && byId["pitsa-nutela"] ? ", от Маргарита до сладката Нутела." : "."), a: "Пиците на пещ", href: url.cat("pitsi"), data: "" }] : []),
+    { art: art("t-bon-stek-ot-blek-angas", "skara-bertha"), h: "Дървените въглища", p: "Месата и рибата се пекат във Bertha, затворена фурна на дървени въглища. Огънят нагрява стените и тавана, затова топлината е равномерна, а вкусът е опушен.", a: "Как работи фурната", href: url.page("bertha"), data: "" },
+    { art: lunch[0] ? artOf(lunch[0]) : art("kebapcheta", "skara-bertha"), h: "Кварталът", p: "Готвим за съседите от Дружба 1 и 2 и за офисите наоколо: обедно меню всеки ден и безплатна доставка до " + andList(freeZones.map((z) => z.n)) + ".", a: lunchLinkText(false), href: url.lunch(), data: " data-lunchlink" },
+    { art: art("tiramisu", "deserti"), h: "Семейните празници", p: "Рожден ден, кръщене, юбилей или фирмено парти, в салона или в градината. При ранна резервация -5%.", a: "Празник при нас", href: url.page("celebration"), data: "" },
   ];
   return '<section class="sec" aria-labelledby="ab-vals-h"><div class="sec-h"><h2 class="h2" id="ab-vals-h">Какво ни е важно</h2></div>' +
     '<div class="ab-vals">' + vals.map((v, i) =>
@@ -64,9 +69,9 @@ export function valuesHTML(): string {
 export function storyHTML(): string {
   const nums = [
     { n: mainItems.length, l: "ястия в основното меню", href: url.menu(), ink: true },
-    { n: mainCats.length, l: "категории, от супите до десертите", href: url.menu() },
-    { n: inCat("pitsi").length, l: "пици на пещ", href: url.cat("pitsi") },
-    { n: inCat("skara-bertha").length, l: "ястия от фурната Bertha", href: url.cat("skara-bertha") },
+    { n: mainCats.length, l: catById.supi && catById.deserti ? "категории, от супите до десертите" : "категории в основното меню", href: url.menu() },
+    ...(nPizza ? [{ n: nPizza, l: "пици на пещ", href: url.cat("pitsi") }] : []),
+    ...(nBertha ? [{ n: nBertha, l: "ястия от фурната Bertha", href: url.cat("skara-bertha") }] : []),
     { n: 7, l: "дни в седмицата, " + hours, href: url.page("contacts") },
     { n: freeZones.length, l: "квартала с безплатна доставка", href: url.page("delivery") },
   ];
@@ -141,7 +146,7 @@ export function visitHTML(): string {
 export function endHTML(): string {
   const c = endCta({ kitchen: true, delivery: true });
   return '<section class="sec" aria-labelledby="ab-end-h"><div class="ab-end rv" data-ab-end>' +
-    '<div class="ab-end-art" aria-hidden="true">' + art("pitsa-dyavolo") + "</div>" +
+    '<div class="ab-end-art" aria-hidden="true">' + art("pitsa-dyavolo", "pitsi") + "</div>" +
     '<div class="ab-end-t"><h2 class="h2" id="ab-end-h">Заповядайте в Siracusa</h2><p data-end-text>' + c.text + "</p></div>" +
     '<div class="btns"><a class="pill pill-red pill-lg" href="' + url.reservation() + '">' + ic("calendar-blank", 20) + 'Резервирай маса</a><a class="pill pill-ghost pill-lg" href="' + c.href + '" data-end-btn>' + ic("shopping-bag", 20) + "<span>" + c.label + "</span></a></div>" +
   "</div></section>";

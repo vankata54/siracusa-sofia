@@ -45,6 +45,9 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
 .ch-plate.square .sh{display:none}
 .ch-spin{position:absolute; inset:0; animation:plateIn 1100ms var(--ease) both}
 .ch-spin svg{width:100%; height:100%; display:block; will-change:transform}
+/* the admin's photo of the hero dish: a round photo on the plate, no spin */
+.ch-spin.ph{inset:11%}
+.ch-spin.ph img{width:100%; height:100%; display:block; border-radius:50%; object-fit:cover}
 @keyframes plateIn{from{transform:rotate(-70deg) scale(.82); opacity:0} to{transform:none; opacity:1}}
 
 
@@ -310,7 +313,7 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   }
   function moreFilters() {
     const total = items().length;
-    const rows = SC.FILTERS.map((F) => {
+    const rows = SC.FILTERS.filter((F) => F.id !== "bertha" || SC.catById["skara-bertha"]).map((F) => {
       const n = items().filter(F.test).length;
       if (F.needs) return [F, "Скоро. Чакаме " + F.needs + " от кухнята."] as const;
       if (!n) return [F, "Няма " + many() + " с това в категорията."] as const;
@@ -393,8 +396,9 @@ const st0: CatState = { f: [], a: [], q: "", sort: "rec" };
   /* ---------- preview only: the simulated states ("Само в прегледа"), never on the real site ---------- */
   if (SC.preview) {
     const q = location.search;
-    const links: [string, string][] = [["Изчерпано ястие", SC.url.cat("skara-bertha")], ["Без данни за алергени", SC.url.cat("supi", "a=gluten")], ["Закуски", SC.url.cat("zakuski")],
-      ["Търсене „моцарела“", SC.url.cat("pitsi", "q=" + encodeURIComponent("моцарела"))], ["Няма такава категория", SC.demo ? (document.documentElement.dataset.root || "./") + "404.html" : SC.url.menu().replace(/(index\.html)?$/, "") + "napitki/"]];
+    /* only the states whose category this menu has (a published new menu may not) */
+    const links: [string, string][] = ([["Изчерпано ястие", "skara-bertha", ""], ["Без данни за алергени", "supi", "a=gluten"], ["Закуски", "zakuski", ""],
+      ["Търсене „моцарела“", "pitsi", "q=" + encodeURIComponent("моцарела")]] as const).filter(([, c]) => SC.catById[c]).map(([n, c, h]): [string, string] => [n, SC.url.cat(c, h || undefined)]).concat([["Няма такава категория", SC.demo ? (document.documentElement.dataset.root || "./") + "404.html" : SC.url.menu().replace(/(index\.html)?$/, "") + "napitki/"]]);
     elBody.querySelector('[aria-labelledby="faq-h"]')!.insertAdjacentHTML("afterend", previewPanel(
       ([["loading", PV.loading], ["error", PV.error], ["offline", PV.offline]] as const).map(([k, n]) => pvChip(n, false, 'data-view="' + k + '"')).join("") +
       links.map(([n, h]) => { const [p, hs] = h.split("#"); return '<a class="chip" href="' + p + q + (hs ? "#" + hs : "") + '">' + n + "</a>"; }).join(""), { id: "cat-pv" }));

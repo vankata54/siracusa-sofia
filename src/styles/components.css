@@ -227,6 +227,8 @@ textarea.input{padding:14px 16px; min-height:96px; resize:vertical}
 .pic{position:relative; overflow:hidden; background:radial-gradient(120% 90% at 50% 30%, var(--plate-1), var(--plate-2))}
 .pic > svg{position:absolute; inset:7%; width:86%; height:86%; display:block; filter:drop-shadow(0 14px 18px rgba(0,0,0,.28))}
 .pic.out > svg{opacity:.4; filter:grayscale(.9)}
+.pic > img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block}
+.pic.out > img{opacity:.4; filter:grayscale(.9)}
 
 /* dish cards */
 .rail{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 8px; margin:0 -16px; scroll-snap-type:x mandatory; scroll-padding:0 16px; scrollbar-width:none}

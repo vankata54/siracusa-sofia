@@ -5,38 +5,40 @@
    (SEO), plus JSON-LD Menu > MenuSection > MenuItem. The browser adds the hour (segment sub-lines, delivery line, notices),
    the filters, allergens, search and scrollspy, kept in the address: #pitsi&f=veg.hot&a=gluten.milk&q=пица. */
 import Base from "../../layouts/Base.astro";
-import { ic, art, byId, inCat, catById, state, eta, url, lunchIsToday } from "../../lib/index.ts";
+import { ic, art, photo, catById, state, eta, url, lunchIsToday } from "../../lib/index.ts";
 import {
-  MAIN_ITEMS, BF_ITEMS, HERO_ID, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, LAZY_AFTER,
+  BF_ITEMS, HAS_BF, heroDish, menuDescription, menuLead, searchHint, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, LAZY_AFTER,
   type MenuState,
 } from "./_menu.ts";
 
 const S = state(), E = eta();
 const st0: MenuState = { menu: "main", f: [], a: [], q: "", cat: null };
 const R = results(st0);
-const bfGroup = { c: catById.zakuski, items: BF_ITEMS, top: 0 };
-const heroArt = byId[HERO_ID] || inCat("pitsi")[0];
-const resultsHTML = R.groups.map((g, i) => sectionHTML(g, { menu: "main", lazy: i >= LAZY_AFTER })).join("") + sectionHTML(bfGroup, { menu: "bf", hidden: true, lazy: true });
+const heroArt = heroDish();
+const heroPhoto = !!(heroArt && heroArt.photo), lead = menuLead();
+/* the first photo in the first screen is not lazy: the hero's, else the first card's */
+const resultsHTML = R.groups.map((g, i) => sectionHTML(g, { menu: "main", lazy: i >= LAZY_AFTER, eager: i === 0 && !heroPhoto })).join("") +
+  (HAS_BF ? sectionHTML({ c: catById.zakuski, items: BF_ITEMS, top: 0 }, { menu: "bf", hidden: true, lazy: true }) : "");
 const jsonld = menuLd(Astro.site);
 ---
 <Base page="menu" nav="menu" title="Меню"
-  description={"Менюто на Siracusa в Дружба 2: " + MAIN_ITEMS.length + " ястия и закуски. Пица на пещ, скара на дървени въглища Bertha, салати, паста, бургери и десерти. Доставка до 21:00."}
+  description={menuDescription()}
   jsonld={jsonld}>
   <div class="menupg" data-menupg>
   <section class="sec mhero" aria-labelledby="mh1">
-    <div class="mtop"><div class="hero-art" aria-hidden="true"><div class="pic" set:html={art(heroArt)}></div></div>
+    <div class="mtop"><div class="hero-art" aria-hidden="true"><div class={"pic" + (heroPhoto ? " ph" : "")} set:html={heroArt ? (heroPhoto ? photo(heroArt, { eager: true, alt: "" }) : art(heroArt)) : ""}></div></div>
       <h1 class="h1" id="mh1">Меню</h1>
-      <p class="lead">Пица на пещ и скара на дървени въглища.</p>
+      {lead && <p class="lead">{lead}</p>}
       <Fragment set:html={etaLine(S, E)} />
     </div>
     <div class="mctl">
       <div class="seg mseg" role="group" aria-label="Кое меню">
         <button type="button" data-menu="main" aria-pressed="true"><b>Основно</b><small data-sub="main" set:html={segSub("main", S)}></small></button>
         <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" set:html={segSub("lunch", S, lunchIsToday())}></small></a>
-        <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" set:html={segSub("bf", S)}></small></button>
+        {HAS_BF && <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" set:html={segSub("bf", S)}></small></button>}
       </div>
       <div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
-        <input id="mq" type="search" placeholder="пица, моцарела, бурата" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <input id="mq" type="search" placeholder={searchHint()} autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
         <button class="clr" type="button" data-qclear aria-label="Изчисти търсенето" hidden set:html={ic("x", 20)}></button></div>
         <div class="qchips" data-qchips role="group" aria-label="Как разбрахме търсенето" hidden></div></div>
       <div class="chips fchips" data-fchips role="group" aria-label="Филтри" set:html={filterChipsHTML(st0)}></div>
@@ -67,6 +69,7 @@ const jsonld = menuLd(Astro.site);
 .hero-art{position:absolute; top:-8px; right:-60px; width:184px; height:184px; pointer-events:none; animation:artIn 900ms var(--ease) both}
 .hero-art .pic{width:100%; height:100%; background:none; overflow:visible}
 .hero-art .pic > svg{inset:0; width:100%; height:100%}
+.hero-art .pic.ph > img{inset:8%; width:84%; height:84%; border-radius:50%; box-shadow:var(--shadow-lg)}
 @keyframes artIn{from{transform:rotate(-40deg) scale(.86); opacity:0}to{transform:none; opacity:1}}
 
 .mctl{display:grid; gap:16px; margin-top:22px}
@@ -328,7 +331,7 @@ const jsonld = menuLd(Astro.site);
   function emptyHTML(): string {
     const q = st.q.trim(), ic = SC.ic, esc = SC.esc;
     if (q && !(st.f.length || st.a.length)) return '<div class="empty mempty"><span class="ill">' + ic("magnifying-glass", 40) + '</span><h2 class="h3">Не намерихме „' + esc(q) + '“</h2><p>Проверете думата или опитайте някое от тези. Можете да попитате и асистента.</p>' +
-      '<div class="tryq">' + ["пица", "кебапчета", "салата", "бургер"].map((w) => '<button class="chip" type="button" data-try="' + w + '">' + w + "</button>").join("") + "</div>" +
+      '<div class="tryq">' + ["пица", "кебапчета", "салата", "бургер"].filter((w) => results({ menu: "main", f: [], a: [], q: w, cat: null }).list.length).map((w) => '<button class="chip" type="button" data-try="' + w + '">' + w + "</button>").join("") + "</div>" +
       '<div class="acts"><button class="pill pill-line" type="button" data-qclear>' + ic("x", 20) + 'Изчисти търсенето</button><button class="pill pill-ember" type="button" data-ai>' + ic("sparkle", 20) + "Попитай асистента</button></div></div>";
     const rm = st.f.map((id) => '<button class="chip" type="button" data-f="' + id + '">' + ic("x", 18) + filterById(id)!.n + "</button>")
       .concat(st.a.map((id) => '<button class="chip" type="button" data-arm="' + id + '">' + ic("x", 18) + "Без " + SC.allergenName(id).toLowerCase() + "</button>")).join("");
@@ -348,7 +351,7 @@ const jsonld = menuLd(Astro.site);
   }
   /* the hour-dependent frame: segment sub-lines, delivery line, notices */
   function timeParts() {
-    (["main", "lunch", "bf"] as const).forEach((k) => { const el = $("[data-sub=" + k + "]"); const h = segSub(k, S, SC.lunchIsToday()); if (el.innerHTML !== h) el.innerHTML = h; });
+    (["main", "lunch", "bf"] as const).forEach((k) => { const el = root.querySelector("[data-sub=" + k + "]"); const h = segSub(k, S, SC.lunchIsToday()); if (el && el.innerHTML !== h) el.innerHTML = h; });
     const eta = $("[data-eta]"), h = etaLine(S, SC.eta());
     if (eta.outerHTML !== h) eta.outerHTML = h;
     elNot.innerHTML = noticesHTML(S, st, view === "offline");
@@ -467,7 +470,8 @@ const jsonld = menuLd(Astro.site);
   }
   function moreSheet() {
     const list = scopeItems(st);
-    const rows = SC.FILTERS.map((f) => {
+    /* "От фурната Bertha" names a category: not listed while the menu has none of it */
+    const rows = SC.FILTERS.filter((f) => f.id !== "bertha" || SC.catById["skara-bertha"]).map((f) => {
       const n = f.needs ? 0 : list.filter(f.test).length, on = st.f.indexOf(f.id) > -1, dis = !!f.needs || !n;
       return '<label class="check' + (dis ? " dis" : "") + '"><input type="checkbox" data-fx="' + f.id + '"' + (on ? " checked" : "") + (dis ? " disabled" : "") + '><span class="fi ' + (FICON[f.id] || "") + '">' + SC.ic(fic(f), 22) + '</span><span class="ft"><b>' + f.n + "</b><small>" + (f.needs ? "Скоро. Чакаме " + f.needs + " от кухнята." : n ? plural(n) : "Няма такива в това меню") + "</small></span></label>";
     }).join("");

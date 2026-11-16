@@ -88,6 +88,14 @@ const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k)
 /** a dish of the menu, of the lunch menu or a removed one (for a cart line and an old order) */
 export function findDish(id: string): Dish | undefined { return own(byId, id) ? byId[id] : own(removedById, id) ? removedById[id] : undefined; }
 
+/** The first of these dishes that this menu has, else a hit, else the first dish: the picture or the example of a page that
+    named a dish the published menu may not have (decision 15.11.2026, "Ново меню"). Never a lunch or removed dish. */
+export function anyDish(...ids: string[]): Dish | undefined {
+  for (const id of ids) if (own(byId, id) && !byId[id].lunch) return byId[id];
+  const ok = items.filter((x) => !isOut(x));
+  return ok.find((x) => x.t.indexOf("hit") > -1) || ok[0] || items[0];
+}
+
 /* let url.dish("id") and the cart find a dish by id once the menu is loaded */
 import { setDishResolver } from "./registry.ts";
 setDishResolver((id) => byId[id] || removedById[id]);

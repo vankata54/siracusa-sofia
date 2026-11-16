@@ -34,5 +34,6 @@ export function partySvg(): string {
 
 /** The frame in the page HTML: label and size on the server, the drawing comes from praznik-masa.svg. */
 export function partyArt(): string {
-  return '<div class="party-art rv" role="img" data-art aria-label="Празнична маса отгоре с ястия от менюто: ' + dishes().filter(Boolean).map((x) => esc(x!.n)).join(", ") + ' (илюстрация)"></div>';
+  const names = dishes().filter(Boolean).map((x) => esc(x!.n)).join(", ");
+  return '<div class="party-art rv" role="img" data-art aria-label="Празнична маса отгоре' + (names ? " с ястия от менюто: " + names : "") + ' (илюстрация)"></div>';
 }

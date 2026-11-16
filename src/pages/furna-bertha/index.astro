@@ -10,7 +10,7 @@
 import Base from "../../layouts/Base.astro";
 import { url } from "../../lib/routes.ts";
 import { ic } from "../../lib/icons.ts";
-import { inCat, isOut } from "../../lib/data.ts";
+import { inCat, isOut, catById } from "../../lib/data.ts";
 import { dishCard } from "../../lib/render.ts";
 import { crumbs, photoSlot, faqHead } from "../../lib/ui.ts";
 import { sortDishes, faq, faqHTML, gauge, diagram, stepsHTML, playHTML, serviceHTML, countHTML } from "./_bertha.ts";
@@ -19,6 +19,9 @@ const dishes = sortDishes(inCat("skara-bertha"), isOut);
 const sides = inCat("garnituri");
 const FAQ = faq(dishes.map((x) => x.n));
 const nOut = dishes.filter(isOut).length;
+/* the oven is the restaurant's; its dishes, sides and sauces only while the published menu has those categories
+   (hidden, not removed: the page script keeps its elements) */
+const hasGrill = dishes.length > 0, hasSides = hasGrill && sides.length > 0;
 /* signature of what the HTML shows (id, price, sold out), compared in the browser with api.menu() */
 const sig = (xs: typeof dishes) => xs.map((x) => x.id + ":" + x.p + ":" + (isOut(x) ? 1 : 0)).join(",");
 
@@ -30,7 +33,7 @@ const jsonld = [
   ] },
   { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q[0], acceptedAnswer: { "@type": "Answer", text: q[1] } })) },
 ];
-const description = "Скара на дървени въглища във фурна Bertha в Дружба 2, София: равномерна топлина около 250 - 350 °C и опушен вкус. Кебапчета, ребра и стекове Блек Ангъс.";
+const description = "Скара на дървени въглища във фурна Bertha в Дружба 2, София: равномерна топлина около 250 - 350 °C и опушен вкус." + (hasGrill ? " Кебапчета, ребра и стекове Блек Ангъс." : "");
 const cta = "Виж ястията от скарата";
 ---
 <Base page="bertha" nav={null} title="Фурната Bertha" docTitle="Фурната Bertha: скара на дървени въглища" description={description} jsonld={jsonld}>
@@ -41,7 +44,7 @@ const cta = "Виж ястията от скарата";
         <h1 class="h1" id="h1" style="margin-top:16px">Скара на дървени въглища във фурна Bertha</h1>
         <p class="lead">Bertha е британска затворена фурна. Огънят нагрява стените и тавана, затова месото се пече равномерно и поема опушения вкус на въглищата.</p></div>
       <div class="vis" set:html={gauge()}></div>
-      <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button>
+      <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia" hidden={!hasGrill}>{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button>
         <a class="pill pill-line pill-lg" href={url.page("reservation")}><Fragment set:html={ic("calendar-blank", 20)} />Резервирай маса</a></div>
     </section>
   </div>
@@ -59,17 +62,17 @@ const cta = "Виж ястията от скарата";
     {/* for the developer (hand-off 13): the video plays without sound, with a poster and "Пауза", loaded lazily on scroll */}
   </section>
 
-  <section class="sec rv anchor" id="yastia" aria-labelledby="h-dish"><div class="sec-h" style="display:block"><h2 class="h2" id="h-dish">Ястията от фурната</h2></div>
+  <section class="sec rv anchor" id="yastia" aria-labelledby="h-dish" hidden={!hasGrill}><div class="sec-h" style="display:block"><h2 class="h2" id="h-dish">Ястията от фурната</h2></div>
     <div data-count set:html={countHTML(dishes.length, nOut)}></div>
     <div data-svc set:html={serviceHTML({ m: 720, kitchen: true, delivery: true, etaMin: 35, offline: false })}></div>
     <div data-dishes aria-live="polite" data-sig={sig(dishes)}><div class="grid-dishes" set:html={dishes.map((x) => dishCard(x)).join("")}></div></div>
-    <a class="pill pill-line catlink" href={url.cat("skara-bertha")}>Отвори категорията Скара Bertha<Fragment set:html={ic("caret-right", 18)} /></a>
+    {hasGrill && <a class="pill pill-line catlink" href={url.cat("skara-bertha")}>Отвори категорията Скара Bertha<Fragment set:html={ic("caret-right", 18)} /></a>}
   </section>
 
-  <section class="sec rv side" aria-labelledby="h-side"><div class="sec-h"><h2 class="h2" id="h-side">Към скарата</h2><a class="link" href={url.cat("garnituri")}>Гарнитури<Fragment set:html={ic("caret-right", 18)} /></a></div>
+  <section class="sec rv side" aria-labelledby="h-side" hidden={!hasSides}><div class="sec-h"><h2 class="h2" id="h-side">Към скарата</h2>{hasSides && <a class="link" href={url.cat("garnituri")}>Гарнитури<Fragment set:html={ic("caret-right", 18)} /></a>}</div>
     <p class="lead">Гарнитура към месото, за да е пълна чинията.</p>
     <div class="rail" data-sides data-sig={sig(sides)} set:html={sides.map((x) => dishCard(x)).join("")}></div>
-    <a class="pill pill-line catlink" href={url.cat("sosove")}>Виж сосовете<Fragment set:html={ic("caret-right", 18)} /></a>
+    {catById.sosove && <a class="pill pill-line catlink" href={url.cat("sosove")}>Виж сосовете<Fragment set:html={ic("caret-right", 18)} /></a>}
   </section>
 
   <section class="sec rv" aria-labelledby="h-pp"><div class="sec-h" style="display:block"><h2 class="h2" id="h-pp">Фурната накратко</h2></div>
@@ -92,7 +95,7 @@ const cta = "Виж ястията от скарата";
 
   <section class="sec rv" aria-labelledby="h-close"><div class="fire close"><div class="glow"></div>
     <div><h2 class="h2" id="h-close">Опитайте скарата Bertha</h2><p class="lead" style="margin-top:10px">Поръчайте за вкъщи или елате на маса в Дружба 2. Имаме салон и отоплявана градина, която работи целогодишно.</p></div>
-    <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia">{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button><a class="pill pill-line pill-lg" href={url.page("reservation")}><Fragment set:html={ic("calendar-blank", 20)} />Резервирай маса</a></div>
+    <div class="cta"><button class="pill pill-red go" type="button" data-to="yastia" hidden={!hasGrill}>{cta}<span class="knob" set:html={ic("caret-down", 22)}></span></button><a class="pill pill-line pill-lg" href={url.page("reservation")}><Fragment set:html={ic("calendar-blank", 20)} />Резервирай маса</a></div>
   </div></section>
   <div data-proto></div>
 </Base>

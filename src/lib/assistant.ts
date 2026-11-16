@@ -1,6 +1,6 @@
 /* AI assistant v1: rule-based, answers only from the menu data (same scripted scenarios as the prototype). */
 import { items, menu, isOut } from "./data.ts";
-import { art, ic } from "./render.ts";
+import { thumb, ic } from "./render.ts";
 import "sc-icons:paper-plane-right"; /* the icons of this module in one group (scripts/icon-groups.mjs) */
 import { esc, fmt, fmtNb } from "./format.ts";
 import { url } from "./routes.ts";
@@ -31,7 +31,7 @@ export function aiReply(kind: AiKind): string {
   if (kind === "group") {
     const plan = aiPlan(), ids: string[] = [];
     let tot = 0;
-    const rows = plan.map((z) => { const x = z[1]!; ids.push(x.id); tot += x.p; return '<div class="prow"><span class="pic">' + art(x) + "</span><span><small>" + z[0] + "</small><b>" + esc(x.n) + "</b><em>" + z[2] + '</em></span><span class="price">' + fmt(x.p) + "</span></div>"; }).join("");
+    const rows = plan.map((z) => { const x = z[1]!; ids.push(x.id); tot += x.p; return '<div class="prow"><span class="pic">' + thumb(x) + "</span><span><small>" + z[0] + "</small><b>" + esc(x.n) + "</b><em>" + z[2] + '</em></span><span class="price">' + fmt(x.p) + "</span></div>"; }).join("");
     return "<p>Ето предложение за трима от вас:</p>" + rows + '<p>А четвъртият какво обича? Кажете ми и ще допълня.</p><button class="pill pill-red pill-block" type="button" data-aiadd="' + ids.join(",") + '" style="margin-top:6px">Добави всичко · ' + fmt(tot) + "</button>";
   }
   if (kind === "lunch") {

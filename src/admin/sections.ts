@@ -84,7 +84,7 @@ export const MODULES: Mod[] = [
    with the modules), "finance" (a "Скоро" sheet, as in the prototype) and the staff apps (/servitor/, /kuhnya/, /shofyor/).
    The author of a section takes its key out of this list when the section gets its own page. */
 export const SOON: [string, string][] = [
-  ["orders", "Поръчки"], ["reservations", "Резервации"], ["lunch", "Обедно меню"], ["offers", "Оферти и ваучери"],
+  ["orders", "Поръчки"], ["reservations", "Резервации"], ["offers", "Оферти и ваучери"],
   ["events", "Събития"], ["zones", "Зони за доставка"], ["hall", "Залата и масите"], ["qr", "QR генератор"], ["customers", "Клиенти"],
   ["staff", "Персонал"], ["reports", "Отчети"],
   ["settings", "Настройки"],

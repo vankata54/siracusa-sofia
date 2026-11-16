@@ -3,7 +3,7 @@
    the hall, the garden and the events are the shot list for the new photo shoot: subjects only, [ЛИПСВА: снимка]. */
 import { url } from "../../lib/routes.ts";
 import { RESTAURANT } from "../../lib/consts.ts";
-import { byId, catById, isOut, type Dish } from "../../lib/data.ts";
+import { items, byId, catById, isOut, type Dish } from "../../lib/data.ts";
 import { pic, art } from "../../lib/render.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt } from "../../lib/format.ts";
@@ -30,7 +30,10 @@ const DISHES: DishIt[] = ([
   ["pitsa-s-burata-i-proshuto-krudo", 0.8], ["svinski-rebra", 1], ["kapreze-s-burata-i-avokado", 1], ["pitsa-s-proshuto-koto-i-tryufel", 1],
   ["ribay-stek-ot-blek-angas", 0.8], ["pitsa-dyavolo", 1], ["kebapcheta", 1.25], ["spageti-karbonara", 1],
   ["plato-frenski-sirena", 1.25], ["pitsa-margarita", 0.8], ["chiyzburger-s-teleshko-kyufte-blek-angas-s-parzh", 1], ["tiramisu", 1],
-] as [string, number][]).filter(([id]) => byId[id] && !isOut(byId[id])).map(([id, ar]) => {
+] as [string, number][]).filter(([id]) => byId[id] && !isOut(byId[id]))
+  /* + every dish with a photo from the admin (a published menu): the real photos join the gallery */
+  .concat(items.filter((x) => x.photo && !isOut(x)).map((x) => [x.id, 1] as [string, number]))
+  .filter(([id], i, a) => a.findIndex((z) => z[0] === id) === i).map(([id, ar]) => {
   const x = byId[id];
   return { k: "dish", cat: "yastia", x, ar, title: x.n, sub: (catById[x.cat] || { n: "" }).n };
 });
@@ -72,7 +75,7 @@ export function countText(cat: CatId): string {
 
 /* the dish picture without its SVG: the browser draws it near the viewport (data-art). Inside the tile it is decoration:
    the tile's name is its visible caption (WCAG 2.5.3, "Label in Name"). */
-const lazyPic = (x: Dish) => pic(x).replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ').replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true"');
+const lazyPic = (x: Dish) => x.photo ? pic(x).replace(/ alt="[^"]*"/, ' alt=""').replace('class="pic ', 'aria-hidden="true" class="pic ') : pic(x).replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ').replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true"');
 
 /* the one photo slot of the site (lib/ui.ts), filling the tile */
 function slotHTML(it: SlotIt): string {

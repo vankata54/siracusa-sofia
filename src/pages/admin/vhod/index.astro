@@ -5,13 +5,21 @@
 import Admin from "../../../layouts/Admin.astro";
 import "../../../admin/login.css";
 import { ic, pic } from "../../../lib/render.ts";
+import { anyDish, items, isOut } from "../../../lib/data.ts";
+/* three dishes of the live menu: the ones of the prototype when they are there, else other dishes (never the same twice) */
+const plates: string[] = [];
+for (const id of ["pitsa-margarita", "kebapcheta", "shopska-salata"]) {
+  const d = anyDish(id);
+  const pick = d && !plates.includes(d.id) ? d : items.find((x) => !isOut(x) && !plates.includes(x.id));
+  if (pick) plates.push(pick.id);
+}
 ---
 <Admin title="Вход" page="admin-login" boot={false}>
 <div class="lg"><div class="lg-in">
   <aside class="lg-art" aria-hidden="true">
     <div><span class="word">Siracusa</span><div class="tagl"><i></i>Админ панел</div></div>
     <div><h2>Ресторантът на едно място.</h2><p>Менюто, поръчките, залата и сайтът. Всяка роля вижда своето.</p></div>
-    <div class="plates" set:html={pic("pitsa-margarita", "p1") + pic("kebapcheta", "p2") + pic("shopska-salata", "p3")}></div>
+    <div class="plates" set:html={plates.map((id, i) => pic(id, "p" + (i + 1))).join("")}></div>
   </aside>
   <main class="lg-main" id="main" tabindex="-1"><div class="lg-box">
     <div class="lg-brand"><span class="word">Siracusa</span><span class="sa-btag">Админ</span></div>

@@ -1,0 +1,11 @@
+---
+/* /admin/lunch/: "Обедно меню" (design/pages-admin/lunch.html): the weekly schedule, the PIN, publishing (src/admin/lunch.ts). */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../admin/lunch.css";
+---
+<Admin title="Обедно меню" page="admin-lunch">
+<script>
+import { initLunch } from "../../../admin/lunch.ts";
+initLunch();
+</script>
+</Admin>

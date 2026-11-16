@@ -1,0 +1,34 @@
+{
+  "updated": "2026-11-16",
+  "source": "тестово меню (tests/fixtures/menu-new.json): други категории, ястие със снимка, празна категория, без пици",
+  "cats": [
+    { "id": "ribni-yastia", "n": "Рибни ястия", "course": "main" },
+    { "id": "salati", "n": "Салати", "course": "salad" },
+    { "id": "prazna-kategoria", "n": "Празна категория", "course": "main" },
+    { "id": "sladko", "n": "Сладко", "course": "dessert" },
+    { "id": "burgeri", "n": "Бургери", "course": "main" }
+  ],
+  "items": [
+    { "id": "syomga-na-skara", "n": "Сьомга на скара", "cat": "ribni-yastia", "course": "main", "comp": "сьомга, лимон, копър", "g": "250 гр.", "p": 14.9, "t": ["hit"], "al": ["fish"], "noOnion": false, "share": false,
+      "desc": "Филе от сьомга на скара с лимон и копър.", "photo": "/media/0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0.png" },
+    { "id": "lavrak-file-s-maslo-i", "slug": "lavrak-file-s-maslo-i-chesan", "n": "Лаврак филе с масло и чесън", "cat": "ribni-yastia", "course": "main", "comp": "лаврак, масло, чесън", "g": "220 гр.", "p": 13.5, "t": ["new"], "al": ["fish", "milk"], "noOnion": true, "share": false },
+    { "id": "shopska-salata", "n": "Шопска салата", "cat": "salati", "course": "salad", "comp": "домати, краставици, чушки, лук, сирене", "g": "350 гр.", "p": 5.5, "t": ["veg"], "al": ["milk"], "noOnion": false, "share": true },
+    { "id": "zelena-salata", "n": "Зелена салата", "cat": "salati", "course": "salad", "comp": "", "g": "300 гр.", "p": 4.2, "t": ["out"], "al": [], "noOnion": false, "share": false },
+    { "id": "shokoladov-sufle", "n": "Шоколадово суфле", "cat": "sladko", "course": "dessert", "comp": "шоколад, яйца, масло", "g": "150 гр.", "p": 5.9, "t": [], "al": ["eggs", "milk", "gluten"], "noOnion": true, "share": false,
+      "photo": "/media/a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90.png" },
+    { "id": "klasicheski-burger", "n": "Класически бургер", "cat": "burgeri", "course": "main", "comp": "телешко, чедър, домат, марули", "g": "320 гр.", "p": 9.8, "t": [], "al": ["gluten", "milk"], "noOnion": false, "share": false }
+  ],
+  "lunch": {
+    "date": "2026-11-16",
+    "dayName": "Понеделник",
+    "items": [
+      { "id": "l-test-supa", "group": "Супи", "n": "Тестова супа", "p": 2.4 },
+      { "id": "l-test-osnovno", "group": "Основни", "n": "Тестово основно", "p": 5.2 }
+    ]
+  },
+  "opts": { "addon": { "cats": ["pitsi", "burgeri"], "dishes": {} }, "swap": { "on": false, "groups": [], "dishes": {} } },
+  "removed": [
+    { "id": "pitsa-margarita", "n": "Пица Маргарита", "cat": "pitsi", "course": "main", "comp": "", "g": "", "p": 8, "t": [], "al": [], "noOnion": false, "share": false, "removed": true }
+  ],
+  "redirects": { "/menu/pitsi/pitsa-margarita/": "/menu/", "/menu/pitsi/": "/menu/" }
+}

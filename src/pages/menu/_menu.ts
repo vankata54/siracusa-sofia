@@ -18,7 +18,34 @@ import "sc-icons:barbell,bowl-food,caret-right,clock,drop,funnel,grains,info,mag
 export const MAIN_CATS: Category[] = cats.filter((c) => c.id !== "zakuski");
 export const MAIN_ITEMS: Dish[] = items.filter((x) => x.cat !== "zakuski");
 export const BF_ITEMS: Dish[] = inCat("zakuski");
+/** the menu has breakfasts: the „Закуски“ segment and #zakuski exist only then (any published menu, decision 15.11.2026) */
+export const HAS_BF = BF_ITEMS.length > 0;
 export const HERO_ID = "pitsa-s-burata-i-proshuto-krudo";
+/** the plate in the hero: the chosen dish, else a pizza, else the category hero of the first category (a new menu) */
+export const heroDish = (): Dish | undefined => {
+  const ok = MAIN_ITEMS.filter((x) => !isOut(x));
+  return items.find((x) => x.id === HERO_ID) || inCat("pitsi")[0] || ok.find((x) => x.t.indexOf("hit") > -1) || ok[0] || items[0];
+};
+/** /menu/'s meta description: the current wording while its categories are on the menu, else built from the menu */
+export function menuDescription(): string {
+  const n = MAIN_ITEMS.length, has = (id: string) => !!catById[id];
+  if (["pitsi", "skara-bertha", "salati", "pasta-i-rizoto", "burgeri", "deserti"].every(has) && HAS_BF)
+    return "Менюто на Siracusa в Дружба 2: " + n + " ястия и закуски. Пица на пещ, скара на дървени въглища Bertha, салати, паста, бургери и десерти. Доставка до 21:00.";
+  const head = "Менюто на Siracusa в Дружба 2: " + n + " " + (n === 1 ? "ястие" : "ястия") + (HAS_BF ? " и закуски" : "") + ".", tail = " Доставка до 21:00.";
+  let list = "";
+  for (const c of MAIN_CATS) { const next = (list ? list + ", " : " ") + (list ? c.n.toLowerCase() : c.n); if ((head + next + "." + tail).length > 160) break; list = next; }
+  return head + (list ? list + "." : "") + tail;
+}
+/** the line under "Меню": pizza and the grill only while the menu has them */
+export function menuLead(): string {
+  const pz = !!catById.pitsi, gr = !!catById["skara-bertha"];
+  return pz && gr ? "Пица на пещ и скара на дървени въглища." : pz ? "Пица на пещ." : gr ? "Скара на дървени въглища." : "";
+}
+/** the search placeholder: words from the menu (pizza only while pizzas are on it) */
+export function searchHint(): string {
+  if (catById.pitsi) return "пица, моцарела, бурата";
+  return MAIN_CATS.slice(0, 3).map((c) => c.n.toLowerCase()).join(", ");
+}
 
 export { filterById };
 export type MenuKind = "main" | "bf";
@@ -46,7 +73,7 @@ export function parseHash(hash: string): MenuState {
   h.split("&").forEach((p) => {
     if (!p) return;
     const i = p.indexOf("=");
-    if (i < 0) { if (p === "zakuski") st.menu = "bf"; else if (catById[p]) st.cat = p; return; }
+    if (i < 0) { if (p === "zakuski" && HAS_BF) st.menu = "bf"; else if (catById[p]) st.cat = p; return; }
     const k = p.slice(0, i), v = p.slice(i + 1);
     if (k === "f") st.f = v.split(".").filter((id) => { const f = filterById(id); return !!f && !f.needs; });
     if (k === "a") st.a = v.split(".").filter((id) => ALLERGEN_IDS.indexOf(id) > -1);
@@ -65,7 +92,7 @@ export function hashOf(st: MenuState): string {
 
 /* ---------- results ---------- */
 export const scopeItems = (st: MenuState): Dish[] => (st.menu === "bf" ? BF_ITEMS : MAIN_ITEMS);
-export const scopeCats = (st: MenuState): Category[] => (st.menu === "bf" ? [catById.zakuski] : MAIN_CATS);
+export const scopeCats = (st: MenuState): Category[] => (st.menu === "bf" ? (catById.zakuski ? [catById.zakuski] : []) : MAIN_CATS);
 /** Without a search: the categories as sections. With a search (lib/search.ts): the dishes by name on top, then the band
     „Съдържат ...“ with the dishes by composition (never repeated), and the dishes without a composition apart at the bottom
     (only with „без ...“). Only „без ...“: the dishes that pass it, in their categories (like a filter), then that bottom group.
@@ -101,10 +128,11 @@ export function catDesc(c: Category, shown: number): string {
 }
 
 /** One dish card: the shared dishCard + the composition line; "no allergen data" and "later" variants. */
-export function card(x: Dish, o: { nd?: boolean; later?: string | null; lazy?: boolean } = {}): string {
-  let h = dishCard(x);
-  /* lazy: the illustration (placeholder until the photo shoot, heavy SVG) is drawn by the browser near the viewport */
-  if (o.lazy) h = h.replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ');
+export function card(x: Dish, o: { nd?: boolean; later?: string | null; lazy?: boolean; eager?: boolean } = {}): string {
+  let h = dishCard(x, "card", o.eager);
+  /* lazy: the illustration (placeholder until the photo shoot, heavy SVG) is drawn by the browser near the viewport;
+     a photo is an <img loading="lazy"> already */
+  if (o.lazy && !x.photo) h = h.replace(art(x), "").replace('class="pic ', 'data-art="' + x.id + '" class="pic ');
   if (x.comp) h = h.replace('</a><div class="rowp">', '<span class="cp">' + esc(cap(x.comp)) + '</span></a><div class="rowp">');
   if (o.nd && !x.comp) h = h.replace('</a><div class="rowp">', '<span class="nodata">' + ic("info", 18) + NO_COMP + '</span></a><div class="rowp">');
   if (o.later) h = h.replace('class="pic ', 'class="pic out ').replace(/<button class="plus"[\s\S]*?<\/button>/, '<span class="later">' + o.later + "</span>");
@@ -113,14 +141,14 @@ export function card(x: Dish, o: { nd?: boolean; later?: string | null; lazy?: b
 
 /** Sections after the first LAZY_AFTER ones get lazy illustrations (keeps the HTML light; names, prices and links stay). */
 export const LAZY_AFTER = 2;
-export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: boolean; later?: string | null; hidden?: boolean; lazy?: boolean }): string {
+export function sectionHTML(g: Group, o: { q?: string; menu: MenuKind; nd?: boolean; later?: string | null; hidden?: boolean; lazy?: boolean; eager?: boolean }): string {
   const c = g.c, nn = NOUN[c.id];
   return '<section class="mcat" id="c-' + c.id + '" data-cat="' + c.id + '" aria-labelledby="h-' + c.id + '"' + (o.hidden ? " hidden" : "") + ">" +
     '<div class="sec-h"><h2 class="h2" id="h-' + c.id + '">' + esc(c.n) + "</h2>" +
     (o.menu === "main" ? '<a class="link" href="' + url.cat(c.id) + '"' + (nn ? "" : ' aria-label="Към категорията ' + esc(c.n) + '"') + ">" + (nn ? "Всички " + nn[1] : "Към категорията") + ic("caret-right", 18) + "</a>" : "") + "</div>" +
     '<p class="cdesc">' + catDesc(c, g.items.length) + "</p>" +
     (o.q ? "" : '<p class="cseo missing">[ЛИПСВА: SEO текст за „' + esc(c.n) + "“, 2 - 3 изречения]</p>") +
-    '<div class="grid-dishes">' + g.items.map((x) => card(x, { nd: o.nd, later: o.later, lazy: o.lazy })).join("") + "</div></section>";
+    '<div class="grid-dishes">' + g.items.map((x, i) => card(x, { nd: o.nd, later: o.later, lazy: o.lazy, eager: o.eager && i === 0 })).join("") + "</div></section>";
 }
 
 /** One search group. The heading is the group's title (not only a colour): by name (for screen readers only, the count line

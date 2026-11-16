@@ -10,6 +10,8 @@
 import Base from "../layouts/Base.astro";
 import { ic, url, dishCard, RESTAURANT as R } from "../lib/index.ts";
 import { v, emptyPlate, callLine, suggestionsHTML, pizzas, catsHTML, upcomingHTML, TEL } from "./_404.ts";
+/* the pizzas only while the menu has them (a published new menu may not) */
+const pz = pizzas();
 ---
 <Base page="404" nav={null} title="Страницата я няма" noindex description="Тази страница я няма в менюто на Siracusa Bar & Grill. Вижте менюто, събитията или ни се обадете.">
   <section class="sec nf" data-nf>
@@ -40,10 +42,10 @@ import { v, emptyPlate, callLine, suggestionsHTML, pizzas, catsHTML, upcomingHTM
     <h2 class="h2" style="margin-bottom:14px">Може би търсите</h2>
     <Fragment set:html={suggestionsHTML()} />
   </section>
-  <section class="sec" data-v="gen">
+  {pz.length > 0 && <section class="sec" data-v="gen">
     <div class="sec-h"><h2 class="h2">Пици на пещ</h2><a class="link" href={url.cat("pitsi")}>Всички<Fragment set:html={ic("caret-right", 18)} /></a></div>
-    <div class="grid-dishes" set:html={pizzas().map((x) => dishCard(x)).join("")}></div>
-  </section>
+    <div class="grid-dishes" set:html={pz.map((x) => dishCard(x)).join("")}></div>
+  </section>}
   <!-- after all variants are parsed, before the first paint: pick the variant -->
   <script is:inline>
   (function(){

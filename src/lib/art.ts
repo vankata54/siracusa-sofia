@@ -77,7 +77,18 @@ export function kind(x: Dish): string {
   if (x.cat === "garnituri") return /пюре/.test(t) ? "puree" : /картоф/.test(t) ? "fries" : "veggies";
   if (x.cat === "deserti") return "dessert";
   if (x.cat === "zakuski") return "breakfast";
-  return "salad";
+  /* a category of a new menu: by the name, else by the kind of dish */
+  if (/пица/.test(t)) return "pizza";
+  if (/риба|сьомга|лаврак|ципура|пъстърва|скарид|калмар|октопод|миди/.test(t)) return "seafood";
+  if (/бургер/.test(t)) return "burger";
+  if (/супа|чорба/.test(t)) return "soup";
+  if (/ризото/.test(t)) return "risotto";
+  if (/паста|спагети|лазаня|талиатели|пене/.test(t)) return "pasta";
+  if (/ребра/.test(t)) return "ribs";
+  if (/кебап|кюфте/.test(t)) return "kebap";
+  if (/пиле/.test(t)) return "chicken";
+  const C: Record<string, string> = { salad: "salad", starter: "platter", main: "steak", side: "veggies", sauce: "sauce", dessert: "dessert", addon: "addon", breakfast: "breakfast" };
+  return C[x.course] || "salad";
 }
 
 /** SVG markup of a dish illustration. */

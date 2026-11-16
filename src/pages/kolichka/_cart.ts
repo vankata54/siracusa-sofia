@@ -702,10 +702,13 @@ export function start(): void {
   /* ---------- preview: sample cart from the real menu ---------- */
   function fillDemo() {
     SC.cart.clear();
-    SC.cart.add("pitsa-dyavolo", 1, { mods: ["без лук", "+ Кашкавал"], extra: SC.byId["kashkaval"] ? SC.byId["kashkaval"].p : 0 });
-    SC.cart.add("svinski-rebra", 1);
-    if (SC.byId["l-lazanya-boloneze"]) SC.cart.add("l-lazanya-boloneze", 2);
-    SC.cart.add("parzheni-kartofi", 1);
+    /* only dishes this menu has; a published new menu without them: its first two dishes */
+    const add = (id: string, q: number, o?: Parameters<typeof SC.cart.add>[2]) => { if (SC.byId[id]) SC.cart.add(id, q, o); };
+    add("pitsa-dyavolo", 1, { mods: ["без лук", "+ Кашкавал"], extra: SC.byId["kashkaval"] ? SC.byId["kashkaval"].p : 0 });
+    add("svinski-rebra", 1);
+    add("l-lazanya-boloneze", 2);
+    add("parzheni-kartofi", 1);
+    if (!SC.cart.count()) SC.items.filter((x) => !SC.isOut(x)).slice(0, 2).forEach((x) => SC.cart.add(x.id, 1));
   }
 
   function removeLine(key: string) {

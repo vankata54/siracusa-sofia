@@ -6,7 +6,7 @@
    "Любимо", the back link by referrer, the "Добавки и промени" sheet, the counter, 3D and adding to the cart. */
 import type { GetStaticPaths } from "astro";
 import Base from "../../../layouts/Base.astro";
-import { ic, pic, badges, url, fmt, esc, isOut, type Dish } from "../../../lib/index.ts";
+import { ic, pic, photo, badges, url, fmt, esc, isOut, type Dish } from "../../../lib/index.ts";
 import { DISHES, ADDONS, catOf, canAdd, hasMods, modBtnInner, buyHTML, soldBarHTML, favHTML, similar, pairCard, pairsHTML, factsCard, metaDescription, dishLd, dishLite, docTitle } from "./_dish.ts";
 import { catById } from "../../../lib/data.ts";
 import { crumbs } from "../../../lib/ui.ts";
@@ -39,8 +39,8 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(dishLite(x)) ? ADDO
     <div class="dgrid">
       <div class="hero">
         <div class="shell"><div class="core">
-          <Fragment set:html={pic(x) + badges(x, true)} />
-          {!out && <button class="v3d" type="button" data-3d><Fragment set:html={ic("cube", 20)} />Виж в 3D</button>}
+          <Fragment set:html={(x.photo ? '<div class="pic' + (out ? " out" : "") + '">' + photo(x, { eager: true, w: 800, h: 600 }) + "</div>" : pic(x)) + badges(x, true)} />
+          {!out && !x.photo && <button class="v3d" type="button" data-3d><Fragment set:html={ic("cube", 20)} />Виж в 3D</button>}
           <span class="hint3d" aria-hidden="true"><Fragment set:html={ic("hand-waving", 18)} />Завъртете с пръст</span>
         </div></div>
         <p class="note3d muted" data-note3d hidden>Прототип: истинският 3D модел идва след фотосесията. <span class="missing">[ЛИПСВА: 3D модел]</span></p>
@@ -66,7 +66,7 @@ const lite = JSON.stringify({ x: dishLite(x), addons: canAdd(dishLite(x)) ? ADDO
             <div class="buy" data-buybox set:html={buyHTML(x)}></div>
           </Fragment>
         )}
-        <p class="desc"><span class="missing">[ЛИПСВА: описание на ястието - как се приготвя и с какво върви]</span></p>
+        {x.desc ? <p class="desc">{x.desc}</p> : <p class="desc"><span class="missing">[ЛИПСВА: описание на ястието - как се приготвя и с какво върви]</span></p>}
         <Fragment set:html={factsCard(x)} />
       </div>
     </div>
