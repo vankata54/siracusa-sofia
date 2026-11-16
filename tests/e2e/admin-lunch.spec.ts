@@ -127,7 +127,7 @@ test("a day: „Добави“ and „Отмени“, the rule for two days in
   await expect(day(page, tue)).toContainText("Повтаря се");
   await expect(day(page, mon)).toContainText("Повтаря се");
   await page.locator(".ln-pub [data-publish]").click();
-  await toastHas(page, "Не е публикувано: пн и вт повтаря съседен ден.");
+  await toastHas(page, "Не е публикувано: пн и вт повтарят съседен ден.");
   await expect(page.locator(".ln-day h2")).toHaveText(/^Вторник, /);
   const l0 = await lunchOf(context);
   expect(l0.pub[mon]).toBeUndefined();
