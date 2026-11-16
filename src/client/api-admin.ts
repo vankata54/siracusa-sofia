@@ -6,7 +6,9 @@ import { http, pick, demoTok, setDemoTok, ApiError } from "./api.ts";
 import type { Core, NoteInput, NoteStatus, OrderStatus, ReservationStatus, Order, Reservation, Settings, Feedback, FeedbackNote, Role, RoleId, AuditEntry } from "./api-types.ts";
 import type { SettingsPatch } from "../core/settings.ts";
 import { settingsAllowed } from "../core/settings-guard.ts";
-import type { PublicStaff, Summary, SearchAnswer, NoteFilter } from "../core/index.ts";
+import { maskFeedback, maskList } from "../core/rights.ts";
+import type { PublicStaff, Summary, SearchAnswer, NoteFilter, ResRow } from "../core/index.ts";
+import type { HoursInfo } from "../core/reservations-admin.ts";
 import type { AuditFilter } from "../core/audit.ts";
 
 export { ApiError };
@@ -56,17 +58,21 @@ export const adminApi = {
   audit: pick(async (c, f: AuditFilter = {}) => { await g(c, "audit"); return c.audit.list(f); }, (f = {}) => http<(AuditEntry & { role?: string })[]>("GET", "admin/audit" + q(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v == null ? undefined : String(v)]))))),
 
   /* the sections of part 3 use these (kept from api.ts, now with the same checks as the server) */
-  orders: pick(async (c, s?: OrderStatus) => { await g(c, "orders"); return c.orders.list(s ? { status: s } : {}); }, (s) => http<Order[]>("GET", "admin/orders" + q({ status: s }))),
+  /* the raw lists with the phone masked (the screens of part 3: api-admin-3.ts) */
+  orders: pick(async (c, s?: OrderStatus) => { await g(c, "orders"); return maskList(await c.orders.list(s ? { status: s } : {})); }, (s) => http<Order[]>("GET", "admin/orders" + q({ status: s }))),
   setOrderStatus: pick(async (c, no: string, st: OrderStatus) => { const s = await g(c, ["orders", "kitchen", "driver"]); return c.orders.setStatus(no, st, s.user.username, s); },
     (no, st) => http<Order>("PATCH", "admin/orders/" + no, { status: st })),
-  reservations: pick(async (c) => { await g(c, "reservations"); return c.reservations.list(); }, () => http<Reservation[]>("GET", "admin/reservations")),
-  setReservationStatus: pick(async (c, id: string, st: ReservationStatus) => { const s = await g(c, "reservations"); return c.reservations.setStatus(id, st, s.user.username); },
-    (id, st) => http<Reservation>("PATCH", "admin/reservations/" + id, { status: st })),
-  settings: pick(async (c) => { await g(c); return c.settings.get(); }, () => http<Settings>("GET", "admin/settings")),
+  reservations: pick(async (c) => { await g(c, "reservations"); return maskList(await c.reservations.list()); }, () => http<Reservation[]>("GET", "admin/reservations")),
+  /** the admin's rules (core/reservations-admin.ts resSetStatus): the row of "Резервации" */
+  setReservationStatus: pick(async (c, id: string, st: ReservationStatus) => c.resAdmin.setStatus(await g(c), id, st),
+    (id, st) => http<ResRow>("PATCH", "admin/reservations/" + id, { status: st })),
+  /** + hours (read only: the core's rules) */
+  settings: pick(async (c) => { await g(c); return c.settings.view(); }, () => http<Settings & { hours: HoursInfo }>("GET", "admin/settings")),
   setSettings: pick(async (c, p: SettingsPatch) => { const s = await g(c); settingsAllowed(s, p); return c.settings.update(p, s.user.username); }, (p) => http<Settings>("PATCH", "admin/settings", p)),
   /** "Изчерпано днес" for one dish (kitchen, menu, lunch menu); only for today */
   setSoldOut: pick(async (c, id: string, out: boolean) => { const s = await g(c, ["menu", "kitchen", "lunch"]); return c.menu.setSoldOut(id, out, s.user.username); },
     (id, out) => http<{ id: string; out: boolean }>("PUT", "admin/menu/" + encodeURIComponent(id) + "/sold-out", { out })),
   staff: pick(async (c) => { await g(c, "staff"); return c.staff.list(); }, () => http<PublicStaff[]>("GET", "admin/staff")),
-  feedback: pick(async (c) => { await g(c, "customers"); return c.feedback.list(); }, () => http<Feedback[]>("GET", "admin/feedback")),
+  /** the contact masked (the whole one: customersAdminApi.messageContact, into the log) */
+  feedback: pick(async (c) => { await g(c, "customers"); return maskFeedback(await c.feedback.list()); }, () => http<Feedback[]>("GET", "admin/feedback")),
 };

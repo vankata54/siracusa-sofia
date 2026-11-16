@@ -21,6 +21,7 @@ const TABLES: Record<string, Cols> = {
   events: {}, offers: {}, settings: {}, bonus_used: {}, feedback: { status: (d) => d.status },
   push_subs: { order_no: (d) => d.orderNo },
   notes_seen: {}, noshow_blocks: {}, login_fails: {},
+  vouchers: { used_by: (d) => d.usedBy || null },
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {

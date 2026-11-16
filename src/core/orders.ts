@@ -26,9 +26,13 @@ import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 import { outNow, soldOutToday, type SoldOutToday } from "./menu.ts";
 import { state } from "../lib/status.ts";
 import { byId, removedById, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../lib/data.ts";
+import { liveZone, zoneRule } from "./zones.ts";
+import { liveOffers, offerApplies, orderOfferContext } from "./offer-rules.ts";
 import { hhmm, normPhone } from "../lib/format.ts";
 
 export const FIRST_ORDER_NO = 1042;
+export const OFFER_OFF_MSG = "Тази отстъпка е изключена в момента.";
+export const OFFER_OUT_MSG = "Кодът не важи за тази поръчка (ден, час, канал или ястия).";
 
 export interface OrderInput {
   cart: Cart;
@@ -43,6 +47,8 @@ export interface OrderInput {
   table?: string | null;
   /** discount code from the internal rating ("SC10-XXXXXXXX") */
   code?: string;
+  /** a phone order: the staff member who took it (orders-admin.ts) */
+  by?: string;
 }
 
 export const FLOW: Record<"delivery" | "pickup", OrderStatus[]> = {
@@ -68,6 +74,7 @@ export const MSG = {
   lunchSched: "Обедното меню не може да се поръча предварително.",
   lunchStale: "Обедното меню за днес още не е качено. Махнете обедните ястия от количката.",
   sched: "Поръчка „за днес“ с час се прави само преди 10:00. Обновете страницата.",
+  phoneSlot: "Изберете час от списъка: доставка до 20:45, през 15 минути, след времето за квартала.",
   slot: "Изберете час от списъка.",
   slotBusy: "Този час вече е зает: кухнята е пълна.",
   addr: "Напишете адреса за доставка.",
@@ -156,13 +163,23 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   let codePct = 0;
   if (codeIn) { const c = await findCode(ctx, codeIn); if ("error" in c) errs.code = c.error; else codePct = c.rating.pct; }
 
-  let zone: Zone | null = null, addr = "";
-  if (mode === "delivery") { const z = resolveZone(input.addr || "", input.zone, (input.channel || "web") === "web"); if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; } }
+  const channel: Channel = input.channel || "web";
+  let zone: Zone | null = null, addr = "", zoneRow: Awaited<ReturnType<typeof liveZone>> = null;
+  /* the zone from the address; the fee, the minutes and the rules (off, minimum, hours) from the admin's live zones */
+  if (mode === "delivery") {
+    const z = resolveZone(input.addr || "", input.zone, channel === "web" || channel === "phone");
+    if ("error" in z) errs.addr = z.error;
+    else { addr = z.addr; zoneRow = await liveZone(ctx, z.zone); zone = zoneRow ? zoneRow.zone : z.zone; }
+  }
+  /* the offers' rules (the admin): the profile bonus and the rating code only when their offer is on and the order fits */
+  const offs = await liveOffers(ctx);
+  const oc = orderOfferContext(ctx, { mode, channel, sched, slot: String(input.slot || "asap"), lines: cart.lines });
+  if (codePct && !errs.code && !offerApplies(offs.find((o) => o.id === "rating"), oc)) { errs.code = offs.find((o) => o.id === "rating")?.on === false ? OFFER_OFF_MSG : OFFER_OUT_MSG; codePct = 0; }
   /* the profile bonus: signed in (userId from the session, never from the body) with the profile's phone, unused coupon */
   const phone0 = normPhone(input.phone);
   const prof = input.userId ? await ctx.repo.get<Customer>(COL.customers, input.userId) : null;
   const bonus0 = prof && phone0 && prof.phone === phone0 ? (prof.coupons || []).find((c) => c.code === PROFILE_COUPON && !c.used) : undefined;
-  const bonus = bonus0 && !(await bonusTaken(ctx, phone0!)) ? bonus0 : undefined;
+  const bonus = bonus0 && !(await bonusTaken(ctx, phone0!)) && offerApplies(offs.find((o) => o.id === "signup"), oc) ? bonus0 : undefined;
   const P = price(cart, { zone, scheduled: !!sched, clock: ctx.clock, busy: settings.kitchen.busy, codePct, profilePct: bonus ? bonus.pct : 0 });
   if (!String(input.name || "").trim()) errs.name = "Напишете името си.";
   const phone = normPhone(input.phone);
@@ -170,9 +187,18 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
   if (input.email && (String(input.email).length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(input.email).trim()))) errs.email = "Проверете имейла, например ime@primer.bg.";
 
   const slot = String(input.slot || "asap");
-  if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
+  /* a phone order (the staff, orders-admin.ts) may be delivered later today: "HH:MM" every 15 min, after the zone's minutes, until 20:45 */
+  const phoneLater = !sched && channel === "phone" && mode === "delivery" && slot !== "asap";
+  const slotMin = /^\d{2}:\d{2}$/.test(slot) ? +slot.slice(0, 2) * 60 + +slot.slice(3) : -1;
+  if (phoneLater) { if (slotMin < 0 || slotMin % ORDER_RULES.slotStep || slotMin < m + P.etaMin || slotMin > ORDER_RULES.preorderDeliveryUntil) errs.slot = MSG.phoneSlot; }
+  else if (sched) { if (!slotAllowed(P, slot, ctx.clock, true)) errs.slot = MSG.slot; }
   else if (mode === "pickup" && (slot === "asap" ? !pickupToday(P, ctx.clock).asap : !slotAllowed(P, slot, ctx.clock, false))) errs.slot = MSG.slot; /* the one pickup rule (lib/pricing.ts) */
   else if (mode === "pickup" && slot !== "asap" && slotBusy(+slot.slice(0, 2) * 60 + +slot.slice(3), m, settings.kitchen.busy)) errs.slot = MSG.slotBusy; /* "заето" (the same rule as the screen) */
+  /* the zone's rules: off, the hours (now, or the time of a pre-order / a later delivery), the minimum order */
+  if (zoneRow && !errs.addr) {
+    const rule = zoneRule(zoneRow.row, { now: sched || phoneLater ? null : m, slot: (sched || phoneLater) && slotMin >= 0 ? slotMin : null, sub: P.sub });
+    if (rule) { if (rule.code === "delivery_closed" && rule.field === "addr" && !Object.keys(errs).length) throw new CoreError("delivery_closed", rule.msg, 409); errs[rule.field] = rule.msg; }
+  }
   if (Object.keys(errs).length) invalid(errs);
   /* a big order goes by phone (the office has its own limits per person, the sum limit is the same) */
   if ((input.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);
@@ -182,6 +208,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
 
   let atMin: number | null;
   if (sched) atMin = null;
+  else if (phoneLater) atMin = slotMin;
   else if (mode === "delivery") atMin = m + P.etaMin;
   else if (slot === "asap") atMin = P.hasTrad ? Math.ceil(P.earliest / 5) * 5 : m;
   else atMin = +slot.slice(0, 2) * 60 + +slot.slice(3);
@@ -202,17 +229,17 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
     }
     const ts = nowDate(ctx);
     const o: Order = {
-      id: no, no, mode, channel: input.channel || "web",
+      id: no, no, mode, channel,
       lines: P.rows.map((r) => ({ id: r.x.id, q: r.q, mods: r.mods || [], extra: Math.round((r.unit - r.x.p) * 100) / 100, name: r.x.n, unit: r.unit, cat: r.x.cat, course: r.x.course })),
       lunchOnly: P.rows.every((r) => !!r.x.lunch), zone: zone ? zone.n : "", addr,
       pay, payLabel: PAY_LABEL[pay], sub: P.sub, disc: P.disc, fee: P.fee, total: P.total,
-      eta: atMin == null ? null : atMin - m, at, sched, slot: sched || mode === "pickup" ? slot : "asap", placedAt: hhmm(m), ts: ts.getTime(),
+      eta: atMin == null ? null : atMin - m, at, sched, slot: sched || mode === "pickup" || phoneLater ? slot : "asap", placedAt: hhmm(m), ts: ts.getTime(),
       status: "accepted", name: String(input.name).trim().slice(0, 80), phone: phone!, email: input.email ? String(input.email).trim() : undefined,
       note: input.note ? String(input.note).trim().slice(0, 2000) : undefined,
       marketing: input.marketing === true, userId: input.userId || null,
       /* a table only for QR / waiter orders (never from a web order's body) */
       table: input.channel === "qr" || input.channel === "waiter" ? input.table || null : null,
-      key: randomKey(8), discKind: P.discKind, ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
+      key: randomKey(8), discKind: P.discKind, ...(channel === "phone" && input.by ? { by: String(input.by) } : {}), ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
       times: { accepted: ts.toISOString() }, createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
     };
     await ctx.repo.put(COL.orders, o);
@@ -230,7 +257,9 @@ export async function getOrder(ctx: Ctx, no: string): Promise<Order | null> {
 /* ---------- public tracking (/porachka/<no>-<key>/) ---------- */
 export type PublicOrder = Pick<Order, "id" | "no" | "mode" | "channel" | "status" | "lunchOnly" | "zone" | "pay" | "payLabel" | "sub" | "disc" | "fee" | "total" |
   "eta" | "at" | "sched" | "slot" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> &
-  { lines: Order["lines"]; key?: string; times: Partial<Record<OrderStatus, string>>; changes: number };
+  { lines: Order["lines"]; key?: string; times: Partial<Record<OrderStatus, string>>; changes: number;
+    /** "Откажи" in the admin: why (the customer sees it) */
+    reason?: string };
 
 /** What the tracking page needs, nothing personal: no name, phone, e-mail, address, note, profile, code. */
 export function publicOrder(o: Order, withKey = false): PublicOrder {
@@ -242,6 +271,7 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     times: o.times || { accepted: o.createdAt }, changes: o.changes || 0,
   };
   if (withKey && o.key) p.key = o.key;
+  if (o.status === "cancelled" && o.reason) p.reason = o.reason;
   return p;
 }
 
@@ -295,7 +325,7 @@ export function stepAllowed(o: Pick<Order, "mode" | "status" | "prevStatus">, to
   return pairs.some(([sec, a, b]) => has(sec) && o.status === a && to === b && j > -1);
 }
 
-export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system", by?: { user: { role: string }; sections: string[] }): Promise<Order> {
+export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system", by?: { user: { role: string }; sections: string[] }, reason?: string): Promise<Order> {
   const o = await getOrder(ctx, no);
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
@@ -304,10 +334,12 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   if (o.status === status) { emit(ctx, "order.status", { no: o.no, status, at: (o.times && o.times[status]) || o.updatedAt }, { order: o.no }); return o; }
   const now = iso(ctx);
   if (status === "cancelled" && o.status !== "cancelled") o.prevStatus = o.status;
-  else if (status !== "cancelled") delete o.prevStatus;
+  else if (status !== "cancelled") { delete o.prevStatus; delete o.reason; }
+  /* "Откажи" with a reason (orders-admin.ts requires it; the customer sees it on the tracking page) */
+  if (status === "cancelled" && reason) o.reason = String(reason).replace(/\s+/g, " ").trim().slice(0, 200);
   o.status = status; o.updatedAt = now; o.times = { ...(o.times || { accepted: o.createdAt }), [status]: now };
   await ctx.repo.put(COL.orders, o);
-  await audit(ctx, actor, "order.status", o.no, { status });
+  await audit(ctx, actor, "order.status", o.no, { status, ...(o.reason && status === "cancelled" ? { reason: o.reason } : {}) });
   emit(ctx, "order.status", { no: o.no, status, at: now }, { order: o.no });
   /* Web Push to the browsers that asked for it: in the background, a slow push service never delays the kitchen */
   pushStatus(ctx, o).catch(() => { /* logged by the sender */ });
@@ -361,10 +393,10 @@ export async function changeOrder(ctx: Ctx, id: string, patch: OrderChange): Pro
   const raw = p.cart ? { ...p.cart, mode } : { mode, lines: o0.lines.map((l) => ({ key: lineKey(l.id, l.mods), id: l.id, q: l.q, mods: l.mods, extra: 0 })) };
   const cart = checkLines(ctx, raw, mode, today ? await soldOutToday(ctx) : {});
   const errs: Record<string, string> = {};
-  let zone: Zone | null = null, addr = "";
+  let zone: Zone | null = null, addr = "", zoneRow: Awaited<ReturnType<typeof liveZone>> = null;
   if (mode === "delivery") {
     const z = resolveZone(p.addr !== undefined ? String(p.addr) : o0.addr, p.zone !== undefined ? p.zone : o0.zone, (o0.channel || "web") === "web");
-    if ("error" in z) errs.addr = z.error; else { zone = z.zone; addr = z.addr; }
+    if ("error" in z) errs.addr = z.error; else { addr = z.addr; zoneRow = await liveZone(ctx, z.zone); zone = zoneRow ? zoneRow.zone : z.zone; }
   }
   /* the discounts the order already has: the same percentage, never a second use */
   let codePct = 0, profilePct = 0;
@@ -378,6 +410,7 @@ export async function changeOrder(ctx: Ctx, id: string, patch: OrderChange): Pro
   const P = price(cart, { zone, scheduled: true, clock: ctx.clock, busy: settings.kitchen.busy, codePct, profilePct });
   const slot = p.slot !== undefined ? String(p.slot) : String(o0.slot || o0.at);
   if (!slotAllowed(P, slot, ctx.clock, true) || !beforeDeadline(ctx, day, slot)) errs.slot = today && slotAllowed(P, slot, ctx.clock, true) ? CHANGE_MSG.late : MSG.slot;
+  if (zoneRow && !errs.addr && !errs.slot) { const rule = zoneRule(zoneRow.row, { slot: +slot.slice(0, 2) * 60 + +slot.slice(3), sub: P.sub }); if (rule) errs[rule.field] = rule.msg; }
   if (Object.keys(errs).length) invalid(errs);
   if ((o0.channel || "web") !== "office" && P.n > ORDER_RULES.maxPortions) throw new CoreError("too_big", MSG.big, 422);
   if (P.sub > ORDER_RULES.maxTotal) throw new CoreError("too_big", MSG.big, 422);

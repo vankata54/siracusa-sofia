@@ -66,4 +66,7 @@ export const pushSubs = sqliteTable("push_subs", { ...doc, orderNo: text("order_
 export const notesSeen = sqliteTable("notes_seen", { ...doc });
 export const noshowBlocks = sqliteTable("noshow_blocks", { ...doc });
 export const loginFails = sqliteTable("login_fails", { ...doc });
+/* admin part 3: voucher codes SCV- ("Нови кодове" in "Оферти и ваучери"); the zones, hall, events, offers, QR codes are
+   documents in `settings` (core/site-data.ts, core/hall.ts) */
+export const vouchers = sqliteTable("vouchers", { ...doc, used: text("used_by") });
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });

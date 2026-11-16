@@ -139,9 +139,9 @@ export const api = {
   /** the live menu: the same shape as src/data/menu.json, "out" in t (and lunch.items[].out) from the kitchen / admin */
   menu: async (): Promise<Menu> => (DEMO ? (await loadModule(demoChunk)).menuLive() : http<Menu>("GET", "menu")),
   status: async (): Promise<StatusInfo> => (DEMO ? (await loadModule(demoChunk)).statusInfo() : http<StatusInfo>("GET", "status")),
-  offers: async () => (DEMO ? (await loadModule(demoChunk)).offers() : http<unknown>("GET", "offers")),
+  offers: async () => (DEMO ? (await loadModule(demoChunk)).offersLive() : http<unknown>("GET", "offers")),
   /** events with the date as "YYYY-MM-DD" */
-  events: async (): Promise<SiteEventJson[]> => (DEMO ? (await loadModule(demoChunk)).eventsJson() : http<SiteEventJson[]>("GET", "events")),
+  events: async (): Promise<SiteEventJson[]> => (DEMO ? (await loadModule(demoChunk)).eventsLive() : http<SiteEventJson[]>("GET", "events")),
 
   orders: {
     /** returns the whole order (with `key`: the tracking address is SC.url.tracking(order)) */

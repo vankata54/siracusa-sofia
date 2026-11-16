@@ -77,11 +77,8 @@ export function normKey(s: string): string {
     .replace(/[yj]/g, "i").replace(/w/g, "v").replace(/q/g, "k").replace(/x/g, "ks").replace(/[^a-z0-9 ]/g, " ").replace(/([a-z])\1+/g, "$1").replace(/\s+/g, " ").trim();
 }
 const digits = (x: unknown) => String(x || "").replace(/\D/g, "");
-export function maskPhone(p: string): string {
-  let d = digits(p);
-  if (d.startsWith("359")) d = "0" + d.slice(3);
-  return d.length === 10 ? d.slice(0, 4) + " •• •• " + d.slice(8) : d ? "•• " + d.slice(-2) : "";
-}
+import { maskPhone } from "./rights.ts";
+export { maskPhone };
 
 export interface SearchHit { kind: "customer" | "order" | "reservation"; id: string; title: string; status?: string; date?: string; time?: string; people?: number; phone: string; exact: boolean }
 export interface SearchAnswer { customers: SearchHit[] | null; orders: SearchHit[] | null; reservations: SearchHit[] | null }

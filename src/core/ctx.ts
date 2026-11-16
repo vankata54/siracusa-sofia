@@ -28,6 +28,8 @@ export interface Ctx {
   push?: import("./push.ts").PushSender;
   /** the menu editor (core/menu-edit.ts): the live menu changed (publish, rollback, today's lunch menu); the server rebuilds the site */
   onMenu?: (menu: import("../data/menu.ts").Menu, kind: "publish" | "rollback" | "lunch" | "tick") => void;
+  /** the site data (zones, hall, events, offers: core/site-data.ts) changed; the server rebuilds the site (same queue as the menu) */
+  onSite?: (site: import("./site-data.ts").SiteBuild) => void;
   /** the server: does an uploaded photo (/media/<sha256>.<ext>) exist; missing in the demo and the tests */
   mediaExists?: (url: string) => boolean;
   /** the tracking address must carry the order's key (/porachka/1042-k7f3m2pq/); off until the pages pass it */
@@ -42,7 +44,7 @@ export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
   notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback", bonusUsed: "bonus_used",
-  push: "push_subs", notesSeen: "notes_seen", blocks: "noshow_blocks", loginFails: "login_fails",
+  push: "push_subs", notesSeen: "notes_seen", blocks: "noshow_blocks", loginFails: "login_fails", vouchers: "vouchers",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }

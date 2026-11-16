@@ -55,6 +55,10 @@ export interface Order {
   changedAt?: Iso;
   /** the status before "Отказана" (the way back with "Отмени") */
   prevStatus?: OrderStatus;
+  /** why it was cancelled ("Откажи" in the admin: required, the customer sees it) */
+  reason?: string;
+  /** a phone order: the staff member who took it */
+  by?: string;
   createdAt: Iso;
   updatedAt: Iso;
 }
@@ -68,6 +72,10 @@ export interface Reservation {
   dur?: number;
   /** secret for get/cancel from the SMS link (returned only by create) */
   key?: string;
+  /** made by the staff ("Нова резервация" in the admin): the username */
+  by?: string;
+  /** the status before the last change by the staff (the way back with "Отмени") */
+  prevStatus?: ReservationStatus;
 }
 
 export interface Celebration {
@@ -111,6 +119,8 @@ export interface Customer {
   favs: string[]; addrs: { id: string; label: string; addr: string; zone: string }[];
   stamps: number; coupons: { code: string; pct: number; note: string; used: boolean; orderNo?: string }[];
   blocked?: boolean; createdAt: Iso;
+  /** "Изтрий" in the admin (GDPR): deleted for good after `until` (epoch ms) unless "Отмени" comes first */
+  deleting?: { at: Iso; by: string; until: number } | null;
 }
 
 /** sentAt: last code (30 s between codes); sends: codes in the current hour window from windowAt */
@@ -127,13 +137,19 @@ export interface Rating {
 /** Settings the admin / kitchen change (one document "main"). */
 export interface Settings {
   id: "main";
-  kitchen: { busy: boolean; etaMin: number; etaBusyMin: number };
+  /** busyAt: when "Натоварено" was turned on (ISO; set by the core, null when off) */
+  kitchen: { busy: boolean; etaMin: number; etaBusyMin: number; busyAt?: string | null };
   /** how long a reservation holds the table, minutes (default 120, owner to confirm) */
   resMinutes: number;
   /** the celebration calculator: show an estimate to the guest, or only "Ще ви изпратим оферта" (OPEN-QUESTIONS 3) */
   celebrationPrice: "estimate" | "offer";
   /** "early booking" -5% for a celebration booked this many days ahead; null = [ЛИПСВА] (OPEN-QUESTIONS 13): no -5% */
   earlyDays: number | null;
+  /** no-shows of one phone before it waits for a decision ("Блокирай" / "Не блокирай"), 1-5 (OPEN-QUESTIONS 8: 2) */
+  noShowLimit: number;
+  /** the QR table: minutes between two same calls (3) and to the manager after (5) (OPEN-QUESTIONS, modules 1) */
+  callCooldown: number;
+  callManager: number;
   updatedAt?: Iso;
 }
 
@@ -161,7 +177,11 @@ export interface NoShowBlock { id: string; name: string; count: number; status: 
 
 export type RoleId = "admin" | "owner" | "manager" | "waiter" | "kitchen" | "driver" | "marketing";
 export interface Role { id: RoleId; n: string; desc: string; sections: string[] }
-export interface StaffUser { id: string; username: string; name: string; role: RoleId; salt: string; hash: string; algo: "scrypt" | "pbkdf2"; active: boolean; createdAt: Iso; updatedAt?: Iso }
+export interface StaffUser { id: string; username: string; name: string; role: RoleId; salt: string; hash: string; algo: "scrypt" | "pbkdf2"; active: boolean; createdAt: Iso; updatedAt?: Iso;
+  /** the PIN of the staff apps (waiter, kitchen, driver): only its salted hash (staff-admin.ts), never the PIN */
+  pin?: { salt: string; hash: string; algo: "scrypt" | "pbkdf2"; at: Iso } | null;
+  /** the last sign-in (ISO) */
+  lastLoginAt?: Iso }
 export interface Session { id: string; kind: "staff" | "customer"; userId: string; role?: RoleId; expiresAt: number; createdAt: Iso }
 
 export interface AuditEntry { id: string; at: Iso; actor: string; action: string; target?: string; data?: unknown }

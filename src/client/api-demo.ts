@@ -4,12 +4,10 @@
 import { createCore, KVRepo, CoreError, type Core, type Hasher, type StaffUser, type RoleId } from "../core/index.ts";
 import { MENU, type Menu } from "../data/menu.ts";
 import { state, status, eta, getKitchen } from "../lib/status.ts";
-import { offers } from "../lib/offers.ts";
-import { eventsJson } from "../lib/events-json.ts";
 import { ApiError, busFire, demoChannel } from "./api.ts";
 import { publicSettings } from "../core/settings.ts";
 
-export { MENU, offers, eventsJson };
+export { MENU };
 
 const enc = new TextEncoder();
 const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
@@ -33,11 +31,13 @@ async function core(): Promise<Core> {
   await demoCore.settings.get();
   /* the menu published in the demo's admin into this page (prices, "Добави", removed dishes in the cart check) */
   await demoCore.menuEdit.boot().catch(() => undefined);
+  /* the zones and tables from the demo's admin into this page's lib arrays (core/site-data.ts applySite) */
+  await demoCore.site.boot().catch(() => undefined);
   /* staff accounts: PBKDF2 hashes built from .env at `npm run build:demo` (never the passwords) */
   const list = typeof __DEMO_STAFF__ !== "undefined" ? __DEMO_STAFF__ : [];
   for (const s of list) {
     const have = (await demoCore.ctx.repo.list<StaffUser>("staff_users", { username: s.username }))[0];
-    if (!have || have.hash !== s.hash) await demoCore.ctx.repo.put<StaffUser>("staff_users", { id: have ? have.id : "u-" + s.username, username: s.username, name: s.name, role: s.role as RoleId, salt: s.salt, hash: s.hash, algo: "pbkdf2", active: true, createdAt: new Date().toISOString() });
+    if (!have || have.hash !== s.hash) await demoCore.ctx.repo.put<StaffUser>("staff_users", { ...(have || {}), id: have ? have.id : "u-" + s.username, username: s.username, name: s.name, role: s.role as RoleId, salt: s.salt, hash: s.hash, algo: "pbkdf2", active: have ? have.active : true, createdAt: have ? have.createdAt : new Date().toISOString() });
   }
   return demoCore;
 }
@@ -60,6 +60,10 @@ export async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
 export async function menuLive(): Promise<Menu> {
   return (await core()).menuEdit.site();
 }
+
+/** the banner offers and the events from the demo's admin (the same as the server's /api/offers and /api/events) */
+export async function offersLive() { return (await core()).offersAdmin.public(); }
+export async function eventsLive() { return (await core()).eventsAdmin.public(); }
 
 export async function statusInfo() {
   const c = await core();

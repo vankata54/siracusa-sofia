@@ -1,5 +1,6 @@
 /* eventsJson for the API (server and demo core): NOT in lib/events.ts, which is part of the shared runtime (size budget). */
-import { events, type SiteEventJson } from "./events.ts";
+import type { SiteEventJson } from "./events.ts";
+import { events } from "./events-all.ts";
 
 /** The events with the date as "YYYY-MM-DD" (a Date would travel as UTC and lose a day at night). */
 export function eventsJson(today: Date = new Date()): SiteEventJson[] {

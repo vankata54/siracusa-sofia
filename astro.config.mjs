@@ -5,11 +5,12 @@ import crypto from "node:crypto";
 import { readEnv, staffFromEnv } from "./scripts/env.mjs";
 import { iconGroups } from "./scripts/icon-groups.mjs";
 import { buildChecks } from "./scripts/build-checks.mjs";
+import { siteFile } from "./scripts/site-file.mjs";
 import fs from "node:fs";
 
 const DEMO = process.env.DEMO === "1";
 /* modules of the shared runtime (keep in sync with the imports of src/client/sc.ts) */
-const RUNTIME = ["/src/client/sc.ts", "/src/lib/format.ts", "/src/lib/status.ts", "/src/lib/consts.ts", "/src/lib/cart.ts", "/src/lib/events.ts",
+const RUNTIME = ["/src/client/sc.ts", "/src/lib/format.ts", "/src/lib/status.ts", "/src/lib/consts.ts", "/src/lib/zones-data.ts", "/src/lib/cart.ts", "/src/lib/events.ts",
   "/src/lib/chrome-core.ts", "/src/lib/icons.ts", "/src/lib/icons/x.ts", "/src/lib/icons/check.ts", "/src/lib/icons/caret-right.ts", "/src/lib/icons/phone.ts",
   "/src/lib/icons/question.ts", "/src/lib/routes.ts", "/src/lib/time.ts", "/src/lib/registry.ts", "/src/lib/lunch.ts", "/src/lib/lunch-date.ts", "/src/lib/load.ts"];
 const env = { ...readEnv(), ...process.env };
@@ -56,7 +57,9 @@ export default defineConfig({
   devToolbar: { enabled: false },
   vite: {
     /* import "sc-icons:moon,truck,info": the page's icons in ONE module inside the page's own chunk (scripts/icon-groups.mjs) */
-    plugins: [menuFile(), iconGroups()],
+    /* SITE_FILE (the server's rebuild after a change of the zones, hall, events or offers in the admin, server/publish.ts):
+       the site data takes the place of src/lib/zones-data.ts, tables.ts, events.ts, events-extra.ts, offers-data.ts */
+    plugins: [menuFile(), siteFile(), iconGroups()],
     /* the shared runtime (src/client/sc.ts and the small lib modules it needs) is ONE chunk on every page */
     build: {
       rollupOptions: {

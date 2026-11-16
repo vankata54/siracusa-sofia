@@ -7,7 +7,7 @@ import { CoreError, type Celebration, type NoShowBlock, type Reservation, type R
 import { audit } from "./audit.ts";
 import { normPhone, hhmm } from "../lib/format.ts";
 import { EVENT_CATS } from "../lib/consts.ts";
-import { TABLES } from "../lib/tables.ts";
+import { liveHall, groupOf, seatsOf, closedTables } from "./hall.ts";
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 
 /** Is "YYYY-MM-DD" a real calendar date? (here, not in lib/time.ts: that module is in the shared runtime) */
@@ -34,8 +34,11 @@ function invalid(fields: Record<string, string>) {
 }
 const emailOk = (e?: string) => !e || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-async function isBlocked(ctx: Ctx, phone: string): Promise<boolean> {
+/** a blocked number does not book online: the demo number, a profile marked blocked, or a no-show block ("Блокирай") */
+export async function isBlocked(ctx: Ctx, phone: string): Promise<boolean> {
   if (phone === BLOCKED_DEMO_PHONE) return true;
+  const b = await ctx.repo.get<NoShowBlock>(COL.blocks, phone);
+  if (b && b.status === "blocked") return true;
   const c = (await ctx.repo.list<{ id: string; phone: string; blocked?: boolean }>(COL.customers, { phone }))[0];
   return !!(c && c.blocked);
 }
@@ -43,6 +46,11 @@ async function isBlocked(ctx: Ctx, phone: string): Promise<boolean> {
 export interface ReservationInput { date: string; time: string; people: number; table?: string | null; name: string; phone: string; email?: string; occasion?: string; note?: string; marketing?: boolean; waitlist?: boolean;
   /** change of a booking: the old one (id + key from create / the SMS link) is cancelled in the same transaction and its table is free for the new one */
   replaces?: { id: string; key: string } | null }
+/** a booking made by the staff ("Нова резервация" in the admin, reservations-admin.ts): "Потвърдена", never marketing,
+    the staff member in the log; the other rules (hours, days, seats, a free table, a blocked number) are the same */
+export interface StaffBooking { actor: string }
+export const BLOCKED_STAFF_MSG = "Този номер е блокиран за резервации (неявили се). Отблокира го управителят.";
+export const GARDEN_CLOSED_MSG = "Градината е затворена. Изберете маса в салона.";
 
 /* Online change / cancel: until 2 hours before a booking from 17:00, until 1 hour before during the day
    (design/pages/reservation.html: "До 2 часа преди резервация след 17:00 и до 1 час преди през деня"). */
@@ -61,7 +69,7 @@ function checkLate(ctx: Ctx, r: Reservation) {
   if (minutesUntil(ctx, r.date, r.time) < changeLimit(r.time)) throw new CoreError("too_late", RES_LATE_MSG, 409);
 }
 
-export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<Reservation> {
+export async function createReservation(ctx: Ctx, r: ReservationInput, staff?: StaffBooking): Promise<Reservation> {
   const f: Record<string, string> = {};
   const today = sofiaYmd(nowDate(ctx)), m = minutes(ctx.clock);
   const date = String(r.date || ""), time = String(r.time || "");
@@ -76,11 +84,14 @@ export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<
   const phone = normPhone(r.phone);
   need(phone, f, "phone", "Телефонът трябва да е 10 цифри, например 0888 12 34 56.");
   need(emailOk(r.email), f, "email", "Проверете имейла, например ime@primer.bg.");
-  const t = r.table ? TABLES.find((x) => x.id === r.table) : null;
+  const hall = await liveHall(ctx);
+  const t = r.table ? hall.tables.find((x) => x.id === r.table && !x.off) : null;
   if (r.table && !t) f.table = "Няма такава маса.";
-  if (t && !f.people && people > t.seats) f.people = "Масата е за " + t.seats + " души. Изберете по-голяма маса или съединени маси.";
+  else if (t && t.zone === "garden" && !hall.gardenOpen) f.table = GARDEN_CLOSED_MSG;
+  const seats = t ? seatsOf(hall, t.id) : 0;
+  if (t && !f.people && !f.table && people > seats) f.people = "Масата е за " + seats + " души. Изберете по-голяма маса или съединени маси.";
   invalid(f);
-  if (await isBlocked(ctx, phone!)) throw new CoreError("blocked", BLOCKED_MSG, 403);
+  if (await isBlocked(ctx, phone!)) throw new CoreError("blocked", staff ? BLOCKED_STAFF_MSG : BLOCKED_MSG, 403);
   const dur = (await getSettings(ctx)).resMinutes;
   /* a change: the old booking must be the caller's (key) and still changeable */
   const old = r.replaces && r.replaces.id ? await getReservation(ctx, String(r.replaces.id), String(r.replaces.key || "")) : null;
@@ -92,13 +103,15 @@ export async function createReservation(ctx: Ctx, r: ReservationInput): Promise<
     const res: Reservation = {
       id: rid(8), date, time, people, table: t ? t.id : null, zone: t ? t.zone : null,
       name: String(r.name).trim().slice(0, 80), phone: phone!, email: r.email || undefined, occasion: r.occasion ? String(r.occasion).slice(0, 80) : undefined,
-      note: r.note ? String(r.note).slice(0, 1000) : undefined, marketing: r.marketing === true, status: r.waitlist ? "waitlist" : "new", createdAt: now, updatedAt: now,
-      dur, key: rid(12),
+      note: r.note ? String(r.note).slice(0, 1000) : undefined, marketing: staff ? false : r.marketing === true,
+      status: r.waitlist ? "waitlist" : staff ? "confirmed" : "new", createdAt: now, updatedAt: now,
+      dur, key: rid(12), ...(staff ? { by: staff.actor } : {}),
     };
     await ctx.repo.put(COL.reservations, res);
     return res;
   };
   const res = ctx.repo.transaction ? await ctx.repo.transaction(make) : await make();
+  if (staff) await audit(ctx, staff.actor, "reservation.create", res.id, { date: res.date, time: res.time, people: res.people, table: res.table, status: res.status });
   emit(ctx, "reservation.created", { date: res.date, time: res.time, until: hhmm(toMin(res.time) + dur), table: res.table, people: res.people }, { public: true });
   if (old && old.status === "cancelled") emit(ctx, "reservation.status", { date: old.date, time: old.time, table: old.table, status: "cancelled" }, { public: true });
   return res;
@@ -108,15 +121,16 @@ export async function listReservations(ctx: Ctx, where: Partial<Reservation> = {
   return (await ctx.repo.list<Reservation>(COL.reservations, where)).sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
 }
 
-/** Tables taken at a date/time: every booking whose interval [time, time + its length) overlaps [time, time + length). */
+/** Tables taken at a date/time: every booking whose interval [time, time + its length) overlaps [time, time + length);
+    a booking of a joined table holds the whole group (hall.ts); removed tables and the closed garden are never free. */
 export async function takenTables(ctx: Ctx, date: string, time: string, exceptId?: string): Promise<string[]> {
   if (!validYmd(date) || !/^\d{2}:\d{2}$/.test(time)) return [];
-  const dur = (await getSettings(ctx)).resMinutes, t = toMin(time);
-  const out = new Set<string>();
+  const dur = (await getSettings(ctx)).resMinutes, t = toMin(time), hall = await liveHall(ctx);
+  const out = new Set<string>(closedTables(hall));
   for (const r of await ctx.repo.list<Reservation>(COL.reservations, { date })) {
     if (!holds(r) || r.id === exceptId) continue;
     const a = toMin(r.time), d = r.dur || dur;
-    if (a < t + dur && t < a + d) out.add(r.table!);
+    if (a < t + dur && t < a + d) for (const id of groupOf(hall, r.table!)) out.add(id);
   }
   return [...out];
 }
@@ -155,22 +169,29 @@ export async function setReservationStatus(ctx: Ctx, id: string, status: Reserva
   const r = await ctx.repo.get<Reservation>(COL.reservations, id);
   if (!r) throw new CoreError("not_found", "Няма такава резервация.", 404);
   const was = r.status;
+  if (was !== status) (r as Reservation & { prevStatus?: ReservationStatus }).prevStatus = was;
   r.status = status; r.updatedAt = iso(ctx);
   await ctx.repo.put(COL.reservations, r);
-  await audit(ctx, actor, "reservation.status", id, { status });
+  await audit(ctx, actor, "reservation.status", id, { status, from: was });
   if (status === "no_show" && was !== "no_show") await countNoShow(ctx, r);
+  if (was === "no_show" && status !== "no_show") await countNoShow(ctx, r, -1);
   emit(ctx, "reservation.status", { date: r.date, time: r.time, table: r.table, status }, { public: true });
   return r;
 }
 
-/** No-shows of one phone (OPEN-QUESTIONS 8, default: after 2 the manager decides; "Неявили се за решение" on the dashboard). */
+/** No-shows of one phone (OPEN-QUESTIONS 8, default: after 2 the manager decides; "Неявили се за решение" on the dashboard).
+    The limit is the setting noShowLimit (1-5, default NO_SHOW_LIMIT). by -1: "Отмени" of a no-show takes it back. */
 export const NO_SHOW_LIMIT = 2;
-async function countNoShow(ctx: Ctx, r: Reservation): Promise<void> {
+async function countNoShow(ctx: Ctx, r: Reservation, by = 1): Promise<void> {
   const phone = normPhone(r.phone);
   if (!phone) return;
-  const b = (await ctx.repo.get<NoShowBlock>(COL.blocks, phone)) || { id: phone, name: r.name, count: 0, status: "cleared" as const, at: iso(ctx) };
-  b.count += 1; b.name = r.name; b.at = iso(ctx);
-  if (b.count >= NO_SHOW_LIMIT && b.status !== "blocked") b.status = "pending";
+  const limit = (await getSettings(ctx)).noShowLimit || NO_SHOW_LIMIT;
+  const b0 = await ctx.repo.get<NoShowBlock>(COL.blocks, phone);
+  if (!b0 && by < 0) return;
+  const b = b0 || { id: phone, name: r.name, count: 0, status: "cleared" as const, at: iso(ctx) };
+  b.count = Math.max(0, b.count + by); b.name = r.name; b.at = iso(ctx);
+  if (by > 0 && b.count >= limit && b.status !== "blocked") b.status = "pending";
+  if (by < 0 && b.count < limit && b.status === "pending") b.status = "cleared";
   await ctx.repo.put(COL.blocks, b);
 }
 

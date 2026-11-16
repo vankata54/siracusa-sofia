@@ -10,19 +10,28 @@ import { bodyLimit } from "hono/body-limit";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { openDb, seedMenu } from "./db/index.ts";
 import { menuRoutes } from "./routes/menu.ts";
-import { createPublisher, astroBuild, menuHash, type BuildFn, type Publisher } from "./publish.ts";
+import { ordersAdminRoutes } from "./routes/orders-admin.ts";
+import { reservationsAdminRoutes } from "./routes/reservations-admin.ts";
+import { hallRoutes } from "./routes/hall.ts";
+import { zonesRoutes } from "./routes/zones.ts";
+import { offersRoutes } from "./routes/offers.ts";
+import { eventsRoutes } from "./routes/events.ts";
+import { customersRoutes } from "./routes/customers.ts";
+import { reportsRoutes } from "./routes/reports.ts";
+import { staffAdminRoutes } from "./routes/staff-admin.ts";
+import { siteRoutes as siteDataRoutes } from "./routes/site.ts";
+import { createPublisher, astroBuild, buildHash, type BuildFn, type Publisher } from "./publish.ts";
+import type { SiteBuild } from "../src/core/site-data.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { webPushSender, type Vapid } from "./push.ts";
 import { scryptHasher } from "./hasher.ts";
 import { createCore, CoreError, homeOf, officeDueAt, publicOrder, PUSH_MSG, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus, type PushSender } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
-import { offers } from "../src/lib/offers.ts";
-import { eventsJson } from "../src/lib/events-json.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
 import { publicSettings, settingsAllowed } from "../src/core/settings.ts";
+import { maskFeedback, maskList } from "../src/core/rights.ts";
 import { normPhone } from "../src/lib/format.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
-import { ZONES } from "../src/lib/data.ts";
 
 export interface AppOpts {
   dbFile: string; distDir: string; secure?: boolean;
@@ -82,11 +91,15 @@ export function createApp(opts: AppOpts) {
     repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
     emit: (type, data, to) => clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); }),
     push: opts.pushSender || (opts.vapid ? webPushSender(opts.vapid) : undefined),
-    /* the live menu changed (publish, rollback, today's lunch menu): rebuild the site, one build at a time */
-    onMenu: (m) => { if (publisher) publisher.enqueue(m); },
+    /* the live menu changed (publish, rollback, today's lunch menu): rebuild the site, one build at a time (with the site data) */
+    onMenu: (m) => { if (publisher) void siteFor().then((site) => publisher!.enqueue(m, site)).catch((e) => console.error("site data", e)); },
+    /* the site data changed (zones, hall, events, offers): the same queue, with the effective menu */
+    onSite: (site) => { if (publisher) void core.menuEdit.effective().then((m) => publisher!.enqueue(m, site)).catch((e) => console.error("site data", e)); },
     mediaExists: (u) => { const m = /^\/media\/([a-f0-9]{64}\.(?:webp|jpg|png))$/.exec(u); return !!m && fs.existsSync(path.join(mediaDir, m[1])); },
   };
   const core = createCore(ctx);
+  /* the site data for a rebuild: null while nothing was changed (the build uses the built-in data, as `npm run build`) */
+  const siteFor = async (): Promise<SiteBuild | null> => ((await core.site.version()) > 0 ? core.site.build() : null);
   const booted = core.menuEdit.boot(); /* the published menu into this process (src/lib/data.ts) */
   void core.settings.get(); /* kitchen minutes and "Натоварено" into this process */
   /* preview core for one request (tests only): the page's clock, the lunch menu as today's */
@@ -188,10 +201,14 @@ export function createApp(opts: AppOpts) {
   /* the live menu from the core (published in the admin, else the built-in one) with today's "Изчерпано днес" */
   app.get("/api/menu", async (c) => c.json(await core.menuEdit.site()));
   app.get("/api/status", async (c) => { const st = await core.settings.get(); return c.json({ state: state(), status: status(), eta: eta(), ...publicSettings(st) }); });
-  app.get("/api/offers", (c) => c.json(offers()));
-  app.get("/api/events", (c) => c.json(eventsJson()));
-  app.get("/api/zones", (c) => c.json(ZONES));
-  app.get("/api/zones/check", (c) => c.json(zoneOfAddress(c.req.query("q") || "")));
+  /* the offers, events and zones from the admin's live data (core/site-data.ts): at once, before the rebuild of the site */
+  app.get("/api/offers", async (c) => c.json(await coreFor(c).offersAdmin.public()));
+  app.get("/api/events", async (c) => c.json(await core.eventsAdmin.public()));
+  app.get("/api/zones", async (c) => c.json(await core.zones.public()));
+  app.get("/api/zones/check", async (c) => {
+    const r = zoneOfAddress(c.req.query("q") || ""), live = await core.zones.public(), z = (x: { slug: string }) => live.find((l) => l.slug === x.slug) || x;
+    return c.json(r.type === "zone" ? { ...r, zone: z(r.zone) } : r.type === "ask" ? { ...r, opts: r.opts.map(z) } : r);
+  });
 
   /* ---------- orders ---------- */
   app.post("/api/orders", async (c) => {
@@ -244,15 +261,17 @@ export function createApp(opts: AppOpts) {
       throw e;
     }
   });
-  app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {})); });
+  /* the raw list (the screens use /api/admin/orders/list): the phone masked, no tracking key */
+  app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(maskList(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {}))); });
   /* the status by section and step (core/orders.ts stepAllowed): "Поръчки" one step, the kitchen and the driver their own */
+  /* {status, reason?}: the reason of "Отказана" is kept when sent (the admin's screen sends it through /cancel, which requires it) */
   app.patch("/api/admin/orders/:no", async (c) => {
     const s = await staff(c, ["orders", "kitchen", "driver"]), b = await body(c);
-    return c.json(await core.orders.setStatus(c.req.param("no"), b.status as OrderStatus, s.user.username, s));
+    return c.json(await core.orders.setStatus(c.req.param("no"), b.status as OrderStatus, s.user.username, s, typeof b.reason === "string" ? b.reason : undefined));
   });
 
   /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */
-  app.get("/api/admin/settings", async (c) => { await staff(c); return c.json(await core.settings.get()); });
+  app.get("/api/admin/settings", async (c) => { await staff(c); return c.json(await core.settings.view()); });
   /* "Изчерпано днес" (kitchen, menu, lunch menu): {out: true|false}; one source in the core, read by /api/menu and the order check */
   app.put("/api/admin/menu/:id/sold-out", async (c) => {
     const s = await staff(c, ["menu", "kitchen", "lunch"]);
@@ -263,7 +282,7 @@ export function createApp(opts: AppOpts) {
     /* who may change what: core/settings.ts settingsNeed (the same check in the demo) */
     const s = await staff(c);
     settingsAllowed(s, b);
-    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays }, s.user.username));
+    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays, noShowLimit: b.noShowLimit, callCooldown: b.callCooldown, callManager: b.callManager }, s.user.username));
   });
 
   /* ---------- rate limits (off in the test mode SC_PREVIEW_API=1) ---------- */
@@ -295,8 +314,9 @@ export function createApp(opts: AppOpts) {
   app.get("/api/reservations/taken", async (c) => c.json(await core.reservations.taken(c.req.query("date") || "", c.req.query("time") || "", c.req.query("except") || undefined, c.req.query("k") || undefined)));
   app.get("/api/reservations/:id", async (c) => c.json(await core.reservations.get(c.req.param("id"), c.req.query("k") || "")));
   app.post("/api/reservations/:id/cancel", async (c) => c.json(await coreFor(c).reservations.cancel(c.req.param("id"), String((await body(c)).key || ""))));
-  app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(await core.reservations.list()); });
-  app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c, "reservations"); const b = await body(c); return c.json(await core.reservations.setStatus(c.req.param("id"), b.status as ReservationStatus, s.user.username)); });
+  /* the raw list (the screens use /api/admin/reservations/day): the phone masked, no key; the status by the admin's rules */
+  app.get("/api/admin/reservations", async (c) => { await staff(c, "reservations"); return c.json(maskList(await core.reservations.list())); });
+  app.patch("/api/admin/reservations/:id", async (c) => { const s = await staff(c); const b = await body(c); return c.json(await core.resAdmin.setStatus(s, c.req.param("id"), b.status as ReservationStatus)); });
   app.post("/api/celebrations", async (c) => { limit("celeb-ip:" + ip(c), 5, 10, TRY_LATER(10)); return c.json(await core.celebrations.create(await body(c)), 201); });
   app.post("/api/office", async (c) => { const o = await coreFor(c).office.create(await body(c)); schedule(o); return c.json(o, 201); });
   /* wrong office codes (unknown or not the organizer's): at most 20 per IP + device (cookie sc_dev) in 10 min, and 200 per
@@ -346,7 +366,8 @@ export function createApp(opts: AppOpts) {
     list.push(now); fbTries.set(k, list);
     return c.json({ ok: true, id: r.id }, 201);
   });
-  app.get("/api/admin/feedback", async (c) => { await staff(c, "customers"); return c.json(await core.feedback.list()); });
+  /* the contact masked as in every list of the admin (the whole one: POST /api/admin/messages/:id/contact, into the log) */
+  app.get("/api/admin/feedback", async (c) => { await staff(c, "customers"); return c.json(maskFeedback(await core.feedback.list())); });
 
   /* ---------- customers: SMS sign-in (v1: the code is returned and shown on screen) ---------- */
   /* SMS codes: at most 10 requests per IP in 10 min (the core adds 30 s and 5 an hour per number) */
@@ -464,6 +485,18 @@ export function createApp(opts: AppOpts) {
 
   /* the menu editor, photos, the lunch menu (server/routes/menu.ts) */
   menuRoutes(app, { core, staff, body, cookieOpts, mediaDir, publisher: (publisher = makePublisher()) });
+  /* the admin, part 3 (server/routes/*.ts): the rights are in the core, a route passes the signed-in staff member */
+  const adm = { core, staff: (c: Context) => staff(c), body };
+  ordersAdminRoutes(app, adm);
+  reservationsAdminRoutes(app, adm);
+  hallRoutes(app, adm);
+  zonesRoutes(app, adm);
+  offersRoutes(app, adm);
+  eventsRoutes(app, adm);
+  customersRoutes(app, adm);
+  reportsRoutes(app, adm);
+  staffAdminRoutes(app, adm);
+  siteDataRoutes(app, { ...adm, publisher: () => publisher });
 
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 
@@ -504,6 +537,8 @@ export function createApp(opts: AppOpts) {
     /* /porachka/1042/ -> the one static tracking page (it reads the number from the address) */
     const tr = /^\/porachka\/[^/]+\/?$/.exec(rel);
     if (tr) { const p = file("/porachka/"); if (p) return send(c, p); }
+    /* /masa/<код>/ (the QR label of a table, core/hall.ts) -> the one QR table page, when the build has it (etap D) */
+    if (/^\/masa\/[a-z2-9]{8}\/?$/.test(rel)) { const p = file("/masa/"); if (p) return send(c, p); }
     const p = file(rel);
     if (p) {
       if (!rel.endsWith("/") && !path.extname(rel) && p.endsWith("index.html")) return c.redirect(rel + "/", 301);
@@ -521,12 +556,15 @@ export function createApp(opts: AppOpts) {
   }
   /* a published menu that the site on disk was not built with (e.g. a fresh `npm run build` after a deploy): rebuild once */
   void booted.then(async () => {
+    await core.site.boot();
     if (!publisher) return;
-    const live = await core.menuEdit.live(), eff = await core.menuEdit.effective();
-    if ((live.version > 0 || eff.lunch.date !== live.menu.lunch.date) && publisher.builtHash() !== menuHash(eff)) publisher.enqueue(eff);
+    const live = await core.menuEdit.live(), eff = await core.menuEdit.effective(), site = await siteFor();
+    if ((live.version > 0 || eff.lunch.date !== live.menu.lunch.date || site) && publisher.builtHash() !== buildHash(eff, site)) publisher.enqueue(eff, site);
   }).catch((e) => console.error("menu boot", e));
   /* today's published lunch menu starts at midnight (Sofia): checked every 5 minutes, the site rebuilds when it changed */
   if (opts.timers !== false) setInterval(() => { core.menuEdit.refresh("tick").catch((e) => console.error("menu refresh", e)); }, 5 * 60_000).unref();
+  /* "Изтрий" of a customer (GDPR): deleted for good once the window for "Отмени" has passed (core/customers-admin.ts) */
+  if (opts.timers !== false) setInterval(() => { core.customersAdmin.purge().catch((e) => console.error("customers purge", e)); }, 5_000).unref();
 
   return { app, core, sqlite, db, sweep, publisher: () => publisher };
 }

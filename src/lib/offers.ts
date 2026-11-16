@@ -5,10 +5,12 @@ import { lunchIsToday } from "./lunch.ts";
 import { plural } from "./format.ts";
 import { url } from "./routes.ts";
 import type { ClockInput } from "./time.ts";
+import { OFFER_OFF } from "./offers-data.ts";
 
 export interface Offer { id: string; t: string; p: string; go: string; href: string }
 
-export function offers(o?: ClockInput, today: Date = new Date()): Offer[] {
+/** off: the offers the admin turned off (core/offers-admin.ts); by default the published list of the site build */
+export function offers(o?: ClockInput, today: Date = new Date(), off: string[] = OFFER_OFF): Offer[] {
   const s = state(o), ev = lastSaturday(today), out: Offer[] = [];
   if (s.lunch) out.push(lunchIsToday(today)
     ? { id: "lunch", t: "Обедно меню днес", p: "Поръчайте до 15:00 с доставка или вземане от място.", go: "Виж обедното меню", href: url.lunch() }
@@ -18,5 +20,5 @@ export function offers(o?: ClockInput, today: Date = new Date()): Offer[] {
   out.push({ id: "greek", t: "Гръцка вечер", p: (ev.days === 0 ? "Днес" : "След " + plural(ev.days, "ден", "дни")) + ". Последната събота от месеца.", go: "Запази място", href: url.event("gratska-vecher") });
   out.push({ id: "birthday", t: "Рожден ден при нас", p: "-10% от сметката или малка торта за рожденика.", go: "Виж офертата", href: url.offers("birthday") });
   out.push({ id: "signup", t: "-10% с профил", p: "Направете профил и вземете -10% от следващата поръчка.", go: "Направи профил", href: url.login() });
-  return out;
+  return off.length ? out.filter((x) => off.indexOf(x.id) < 0) : out;
 }

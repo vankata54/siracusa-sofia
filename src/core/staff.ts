@@ -76,13 +76,16 @@ export async function upsertStaff(ctx: Ctx, u: { username: string; name: string;
   if (!u.password || u.password.length < 10) throw new CoreError("weak", "Паролата трябва да е поне 10 знака.");
   const existing = (await ctx.repo.list<StaffUser>(COL.staff, { username: u.username }))[0];
   const h = await ctx.hasher.hash(u.password);
-  const doc: StaffUser = { id: existing ? existing.id : rid(8), username: u.username, name: u.name, role: u.role, ...h, active: true, createdAt: existing ? existing.createdAt : iso(ctx) };
+  /* a new seed keeps what the admin set (the PIN, the last sign-in) */
+  const doc: StaffUser = { id: existing ? existing.id : rid(8), username: u.username, name: u.name, role: u.role, ...h, active: true, createdAt: existing ? existing.createdAt : iso(ctx),
+    ...(existing && existing.pin ? { pin: existing.pin } : {}), ...(existing && existing.lastLoginAt ? { lastLoginAt: existing.lastLoginAt } : {}) };
   await ctx.repo.put(COL.staff, doc);
   return doc;
 }
 
-export type PublicStaff = Omit<StaffUser, "salt" | "hash" | "algo">;
-export function publicStaff(u: StaffUser): PublicStaff { const { salt: _s, hash: _h, algo: _a, ...rest } = u; return rest; }
+/** never the password hash or the PIN hash (staff-admin.ts) */
+export type PublicStaff = Omit<StaffUser, "salt" | "hash" | "algo" | "pin">;
+export function publicStaff(u: StaffUser): PublicStaff { const { salt: _s, hash: _h, algo: _a, pin: _p, ...rest } = u; return rest; }
 
 /* sign-in lockout (decision 15.11.2026): 10 wrong attempts per username in 15 minutes lock that username for 15 minutes;
    the address has a higher second limit (50: in the restaurant everyone signs in from one address, REVIEW-2 "За кода" 3).
@@ -134,6 +137,9 @@ export async function staffLogin(ctx: Ctx, username: string, password: string, a
   if (fa.n > 0) { fa.n -= 1; if (fa.n < LOGIN_MAX_FAILS_ADDR) fa.until = 0; await ctx.repo.put(COL.loginFails, fa); }
   const s: Session = { id: rid(24), kind: "staff", userId: u.id, role: u.role, expiresAt: now + STAFF_SESSION_TTL_MS, createdAt: iso(ctx) };
   await ctx.repo.put(COL.sessions, s);
+  /* "Последен вход" in "Персонал" */
+  u.lastLoginAt = iso(ctx);
+  await ctx.repo.put(COL.staff, u);
   await audit(ctx, u.username, "staff.login");
   return { token: s.id, user: publicStaff(u), expiresAt: s.expiresAt, home: homeOf(u.role) };
 }

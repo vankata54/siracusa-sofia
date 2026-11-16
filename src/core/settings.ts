@@ -7,9 +7,10 @@ import { audit } from "./audit.ts";
 import { KITCHEN_DEFAULT, setKitchen } from "../lib/status.ts";
 
 export const RES_MINUTES_DEFAULT = 120;
-export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT, celebrationPrice: "offer", earlyDays: null };
+/* noShowLimit, callCooldown, callManager: the open questions that are settings (OPEN-QUESTIONS 8 and modules 1), with the defaults */
+export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT, celebrationPrice: "offer", earlyDays: null, noShowLimit: 2, callCooldown: 3, callManager: 5 };
 /** what any page may read (GET /api/status): no internal settings */
-export function publicSettings(s: Settings) { return { kitchen: s.kitchen, celebrationPrice: s.celebrationPrice, earlyDays: s.earlyDays }; }
+export function publicSettings(s: Settings) { return { kitchen: { busy: s.kitchen.busy, etaMin: s.kitchen.etaMin, etaBusyMin: s.kitchen.etaBusyMin }, celebrationPrice: s.celebrationPrice, earlyDays: s.earlyDays }; }
 
 export async function getSettings(ctx: Ctx): Promise<Settings> {
   const s = await ctx.repo.get<Settings>(COL.settings, "main");
@@ -18,7 +19,8 @@ export async function getSettings(ctx: Ctx): Promise<Settings> {
   return out;
 }
 
-export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number; celebrationPrice?: Settings["celebrationPrice"]; earlyDays?: number | null };
+export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number; celebrationPrice?: Settings["celebrationPrice"]; earlyDays?: number | null;
+  noShowLimit?: number; callCooldown?: number; callManager?: number };
 
 export { settingsAllowed } from "./settings-guard.ts";
 
@@ -35,8 +37,18 @@ export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "sy
   if (celebrationPrice !== "estimate" && celebrationPrice !== "offer") f.celebrationPrice = "Изберете „ориентировъчна цена“ или „само оферта“.";
   const earlyDays = patch.earlyDays === undefined ? cur.earlyDays : patch.earlyDays;
   if (earlyDays !== null && (!Number.isInteger(earlyDays) || earlyDays < 1 || earlyDays > 365)) f.earlyDays = "Дните са цяло число от 1 до 365 (или празно).";
+  const int = (k: "noShowLimit" | "callCooldown" | "callManager", lo: number, hi: number, msg: string) => {
+    const v = patch[k] == null ? cur[k] : patch[k];
+    if (!Number.isInteger(v) || (v as number) < lo || (v as number) > hi) f[k] = msg;
+    return v as number;
+  };
+  const noShowLimit = int("noShowLimit", 1, 5, "Неявяванията са цяло число от 1 до 5.");
+  const callCooldown = int("callCooldown", 1, 15, "Минутите са цяло число от 1 до 15.");
+  const callManager = int("callManager", 1, 30, "Минутите са цяло число от 1 до 30.");
   if (Object.keys(f).length) throw Object.assign(new CoreError("invalid", "Проверете полетата.", 422), { fields: f });
-  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin }, resMinutes, celebrationPrice, earlyDays, updatedAt: iso(ctx) };
+  /* when "Натоварено" was turned on (the kitchen's reminder after 60 min, OPEN-QUESTIONS 15) */
+  const busyAt = k.busy ? (cur.kitchen.busy ? cur.kitchen.busyAt || iso(ctx) : iso(ctx)) : null;
+  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin, busyAt }, resMinutes, celebrationPrice, earlyDays, noShowLimit, callCooldown, callManager, updatedAt: iso(ctx) };
   await ctx.repo.put(COL.settings, next);
   setKitchen(next.kitchen);
   await audit(ctx, actor, "settings.update", "main", patch);

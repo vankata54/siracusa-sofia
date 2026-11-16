@@ -55,15 +55,11 @@ export const ORDER_RULES = {
   officeMaxPeople: 60,
 } as const;
 
-export interface Zone { n: string; slug: string; etaMin: number; free: boolean; fee?: number | null; eta: string }
-export const ZONES: Zone[] = [
-  { n: "Дружба 1", slug: "druzhba-1", etaMin: 30, free: true, eta: "около 30\u00a0мин" },
-  { n: "Дружба 2", slug: "druzhba-2", etaMin: 25, free: true, eta: "около 25\u00a0мин" },
-  { n: "НПЗ Искър", slug: "npz-iskar", etaMin: 35, free: true, eta: "около 35\u00a0мин" },
-  { n: "Бусманци", slug: "busmantsi", etaMin: 40, free: true, eta: "около 40\u00a0мин" },
-  { n: "Горубляне", slug: "gorublyane", etaMin: 40, free: false, fee: null, eta: "около 40\u00a0мин" },
-  { n: "Гара Искър", slug: "gara-iskar", etaMin: 45, free: false, fee: null, eta: "около 45\u00a0мин" },
-];
+/** a delivery zone. on / min / from / to: the admin's settings (core/zones.ts); only the core reads them, the site build
+    carries the fields above (the shared runtime budget) */
+export interface Zone { n: string; slug: string; etaMin: number; free: boolean; fee?: number | null; eta: string; on?: boolean; min?: number | null; from?: string; to?: string }
+/* ZONES: in lib/zones-data.ts (the server's rebuild puts the zones from the admin in its place, astro.config.mjs SITE_FILE) */
+export { ZONES } from "./zones-data.ts";
 
 export const TAGS: Record<TagId, [string, string]> = {
   hit: ["Хит", "fire"], new: ["Ново", "sparkle"], veg: ["Вегетарианско", "leaf"], hot: ["Люто", "pepper"], out: ["Изчерпано днес", "clock"],

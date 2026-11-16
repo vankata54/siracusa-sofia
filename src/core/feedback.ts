@@ -9,7 +9,7 @@ export interface FeedbackInput { name: string; contact: string; message: string;
 export const FEEDBACK_TOPICS = ["voucher", "birthday"] as const;
 export interface Feedback {
   id: string; name: string; contact: string; mode: "phone" | "email"; message: string; topic?: string;
-  status: "new" | "done"; createdAt: string; updatedAt: string;
+  status: "new" | "called" | "done"; createdAt: string; updatedAt: string;
 }
 export const FEEDBACK_MSG = {
   name: "Напишете името си.",
