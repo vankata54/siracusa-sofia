@@ -2,7 +2,7 @@
    The chrome is already rendered by the server; this file wires it up and exposes window.SC with the SAME API as
    the prototype, so page scripts can be ported with minimal changes:
      - SC.mount(opts) returns the already rendered <main> (does not draw again),
-     - links: "dish.html#id" -> SC.url.dish(id) (or SC.fromProto("dish.html#id")),
+     - links: "dish.html#id" -> SC.url.dish(id) (or fromProto("dish.html#id") from lib/routes-proto.ts),
      - the document scrolls (not SC.scroller): use window.scrollY / window.scrollTo and IntersectionObserver root:null.
        SC.scroller keeps scrollTop / scrollTo / scrollBy / scroll listeners / getBoundingClientRect working as a shim. */
 /* SIZE BUDGET: this file is on every page. It must NOT import the menu (lib/data.ts), the illustrations (art.ts) or
@@ -14,7 +14,7 @@ import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
 import { ic, loadAllIcons, statusHTML, sheetHTML } from "../lib/chrome-core.ts";
 import type { CookiePrefs } from "../lib/chrome-sheets.ts";
-import { configureRoutes, url, fromProto } from "../lib/routes.ts";
+import { configureRoutes, url } from "../lib/routes.ts";
 import { setClock, setPreview, parseTime, now, minutes } from "../lib/time.ts";
 import { resolveDish } from "../lib/registry.ts";
 import { lunchIsToday } from "../lib/lunch.ts";
@@ -390,7 +390,7 @@ export const SC = {
   lunchIsToday: () => lunchIsToday(),
   now: () => now(), minutes: () => minutes(), state: () => T.state(), status: () => T.status(), eta: () => T.eta(), lastSaturday: () => T.lastSaturday(),
   events: () => events(),
-  url, fromProto,
+  url,
   /* cart & user */
   cart: cartApi, updateCartUI, user: () => load<Record<string, unknown> | null>("sc-user", null),
   /** the cookie choice: necessary always; analytics / marketing only when the visitor allowed them */

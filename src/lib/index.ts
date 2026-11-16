@@ -4,6 +4,7 @@ export * from "./time.ts";
 export * from "./status.ts";
 export * from "./format.ts";
 export * from "./routes.ts";
+export * from "./routes-proto.ts";
 export * from "./suggest.ts";
 export * from "./offers.ts";
 export type { SiteEvent, SiteEventJson } from "./events.ts";
