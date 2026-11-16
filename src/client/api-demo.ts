@@ -48,7 +48,7 @@ export async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
     await c.office.sendDue().catch(() => undefined);
     return await fn(c);
   } catch (e) {
-    if (e instanceof CoreError) { const x = e as CoreError & { fields?: Record<string, string>; retryIn?: number }; throw new ApiError(e.code, e.message, e.status, x.fields, x.retryIn); }
+    if (e instanceof CoreError) { const x = e as CoreError & { fields?: Record<string, string>; retryIn?: number; left?: number }; throw new ApiError(e.code, e.message, e.status, x.fields, x.retryIn, x.left); }
     throw e;
   }
 }

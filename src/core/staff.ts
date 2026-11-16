@@ -5,28 +5,37 @@ import { audit } from "./audit.ts";
 
 export const STAFF_SESSION_TTL_MS = 12 * 3600_000;
 
-/** Admin sections (tiles on the dashboard). "Скоро" sections exist so the matrix is complete from day one. */
+/** Admin sections (tiles on the dashboard). "Скоро" sections exist so the matrix is complete from day one.
+    "settings" (14.11.2026): "Натоварено" and the minutes, the table hold, the celebration price. */
 export const SECTIONS: [string, string][] = [
   ["dashboard", "Табло"], ["notes", "Бележки (молив)"], ["menu", "Меню"], ["lunch", "Обедно меню"], ["zones", "Зони за доставка"],
   ["offers", "Оферти и ваучери"], ["events", "Събития"], ["reservations", "Резервации"], ["hall", "Залата и масите"], ["qr", "QR генератор"],
   ["orders", "Поръчки"], ["customers", "Клиенти"], ["reports", "Отчети"], ["finance", "Финанси и гориво"], ["staff", "Персонал"],
   ["roles", "Роли и права"], ["audit", "Дневник"], ["waiter", "Сервитьор"], ["kitchen", "Кухня"], ["driver", "Шофьор"], ["site", "Клиентски сайт"],
+  ["settings", "Настройки"],
 ];
-const ALL = SECTIONS.map((s) => s[0]);
+export const ALL_SECTIONS = SECTIONS.map((s) => s[0]);
+const ALL = ALL_SECTIONS;
 
+/* the approved admin prototype (design/pages-admin/_admin.js, version 4): "Бележки" for the main admin, the owner, the manager
+   and marketing; every role writes recommendations with the pencil (decision 15.11.2026), with or without the section */
 export const DEFAULT_ROLES: Role[] = [
   { id: "admin", n: "Главен админ", desc: "Всичко; прави директни промени по сайта. Агенцията, която държи и ролята Маркетинг.", sections: ALL },
   { id: "owner", n: "Собственик", desc: "Всичко, включително финанси, гориво и отчети.", sections: ALL.filter((s) => s !== "roles") },
   { id: "manager", n: "Управител", desc: "Почти всичко като собственика: меню, цени, промоции, събития, резервации, персонал, отчети.", sections: ALL.filter((s) => !["roles", "finance", "audit"].includes(s)) },
-  { id: "waiter", n: "Сервитьор", desc: "Повиквания, статус на масите, въвеждане на поръчки, потвърждаване на QR поръчки, сметки.", sections: ["dashboard", "waiter", "orders", "reservations", "site"] },
+  { id: "waiter", n: "Сервитьор", desc: "Повиквания, статус на масите, въвеждане на поръчки, потвърждаване на QR поръчки, сметки.", sections: ["dashboard", "waiter", "orders", "reservations"] },
   { id: "kitchen", n: "Кухня", desc: "Кухненски екран на своята секция с опашката от поръчки.", sections: ["dashboard", "kitchen"] },
   { id: "driver", n: "Шофьор", desc: "Своите доставки, навигация, статуси, зареждане с гориво, избор на автомобил.", sections: ["dashboard", "driver"] },
   { id: "marketing", n: "Маркетинг", desc: "Събития, поводи, оферти, снимки, текстове, SEO полета.", sections: ["dashboard", "notes", "offers", "events", "site"] },
 ];
+export const ROLE_IDS = DEFAULT_ROLES.map((r) => r.id);
+/** staff apps: after sign-in these roles go straight to their own module (decision 15.11.2026), never to the dashboard */
+export const STAFF_APP: Partial<Record<RoleId, string>> = { waiter: "waiter", kitchen: "kitchen", driver: "driver" };
 
 export async function roles(ctx: Ctx): Promise<Role[]> {
   const stored = await ctx.repo.list<Role>(COL.roles);
-  return DEFAULT_ROLES.map((d) => stored.find((s) => s.id === d.id) || d);
+  /* "Табло" is never taken from a role (the start page after sign-in) */
+  return DEFAULT_ROLES.map((d) => { const s = d.id !== "admin" && stored.find((x) => x.id === d.id); return s ? { ...d, sections: [...new Set(["dashboard", ...s.sections.filter((x) => ALL.includes(x))])] } : { ...d, sections: [...d.sections] }; });
 }
 
 export async function can(ctx: Ctx, role: RoleId, section: string): Promise<boolean> {
@@ -35,13 +44,30 @@ export async function can(ctx: Ctx, role: RoleId, section: string): Promise<bool
   return !!r && r.sections.includes(section);
 }
 
+export type StaffCtx = { user: PublicStaff; sections: string[] };
+/** The one permission check (server routes and the demo): a valid staff session, and one of `need` (any is enough).
+    Without a session: 401 "auth"; without the section: 403 "forbidden". `adminOnly`: only the role admin (not given with roles). */
+export async function guard(ctx: Ctx, token: string | null | undefined, need?: string | string[], adminOnly = false): Promise<StaffCtx> {
+  const s = await staffBySession(ctx, token);
+  if (!s) throw new CoreError("auth", "Влезте отново.", 401);
+  const list = need ? (Array.isArray(need) ? need : [need]) : [];
+  if (adminOnly && s.user.role !== "admin") throw new CoreError("forbidden", "Само главният админ може това.", 403);
+  if (list.length && !(s.user.role === "admin" || list.some((x) => s.sections.includes(x)))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+  return s;
+}
+
+/** where a role lands after sign-in: its staff app, or the dashboard */
+export function homeOf(role: RoleId): string { return STAFF_APP[role] ? "app:" + STAFF_APP[role] : "dashboard"; }
+
 export async function setRoleSections(ctx: Ctx, id: RoleId, sections: string[], actor: string): Promise<Role> {
   const base = (await roles(ctx)).find((r) => r.id === id);
   if (!base) throw new CoreError("not_found", "Няма такава роля.", 404);
   if (id === "admin") throw new CoreError("forbidden", "Правата на главния админ не се променят.", 403);
-  const r: Role = { ...base, sections: sections.filter((s) => ALL.includes(s)) };
+  const next = [...new Set(["dashboard", ...(Array.isArray(sections) ? sections : []).filter((s) => ALL.includes(s))])];
+  const r: Role = { ...base, sections: ALL.filter((s) => next.includes(s)) };
+  const added = r.sections.filter((s) => !base.sections.includes(s)), removed = base.sections.filter((s) => !r.sections.includes(s));
   await ctx.repo.put(COL.roles, r);
-  await audit(ctx, actor, "role.update", id, { sections: r.sections });
+  if (added.length || removed.length) await audit(ctx, actor, "role.update", id, { added, removed, sections: r.sections });
   return r;
 }
 
@@ -58,19 +84,38 @@ export async function upsertStaff(ctx: Ctx, u: { username: string; name: string;
 export type PublicStaff = Omit<StaffUser, "salt" | "hash" | "algo">;
 export function publicStaff(u: StaffUser): PublicStaff { const { salt: _s, hash: _h, algo: _a, ...rest } = u; return rest; }
 
-export async function staffLogin(ctx: Ctx, username: string, password: string): Promise<{ token: string; user: PublicStaff; expiresAt: number }> {
+/* sign-in lockout (decision 15.11.2026): 10 wrong attempts per username AND per address in 15 minutes lock that
+   username / that address for 15 minutes (either is enough). In the core, so the demo locks too. */
+export const LOGIN_MAX_FAILS = 10, LOGIN_LOCK_MIN = 15;
+type Fails = { id: string; n: number; first: number; until: number };
+const LOCKED_MSG = "Твърде много опити. Опитайте след 15 минути.";
+async function failsOf(ctx: Ctx, id: string): Promise<Fails> {
+  const now = nowDate(ctx).getTime(), f = await ctx.repo.get<Fails>(COL.loginFails, id);
+  return f && (f.until > now || f.first > now - LOGIN_LOCK_MIN * 60_000) ? f : { id, n: 0, first: now, until: 0 };
+}
+
+export async function staffLogin(ctx: Ctx, username: string, password: string, addr = "local"): Promise<{ token: string; user: PublicStaff; expiresAt: number; home: string }> {
   if (!ctx.hasher) throw new Error("hasher missing");
-  const u = (await ctx.repo.list<StaffUser>(COL.staff, { username: String(username || "").trim() }))[0];
+  const uname = String(username || "").trim().toLowerCase().slice(0, 64), now = nowDate(ctx).getTime();
+  const keys = ["u:" + uname, "a:" + String(addr || "local").slice(0, 80)];
+  const fails = await Promise.all(keys.map((k) => failsOf(ctx, k)));
+  const lock = fails.find((f) => f.until > now);
+  if (lock) throw Object.assign(new CoreError("throttled", LOCKED_MSG, 429), { retryIn: Math.max(1, Math.ceil((lock.until - now) / 1000)) });
+  const u = (await ctx.repo.list<StaffUser>(COL.staff)).find((x) => x.username.toLowerCase() === uname);
   /* same message and similar time for "no such user" and "wrong password" */
   const ok = u && u.active ? await ctx.hasher.verify(String(password || ""), u.salt, u.hash, u.algo) : (await ctx.hasher.hash(String(password || "x")), false);
   if (!u || !ok) {
-    await audit(ctx, String(username || "?"), "staff.login_failed");
-    throw new CoreError("bad_login", "Грешен потребител или парола.", 401);
+    for (const f of fails) { f.n += 1; if (f.n >= LOGIN_MAX_FAILS) f.until = now + LOGIN_LOCK_MIN * 60_000; await ctx.repo.put(COL.loginFails, f); }
+    await audit(ctx, uname || "?", "staff.login_failed");
+    const left = LOGIN_MAX_FAILS - Math.max(...fails.map((f) => f.n));
+    if (left <= 0) throw Object.assign(new CoreError("throttled", LOCKED_MSG, 429), { retryIn: LOGIN_LOCK_MIN * 60 });
+    throw Object.assign(new CoreError("bad_login", "Грешен потребител или парола.", 401), left <= 3 ? { left } : {});
   }
-  const s: Session = { id: rid(24), kind: "staff", userId: u.id, role: u.role, expiresAt: nowDate(ctx).getTime() + STAFF_SESSION_TTL_MS, createdAt: iso(ctx) };
+  await ctx.repo.del(COL.loginFails, keys[0]);
+  const s: Session = { id: rid(24), kind: "staff", userId: u.id, role: u.role, expiresAt: now + STAFF_SESSION_TTL_MS, createdAt: iso(ctx) };
   await ctx.repo.put(COL.sessions, s);
   await audit(ctx, u.username, "staff.login");
-  return { token: s.id, user: publicStaff(u), expiresAt: s.expiresAt };
+  return { token: s.id, user: publicStaff(u), expiresAt: s.expiresAt, home: homeOf(u.role) };
 }
 
 export async function staffBySession(ctx: Ctx, token: string | null | undefined): Promise<{ user: PublicStaff; sections: string[] } | null> {
@@ -80,10 +125,14 @@ export async function staffBySession(ctx: Ctx, token: string | null | undefined)
   const u = await ctx.repo.get<StaffUser>(COL.staff, s.userId);
   if (!u || !u.active) return null;
   const r = (await roles(ctx)).find((x) => x.id === u.role);
-  return { user: publicStaff(u), sections: u.role === "admin" ? ALL : r ? r.sections : [] };
+  return { user: publicStaff(u), sections: u.role === "admin" ? [...ALL] : r ? r.sections : [] };
 }
 
-export async function staffLogout(ctx: Ctx, token: string): Promise<void> { await ctx.repo.del(COL.sessions, token); }
+export async function staffLogout(ctx: Ctx, token: string): Promise<void> {
+  const s = await staffBySession(ctx, token);
+  await ctx.repo.del(COL.sessions, token);
+  if (s) await audit(ctx, s.user.username, "staff.logout");
+}
 
 export async function listStaff(ctx: Ctx): Promise<PublicStaff[]> {
   return (await ctx.repo.list<StaffUser>(COL.staff)).map(publicStaff);

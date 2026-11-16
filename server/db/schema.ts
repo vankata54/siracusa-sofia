@@ -62,4 +62,8 @@ export const bonusUsed = sqliteTable("bonus_used", { ...doc });
 export const feedback = sqliteTable("feedback", { ...doc, status: text("status") });
 /* Web Push subscriptions of a browser to one order (tracking page, "Включи известията"); removed when the order ends */
 export const pushSubs = sqliteTable("push_subs", { ...doc, orderNo: text("order_no") }, (t) => [index("push_order").on(t.orderNo)]);
+/* admin (etap C): when a staff member last opened "Бележки"; no-shows per phone; wrong sign-in attempts per username / address */
+export const notesSeen = sqliteTable("notes_seen", { ...doc });
+export const noshowBlocks = sqliteTable("noshow_blocks", { ...doc });
+export const loginFails = sqliteTable("login_fails", { ...doc });
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });

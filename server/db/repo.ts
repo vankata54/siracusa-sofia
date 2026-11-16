@@ -20,6 +20,7 @@ const TABLES: Record<string, Cols> = {
   audit_log: { actor: (d) => d.actor, action: (d) => d.action },
   events: {}, offers: {}, settings: {}, bonus_used: {}, feedback: { status: (d) => d.status },
   push_subs: { order_no: (d) => d.orderNo },
+  notes_seen: {}, noshow_blocks: {}, login_fails: {},
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {

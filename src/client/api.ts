@@ -24,7 +24,9 @@ export class ApiError extends Error {
   code: string; status: number; fields?: Record<string, string>;
   /** seconds to wait ("too_soon": a new SMS code) */
   retryIn?: number;
-  constructor(code: string, message: string, status = 400, fields?: Record<string, string>, retryIn?: number) { super(message); this.code = code; this.status = status; this.fields = fields; if (retryIn != null) this.retryIn = retryIn; }
+  /** staff sign-in: wrong attempts left before the lockout (only the last 3) */
+  left?: number;
+  constructor(code: string, message: string, status = 400, fields?: Record<string, string>, retryIn?: number, left?: number) { super(message); this.code = code; this.status = status; this.fields = fields; if (retryIn != null) this.retryIn = retryIn; if (left != null) this.left = left; }
 }
 
 /* ---------- keys kept in this browser ---------- */
@@ -94,7 +96,7 @@ async function local<T>(fn: (c: Core) => Promise<T>): Promise<T> {
   return m.local(fn);
 }
 const pad = (n: number) => String(n).padStart(2, "0");
-async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
   let r: Response;
   const h: Record<string, string> = {};
   if (body) h["content-type"] = "application/json";
@@ -107,14 +109,14 @@ async function http<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError("offline", "Няма връзка. Проверете интернета и опитайте пак.", 0);
   }
   const j = await r.json().catch(() => null);
-  if (!r.ok) throw new ApiError(j?.error || "server", j?.message || "Нещо се обърка. Опитайте пак.", r.status, j?.fields, j?.retryIn);
+  if (!r.ok) throw new ApiError(j?.error || "server", j?.message || "Нещо се обърка. Опитайте пак.", r.status, j?.fields, j?.retryIn, j?.left);
   return j as T;
 }
 /** pick the demo or the server implementation */
-const pick = <A extends unknown[], T>(demo: (c: Core, ...a: A) => Promise<T>, server: (...a: A) => Promise<T>) =>
+export const pick = <A extends unknown[], T>(demo: (c: Core, ...a: A) => Promise<T>, server: (...a: A) => Promise<T>) =>
   (...a: A): Promise<T> => (DEMO ? local((c) => demo(c, ...a)) : server(...a));
-const demoTok = (k: "staff" | "user") => { try { return localStorage.getItem(k === "staff" ? "sc-demo-staff" : "sc-demo-user"); } catch { return null; } };
-const setDemoTok = (k: "staff" | "user", v: string | null) => { try { const n = k === "staff" ? "sc-demo-staff" : "sc-demo-user"; v ? localStorage.setItem(n, v) : localStorage.removeItem(n); } catch { /* ignore */ } };
+export const demoTok = (k: "staff" | "user") => { try { return localStorage.getItem(k === "staff" ? "sc-demo-staff" : "sc-demo-user"); } catch { return null; } };
+export const setDemoTok = (k: "staff" | "user", v: string | null) => { try { const n = k === "staff" ? "sc-demo-staff" : "sc-demo-user"; v ? localStorage.setItem(n, v) : localStorage.removeItem(n); } catch { /* ignore */ } };
 
 /* "sc-user": the prototype key that SC.user() and the pages read (name, phone, consents). */
 function rememberUser(c: Customer | null) {
@@ -298,35 +300,6 @@ export const api = {
       async (id) => { const r = await http<Customer>("DELETE", "me/addresses/" + encodeURIComponent(id)); rememberUser(r); return r; }),
     addresses: async () => ((await api.auth.me())?.addrs || []),
     toggleFav: pick(async (c, id: string) => { const u = await c.customers.bySession(demoTok("user")); if (!u) throw noAuth(); return c.customers.toggleFav(u.id, id); }, (id) => http<Customer>("POST", "me/favorites", { id })),
-  },
-
-  /* staff sign-in (server: scrypt + httpOnly cookie; demo: PBKDF2 hashes from the build, token in localStorage) */
-  staff: {
-    login: pick(async (c, username: string, password: string) => { const r = await c.staff.login(username, password); setDemoTok("staff", r.token); return { user: r.user as unknown }; }, (username, password) => http<{ user: unknown }>("POST", "auth/login", { username, password })),
-    logout: pick(async (c) => { const t = demoTok("staff"); if (t) await c.staff.logout(t); setDemoTok("staff", null); return { ok: true }; }, () => http<{ ok: boolean }>("POST", "auth/logout")),
-    me: pick((c) => c.staff.bySession(demoTok("staff")), () => http<unknown>("GET", "auth/me")),
-  },
-
-  /* admin (the server checks the role x section matrix; the demo checks the session only) */
-  admin: {
-    orders: pick((c, s?: OrderStatus) => c.orders.list(s ? { status: s } : {}), (s) => http<Order[]>("GET", "admin/orders" + (s ? "?status=" + s : ""))),
-    setOrderStatus: pick((c, no: string, s: OrderStatus) => c.orders.setStatus(no, s, "demo"), (no, s) => http<Order>("PATCH", "admin/orders/" + no, { status: s })),
-    reservations: pick((c) => c.reservations.list(), () => http<Reservation[]>("GET", "admin/reservations")),
-    setReservationStatus: pick((c, id: string, s: ReservationStatus) => c.reservations.setStatus(id, s, "demo"), (id, s) => http<Reservation>("PATCH", "admin/reservations/" + id, { status: s })),
-    /** kitchen "Натоварено" + minutes, reservation length */
-    settings: pick((c) => c.settings.get(), () => http<Settings>("GET", "admin/settings")),
-    setSettings: pick((c, p: SettingsPatch) => c.settings.update(p, "demo"), (p) => http<Settings>("PATCH", "admin/settings", p)),
-    /** "Изчерпано днес" for one dish (kitchen, menu, lunch menu); only for today */
-    setSoldOut: pick((c, id: string, out: boolean) => c.menu.setSoldOut(id, out, "demo"), (id, out) => http<{ id: string; out: boolean }>("PUT", "admin/menu/" + encodeURIComponent(id) + "/sold-out", { out })),
-    staff: pick((c) => c.staff.list(), () => http<unknown[]>("GET", "admin/staff")),
-    roles: pick((c) => c.staff.roles(), () => http<unknown[]>("GET", "admin/roles")),
-    setRole: pick((c, id: Parameters<Core["staff"]["setRole"]>[0], sections: string[]) => c.staff.setRole(id, sections, "demo"), (id, sections) => http<unknown>("PUT", "admin/roles/" + id, { sections })),
-    notes: pick((c, f: { status?: NoteStatus; module?: string } = {}) => c.notes.list(f), (f = {}) => http<unknown[]>("GET", "admin/notes?" + new URLSearchParams(f as Record<string, string>))),
-    createNote: pick(async (c, n: NoteInput) => { const s = await c.staff.bySession(demoTok("staff")); return c.notes.create(n, s ? s.user.username : "demo"); }, (n) => http<unknown>("POST", "admin/notes", n)),
-    setNoteStatus: pick((c, id: string, s: NoteStatus) => c.notes.setStatus(id, s, "demo"), (id, s) => http<unknown>("PATCH", "admin/notes/" + id, { status: s })),
-    deleteNote: pick(async (c, id: string) => { await c.notes.remove(id, "demo"); return { ok: true }; }, (id) => http<{ ok: boolean }>("DELETE", "admin/notes/" + id)),
-    audit: pick((c) => c.audit.list(), () => http<unknown[]>("GET", "admin/audit")),
-    feedback: pick((c) => c.feedback.list(), () => http<Feedback[]>("GET", "admin/feedback")),
   },
 
   /** Follow an order / office order in real time without reading it first (api.orders.get / api.office.* do it themselves). */

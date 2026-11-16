@@ -12,6 +12,7 @@ import * as settings from "./settings.ts";
 import * as feedback from "./feedback.ts";
 import * as menu from "./menu.ts";
 import * as push from "./push.ts";
+import * as adminMod from "./admin.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -23,7 +24,10 @@ export { normCode, CODE_MSG } from "./codes.ts";
 export { DEFAULT_SETTINGS } from "./settings.ts";
 export { outNow, type SoldOutToday, type SoldOutDoc } from "./menu.ts";
 export { FEEDBACK_MSG, type Feedback, type FeedbackInput } from "./feedback.ts";
-export { SECTIONS, DEFAULT_ROLES } from "./staff.ts";
+export { SECTIONS, ALL_SECTIONS, DEFAULT_ROLES, ROLE_IDS, STAFF_APP, homeOf, LOGIN_MAX_FAILS, type StaffCtx, type PublicStaff } from "./staff.ts";
+export { NOTE_MSG, scrubPersonal, isSiteUrl, type NoteInput, type NoteFilter } from "./notes.ts";
+export { NO_SHOW_LIMIT } from "./reservations.ts";
+export { normKey, maskPhone, type Summary, type SearchHit, type SearchAnswer } from "./admin.ts";
 export { BLOCKED_DEMO_PHONE } from "./reservations.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;
@@ -56,9 +60,13 @@ export function createCore(ctx: Ctx) {
     ratings: bind(ctx, { submit: codes.submitRating }),
     staff: bind(ctx, {
       login: staff.staffLogin, bySession: staff.staffBySession, logout: staff.staffLogout, list: staff.listStaff, upsert: staff.upsertStaff,
-      roles: staff.roles, can: staff.can, setRole: staff.setRoleSections,
+      roles: staff.roles, can: staff.can, setRole: staff.setRoleSections, guard: staff.guard,
     }),
-    notes: bind(ctx, { create: notes.createNote, list: notes.listNotes, setStatus: notes.setNoteStatus, remove: notes.deleteNote }),
+    notes: bind(ctx, {
+      create: notes.createNote, suggest: notes.suggestNote, list: notes.listNotes, mine: notes.myNotes, approved: notes.approvedNotes,
+      setStatus: notes.setNoteStatus, remove: notes.deleteNote, restore: notes.restoreNote, waiting: notes.notesWaiting, seen: notes.markNotesSeen,
+    }),
+    admin: bind(ctx, { summary: adminMod.summary, search: adminMod.search }),
     audit: bind(ctx, { log: auditMod.audit, list: auditMod.listAudit }),
   };
 }

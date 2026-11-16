@@ -38,7 +38,7 @@ export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
   notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback", bonusUsed: "bonus_used",
-  push: "push_subs",
+  push: "push_subs", notesSeen: "notes_seen", blocks: "noshow_blocks", loginFails: "login_fails",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }

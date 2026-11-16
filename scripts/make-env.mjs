@@ -12,10 +12,12 @@ function vapid() {
   return [`VAPID_PUBLIC_KEY=${e.getPublicKey().toString("base64url")}`, `VAPID_PRIVATE_KEY=${e.getPrivateKey().toString("base64url")}`];
 }
 if (fs.existsSync(file)) {
-  const have = fs.readFileSync(file, "utf8");
-  if (/^VAPID_PRIVATE_KEY=/m.test(have)) { console.log(".env exists, left as is"); process.exit(0); }
-  fs.appendFileSync(file, (have.endsWith("\n") ? "" : "\n") + "# Web Push (order status). Secret: never commit.\n" + vapid().join("\n") + "\n");
-  console.log(".env exists: added the VAPID keys for Web Push (the rest is left as is)");
+  let have = fs.readFileSync(file, "utf8");
+  const added = [];
+  const add = (text) => { have += (have.endsWith("\n") ? "" : "\n") + text + "\n"; fs.writeFileSync(file, have, { mode: 0o600 }); };
+  if (!/^VAPID_PRIVATE_KEY=/m.test(have)) { add("# Web Push (order status). Secret: never commit.\n" + vapid().join("\n")); added.push("the VAPID keys for Web Push"); }
+  if (!/^MARKETING_PASSWORD=/m.test(have)) { add(`MARKETING_PASSWORD=${pw()}`); added.push("the marketing account"); }
+  console.log(added.length ? ".env exists: added " + added.join(" and ") + " (the rest is left as is)" : ".env exists, left as is");
   process.exit(0);
 }
 const body = [
@@ -30,6 +32,7 @@ const body = [
   `WAITER_PASSWORD=${pw()}`,
   `KITCHEN_PASSWORD=${pw()}`,
   `DRIVER_PASSWORD=${pw()}`,
+  `MARKETING_PASSWORD=${pw()}`,
   "# Web Push (order status). Secret: never commit.",
   ...vapid(),
   "",

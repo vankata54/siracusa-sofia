@@ -135,15 +135,29 @@ export interface Settings {
   updatedAt?: Iso;
 }
 
-export type NoteStatus = "new" | "doing" | "done";
+/** decision 15.11.2026: new -> approved -> doing -> review -> published, or rejected (with a reason). Only the role admin changes it. */
+export type NoteStatus = "new" | "approved" | "doing" | "review" | "published" | "rejected";
+export const NOTE_STATUSES: NoteStatus[] = ["new", "approved", "doing", "review", "published", "rejected"];
+/** who wrote it: a staff member (role + username) or a customer from the site ("Предложи подобрение", no sign-in) */
+export type NoteSource = { type: "staff"; role: RoleId; user: string } | { type: "client" };
 export interface FeedbackNote {
   id: string; module: string; url: string; selector: string; editId?: string | null; text: string; elementText?: string;
   viewport: { w: number; h: number }; screenshot?: string | null; author: string; status: NoteStatus; createdAt: Iso; updatedAt: Iso;
+  source?: NoteSource;
+  /** why it was rejected (required for "rejected") */
+  reason?: string;
+  /** what was changed, shown in "За преглед" (filled by the session that did the work) */
+  change?: { summary: string; before?: string; after?: string } | null;
+  history?: { status: NoteStatus; at: Iso; who: string }[];
 }
+/** the moment a staff member last opened "Бележки" / "Моите препоръки" (the badge counts what changed after it) */
+export interface NotesSeen { id: string; at: Iso }
+/** no-shows of one phone (id = the phone): "pending" after 2 (the manager decides), "blocked", "cleared" */
+export interface NoShowBlock { id: string; name: string; count: number; status: "pending" | "blocked" | "cleared"; at: Iso; by?: string }
 
 export type RoleId = "admin" | "owner" | "manager" | "waiter" | "kitchen" | "driver" | "marketing";
 export interface Role { id: RoleId; n: string; desc: string; sections: string[] }
-export interface StaffUser { id: string; username: string; name: string; role: RoleId; salt: string; hash: string; algo: "scrypt" | "pbkdf2"; active: boolean; createdAt: Iso }
+export interface StaffUser { id: string; username: string; name: string; role: RoleId; salt: string; hash: string; algo: "scrypt" | "pbkdf2"; active: boolean; createdAt: Iso; updatedAt?: Iso }
 export interface Session { id: string; kind: "staff" | "customer"; userId: string; role?: RoleId; expiresAt: number; createdAt: Iso }
 
 export interface AuditEntry { id: string; at: Iso; actor: string; action: string; target?: string; data?: unknown }

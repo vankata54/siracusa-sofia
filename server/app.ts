@@ -11,7 +11,7 @@ import { openDb, seedMenu, readMenu } from "./db/index.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { webPushSender, type Vapid } from "./push.ts";
 import { scryptHasher } from "./hasher.ts";
-import { createCore, CoreError, officeDueAt, publicOrder, PUSH_MSG, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus, type PushSender } from "../src/core/index.ts";
+import { createCore, CoreError, homeOf, officeDueAt, publicOrder, PUSH_MSG, rid, type Audience, type Core, type Ctx, type OfficeOrder, type RoleId, type NoteStatus, type OrderStatus, type ReservationStatus, type PushSender } from "../src/core/index.ts";
 import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events-json.ts";
@@ -80,25 +80,33 @@ export function createApp(opts: AppOpts) {
   };
   const app = new Hono();
   const dist = path.resolve(opts.distDir);
+  /* the site's own pages (every folder of dist/ with an index.html, without the admin): "Предложи подобрение" accepts only these */
+  let routesCache: string[] | null = null;
+  const siteRoutes = (): string[] => {
+    if (routesCache) return routesCache;
+    const out: string[] = [];
+    const walk = (dir: string, rel: string) => {
+      let list: fs.Dirent[] = [];
+      try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      if (list.some((e) => e.isFile() && e.name === "index.html")) out.push(rel || "/");
+      for (const e of list) if (e.isDirectory() && !e.name.startsWith("_") && !(rel === "" && e.name === "admin")) walk(path.join(dir, e.name), (rel || "") + "/" + e.name + "/".slice(0, 0));
+    };
+    walk(dist, "");
+    routesCache = out.map((r) => (r.endsWith("/") ? r : r + "/"));
+    return routesCache;
+  };
 
   /* ---------- helpers ---------- */
   const cookieOpts = { httpOnly: true, sameSite: "Lax" as const, secure: !!opts.secure, path: "/" };
   const body = async (c: Context) => { try { return await c.req.json(); } catch { return {}; } };
-  /** section: one section, or a list (any of them is enough) */
-  async function staff(c: Context, section?: string | string[]) {
-    const s = await core.staff.bySession(getCookie(c, STAFF_COOKIE));
-    if (!s) throw new CoreError("auth", "Влезте отново.", 401);
-    const need = section ? (Array.isArray(section) ? section : [section]) : [];
-    if (need.length && !(s.user.role === "admin" || need.some((x) => s.sections.includes(x)))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
-    return s;
-  }
+  /** section: one section, or a list (any of them is enough); adminOnly: the role admin only. The check is in the core
+      (staff.guard), the same one the demo uses. */
+  const staff = (c: Context, section?: string | string[], adminOnly = false) => core.staff.guard(getCookie(c, STAFF_COOKIE), section, adminOnly);
   async function customer(c: Context) {
     const u = await core.customers.bySession(getCookie(c, USER_COOKIE));
     if (!u) throw new CoreError("auth", "Влезте с телефона си.", 401);
     return u;
   }
-  /* login throttling: 10 failed attempts per IP per 15 min */
-  const fails = new Map<string, { n: number; until: number }>();
   /* the client's address: X-Forwarded-For only behind our own proxy (TRUST_PROXY=1), else the socket's address
      (a header from the internet could be anything) */
   const ip = (c: Context): string => {
@@ -110,7 +118,7 @@ export function createApp(opts: AppOpts) {
   };
 
   app.onError((err, c) => {
-    if (err instanceof CoreError) { const x = err as CoreError & { fields?: unknown; retryIn?: number }; return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}) }, err.status as 400); }
+    if (err instanceof CoreError) { const x = err as CoreError & { fields?: unknown; retryIn?: number; left?: number }; return c.json({ error: err.code, message: err.message, fields: x.fields, ...(x.retryIn != null ? { retryIn: x.retryIn } : {}), ...(x.left != null ? { left: x.left } : {}) }, err.status as 400); }
     console.error(err);
     return c.json({ error: "server", message: "Нещо се обърка. Опитайте пак." }, 500);
   });
@@ -196,9 +204,13 @@ export function createApp(opts: AppOpts) {
     }
   });
   app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {})); });
+  /* the status by section: "Поръчки" any step; the kitchen only "Готви се" / "Готова"; the driver only "На път" / "Доставена" */
+  const ORDER_STEP: Record<string, OrderStatus[]> = { kitchen: ["cooking", "ready"], driver: ["on_way", "delivered"] };
   app.patch("/api/admin/orders/:no", async (c) => {
-    const s = await staff(c); const b = await body(c);
-    return c.json(await core.orders.setStatus(c.req.param("no"), b.status, s.user.username));
+    const b = await body(c), st = b.status as OrderStatus;
+    const s = await staff(c, ["orders", ...Object.keys(ORDER_STEP).filter((k) => ORDER_STEP[k].includes(st))]);
+    if (!(s.user.role === "admin" || s.sections.includes("orders")) && !Object.keys(ORDER_STEP).some((k) => s.sections.includes(k) && ORDER_STEP[k].includes(st))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+    return c.json(await core.orders.setStatus(c.req.param("no"), st, s.user.username));
   });
 
   /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */
@@ -210,9 +222,10 @@ export function createApp(opts: AppOpts) {
   });
   app.patch("/api/admin/settings", async (c) => {
     const b = await body(c);
-    const s = await staff(c, b.resMinutes != null ? "reservations" : "kitchen");
-    if (b.resMinutes != null && b.kitchen) await staff(c, "kitchen");
-    if ((b.celebrationPrice != null || b.earlyDays !== undefined) && !(s.user.role === "admin" || s.sections.includes("offers"))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+    /* "Настройки" changes everything here; without it: the kitchen its minutes, "Резервации" the table hold, "Оферти" the celebration */
+    const s = await staff(c, ["settings", b.resMinutes != null ? "reservations" : "kitchen"]);
+    const has = (x: string) => s.user.role === "admin" || s.sections.includes("settings") || s.sections.includes(x);
+    if ((b.kitchen && !has("kitchen")) || (b.resMinutes != null && !has("reservations")) || ((b.celebrationPrice != null || b.earlyDays !== undefined) && !has("offers"))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
     return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays }, s.user.username));
   });
 
@@ -326,32 +339,49 @@ export function createApp(opts: AppOpts) {
   app.delete("/api/me/addresses/:id", async (c) => { const u = await customer(c); return c.json(await core.customers.removeAddress(u.id, c.req.param("id"))); });
 
   /* ---------- staff sign-in ---------- */
+  /* the lockout (10 wrong per username and per address, 15 min) is in the core (staff.ts), the same in the demo */
   app.post("/api/auth/login", async (c) => {
-    const key = ip(c), f = fails.get(key);
-    if (f && f.n >= 10 && f.until > Date.now()) throw new CoreError("throttled", "Твърде много опити. Опитайте след 15 минути.", 429);
     const b = await body(c);
-    try {
-      const r = await core.staff.login(b.username, b.password);
-      fails.delete(key);
-      setCookie(c, STAFF_COOKIE, r.token, { ...cookieOpts, maxAge: 12 * 3600 });
-      return c.json({ user: r.user });
-    } catch (e) {
-      const cur = fails.get(key);
-      fails.set(key, { n: (cur && cur.until > Date.now() ? cur.n : 0) + 1, until: Date.now() + 15 * 60_000 });
-      throw e;
-    }
+    const r = await core.staff.login(b.username, b.password, ip(c));
+    setCookie(c, STAFF_COOKIE, r.token, { ...cookieOpts, maxAge: 12 * 3600 });
+    return c.json({ user: r.user, home: r.home });
   });
   app.post("/api/auth/logout", async (c) => { const t = getCookie(c, STAFF_COOKIE); if (t) await core.staff.logout(t); deleteCookie(c, STAFF_COOKIE, { path: "/" }); return c.json({ ok: true }); });
-  app.get("/api/auth/me", async (c) => c.json(await core.staff.bySession(getCookie(c, STAFF_COOKIE))));
+  app.get("/api/auth/me", async (c) => { const s = await core.staff.bySession(getCookie(c, STAFF_COOKIE)); return c.json(s ? { ...s, home: homeOf(s.user.role) } : null); });
 
   /* ---------- admin ---------- */
   app.get("/api/admin/staff", async (c) => { await staff(c, "staff"); return c.json(await core.staff.list()); });
   app.get("/api/admin/roles", async (c) => { await staff(c); return c.json(await core.staff.roles()); });
-  app.put("/api/admin/roles/:id", async (c) => { const s = await staff(c, "roles"); return c.json(await core.staff.setRole(c.req.param("id") as RoleId, (await body(c)).sections || [], s.user.username)); });
-  app.get("/api/admin/notes", async (c) => { await staff(c, "notes"); return c.json(await core.notes.list({ status: c.req.query("status") as NoteStatus | undefined, module: c.req.query("module") })); });
-  app.post("/api/admin/notes", async (c) => { const s = await staff(c, "notes"); return c.json(await core.notes.create(await body(c), s.user.username), 201); });
-  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, "notes"); return c.json(await core.notes.setStatus(c.req.param("id"), (await body(c)).status, s.user.username)); });
-  app.delete("/api/admin/notes/:id", async (c) => { const s = await staff(c, "notes"); await core.notes.remove(c.req.param("id"), s.user.username); return c.json({ ok: true }); });
+  /* the role x section matrix: only the main admin changes it (decision 15.11.2026); "Роли и права" lets others look */
+  app.put("/api/admin/roles/:id", async (c) => { const s = await staff(c, "roles", true); return c.json(await core.staff.setRole(c.req.param("id") as RoleId, (await body(c)).sections || [], s.user.username)); });
+  /* the dashboard: "Чака те", "Днес" (and "Днес: X € от N поръчки" for the owner and the main admin), the badges */
+  app.get("/api/admin/summary", async (c) => c.json(await core.admin.summary(await staff(c))));
+  app.get("/api/admin/search", async (c) => c.json(await core.admin.search(await staff(c), c.req.query("q") || "")));
+  /* notes: every staff member writes recommendations and sees his own; the section "Бележки" sees all;
+     the status (approve, run, publish, reject), delete and restore are for the role admin only */
+  app.get("/api/admin/notes", async (c) => {
+    await staff(c, "notes");
+    const st = c.req.query("status") as NoteStatus | undefined;
+    return c.json(st === "approved" ? await core.notes.approved() : await core.notes.list({ status: st, module: c.req.query("module"), source: c.req.query("source") }));
+  });
+  app.get("/api/admin/notes/mine", async (c) => c.json(await core.notes.mine(await staff(c))));
+  app.get("/api/admin/notes/waiting", async (c) => c.json(await core.notes.waiting(await staff(c))));
+  app.post("/api/admin/notes/seen", async (c) => c.json(await core.notes.seen(await staff(c))));
+  /* docs/NOTES.json: the approved ones only (what the next session works on) */
+  app.get("/api/admin/notes/export", async (c) => { await staff(c, "notes"); c.header("Content-Disposition", 'attachment; filename="NOTES.json"'); return c.json(await core.notes.approved()); });
+  app.post("/api/admin/notes", async (c) => { const s = await staff(c); return c.json(await core.notes.create(await body(c), s), 201); });
+  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); const b = await body(c); return c.json(await core.notes.setStatus(c.req.param("id"), b.status, s.user.name, { reason: b.reason, change: b.change })); });
+  app.delete("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); return c.json({ ok: true, note: await core.notes.remove(c.req.param("id"), s.user.username) }); });
+  app.post("/api/admin/notes/restore", async (c) => { const s = await staff(c, undefined, true); return c.json(await core.notes.restore((await body(c)).note, s.user.username), 201); });
+  /* "Предложи подобрение" on the site: no sign-in; only addresses of the site's own pages; personal data filtered in the
+     core; at most 3 an hour per device (cookie sc_dev) and per IP (behind a proxy TRUST_PROXY=1 is a must) */
+  app.post("/api/notes/suggest", async (c) => {
+    let dev: string = getCookie(c, "sc_dev") || "";
+    if (!/^[0-9a-f]{16,32}$/.test(dev)) { dev = rid(12); setCookie(c, "sc_dev", dev, { ...cookieOpts, maxAge: 365 * 24 * 3600 }); }
+    const msg = "Благодарим! Вече получихме няколко предложения от вас. Можете да пишете пак след час.";
+    const undos = [limit("sug-ip:" + ip(c), 3, 60, msg), limit("sug-dev:" + dev, 3, 60, msg)];
+    return c.json(await counted(undos, async () => core.notes.suggest(await body(c), siteRoutes())), 201);
+  });
   app.get("/api/admin/audit", async (c) => { await staff(c, "audit"); return c.json(await core.audit.list()); });
 
   /* ---------- real time ----------

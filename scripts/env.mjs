@@ -18,6 +18,7 @@ export const STAFF = [
   ["waiter", "Сервитьор", "waiter", "WAITER_PASSWORD"],
   ["kitchen", "Кухня", "kitchen", "KITCHEN_PASSWORD"],
   ["driver", "Шофьор", "driver", "DRIVER_PASSWORD"],
+  ["marketing", "Маркетинг", "marketing", "MARKETING_PASSWORD"],
 ];
 export function staffFromEnv(env) {
   return STAFF.map(([u, name, role, key]) => ({ username: u === "ADMIN_USER" ? env.ADMIN_USER || "admin" : u, name, role, password: env[key] }))

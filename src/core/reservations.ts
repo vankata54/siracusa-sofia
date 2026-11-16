@@ -3,7 +3,7 @@
    in the past), people not more than the table's seats; the table is held for `resMinutes` (setting, default 120, owner to
    confirm), so two bookings of one table must not overlap. create returns a secret `key` for get / cancel (link from SMS). */
 import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
-import { CoreError, type Celebration, type Reservation, type ReservationStatus, type Subscription } from "./types.ts";
+import { CoreError, type Celebration, type NoShowBlock, type Reservation, type ReservationStatus, type Subscription } from "./types.ts";
 import { audit } from "./audit.ts";
 import { normPhone, hhmm } from "../lib/format.ts";
 import { EVENT_CATS } from "../lib/consts.ts";
@@ -154,11 +154,24 @@ export async function cancelReservation(ctx: Ctx, id: string, key: string): Prom
 export async function setReservationStatus(ctx: Ctx, id: string, status: ReservationStatus, actor = "system"): Promise<Reservation> {
   const r = await ctx.repo.get<Reservation>(COL.reservations, id);
   if (!r) throw new CoreError("not_found", "Няма такава резервация.", 404);
+  const was = r.status;
   r.status = status; r.updatedAt = iso(ctx);
   await ctx.repo.put(COL.reservations, r);
   await audit(ctx, actor, "reservation.status", id, { status });
+  if (status === "no_show" && was !== "no_show") await countNoShow(ctx, r);
   emit(ctx, "reservation.status", { date: r.date, time: r.time, table: r.table, status }, { public: true });
   return r;
+}
+
+/** No-shows of one phone (OPEN-QUESTIONS 8, default: after 2 the manager decides; "Неявили се за решение" on the dashboard). */
+export const NO_SHOW_LIMIT = 2;
+async function countNoShow(ctx: Ctx, r: Reservation): Promise<void> {
+  const phone = normPhone(r.phone);
+  if (!phone) return;
+  const b = (await ctx.repo.get<NoShowBlock>(COL.blocks, phone)) || { id: phone, name: r.name, count: 0, status: "cleared" as const, at: iso(ctx) };
+  b.count += 1; b.name = r.name; b.at = iso(ctx);
+  if (b.count >= NO_SHOW_LIMIT && b.status !== "blocked") b.status = "pending";
+  await ctx.repo.put(COL.blocks, b);
 }
 
 /* ---------- celebration inquiries (калкулатор на празник) ---------- */
