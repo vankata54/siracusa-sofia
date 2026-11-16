@@ -43,8 +43,10 @@ describe("admin: roles, sign-in, guard", () => {
     for (let i = 0; i < 9; i++) await expect(core.staff.login("manager", "x", "2.0.0." + i)).rejects.toMatchObject({ code: "bad_login" });
     await expect(core.staff.login("manager", "x", "2.0.0.9")).rejects.toMatchObject({ code: "throttled", status: 429 });
     await expect(core.staff.login("manager", PW, "3.3.3.3")).rejects.toMatchObject({ code: "throttled" });
-    /* per address: 10 wrong for different usernames lock the address, also for a right password */
+    /* per address: a higher second limit (50), so 10 wrong of colleagues do not lock the restaurant */
     for (let i = 0; i < 10; i++) await core.staff.login("ghost" + i, "x", "4.4.4.4").catch(() => undefined);
+    expect((await core.staff.login("owner", PW, "4.4.4.4")).user.username).toBe("owner");
+    for (let i = 0; i < 41; i++) await core.staff.login("ghost" + i, "x", "4.4.4.4").catch(() => undefined);
     await expect(core.staff.login("owner", PW, "4.4.4.4")).rejects.toMatchObject({ code: "throttled" });
     expect((await core.staff.login("owner", PW, "5.5.5.5")).user.username).toBe("owner");
     /* the last attempts say how many are left */
@@ -66,8 +68,9 @@ describe("admin: notes and recommendations", () => {
     await expect(core.notes.setStatus(a.id, "rejected", "Главен админ")).rejects.toMatchObject({ code: "invalid", fields: { reason: expect.any(String) } });
     await core.notes.setStatus(a.id, "approved", "Главен админ");
     expect((await core.notes.approved()).map((n) => n.id)).toEqual([a.id]);
+    await core.notes.setStatus(a.id, "doing", "Главен админ");
     const b = await core.notes.setStatus(a.id, "review", "Главен админ", { change: { summary: "Заглавието е 32 px", before: "28 px", after: "32 px" } });
-    expect(b.history!.map((h) => h.status)).toEqual(["new", "approved", "review"]);
+    expect(b.history!.map((h) => h.status)).toEqual(["new", "approved", "doing", "review"]);
     expect(b.change).toMatchObject({ summary: "Заглавието е 32 px" });
     await expect(core.notes.setStatus(a.id, "done" as never, "x")).rejects.toMatchObject({ code: "bad_status" });
     expect((await core.notes.list({ source: "waiter" })).length).toBe(1);
@@ -98,7 +101,7 @@ describe("admin: notes and recommendations", () => {
     const routes = ["/", "/menu/", "/menu/pitsi/"];
     expect(isSiteUrl("/menu/pitsi/#x", routes)).toBe(true);
     expect(isSiteUrl("/menu/pitsi", routes)).toBe(true);
-    expect(isSiteUrl("/porachka/1042-abc/", routes)).toBe(true);
+    expect(isSiteUrl("/porachka/1042-abcd23/", routes)).toBe(true);
     for (const bad of ["/admin/", "/api/x", "https://evil.com/", "//evil.com/", "/nope/"]) expect(isSiteUrl(bad, routes)).toBe(false);
     const core = mk();
     const r = await core.notes.suggest({ ...note, url: "/menu/", text: "Пишете ми на ivan@abv.bg", elementText: "0888123456" }, routes);
@@ -158,7 +161,7 @@ describe("admin: dashboard and search by role", () => {
 });
 
 describe("admin: server routes", async () => {
-  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true });
+  const { app, core } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true, routes: ["/", "/menu/", "/kontakti/"] });
   for (const [u, r] of [["admin", "admin"], ["waiter", "waiter"], ["owner", "owner"]] as const) await core.staff.upsert({ username: u, name: u, role: r, password: PW });
   const json = (method: string, body?: unknown, cookie?: string, ip = "10.0.0.1") => ({ method, headers: { "content-type": "application/json", "x-forwarded-for": ip, ...(cookie ? { cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
   const login = async (u: string, ip = "10.0.0.1") => { const r = await app.request("/api/auth/login", json("POST", { username: u, password: PW }, undefined, ip)); return { body: await r.json(), cookie: r.headers.get("set-cookie")!.split(";")[0] }; };
@@ -188,7 +191,7 @@ describe("admin: server routes", async () => {
     await core.staff.upsert({ username: "kitchen", name: "Кухня", role: "kitchen", password: PW });
     const k = await login("kitchen");
     const o = await core.orders.create({ cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] } as never, name: "Клиент 4", phone: "0888123499", pay: "cash", sched: "утре", slot: "12:00" });
-    expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cancelled" }, k.cookie))).status).toBe(403);
+    expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cancelled" }, k.cookie))).status).toBe(409);
     expect((await app.request("/api/admin/orders/" + o.no, json("PATCH", { status: "cooking" }, k.cookie))).status).toBe(200);
   });
 
@@ -197,6 +200,7 @@ describe("admin: server routes", async () => {
     const r = await send("20.0.0.1");
     expect(r.status).toBe(201);
     expect((await send("20.0.0.2", "/admin/")).status).toBe(422);
+    expect((await send("20.0.0.2", "/servitor/")).status).toBe(422);
     expect((await send("20.0.0.1")).status).toBe(201);
     expect((await send("20.0.0.1")).status).toBe(201);
     const four = await send("20.0.0.1");
@@ -212,5 +216,79 @@ describe("admin: server routes", async () => {
     const r = await app.request("/api/auth/login", json("POST", { username: "lock", password: PW }, undefined, "31.0.0.1"));
     expect(r.status).toBe(429);
     expect((await r.json()).message).toBe("Твърде много опити. Опитайте след 15 минути.");
+  });
+});
+
+describe("admin: after the flows review (round 1)", () => {
+  it("parallel wrong attempts cannot slip past the lockout", async () => {
+    const core = mk(); await people(core);
+    const r = await Promise.allSettled(Array.from({ length: 30 }, (_, i) => core.staff.login("kitchen", "wrong-" + i, "7.0.0." + i)));
+    const codes = r.map((x) => (x.status === "rejected" ? (x.reason as { code: string }).code : "ok"));
+    expect(codes.filter((c) => c === "bad_login").length).toBeLessThanOrEqual(9);
+    expect(codes.filter((c) => c === "throttled").length).toBeGreaterThanOrEqual(21);
+  });
+
+  it("personal data in any script and with separators; the order key and the query never stay", async () => {
+    for (const x of ["０８８８１２３４５６", "٠٨٨٨١٢٣٤٥٦", "088８123456", "+359 (888) 12-34-56", "0888 - 123 - 456", "0888\u2013123\u2013456"]) expect(scrubPersonal("т: " + x)).toBe("т: [телефон]");
+    for (const x of ["ivan @ abv.bg", "ivan＠abv.bg", "ivan@abv . bg"]) expect(scrubPersonal(x)).toBe("[имейл]");
+    expect(scrubPersonal("На 15.11.2026 в 19:00, 12,50 €")).toBe("На 15.11.2026 в 19:00, 12,50 €");
+    const core = mk(); const { s } = await people(core);
+    const routes = ["/", "/menu/"];
+    await core.notes.suggest({ ...note, url: "/porachka/1042-75p5eqmf/#x", text: "Добре" }, routes);
+    await core.notes.suggest({ ...note, url: "/menu/?phone=0888123456#tel0888123456", selector: 'a[href="tel:0888 123 456"]', editId: "0888123456", text: "Добре" }, routes);
+    const l = await core.notes.list({ source: "client" });
+    expect(l.map((n) => n.url).sort()).toEqual(["/menu/", "/porachka/"]);
+    const m = l.find((n) => n.url === "/menu/")!;
+    expect(m.selector).toBe('a[href="tel:[телефон]"]');
+    expect(m.editId).toBe("[телефон]");
+    await expect(core.notes.suggest({ ...note, url: "/porachka/<img src=x onerror=alert(1)>/" }, routes)).rejects.toMatchObject({ code: "invalid" });
+    /* staff: only a path of the site, only png / jpeg / webp screenshots; the order key goes */
+    const w = await s("driver" as never).catch(() => s("waiter"));
+    await expect(core.notes.create({ ...note, url: "javascript:alert(1)" }, w)).rejects.toMatchObject({ code: "invalid" });
+    await expect(core.notes.create({ ...note, url: "//evil.com/x" }, w)).rejects.toMatchObject({ code: "invalid" });
+    const sv = await core.notes.create({ ...note, screenshot: "data:image/svg+xml,<svg onload=alert(1)>" }, w);
+    expect(sv.screenshot).toBeNull();
+    const k = await core.notes.create({ ...note, url: "/porachka/1042-75p5eqmf/" }, w);
+    expect(k.url).toBe("/porachka/");
+    const h = await core.notes.create({ ...note, url: "/admin/notes/#s=new" }, w);
+    expect(h.url).toBe("/admin/notes/#s=new");
+  });
+
+  it("the note steps go in order; restore checks the note like a new one", async () => {
+    const core = mk(); const { s } = await people(core);
+    const n = await core.notes.create(note, await s("waiter"));
+    await expect(core.notes.setStatus(n.id, "published", "admin")).rejects.toMatchObject({ code: "bad_step", status: 409 });
+    await core.notes.setStatus(n.id, "approved", "admin", { who: "Главен админ" });
+    await core.notes.setStatus(n.id, "new", "admin");
+    const a = await core.notes.setStatus(n.id, "approved", "admin", { who: "Главен админ" });
+    expect(a.history!.at(-1)!.who).toBe("Главен админ");
+    await expect(core.notes.restore({ id: "zz1", status: "new" } as never, "admin")).rejects.toMatchObject({ code: "invalid" });
+    const gone = await core.notes.remove(n.id, "admin");
+    const back = await core.notes.restore({ ...gone!, url: "javascript:x" }, "admin").catch((e) => e);
+    expect(back).toMatchObject({ code: "invalid" });
+    expect((await core.notes.restore(gone!, "admin")).status).toBe("approved");
+  });
+
+  it("order steps by section: the kitchen never brings back a cancelled order; the way back with Отмени", async () => {
+    const core = mk(); const { s } = await people(core);
+    const o = await core.orders.create({ cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] } as never, name: "Клиент 5", phone: "0888123477", pay: "cash" });
+    const kit = await s("kitchen"), man = await s("manager");
+    await expect(core.orders.setStatus(o.no, "ready", "kitchen", kit)).rejects.toMatchObject({ code: "bad_step" });
+    await core.orders.setStatus(o.no, "cooking", "kitchen", kit);
+    await core.orders.setStatus(o.no, "cancelled", "manager", man);
+    await expect(core.orders.setStatus(o.no, "cooking", "kitchen", kit)).rejects.toMatchObject({ code: "bad_step" });
+    await expect(core.orders.setStatus(o.no, "ready", "manager", man)).rejects.toMatchObject({ code: "bad_step" });
+    expect((await core.orders.setStatus(o.no, "cooking", "manager", man)).status).toBe("cooking");
+    await expect(core.orders.setStatus(o.no, "picked_up", "manager", man)).rejects.toMatchObject({ code: "bad_step" });
+  });
+
+  it("server: the real address is the last X-Forwarded-For; Origin null is 403; a big body is 413", async () => {
+    const { app } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, trustProxy: true, routes: ["/"] });
+    const send = (i: number) => app.request("/api/notes/suggest", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "10.9.9." + i + ", 203.0.113.7" }, body: JSON.stringify({ ...note, url: "/", text: "Добре" }) });
+    const st: number[] = [];
+    for (let i = 0; i < 5; i++) st.push((await send(i)).status);
+    expect(st).toEqual([201, 201, 201, 429, 429]);
+    expect((await app.request("/api/notes/suggest", { method: "POST", headers: { "content-type": "application/json", origin: "null" }, body: "{}" })).status).toBe(403);
+    expect((await app.request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json", "content-length": "3000000" }, body: "{}" })).status).toBe(413);
   });
 });

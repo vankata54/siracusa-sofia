@@ -20,6 +20,8 @@ export async function getSettings(ctx: Ctx): Promise<Settings> {
 
 export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number; celebrationPrice?: Settings["celebrationPrice"]; earlyDays?: number | null };
 
+export { settingsAllowed } from "./settings-guard.ts";
+
 export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "system"): Promise<Settings> {
   const cur = await getSettings(ctx);
   const k = { ...cur.kitchen, ...(patch.kitchen || {}) };

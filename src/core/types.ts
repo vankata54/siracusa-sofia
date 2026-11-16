@@ -53,6 +53,8 @@ export interface Order {
   /** changes by the customer (pre-orders only): how many and when the last one was */
   changes?: number;
   changedAt?: Iso;
+  /** the status before "Отказана" (the way back with "Отмени") */
+  prevStatus?: OrderStatus;
   createdAt: Iso;
   updatedAt: Iso;
 }

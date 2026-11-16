@@ -116,9 +116,9 @@ describe("pencil notes, staff and roles", () => {
     const n = await core.notes.create({ module: "site", url: "/menu/", selector: "main h1", editId: "menu-h1", text: "По-голямо заглавие", elementText: "Меню", viewport: { w: 390, h: 844 } }, "admin");
     expect(n).toMatchObject({ status: "new", author: "admin", screenshot: null });
     await expect(core.notes.create({ module: "site", url: "/", selector: "", text: " ", viewport: { w: 1, h: 1 } }, "admin")).rejects.toMatchObject({ code: "invalid" });
-    await core.notes.setStatus(n.id, "doing", "admin");
+    await core.notes.setStatus(n.id, "approved", "admin");
     expect(await core.notes.list({ status: "new" })).toHaveLength(0);
-    expect(await core.notes.list({ status: "doing", module: "site" })).toHaveLength(1);
+    expect(await core.notes.list({ status: "approved", module: "site" })).toHaveLength(1);
     expect(events.map((e) => e[0])).toContain("note.created");
   });
   it("staff login, sessions, role matrix", async () => {

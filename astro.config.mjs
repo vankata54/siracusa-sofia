@@ -43,6 +43,8 @@ export default defineConfig({
           manualChunks(id) {
             const f = id.split("?")[0].replace(/\\/g, "/");
             if (RUNTIME.some((m) => f.endsWith(m))) return "sc";
+            /* the scrub of personal data goes with the pencil's pure part (one chunk, one name less in the runtime's preload list) */
+            if (f.endsWith("/src/core/scrub.ts") || f.endsWith("/src/admin/pen-core.ts")) return "pen-core";
             return undefined;
           },
         },

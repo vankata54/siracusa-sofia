@@ -33,8 +33,9 @@ export function personal(t: string): boolean {
     /[\w.-]{2,}\s*(\(?\s*(at|ат|маймунка|кльомба)\s*\)?)\s*[\w-]{2,}\s*(\.|dot|точка)\s*[a-zа-я]{2,}/i.test(x);
 }
 const hm = (ms: number) => { try { return new Intl.DateTimeFormat("bg-BG", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(ms)); } catch { const d = new Date(ms); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); } };
-/** the address saved with the note: the path of the page (the demo: without "index.html") and its # */
-const urlOf = () => (location.pathname.replace(/index\.html$/, "") || "/") + location.hash;
+/** the address saved with the note: only the path of the page (the demo: without "index.html"); never "?" or "#" (codes,
+    keys) and never the secret key of an order (/porachka/1042-k7f3m2pq/ -> /porachka/); the server checks it again */
+const urlOf = () => (location.pathname.replace(/index\.html$/, "") || "/").replace(/\/porachka\/[^/]+\/?$/, "/porachka/");
 
 /* ---------- the place on the page ---------- */
 type Place = { selector: string; editId: string | null; text: string; kind: string };

@@ -6,10 +6,9 @@
 export const clean = (s: unknown): string => String(s ?? "").replace(/\s+/g, " ").trim();
 
 /* personal data never leaves the browser in a note: the same rules as scrubPersonal() in src/core/notes.ts (the server
-   scrubs again); kept here so this file has no imports */
-const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu;
-const PHONE = /(?:\+|00)?\d(?:[\s().\/-]?\d){7,}/g;
-export const scrub = (s: string): string => String(s || "").replace(EMAIL, "[имейл]").replace(PHONE, "[телефон]");
+   scrubs again); one function for both: src/core/scrub.ts */
+import { scrubPersonal } from "../core/scrub.ts";
+export const scrub = (s: string): string => scrubPersonal(s);
 
 const cls = (el: Element): string => (typeof (el as HTMLElement).className === "string" ? (el as HTMLElement).className : "");
 

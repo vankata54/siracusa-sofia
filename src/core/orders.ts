@@ -206,7 +206,7 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
     return o;
   };
   const o = ctx.repo.transaction ? await ctx.repo.transaction(make) : await make();
-  emit(ctx, "order.created", { no: o.no, mode: o.mode, total: o.total, status: o.status });
+  emit(ctx, "order.created", { no: o.no, mode: o.mode, total: o.total, status: o.status, channel: o.channel });
   return o;
 }
 
@@ -264,11 +264,32 @@ export function nextStatus(o: Pick<Order, "mode" | "status">): OrderStatus | nul
   return i > -1 && i < f.length - 1 ? f[i + 1] : null;
 }
 
-export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system"): Promise<Order> {
+/** Who may move an order from its status to `to` (a staff member from the admin or a module):
+    - "Поръчки": one step forward or back ("Отмени"), "Отказана" from any open status, and back from "Отказана" to the
+      status it had (the way back from a finished order is one step);
+    - "Кухня": only "Приета" -> "Готви се" -> "Готова"; "Шофьор": only "Готова" -> "На път" -> "Доставена".
+    Finished and cancelled orders stay as they are for everyone else. */
+export function stepAllowed(o: Pick<Order, "mode" | "status" | "prevStatus">, to: OrderStatus, s: { user: { role: string }; sections: string[] }): boolean {
+  if (o.status === to) return true;
+  const f = FLOW[o.mode], i = f.indexOf(o.status), j = f.indexOf(to);
+  const has = (x: string) => s.user.role === "admin" || s.sections.includes(x);
+  if (has("orders")) {
+    if (o.status === "cancelled") return to === (o.prevStatus || "accepted");
+    if (to === "cancelled") return !FINISHED.includes(o.status);
+    return i > -1 && j > -1 && Math.abs(i - j) === 1;
+  }
+  const pairs: [string, OrderStatus, OrderStatus][] = [["kitchen", "accepted", "cooking"], ["kitchen", "cooking", "ready"], ["driver", "ready", "on_way"], ["driver", "on_way", "delivered"]];
+  return pairs.some(([sec, a, b]) => has(sec) && o.status === a && to === b && j > -1);
+}
+
+export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system", by?: { user: { role: string }; sections: string[] }): Promise<Order> {
   const o = await getOrder(ctx, no);
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
+  if (by && !stepAllowed(o, status, by)) throw new CoreError("bad_step", "Тази стъпка не е позволена за поръчката сега. Опреснете страницата.", 409);
   const now = iso(ctx);
+  if (status === "cancelled" && o.status !== "cancelled") o.prevStatus = o.status;
+  else if (status !== "cancelled") delete o.prevStatus;
   o.status = status; o.updatedAt = now; o.times = { ...(o.times || { accepted: o.createdAt }), [status]: now };
   await ctx.repo.put(COL.orders, o);
   await audit(ctx, actor, "order.status", o.no, { status });

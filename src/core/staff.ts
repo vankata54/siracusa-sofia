@@ -84,11 +84,23 @@ export async function upsertStaff(ctx: Ctx, u: { username: string; name: string;
 export type PublicStaff = Omit<StaffUser, "salt" | "hash" | "algo">;
 export function publicStaff(u: StaffUser): PublicStaff { const { salt: _s, hash: _h, algo: _a, ...rest } = u; return rest; }
 
-/* sign-in lockout (decision 15.11.2026): 10 wrong attempts per username AND per address in 15 minutes lock that
-   username / that address for 15 minutes (either is enough). In the core, so the demo locks too. */
-export const LOGIN_MAX_FAILS = 10, LOGIN_LOCK_MIN = 15;
+/* sign-in lockout (decision 15.11.2026): 10 wrong attempts per username in 15 minutes lock that username for 15 minutes;
+   the address has a higher second limit (50: in the restaurant everyone signs in from one address, REVIEW-2 "За кода" 3).
+   In the core, so the demo locks too. Every attempt is counted BEFORE the password check (no await on real I/O between
+   reading and writing the counter), so parallel attempts cannot slip past the limit; a right password gives it back. */
+export const LOGIN_MAX_FAILS = 10, LOGIN_MAX_FAILS_ADDR = 50, LOGIN_LOCK_MIN = 15, PASSWORD_MAX = 256;
 type Fails = { id: string; n: number; first: number; until: number };
 const LOCKED_MSG = "Твърде много опити. Опитайте след 15 минути.";
+const queues = new WeakMap<object, Promise<unknown>>();
+/** run fn after the previous fn on the same store finished (a tiny mutex) */
+async function serial<T>(ctx: Ctx, fn: () => Promise<T>): Promise<T> {
+  const prev = queues.get(ctx.repo) || Promise.resolve();
+  let release!: () => void;
+  const mine = new Promise<void>((r) => { release = r; });
+  queues.set(ctx.repo, prev.then(() => mine));
+  await prev.catch(() => undefined);
+  try { return await fn(); } finally { release(); }
+}
 async function failsOf(ctx: Ctx, id: string): Promise<Fails> {
   const now = nowDate(ctx).getTime(), f = await ctx.repo.get<Fails>(COL.loginFails, id);
   return f && (f.until > now || f.first > now - LOGIN_LOCK_MIN * 60_000) ? f : { id, n: 0, first: now, until: 0 };
@@ -97,21 +109,29 @@ async function failsOf(ctx: Ctx, id: string): Promise<Fails> {
 export async function staffLogin(ctx: Ctx, username: string, password: string, addr = "local"): Promise<{ token: string; user: PublicStaff; expiresAt: number; home: string }> {
   if (!ctx.hasher) throw new Error("hasher missing");
   const uname = String(username || "").trim().toLowerCase().slice(0, 64), now = nowDate(ctx).getTime();
-  const keys = ["u:" + uname, "a:" + String(addr || "local").slice(0, 80)];
-  const fails = await Promise.all(keys.map((k) => failsOf(ctx, k)));
-  const lock = fails.find((f) => f.until > now);
-  if (lock) throw Object.assign(new CoreError("throttled", LOCKED_MSG, 429), { retryIn: Math.max(1, Math.ceil((lock.until - now) / 1000)) });
+  const pw = String(password || "").slice(0, PASSWORD_MAX);
+  const keys: [string, number][] = [["u:" + uname, LOGIN_MAX_FAILS], ["a:" + String(addr || "local").slice(0, 80), LOGIN_MAX_FAILS_ADDR]];
+  /* read, check and count in one step per store (the demo and the tests run attempts in parallel in one event loop) */
+  const fails = await serial(ctx, async () => {
+    const fs = await Promise.all(keys.map(([k]) => failsOf(ctx, k)));
+    const lock = fs.find((f) => f.until > now);
+    if (lock) throw Object.assign(new CoreError("throttled", LOCKED_MSG, 429), { retryIn: Math.max(1, Math.ceil((lock.until - now) / 1000)) });
+    for (let i = 0; i < fs.length; i++) { const f = fs[i]; f.n += 1; if (f.n >= keys[i][1]) f.until = now + LOGIN_LOCK_MIN * 60_000; await ctx.repo.put(COL.loginFails, f); }
+    return fs;
+  });
   const u = (await ctx.repo.list<StaffUser>(COL.staff)).find((x) => x.username.toLowerCase() === uname);
   /* same message and similar time for "no such user" and "wrong password" */
-  const ok = u && u.active ? await ctx.hasher.verify(String(password || ""), u.salt, u.hash, u.algo) : (await ctx.hasher.hash(String(password || "x")), false);
+  const ok = u && u.active ? await ctx.hasher.verify(pw, u.salt, u.hash, u.algo) : (await ctx.hasher.hash(pw || "x"), false);
   if (!u || !ok) {
-    for (const f of fails) { f.n += 1; if (f.n >= LOGIN_MAX_FAILS) f.until = now + LOGIN_LOCK_MIN * 60_000; await ctx.repo.put(COL.loginFails, f); }
     await audit(ctx, uname || "?", "staff.login_failed");
-    const left = LOGIN_MAX_FAILS - Math.max(...fails.map((f) => f.n));
+    const left = Math.min(...fails.map((f, i) => keys[i][1] - f.n));
     if (left <= 0) throw Object.assign(new CoreError("throttled", LOCKED_MSG, 429), { retryIn: LOGIN_LOCK_MIN * 60 });
     throw Object.assign(new CoreError("bad_login", "Грешен потребител или парола.", 401), left <= 3 ? { left } : {});
   }
-  await ctx.repo.del(COL.loginFails, keys[0]);
+  /* the right password: the username starts again, the address gets this attempt back */
+  await ctx.repo.del(COL.loginFails, keys[0][0]);
+  const fa = await failsOf(ctx, keys[1][0]);
+  if (fa.n > 0) { fa.n -= 1; if (fa.n < LOGIN_MAX_FAILS_ADDR) fa.until = 0; await ctx.repo.put(COL.loginFails, fa); }
   const s: Session = { id: rid(24), kind: "staff", userId: u.id, role: u.role, expiresAt: now + STAFF_SESSION_TTL_MS, createdAt: iso(ctx) };
   await ctx.repo.put(COL.sessions, s);
   await audit(ctx, u.username, "staff.login");

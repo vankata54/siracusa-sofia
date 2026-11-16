@@ -14,7 +14,7 @@ if (fs.existsSync(".env")) process.loadEnvFile(".env");
 const port = +(process.env.PORT || 8787);
 const { app, core } = createApp({
   dbFile: process.env.DB_FILE || "data/siracusa.db", distDir: process.env.DIST_DIR || "dist", secure: process.env.COOKIE_SECURE === "1",
-  previewApi: process.env.SC_PREVIEW_API === "1", trustProxy: process.env.TRUST_PROXY === "1", smsDemo: process.env.SMS_DEMO === "1" || process.env.SC_PREVIEW_API === "1", requireTrackKey: process.env.TRACK_KEY_REQUIRED !== "0",
+  previewApi: process.env.SC_PREVIEW_API === "1", trustProxy: process.env.TRUST_PROXY === "cloudflare" ? "cloudflare" : process.env.TRUST_PROXY === "1", smsDemo: process.env.SMS_DEMO === "1" || process.env.SC_PREVIEW_API === "1", requireTrackKey: process.env.TRACK_KEY_REQUIRED !== "0",
   vapid: vapidFromEnv(),
 });
 const n = await seedStaff(core);

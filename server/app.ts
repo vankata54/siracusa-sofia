@@ -16,7 +16,7 @@ import { state, status, eta } from "../src/lib/status.ts";
 import { offers } from "../src/lib/offers.ts";
 import { eventsJson } from "../src/lib/events-json.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
-import { publicSettings } from "../src/core/settings.ts";
+import { publicSettings, settingsAllowed } from "../src/core/settings.ts";
 import { normPhone } from "../src/lib/format.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
 import { ZONES } from "../src/lib/data.ts";
@@ -30,7 +30,9 @@ export interface AppOpts {
   /** no SMS provider yet: return the code as demoCode (SMS_DEMO=1, tests); otherwise 503 sms_unavailable */
   smsDemo?: boolean;
   /** behind our own reverse proxy: take the client's address from X-Forwarded-For (TRUST_PROXY=1); default off */
-  trustProxy?: boolean;
+  trustProxy?: boolean | "cloudflare";
+  /** tests: the site's pages for "Предложи подобрение" (else read from distDir) */
+  routes?: string[];
   /** run the timers for the automatic office send (default true; off in unit tests) */
   timers?: boolean;
   /** Web Push: the VAPID keys from .env (server/push.ts vapidFromEnv); without them push is off. pushSender: tests only. */
@@ -81,21 +83,25 @@ export function createApp(opts: AppOpts) {
   const app = new Hono();
   const dist = path.resolve(opts.distDir);
   /* the site's own pages (every folder of dist/ with an index.html, without the admin): "Предложи подобрение" accepts only these */
-  let routesCache: string[] | null = null;
+  /* read again when the build changes (a new build, "Публикувай" of the menu): keyed by the mtime of dist/index.html */
+  let routesCache: { at: number; list: string[] } | null = null;
   const siteRoutes = (): string[] => {
-    if (routesCache) return routesCache;
+    if (opts.routes) return opts.routes;
+    let at = 0;
+    try { at = fs.statSync(path.join(dist, "index.html")).mtimeMs; } catch { /* no build yet */ }
+    if (routesCache && routesCache.at === at && at) return routesCache.list;
     const out: string[] = [];
+    const STAFF_DIRS = ["admin", "servitor", "kuhnya", "shofyor"];
     const walk = (dir: string, rel: string) => {
       let list: fs.Dirent[] = [];
       try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-      if (list.some((e) => e.isFile() && e.name === "index.html")) out.push(rel || "/");
-      for (const e of list) if (e.isDirectory() && !e.name.startsWith("_") && !(rel === "" && e.name === "admin")) walk(path.join(dir, e.name), (rel || "") + "/" + e.name + "/".slice(0, 0));
+      if (list.some((e) => e.isFile() && e.name === "index.html")) out.push(rel + "/");
+      for (const e of list) if (e.isDirectory() && !e.name.startsWith("_") && !(rel === "" && STAFF_DIRS.includes(e.name))) walk(path.join(dir, e.name), rel + "/" + e.name);
     };
     walk(dist, "");
-    routesCache = out.map((r) => (r.endsWith("/") ? r : r + "/"));
-    return routesCache;
+    routesCache = { at, list: out };
+    return out;
   };
-
   /* ---------- helpers ---------- */
   const cookieOpts = { httpOnly: true, sameSite: "Lax" as const, secure: !!opts.secure, path: "/" };
   const body = async (c: Context) => { try { return await c.req.json(); } catch { return {}; } };
@@ -110,7 +116,10 @@ export function createApp(opts: AppOpts) {
   /* the client's address: X-Forwarded-For only behind our own proxy (TRUST_PROXY=1), else the socket's address
      (a header from the internet could be anything) */
   const ip = (c: Context): string => {
-    if (opts.trustProxy) { const f = c.req.header("x-forwarded-for"); if (f) return f.split(",")[0].trim(); }
+    /* behind our own proxy the real address is the LAST one in X-Forwarded-For (nginx $proxy_add_x_forwarded_for adds it
+       on the right; the left ones the client can write himself); behind Cloudflare: CF-Connecting-IP (TRUST_PROXY=cloudflare) */
+    if (opts.trustProxy === "cloudflare") { const cf = c.req.header("cf-connecting-ip"); if (cf) return cf.trim(); }
+    if (opts.trustProxy) { const f = c.req.header("x-forwarded-for"); if (f) { const l = f.split(",").map((x) => x.trim()).filter(Boolean); if (l.length) return l[l.length - 1]; } }
     let a = "";
     try { a = getConnInfo(c).remote.address || ""; } catch { /* no socket (tests, some runtimes) */ }
     /* no address at all: never one key for the whole site; the device cookie (or the phone in the phone keys) separates people */
@@ -127,7 +136,12 @@ export function createApp(opts: AppOpts) {
   app.use("/api/*", async (c, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
       const origin = c.req.header("origin");
-      if (origin && new URL(origin).host !== c.req.header("host")) return c.json({ error: "origin", message: "Забранен адрес." }, 403);
+      let host = "";
+      try { host = origin ? new URL(origin).host : ""; } catch { host = "?"; }
+      if (origin && host !== c.req.header("host")) return c.json({ error: "origin", message: "Забранен адрес." }, 403);
+      /* body size: 2 MB for a note with a screenshot, 64 KB for everything else (never a 2 MB password through scrypt) */
+      const max = /^\/api\/admin\/notes/.test(c.req.path) ? 2_100_000 : 65_536, len = +(c.req.header("content-length") || 0);
+      if (len > max) return c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
     }
     c.header("Cache-Control", "no-store");
     await next();
@@ -204,13 +218,10 @@ export function createApp(opts: AppOpts) {
     }
   });
   app.get("/api/admin/orders", async (c) => { await staff(c, "orders"); return c.json(await core.orders.list(c.req.query("status") ? { status: c.req.query("status") as OrderStatus } : {})); });
-  /* the status by section: "Поръчки" any step; the kitchen only "Готви се" / "Готова"; the driver only "На път" / "Доставена" */
-  const ORDER_STEP: Record<string, OrderStatus[]> = { kitchen: ["cooking", "ready"], driver: ["on_way", "delivered"] };
+  /* the status by section and step (core/orders.ts stepAllowed): "Поръчки" one step, the kitchen and the driver their own */
   app.patch("/api/admin/orders/:no", async (c) => {
-    const b = await body(c), st = b.status as OrderStatus;
-    const s = await staff(c, ["orders", ...Object.keys(ORDER_STEP).filter((k) => ORDER_STEP[k].includes(st))]);
-    if (!(s.user.role === "admin" || s.sections.includes("orders")) && !Object.keys(ORDER_STEP).some((k) => s.sections.includes(k) && ORDER_STEP[k].includes(st))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
-    return c.json(await core.orders.setStatus(c.req.param("no"), st, s.user.username));
+    const s = await staff(c, ["orders", "kitchen", "driver"]), b = await body(c);
+    return c.json(await core.orders.setStatus(c.req.param("no"), b.status as OrderStatus, s.user.username, s));
   });
 
   /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */
@@ -222,10 +233,9 @@ export function createApp(opts: AppOpts) {
   });
   app.patch("/api/admin/settings", async (c) => {
     const b = await body(c);
-    /* "Настройки" changes everything here; without it: the kitchen its minutes, "Резервации" the table hold, "Оферти" the celebration */
-    const s = await staff(c, ["settings", b.resMinutes != null ? "reservations" : "kitchen"]);
-    const has = (x: string) => s.user.role === "admin" || s.sections.includes("settings") || s.sections.includes(x);
-    if ((b.kitchen && !has("kitchen")) || (b.resMinutes != null && !has("reservations")) || ((b.celebrationPrice != null || b.earlyDays !== undefined) && !has("offers"))) throw new CoreError("forbidden", "Нямате права за този раздел.", 403);
+    /* who may change what: core/settings.ts settingsNeed (the same check in the demo) */
+    const s = await staff(c);
+    settingsAllowed(s, b);
     return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays }, s.user.username));
   });
 
@@ -370,7 +380,7 @@ export function createApp(opts: AppOpts) {
   /* docs/NOTES.json: the approved ones only (what the next session works on) */
   app.get("/api/admin/notes/export", async (c) => { await staff(c, "notes"); c.header("Content-Disposition", 'attachment; filename="NOTES.json"'); return c.json(await core.notes.approved()); });
   app.post("/api/admin/notes", async (c) => { const s = await staff(c); return c.json(await core.notes.create(await body(c), s), 201); });
-  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); const b = await body(c); return c.json(await core.notes.setStatus(c.req.param("id"), b.status, s.user.name, { reason: b.reason, change: b.change })); });
+  app.patch("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); const b = await body(c); return c.json(await core.notes.setStatus(c.req.param("id"), b.status, s.user.username, { reason: b.reason, change: b.change, who: s.user.name })); });
   app.delete("/api/admin/notes/:id", async (c) => { const s = await staff(c, undefined, true); return c.json({ ok: true, note: await core.notes.remove(c.req.param("id"), s.user.username) }); });
   app.post("/api/admin/notes/restore", async (c) => { const s = await staff(c, undefined, true); return c.json(await core.notes.restore((await body(c)).note, s.user.username), 201); });
   /* "Предложи подобрение" on the site: no sign-in; only addresses of the site's own pages; personal data filtered in the

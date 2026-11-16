@@ -23,7 +23,8 @@
 ## Пускане (етап E)
 
 - [ ] Седмичен build (cron): датите на събитията в HTML/JSON-LD са от build-а.
-- [ ] Зад прокси (Cloudflare, nginx) задължително `TRUST_PROXY=1` (кодът е готов), иначе всички клиенти са един адрес за ограниченията.
+- [ ] Зад прокси задължително: nginx `TRUST_PROXY=1` (истинският адрес е последният в `X-Forwarded-For`, `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`), Cloudflare `TRUST_PROXY=cloudflare` (`CF-Connecting-IP`); иначе всички клиенти са един адрес за ограниченията.
+- [ ] На HTTPS задължително `COOKIE_SECURE=1` (бисквитките на входа и на клиента само по HTTPS).
 - [ ] SMS доставчик: без него входът с код връща 503 `sms_unavailable` (кодът се показва само в демото и при `SMS_DEMO=1`).
 - [ ] Web Push на живия сървър: `node scripts/make-env.mjs` добавя VAPID ключовете в `.env` на сървъра (не в git); сайтът трябва да е на HTTPS. За iPhone: манифест и икона на приложението от логото (квадратен PNG, поне 512 × 512 px, от собственика; OPEN-QUESTIONS).
 - [ ] При нов build старите адреси на ястията се пренасочват от `redirects.json` (от build-а): да се качва заедно с `dist/`.

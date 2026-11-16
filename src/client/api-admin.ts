@@ -5,6 +5,7 @@
 import { http, pick, demoTok, setDemoTok, ApiError } from "./api.ts";
 import type { Core, NoteInput, NoteStatus, OrderStatus, ReservationStatus, Order, Reservation, Settings, Feedback, FeedbackNote, Role, RoleId, AuditEntry } from "./api-types.ts";
 import type { SettingsPatch } from "../core/settings.ts";
+import { settingsAllowed } from "../core/settings-guard.ts";
 import type { PublicStaff, Summary, SearchAnswer, NoteFilter } from "../core/index.ts";
 
 export { ApiError };
@@ -44,7 +45,7 @@ export const adminApi = {
   notesSeen: pick(async (c) => c.notes.seen(await g(c)), () => http<{ id: string; at: string }>("POST", "admin/notes/seen")),
   exportNotes: pick(async (c) => { await g(c, "notes"); return c.notes.approved(); }, () => http<FeedbackNote[]>("GET", "admin/notes/export")),
   createNote: pick(async (c, n: NoteInput) => c.notes.create(n, await g(c)), (n) => http<FeedbackNote>("POST", "admin/notes", n)),
-  setNoteStatus: pick(async (c, id: string, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"] } = {}) => { const s = await g(c, undefined, true); return c.notes.setStatus(id, status, s.user.name, extra); },
+  setNoteStatus: pick(async (c, id: string, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"] } = {}) => { const s = await g(c, undefined, true); return c.notes.setStatus(id, status, s.user.username, { ...extra, who: s.user.name }); },
     (id, status, extra = {}) => http<FeedbackNote>("PATCH", "admin/notes/" + encodeURIComponent(id), { status, ...extra })),
   deleteNote: pick(async (c, id: string) => { const s = await g(c, undefined, true); return { ok: true, note: await c.notes.remove(id, s.user.username) }; },
     (id) => http<{ ok: boolean; note: FeedbackNote | null }>("DELETE", "admin/notes/" + encodeURIComponent(id))),
@@ -54,13 +55,13 @@ export const adminApi = {
 
   /* the sections of part 3 use these (kept from api.ts, now with the same checks as the server) */
   orders: pick(async (c, s?: OrderStatus) => { await g(c, "orders"); return c.orders.list(s ? { status: s } : {}); }, (s) => http<Order[]>("GET", "admin/orders" + q({ status: s }))),
-  setOrderStatus: pick(async (c, no: string, st: OrderStatus) => { const s = await g(c, ["orders", ...(st === "cooking" || st === "ready" ? ["kitchen"] : []), ...(st === "on_way" || st === "delivered" ? ["driver"] : [])]); return c.orders.setStatus(no, st, s.user.username); },
+  setOrderStatus: pick(async (c, no: string, st: OrderStatus) => { const s = await g(c, ["orders", "kitchen", "driver"]); return c.orders.setStatus(no, st, s.user.username, s); },
     (no, st) => http<Order>("PATCH", "admin/orders/" + no, { status: st })),
   reservations: pick(async (c) => { await g(c, "reservations"); return c.reservations.list(); }, () => http<Reservation[]>("GET", "admin/reservations")),
   setReservationStatus: pick(async (c, id: string, st: ReservationStatus) => { const s = await g(c, "reservations"); return c.reservations.setStatus(id, st, s.user.username); },
     (id, st) => http<Reservation>("PATCH", "admin/reservations/" + id, { status: st })),
   settings: pick(async (c) => { await g(c); return c.settings.get(); }, () => http<Settings>("GET", "admin/settings")),
-  setSettings: pick(async (c, p: SettingsPatch) => { const s = await g(c, ["settings", p.resMinutes != null ? "reservations" : "kitchen"]); return c.settings.update(p, s.user.username); }, (p) => http<Settings>("PATCH", "admin/settings", p)),
+  setSettings: pick(async (c, p: SettingsPatch) => { const s = await g(c); settingsAllowed(s, p); return c.settings.update(p, s.user.username); }, (p) => http<Settings>("PATCH", "admin/settings", p)),
   /** "Изчерпано днес" for one dish (kitchen, menu, lunch menu); only for today */
   setSoldOut: pick(async (c, id: string, out: boolean) => { const s = await g(c, ["menu", "kitchen", "lunch"]); return c.menu.setSoldOut(id, out, s.user.username); },
     (id, out) => http<{ id: string; out: boolean }>("PUT", "admin/menu/" + encodeURIComponent(id) + "/sold-out", { out })),
