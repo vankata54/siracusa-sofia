@@ -138,7 +138,7 @@ export async function initNotes(): Promise<void> {
   function card(n: FeedbackNote) {
     const so = sourceOf(n);
     let extra = "";
-    if (n.status === "doing") extra = '<p class="muted nt-p">Следващата сесия на Claude работи по бележката. После тя идва тук „За преглед“.</p>';
+    if (n.status === "doing") extra = (n.fix ? '<div class="nt-why"><b>Да се поправи</b>' + esc(n.fix) + "</div>" : "") + '<p class="muted nt-p">Следващата сесия на Claude работи по бележката. После тя идва тук „За преглед“.</p>';
     else if ((n.status === "review" || n.status === "published") && n.change) extra = '<p class="nt-p">' + esc(n.change.summary) + '</p><div class="nt-diff"><div><small>Преди</small>' + esc(n.change.before || "") + '</div><div class="after"><small>След</small>' + esc(n.change.after || "") + "</div></div>" +
       (n.status === "published" ? '<p class="muted nt-p">Публикувана ' + esc(ago(n.updatedAt)) + ".</p>" : '<p class="muted nt-p">Проверете в прегледа на същия адрес и размер; на живия сайт отива само след „Публикувай“.</p>');
     else if (n.status === "rejected" && n.reason) extra = '<div class="nt-why"><b>Причина</b>' + esc(n.reason) + "</div>";
@@ -202,7 +202,7 @@ export async function initNotes(): Promise<void> {
   /* errors of an action: one calm toast; the note stays as it was */
   const failToast = (e: unknown) => toast(isOffline(e) ? "Няма връзка. Промяната не е изпратена; опитайте пак." : e instanceof ApiError ? e.message : "Не успяхме. Опитайте пак.");
   const put = (n: FeedbackNote) => { const i = notes.findIndex((x) => x.id === n.id); if (i > -1) notes[i] = n; else notes.unshift(n); };
-  async function setStatus(n: FeedbackNote, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"] }, text: string, after?: () => void) {
+  async function setStatus(n: FeedbackNote, status: NoteStatus, extra: { reason?: string; change?: FeedbackNote["change"]; fix?: string }, text: string, after?: () => void) {
     const prev = JSON.parse(JSON.stringify(n)) as FeedbackNote;
     try { put(await adminApi.setNoteStatus(n.id, status, extra)); } catch (e) { failToast(e); return; }
     if (after) after();
@@ -238,7 +238,7 @@ export async function initNotes(): Promise<void> {
     if (a === "run") { setStatus(n, "approved", {}, "Одобрена за изпълнение: следващата сесия на Claude я поема", () => { f.s = "approved"; }); return; }
     if (a === "back") { setStatus(n, "new", {}, "Върната в нови"); return; }
     if (a === "reject") { ask("Отхвърли бележката", "Причина (вижда я и авторът)", true, "Отхвърли", (v) => setStatus(n, "rejected", { reason: v }, "Бележката е отхвърлена")); return; }
-    if (a === "fix") { setStatus(n, "doing", {}, "Върната за поправка: сесията на Claude я поправя", () => { f.s = "doing"; }); return; }
+    if (a === "fix") { ask("Върни за поправка", "Какво да се поправи (по желание)", false, "Върни за поправка", (v) => setStatus(n, "doing", { fix: v }, "Върната за поправка: сесията на Claude я поправя", () => { f.s = "doing"; })); return; }
     if (a === "publish") {
       confirm({ title: "Публикувай промяната", text: "Промяната по „" + esc(short) + "“ е проверена в прегледа и може да отиде на живия сайт. Бележката става „Публикувана“.", ok: "Публикувай", danger: true, icon: "check" },
         () => setStatus(n, "published", {}, "Публикувана"));

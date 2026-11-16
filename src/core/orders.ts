@@ -287,6 +287,8 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
   if (by && !stepAllowed(o, status, by)) throw new CoreError("bad_step", "Тази стъпка не е позволена за поръчката сега. Опреснете страницата.", 409);
+  /* the same status again (two people pressed it): nothing to write, no line in the log */
+  if (o.status === status) return o;
   const now = iso(ctx);
   if (status === "cancelled" && o.status !== "cancelled") o.prevStatus = o.status;
   else if (status !== "cancelled") delete o.prevStatus;

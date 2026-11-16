@@ -16,7 +16,7 @@ export async function listAudit(ctx: Ctx, f: AuditFilter | number = {}): Promise
   const staff = await ctx.repo.list<{ id: string; username: string; role: string }>(COL.staff);
   const roleOf = new Map(staff.map((u) => [u.username, u.role]));
   const all = (await ctx.repo.list<AuditEntry>(COL.audit)).filter((e) =>
-    (!o.before || e.at < o.before) && (!o.from || e.at.slice(0, 10) >= o.from) && (!o.to || e.at.slice(0, 10) <= o.to) &&
+    (!o.before || e.at <= o.before) && (!o.from || e.at.slice(0, 10) >= o.from) && (!o.to || e.at.slice(0, 10) <= o.to) &&
     (!o.who || e.actor === o.who) && (!o.action || e.action.startsWith(o.action)) &&
     (!q || (e.actor + " " + e.action + " " + (e.target || "") + " " + JSON.stringify(e.data ?? "")).toLowerCase().includes(q)));
   return all.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit).map((e) => ({ ...e, role: roleOf.get(e.actor) }));

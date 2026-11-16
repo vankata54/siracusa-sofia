@@ -21,7 +21,8 @@ export const NOTE_MSG = {
 
 import { scrubPersonal } from "./scrub.ts";
 export { scrubPersonal };
-const clean = (s: unknown, max: number) => scrubPersonal(String(s ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim()).slice(0, max);
+/* cut first (a 60 KB text never reaches the patterns), then scrub, then cut again (a marker can be longer than the number) */
+const clean = (s: unknown, max: number) => scrubPersonal(String(s ?? "").slice(0, max + 64).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim(), max + 64).slice(0, max);
 /* the secret key of an order never goes into a note: /porachka/1042-k7f3m2pq/ -> /porachka/ */
 const noKeys = (p: string) => p.replace(/^\/porachka\/[^/?#]*\/?/, "/porachka/");
 /** the address of the note: only a path of this site ("/..."), never "//host", "javascript:" or markup; a customer's
@@ -35,7 +36,7 @@ function noteUrl(raw: unknown, keepHash: boolean): string {
   return scrubPersonal(u);
 }
 /** a CSS selector / an id from the page: plain text, short, no personal data */
-const plain = (s: unknown, max: number) => scrubPersonal(String(s ?? "").replace(/[\u0000-\u001f]/g, "").trim()).slice(0, max);
+const plain = (s: unknown, max: number) => scrubPersonal(String(s ?? "").slice(0, max + 64).replace(/[\u0000-\u001f]/g, "").trim(), max + 64).slice(0, max);
 const SHOT = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 
 function build(ctx: Ctx, n: NoteInput, author: string, source: NoteSource, emptyMsg: string): FeedbackNote {

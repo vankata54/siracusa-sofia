@@ -6,6 +6,7 @@ import zlib from "node:zlib";
 import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
+import { bodyLimit } from "hono/body-limit";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { openDb, seedMenu, readMenu } from "./db/index.ts";
 import { SqliteRepo } from "./db/repo.ts";
@@ -140,7 +141,7 @@ export function createApp(opts: AppOpts) {
       try { host = origin ? new URL(origin).host : ""; } catch { host = "?"; }
       if (origin && host !== c.req.header("host")) return c.json({ error: "origin", message: "Забранен адрес." }, 403);
       /* body size: 2 MB for a note with a screenshot, 64 KB for everything else (never a 2 MB password through scrypt) */
-      const max = /^\/api\/admin\/notes/.test(c.req.path) ? 2_100_000 : 65_536, len = +(c.req.header("content-length") || 0);
+      const max = /^\/api\/admin\/notes/.test(c.req.path) ? 2_100_000 : /^\/api\/admin\/media/.test(c.req.path) ? 5_300_000 : 65_536, len = +(c.req.header("content-length") || 0);
       if (len > max) return c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
     }
     c.header("Cache-Control", "no-store");
@@ -156,6 +157,12 @@ export function createApp(opts: AppOpts) {
       }
     }
   });
+
+  /* the real size of the body as it is read (also with Transfer-Encoding: chunked, where there is no Content-Length):
+     2 MB for a note with a screenshot, 5 MB for a photo of the menu, 64 KB for everything else */
+  const tooLarge = (c: Context) => c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
+  const LIMITS = { small: bodyLimit({ maxSize: 65_536, onError: tooLarge }), notes: bodyLimit({ maxSize: 2_100_000, onError: tooLarge }), media: bodyLimit({ maxSize: 5_300_000, onError: tooLarge }) };
+  app.use("/api/*", (c, next) => (["GET", "HEAD", "OPTIONS"].includes(c.req.method) ? next() : (/^\/api\/admin\/notes/.test(c.req.path) ? LIMITS.notes : /^\/api\/admin\/media/.test(c.req.path) ? LIMITS.media : LIMITS.small)(c, next)));
 
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
@@ -411,7 +418,12 @@ export function createApp(opts: AppOpts) {
       clients.add(sub);
       stream.onAbort(() => { clients.delete(sub); });
       await stream.writeSSE({ event: "hello", data: JSON.stringify({ orders: [...orders], offices: [...offices] }) });
-      while (!stream.aborted) { await stream.sleep(25_000); await stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {}); }
+      while (!stream.aborted) {
+        await stream.sleep(25_000);
+        /* the staff session can end (sign-out, 12 h): from then on only public events and the own orders */
+        if (sub.staff && !(await core.staff.bySession(getCookie(c, STAFF_COOKIE)))) sub.staff = false;
+        await stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {});
+      }
       clients.delete(sub);
     });
   });

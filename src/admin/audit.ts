@@ -50,8 +50,8 @@ export function auditText(e: AuditEntry, names: Names = {}): string {
     case "note.status": return "Бележка: " + statusName(String(d.status || "")) + note() + (d.reason ? " · причина: " + q(cut(String(d.reason), 120)) : "");
     case "note.delete": return "Изтрита бележка" + note();
     case "note.restore": return "Върната изтрита бележка" + note();
-    case "order.status": return "№ " + t + ": " + (OST[String(d.status)] || String(d.status || ""));
-    case "order.change": return "№ " + t + ": клиентът промени поръчката" + (d.slot ? " (час " + String(d.slot).slice(-5) + ")" : "");
+    case "order.status": return "№\u00a0" + t + ": " + (OST[String(d.status)] || String(d.status || ""));
+    case "order.change": return "№\u00a0" + t + ": клиентът промени поръчката" + (d.slot ? " (час " + String(d.slot).slice(-5) + ")" : "");
     case "office.auto_sent": return "Обедна поръчка за офиса " + t + ": изпратена автоматично в крайния час";
     case "reservation.status": return "Резервация: " + (RST[String(d.status)] || String(d.status || ""));
     case "reservation.cancel": return "Резервация: отказана от госта";
@@ -165,7 +165,7 @@ export async function initAudit(): Promise<void> {
     if (t.closest("[data-more]")) { shown += 60; draw(); return; }
     if (t.closest("[data-older]") && L0.length) {
       const b = t.closest<HTMLButtonElement>("[data-older]")!; b.disabled = true;
-      adminApi.audit({ limit: PAGE, before: L0[L0.length - 1].at }).then((l) => { L0 = L0.concat(l); more = l.length >= PAGE; draw(); }, () => { b.disabled = false; toast("Не успяхме да заредим по-старите записи. Опитайте пак."); });
+      adminApi.audit({ limit: PAGE, before: L0[L0.length - 1].at }).then((l) => { const have = new Set(L0.map((x) => x.id)), add = l.filter((x) => !have.has(x.id)); L0 = L0.concat(add); more = add.length > 0 && l.length >= PAGE; draw(); }, () => { b.disabled = false; toast("Не успяхме да заредим по-старите записи. Опитайте пак."); });
       return;
     }
     if (t.closest("[data-clear]")) { f = { g: "", who: "", p: "all", q: "" }; hashSync(); draw(); }
@@ -181,7 +181,9 @@ export async function initAudit(): Promise<void> {
     if (!(e.target as Element).closest("[data-csv]")) return;
     if (!loaded) { toast("Дневникът още се зарежда."); return; }
     const rows = [["Кога", "Кой", "Роля", "Действие", "Какво"]].concat(list().map((x) => { const w = whoOf(x, staff); return [ymdOf(x.at) + " " + hmOf(x.at), w.name, w.role ? roleName(w.role) : "", x.action, text(x)]; }));
-    const csv = "﻿" + rows.map((r) => r.map((v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"').join(";")).join("\n");
+    /* a cell that starts with = + - @ (or a tab / return) is text, never a formula: a username from a failed sign-in is anyone's */
+    const cell = (v: unknown) => { let x = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return '"' + x.replace(/"/g, '""') + '"'; };
+    const csv = "﻿" + rows.map((r) => r.map(cell).join(";")).join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "siracusa-dnevnik.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     toast("Изтеглени " + plural(list().length, "запис", "записа"));
   });

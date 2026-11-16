@@ -89,4 +89,6 @@
 /* „Моите препоръки“ на цял екран (сервитьор, кухня, шофьор): без лентата на админа */
 .sa-app.nt-staffmode .sa-top .sm{display:none}
 .sa-app.nt-staffmode .sa-end{height:176px}
-@container app (max-width:699px){ .sa-app.nt-staffmode .sa-crumb{display:none} .sa-app.nt-staffmode .sa-top .lg{display:none} .sa-app.nt-staffmode .sa-top .sm{display:inline} .sa-app.nt-staffmode .sa-top{justify-content:space-between} }
+@container app (max-width:699px){ .sa-app.nt-staffmode .sa-crumb{display:none} .sa-app.nt-staffmode .sa-top .lg{display:none} .sa-app.nt-staffmode .sa-top .sm{display:inline} .sa-app.nt-staffmode .sa-top{justify-content:space-between}
+  /* on the phone "Изход" is in the profile sheet (no room for a fifth button in the top bar) */
+  .sa-app.nt-staffmode .sa-top [data-sa="logout"]{display:none} }

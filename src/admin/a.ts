@@ -275,7 +275,7 @@ function watchOrders() {
     if (!d.no || (d.status && d.status !== "accepted") || !online) { refreshSoon(); return; }
     ssSet(ALERT, JSON.stringify({ no: d.no, at: Date.now() }));
     chime();
-    toast("Нова онлайн поръчка № " + d.no, { action: { label: "Виж", href: aurl.section("orders", "n=" + d.no) }, ms: 6000, queue: true });
+    toast("Нова онлайн поръчка №\u00a0" + d.no, { action: { label: "Виж", href: aurl.section("orders", "n=" + d.no) }, ms: 6000, queue: true });
     if (A.onNewOrder) A.onNewOrder({ no: d.no });
     refreshSoon();
   });

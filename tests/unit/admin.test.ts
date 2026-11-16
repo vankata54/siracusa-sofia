@@ -292,3 +292,32 @@ describe("admin: after the flows review (round 1)", () => {
     expect((await app.request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json", "content-length": "3000000" }, body: "{}" })).status).toBe(413);
   });
 });
+
+describe("admin: after the flows review (round 2)", () => {
+  it("the scrub is linear and cuts first; phones with dots and worded e-mails go", async () => {
+    const big = "а".repeat(60_000) + " ivan@abv.bg";
+    const t0 = Date.now(); scrubPersonal(big); scrubPersonal("x".repeat(60_000)); expect(Date.now() - t0).toBeLessThan(300);
+    expect(scrubPersonal("т. 0888.123.456 и 0888/123456")).toBe("т. [телефон] и [телефон]");
+    expect(scrubPersonal("15.11.2026, 12.50 €")).toBe("15.11.2026, 12.50 €");
+    expect(scrubPersonal("ivan at abv dot bg")).toBe("[имейл]");
+    const core = mk();
+    const t1 = Date.now();
+    await core.notes.suggest({ ...note, url: "/", text: "б".repeat(60_000) }, ["/"]);
+    expect(Date.now() - t1).toBeLessThan(500);
+  });
+  it("server: a chunked body over the limit is 413", async () => {
+    const { app } = createApp({ dbFile: ":memory:", distDir: "dist", timers: false, routes: ["/"] });
+    const big = new ReadableStream({ start(c) { for (let i = 0; i < 40; i++) c.enqueue(new TextEncoder().encode("x".repeat(4096))); c.close(); } });
+    const r = await app.request("/api/notes/suggest", { method: "POST", headers: { "content-type": "application/json" }, body: big, duplex: "half" } as RequestInit);
+    expect(r.status).toBe(413);
+  });
+  it("the same order status again writes nothing", async () => {
+    const core = mk(); const { s } = await people(core);
+    const o = await core.orders.create({ cart: { mode: "pickup", lines: [{ key: "pitsa-dyavolo", id: "pitsa-dyavolo", q: 1, mods: [], extra: 0 }] } as never, name: "Клиент 6", phone: "0888123466", pay: "cash" });
+    const man = await s("manager");
+    await core.orders.setStatus(o.no, "cancelled", "manager", man);
+    const n = (await core.audit.list()).length;
+    await core.orders.setStatus(o.no, "cancelled", "manager", man);
+    expect((await core.audit.list()).length).toBe(n);
+  });
+});
