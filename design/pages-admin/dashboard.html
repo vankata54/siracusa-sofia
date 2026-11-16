@@ -61,7 +61,7 @@
 @container page (min-width:620px){ .mods{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @container page (min-width:1000px){ .mods{grid-template-columns:repeat(3,minmax(0,1fr))} }
 .mod{display:flex; flex-direction:column; padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
-.mod .vis{position:relative; height:172px; border-radius:22px; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 120% at 70% 0%, var(--plate-1), var(--plate-2))}
+.mod .vis{position:relative; height:172px; padding-top:30px; /* рисунката под значката „N екрана“ */ border-radius:22px; overflow:hidden; display:grid; place-items:center; background:radial-gradient(120% 120% at 70% 0%, var(--plate-1), var(--plate-2))}
 .mod .vis .cnt{position:absolute; left:12px; top:12px; width:max-content; display:inline-flex; align-items:center; min-height:30px; padding:0 11px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px var(--glass-line); font-size:14px; font-weight:800; color:var(--ink)}
 .mod .vis .dv{position:absolute; right:14px; top:16px; width:max-content; font-size:14px; font-weight:700; color:var(--muted)}
 .mod .body{flex:1; display:grid; gap:8px; align-content:start; padding:16px 14px 6px}
@@ -75,7 +75,8 @@
 .mod .open .sm{display:none}
 @container page (max-width:619px){
   .mods{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
-  .mod .vis{height:96px} .mod .g{transform:scale(.72)} .mod:hover .g{transform:scale(.72)} .mod .vis .dv{display:none}
+  /* значката с броя екрани стои горе (8-38 px), рисунката под нея: без застъпване и на 360 */
+  .mod .vis{height:120px; padding-top:38px} .mod .vis .cnt{top:8px; left:8px} .mod .g{transform:scale(.64)} .mod:hover .g{transform:scale(.64)} .mod .vis .dv{display:none}
   .mod .body{padding:12px 10px 4px; gap:4px} .mod h3{font-size:18px} .mod .body p:not(.who){display:none} .mod .who{font-size:14px}
   .mod .act{padding:8px 4px 4px} .mod .open{padding:0 4px 0 14px; min-height:52px; font-size:16px} .mod .open .lg{display:none} .mod .open .sm{display:inline} .mod .open .knob{width:40px; height:40px}
   .mod.soon .note{display:none}

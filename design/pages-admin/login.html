@@ -13,7 +13,8 @@
 .lg{position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; background:var(--bg); container-type:inline-size; container-name:app}
 .lg-in{min-height:100%; display:grid; grid-template-columns:minmax(0,1fr)}
 .lg-art{display:none}
-.lg-main{display:grid; align-content:center; justify-items:center; padding:28px 16px 40px}
+/* една колона minmax(0,1fr): без нея дългото съдържание (кодовете в „Само в прототипа“) разширява кутията и на 360 отстъпът вдясно става 2 px */
+.lg-main{display:grid; grid-template-columns:minmax(0,1fr); align-content:center; justify-items:center; padding:28px 16px 40px}
 .lg-box{width:100%; max-width:440px}
 .lg-brand{display:flex; align-items:center; gap:10px; margin:0 0 28px}
 .lg-brand .word{font-size:26px}
