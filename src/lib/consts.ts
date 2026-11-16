@@ -1,5 +1,5 @@
 /* Constants without the menu (small; safe for the shared runtime bundle). data.ts re-exports all of this. */
-import type { Dish, AllergenId, TagId } from "../data/menu.ts";
+import type { AllergenId } from "../data/menu.ts";
 export { MON, MONTHS, DAYS } from "./format.ts";
 
 export const RESTAURANT = {
@@ -61,10 +61,6 @@ export interface Zone { n: string; slug: string; etaMin: number; free: boolean; 
 /* ZONES: in lib/zones-data.ts (the server's rebuild puts the zones from the admin in its place, astro.config.mjs SITE_FILE) */
 export { ZONES } from "./zones-data.ts";
 
-export const TAGS: Record<TagId, [string, string]> = {
-  hit: ["Хит", "fire"], new: ["Ново", "sparkle"], veg: ["Вегетарианско", "leaf"], hot: ["Люто", "pepper"], out: ["Изчерпано днес", "clock"],
-};
-
 /* 14 EU allergens (Reg. 1169/2011). Values in data are derived from the composition and must be confirmed by the kitchen. */
 export const ALLERGENS: [AllergenId, string, string][] = [
   ["gluten", "Глутен", "grains"], ["crustaceans", "Ракообразни", "shrimp"], ["eggs", "Яйца", "egg"], ["fish", "Риба", "fish"],
@@ -77,25 +73,9 @@ export function allergenName(k: string): string {
   return a ? a[1] : k;
 }
 
-export interface Filter { id: string; n: string; icon: string; test: (x: Dish) => boolean; needs?: string }
-/* Menu filters. Data-driven: a filter is shown only if at least one item matches. */
-export const FILTERS: Filter[] = [
-  { id: "veg", n: "Вегетарианско", icon: "leaf", test: (x) => x.t.indexOf("veg") > -1 },
-  { id: "hot", n: "Люто", icon: "pepper", test: (x) => x.t.indexOf("hot") > -1 },
-  { id: "noonion", n: "Без лук", icon: "plant", test: (x) => x.noOnion },
-  { id: "share", n: "За споделяне", icon: "users-three", test: (x) => x.share },
-  { id: "bertha", n: "От фурната Bertha", icon: "fire", test: (x) => x.cat === "skara-bertha" },
-  { id: "nogluten", n: "Без глутен", icon: "grains", test: (x) => !!x.comp && x.al.indexOf("gluten") < 0 },
-  { id: "nomilk", n: "Без мляко", icon: "drop", test: (x) => !!x.comp && x.al.indexOf("milk") < 0 },
-  { id: "protein", n: "Протеиново", icon: "barbell", test: (x) => !!x.protein && x.protein >= 30, needs: "хранителни данни" },
-  { id: "light", n: "Леко до 500 ккал", icon: "leaf", test: (x) => !!x.kcal && x.kcal <= 500, needs: "хранителни данни" },
-];
-
-export const EVENT_CATS = ["Жива музика", "Тематични вечери", "Празници", "Рождени дни", "Кръщенета", "Юбилеи", "Фирмени партита", "Абитуриентски", "Детски", "Частни партита"];
-
-export const COURSE_NAME: Record<string, string> = {
-  salad: "Салата", starter: "Предястие", main: "Основно", side: "Гарнитура", sauce: "Сос", dessert: "Десерт", drink: "Напитка", addon: "Добавка", breakfast: "Закуска",
-};
+/* TAGS, FILTERS and COURSE_NAME (only for the pages with dishes) are in lib/consts-menu.ts; lib/data.ts re-exports them.
+   This file must NOT import or re-export that module: every module the shared runtime imports lands in the runtime chunk
+   on every page (decision 16.11.2026, the runtime budget). The allergens stay here: /alergeni/ shows them without the menu. */
 
 export interface Table { id: string; n: number; zone: "salon" | "garden"; seats: number; shape: "round" | "square" | "rect"; x: number; y: number; window: boolean; stroller: boolean; access: boolean }
 /* TABLES (the mock floor plan) is in lib/tables.ts: only the reservation and the core need it (runtime size budget) */

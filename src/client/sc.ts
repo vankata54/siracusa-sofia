@@ -9,7 +9,7 @@
    the full icon set. Pages that need menu data import "./sc-menu.ts" (same SC object, with SC.items, SC.dishCard ...). */
 import * as F from "../lib/format.ts";
 import * as T from "../lib/status.ts";
-import * as C from "../lib/consts.ts";
+import { RESTAURANT, ZONES, ALLERGENS, allergenName } from "../lib/consts.ts";
 import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
 import { ic, loadAllIcons, statusHTML, sheetHTML } from "../lib/chrome-core.ts";
@@ -382,9 +382,9 @@ export const SC = {
   fmt: F.fmt, esc: F.esc, ic, plural: F.plural, dateLong: F.dateLong, dateShort: F.dateShort, hhmm: F.hhmm, MON: F.MON, MONTHS: F.MONTHS, DAYS: F.DAYS,
   /** load the full icon set (lazy chunk); SC.ic works synchronously afterwards for every icon */
   icons: loadAllIcons,
-  /* constants (no menu) */
-  RESTAURANT: C.RESTAURANT, ZONES: C.ZONES, TAGS: C.TAGS, ALLERGENS: C.ALLERGENS, allergenName: C.allergenName, FILTERS: C.FILTERS,
-  EVENT_CATS: C.EVENT_CATS, COURSE_NAME: C.COURSE_NAME, EVENT_SLUGS,
+  /* constants (no menu). TAGS, FILTERS and COURSE_NAME come with the menu (./sc-menu.ts); EVENT_CATS is imported from
+     lib/event-cats.ts by the pages that need it (decision 16.11.2026, the runtime budget) */
+  RESTAURANT, ZONES, ALLERGENS, allergenName, EVENT_SLUGS,
   /* time */
   /** the lunch menu is for today (without the menu: the date is generated at build) */
   lunchIsToday: () => lunchIsToday(),

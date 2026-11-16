@@ -21,7 +21,7 @@ import { A, mount, toast, sheet, confirm, skel, empty, banner, offline as offlin
 import { aurl } from "./routes.ts";
 import { ago, hmOf } from "./when.ts";
 
-/* the tags and the 14 allergens as in src/lib/consts.ts (TAGS, ALLERGENS); kept here so the admin adds no exports to the
+/* the tags and the 14 allergens as in src/lib/consts-menu.ts and src/lib/consts.ts (TAGS, ALLERGENS); kept here so the admin adds no exports to the
    shared runtime chunk (it holds consts.ts) */
 const TAGS: [string, string, string][] = [["hit", "Хит", "fire"], ["new", "Ново", "sparkle"], ["veg", "Вегетарианско", "leaf"], ["hot", "Люто", "pepper"]];
 const TAGN: Record<string, [string, string]> = { hit: ["Хит", "fire"], new: ["Ново", "sparkle"], veg: ["Вегетарианско", "leaf"], hot: ["Люто", "pepper"] };

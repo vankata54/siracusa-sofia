@@ -14,7 +14,7 @@ import type { StaffCtx } from "./staff.ts";
 import { need, invalid, money, HHMM } from "./rights.ts";
 import { getSection, writeSection, eventNote, type EventRow, type EventsData, type PriceMode } from "./site-data.ts";
 import { validYmd } from "./reservations.ts";
-import { EVENT_CATS } from "../lib/consts.ts";
+import { EVENT_CATS } from "../lib/event-cats.ts";
 import { lastSaturday } from "../lib/status.ts";
 import { slugify } from "../lib/slug.ts";
 import { sofiaYmd, addDaysYmd } from "../lib/time.ts";

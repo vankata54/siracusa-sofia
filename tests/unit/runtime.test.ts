@@ -39,6 +39,39 @@ describe("runtime size: on-demand parts stay out of the shared chunk", () => {
   });
 });
 
+describe("runtime size: what the bundler puts into the shared chunk", () => {
+  /* astro.config.mjs puts the RUNTIME modules into the chunk "sc"; the bundler adds EVERY module they import (also a plain
+     re-export), on every page. So a runtime module may import only runtime modules (decision 16.11.2026). */
+  it("a module of the runtime imports only modules of the runtime (the rest comes with import())", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const cfg = fs.readFileSync("astro.config.mjs", "utf8");
+    const list = [.../const RUNTIME = \[([\s\S]*?)\];/.exec(cfg)![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(list).toContain("/src/client/sc.ts");
+    for (const m of list) {
+      const file = path.join(process.cwd(), m), src = fs.readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      const froms = [...src.matchAll(/^\s*(?:import|export)\s+(?!type\b)(?:[^;"']*?\sfrom\s+)?"(\.[^"]+)"/gm)].map((x) => x[1]);
+      for (const f of froms) {
+        const to = "/" + path.relative(process.cwd(), path.resolve(path.dirname(file), f)).split(path.sep).join("/");
+        expect(list, m + " imports " + f + " (not a module of the runtime)").toContain(to);
+      }
+    }
+  });
+  it("the menu constants (TAGS, FILTERS, COURSE_NAME) have one importer, lib/data.ts: they stay in the chunk of the menu", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const users: string[] = [];
+    (function walk(d: string) {
+      for (const f of fs.readdirSync(d)) {
+        const p = path.join(d, f);
+        if (fs.statSync(p).isDirectory()) walk(p);
+        else if (/\.(ts|astro|mjs)$/.test(f) && /from\s+"[^"]*consts-menu\.ts"/.test(fs.readFileSync(p, "utf8"))) users.push(p.split(path.sep).join("/"));
+      }
+    })("src");
+    expect(users).toEqual(["src/lib/data.ts"]);
+  });
+});
+
 describe("loadModule: after a failed chunk the next try reloads the page", () => {
   it("keeps success; after a failure, offline rejects at once and online reloads", async () => {
     const { loadModule, loadFailed } = await import("../../src/lib/load.ts");
