@@ -25,8 +25,9 @@ export async function initDashboard(): Promise<void> {
   if (!body || !A.me) return;
   const me = A.me;
   /* "Добър вечер, Поли": the first name; an account named like its role ("Главен админ") keeps the whole name */
-  const nm = me.user.name === (ROLES[me.user.role] && ROLES[me.user.role].n) ? me.user.name : me.user.name.split(" ")[0];
-  const h1 = document.querySelector(".sa-h1"); if (h1) h1.textContent = hello + ", " + nm;
+  /* an account named like its role ("Главен админ"): only the greeting, the role is already in the profile */
+  const asRole = me.user.name === (ROLES[me.user.role] && ROLES[me.user.role].n);
+  const h1 = document.querySelector(".sa-h1"); if (h1) h1.textContent = asRole ? hello : hello + ", " + me.user.name.split(" ")[0];
   const site = MODULES.find((m) => m.id === "site")!;
   if (modCan(site)) {
     const head = document.querySelector(".sa-head");
@@ -50,7 +51,7 @@ export async function initDashboard(): Promise<void> {
     type K = [string, string, string, string, string, string, boolean];
     const K: K[] = [];
     if (td) {
-      if (td.sales) K.push(["dashboard", "Днес", "wallet", '<span class="sum">' + fmt(td.sales.sum) + "</span>", "от " + plural(td.sales.n, "поръчка", "поръчки") + (td.sales.sample ? " " + SAMPLE : ""), secHref("reports", "p=today"), false]);
+      if (td.sales) K.push(["dashboard", "Днес", "wallet", '<span class="sum">' + fmt(td.sales.sum) + "</span>", (td.sales.n ? "от " + plural(td.sales.n, "поръчка", "поръчки") : "Още няма поръчки днес") + (td.sales.sample ? " " + SAMPLE : ""), secHref("reports", "p=today"), false]);
       if (td.inWork != null) K.push(["orders", "Поръчки в работа", "receipt", String(td.inWork), td.inWork ? "" : kitchenOpen ? "Няма поръчки в работа" : "Кухнята не работи сега", secHref("orders"), false]);
       if (td.reservations != null) K.push(["reservations", "Резервации днес", "calendar-check", String(td.reservations), "", secHref("reservations"), false]);
       if (td.soldOut != null && can("menu")) {
@@ -102,8 +103,8 @@ export async function initDashboard(): Promise<void> {
     const META: Record<string, string> = {
       orders: td && td.inWork != null ? td.inWork + " в работа" : "", reservations: td && td.reservations != null ? td.reservations + " днес" : "",
       menu: menuN + " ястия" + (td && td.soldOut != null ? " · " + plural(td.soldOut, "изчерпано", "изчерпани") + " днес" : ""), lunch: lunchDate ? "Последно качено: " + fmtYmd(lunchDate) : "",
-      events: ev ? esc(ev.n) + ", " + fmtYmd(ymd(ev.date), true) : "Няма предстоящи", zones: ZONES.length + " квартала · доставка до 21:00",
-      hall: TABLES.length + " маси (условни за макета)", qr: TABLES.length + " етикета за печат", roles: Object.keys(ROLES).length + " роли",
+      events: ev ? esc(ev.n) + ", " + fmtYmd(ymd(ev.date)) : "Няма предстоящи", zones: ZONES.length + " квартала · доставка до 21:00",
+      hall: TABLES.length + " маси", qr: TABLES.length + " етикета за печат", roles: Object.keys(ROLES).length + " роли",
       notes: w ? (w.notes.title || "Няма нови") : "", site: "Модулите на живо", settings: eta,
     };
     const groups = () => '<div class="groups" data-edit-id="admin.dashboard.sections">' + GROUPS.map((g, gi) => {

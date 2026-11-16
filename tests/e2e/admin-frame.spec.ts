@@ -78,7 +78,7 @@ test("sign-in by role: the main admin -> the dashboard, the waiter -> /servitor/
   await page.goto("/admin/vhod/");
   await page.fill("#u", USER.admin[0]); await page.fill("#p", USER.admin[1]); await page.click("[data-go]");
   await expect(page).toHaveURL(/\/admin\/$/);
-  await expect(page.locator(".sa-h1")).toHaveText(/^(Добро утро|Добър ден|Добър вечер), /);
+  await expect(page.locator(".sa-h1")).toHaveText(/^(Добро утро|Добър ден|Добър вечер)(, |$)/);
   await expect(page.locator("#db-wait-h")).toHaveText("Чака те");
   /* already signed in: the sign-in says so and leads back */
   await page.goto("/admin/vhod/");

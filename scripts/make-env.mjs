@@ -16,6 +16,7 @@ if (fs.existsSync(file)) {
   const added = [];
   const add = (text) => { have += (have.endsWith("\n") ? "" : "\n") + text + "\n"; fs.writeFileSync(file, have, { mode: 0o600 }); };
   if (!/^VAPID_PRIVATE_KEY=/m.test(have)) { add("# Web Push (order status). Secret: never commit.\n" + vapid().join("\n")); added.push("the VAPID keys for Web Push"); }
+  if (!/^ADMIN_NAME=/m.test(have)) { add("ADMIN_NAME=Поли"); added.push("the main admin's name"); }
   if (!/^MARKETING_PASSWORD=/m.test(have)) { add(`MARKETING_PASSWORD=${pw()}`); added.push("the marketing account"); }
   console.log(added.length ? ".env exists: added " + added.join(" and ") + " (the rest is left as is)" : ".env exists, left as is");
   process.exit(0);
@@ -26,6 +27,7 @@ const body = [
   "SITE_URL=https://siracusa-sofia.com",
   "DB_FILE=data/siracusa.db",
   "ADMIN_USER=admin",
+  "ADMIN_NAME=Поли",
   `ADMIN_PASSWORD=${pw()}`,
   `OWNER_PASSWORD=${pw()}`,
   `MANAGER_PASSWORD=${pw()}`,

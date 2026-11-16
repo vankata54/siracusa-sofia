@@ -45,7 +45,7 @@ test("the footer button is on every page; the module loads only at the first tap
   await expect(sheet(page).locator("#sg-t")).toHaveAttribute("aria-invalid", "true");
   await sheet(page).locator("#sg-t").fill("Обадете ми се на 0888 12 34 56");
   await sheet(page).locator("[type=submit]").click();
-  await expect(sheet(page).locator("#sg-e")).toHaveText("Моля, без телефон и имейл: препоръката е анонимна.");
+  await expect(sheet(page).locator("#sg-e")).toHaveText("Моля, махнете телефона или имейла от текста.");
 
   await sheet(page).locator("#sg-t").fill("Бутонът за филтрите е малък");
   const req = page.waitForRequest((r) => r.url().endsWith("/api/notes/suggest") && r.method() === "POST");

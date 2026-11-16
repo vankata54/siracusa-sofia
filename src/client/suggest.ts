@@ -157,7 +157,7 @@ function sheet() {
     const t = ta.value.trim();
     const bad = (m: string) => { er.textContent = m; er.hidden = false; ta.setAttribute("aria-invalid", "true"); ta.setAttribute("aria-describedby", "sg-e sg-h"); ta.focus(); };
     if (!t) return bad("Напишете какво да подобрим.");
-    if (personal(t)) return bad("Моля, без телефон и имейл: препоръката е анонимна.");
+    if (personal(t)) return bad("Моля, махнете телефона или имейла от текста.");
     const note: NoteInput = { module: "site", url: urlOf(), selector: picked ? picked.selector : "", editId: picked ? picked.editId : null, text: t.slice(0, 4000), elementText: picked ? picked.text : "", viewport: { w: innerWidth, h: innerHeight } };
     busy = true; send.disabled = true; send.setAttribute("aria-busy", "true");
     try { await sendSuggestion(note); }

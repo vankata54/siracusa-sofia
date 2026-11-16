@@ -107,7 +107,7 @@ export function norm(s: string): string {
 }
 export function searchSections(q: string): Sec[] {
   const n = norm(q); if (!n) return [];
-  return visibleSections().filter((s) => { const k = norm(s.n + " " + s.short + " " + s.desc + " " + groupOf(s.id)); return n.split(" ").every((p) => k.includes(p)); })
+  return visibleSections().filter((s) => { const k = norm(s.n + " " + s.short + " " + s.desc + " " + groupOf(s.id)); const ws = k.split(" "); return n.split(" ").every((p) => ws.some((w) => w.startsWith(p))); })
     .sort((a, b) => Number(norm(b.n).indexOf(n) === 0) - Number(norm(a.n).indexOf(n) === 0));
 }
 
@@ -372,6 +372,8 @@ export function mountPen(module: string, slot?: HTMLElement) {
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
       module, who: who(), sectionNotes: can("notes"), slot,
+      /* the ember bar under the top bar of the admin (BRIEF, decision 3 of the chief); the staff apps have no top bar of the admin */
+      barTop: APPS.includes(module) ? undefined : [8, 88],
       onSave: async (n) => { await adminApi.createNote(n); refreshSoon(); },
     });
   }).catch(() => { /* without the pencil the page still works */ });
@@ -474,8 +476,8 @@ export function search(q: string, open: Record<string, boolean>, cb: (html: stri
       else if (ans) {
         const mapH = (l: SearchHit[] | null, f: (h: SearchHit) => Item) => (l || []).map(f);
         grp("cus", "Клиенти", mapH(ans.customers, (h) => ({ href: secHref("customers"), icon: "user", title: h.title, meta: h.phone })), !!ans.customers && ans.customers.some((h) => h.exact));
-        grp("ord", "Поръчки", mapH(ans.orders, (h) => ({ href: secHref("orders", "n=" + h.id), icon: "receipt", title: h.title + " · " + (OST[h.status || ""] || h.status || ""), meta: [h.date ? fmtYmd(h.date, true) : "", h.time || "", h.phone].filter(Boolean).join(" · ") })), !!ans.orders && ans.orders.some((h) => h.exact));
-        grp("res", "Резервации", mapH(ans.reservations, (h) => ({ href: secHref("reservations", "d=" + (h.date || "")), icon: "calendar-check", title: h.title + (h.time ? " · " + h.time : ""), meta: [h.date ? fmtYmd(h.date, true) : "", h.people ? plural(h.people, "човек", "души") : "", RST[h.status || ""] || h.status || ""].filter(Boolean).join(" · ") })), !!ans.reservations && ans.reservations.some((h) => h.exact));
+        grp("ord", "Поръчки", mapH(ans.orders, (h) => ({ href: secHref("orders", "n=" + h.id), icon: "receipt", title: h.title + " · " + (OST[h.status || ""] || h.status || ""), meta: [h.date ? fmtYmd(h.date) : "", h.time || "", h.phone].filter(Boolean).join(" · ") })), !!ans.orders && ans.orders.some((h) => h.exact));
+        grp("res", "Резервации", mapH(ans.reservations, (h) => ({ href: secHref("reservations", "d=" + (h.date || "")), icon: "calendar-check", title: h.title + (h.time ? " · " + h.time : ""), meta: [h.date ? fmtYmd(h.date) : "", h.people ? plural(h.people, "човек", "души") : "", RST[h.status || ""] || h.status || ""].filter(Boolean).join(" · ") })), !!ans.reservations && ans.reservations.some((h) => h.exact));
       }
     }
     if (dishesOn()) {

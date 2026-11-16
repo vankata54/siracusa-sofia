@@ -320,7 +320,10 @@ select.input{appearance:none; -webkit-appearance:none; padding-right:44px; backg
 /* нова поръчка: значката мига спокойно, докато поръчките не са видени; при „намалено движение“ само цвят и дума „Нова“ */
 @keyframes sa-fresh{0%,100%{transform:scale(1); opacity:1} 50%{transform:scale(1.18); opacity:.75}}
 .sa-n.fresh, .fresh .sa-n{background:var(--ember); color:var(--on-ember); animation:sa-fresh 1.6s var(--ease) infinite}
-@media (prefers-reduced-motion: reduce){ .sa-n.fresh, .fresh .sa-n{animation:none} .sa-n.fresh::after, .fresh .sa-n::after{content:" Нова"; font-weight:800} }
+@media (prefers-reduced-motion: reduce){ .sa-n.fresh, .fresh .sa-n{animation:none} .sa-n.fresh::after, .fresh .sa-n::after{content:" Нова"; font-weight:800}
+  /* the word makes the badge wider: in the bottom bar it sits over the icon (never on the label), in "Чака те" it stays in the row */
+  .sa-bnav .sa-n.fresh, .sa-bnav .fresh .sa-n{left:auto; right:calc(50% - 40px); top:2px}
+  .wt b .sa-n.fresh, .wt .fresh .sa-n{position:static; display:inline-grid; margin-left:6px} }
 /* компютър до 1500: по-тясно търсене, темата е в профила, за да има място за името на раздела и „Звук“ */
 @container app (min-width:1100px) and (max-width:1499px){ .sa-top .sa-search input{width:240px} .sa-top [data-sa="theme"]{display:none !important} .sa-me .who small{display:none} }
 

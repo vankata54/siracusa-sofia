@@ -21,6 +21,7 @@ export const STAFF = [
   ["marketing", "Маркетинг", "marketing", "MARKETING_PASSWORD"],
 ];
 export function staffFromEnv(env) {
-  return STAFF.map(([u, name, role, key]) => ({ username: u === "ADMIN_USER" ? env.ADMIN_USER || "admin" : u, name, role, password: env[key] }))
+  /* the shown name: <ROLE>_NAME in .env (e.g. ADMIN_NAME=Поли), else the role */
+  return STAFF.map(([u, name, role, key]) => ({ username: u === "ADMIN_USER" ? env.ADMIN_USER || "admin" : u, name: String(env[role.toUpperCase() + "_NAME"] || name).slice(0, 60), role, password: env[key] }))
     .filter((s) => s.password);
 }
