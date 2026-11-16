@@ -6,6 +6,7 @@ import { esc } from "../lib/format.ts";
 import { loadModule } from "../lib/load.ts";
 import type { AiKind } from "../lib/assistant.ts";
 import type { SCType } from "./sc.ts";
+import "./sc-sheet.ts"; /* SC.sheet() */
 
 const sc = (): SCType => window.SC;
 const assistantChunk = () => import("../lib/assistant.ts");

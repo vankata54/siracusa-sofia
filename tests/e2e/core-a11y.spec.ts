@@ -26,6 +26,29 @@ test("sheets: Tab and Shift+Tab go round inside; a radio group as the last stop;
   await expect(page.locator(".sheetwrap.on [data-close]")).toBeFocused();
 });
 
+/* the sheet and its focus trap are in src/client/sc-sheet.ts, out of the shared runtime (decision 16.11.2026) */
+test("the sheet module loads only where a sheet opens: on the home page with 'Още' (from pointerdown), at once on a page with its own sheet", async ({ page }) => {
+  await noCookie(page);
+  const loaded = () => page.evaluate(() => performance.getEntriesByType("resource").some((e) => /\/_astro\/sc-sheet\.[\w-]+\.js$/.test(e.name)));
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  expect(await loaded()).toBe(false);
+  const more = page.locator("[data-more]").first();
+  /* the finger is down: the chunk is on its way before the tap ends */
+  await more.dispatchEvent("pointerdown");
+  await expect.poll(loaded).toBe(true);
+  await more.click();
+  await expect(page.locator(".sheetwrap.on [data-close]")).toBeFocused();
+  await expect(page.locator(".sheetwrap")).toHaveCount(1);
+  await expect(page.locator(".sheetwrap.on .sheet h2")).toHaveText("Още");
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+  await expect(page.locator(".sheetwrap")).toHaveCount(0);
+  await page.goto("/menu/pitsi/");
+  await page.waitForLoadState("networkidle");
+  expect(await loaded()).toBe(true);
+});
+
 test("cookie sheet: after Escape or 'Запази избора' the focus is on a visible element, never on body", async ({ page }) => {
   await page.goto("/biskvitki/");
   await page.locator('.cookie [data-cookie="set"]').click();

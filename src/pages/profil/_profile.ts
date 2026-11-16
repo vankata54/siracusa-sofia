@@ -8,6 +8,7 @@
      addresses / addAddress / removeAddress -> "Адреси", codes -> "Моите кодове" (from the ratings), update({notify}) -> "Известия".
    Still [ЛИПСВА]: the stamp rule and reward, how notifications are sent (no SMS provider yet), English. */
 import { SC } from "../../client/sc-menu.ts";
+import "../../client/sc-sheet.ts"; /* SC.sheet() */
 import { api, ApiError } from "../../client/api.ts";
 import type { Customer, Order } from "../../client/api-types.ts";
 import type { CustomerView } from "../../client/api.ts";

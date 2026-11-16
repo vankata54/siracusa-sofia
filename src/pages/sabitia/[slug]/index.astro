@@ -247,6 +247,7 @@ const evLd = JSON.stringify(eventLd(ev, site)).replace(/</g, "\\u003c");
 
 <script>
   import { SC } from "../../../client/sc.ts";
+  import "../../../client/sc-sheet.ts"; /* SC.sheet() */
   {
     const t = document.querySelector<HTMLElement>(".top.back .ttl"), h = document.querySelector("h1.ev-title");
     if (t && h && "IntersectionObserver" in window) new IntersectionObserver((es) => { const en = es[0]; t.classList.toggle("on", !en.isIntersecting && en.boundingClientRect.top < 200); }, { root: null, rootMargin: "-150px 0px 0px 0px" }).observe(h);

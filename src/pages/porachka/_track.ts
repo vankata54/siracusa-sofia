@@ -5,6 +5,7 @@
    Address with the secret key: /porachka/1042-k7f3m2pq/ and #1042-k7f3m2pq (shown number = the part before "-").
    The menu (illustration in the plate, grams, "Поръчай същото") is a lazy chunk, loaded in parallel with the order. */
 import { SC } from "../../client/sc.ts";
+import "../../client/sc-sheet.ts"; /* SC.sheet() */
 import type { SCMenu } from "../../client/sc-menu.ts";
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaNow, sofiaYmd, addDaysYmd, sofiaEpoch, minutes, clockOverride } from "../../lib/time.ts";

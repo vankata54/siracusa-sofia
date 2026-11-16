@@ -284,6 +284,7 @@ const jsonld = menuLd(Astro.site);
 
 <script>
   import { SC } from "../../client/sc-menu.ts";
+  import "../../client/sc-sheet.ts"; /* SC.sheet() */
   import { stateBox, loadingText, skeleton, previewPanel, pvChip, PV } from "../../lib/ui.ts";
   import {
     parseHash, hashOf, results, scopeItems, sectionHTML, searchSectionHTML, qchipsHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, laterText, catChipsHTML, sideHTML, LAZY_AFTER,

@@ -7,6 +7,7 @@
    cancel go through api.reservations.cancel (locked under 2 h in the evening / 1 h during the day).
    The hero and "Добре е да знаете" are drawn on the server (SEO); the flow depends on the day and hour, so it is drawn here. */
 import { SC } from "../../client/sc.ts";
+import "../../client/sc-sheet.ts"; /* SC.sheet() */
 import { api, ApiError } from "../../client/api.ts";
 import { normPhone, prettyPhone } from "../../lib/format.ts";
 import type { Table } from "../../lib/consts.ts";
