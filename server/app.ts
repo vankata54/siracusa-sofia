@@ -484,7 +484,8 @@ export function createApp(opts: AppOpts) {
   }
 
   /* the menu editor, photos, the lunch menu (server/routes/menu.ts) */
-  menuRoutes(app, { core, staff, body, cookieOpts, mediaDir, publisher: (publisher = makePublisher()) });
+  menuRoutes(app, { core, staff, body, cookieOpts, mediaDir, publisher: (publisher = makePublisher()),
+    rebuild: async () => { if (publisher) { const [m, site] = await Promise.all([core.menuEdit.effective(), siteFor()]); publisher.enqueue(m, site); } } });
   /* the admin, part 3 (server/routes/*.ts): the rights are in the core, a route passes the signed-in staff member */
   const adm = { core, staff: (c: Context) => staff(c), body };
   ordersAdminRoutes(app, adm);

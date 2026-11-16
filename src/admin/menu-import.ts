@@ -37,7 +37,7 @@ export async function initMenuImport(): Promise<void> {
   const step = () => (file || rows.some(filled) ? 1 : 0);
 
   function stepper() {
-    const t = ["Качете файла", "Проверете черновата", "Публикувайте от „Меню“"], k = step();
+    const t = ["Качете файла", "Въведете ястията", "Публикувайте от „Меню“"], k = step();
     return '<div class="stepper im-steps" style="--n:3" data-edit-id="admin.menuimport.steps"><div class="bar">' + t.map((_, i) => '<span class="' + (i <= k ? "on" : "") + '"></span>').join("") + '</div><div class="t"><span>Стъпка <b>' + (k + 1) + " от 3</b></span><span>" + t[k] + "</span></div></div>";
   }
   function upload() {

@@ -46,6 +46,8 @@ export interface MenuDeps {
   cookieOpts: { httpOnly: boolean; sameSite: "Lax"; secure: boolean; path: string };
   mediaDir: string;
   publisher: Publisher | null;
+  /** the site again with the live menu and site data (after a failed rebuild) */
+  rebuild: () => Promise<void>;
 }
 
 export function menuRoutes(app: Hono, d: MenuDeps): void {
@@ -69,6 +71,7 @@ export function menuRoutes(app: Hono, d: MenuDeps): void {
     const r = await core.menuEdit.publish(s, num(b.version));
     return c.json({ ...r, build: d.publisher ? d.publisher.state() : { state: "idle", at: null, waiting: false } });
   });
+  app.post("/api/admin/menu/rebuild", async (c) => { const s = await staff(c, "menu"); await core.audit.log(s.user.username, "menu.rebuild"); await d.rebuild(); return c.json(await state(s)); });
   app.post("/api/admin/menu/rollback", async (c) => { const s = await staff(c, "menu"), b = await body(c); await core.menuEdit.rollback(s, num(b.version)); return c.json(await state(s)); });
 
   /* ---------- photos ---------- */

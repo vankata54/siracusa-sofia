@@ -50,7 +50,7 @@ export function plusBtn(x: DishRef): string {
 
 /** variant "card" (rail / grid) or "row" */
 export function dishCard(x: DishRef, variant: "card" | "row" = "card", eager?: boolean): string {
-  const d = D(x), href = url.dish(d), unit = d.per100 ? "за 100 гр." : d.g;
+  const d = D(x), href = url.dish(d), unit = d.per100 ? "за 100 гр." : esc(d.g);
   if (variant === "row") return '<div class="drow"><a class="open" href="' + href + '">' + pic(d, "", eager) + '<span><span class="nm">' + esc(d.n) + '</span><span class="meta"><span class="price">' + fmt(d.p) + '</span><span class="muted small">' + unit + "</span></span>" + (d.t.length ? '<span style="display:block;margin-top:6px">' + badges(d) + "</span>" : "") + "</span></a>" + plusBtn(d) + "</div>";
   return '<div class="dcard"><a class="open" href="' + href + '"><span class="pw">' + pic(d, "", eager) + badges(d, true) + '</span><span class="nm">' + esc(d.n) + '</span></a><div class="rowp"><span><span class="price">' + fmt(d.p) + "</span><small>" + unit + "</small></span>" + plusBtn(d) + "</div></div>";
 }

@@ -207,8 +207,9 @@ export async function initMenu(): Promise<void> {
     if (PS.mode === "demo") st = '<span class="st">' + ic("info", 18) + "В демото сайтът не се пресглобява; на сървъра се пресглобява сам.</span>";
     else if (b.state === "queued") st = '<span class="st wait" role="status">' + ic("clock", 18) + "Сайтът чака да се пресглоби …</span>";
     else if (b.state === "building") st = '<span class="st wait" role="status">' + ic("arrow-clockwise", 18) + "Сайтът се пресглобява …</span>";
-    else if (b.state === "done" && b.at) st = '<span class="st">' + ic("check-circle", 18) + "Сайтът е пресглобен: готово в " + esc(hmOf(b.at)) + (PS.by ? " от " + esc(PS.by) : "") + "</span>";
-    else if (b.state === "error") st = '<span class="st bad" role="alert">' + ic("warning", 18) + "Сайтът не се пресглоби, остава предишният. Опитайте „Публикувай“ пак или кажете на главния админ.</span>";
+    else if (b.state === "done" && b.at) st = '<span class="st">' + ic("check-circle", 18) + "Сайтът е пресглобен: готово в " + esc(hmOf(b.at)) + "</span>";
+    else if (b.state === "error") st = '<span class="st bad" role="alert">' + ic("warning", 18) + "Сайтът не се пресглоби, остава предишният. Цените в поръчките вече са новите: пресглобете пак или кажете на главния админ.</span>" +
+      '<button class="pill pill-ink" type="button" data-rebuild>' + ic("arrow-clockwise", 18) + "Пресглоби пак</button>";
     const head = PS.at ? ic("check-circle", 18) + "<span>Публикувано " + esc(ago(PS.at)) + (PS.by ? " от " + esc(PS.by) : "") + (PS.count ? " · " + plural(PS.count, "промяна", "промени") : "") + "</span>" : "";
     const back = PS.prev ? '<button class="pill pill-line" type="button" data-rollback>' + ic("arrow-counter-clockwise", 18) + "Върни предишното меню</button>" : "";
     if (!head && !back && PS.mode !== "demo" && b.state === "idle") return "";
@@ -216,7 +217,7 @@ export async function initMenu(): Promise<void> {
   }
 
   function summary() {
-    const ol = outList(), list = M!.items, n = CH.count;
+    const ol = outList(), list = live ? live.items : M!.items.filter((x) => !String(x.id).startsWith("new-")), n = CH.count;
     return '<div class="sa-shell" data-edit-id="admin.menu.summary"><div class="mn-sum">' +
       '<button class="mn-k" type="button" data-f=""><span class="lb">' + ic("fork-knife", 20) + 'Ястия в менюто</span><span class="v">' + list.length + '</span><span class="ft">в ' + plural(M!.cats.length, "категория", "категории") + "</span></button>" +
       '<button class="mn-k out" type="button" data-f="out"><span class="lb">' + ic("clock", 20) + 'Изчерпани днес</span><span class="v">' + ol.length + '</span><span class="ft">' + (ol.length ? esc(ol.slice(0, 2).map((x) => x.n).join(", ")) + (ol.length > 2 ? " и още " + (ol.length - 2) : "") : "Всичко е налично") + "</span></button>" +
@@ -446,6 +447,11 @@ export async function initMenu(): Promise<void> {
     if (tg.closest("[data-retry]")) { start(); return; }
     if (tg.closest("[data-reload]")) { hideToast(); start(true); return; }
     if (tg.closest("[data-rollback]")) { rollback(); return; }
+    if (tg.closest("[data-rebuild]")) {
+      const b0 = tg.closest<HTMLButtonElement>("[data-rebuild]")!; b0.disabled = true;
+      menuApi.rebuild().then((st) => { PS = st; toast("Сайтът се пресглобява пак"); const el = body.querySelector("[data-pubinfo]"); if (el) el.outerHTML = pubInfo() || "<span data-pubinfo></span>"; poll(); }, (e) => { b0.disabled = false; toast(e instanceof Error ? e.message : "Не успяхме. Опитайте пак."); });
+      return;
+    }
     if ((t = tg.closest<HTMLElement>("[data-tab]"))) { view.t = t.dataset.tab || ""; syncHash(); draw(); const n = body.querySelector<HTMLElement>('[data-tab="' + view.t + '"]'); if (n) n.focus({ preventScroll: true }); return; }
     if ((t = tg.closest<HTMLElement>("[data-f]"))) {
       view.f = t.dataset.f || ""; if (view.t) view.t = ""; syncHash();
@@ -735,4 +741,11 @@ export async function initMenu(): Promise<void> {
     if (H.d && dish(H.d) && stateOf(H.d) !== "del") setTimeout(() => openDish(H.d), 300);
     else if (H.review) setTimeout(reviewSheet, 300);
   }
+  /* a link to #review=1 or #d=<id> while the page is open (the search, "Внос на меню" in another tab) */
+  window.addEventListener("hashchange", () => {
+    const p = new URLSearchParams(location.hash.slice(1));
+    if (!M) return;
+    if (p.get("review") === "1") reviewSheet();
+    else { const id = p.get("d"); if (id && dish(id) && stateOf(id) !== "del") openDish(id); }
+  });
 }

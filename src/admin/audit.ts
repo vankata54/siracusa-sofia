@@ -62,6 +62,7 @@ export function auditText(e: AuditEntry, names: Names = {}): string {
     case "menu.draft": return "Меню: промяна в черновата";
     case "menu.publish": return "Меню: публикувано" + (d.version != null ? " (версия " + String(d.version) + ")" : "") + " · сайтът се пресглобява";
     case "menu.rollback": return "Меню: върнато предишното" + (d.version != null ? " (версия " + String(d.version) + ")" : "");
+    case "menu.rebuild": return "Меню: сайтът е пресглобен пак";
     case "menu.discard": return "Меню: черновата е отказана";
     case "menu.media": return "Меню: качена снимка";
     case "lunch.update": return /^\d{4}-\d{2}-\d{2}$/.test(t) ? (d.n ? "Обедно меню, " + fmtDay(t) + ": " + String(d.n) + " ястия" : "Обедно меню: изчистен ден " + fmtDay(t)) : "Обедно меню: графикът е променен";

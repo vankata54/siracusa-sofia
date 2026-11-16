@@ -130,4 +130,13 @@ describe("бавен: сайтът се сглобява с ново меню (M
     expect(sc.length).toBe(1);
     expect(fs.statSync(path.join(a, sc[0])).size).toBeLessThanOrEqual(30000);
   });
+  /* the admin's text never runs as a script on the site (round 1 of the flows review of part 2): JSON-LD and every field */
+  it("text from the menu editor stays text: no markup from the data in any page", () => {
+    for (const f of htmlFiles()) {
+      /* inside a quoted attribute ("content", "alt", "aria-label") "<" is only text: those are taken out first */
+      const h = fs.readFileSync(f, "utf8").replace(/\s[\w-]+="[^"]*"/g, "");
+      expect(h.includes("<img src=x onerror"), f).toBe(false);
+      expect(/<\/script><img/.test(h), f).toBe(false);
+    }
+  });
 });

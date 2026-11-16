@@ -249,7 +249,7 @@ test("PIN: set once (shown once, never again), wrong with the tries left, unlock
     await expect(p2.locator("[data-perr]")).not.toHaveText("");
   }
   await expect(p2.locator("[data-perr]")).toContainText("Твърде много грешни опити.");
-  await expect(p2.locator("[data-perr]")).toContainText(/Опитайте пак след 1[45]:\d\d мин\./);
+  await expect(p2.locator("[data-perr]")).toContainText(/Остават 1[45]:\d\d\./);
   await expect(p2.locator('.ln-keys [data-k="1"]')).toBeDisabled();
   await ctx.close(); await ctx2.close();
   expect(errs).toEqual([]);

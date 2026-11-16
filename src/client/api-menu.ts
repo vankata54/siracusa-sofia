@@ -68,6 +68,8 @@ export const menuApi = {
   rollback: pick(async (c, version: number): Promise<MenuState> => { const s = await g(c, "menu"); await c.menuEdit.rollback(s, version); return { ...(await c.menuEdit.publishState(s)), build: IDLE }; },
     (version) => http<MenuState>("POST", "admin/menu/rollback", { version })),
   /** the live version, who and when, one step back, the draft, the rebuild; mode "demo": the static site is not rebuilt */
+  /** the site again with the live menu (after a failed rebuild); the demo has no rebuild */
+  rebuild: pick(async (c): Promise<MenuState> => ({ ...(await c.menuEdit.publishState(await g(c, "menu"))), build: IDLE }), () => http<MenuState>("POST", "admin/menu/rebuild")),
   state: pick(async (c): Promise<MenuState> => ({ ...(await c.menuEdit.publishState(await g(c, "menu"))), build: IDLE }), () => http<MenuState>("GET", "admin/menu/publish")),
   /** a photo for a dish: {url} goes into dish.photo (server: /media/<sha256>.<ext>; demo: a data: URL) */
   uploadMedia: pick(async (c, file: Blob) => uploadDemo(c, file), (file) => uploadServer(file)),

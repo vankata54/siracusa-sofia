@@ -196,7 +196,7 @@ export async function initLunch(): Promise<void> {
       '<div class="ln-ph"><div><h2>' + dayFull(cur) + "</h2><small>" + (list.length ? plural(list.length, "ястие", "ястия") + " · " : "") + esc(s.t) + pbWhen + "</small></div></div>" +
       (c && s.k !== "pub" && cur >= V!.today ? '<div class="ln-rule">' + banner({ tone: "danger", icon: "warning", title: "Същото меню като " + dayLow(c) + ", " + parts(c).d + " " + MONTHS[parts(c).m] + ".", text: "Едно и също меню не може два поредни дни. Сменете поне едно ястие, за да го публикувате." }) + "</div>" : "") +
       '<div class="ln-dl" data-dl>' + rows + "</div>" +
-      (list.length ? "" : '<div class="ln-dz">' + ic("bowl-food", 32) + "<span>Денят е празен. Пуснете тук ястие от списъка" + (pdow >= 1 && pdow <= 5 && ids(prev).length ? " или започнете от менюто за " + DAYN[pdow].toLowerCase() : "") + ".</span></div>") +
+      (list.length ? "" : '<div class="ln-dz">' + ic("bowl-food", 32) + "<span>Денят е празен. Добавете ястие от списъка" + (pdow >= 1 && pdow <= 5 && ids(prev).length ? " или започнете от менюто за " + DAYN[pdow].toLowerCase() : "") + ".</span></div>") +
       '<div class="ln-acts"><button class="pill pill-line add" type="button" data-pick>' + ic("plus", 20) + "Добави ястия</button>" +
       (pdow >= 1 && pdow <= 5 ? '<button class="pill pill-line" type="button" data-copy' + (ids(prev).length ? "" : " disabled") + ">" + ic("copy", 20) + "Копирай от " + DS[pdow] + "</button>" : "") +
       '<button class="pill pill-line" type="button" data-fav' + (list.length ? "" : " disabled") + ">" + ic("heart", 20) + "Запази като любима</button>" +
@@ -539,7 +539,7 @@ export async function initLunch(): Promise<void> {
     function wait(sec: number) {
       let left = Math.max(1, Math.round(sec));
       keys().forEach((b) => { b.disabled = true; });
-      const show = () => { errEl.innerHTML = "Твърде много грешни опити.<span class=\"left\">Опитайте пак след " + mmss(left) + " мин.</span>"; };
+      const show = () => { errEl.innerHTML = "Твърде много грешни опити.<span class=\"left\">Остават " + mmss(left) + ".</span>"; };
       show(); clearInterval(tick);
       tick = setInterval(() => { left--; if (left <= 0) { clearInterval(tick); errEl.textContent = "Можете да опитате пак."; keys().forEach((b) => { b.disabled = false; }); root.querySelector<HTMLButtonElement>('[data-k="1"]')?.focus(); } else show(); }, 1000);
     }

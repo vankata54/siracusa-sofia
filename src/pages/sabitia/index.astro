@@ -30,7 +30,7 @@ const FAQ: [string, string, boolean][] = [
 const faqLd = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.filter((f) => f[2]).map((f) => ({ "@type": "Question", name: f[0], acceptedAnswer: { "@type": "Answer", text: f[1] } })) };
 const site = String(Astro.site || "https://siracusa-sofia.com");
 /* Event JSON-LD in its own script: the browser rewrites it with today's date (see _ld.ts) */
-const evsLd = JSON.stringify(evs.map((e) => eventLd(e, site)));
+const evsLd = JSON.stringify(evs.map((e) => eventLd(e, site))).replace(/</g, "\\u003c");
 const jsonld = [crumbsLd(site), faqLd];
 const description = "Тематична вечер всяка последна събота, празници и вашите поводи в Siracusa, Дружба 2: рожден ден, кръщене, фирмено парти. -5% при ранна резервация на празник.";
 ---

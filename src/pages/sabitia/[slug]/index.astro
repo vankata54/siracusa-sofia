@@ -22,7 +22,7 @@ const pageUrl = new URL(url.event(ev.id), site).href;
 const gs = byId["gratska-salata"];
 /* one mention of "последна събота" (ev.text already says it), under 160 characters */
 const description = ev.n + " от " + ev.time + " в Siracusa, Дружба 2. " + ev.text + " Запазете място: " + R.phone + ".";
-const evLd = JSON.stringify(eventLd(ev, site));
+const evLd = JSON.stringify(eventLd(ev, site)).replace(/</g, "\\u003c");
 ---
 <Base page="event" nav="events" back={{ href: url.events(), label: "Събития и поводи" }} title={ev.n} docTitle={ev.n + " | Събития"} actionBar
   description={description} jsonld={crumbsLd(site, ev)}>

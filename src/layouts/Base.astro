@@ -77,7 +77,7 @@ const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(lo
 <link rel="preload" href={latinFont} as="font" type="font/woff2" crossorigin>
 <style is:inline set:html={fontCss}></style>
 <script is:inline set:html={boot}></script>
-{ld.map((j) => <script type="application/ld+json" set:html={JSON.stringify(j)} />)}
+{ld.map((j) => <script type="application/ld+json" set:html={JSON.stringify(j).replace(/</g, "\\u003c")} />)}
 <slot name="head" />
 </head>
 <body>

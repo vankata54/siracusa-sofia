@@ -132,6 +132,8 @@ export function toastUp() {
    order): the notice waits until the "Отмени" toast is gone */
 let undoUntil = 0, waiting: (() => void) | null = null;
 export function toast(text: string, o: { undo?: () => void; undoLabel?: string; action?: { label: string; href?: string; fn?: () => void }; ms?: number; queue?: boolean } = {}) {
+  /* never over an open sheet (a new PIN is shown there only once): the toast waits until the sheet is closed */
+  if ($(".sa-ov .sheetwrap.on")) { const t0 = Date.now(); const wait = () => { if (!$(".sa-ov .sheetwrap.on") || Date.now() - t0 > 120_000) toast(text, o); else setTimeout(wait, 400); }; setTimeout(wait, 400); return; }
   const left = undoUntil - Date.now();
   if (o.queue && left > 0) { waiting = () => toast(text, o); setTimeout(() => { const w = waiting; waiting = null; if (w) w(); }, left + 400); return; }
   const col = A.col || document.body; let t = $(".sa-toast", col);

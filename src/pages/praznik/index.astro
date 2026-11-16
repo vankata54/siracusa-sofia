@@ -46,7 +46,7 @@ const hero =
   </section>
   <section class="wrap"><div class="proto" data-proto hidden></div></section>
   <template data-pkgtpl set:html={pkgCardsHTML()}></template>
-  <script is:inline type="application/json" id="cel-pkgs" set:html={JSON.stringify(pkgs)}></script>
+  <script is:inline type="application/json" id="cel-pkgs" set:html={JSON.stringify(pkgs).replace(/</g, "\\u003c")}></script>
   <div class="abar nonav cbar" data-cbar slot="ov" set:html={barHTML(v)}></div>
 </Base>
 
