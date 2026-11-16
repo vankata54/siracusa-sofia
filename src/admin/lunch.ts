@@ -404,7 +404,8 @@ export async function initLunch(): Promise<void> {
     if (!w.length) { toast("Седмицата е празна. Добавете ястия в поне един ден."); return; }
     if (bad.length) {
       if (!bad.includes(cur)) { cur = bad[0]; sync(); redrawDay(); }
-      toast("Не е публикувано: " + bad.map((d) => DS[dowOf(d)]).join(" и ") + " повтаря съседен ден.");
+      const names = bad.map((d) => DS[dowOf(d)]), list = names.length > 1 ? names.slice(0, -1).join(", ") + " и " + names[names.length - 1] : names[0];
+      toast("Не е публикувано: " + list + (names.length > 1 ? " повтарят съседен ден." : " повтаря съседен ден."));
       root.querySelector(".ln-rule")?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
       return;
     }
