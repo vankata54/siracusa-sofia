@@ -155,6 +155,8 @@ export interface Sheet { el: HTMLElement; body: HTMLElement; foot: HTMLElement |
 export function sheet(o: { title: string; html?: string; foot?: string; focus?: string; onClose?: () => void }): Sheet {
   const ov = A.ov || document.body, w = document.createElement("div"), id = "sa" + Math.random().toString(36).slice(2, 8); w.className = "sheetwrap";
   w.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle"></div><div class="sheet-h"><h2 id="' + id + '">' + esc(o.title || "") + '</h2><button class="hb" type="button" data-close>' + ic("x", 20) + "Затвори</button></div><div class=\"body\">" + (o.html || "") + "</div>" + (o.foot ? '<div class="sa-sfoot">' + o.foot + "</div>" : "") + "</div>";
+  /* a toast that is still on screen goes away: it must never cover the sheet (a new PIN is shown there only once) */
+  const oldToast = $(".sa-toast", A.col || document.body); if (oldToast) { oldToast.classList.remove("on"); clearTimeout(toastT); }
   ov.appendChild(w); const penHost = $("sa-pen-ui"); if (penHost) penHost.setAttribute("data-sheet", ""); /* the round "Молив" hides while a sheet is open */
   const prev = document.activeElement as HTMLElement | null, bg = [A.side, A.scroller, A.col && $(".sa-top", A.col), A.bnav].filter(Boolean) as HTMLElement[];
   bg.forEach((el) => { el.inert = true; });
