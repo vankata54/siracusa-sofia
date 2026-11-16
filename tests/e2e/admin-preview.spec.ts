@@ -76,6 +76,8 @@ test("@desktop device, screen and hour change, stay in the address; the frame is
   await page.locator('.pv-tools [data-dev="desktop"]').click();
   await expect(page.locator("[data-cap]")).toContainText("1440 × 900");
   await expect(page.locator(".pv-chrome .url")).toHaveText("siracusa · /");
+  /* the new device loads the frame again: wait for it, then read it */
+  await loaded(page, "/");
   fi = await frameInfo(page);
   expect(fi.path).toBe("/");
   /* "Отвори в нов раздел": the same page with the hour */
