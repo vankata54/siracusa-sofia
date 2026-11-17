@@ -44,10 +44,19 @@ const provider = `({ label: "Търси маса, поръчка, резерва
   start: () => '<p class="fscope">Търсиш само в своето.</p><div class="fchips"><button class="chip" type="button" data-ex="12">Маса 12</button></div>',
   results: (q) => q === "няма" ? '<div class="fempty"><h3>Няма „няма“</h3></div>' : '<section class="fgrp"><h3>Маси<span class="muted">2</span></h3><a class="frow" href="#m' + q + '"><span class="fi">' + q + '</span><span><b>Маса ' + q + '</b><small>Моя маса</small></span><span class="fr"></span></a><a class="frow" href="#second"><span class="fi">7</span><span><b>Маса 7</b></span><span class="fr"></span></a></section>' })`;
 const st = "(window.SCStaff)";
+/* the waiter's "Залата" draws the live hall and sets the badges from it: for the checks of the frame alone it gets an empty
+   hall and no real-time stream (the other specs change the hall in parallel) */
+async function quiet(page: Page) {
+  await page.route("**/api/stream**", (r) => r.abort());
+  await page.route("**/api/floor/hall", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ now: new Date().toISOString(),
+    me: { username: "waiter", name: "Сервитьор", onShift: false, since: null, tables: [] }, tables: [], calls: [], qr: [],
+    counters: { queue: 0, calls: 0, qr: 0, ready: 0, readyTables: 0, free: 0, busy: 0 }, settings: { warnMin: 2, callManager: 5, qrManager: 3, callCooldown: 3 } }) }));
+}
 
 test("no session: the module leads to the sign-in with #next=, and back after it", async ({ page }) => {
+  /* the waiter signs in on the app's own screen (the PIN on a known phone, else the password) */
   await page.goto("/servitor/");
-  await expect(page).toHaveURL(/\/admin\/vhod\/#next=%2Fservitor%2F$/);
+  await expect(page).toHaveURL(/\/servitor\/vhod\/#next=%2Fservitor%2F$/);
   await page.goto("/shofyor/");
   await expect(page).toHaveURL(/\/admin\/vhod\/#next=%2Fshofyor%2F$/);
   await page.fill("#u", USER.driver[0]); await page.fill("#p", USER.driver[1]); await page.click("[data-go]");
@@ -82,6 +91,7 @@ for (const app of APPS) {
   test(`@phone ${app.role}: the top buttons and the tabs at 390 and 360, light and dark: 48 px, nothing overlaps, no horizontal scroll`, async ({ page, context }) => {
     const errs = errors(page);
     await signIn(context, app.role);
+    if (app.role === "waiter") await quiet(page);
     for (const [w, h, theme] of [[390, 844, "light"], [390, 844, "dark"], [360, 740, "light"], [360, 740, "dark"]] as const) {
       await page.setViewportSize({ width: w, height: h });
       await open(page, app.path, theme);
@@ -132,6 +142,7 @@ for (const app of APPS) {
 
   test(`${app.role}: the tabs lead to the screens of the app; the badges count, hide at 0 and can be grey`, async ({ page, context }) => {
     await signIn(context, app.role);
+    if (app.role === "waiter") await quiet(page);
     await open(page, app.path);
     const nav = page.locator(".st-nav");
     await expect(nav).toHaveAttribute("aria-label", app.role === "waiter" ? "Приложение на сервитьора" : "Приложение на шофьора");
@@ -154,8 +165,9 @@ for (const app of APPS) {
       await page.evaluate(`${st}.setBadge("list", 3)`);
       await expect(nav.locator("a").first()).toHaveAccessibleName(/^Доставки ?, 3 активни$/);
     }
-    /* the one state of the page until its author draws the screen: the empty state of the prototype */
-    await expect(page.locator("main .st-empty h2")).toHaveText(app.role === "waiter" ? "Няма повиквания" : "Няма доставки за теб");
+    /* the screen is drawn in place of the waiting skeleton ("Залата" of the waiter; the driver's empty state) */
+    if (app.role === "waiter") await expect(page.locator("main [data-sv] h2").first()).toBeVisible();
+    else await expect(page.locator("main .st-empty h2")).toHaveText("Няма доставки за теб");
     await expect(page.locator("main .st-skel")).toHaveCount(0);
   });
 
@@ -183,7 +195,7 @@ for (const app of APPS) {
     await page.keyboard.press("Escape");
     await expect(page.locator("sa-pen-ui")).not.toHaveAttribute("data-pen-sheet", "");
     await expect(page.locator("sa-pen-ui .sw")).not.toHaveClass(/on/);
-    await page.locator("main .st-empty h2").click();
+    await page.locator("main h2").first().click();
     if (await pick.isVisible()) await pick.click();
     await expect(sh.locator("h2")).toHaveText("Какво да подобрим?");
     await expect(sh.locator(".meta")).toContainText(app.role === "waiter" ? "Сервитьор" : "Шофьор");
@@ -253,9 +265,9 @@ test("the sheet „Смяна“: who is signed in, the theme, „Изход“;
   /* "Изход" signs out */
   await btn.click();
   await page.locator('.st-sheetwrap.on [data-act="logout"]').click();
-  await expect(page).toHaveURL(/\/admin\/vhod\/$/);
+  await expect(page).toHaveURL(/\/servitor\/vhod\/$/);
   await page.goto("/servitor/");
-  await expect(page).toHaveURL(/\/admin\/vhod\/#next=/);
+  await expect(page).toHaveURL(/\/servitor\/vhod\/#next=/);
 });
 
 test("the driver's sheet has the navigation app; it is remembered on the device", async ({ page, context }) => {
@@ -464,7 +476,8 @@ test("the search shell: one field with one clear button, Enter opens the first r
   const errs = errors(page);
   await signIn(context, "waiter");
   await open(page, "/servitor/");
-  /* nothing to search in yet: no "Търси" and no field */
+  /* nothing to search in: no "Търси" and no field */
+  await page.evaluate(`${st}.setSearch(null)`);
   await expect(page.locator('[data-act="find"]:visible')).toHaveCount(0);
   await page.evaluate(`${st}.setSearch(${provider}); ${st}.setTop({ find: true })`);
   const btn = page.locator('.st-top [data-act="find"]');

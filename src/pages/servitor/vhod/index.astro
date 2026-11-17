@@ -1,0 +1,12 @@
+---
+/* /servitor/vhod/: "Вход" of the waiter's app (design/pages-servitor/login.html). The page is the shared staff frame
+   (src/modules/staff/Staff.astro + frame.ts); the screen is src/modules/servitor/login.ts. */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/servitor/servitor.css";
+---
+<Staff module="waiter" title="Вход">
+<script>
+import { mountLogin } from "../../../modules/servitor/login.ts";
+mountLogin();
+</script>
+</Staff>

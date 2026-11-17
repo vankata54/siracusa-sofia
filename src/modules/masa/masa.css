@@ -1,0 +1,173 @@
+/* QR маса: the shared styles of the five screens (1:1 from design/pages-masa/_masa.css). Tokens only, no new colours;
+   the dark theme works through the tokens. The screens' own styles are in their pages (src/pages/masa/…). */
+
+/* ---------- header: wordmark, table, (desktop) sections, language ---------- */
+.mtop{padding:0 6px 0 18px}
+.mtop .word{flex:none}
+.mtab{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px 0 10px; margin-left:10px; border-radius:var(--r-pill); background:var(--surface-2); font-weight:800; font-size:15px; letter-spacing:-.01em; white-space:nowrap; text-decoration:none; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis}
+.mtab[hidden]{display:none}
+.mtab .ic{color:var(--red); flex:none}
+.mtab [data-mtabt]{min-width:0; overflow:hidden; text-overflow:clip}
+.mtab-sk{display:inline-block; width:120px; height:16px; vertical-align:middle; border-radius:8px}
+.mtop .sp{flex:1}
+.mdnav{display:none}
+.mlang{gap:6px}
+@container app (max-width:400px){ .mtop .mlang{padding:0 8px} }
+@container app (max-width:370px){ .mtab{margin-left:6px; padding:0 10px 0 8px; font-size:14px} .mtop{padding-left:14px} .mtab-sk{width:96px} }
+@container app (min-width:900px){
+  .mdnav{display:flex; gap:2px; margin:0 auto}
+  .mdnav[hidden]{display:none}
+  .mdnav a,.mdnav button{position:relative; display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:0 14px; border:0; border-radius:var(--r-pill); background:transparent; font:inherit; font-weight:700; font-size:15px; text-decoration:none; color:var(--ink); cursor:pointer}
+  .mdnav [aria-current="page"]{background:var(--surface-2)}
+  .mdnav .call .ic{color:var(--red)}
+  .mdnav .cnt{position:static; margin-left:2px}
+  .mtop .sp{display:none}
+}
+
+/* ---------- bottom nav (decision 34): Меню · Повикай сервитьор · Количка · Профил ---------- */
+.mnav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; height:72px; display:grid; grid-template-columns:1fr 1.3fr 1fr 1fr; padding:0 4px; border-radius:var(--r-pill); background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); pointer-events:auto}
+.mnav[hidden]{display:none}
+.mnav a,.mnav button{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:48px; padding:0 2px; border:0; background:transparent; border-radius:var(--r-pill); text-decoration:none; font:inherit; font-size:14px; font-weight:700; line-height:1.1; text-align:center; color:var(--muted); cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.mnav a:active,.mnav button:active{transform:scale(.95)}
+.mnav [aria-current="page"]{color:var(--ink)}
+.mnav [aria-current="page"] .ic{color:var(--red)}
+.mnav .call .ic{color:var(--red)}
+.mnav .ib{position:relative; display:block}
+.mnav .cnt{top:-6px; right:-14px}
+@container app (min-width:900px){ .mnav{display:none} }
+.ov .abar{pointer-events:auto}
+.toast button{min-height:48px}
+
+/* ---------- avatars: who added what (colour + number + name, never colour alone) ---------- */
+.av{flex:none; width:28px; height:28px; border-radius:50%; display:inline-grid; place-items:center; font-size:14px; font-weight:800; line-height:1; background:var(--ink); color:var(--bg)}
+.av.p2{background:var(--ember); color:var(--on-ember)}
+.av.p3{background:var(--ok); color:var(--on-ok)}
+.av.p4{background:var(--red); color:var(--on-red)}
+.av.p5,.av.p7{background:var(--surface-3); color:var(--ink)}
+.av.p6{background:var(--chip-dark); color:var(--on-chip-dark)}
+.av.sm{width:24px; height:24px}
+.who{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.avs{display:inline-flex}
+.avs .av{box-shadow:0 0 0 2px var(--surface)}
+.avs .av + .av{margin-left:-6px}
+
+/* ---------- notes and banners ---------- */
+.mnote{display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 12px; padding:16px 18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.mnote > .ic{margin-top:1px; color:var(--muted)}
+.mnote.warn > .ic{color:var(--warn)}
+.mnote.bad{box-shadow:inset 0 0 0 2px var(--danger)}
+.mnote.bad > .ic{color:var(--danger)}
+.mnote.ok > .ic{color:var(--ok)}
+.mnote b{display:block; font-size:17px; line-height:1.3; letter-spacing:-.01em; text-wrap:balance}
+.mnote p{margin:2px 0 0; color:var(--muted)}
+.mnote .acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.mnotes{display:grid; gap:10px}
+.mnotes:empty{display:none}
+
+/* ---------- line status (icon + word; colour is never the only signal) ---------- */
+.stp{display:inline-flex; align-items:center; gap:5px; min-height:30px; padding:0 11px 0 8px; border-radius:var(--r-pill); font-size:14px; font-weight:800; line-height:1; white-space:nowrap; background:var(--surface-2); color:var(--ink)}
+.stp.wait,.stp.out{background:transparent; color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.stp.cooking{background:var(--ember-soft); color:var(--ink)}
+.stp.cooking .ic{color:var(--warn)}
+.stp.served{background:var(--ok); color:var(--on-ok)}
+
+/* ---------- page frame ---------- */
+.mpage{padding:20px 16px 0}
+.mpage .h1{font-size:38px}
+.mh{display:grid; gap:6px; margin-bottom:20px}
+.mh .lead{font-size:16px}
+.eyebrow{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin:0}
+.mend{height:180px}
+.cpad{padding:20px}
+.flash{animation:mflash 1400ms var(--ease) both}
+@keyframes mflash{0%{opacity:.35; transform:scale(.98)}30%{opacity:1; transform:scale(1.01)}100%{opacity:1; transform:none}}
+@container app (min-width:900px){
+  .mpage{padding:40px max(40px, calc((100% - 1200px)/2)) 0}
+  .mpage .h1{font-size:52px}
+  .mend{height:96px}
+}
+main:focus{outline:none}
+
+/* ---------- loading: aria-hidden blocks + a hidden role="status" ---------- */
+.msk{display:grid; gap:14px}
+.msk .skel{display:block}
+.msk .t{height:44px; width:62%}
+.msk .l{height:18px; width:86%}
+.msk .b{height:120px; border-radius:var(--r-core)}
+.msk .r{height:72px; border-radius:var(--r-core)}
+
+/* ---------- blocking states (invalid code, closed session, full table, no connection) ---------- */
+.gate{display:grid; justify-items:center; text-align:center; gap:14px; padding:40px 8px 8px; max-width:520px; margin:0 auto}
+.gate .ill{width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink)}
+.gate.bad .ill{color:var(--danger)}
+.gate.ok .ill{background:var(--ok); color:var(--on-ok)}
+.gate .h2{margin-top:4px}
+.gate p{margin:0; color:var(--muted)}
+.gate .btns{display:grid; gap:10px; width:100%; max-width:380px; margin-top:8px}
+
+/* ---------- sheets (profile, dish) ---------- */
+.psec + .psec{margin-top:20px; padding-top:18px; border-top:1px solid var(--line)}
+.psec h3{margin:0 0 10px; font-size:17px}
+.psec p{margin:0 0 10px; color:var(--muted)}
+.psec .seg button{min-height:48px}
+.pline{display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:12px; align-items:center; padding:8px 0}
+.pline + .pline{border-top:1px solid var(--line)}
+.pline .pic{width:48px; height:48px; border-radius:14px}
+.pline b{display:block; font-size:16px; line-height:1.25}
+.pline small{display:block; font-size:14px; color:var(--muted)}
+.mlog{display:grid; gap:12px}
+.mlog .field{margin:0}
+.mlog .link{justify-self:start; min-height:48px}
+.mlog .err{margin:4px 0 0; color:var(--danger); font-size:15px; font-weight:700}
+.democode{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:var(--r-field); background:var(--ember-soft); color:var(--ink)}
+.psec .democode{color:var(--ink)}
+.democode .ic{flex:none; margin-top:2px}
+.democode b{letter-spacing:.08em}
+
+/* ---------- compact dish row (menu at the table) ---------- */
+.mrow{display:grid; grid-template-columns:minmax(0,1fr) 48px; gap:10px; align-items:center; padding:12px 0}
+.mrow + .mrow{border-top:1px solid var(--line)}
+.mrow .open{display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; align-items:center; min-height:72px; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; font:inherit}
+.mrow .pic{width:72px; height:72px; border-radius:20px}
+.mrow .tx{display:grid; gap:4px; min-width:0}
+.mrow .nm{font-weight:700; font-size:16px; line-height:1.3; letter-spacing:-.01em}
+.mrow .meta{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; font-size:14px; color:var(--muted); font-weight:600}
+.mrow .meta .price{font-size:16px; color:var(--ink)}
+.mrow .badges{margin-top:2px}
+.mrow.out .nm{color:var(--muted)}
+.mrow > span:last-child:empty{display:block}
+.incart{display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:2px}
+.incart .who{color:var(--ink)}
+.later{font-size:14px; font-weight:700; color:var(--muted); text-align:right; line-height:1.25}
+
+/* ---------- dish sheet ---------- */
+.dsh{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding-bottom:4px}
+.dsh .pill{white-space:normal; text-align:center; line-height:1.2}
+.dsh-pic{width:100%; aspect-ratio:16/10; border-radius:var(--r-img)}
+.dsh-m{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.dsh-m .price{font-size:24px}
+.dsh p{margin:0}
+.dsh h3{margin:4px 0 0; font-size:17px}
+.dsh-no{display:flex; gap:10px; align-items:center; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.dsh-no .ic{color:var(--warn)}
+@container app (min-width:900px){ .dsh-pic{aspect-ratio:4/3} }
+
+/* ---------- the search chips and band (design/ds/sc.css: not in the site's components) ---------- */
+.qchips{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.qchips .ql{font-size:14px; font-weight:700; color:var(--muted)}
+.qchip{min-height:48px; padding:0 12px 0 16px; gap:6px}
+.qchip[aria-pressed="true"]{padding:0 16px 0 12px}
+.sband{display:flex; align-items:center; gap:8px; margin:16px 0 6px; min-height:44px; padding:6px 16px 6px 12px; border-radius:var(--r-pill); background:var(--surface-2); font-size:15px; font-weight:800; letter-spacing:-.01em}
+.sband .ic{color:var(--muted)}
+.sband .n{margin-left:auto; color:var(--muted); font-weight:600; font-size:14px; font-variant-numeric:tabular-nums}
+
+/* ---------- after review 1 ---------- */
+/* whole sentences a guest must read are 16px; 14px stays for meta only */
+.mpage .note-auto{font-size:16px}
+.mpage .note-auto .ic{margin-top:3px}
+.counter button[disabled],.counter button[aria-disabled="true"]{opacity:.35; cursor:not-allowed}
+.legend{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin:0 0 12px; font-size:14px; font-weight:700; color:var(--muted)}
+.legend .stp{background:transparent; box-shadow:none; padding:0; min-height:24px; color:var(--muted)}
+.legend .stp .ic{color:inherit}
+.nw{white-space:nowrap}
+[aria-busy="true"]{cursor:progress}

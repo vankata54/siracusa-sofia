@@ -1,0 +1,110 @@
+---
+/* QR маса · сметката (/masa/<код>/smetka/): design/pages-masa/bill.html. src/modules/masa/bill.ts draws it. */
+import Masa from "../../../modules/masa/Masa.astro";
+import Skeleton from "../../../modules/masa/Skeleton.astro";
+---
+<Masa screen="bill" title="Сметката">
+  <Skeleton />
+</Masa>
+
+<style is:global>
+/* bill (QR table): page-only styles, tokens only (1:1 from the prototype) */
+.bg{display:grid; grid-template-columns:minmax(0,1fr); gap:24px}
+.reqbtn{white-space:normal; text-align:center; line-height:1.2; padding:10px 20px; margin-top:18px}
+.payer{grid-column:2; font-size:14px; font-weight:700; color:var(--muted)}
+.payer.me{color:var(--ok)}
+.unas{display:flex; justify-content:space-between; gap:12px; margin-top:12px; padding:12px 14px; border-radius:var(--r-field); background:var(--ember-soft); font-weight:700}
+.unas.ok{background:var(--surface-2)}
+.unas .ic{vertical-align:-4px; color:var(--ok)}
+.gsep{border:0; border-top:1px solid var(--line); margin:4px 0 0}
+.blk-h{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 12px}
+.blk-h .h3{margin:0}
+.lines{padding:6px 18px 14px}
+.bl{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:12px 0; align-items:center}
+.bl + .bl{border-top:1px solid var(--line)}
+.bl .nm{font-weight:700; line-height:1.3}
+.bl .who{grid-column:1}
+.bl .price{grid-row:1 / span 2; grid-column:2}
+.bl > .payer{grid-column:1}
+.bl.pick{grid-template-columns:auto minmax(0,1fr) auto; cursor:pointer; min-height:64px}
+.bl.pick input{width:24px; height:24px; margin:0; accent-color:var(--red); grid-row:1 / span 3}
+.bl.pick .who{grid-column:2}
+.bl.pick .price{grid-column:3; grid-row:1 / span 3}
+.bl.pick .payer{grid-column:2}
+.bl.taken{opacity:.6; cursor:default}
+.tot{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:14px 0 0; margin-top:4px; border-top:1.5px solid var(--line-strong)}
+.tot b{font-size:18px}
+.tot .price{font-size:28px; letter-spacing:-.03em}
+.lines .kv{padding:6px 0}
+.fine{margin:10px 0 0; font-size:16px; color:var(--muted)}
+.rate .field label,.rate .field .help{font-size:16px}
+.qh{margin:0 0 10px; font-size:17px; font-weight:800}
+.seg.pay button{min-height:64px; font-size:17px}
+.seg.pay button .ic{color:var(--muted)}
+.seg.pay button[aria-pressed="true"] .ic{color:var(--red)}
+.seg.split button{min-height:56px; font-size:16px; line-height:1.15; padding:0 6px; text-align:center}
+.splitbox{margin-top:14px}
+.ppl{padding:4px 18px}
+.pp{display:flex; align-items:center; gap:12px; min-height:60px}
+.pp + .pp{border-top:1px solid var(--line)}
+.pp b{flex:1}
+.mine{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-top:12px; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.mine b{font-size:17px}
+.mine .price{font-size:22px}
+.coming{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 16px; align-items:center; padding:20px}
+.bell{position:relative; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--red); color:var(--on-red); grid-row:span 2}
+.bell::after{content:""; position:absolute; inset:0; border-radius:50%; box-shadow:0 0 0 2px var(--red); animation:bring 2400ms var(--ease) infinite; opacity:0}
+@keyframes bring{0%{transform:scale(1); opacity:.8}100%{transform:scale(1.5); opacity:0}}
+@media (prefers-reduced-motion: reduce){ .bell::after{animation:none} }
+.coming h2{margin:0; font-size:24px; line-height:1.15; letter-spacing:-.03em}
+.coming .t{font-variant-numeric:tabular-nums; white-space:nowrap}
+.coming .what{margin:0; color:var(--muted); font-weight:600}
+.coming .kvs{grid-column:1 / -1; margin-top:8px; border-top:1px solid var(--line)}
+.coming .kv > span:last-child{font-weight:700; text-align:right}
+.coming.done .bell{background:var(--ok); color:var(--on-ok)}
+.coming.done .bell::after{display:none}
+.oth{display:flex; align-items:center; gap:8px; margin:0}
+.oth + .oth{margin-top:8px}
+/* rating (hand-off 10.6, same as tracking) */
+.rate{scroll-margin-top:110px}
+.offer{display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px 0 10px; border-radius:var(--r-pill); background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800}
+.rate h2{font-size:28px; line-height:1.08; letter-spacing:-.035em; font-weight:800; margin:10px 0 0}
+.rate .lead{margin-top:6px}
+.yn{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+.yn button{min-height:64px; border:0; border-radius:var(--r-pill); display:inline-flex; align-items:center; justify-content:center; gap:10px; font:inherit; font-size:19px; font-weight:800; cursor:pointer; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); transition:transform var(--t-fast) var(--ease)}
+.yn button:active{transform:scale(.97)}
+.yn button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.ans{display:grid; gap:16px; margin-top:20px; padding-top:20px; border-top:1px solid var(--line); animation:rise 420ms var(--ease) both}
+@keyframes rise{from{transform:translateY(10px); opacity:0}to{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){ .ans{animation:none} }
+.ans h3{font-size:20px; letter-spacing:-.02em; margin:0}
+.ans h3:focus{outline:none}
+.ans p{margin:0}
+.ans .field{margin:0}
+.code{border-radius:var(--r-core); padding:18px; display:grid; gap:12px}
+.code .k{font-size:16px; font-weight:800}
+.code .v{font-size:26px; font-weight:800; letter-spacing:.02em; font-variant-numeric:tabular-nums; line-height:1.1; white-space:nowrap}
+@container app (max-width:370px){ .code .v{font-size:23px} }
+.code .row{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px}
+.code p{font-size:16px}
+.code .pill{background:var(--on-ember); color:var(--ember); min-height:48px}
+.gq{display:grid; gap:10px}
+.gq .missing,.ans .missing{font-size:14px}
+.ans .link{min-height:48px}
+.fbsent{display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:var(--r-field); background:var(--surface-2)}
+.fbsent .ic{color:var(--ok); margin-top:2px; flex:none}
+.change{justify-self:start; color:var(--muted)}
+.side{display:grid; gap:16px}
+.bempty{padding:28px 16px}
+.bempty p{margin:0; color:var(--muted)}
+@container app (min-width:900px){
+  .bg{grid-template-columns:minmax(0,1fr) 420px; gap:24px 48px; align-items:start}
+  .bg > .side{grid-column:2; grid-row:1 / span 6; position:sticky; top:110px; display:grid; gap:20px}
+  .bg > :not(.side){grid-column:1}
+  .lines,.ppl{padding-left:24px; padding-right:24px}
+}
+</style>
+
+<script>
+  import "../../../modules/masa/bill.ts";
+</script>

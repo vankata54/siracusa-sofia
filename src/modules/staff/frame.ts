@@ -148,8 +148,12 @@ export interface SheetOpts { title: string; html?: string; foot?: string; /** a 
 /* ---------- words of the two apps ---------- */
 const ROLE_N: Record<string, string> = { admin: "Главен админ", owner: "Собственик", manager: "Управител", waiter: "Сервитьор", kitchen: "Кухня", driver: "Шофьор", marketing: "Маркетинг" };
 const STAFF_ROLES = ["waiter", "kitchen", "driver"];
-const MOD: Record<StaffModule, { n: string; suffix: string; nav: string; find: string; net: string; tabs: () => StaffTab[] }> = {
+/** the sign-in of the app (the waiter's own screen) or the admin's */
+const signInUrl = (m: StaffModule, next?: string) => { const f = MOD[m].login; return f ? f(next) : aurl.login(next); };
+const MOD: Record<StaffModule, { n: string; suffix: string; nav: string; find: string; net: string; tabs: () => StaffTab[]; login?: (next?: string) => string }> = {
   waiter: {
+    /* the waiter signs in on the app's own screen (the PIN on a known phone, else the password): /servitor/vhod/ */
+    login: (next) => murl.servitor("vhod", next ? "next=" + encodeURIComponent(next) : undefined),
     n: "Сервитьор", suffix: "Персонал", nav: "Приложение на сервитьора", find: "Търси: маси, поръчки, изчерпано, резервации, ястия", net: "Поръчките се пазят тук.",
     tabs: () => [
       { key: "tables", href: murl.servitor(), icon: "squares-four", word: "Маси" },
@@ -226,7 +230,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
       if (e instanceof ApiError && e.status === 401) me = null;
       else { bootFail(o, e); return null; }
     }
-    if (!me) { location.replace(aurl.login(murl.here())); return null; }
+    if (!me) { location.replace(signInUrl(o.module, murl.here())); return null; }
     const role = me.user.role;
     /* the same rule as the stub of stage C: the main admin, the role of the module, or a role with the module's section */
     if (!(role === "admin" || role === o.module || me.sections.includes(o.module))) { location.replace(STAFF_ROLES.includes(role) ? aurl.app(role) : aurl.home()); return null; }
@@ -428,7 +432,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
   }
   function fail(e: unknown): "offline" | "auth" | "error" {
     if (e instanceof ApiError && e.code === "offline") { probe().then((ok) => { if (ok && main.querySelector(".st-skel")) main.innerHTML = errorHTML(); }); return "offline"; }
-    if (e instanceof ApiError && e.status === 401) { location.replace(aurl.login(murl.here())); return "auth"; }
+    if (e instanceof ApiError && e.status === 401) { location.replace(signInUrl(o.module, murl.here())); return "auth"; }
     main.innerHTML = errorHTML(e instanceof ApiError && e.message ? e.message : undefined); return "error";
   }
 
@@ -457,7 +461,9 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
   let leaving = false;
   function logout() {
     if (leaving) return; leaving = true;
-    adminRuntime().then((a) => a.logout()).catch(() => { leaving = false; toast("Няма връзка. Изходът ще стане, щом се върне."); });
+    const back = MOD[o.module].login;
+    (back ? import("../../client/api-admin.ts").then(async ({ staffApi }) => { try { await staffApi.logout(); } catch { /* the cookie goes anyway on the next sign-in */ } location.href = back(); })
+      : adminRuntime().then((a) => a.logout())).catch(() => { leaving = false; toast("Няма връзка. Изходът ще стане, щом се върне."); });
   }
 
   /* ----- clicks the frame handles anywhere on the page ----- */

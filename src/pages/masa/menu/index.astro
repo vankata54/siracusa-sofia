@@ -1,0 +1,94 @@
+---
+/* QR маса · меню (/masa/<код>/menu/): design/pages-masa/menu.html. src/modules/masa/menu.ts draws it after the first view. */
+import Masa from "../../../modules/masa/Masa.astro";
+import Skeleton from "../../../modules/masa/Skeleton.astro";
+---
+<Masa screen="menu" title="Меню на масата" actionBar>
+  <Skeleton />
+</Masa>
+
+<style is:global>
+/* menu (QR table): page-only styles, tokens only (1:1 from the prototype) */
+.mm-h{display:grid; gap:6px}
+.mm-h .lead{max-width:46ch; margin:0}
+.mm-h .h1{margin:0}
+.tbl{display:flex; align-items:center; gap:12px; margin-top:16px; padding:12px 16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:inherit; min-height:64px}
+.tbl b{display:block; font-size:16px; line-height:1.3}
+.tbl .d{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.tbl > .ic{margin-left:auto; color:var(--muted); flex:none}
+.tbl.flash{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
+.sbox{position:relative; margin-top:16px}
+.sbox > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.sbox input{width:100%; min-height:52px; padding:0 52px 0 50px; border:0; border-radius:var(--r-pill); background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:16px; outline:none; -webkit-appearance:none; appearance:none}
+.sbox input::placeholder{color:var(--muted)}
+.sbox input:focus{box-shadow:inset 0 0 0 2px var(--red)}
+.sbox input::-webkit-search-cancel-button,.sbox input::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}
+.sbox .clr{position:absolute; right:2px; top:2px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.sbox .clr[hidden]{display:none}
+.fchips{margin-top:12px; padding-bottom:2px}
+.fchips .chip{min-height:48px}
+.mm .qchips{margin-top:10px}
+.mband{margin:0 0 4px}
+.mband h2{display:flex; align-items:center; gap:8px; margin:0; font-size:17px; letter-spacing:-.02em}
+.munk{margin-bottom:6px}
+.fchips .chip.leaf .ic{color:var(--ok)} .fchips .chip.pep .ic{color:var(--red)}
+.fchips .chip[aria-pressed="true"] .ic{color:inherit}
+.fchips .dot{min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; display:inline-grid; place-items:center}
+.mstat{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; min-height:48px}
+.mstat p{margin:0; font-weight:800; font-variant-numeric:tabular-nums}
+.mstat p span{color:var(--muted); font-weight:600}
+.mstat .link{min-height:48px}
+.mstat .link[hidden]{display:none}
+.alnote{margin-top:4px}
+.mm .mnotes{margin-top:16px}
+/* sticky categories */
+.catbar{position:sticky; top:74px; z-index:18; margin:18px -8px 0; padding:4px; border-radius:var(--r-pill); background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.catbar[hidden]{display:none}
+.catbar .cs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; border-radius:var(--r-pill)}
+.catbar .cs::-webkit-scrollbar{display:none}
+.catbar .chip{background:transparent; box-shadow:none; padding:0 14px; text-decoration:none; min-height:48px; flex:none}
+.catbar .chip[aria-current="true"]{background:var(--ink); color:var(--bg)}
+.mcat{padding-top:32px; scroll-margin-top:136px}
+.mcat .h3{font-size:22px; margin:0}
+.mcat .cdesc{margin:2px 0 4px; font-size:14px; font-weight:600; color:var(--muted)}
+.rows{display:grid}
+.mempty{margin-top:24px; padding:32px 20px; border-radius:var(--r-shell); background:var(--surface-2)}
+.mempty .ill{background:var(--surface); color:var(--ink)}
+.mempty p{margin:0; color:var(--muted)}
+/* allergen sheet */
+.flist .check{align-items:center; min-height:56px; padding:6px 0; border-top:1px solid var(--line)}
+.flist .check:first-child{border-top:0}
+.flist .fi{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); flex:none}
+.flist .ft{flex:1; display:grid; line-height:1.25}
+.flist .ft small{font-size:14px; color:var(--muted); font-weight:600}
+.sh-foot{position:sticky; bottom:0; display:grid; grid-template-columns:auto 1fr; gap:8px; padding:14px 0 2px; background:var(--surface)}
+/* cart bar */
+.cbar{padding:6px 6px 6px 16px}
+.cbar[hidden]{display:none}
+.cbar .avs{flex:none}
+.cbar .cn{flex:none; font-size:14px; font-weight:700; line-height:1.2; color:var(--muted)}
+.cbar .cn b{display:block; color:var(--ink); font-size:16px}
+.cbar .pill{flex:1; justify-content:space-between; padding:0 8px 0 18px; min-height:52px}
+.cbar .knob{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--red-press)}
+.cbar.off .pill{background:var(--ink); color:var(--bg)}
+.cbar.off .knob{background:transparent}
+@container app (max-width:699px){ .cbar .avs{display:none} }
+@container app (max-width:370px){ .cbar .cn{display:none} }
+@container app (min-width:700px){
+  .rows{grid-template-columns:1fr 1fr; column-gap:32px}
+  .rows .mrow + .mrow{border-top:0}
+  .rows .mrow{border-bottom:1px solid var(--line)}
+}
+@container app (min-width:900px){
+  .mm-top{display:grid; grid-template-columns:minmax(0,1fr) 420px; gap:12px 40px; align-items:end}
+  .tbl{margin-top:0}
+  .catbar{top:96px; margin:28px 0 0}
+  .mcat{scroll-margin-top:170px; padding-top:44px}
+  .fchips{flex-wrap:wrap; overflow:visible; margin:12px 0 0; padding:0}
+}
+@container app (min-width:1100px){ .rows{grid-template-columns:1fr 1fr 1fr} }
+</style>
+
+<script>
+  import "../../../modules/masa/menu.ts";
+</script>

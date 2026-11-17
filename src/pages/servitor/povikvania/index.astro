@@ -1,0 +1,12 @@
+---
+/* /servitor/povikvania/: "Повиквания" of the waiter's app (design/pages-servitor/calls.html). The page is the shared staff frame
+   (src/modules/staff/Staff.astro + frame.ts); the screen is src/modules/servitor/calls.ts. */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/servitor/servitor.css";
+---
+<Staff module="waiter" title="Повиквания" nav>
+<script>
+import { mountCalls } from "../../../modules/servitor/calls.ts";
+mountCalls();
+</script>
+</Staff>

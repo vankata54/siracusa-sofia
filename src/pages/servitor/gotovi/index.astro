@@ -1,0 +1,12 @@
+---
+/* /servitor/gotovi/: "Готови" of the waiter's app (design/pages-servitor/ready.html). The page is the shared staff frame
+   (src/modules/staff/Staff.astro + frame.ts); the screen is src/modules/servitor/ready.ts. */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/servitor/servitor.css";
+---
+<Staff module="waiter" title="Готови" nav>
+<script>
+import { mountReady } from "../../../modules/servitor/ready.ts";
+mountReady();
+</script>
+</Staff>

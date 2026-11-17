@@ -1,18 +1,12 @@
 ---
-/* /servitor/: "Залата", the first screen of the waiter's app. Here is only the shared phone frame
-   (src/modules/staff/frame.ts): the body of the screen is written by its author in src/modules/servitor/ and drawn into
-   st.main. Until then the page shows ONE state: the waiting skeleton, then the empty state of the prototype.
-   For the author: the search field of the first screen comes with
-     homeFind: { text: "Търси маса, №, резервация, ястие…", label: "Търси: маси, поръчки, изчерпано, резервации, ястия" }, search: <provider> */
+/* /servitor/: "Залата" of the waiter's app (design/pages-servitor/tables.html). The page is the shared staff frame
+   (src/modules/staff/Staff.astro + frame.ts); the screen is src/modules/servitor/hall.ts. */
 import Staff from "../../modules/staff/Staff.astro";
+import "../../modules/servitor/servitor.css";
 ---
 <Staff module="waiter" title="Залата" nav>
 <script>
-import { mountStaff } from "../../modules/staff/frame.ts";
-mountStaff({ module: "waiter", screen: "tables", tab: "tables", title: "Залата", offlineFull: true }).then((st) => {
-  if (!st) return;
-  st.main.innerHTML = st.empty({ title: "Няма повиквания", text: "Всички маси са обслужени. Щом някой повика, телефонът и часовникът ще вибрират." });
-  st.synced();
-});
+import { mountHall } from "../../modules/servitor/hall.ts";
+mountHall();
 </script>
 </Staff>

@@ -40,8 +40,11 @@ export async function mountOrder(): Promise<void> {
 }
 
 /* ---------- step 0: "За коя маса?" ---------- */
+let pickHall: HallLive | null = null;
 async function pickTable(q: string) {
-  const st0 = await mountStaff({ module: "waiter", screen: "order", tab: "order", title: "Нова поръчка", sub: "На маса: за коя маса?" });
+  /* "Търси": the waiter's search of the hall (src/modules/servitor/find.ts), loaded on the first press */
+  const st0 = await mountStaff({ module: "waiter", screen: "order", tab: "order", title: "Нова поръчка", sub: "На маса: за коя маса?",
+    search: () => import("./find.ts").then((m) => m.provider(() => pickHall)) });
   if (!st0) return;
   const st: Staff = st0;
   let L: HallLive | null = null;
@@ -64,7 +67,7 @@ async function pickTable(q: string) {
   }
   async function load() {
     try {
-      L = await floorApi.hall(); st.synced(); draw();
+      L = pickHall = await floorApi.hall(); st.synced(); draw();
       st.setBadge("calls", L.counters.queue); st.setBadge("ready", L.counters.ready);
     } catch (e) { if (!L) st.fail(e); }
   }

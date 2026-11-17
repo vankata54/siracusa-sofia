@@ -1,0 +1,82 @@
+---
+/* The shell of the QR table (/masa/<код>/…, design/pages-masa/_masa.js M.mount): no chrome of the site (no footer,
+   assistant, cookie banner, site cart, status row, marketing). The top bar ("Маса 14 · Градина", 48 px; from 900 px the
+   sections too; the language of THIS phone) and the bottom nav of decision 34 (Меню · Повикай сервитьор · Количка ·
+   Профил) are in the HTML, so the page has its frame before any script; ./frame.ts fills the table and the counter.
+   The same elements as Base.astro (.device > .scroller > header + <main>, the fixed .ov layer with the toast), so the
+   shared runtime (src/client/sc.ts) starts as on every page and adds nothing. noindex, no canonical, no og:url. */
+import "../../styles/tokens.css";
+import "../../styles/components.css";
+import "./masa.css";
+import "../../lib/icons-all.ts"; /* server only: the icons in the HTML */
+import latinFont from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import cyrFont from "@fontsource-variable/manrope/files/manrope-cyrillic-wght-normal.woff2?url";
+import { ic } from "../../lib/icons.ts";
+import { NAV, type MasaPage } from "./words.ts";
+
+export interface Props {
+  /** the screen: welcome | menu | cart | call | bill */
+  screen: MasaPage;
+  /** <title>X | Siracusa Bar & Grill</title> */
+  title: string;
+  /** the screen draws its own floating .abar (the menu's cart bar, the cart's send button) */
+  actionBar?: boolean;
+}
+const p = Astro.props;
+const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
+const path = Astro.url.pathname;
+const depth = path.replace(/^\/|\/?index\.html$/g, "").split("/").filter(Boolean).length;
+const root = depth ? "../".repeat(depth) : "./";
+/* the server answers /masa/<код>/<екран>/ with /masa/<екран>/: the links are relative to the screen (no code needed);
+   ./frame.ts sets the final addresses (murl.masa) at once, also the demo's #k=<код> */
+const up = p.screen === "welcome" ? "" : "../";
+const rel = (s: string) => up + (s ? s + "/" : "") || "./";
+const fontCss = `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${cyrFont}) format("woff2-variations"),url(${cyrFont}) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}` +
+  `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${latinFont}) format("woff2-variations"),url(${latinFont}) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}`;
+/* the theme (the site's key) and the language of this phone before the first paint */
+const boot = `(function(){var d=document.documentElement;try{var p=JSON.parse(localStorage.getItem("sc-prefs")||"{}");if(p.theme==="light"||p.theme==="dark")d.dataset.theme=p.theme;if(localStorage.getItem("sc-masa-lang")==="en"){d.lang="en";d.dataset.mlang="en";}}catch(e){}})();`;
+const navItem = (n: (typeof NAV)[number], desk: boolean) => {
+  const cur = p.screen === n.id ? ' aria-current="page"' : "", cls = n.id === "call" ? ' class="call"' : "";
+  const cnt = n.id === "cart" ? '<span class="cnt" data-mcnt aria-hidden="true" hidden>0</span>' : "";
+  const desc = n.id === "cart" ? '<span class="vh" data-mcntl></span>' : "";
+  const inner = desk ? ic(n.icon, 20) + '<span data-mw="' + n.id + '">' + n.bg + "</span>" + desc + cnt : '<span class="ib">' + ic(n.icon, 24) + cnt + '</span><span data-mw="' + n.id + '">' + n.bg + "</span>" + desc;
+  if (n.id === "profile") return '<button type="button" data-mprofile' + cls + ' aria-haspopup="dialog">' + inner + "</button>";
+  return '<a href="' + rel(n.path) + '" data-mgo="' + n.path + '"' + cls + cur + ">" + inner + "</a>";
+};
+const header = '<header class="top mtop" data-mtop><a class="word" href="' + rel("") + '" data-mgo="" title="Заместител до новото лого">Siracusa</a>' +
+  '<a class="mtab" href="' + rel("") + '" data-mgo="" data-mtab aria-label="Масата, начало">' + ic("map-pin", 18) + '<span data-mtabt><span class="skel mtab-sk" aria-hidden="true"></span></span></a><span class="sp"></span>' +
+  '<nav class="mdnav" aria-label="Раздели" data-mdnav>' + NAV.map((n) => navItem(n, true)).join("") + "</nav>" +
+  '<button class="hb mlang" type="button" data-mlang="en">' + ic("globe", 20) + '<span data-mlt>EN</span><span class="vh" data-mlv lang="en">, switch to English</span></button></header>';
+const nav = '<nav class="mnav" aria-label="Основна навигация" data-mnav>' + NAV.map((n) => navItem(n, false)).join("") + "</nav>";
+---
+<!doctype html>
+<html lang="bg" data-root={root} data-demo={demo ? "1" : undefined} data-page={"masa-" + p.screen} data-sc-abar={p.actionBar ? "1" : undefined} data-sc-nonav="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{p.title} | Siracusa Bar & Grill</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href={cyrFont} as="font" type="font/woff2" crossorigin>
+<link rel="preload" href={latinFont} as="font" type="font/woff2" crossorigin>
+<style is:inline set:html={fontCss}></style>
+<script is:inline set:html={boot}></script>
+</head>
+<body>
+<a class="vh skip" href="#main">Към съдържанието</a>
+<div class="device" data-page={"masa-" + p.screen}>
+  <div class="scroller" data-scroller>
+    <Fragment set:html={header} />
+    <main id="main" data-main tabindex="-1"><slot /></main>
+    <div class="mend"></div>
+  </div>
+</div>
+<div class="ov" data-ov data-nav="0" data-actionbar={p.actionBar ? "1" : "0"}>
+  <Fragment set:html={nav} />
+  <slot name="ov" />
+  <div class="toast" role="status" aria-live="polite"></div>
+</div>
+</body>
+</html>

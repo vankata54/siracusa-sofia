@@ -133,7 +133,7 @@ export function createApp(opts: AppOpts) {
     try { at = fs.statSync(path.join(dist, "index.html")).mtimeMs; } catch { /* no build yet */ }
     if (routesCache && routesCache.at === at && at) return routesCache.list;
     const out: string[] = [];
-    const STAFF_DIRS = ["admin", "servitor", "kuhnya", "shofyor"];
+    const STAFF_DIRS = ["admin", "servitor", "kuhnya", "shofyor", "masa"];
     const walk = (dir: string, rel: string) => {
       let list: fs.Dirent[] = [];
       try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
