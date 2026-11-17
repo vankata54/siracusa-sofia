@@ -33,6 +33,9 @@ import * as floorG from "./floor-guest.ts";
 import * as floorS from "./floor-staff.ts";
 import * as floorSh from "./floor-shift.ts";
 import * as pinMod from "./staff-pin.ts";
+/* stage D, step 6: the manager's module (core/shift.ts) and the owner's (core/owner.ts, with THE history core/history.ts) */
+import * as shiftMod from "./shift.ts";
+import * as ownerMod from "./owner.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -81,6 +84,12 @@ export { TABLE_STATE_LABEL, type TableStateKey, type HallLive, type HallTile, ty
 export { SHIFT_MSG, type WaiterShift, type ShiftMine, type WaiterShiftView, type ShiftRow } from "./floor-shift.ts";
 export { PIN_MSG, PIN_MODULES, PIN_LOGIN_DEVICE, PIN_LOGIN_PERSON, type PinModule, type PinPeople } from "./staff-pin.ts";
 export { TABLE_MSG, GRAMS_MIN, GRAMS_MAX, LUNCH_TABLE_MISSING, type TableOrderInput, type TableLine } from "./orders.ts";
+/* the manager and the owner (the screens import the types through src/client/api-boss.ts) */
+export { MGR_MSG, MGR_UNDO_MS, MANAGER_ROLES, MGR_TILE_LABEL, RES_AHEAD_MIN, type MgrNow, type Problem, type ProblemRef, type WaitOrder, type WaitRes, type MgrKitchen, type MgrHall, type MgrTile, type MgrTileState,
+  type MgrTable, type TonightRes, type MgrTeam, type MgrSearch } from "./shift.ts";
+export { OWNER_MSG, OWNER_MISSING, OWNER_ROLES, OWNER_QUESTIONS, OWNER_GROUPS, FACT_QUESTIONS, ALERT_PCT, ALERT_MIN_ORDERS, ANSWER_UNDO_MS, type OwnerToday, type OwnerWaits, type OwnerTrends, type TrendQuery,
+  type OwnerFinance, type PayBlock, type OwnerQuestion, type QuestionView, type OwnerDecisions, type AnswerInput, type AnswerResult, type MailSettings } from "./owner.ts";
+export { YEAR_DAYS, USUAL_WEEKS, HISTORY_MAX_DAYS, CH5_LABEL, CH_LABEL as REPORT_CH_LABEL, type Compare, type Ch5, type ChKey, type Peak, type Pair, type Times } from "./history.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;
 type Bound<M> = { [K in keyof M]: M[K] extends (ctx: Ctx, ...a: never[]) => unknown ? Tail<M[K]> : never };
@@ -182,6 +191,22 @@ export function createCore(ctx: Ctx) {
       shiftMine: floorSh.shiftMine, shiftStart: floorSh.shiftStart, shiftEnd: floorSh.shiftEnd, shiftView: floorSh.shiftView, shiftSetTables: floorSh.shiftSetTables,
     }),
     pin: bind(ctx, { people: pinMod.pinPeople, login: pinMod.pinLogin }),
+    /* ---------- stage D, step 6: "Управител" (rights: main admin, owner, manager; "Залата" hall | reservations, "Екипът" staff)
+       and "Собственик" (owner and main admin; only the owner answers the questions). Sums over several orders only with
+       "Финанси и гориво". Every action writes a line in the log and tells the screens shift.update. ---------- */
+    shift: bind(ctx, {
+      now: shiftMod.managerNow, hall: shiftMod.managerHall, table: shiftMod.managerTable, team: shiftMod.managerTeam, search: shiftMod.managerSearch,
+      accept: shiftMod.managerAccept, acceptUndo: shiftMod.managerAcceptUndo, callCustomer: shiftMod.managerCallCustomer, ack: shiftMod.managerAck, ackUndo: shiftMod.managerAckUndo,
+      callGo: shiftMod.managerCallGo, callAssign: shiftMod.managerCallAssign, callUndo: shiftMod.managerCallUndo,
+      qrConfirm: shiftMod.managerQrConfirm, qrAssign: shiftMod.managerQrAssign, qrAssignUndo: shiftMod.managerQrAssignUndo,
+      answer: shiftMod.managerAnswer, answerUndo: shiftMod.managerAnswerUndo, resConfirm: shiftMod.managerResConfirm, block: shiftMod.managerBlock,
+      busy: shiftMod.managerBusy, backIn: shiftMod.managerBackIn, setTables: shiftMod.managerSetTables, setTablesUndo: shiftMod.managerSetTablesUndo,
+      setWaiter: shiftMod.managerSetWaiter, walkin: shiftMod.managerWalkin,
+    }),
+    owner: bind(ctx, {
+      today: ownerMod.ownerToday, trends: ownerMod.ownerTrends, finance: ownerMod.ownerFinance, decisions: ownerMod.ownerDecisions,
+      answer: ownerMod.ownerAnswer, answerUndo: ownerMod.ownerAnswerUndo, block: ownerMod.ownerBlock, setMail: ownerMod.ownerSetMail,
+    }),
     audit: bind(ctx, { log: auditMod.audit, list: auditMod.listAudit }),
   };
 }

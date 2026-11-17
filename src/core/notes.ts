@@ -5,7 +5,7 @@
      them ("Одобри и изпълни", "Публикувай"); nothing goes straight to the live site.
    - The next Claude session reads GET /api/admin/notes?status=approved (or docs/NOTES.json, only the approved ones). */
 import { COL, emit, iso, rid, type Ctx } from "./ctx.ts";
-import { CoreError, NOTE_STATUSES, type FeedbackNote, type NoteSource, type NoteStatus, type NotesSeen } from "./types.ts";
+import { CoreError, NOTE_STATUSES, type FeedbackNote, type NoteQuestion, type NoteSource, type NoteStatus, type NotesSeen } from "./types.ts";
 import { audit } from "./audit.ts";
 import type { StaffCtx } from "./staff.ts";
 
@@ -85,7 +85,8 @@ export async function suggestNote(ctx: Ctx, n: NoteInput, routes: string[] | nul
   return { id: note.id };
 }
 
-export type NoteFilter = { status?: NoteStatus; module?: string; source?: string };
+/** kind: "answer" = only the owner's answers to the questions ("Отговори на въпроси"), "note" = everything else */
+export type NoteFilter = { status?: NoteStatus; module?: string; source?: string; kind?: "answer" | "note" };
 const bySource = (n: FeedbackNote, src: string) => {
   const s = n.source;
   if (src === "client") return !!s && s.type === "client";
@@ -95,7 +96,9 @@ export async function listNotes(ctx: Ctx, f: NoteFilter = {}): Promise<FeedbackN
   const where: Partial<FeedbackNote> = {};
   if (f.status) where.status = f.status;
   if (f.module) where.module = f.module;
-  return (await ctx.repo.list<FeedbackNote>(COL.notes, where)).filter((n) => !f.source || bySource(n, f.source)).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const kind = f.kind === "answer" || f.kind === "note" ? f.kind : null;
+  return (await ctx.repo.list<FeedbackNote>(COL.notes, where)).filter((n) => (!f.source || bySource(n, f.source)) && (!kind || (kind === "answer") === (n.kind === "answer")))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 /** "Моите препоръки": only the caller's own, read-only */
@@ -159,6 +162,8 @@ export async function restoreNote(ctx: Ctx, n: FeedbackNote, actor: string): Pro
     change: n.change ? { summary: clean(n.change.summary, 2000), before: n.change.before ? clean(n.change.before, 2000) : undefined, after: n.change.after ? clean(n.change.after, 2000) : undefined } : null,
     history: Array.isArray(n.history) ? n.history.filter((h) => h && NOTE_STATUSES.includes(h.status)).slice(-50).map((h) => ({ status: h.status, at: at(h.at), who: String(h.who || "").slice(0, 80) })) : b.history,
   };
+  /* an answer of the owner stays an answer (its question and the earlier answers) */
+  if (n.kind === "answer" && n.q && typeof n.q === "object") { back.kind = "answer"; back.q = n.q; if (Array.isArray(n.answers)) back.answers = n.answers.slice(-20); }
   await ctx.repo.put(COL.notes, back);
   await audit(ctx, actor, "note.restore", n.id);
   return back;
@@ -184,4 +189,55 @@ export async function markNotesSeen(ctx: Ctx, s: StaffCtx): Promise<NotesSeen> {
   const d: NotesSeen = { id: s.user.id, at: iso(ctx) };
   await ctx.repo.put(COL.notesSeen, d);
   return d;
+}
+
+/* ---------- the owner's answers to the questions of the agency ("Решения", core/owner.ts) ----------
+   One note per question (kind "answer"): a new answer replaces the text and the question of the same note, keeps the earlier
+   one in `answers` (the newest last) and puts the status back to "new" (the main admin reviews it again); "Отмени" brings
+   the earlier one back exactly (text, status, history), or removes the note when it was the first answer. Nothing in the
+   system changes until the main admin applies it (decision 16.11.2026). The rights are checked by the caller (owner.ts). */
+export const ANSWER_APPLIED: NoteStatus[] = ["approved", "doing", "review", "published"];
+export async function answerNote(ctx: Ctx, qid: string, all?: FeedbackNote[]): Promise<FeedbackNote | null> {
+  return (all || (await listNotes(ctx, { kind: "answer" }))).find((n) => n.kind === "answer" && !!n.q && n.q.id === qid) || null;
+}
+export interface SavedAnswer { note: FeedbackNote; replaced: boolean; /** the agency had already approved or applied the earlier answer */ applied: boolean }
+export async function saveAnswer(ctx: Ctx, s: StaffCtx, q: NoteQuestion, text: string, url: string): Promise<SavedAnswer> {
+  const cur = await answerNote(ctx, q.id), now = iso(ctx), clean4 = clean(text, 4000);
+  if (!cur) {
+    const n = build(ctx, { module: "owner", url, selector: '[data-qid="' + q.id + '"]', editId: "own.decisions.question", text: clean4, elementText: q.text, viewport: { w: 0, h: 0 } },
+      s.user.name, { type: "staff", role: s.user.role, user: s.user.username }, NOTE_MSG.empty);
+    n.kind = "answer"; n.q = q;
+    await ctx.repo.put(COL.notes, n);
+    await audit(ctx, s.user.username, "note.create", n.id, { module: n.module, kind: "answer", question: q.id, answer: q.answer });
+    emit(ctx, "note.created", { id: n.id, module: n.module, kind: "answer" });
+    return { note: n, replaced: false, applied: false };
+  }
+  const applied = ANSWER_APPLIED.includes(cur.status);
+  cur.answers = [...(cur.answers || []), { at: cur.updatedAt, text: cur.text, q: cur.q!, status: cur.status, ...(cur.reason ? { reason: cur.reason } : {}), history: (cur.history || []).slice(-50) }].slice(-20);
+  cur.text = clean4; cur.q = q; cur.status = "new"; cur.updatedAt = now; delete cur.reason; delete cur.fix; cur.change = null;
+  (cur.history ||= []).push({ status: "new", at: now, who: s.user.name });
+  await ctx.repo.put(COL.notes, cur);
+  await audit(ctx, s.user.username, "note.update", cur.id, { kind: "answer", question: q.id, answer: q.answer, was: cur.answers[cur.answers.length - 1].q.answer, applied });
+  emit(ctx, "note.status", { id: cur.id, status: "new" });
+  return { note: cur, replaced: true, applied };
+}
+/** "Отмени" of the last answer to a question (only its author, within `windowMs`): the earlier answer back, or no note.
+    Returns the note after it (null: removed). 409 "undo_late" otherwise. */
+export async function undoAnswer(ctx: Ctx, s: StaffCtx, qid: string, windowMs: number): Promise<FeedbackNote | null> {
+  const n = await answerNote(ctx, qid), late = () => new CoreError("undo_late", "Вече не може да се отмени.", 409);
+  if (!n || !n.source || n.source.type !== "staff" || n.source.user !== s.user.username) throw late();
+  if (Date.parse(iso(ctx)) - Date.parse(n.updatedAt) > windowMs) throw late();
+  const prev = (n.answers || []).pop();
+  if (!prev) {
+    await ctx.repo.del(COL.notes, n.id);
+    await audit(ctx, s.user.username, "note.delete", n.id, { kind: "answer", question: qid, undo: true });
+    emit(ctx, "note.status", { id: n.id, status: "deleted" });
+    return null;
+  }
+  n.text = prev.text; n.q = prev.q; n.status = prev.status; n.updatedAt = prev.at; n.history = prev.history || n.history;
+  if (prev.reason) n.reason = prev.reason; else delete n.reason;
+  await ctx.repo.put(COL.notes, n);
+  await audit(ctx, s.user.username, "note.update", n.id, { kind: "answer", question: qid, undo: true });
+  emit(ctx, "note.status", { id: n.id, status: n.status });
+  return n;
 }

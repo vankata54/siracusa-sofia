@@ -41,6 +41,8 @@ export interface OrdersQuery { status?: OrderStatus | "work" | "done"; channel?:
 const dayOf = (o: Order) => sofiaYmd(new Date(o.ts || o.createdAt));
 async function lateOf(ctx: Ctx, o: Order, zoneMin: Map<string, number>): Promise<boolean> {
   if (FINISHED.includes(o.status) || o.status === "cancelled" || o.sched || dayOf(o) !== sofiaYmd(nowDate(ctx))) return false;
+  /* pickup and a table order are late only while not ready (the same rule as the manager's module: core/shift.ts lateMinOf) */
+  if (o.mode !== "delivery" && o.status === "ready") return false;
   const placed = +o.placedAt.slice(0, 2) * 60 + +o.placedAt.slice(3), now = minutes(ctx.clock);
   const due = /^\d{2}:\d{2}$/.test(o.at) ? +o.at.slice(0, 2) * 60 + +o.at.slice(3) : placed + (o.mode === "delivery" ? zoneMin.get(o.zone) || 35 : LATE_PICKUP_MIN);
   return now > due;

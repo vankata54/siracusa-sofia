@@ -23,6 +23,7 @@ import { kitchenRoutes } from "./routes/kitchen.ts";
 import { floorRoutes, KNOWN_COOKIE } from "./routes/floor.ts";
 import { siteRoutes as siteDataRoutes } from "./routes/site.ts";
 import { driverRoutes } from "./routes/driver.ts";
+import { bossRoutes } from "./routes/boss.ts";
 import { createPublisher, astroBuild, buildHash, type BuildFn, type Publisher } from "./publish.ts";
 import type { SiteBuild } from "../src/core/site-data.ts";
 import { SqliteRepo } from "./db/repo.ts";
@@ -438,7 +439,8 @@ export function createApp(opts: AppOpts) {
   app.get("/api/admin/notes", async (c) => {
     await staff(c, "notes");
     const st = c.req.query("status") as NoteStatus | undefined;
-    return c.json(st === "approved" ? await core.notes.approved() : await core.notes.list({ status: st, module: c.req.query("module"), source: c.req.query("source") }));
+    const kind = c.req.query("kind"); /* "answer": "Отговори на въпроси" (the owner's answers), "note": the rest */
+    return c.json(st === "approved" ? await core.notes.approved() : await core.notes.list({ status: st, module: c.req.query("module"), source: c.req.query("source"), kind: kind === "answer" || kind === "note" ? kind : undefined }));
   });
   app.get("/api/admin/notes/mine", async (c) => c.json(await core.notes.mine(await staff(c))));
   app.get("/api/admin/notes/waiting", async (c) => c.json(await core.notes.waiting(await staff(c))));
@@ -528,6 +530,8 @@ export function createApp(opts: AppOpts) {
   driverRoutes(app, { ...adm, mediaDir });
   /* stage D: the hall live, the waiter's search, the PIN on a known device (server/routes/floor.ts) */
   floorRoutes(app, { ...adm, limit, ip, cookieOpts });
+  /* stage D, step 6: the manager's and the owner's modules (server/routes/boss.ts; core/shift.ts, core/owner.ts) */
+  bossRoutes(app, adm);
 
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 

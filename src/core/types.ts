@@ -202,7 +202,16 @@ export interface FeedbackNote {
   /** what was changed, shown in "За преглед" (filled by the session that did the work) */
   change?: { summary: string; before?: string; after?: string } | null;
   history?: { status: NoteStatus; at: Iso; who: string }[];
+  /** "answer": the owner's answer to a question of the agency ("Решения", core/owner.ts); one note per question */
+  kind?: "answer";
+  /** the question and the answer (kind "answer") */
+  q?: NoteQuestion;
+  /** the earlier answers to the same question, the newest last (what "Отмени" brings back) */
+  answers?: NoteAnswerPrev[];
 }
+/** the owner's answer: the question word for word, the default, "Съгласен" (default) or "Друго" (other, the text) */
+export interface NoteQuestion { id: string; n: string; sec: "r" | "m"; group: string; text: string; def: string; answer: "default" | "other"; other: string }
+export interface NoteAnswerPrev { at: Iso; text: string; q: NoteQuestion; status: NoteStatus; reason?: string; history?: { status: NoteStatus; at: Iso; who: string }[] }
 /** the moment a staff member last opened "Бележки" / "Моите препоръки" (the badge counts what changed after it) */
 export interface NotesSeen { id: string; at: Iso }
 /** no-shows of one phone (id = the phone): "pending" after 2 (the manager decides), "blocked", "cleared" */

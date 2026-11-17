@@ -447,7 +447,11 @@ describe("reports", () => {
     expect(r.byChannel.find((x) => x.channel === "web")).toMatchObject({ orders: 2, share: 100 });
     expect(r.byHour.find((h) => h.hour === 19)!.orders).toBe(2);
     expect(r.top[0]).toMatchObject({ id: dish.id, q: 4 });
-    expect(r.prev).toMatchObject({ from: "2026-11-15", orders: 0 });
+    /* "Предишният период" of "Днес": the same weekday last week up to the same minute (the same base as the owner's module) */
+    expect(r.prev).toMatchObject({ from: "2026-11-09", to: "2026-11-09", orders: 0 });
+    expect((await core.reports.get(s.owner, { period: "yesterday" })).prev).toMatchObject({ from: "2026-11-08", to: "2026-11-08" });
+    expect((await core.reports.get(s.owner, { period: "7" })).prev).toMatchObject({ from: "2026-11-03", to: "2026-11-09" });
+    expect((await core.reports.get(s.owner, { period: "month" })).prev).toMatchObject({ from: "2026-10-01", to: "2026-10-16" });
     expect(JSON.stringify(r)).not.toMatch(/0888|Иван|Дружба/);
     expect((await core.reports.get(s.owner, { period: "7" })).byDay).toHaveLength(7);
     await expect(core.reports.get(s.owner, { period: "custom", from: "2026-01-01", to: "2026-11-16" })).rejects.toMatchObject({ code: "invalid" });
