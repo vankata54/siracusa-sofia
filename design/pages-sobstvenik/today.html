@@ -82,7 +82,8 @@ function liveTables(){ if (A.sh && A.sh.seated){ var sh = A.data.get("shift", nu
   var set = {}; A.orders().forEach(function(o){ if (o.channel === "table" && o.table && A.FIN.indexOf(o.status) < 0 && o.status !== "cancelled") set[o.table] = 1; }); return Object.keys(set).length; }
 
 /* примерното състояние, избрано в модула на управителя (sa-shift.demo; само се чете): „вечерен пик“ или „нищо не чака“ */
-function demoName(){ var sh = A.data.get("shift", null), d = (sh && sh.demo) || (A.sh && A.sh.demo ? A.sh.demo() : ""), N = (A.sh && A.sh.DEMO_NAME) || {rush:"вечерен пик", calm:"нищо не чака"}; return N[d] || ""; }
+/* като таблото на админа: етикетът важи само докато поръчките са същото примерно състояние (sa-orders.demo === sa-shift.demo) */
+function demoName(){ var sh = A.data.get("shift", null) || {}, ord = A.data.get("orders", null) || {}, N = (A.sh && A.sh.DEMO_NAME) || {rush:"вечерен пик", calm:"нищо не чака"}; return N[sh.demo] && ord.demo === sh.demo ? N[sh.demo] : ""; }
 function draw(){
   if (st === "loading"){ body.innerHTML = O.skel(4, "Зареждаме деня …"); return; }
   if (st === "error"){ body.innerHTML = O.error("Поръчките са запазени. Опитай пак след малко."); return; }
