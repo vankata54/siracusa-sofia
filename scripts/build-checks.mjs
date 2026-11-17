@@ -1,5 +1,6 @@
 // Astro integration, runs after every build (server and demo), decision 12.11.2026:
 //   1. the shared runtime (_astro/sc.*.js) is at most RUNTIME_BUDGET bytes, uncompressed; a bigger one fails the build;
+//      the shared components (_astro/ui.*.js) and the sheet (_astro/sc-sheet.*.js) have their own budgets;
 //   2. robots.txt and sitemap.xml: the sitemap lists every page WITHOUT noindex (not the cart, tracking, login, profile,
 //      404); the demo (all pages noindex) gets a robots.txt that disallows everything and no sitemap.
 // The same budget is checked by the unit tests (tests/unit/budget.test.ts) and the e2e smoke test.
@@ -11,6 +12,9 @@ import { fileURLToPath } from "node:url";
 export const RUNTIME_BUDGET = 30000;
 /** the shared components chunk (_astro/ui.*.js, lib/ui.ts, without icons): its own budget, uncompressed (DECISIONS 12.11.2026) */
 export const UI_BUDGET = 6000;
+/** the bottom sheet and its focus trap (_astro/sc-sheet.*.js, src/client/sc-sheet.ts): loaded by the pages that open a sheet;
+    its own budget, uncompressed (DECISIONS 16.11.2026) */
+export const SHEET_BUDGET = 4000;
 /** meta description of an indexable page: at most this many characters (search results cut the rest) */
 export const DESCRIPTION_MAX = 160;
 
@@ -26,6 +30,13 @@ export function uiSizes(dir) {
   const a = path.join(dir, "_astro");
   if (!fs.existsSync(a)) return [];
   return fs.readdirSync(a).filter((f) => /^ui\.[\w-]+\.js$/.test(f)).map((f) => ({ file: f, bytes: fs.statSync(path.join(a, f)).size }));
+}
+
+/** the sheet chunk(s): [{file, bytes}] */
+export function sheetSizes(dir) {
+  const a = path.join(dir, "_astro");
+  if (!fs.existsSync(a)) return [];
+  return fs.readdirSync(a).filter((f) => /^sc-sheet\.[\w-]+\.js$/.test(f)).map((f) => ({ file: f, bytes: fs.statSync(path.join(a, f)).size }));
 }
 
 const decode = (s) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
@@ -121,6 +132,12 @@ export function buildChecks({ site, demo }) {
         for (const s of uiSizes(d)) {
           if (s.bytes > UI_BUDGET) throw new Error("build-checks: the shared components chunk " + s.file + " is " + s.bytes + " B, over the budget of " + UI_BUDGET + " B (docs/DECISIONS.md 12.11.2026)");
           logger.info("components " + s.file + ": " + s.bytes + " / " + UI_BUDGET + " B");
+        }
+        const sheets = sheetSizes(d);
+        if (!sheets.length) throw new Error("build-checks: no _astro/sc-sheet.*.js chunk in " + d + " (the sheet must stay out of the shared runtime, docs/DECISIONS.md 16.11.2026)");
+        for (const s of sheets) {
+          if (s.bytes > SHEET_BUDGET) throw new Error("build-checks: the sheet chunk " + s.file + " is " + s.bytes + " B, over the budget of " + SHEET_BUDGET + " B (docs/DECISIONS.md 16.11.2026)");
+          logger.info("sheet " + s.file + ": " + s.bytes + " / " + SHEET_BUDGET + " B");
         }
         if (!demo) {
           const long = longDescriptions(d);
