@@ -419,6 +419,8 @@ export function mountPen(module: string, slot?: HTMLElement): boolean {
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
       module: boss || module, who: who(), sectionNotes: boss ? false : can("notes"), slot, notesHref: aurl.section("notes"),
+      /* the modules (staff apps, the manager, the owner) speak on "ти" */
+      ti: APPS.includes(module) || !!boss,
       badge: A.summary && !isMainAdmin() ? A.summary.waiting.notes.changedN : 0,
       /* the ember bar under the top bar of the admin (BRIEF, decision 3 of the chief); the staff apps have no top bar of the admin */
       barTop: APPS.includes(module) || boss ? undefined : [8, 88],

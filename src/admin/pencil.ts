@@ -45,6 +45,8 @@ export interface PencilOptions {
   page?: () => string;
   /** false: no round button (the caller has its own and calls toggle()) */
   fab?: boolean;
+  /** the staff modules speak on "ти" (decision 16.11): "Докосни", "Избери", "Опитай пак" */
+  ti?: boolean;
   /** the ember bar from the top: [phone, wide] px (default 8, 10) */
   barTop?: [number, number];
   /** the round button from the bottom: [phone, wide] px (default 96 above the bottom bar, 24) */
@@ -257,9 +259,9 @@ export function mountPencil(o: PencilOptions): Pencil {
   function barText() {
     const touch = lastType === "touch";
     let t: string;
-    if (cand && touch) t = "<b>Оградено:</b> <span>" + esc(describe(cand)) + ". Докоснете пак или „Бележка за това“.</span>";
-    else if (touch) t = "<b>" + (REC ? "Препоръка" : "Моливът е включен") + "</b> <span>· Докоснете елемент</span>";
-    else t = "<b>" + (REC ? "Препоръка" : "Моливът е включен") + "</b> <span>· Изберете елемент · Esc за изход</span>";
+    if (cand && touch) t = "<b>Оградено:</b> <span>" + esc(describe(cand)) + ". " + (o.ti ? "Докосни" : "Докоснете") + " пак или „Бележка за това“.</span>";
+    else if (touch) t = "<b>" + (REC ? "Препоръка" : "Моливът е включен") + "</b> <span>· " + (o.ti ? "Докосни" : "Докоснете") + " елемент</span>";
+    else t = "<b>" + (REC ? "Препоръка" : "Моливът е включен") + "</b> <span>· " + (o.ti ? "Избери" : "Изберете") + " елемент · Esc за изход</span>";
     if (saved) t += " <span>· Записани: " + saved + "</span>";
     $<HTMLElement>(".bar .t").innerHTML = t;
     const d = tdoc();
@@ -377,7 +379,7 @@ export function mountPencil(o: PencilOptions): Pencil {
       '<div class="body"><div class="meta"><span class="tag">' + svg("squares-four", 16) + esc(mname) + '</span><span class="tag">' + esc(page) + '</span><span class="tag">' + Math.round(vp.w) + " × " + Math.round(vp.h) + "</span></div>" +
       '<figure class="quote"><small>' + esc(kindOf(el)) + "</small>" + (etxt ? "<p>„" + esc(etxt.length > 280 ? etxt.slice(0, 278) + " …" : etxt) + "“</p>" : '<p class="none">Елемент без текст</p>') + "</figure>" +
       (REC ? '<p class="help" style="margin:0 0 12px">Препоръката отива при главния админ. Тя не променя нищо, докато той не я одобри.</p>' : "") +
-      '<label for="pen-t">' + (REC ? "Препоръка" : "Бележка") + '</label><textarea id="pen-t" placeholder="Например: по-голям текст, друга дума, махнете това" aria-describedby="pen-help"></textarea><p class="err" id="pen-err" hidden>Напишете какво да се промени.</p><p class="help" id="pen-help">Записва се с адреса, елемента и размера на екрана.' + (matchMedia("(pointer: fine)").matches ? " Ctrl + Enter записва." : "") + '</p>' +
+      '<label for="pen-t">' + (REC ? "Препоръка" : "Бележка") + '</label><textarea id="pen-t" placeholder="Например: по-голям текст, друга дума, ' + (o.ti ? "махни" : "махнете") + ' това" aria-describedby="pen-help"></textarea><p class="err" id="pen-err" hidden>Напишете какво да се промени.</p><p class="help" id="pen-help">Записва се с адреса, елемента и размера на екрана.' + (matchMedia("(pointer: fine)").matches ? " Ctrl + Enter записва." : "") + '</p>' +
       "<details><summary>Технически данни</summary><dl><dt>Адрес</dt><dd>" + esc(url) + "</dd><dt>CSS селектор</dt><dd>" + esc(sel) + "</dd><dt>data-edit-id</dt><dd>" + (edit ? esc(edit.getAttribute("data-edit-id")) : "няма") + "</dd></dl></details></div>" +
       '<div class="foot"><button class="pill line" type="button" data-x>Откажи</button><button class="pill red" type="button" data-save>' + svg("check", 22) + (REC ? "Изпрати препоръката" : "Запази бележката") + "</button></div></div>";
     const ta = sw.querySelector("textarea") as HTMLTextAreaElement, err = sw.querySelector(".err") as HTMLElement, saveBtn = sw.querySelector("[data-save]") as HTMLButtonElement;
@@ -403,7 +405,7 @@ export function mountPencil(o: PencilOptions): Pencil {
       const note: NoteInput = { module: mod, url, selector: sel, editId: edit ? edit.getAttribute("data-edit-id") : null, text: text.slice(0, 4000), elementText: etxt.slice(0, 500), viewport: { w: Math.round(vp.w), h: Math.round(vp.h) }, screenshot: null };
       busy = true; saveBtn.disabled = true; saveBtn.setAttribute("aria-busy", "true");
       try { await o.onSave(note); }
-      catch (e) { busy = false; saveBtn.disabled = false; saveBtn.removeAttribute("aria-busy"); fail((e instanceof Error && e.message) || "Не се записа. Опитайте пак."); return; }
+      catch (e) { busy = false; saveBtn.disabled = false; saveBtn.removeAttribute("aria-busy"); fail((e instanceof Error && e.message) || (o.ti ? "Не се записа. Опитай пак." : "Не се записа. Опитайте пак.")); return; }
       if (gone) return;
       saved++; close();
       toast(REC ? "Препоръката е изпратена" : "Бележката е записана", o.notesHref ? { label: REC ? "Моите препоръки" : "Виж бележките", href: o.notesHref } : null);
@@ -460,6 +462,11 @@ export function mountPencil(o: PencilOptions): Pencil {
     if (on && lastType === "mouse" && ui.matchMedia && ui.matchMedia("(hover: none)").matches) lastType = "touch";
     paint();
     bar.classList.toggle("on", on);
+    /* the page under the bar may make room for it (the staff apps move their "Няма връзка" strip below it):
+       html[data-pen-on] + --pen-bar-b, the bottom edge of the bar in px */
+    const de = udoc.documentElement;
+    if (on) { de.setAttribute("data-pen-on", ""); requestAnimationFrame(() => { if (on) de.style.setProperty("--pen-bar-b", Math.round(bar.getBoundingClientRect().bottom) + "px"); }); }
+    else { de.removeAttribute("data-pen-on"); de.style.removeProperty("--pen-bar-b"); }
     if (on) { attach(getDoc().defaultView); barText(); }
     else { cand = null; stack = []; if (tw) layers.get(tw)?.clear(); }
     o.onToggle && o.onToggle(on);
