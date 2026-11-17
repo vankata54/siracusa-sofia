@@ -30,7 +30,7 @@
 .kpi .lb .ic{color:var(--red)}
 .kpi .v{font-size:52px; line-height:.95; letter-spacing:-.05em; font-weight:800; font-variant-numeric:tabular-nums}
 .kpi .ft{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15px; color:var(--muted); font-weight:600; min-height:28px}
-.kpi .sa-tag{white-space:normal; text-align:left}
+.kpi .sa-tag{white-space:normal; text-align:left; height:auto; min-height:28px; padding-top:4px; padding-bottom:4px; line-height:1.25} /* „Примерни данни: вечерен пик“ може да е на два реда */
 .kpi.hot{background:var(--ink); color:var(--bg)}
 .kpi.hot .lb, .kpi.hot .ft{color:var(--bg); opacity:.85}
 .kpi.hot .sa-tag{color:inherit; box-shadow:inset 0 0 0 1.5px currentColor}
@@ -150,7 +150,10 @@ function draw(){
 var outs = A.soldOutToday();
 var inWork = A.ordersInWork().length, resToday = A.reservationsToday().length, kitchenOpen = A.minutes() >= 600 && A.minutes() < 1350;
 var newNotes = st === "empty" ? 0 : A.notes.count("new");
-var SAMPLE = '<span class="sa-tag sample">' + ic("info",16) + '<span class="lg">Примерни данни</span><span class="sm">Примерно</span></span>';
+/* примерно състояние от модула Управител (sa-shift.demo: "rush" | "calm"); само се чете. Важи, докато поръчките са същите (sa-orders.demo), иначе е старо */
+var DEMO_NAME = {rush:"вечерен пик", calm:"нищо не чака"}, shiftDemo = (A.data.get("shift", null) || {}).demo, ordDemo = (A.data.get("orders", null) || {}).demo;
+var demo = DEMO_NAME[shiftDemo] && ordDemo === shiftDemo ? DEMO_NAME[shiftDemo] : "";
+var SAMPLE = '<span class="sa-tag sample">' + ic("info",16) + '<span class="lg">Примерни данни' + (demo ? ': ' + demo : '') + '</span><span class="sm">Примерно' + (demo ? ': ' + demo : '') + '</span></span>';
 var K = [
   ["orders","Поръчки в работа","receipt", inWork, inWork ? SAMPLE : (kitchenOpen ? "Няма поръчки в работа" : "Кухнята не работи сега"), "orders.html"],
   ["reservations","Резервации днес","calendar-check", resToday, SAMPLE, "reservations.html"],
