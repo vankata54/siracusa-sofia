@@ -43,11 +43,11 @@ function per(){ return O.dishPeriod ? O.ranges() : {R:[H.addD(H.TODAY, -6), H.TO
 function perLabel(){ var g = per(); return O.dishPeriod ? (g.R[0] === g.R[1] ? H.fd(g.R[0], true) : H.fd(g.R[0], true) + " - " + H.fd(g.R[1], true)) : "за 7 дни"; }
 function week(){ var g = per(), k = g.R.join(); if (!WEEK || WKEY !== k){ WEEK = H.agg(g.R[0], g.R[1]); WKEY = k; } return WEEK; }
 function dishRow(x){ var q = week().dish[x.id] || 0, out = SC.isOut(x), cat = SC.catById[x.cat];
-  return '<a class="ow-fr" role="option" href="trends.html#dish=' + encodeURIComponent(x.id) + '">' + SC.pic(x) + '<span><b>' + esc(x.n) + '</b><small>' + esc(cat ? cat.n : "") + ' · ' + SC.fmt(x.p) + (out ? ' · Изчерпано днес' : '') + '</small></span><span class="fv">' + (q ? A.plural(q, "брой", "броя") + '<small>' + SC.fmt(q * x.p) + '</small>' : '<small>0 броя</small>') + '</span></a>'; }
-function row(it){ return '<a class="ow-fr" role="option" href="' + esc(it.href) + '"><span class="fi">' + ic(it.icon, 22) + '</span><span><b>' + esc(it.title) + '</b>' + (it.meta ? '<small>' + esc(it.meta) + '</small>' : '') + '</span><span class="fv">' + ic("caret-right", 20) + '</span></a>'; }
+  return '<a class="ow-fr" href="trends.html#dish=' + encodeURIComponent(x.id) + '">' + SC.pic(x) + '<span><b>' + esc(x.n) + '</b><small>' + esc(cat ? cat.n : "") + ' · ' + SC.fmt(x.p) + (out ? ' · Изчерпано днес' : '') + '</small></span><span class="fv">' + (q ? A.plural(q, "брой", "броя") + '<small>' + SC.fmt(q * x.p) + '</small>' : '<small>0 броя</small>') + '</span></a>'; }
+function row(it){ return '<a class="ow-fr" href="' + esc(it.href) + '"><span class="fi">' + ic(it.icon, 22) + '</span><span><b>' + esc(it.title) + '</b>' + (it.meta ? '<small>' + esc(it.meta) + '</small>' : '') + '</span><span class="fv">' + ic("caret-right", 20) + '</span></a>'; }
 var more = {};
 function group(key, title, list, render, max, sub){ if (!list.length) return ""; max = max || 5; var open = more[key];
-  return '<section class="ow-fg"><h3>' + esc(title) + '<small>' + (sub || list.length) + '</small></h3>' + list.slice(0, open ? 60 : max).map(render).join("") +
+  return '<section class="ow-fg" aria-label="' + esc(title) + '"><h2>' + esc(title) + '<small>' + (sub || list.length) + '</small></h2>' + list.slice(0, open ? 60 : max).map(render).join("") +
     (list.length > max && !open ? '<button class="link ow-fmore" type="button" data-fmore="' + key + '">Покажи още ' + (list.length - max) + ic("caret-down", 18) + '</button>' : '') + '</section>'; }
 
 /* търсенето (без HTML): за проверките в прототипа */
@@ -79,7 +79,7 @@ function onBody(e, inp, draw){ var b = e.target.closest("button"); if (!b) retur
 /* ---------- телефон: цял екран ---------- */
 OF.open = function(q0){ if (O.app.querySelector(".ow-find")) return;
   var w = document.createElement("div"); w.className = "ow-find"; w.setAttribute("role", "dialog"); w.setAttribute("aria-modal", "true"); w.setAttribute("aria-label", "Търси");
-  w.innerHTML = '<div class="fh"><form role="search" onsubmit="return false"><label class="vh" for="ow-fq">Търси ястие, показател, поръчка</label>' + ic("magnifying-glass", 22) + '<input id="ow-fq" type="search" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Ястие, оборот, гориво …"><button class="clr" type="button" data-clr aria-label="Изчисти търсенето" hidden>' + ic("x", 22) + '</button></form>' +
+  w.innerHTML = '<div class="fh"><form role="search" onsubmit="return false"><label class="vh" for="ow-fq">Търси ястие, показател, поръчка</label>' + ic("magnifying-glass", 22) + '<input id="ow-fq" type="search" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Ястие или показател"><button class="clr" type="button" data-clr aria-label="Изчисти търсенето" hidden>' + ic("x", 22) + '</button></form>' +
     '<button class="fx" type="button" data-fclose>' + ic("caret-left", 24) + 'Затвори</button></div><div class="fb" aria-live="polite"></div>';
   O.app.appendChild(w); document.body.classList.add("ow-find-on");
   var inp = w.querySelector("#ow-fq"), body = w.querySelector(".fb"), clr = w.querySelector("[data-clr]"), prev = document.activeElement, bg = [O.rail, O.col, O.bnav, O.penSlot].filter(Boolean);
@@ -97,24 +97,28 @@ OF.open = function(q0){ if (O.app.querySelector(".ow-find")) return;
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ w.classList.add("on"); inp.focus({preventScroll:true}); }); });
   OF.close = close; };
 
-/* ---------- компютър: панел под полето ---------- */
-OF.bindField = function(inp){ if (inp._of) return; inp._of = 1; var wrap = inp.parentElement, clr = wrap.querySelector(".clr"), sel = -1;
-  var box = document.createElement("div"); box.className = "ow-fpanel"; box.id = "ow-qres"; box.hidden = true; box.setAttribute("role", "listbox"); box.setAttribute("aria-label", "Резултати"); wrap.appendChild(box);
+/* ---------- компютър: панел под полето ----------
+   Обикновено поле и регион с връзки (без combobox / listbox): стрелка надолу влиза в резултатите (истински фокус),
+   стрелките се движат между тях, Esc връща в полето; бройката на резултатите се казва в aria-live. */
+OF.bindField = function(inp){ if (inp._of) return; inp._of = 1; var wrap = inp.parentElement, clr = wrap.querySelector(".clr");
+  ["role","aria-autocomplete","aria-expanded","aria-controls","aria-activedescendant"].forEach(function(a){ inp.removeAttribute(a); });
+  var box = document.createElement("div"); box.className = "ow-fpanel"; box.id = "ow-qres"; box.hidden = true; box.setAttribute("role", "region"); box.setAttribute("aria-label", "Резултати от търсенето"); wrap.appendChild(box);
   var cnt = document.createElement("div"); cnt.className = "vh"; cnt.setAttribute("aria-live", "polite"); wrap.appendChild(cnt);
   function opts(){ return Array.prototype.slice.call(box.querySelectorAll("a.ow-fr")); }
-  function mark(){ opts().forEach(function(el, i){ el.classList.toggle("sel", i === sel); el.setAttribute("aria-selected", String(i === sel)); if (i === sel){ el.scrollIntoView({block:"nearest"}); inp.setAttribute("aria-activedescendant", el.id); } }); if (sel < 0) inp.removeAttribute("aria-activedescendant"); }
-  function draw(){ var v = inp.value.trim(); clr.hidden = !v; sel = -1; box.innerHTML = OF.results(v); opts().forEach(function(el, i){ el.id = "ow-qo-" + i; el.setAttribute("aria-selected", "false"); }); inp.removeAttribute("aria-activedescendant"); box.hidden = false; inp.setAttribute("aria-expanded", "true");
-    var n = opts().length; cnt.textContent = v ? (n ? A.plural(n, "резултат", "резултата") : "Нищо не намерихме") : ""; }
-  function hide(){ box.hidden = true; inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); }
-  inp.addEventListener("focus", draw); inp.addEventListener("input", function(){ more = {}; draw(); });
+  function draw(){ var v = inp.value.trim(); clr.hidden = !v; box.innerHTML = OF.results(v); box.hidden = false; var n = opts().length; cnt.textContent = v ? (n ? A.plural(n, "резултат", "резултата") + ". Стрелка надолу влиза в тях." : "Нищо не намерихме") : ""; }
+  function hide(){ box.hidden = true; }
+  inp.addEventListener("focus", function(){ if (box.hidden) draw(); }); inp.addEventListener("input", function(){ more = {}; draw(); });
   clr.addEventListener("mousedown", function(e){ e.preventDefault(); }); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
   box.addEventListener("mousedown", function(e){ if (!e.target.closest("a")) e.preventDefault(); });
   box.addEventListener("click", function(e){ if (onBody(e, inp, draw)) inp.focus(); });
   inp.addEventListener("keydown", function(e){ var o = opts();
-    if (e.key === "ArrowDown"){ e.preventDefault(); sel = Math.min(o.length - 1, sel + 1); mark(); } else if (e.key === "ArrowUp"){ e.preventDefault(); sel = Math.max(0, sel - 1); mark(); }
-    else if (e.key === "Enter"){ var t = o[sel >= 0 ? sel : 0]; if (t){ e.preventDefault(); location.href = t.getAttribute("href"); } }
+    if (e.key === "ArrowDown"){ if (o[0]){ e.preventDefault(); o[0].focus(); } }
+    else if (e.key === "Enter"){ if (o[0]){ e.preventDefault(); location.href = o[0].getAttribute("href"); } }
     else if (e.key === "Escape"){ if (inp.value){ inp.value = ""; draw(); } else hide(); /* фокусът остава в полето */ } });
-  inp.addEventListener("blur", function(){ setTimeout(function(){ if (!wrap.contains(document.activeElement)) hide(); }, 150); });
+  box.addEventListener("keydown", function(e){ var o = opts(), i = o.indexOf(document.activeElement); if (i < 0 && e.key !== "Escape") return;
+    if (e.key === "ArrowDown"){ e.preventDefault(); (o[i + 1] || o[i]).focus(); } else if (e.key === "ArrowUp"){ e.preventDefault(); if (i > 0) o[i - 1].focus(); else inp.focus(); }
+    else if (e.key === "Escape"){ e.preventDefault(); inp.focus(); } });
+  wrap.addEventListener("focusout", function(){ setTimeout(function(){ if (!wrap.contains(document.activeElement)) hide(); }, 150); });
   document.addEventListener("keydown", function(e){ if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "") && inp.offsetParent){ e.preventDefault(); inp.focus(); } });
   draw(); };
 })();

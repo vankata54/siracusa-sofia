@@ -35,7 +35,7 @@ O.pct = function(cur, prev){ if (!prev) return null; return Math.round((cur - pr
 /* разлика: знак, процент и дума; цветът е само на иконата (никога сам). inv: „повече“ е лошо (неявили се, разход) */
 O.delta = function(cur, prev, o){ o = o || {}; var p = O.pct(cur, prev); if (p == null) return o.none != null ? o.none : '';
   var cls = p === 0 ? "flat" : ((p > 0) !== !!o.inv ? "up" : "down"), word = p === 0 ? "без промяна" : p > 0 ? (o.more || "повече") : (o.less || "по-малко");
-  return '<span class="ow-d ' + cls + (o.chip ? ' dchip' : '') + '">' + ic(p === 0 ? "minus" : p > 0 ? "caret-up" : "caret-down", 18) + (p > 0 ? "+" : "") + p + '%' + '<small>' + word + (o.vs ? ' ' + esc(o.vs) : '') + '</small></span>'; };
+  return '<span class="ow-d ' + cls + (o.chip ? ' dchip' : '') + '">' + ic(p === 0 ? "minus" : p > 0 ? "caret-up" : "caret-down", 18) + (p > 0 ? "+" : "") + p + '%' + '<small><span class="w">' + word + '</span>' + (o.vs ? ' ' + esc(o.vs) : '') + '</small></span>'; };
 
 /* ---------- права и сесия ---------- */
 O.allowed = function(){ return !!A.me && O.ALLOWED.indexOf(A.me.role) > -1; };
@@ -88,7 +88,7 @@ O.QUESTIONS = [
   ["m15","15","m","Кухня","Кой може да включва „Натоварено“: всяка секция или само главният готвач? Напомняне след 60 мин?","всяка секция, с напомняне"],
   ["m16","16","m","Кухня","Срок за всяко ястие или за канал? Колко минути преди срока е „наближава“?","20 мин за канал, „наближава“ 5 мин преди"],
   ["m17","17","m","Кухня","Поръчка за час: влиза в кухнята 20 мин преди часа или според ястието?","20 мин преди"],
-  ["m18","18","m","Кухня","Изчерпаното днес връща ли се само утре в 10:00?","да"],
+  ["m18","18","m","Кухня","Изчерпаното днес: кога се връща в менюто?","в полунощ по София, както в кода; виж въпрос 23 в „За собственика: решения“ и DECISIONS 12.11. Прототипът на кухнята казва „утре в 10:00“: остава за решение"],
   ["m19","19","m","Кухня","При изчерпване в приета поръчка за доставка или вземане: кой се обажда на клиента?","управителят"],
   ["m20","20","m","Кухня","Поръчка от няколко секции: сервитьорът се известява за всяка готова секция, а шофьорът и клиентът, когато всичко е готово?","да"],
   ["m21","21","m","Кухня","Печат на бон в кухнята при срив или само екран?","само екран"],
@@ -113,7 +113,7 @@ O.GROUPS = [["r","Решения за ресторанта"],["m","Модули�
 O.answers = function(){ var m = {}; A.notes.list().slice().reverse().forEach(function(n){ if (n.kind === "answer" && n.q && n.q.id) m[n.q.id] = n; }); return m; };
 O.unanswered = function(){ var a = O.answers(); return O.QUESTIONS.filter(function(q){ return !a[q.id]; }); };
 /* въпроси за факт: „Съгласен“ не носи отговор, затова там е само „Твоят отговор“ */
-O.FACT = ["r4","r5","r22","m6","m24"];
+O.FACT = ["r4","r5","r22","m6","m18","m24"];
 O.hasDefault = function(q){ return q.def && O.FACT.indexOf(q.id) < 0 && !/^\[ЛИПСВА[^\]]*\]$/.test(q.def.trim()); };
 
 
@@ -156,7 +156,10 @@ O.line = function(id, labels, cur, prev, o){ o = o || {}; var n = labels.length,
   var svg = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + (cpts ? '<polygon class="wash" points="0,100 ' + cpts + ' ' + (pc ? pc.x.toFixed(2) : 0) + ',100"/>' : '') + (prev ? '<polyline class="ln prev" points="' + pts(prev) + '"/>' : '') + '<polyline class="ln cur" points="' + cpts + '"/></svg>';
   var dots = (pp ? '<i class="dot prev" style="left:' + pp.x + '%;top:' + pp.y + '%"></i>' : '') + (pc ? '<i class="dot" style="left:' + pc.x + '%;top:' + pc.y + '%"></i>' : '');
   /* подписът на днешната точка стои над нея (не върху линията на обичайното) */
-  var labs = (pc && o.curLabel ? '<span class="elab' + (pc.x > 70 ? ' l' : '') + (pc.y < 25 ? ' dn' : '') + '" style="left:' + pc.x + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
+  var py = null; if (pc && prev){ var ix = Math.round(pc.x / 100 * (n - 1)); if (prev[ix] != null) py = 100 - prev[ix] / nice * 100; }
+  /* подписът не стои върху линията на обичайното: ако тя е точно над точката, подписът е под нея */
+  var below = py != null && py < pc.y && pc.y - py < 18;
+  var labs = (pc && o.curLabel ? '<span class="elab' + (pc.x > 70 ? ' l' : '') + (below ? ' bl' : pc.y < 25 ? ' dn' : '') + '" style="left:' + pc.x + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
   var now = o.nowX != null ? '<i class="now" style="left:' + o.nowX + '%"></i>' : '';
   return '<div class="ow-plot" data-plot="' + id + '" data-line="1">' + yAxis(nice, o.fmt0 || o.fmt) + '<div class="area">' + grid() + svg + now + dots + labs + '</div>' + xLabels(labels, o.xn, o.ticks, true) + '</div>'; };
 O.legend = function(items){ return '<ul class="ow-lgd">' + items.map(function(x){ return '<li><i class="' + (x[1] || '') + '"></i>' + esc(x[0]) + '</li>'; }).join("") + '</ul>'; };
@@ -169,7 +172,7 @@ O.tableHTML = function(t, cap){ return '<div class="ow-tablewrap"><table class="
 /* карта с графика и бутон „Таблица“ / „Графика“ (думата казва какво ще покаже; без aria-pressed) */
 O.card = function(o){ var id = o.id, tb = !!O.showTbl[id], plain = String(o.title).replace(/<[^>]+>/g, "");
   return '<section class="ow-card ' + (o.cls || '') + '" aria-labelledby="h-' + id + '" data-edit-id="own.' + (o.page || "card") + '.' + id + '"' + (o.anchor ? ' id="' + o.anchor + '"' : '') + '><header><div><h2 id="h-' + id + '">' + o.title + (o.sub ? '<small>' + o.sub + '</small>' : '') + '</h2></div>' +
-    (o.table ? '<button class="pill pill-soft ow-tbtn" type="button" data-tbl="' + id + '" aria-label="' + (tb ? 'Покажи графиката: ' : 'Покажи като таблица: ') + esc(plain) + '">' + ic(tb ? "chart-bar" : "list-bullets", 18) + (tb ? 'Графика' : 'Таблица') + '</button>' : '') + '</header>' +
+    (o.table ? '<button class="pill pill-soft ow-tbtn" type="button" data-tbl="' + id + '" aria-label="' + (tb ? 'Графика: ' : 'Таблица: ') + esc(plain) + '">' + ic(tb ? "chart-bar" : "list-bullets", 18) + (tb ? 'Графика' : 'Таблица') + '</button>' : '') + '</header>' +
     (tb && o.table ? O.tableHTML(o.table, plain) : o.inner) + (o.extra || '') + '</section>'; };
 O.bindTips = function(root){ root.querySelectorAll("[data-plot]").forEach(function(pl){ var data = O.TIPS[pl.dataset.plot]; if (!data || pl._tip) return; pl._tip = 1; var area = pl.querySelector(".area"), tip = document.createElement("div"); tip.className = "ow-tip"; tip.hidden = true; pl.appendChild(tip);
   pl.addEventListener("pointermove", function(e){ var r = area.getBoundingClientRect(), line = pl.dataset.line, n = data.length, i = line ? Math.round((e.clientX - r.left) / r.width * (n - 1)) : Math.floor((e.clientX - r.left) / r.width * n);
@@ -191,8 +194,8 @@ O.ranges = function(){ var p = O.per, R = H.range(p.per, p.cust), one = R[0] ===
   return {R:R, C:C, one:one, upTo:upTo, label:one ? H.fd(R[0]) : H.fd(R[0], true) + " - " + H.fd(R[1], true),
     cmpLabel:p.cmp === "year" ? "същите дни от седмицата миналата година: " + cl + " " + (+C[1].slice(0, 4)) : day ? "същия ден миналата седмица: " + cl : "предишния период: " + cl,
     cmpShort:p.cmp === "year" ? "миналата година" : day ? "същия ден миналата седмица" : "предишния период"}; };
-/* сборовете за избрания период и за сравнението (днес: до същия час, като в „Отчети“) */
-O.aggs = function(){ var g = O.ranges(), cur = H.agg(g.R[0], g.R[1]), prev = H.agg(g.C[0], g.C[1]); if (g.upTo) prev = H.cutAt(prev, A.sofia().h); return {g:g, cur:cur, prev:prev}; };
+/* сборовете за избрания период и за сравнението (днес: до същата минута, както на „Днес“) */
+O.aggs = function(){ var g = O.ranges(), cur = H.agg(g.R[0], g.R[1]), prev = H.agg(g.C[0], g.C[1]), s = A.sofia(); if (g.upTo) prev = H.cutAt(prev, s.h, s.m); return {g:g, cur:cur, prev:prev}; };
 O.periodHTML = function(){ var p = O.per;
   return '<div class="ow-per" data-edit-id="own.period"><div class="pp"><p class="lbl" id="ow-pl">Период</p><div class="seg" role="group" aria-labelledby="ow-pl">' + H.PERIODS.map(function(x){ return '<button type="button" data-per="' + x[0] + '" aria-pressed="' + (p.per === x[0]) + '">' + x[1] + '</button>'; }).join("") + '</div></div>' +
     '<div class="pc"><p class="lbl" id="ow-cl">Сравни с</p><div class="seg cmp" role="group" aria-labelledby="ow-cl"><button type="button" data-cmp="prev" aria-pressed="' + (p.cmp === "prev") + '">Предишния период</button><button type="button" data-cmp="year" aria-pressed="' + (p.cmp === "year") + '">Миналата година</button></div></div>' +
@@ -251,7 +254,7 @@ O.loadFind = function(cb){ if (window.OF) return cb && cb(); if (O._fl){ O._fl.p
 /* ---------- рамката ---------- */
 function topHTML(o){
   return '<header class="ow-top" data-edit-id="own.top"><div class="ow-ttl"><h1 id="ow-h1">' + (o.shortTitle ? '<span class="lg">' + esc(o.title) + '</span><span class="sm">' + esc(o.shortTitle) + '</span>' : esc(o.title)) + '</h1><small>Собственик · Siracusa</small></div>' +
-    '<div class="ow-tsearch" role="search"><label class="vh" for="ow-q">Търси ястие, показател, поръчка</label>' + ic("magnifying-glass", 20) + '<input id="ow-q" type="text" placeholder="Търси: ястие, оборот" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ow-qres"><button class="clr" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button></div>' +
+    '<div class="ow-tsearch" role="search"><label class="vh" for="ow-q">Търси ястие, показател, поръчка</label>' + ic("magnifying-glass", 20) + '<input id="ow-q" type="text" placeholder="Търси: ястие, оборот" autocomplete="off"><button class="clr" type="button" aria-label="Изчисти" hidden>' + ic("x", 18) + '</button></div>' +
     '<button class="ow-tb ph" type="button" data-ow="find">' + ic("magnifying-glass", 24) + 'Търси</button>' +
     '<a class="pill pill-line ow-toadmin" href="../pages-admin/dashboard.html" data-home="admin">' + ic("squares-four", 20) + 'Към админа</a>' +
     '<button class="ow-me" type="button" data-ow="profile"><span class="ow-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><span class="who"><span class="vh">Профил: </span><b>' + esc(A.me.name) + '</b><small>' + esc(A.roleName(A.me.role)) + '</small></span></button></header>'; }
@@ -289,7 +292,7 @@ O.mount = function(o){ o = o || {}; O.page = o.page;
   /* моливът: само препоръки (решение 15.11), кръгла икона 56 px; на телефон над долната лента, вдясно. В прегледа на админа връща null: без бутон */
   /* място на молива (решение на шефа, кръг 1): на телефон на реда на долната лента, вдясно от нея; от 900 px най-долу в лявата лента. Никога над съдържанието */
   if (A.me && window.SAPenMount && !A.inPreview){ O.pen = SAPenMount.mount({module:"sobstvenik", slot:O.penSlot, place:"bottom", bottom:92, side:"right", toastWide:"bottom"});
-    if (O.pen && O.pen.button){ app.classList.add("has-pen"); O.pen.button.setAttribute("aria-label", "Молив"); } }
+    if (O.pen && O.pen.button) app.classList.add("has-pen"); }
   return app.querySelector("[data-body]"); };
 function nopermHTML(){ var r0 = O.allowed() ? "manager" : A.me.role, role = A.roleName(r0), home = O.homeOf(r0), app = /pages-upravitel/.test(home);
   return '<section class="ow-card ow-noperm" data-edit-id="own.noperm">' + O.empty({icon:"lock", title:"Модулът Собственик не е за ролята „" + role + "“", text:"Оборота, финансите и решенията ги виждат само собственикът и главният админ. Отиваш в своето начало.", action:'<a class="pill pill-red pill-lg" href="' + esc(home) + '">' + ic("arrow-right", 22) + (app ? 'Към „Смяната“' : 'Към таблото') + '</a>'}) + '</section>'; }

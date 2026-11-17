@@ -121,7 +121,7 @@ function draw(){
   var ex = sumExtra(cur.days), pex = sumExtra(prev.days), tot = ex.newC + ex.retC, rs = tot ? Math.round(ex.retC / tot * 100) : 0;
   h += '<section class="ow-card" id="clients" aria-labelledby="h-cl" data-edit-id="own.trends.clients"><header><div><h2 id="h-cl">Нови и връщащи се клиенти<small>Поръчки от сайта</small></h2></div></header>' +
     '<div class="tr-two"><div><span class="k">Връщащи се</span><b>' + ex.retC + '</b>' + dl(ex.retC, pex.retC) + '</div><div><span class="k">Нови</span><b>' + ex.newC + '</b>' + dl(ex.newC, pex.newC) + '</div></div>' +
-    '<div class="ow-segbar" role="img" aria-label="Връщащи се ' + rs + ' от 100, нови ' + (100 - rs) + ' от 100"><i style="width:' + rs + '%"></i><i class="b" style="width:' + (100 - rs) + '%"></i></div>' + O.legend([["Връщащи се: " + rs + " от 100"], ["Нови: " + (tot ? 100 - rs : 0) + " от 100", "prev"]]) + '<p>' + O.sample() + '</p></section>';
+    '<div class="ow-segbar" role="img" aria-label="' + Math.round(rs / 10) + ' от 10 клиенти се връщат"><i style="width:' + rs + '%"></i><i class="b" style="width:' + (100 - rs) + '%"></i></div>' + O.legend([["Връщащи се"], ["Нови", "prev"]]) + '<p class="ow-note">' + (tot ? Math.round(rs / 10) + ' от 10 клиенти се връщат.' : '') + '</p>' + '<p>' + O.sample() + '</p></section>';
   h += '<section class="ow-card" id="times" aria-labelledby="h-tm" data-edit-id="own.trends.times"><header><div><h2 id="h-tm">Средни времена<small>По-малко е по-добре</small></h2></div></header>' +
     '<div class="tr-two"><div><span class="k">Приготвяне</span><b>' + Math.round(ex.prep) + ' мин</b>' + dl(ex.prep, pex.prep, true) + '</div><div><span class="k">Доставка (от приемане)</span><b>' + Math.round(ex.deliv) + ' мин</b>' + dl(ex.deliv, pex.deliv, true) + '</div>' +
     '<div style="grid-column:1/-1"><span class="k">Отговор на повикване от масата</span><b>' + mmss(ex.call) + ' мин</b>' + dl(ex.call, pex.call, true) + '</div></div><p>' + O.sample() + '</p></section>';
@@ -150,7 +150,7 @@ function heat(cur){ var cnt = {}, nd = {}, mx = 0;
   Object.keys(cnt).forEach(function(k){ var w = +k.split("-")[0]; cnt[k] = nd[w] ? cnt[k] / nd[w] : 0; if (cnt[k] > mx) mx = cnt[k]; });
   function lv(v){ if (!v) return ""; var f = v / mx; return f < .2 ? "l1" : f < .4 ? "l2" : f < .6 ? "l3" : f < .8 ? "l4" : "l5"; }
   var peak = {v:0}; Object.keys(cnt).forEach(function(k){ if (cnt[k] > peak.v) peak = {v:cnt[k], k:k}; });
-  var pk = peak.k ? DOW[DOWI.indexOf(+peak.k.split("-")[0])] + " около " + peak.k.split("-")[1] + ":00" : "";
+  var pk = peak.k ? DOW[DOWI.indexOf(+peak.k.split("-")[0])] + " около\u00a0" + peak.k.split("-")[1] + ":00" : "";
   var g = '<div class="ow-heat" role="img" aria-label="Поръчки по ден от седмицата и час. Най-много: ' + (pk || "няма") + '"><span></span>';
   for (var hh = 10; hh <= 22; hh++) g += '<span class="h">' + (hh % 2 === 0 ? hh : "") + '</span>';
   DOWI.forEach(function(w, i){ g += '<span class="d">' + DOW[i] + '</span>'; for (var hh2 = 10; hh2 <= 22; hh2++){ var v = cnt[w + "-" + hh2] || 0; g += '<span class="c ' + lv(v) + '" title="' + DOW[i] + ', ' + hh2 + ':00 · средно ' + O.f1(v) + ' поръчки"></span>'; } });
