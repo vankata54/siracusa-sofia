@@ -16,6 +16,7 @@ import { api, ApiError } from "../../client/api.ts";
 import { masaApi, type GuestView } from "../../client/api-floor.ts";
 import { murl } from "../routes.ts";
 import { clockOverride, sofiaNow } from "../../lib/time.ts";
+import { fmtNb } from "../../lib/format.ts";
 import { NAV, SCREEN_PATH, STATUS, type MasaPage } from "./words.ts";
 
 export type { GuestView };
@@ -35,7 +36,9 @@ export interface ScreenOpts {
   added?: (M: Masa, keys: string[]) => void;
 }
 
-const ic = SC.ic, esc = SC.esc, fmt = SC.fmt;
+/* a sum never breaks before "€" (a no-break space); the kitchen's hours from the one place (lib/consts.ts) */
+const ic = SC.ic, esc = SC.esc, fmt = fmtNb;
+export const K_OPEN = SC.RESTAURANT.open, K_UNTIL = SC.RESTAURANT.kitchen;
 const de = document.documentElement;
 const LKEY = "sc-masa-lang";
 let lang: Lang = (() => { try { return localStorage.getItem(LKEY) === "en" ? "en" : "bg"; } catch { return "bg"; } })();
@@ -64,9 +67,13 @@ export interface Masa {
   tableLabel(): string;
   zone(): string;
   banners(o?: { kitchen?: boolean; callLink?: boolean }): string;
+  /** "Кухнята отваря в 10:00" / "Кухнята приема поръчки до 22:30" (the hours from lib/consts.ts) */
+  kitchenWhy(): string;
+  /** run a redraw and give the focus back to the same control (by its data-* attributes), else to a stable neighbour */
+  keep(fn: () => void): void;
   toast(text: string, undo?: () => void): void;
   openSheet(o: { title: string; html: string; onClose?: () => void }): { el: HTMLDivElement; close: () => void };
-  act<T>(fn: () => Promise<T>, o?: { busy?: HTMLElement | null }): Promise<T | null>;
+  act<T>(fn: () => Promise<T>, o?: { busy?: HTMLElement | null; offline?: string }): Promise<T | null>;
   refresh(): Promise<void>;
   rerender(why?: Why): void;
 }
@@ -100,7 +107,7 @@ export function mountMasa(o: ScreenOpts): Masa {
     get lost() { return state.lost; },
     lang: () => lang, L, ic, esc, fmt,
     plural: (n, one, many) => SC.plural(n, L(one[0], one[1]), L(many[0], many[1])),
-    dishes: (n) => SC.plural(n, L("ястие", "dish"), L("ястия", "dishes")),
+    dishes: (n) => SC.plural(n, L("ястие", "dish"), L("ястия", "dishes")).replace(/^(\d+) /, "$1\u00a0"),
     me: () => (state.view && state.view.me ? state.view.me.phone : 0),
     name(phone, who) {
       if (phone == null || !phone) return who === "Сервитьор" ? L("Сервитьор", "Waiter") : /^Гост \d+$/.test(who || "") ? L(who!, "Guest " + who!.slice(5)) : who || L("Сервитьор", "Waiter");
@@ -133,12 +140,14 @@ export function mountMasa(o: ScreenOpts): Masa {
       if (state.offline) h += '<div class="mnote bad" role="alert">' + ic("warning-circle", 24) + "<div><b>" + L("Няма връзка", "No connection") + "</b><p>" + L("Поръчката ви е запазена - опитайте пак. Ако е спешно, махнете на сервитьора.", "Your order is saved - try again. If it is urgent, wave to the waiter.") + '</p><div class="acts"><button class="pill pill-ink" type="button" data-mretry>' + ic("arrow-clockwise", 20) + L("Опитай пак", "Try again") + "</button></div></div></div>";
       else if (state.lost) h += '<div class="mnote" role="status">' + ic("arrow-clockwise", 24) + "<div><b>" + L("Свързваме се отново", "Reconnecting") + "</b><p>" + L("Показваме последното, което знаем. Обновява се само.", "We show the last we know. It updates by itself.") + "</p></div></div>";
       if (b.kitchen !== false && v && !v.kitchen.open && v.status === "open") {
-        h += '<div class="mnote warn" role="status">' + ic("clock", 24) + "<div><b>" + (v.kitchen.before ? L("Кухнята отваря в 10:00", "The kitchen opens at 10:00") : L("Кухнята приема поръчки до 22:30", "The kitchen takes orders until 22:30")) + "</b><p>" +
+        h += '<div class="mnote warn" role="status">' + ic("clock", 24) + "<div><b>" + M.kitchenWhy() + "</b><p>" +
           L("Менюто е за разглеждане, поръчка от телефона не може. За сметката или нещо друго повикайте сервитьор.", "You can browse the menu, but not order from the phone. For the bill or anything else, call a waiter.") + "</p>" +
           (b.callLink === false ? "" : '<div class="acts"><a class="pill pill-line" href="' + M.href("call") + '">' + ic("bell-ringing", 20) + L("Повикай сервитьор", "Call a waiter") + "</a></div>") + "</div></div>";
       }
       return h;
     },
+    kitchenWhy: () => (state.view && state.view.kitchen.before ? L("Кухнята отваря в " + K_OPEN, "The kitchen opens at " + K_OPEN) : L("Кухнята приема поръчки до " + K_UNTIL, "The kitchen takes orders until " + K_UNTIL)),
+    keep,
     toast,
     openSheet(so) {
       const s = SC.sheet(so);
@@ -221,6 +230,32 @@ export function mountMasa(o: ScreenOpts): Masa {
     chrome();
   }
 
+  /* ---------- the focus stays on the same control after a redraw (an action, a filter, a change from another phone) ---------- */
+  const FOCUS_KEYS = ["data-madd", "data-mdish", "data-q", "data-k", "data-f", "data-al", "data-call", "data-locked", "data-cancel", "data-pick", "data-pay", "data-split", "data-rate", "data-req", "data-send", "data-nosend", "data-mretry", "data-go", "data-qtoggle", "data-rejok", "data-fb", "data-copy", "data-rate-reset", "data-clr", "data-qclr", "data-mlang", "data-row", "data-key"];
+  function locator(el: Element | null): string | null {
+    if (!el || el === document.body || !(main.contains(el) || SC.ov.contains(el))) return null;
+    if (el.id) return "#" + CSS.escape(el.id);
+    const a = FOCUS_KEYS.filter((k) => el.hasAttribute(k)).map((k) => "[" + k + '="' + CSS.escape(el.getAttribute(k) || "") + '"]').join("");
+    return a ? el.tagName.toLowerCase() + a : null;
+  }
+  function keep(fn: () => void) {
+    const el = document.activeElement as HTMLElement | null, sel = locator(el);
+    /* a stable neighbour: the row / group / section of the control, then the page's heading */
+    const row = el && el.closest("[data-key], [data-row], .tiles, .seg, .chips, section");
+    const rowSel = row ? locator(row) || (row.id ? "#" + CSS.escape(row.id) : null) : null;
+    fn();
+    if (!sel || document.activeElement === el && el && el.isConnected) return;
+    const again = (s: string | null) => { if (!s) return null; try { return document.querySelector<HTMLElement>(s); } catch { return null; } };
+    let to = again(sel);
+    /* the same control in its next state: a tile "Повикай" → "Вече повикахме", "Изпрати" → disabled / "Опитай пак" */
+    if ((!to || !visible(to)) && el) for (const g of SWAP) { const k = g.find((x) => el.hasAttribute(x)); if (!k) continue; for (const k2 of g) { const c = again("[" + k2 + (el.getAttribute(k) ? '="' + CSS.escape(el.getAttribute(k)!) + '"' : "") + "]"); if (c && visible(c)) { to = c; break; } } }
+    if (!to || !visible(to)) { const r = again(rowSel); to = r ? r.querySelector<HTMLElement>("button:not([disabled]), a[href], input") || r : null; }
+    if (!to || !visible(to)) to = main.querySelector<HTMLElement>("h1");
+    if (to) { if (!to.matches("a[href], button, input, textarea, select") && !to.hasAttribute("tabindex")) to.setAttribute("tabindex", "-1"); to.focus({ preventScroll: true }); }
+  }
+  const visible = (e: HTMLElement) => e.isConnected && e.getClientRects().length > 0;
+  const SWAP = [["data-call", "data-locked"], ["data-send", "data-nosend", "data-mretry"], ["data-madd", "data-mdish"]];
+
   /* ---------- the view ---------- */
   let shown = false;
   function draw(why: Why) {
@@ -229,7 +264,7 @@ export function mountMasa(o: ScreenOpts): Masa {
     if (v.status === "closed" && !o.allowClosed) { gate("closed"); return; }
     gated = "";
     chrome();
-    o.render(M, why);
+    keep(() => o.render(M, why));
     if (!shown) { shown = true; main.removeAttribute("aria-busy"); }
   }
   function setView(v: View, why: Why) {
@@ -240,7 +275,9 @@ export function mountMasa(o: ScreenOpts): Masa {
     let added: string[] = [];
     if (prev && why === "remote" && prev.session === v.session) {
       const was = new Map(prev.cart.lines.map((l) => [l.key, l.q]));
-      added = v.cart.lines.filter((l) => !l.mine && (was.get(l.key) || 0) < l.q).map((l) => l.key);
+      /* a rejection puts the waiting dishes back in the cart: nobody added them (the notice is the rejection itself) */
+      const back = prev.pending && !v.pending && v.rejected ? new Set(prev.pending.lines.map((l) => l.key)) : new Set<string>();
+      added = v.cart.lines.filter((l) => !l.mine && !back.has(l.key) && (was.get(l.key) || 0) < l.q).map((l) => l.key);
       const first = v.cart.lines.find((l) => l.key === added[0]);
       if (first) toast(M.name(first.phone) + L(" добави ", " added ") + first.name);
       else if (prev.pending && !v.pending && v.orders.length > prev.orders.length) toast(L("Сервитьорът потвърди поръчката", "The waiter confirmed your order"));
@@ -282,6 +319,7 @@ export function mountMasa(o: ScreenOpts): Masa {
     pick_gone: "This dish has already been paid or asked for.",
     bill_asked: "You have already asked for the bill. Tell the waiter if you want a change.",
   };
+  let offlineText = "";
   function fail(e: unknown, reading = false) {
     const err = e instanceof ApiError ? e : new ApiError("server", L("Нещо се обърка. Опитайте пак.", "Something went wrong. Try again."), 500);
     if (!(e instanceof ApiError)) console.error(e);
@@ -289,19 +327,19 @@ export function mountMasa(o: ScreenOpts): Masa {
       if (!state.view) { gate("offline"); return; }
       const was = state.offline;
       state.offline = true; draw("offline");
-      if (!was || !reading) toast(L("Няма връзка. Поръчката ви е запазена - опитайте пак.", "No connection. Your order is saved - try again."));
+      if (!was || !reading) toast(offlineText || L("Няма връзка. Поръчката ви е запазена - опитайте пак.", "No connection. Your order is saved - try again."));
       return;
     }
     if (err.status === 404 && /Този код/.test(err.message)) { state.view = null as unknown as View; gate("invalid"); return; }
     if (err.code === "table_full") { gate("full", err.message); return; }
     if (err.code === "guest") { state.view = null as unknown as View; void refresh(); return; } /* not in the sitting (any more): open it again */
     if (!state.view) { gate("error", err.message); return; }
-    let text = lang === "en" ? EN[err.code] || (err.code === "closed" ? (state.view.kitchen.before ? "The kitchen opens at 10:00." : "The kitchen takes orders until 22:30.") : err.message) : err.message;
+    let text = lang === "en" ? EN[err.code] || (err.code === "closed" ? M.kitchenWhy() + "." : err.message) : err.message;
     if (err.retryIn) text += " " + L("Пак след ", "Again in ") + M.mmss(err.retryIn) + ".";
     toast(text);
     if (err.status === 409 || err.status === 404) void refresh();
   }
-  async function act<T>(fn: () => Promise<T>, ao: { busy?: HTMLElement | null } = {}): Promise<T | null> {
+  async function act<T>(fn: () => Promise<T>, ao: { busy?: HTMLElement | null; offline?: string } = {}): Promise<T | null> {
     const b = ao.busy;
     if (b) { if (b.getAttribute("aria-busy") === "true") return null; b.setAttribute("aria-busy", "true"); }
     try {
@@ -310,7 +348,7 @@ export function mountMasa(o: ScreenOpts): Masa {
       state.offline = false;
       if (v && typeof v === "object" && "session" in v) setView(v, "act");
       return r;
-    } catch (e) { fail(e); return null; }
+    } catch (e) { offlineText = ao.offline || ""; fail(e); offlineText = ""; return null; }
     finally { if (b) b.removeAttribute("aria-busy"); }
   }
 
@@ -419,7 +457,9 @@ export function mountMasa(o: ScreenOpts): Masa {
     addEventListener("offline", () => { if (state.view && !state.offline) { state.offline = true; draw("offline"); } });
     addEventListener("online", () => { void refresh(); });
     /* the kitchen hours, the cooldowns that ended: the view again every minute */
-    document.addEventListener("sc:tick", () => { if (state.view && !state.offline) void refresh(); });
+    /* the stream brings every change; the view is read again only when the kitchen's hours turn (or every 5 minutes) */
+    let ticks = 0;
+    document.addEventListener("sc:tick", () => { ticks++; if (state.view && !state.offline && (state.lost || ticks % 5 === 0 || SC.state().kitchen !== state.view.kitchen.open)) void refresh(); });
     setInterval(() => { if (state.view && !gated && o.tick) o.tick(M); }, 1000);
   }
   return M;

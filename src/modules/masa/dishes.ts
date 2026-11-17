@@ -38,17 +38,20 @@ export function dishesOf(M: Masa) {
     return M.lang() === "en" ? s.replace(/\s*гр\.?/g, " g").replace(/\s*мл\.?/g, " ml").replace(/\s*бр\.?/g, " pcs") : s;
   };
   const gnb = (x: Dish) => g(x).replace(/ (?=гр|мл|бр|g\b|ml\b|pcs\b)/g, " ");
-  const plus = (x: Dish) => (orderable(x) ? '<button class="plus" type="button" data-madd="' + x.id + '" aria-label="' + L("Добави ", "Add ") + esc(x.n) + L(" в общата количка", " to the table cart") + '">' + ic("plus", 22) + "</button>" : "");
+  /* without a connection "+" stays, but is off and says so (decision 17.11.2026): nothing flies, nothing is "saved" */
+  const plus = (x: Dish) => (!orderable(x) ? "" : M.offline
+    ? '<button class="plus off" type="button" data-madd="' + x.id + '" aria-disabled="true" aria-label="' + L("Добави ", "Add ") + esc(x.n) + L(": няма връзка", ": no connection") + '">' + ic("plus", 22) + "</button>"
+    : '<button class="plus" type="button" data-madd="' + x.id + '" aria-label="' + L("Добави ", "Add ") + esc(x.n) + L(" в общата количка", " to the table cart") + '">' + ic("plus", 22) + "</button>");
   const why = (x: Dish) => (!isOut(x) && breakfastLate(x) && M.view.kitchen.open ? '<span class="later">' + L("до 11:30", "until 11:30") + "</span>" : "");
   /** who already has it in the shared cart */
   const inCartTag = (x: Dish) => {
-    const ls = M.view.cart.lines.filter((l) => l.id === x.id);
+    const me = M.me(), ls = M.view.cart.lines.filter((l) => l.id === x.id).sort((a, b) => (a.phone === me ? -1 : b.phone === me ? 1 : a.phone - b.phone));
     if (!ls.length || M.view.status !== "open") return "";
     return '<span class="incart"><span class="who">' + L("В количката:", "In the cart:") + "</span>" + ls.map((l) => '<span class="who">' + M.av(l.phone, true) + (l.q > 1 ? l.q + " × " : "") + esc(M.name(l.phone)) + "</span>").join("") + "</span>";
   };
-  const card = (x: Dish) => '<div class="dcard"><button class="open" type="button" data-mdish="' + x.id + '"><span class="pw">' + SC.pic(x) + SC.badges(x, true) + '</span><span class="nm">' + esc(x.n) + '</span></button><div class="rowp"><span><span class="price">' + SC.fmt(x.p) + "</span><small>" + gnb(x) + "</small></span>" + plus(x) + why(x) + "</div></div>";
+  const card = (x: Dish) => '<div class="dcard"><button class="open" type="button" data-mdish="' + x.id + '"><span class="pw">' + SC.pic(x) + SC.badges(x, true) + '</span><span class="nm">' + esc(x.n) + '</span></button><div class="rowp"><span><span class="price">' + M.fmt(x.p) + "</span><small>" + gnb(x) + "</small></span>" + plus(x) + why(x) + "</div></div>";
   const row = (x: Dish) => '<div class="mrow' + (isOut(x) ? " out" : "") + '" data-row="' + x.id + '"><button class="open" type="button" data-mdish="' + x.id + '">' + SC.pic(x) + '<span class="tx"><span class="nm">' + esc(x.n) + "</span>" +
-    '<span class="meta"><span class="price">' + SC.fmt(x.p) + "</span><span>" + gnb(x) + "</span></span>" + (x.t.length ? SC.badges(x) : "") + inCartTag(x) + "</span></button>" + (plus(x) || why(x) || "<span></span>") + "</div>";
+    '<span class="meta"><span class="price">' + M.fmt(x.p) + "</span><span>" + gnb(x) + "</span></span>" + (x.t.length ? SC.badges(x) : "") + inCartTag(x) + "</span></button>" + (plus(x) || why(x) || "<span></span>") + "</div>";
   const cap = (s: string) => { s = String(s || "").trim().replace(/,(?=\S)/g, ", "); return s.charAt(0).toUpperCase() + s.slice(1); };
 
   function dishSheet(id: string) {
@@ -57,12 +60,12 @@ export function dishesOf(M: Masa) {
     const al = x.al.length ? x.al.map((k) => { const a = SC.ALLERGENS.find((z) => z[0] === k); return '<span class="badge">' + ic(a ? a[2] : "info", 16) + SC.allergenName(k) + "</span>"; }).join("")
       : '<span class="muted">' + (x.comp ? L("Не открихме алергени в състава.", "No allergens found in the ingredients.") : L("Няма данни за състава. Попитайте сервитьора.", "No ingredient data. Please ask the waiter.")) + "</span>";
     const ok = orderable(x);
-    const reason = isOut(x) ? L("Изчерпано днес", "Sold out today") : M.view.status !== "open" ? L("Масата е затворена", "The table is closed") : !M.view.kitchen.open ? (M.view.kitchen.before ? L("Кухнята отваря в 10:00", "The kitchen opens at 10:00") : L("Кухнята приема поръчки до 22:30", "The kitchen takes orders until 22:30")) : breakfastLate(x) ? L("Закуските са до 11:30", "Breakfast is served until 11:30") : "";
-    const s = M.openSheet({ title: x.n, html: '<div class="dsh">' + SC.pic(x, "dsh-pic") + '<div class="dsh-m"><span class="price">' + SC.fmt(x.p) + '</span><span class="muted">' + gnb(x) + "</span>" + (x.t.length ? SC.badges(x) : "") + "</div>" +
+    const reason = isOut(x) ? L("Изчерпано днес", "Sold out today") : M.view.status !== "open" ? L("Масата е затворена", "The table is closed") : !M.view.kitchen.open ? M.kitchenWhy() : breakfastLate(x) ? L("Закуските са до 11:30", "Breakfast is served until 11:30") : M.offline ? L("Няма връзка. Опитайте пак след малко.", "No connection. Try again in a moment.") : "";
+    const s = M.openSheet({ title: x.n, html: '<div class="dsh">' + SC.pic(x, "dsh-pic") + '<div class="dsh-m"><span class="price">' + M.fmt(x.p) + '</span><span class="muted">' + gnb(x) + "</span>" + (x.t.length ? SC.badges(x) : "") + "</div>" +
       (x.comp ? "<p>" + esc(cap(x.comp)) + "</p>" : '<p class="missing">[ЛИПСВА: състав]</p>') +
       "<h3>" + L("Алергени", "Allergens") + '</h3><div class="badges">' + al + '</div><p class="note-auto">' + ic("info", 18) + "<span>" + L("Предварително, от състава. Чака потвърждение от кухнята.", "Preliminary, from the ingredients. Waiting for the kitchen to confirm.") + "</span></p>" +
       inCartTag(x) +
-      (ok ? '<button class="pill pill-red pill-lg pill-block" type="button" data-madd="' + x.id + '" data-close-after>' + ic("plus", 20) + L("Добави в общата количка · ", "Add to the table cart · ") + SC.fmt(x.p) + "</button>"
+      (ok && !M.offline ? '<button class="pill pill-red pill-lg pill-block" type="button" data-madd="' + x.id + '" data-close-after>' + ic("plus", 20) + L("Добави в общата количка · ", "Add to the table cart · ") + M.fmt(x.p) + "</button>"
         : '<p class="dsh-no">' + ic("clock", 20) + "<b>" + reason + "</b></p>") + "</div>" });
     s.el.classList.add("dshwrap");
   }
@@ -85,9 +88,12 @@ export function dishesOf(M: Masa) {
     if (t.dataset.madd) {
       e.preventDefault();
       const id = t.dataset.madd, inSheet = t.hasAttribute("data-close-after");
-      fly(t, id); SC.haptic();
-      const r = await M.act(() => masaApi.cartAdd(M.code, id), { busy: t });
+      if (t.getAttribute("aria-disabled") === "true") { M.toast(L("Няма връзка. Ястието не е добавено - опитайте пак.", "No connection. The dish was not added - try again.")); return; }
+      const r = await M.act(() => masaApi.cartAdd(M.code, id), { busy: t, offline: L("Няма връзка. Ястието не е добавено - опитайте пак.", "No connection. The dish was not added - try again.") });
       if (!r) return;
+      /* only after the core said yes: the dish flies to the cart */
+      const from = (t.isConnected ? t : document.querySelector<HTMLElement>('[data-madd="' + id + '"]')) || t;
+      fly(from, id); SC.haptic();
       M.toast(L("Добавено в общата количка ✓", "Added to the table cart ✓"));
       if (inSheet) (t.closest(".sheetwrap")?.querySelector("[data-close]") as HTMLElement | null)?.click();
       else { const again = document.querySelector<HTMLElement>('[data-madd="' + id + '"]:not([data-close-after])'); if (again && again.isConnected) SC.flash(again, ic("check", 22)); }

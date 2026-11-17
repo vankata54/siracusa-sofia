@@ -80,6 +80,8 @@ export const FLOOR_MSG = {
   picked: (who: string) => who + " плаща това ястие.",
   pickGone: "Това ястие вече е платено или поискано.",
   rateEarly: "Оценката е след сметката.",
+  rateNone: "Оценката и кодът -10% са за телефон, от който е поръчано на масата.",
+  restoreGone: "Ястието не може да се върне. Добавете го пак от менюто.",
   rateAnswer: "Изберете „Да“ или „Не“.",
   /* the staff ("ти") */
   sFree: "Масата е свободна.",
@@ -129,6 +131,8 @@ export interface TableSession {
   rids?: Record<string, string[]>;
   calls: FloorCall[];
   bills: Record<string, FloorBillReq>;
+  /** the lines removed in the last seconds (for "Отмени" only, FLOOR_UNDO_MS) */
+  gone?: { line: FloorCartLine; at: Iso; by: string }[];
   /** "По ястия": line key -> the phone that pays it */
   picks: Record<string, string>;
   payments: FloorPayment[];
@@ -272,9 +276,10 @@ export interface GuestView {
   /** the lunch menu from the table: not decided ([ЛИПСВА], OPEN-QUESTIONS modules 6); lunch dishes are refused */
   lunch: string;
   settings: { callCooldown: number; callManager: number };
-  cart: { lines: GuestCartLine[]; n: number; sum: number; /** a steak without a price yet */ open: boolean;
+  cart: { lines: GuestCartLine[]; n: number; /** without the blocked lines */ sum: number; /** a steak without a price yet */ open: boolean;
+    /** the keys of the lines that cannot be sent now (sold out today …): sending stops until they are removed */ blocked: string[];
     /** the next send waits for the waiter ("Изпрати към сервитьора"), else it goes to the kitchen */ toWaiter: boolean };
-  pending: { at: Iso; phone: number; lines: GuestCartLine[]; n: number; sum: number; open: boolean } | null;
+  pending: { at: Iso; phone: number; lines: GuestCartLine[]; n: number; sum: number; open: boolean; blocked: string[] } | null;
   rejected: { at: Iso; reason: RejectReason; text: string; n: number } | null;
   orders: GuestOrder[];
   total: number; paid: number; rest: number;
@@ -304,7 +309,9 @@ function cartLineView(ctx: Ctx, l: FloorCartLine, me: string | null, today: Sold
   return { key: l.key, id: l.id, name: d ? d.n : l.id, q: l.q, mods: l.mods, per100, unit, sum: unit == null ? null : r2(unit * l.q), phone: phoneOf(l.who) || 0, mine: l.who === me, at: l.at,
     block: !x ? "removed" : outNow(x, today) ? "sold_out" : tb };
 }
-const cartTotals = (lines: GuestCartLine[]) => ({ n: lines.reduce((a, l) => a + l.q, 0), sum: r2(lines.reduce((a, l) => a + (l.sum || 0), 0)), open: lines.some((l) => l.sum == null) });
+/* a line that cannot be sent now (sold out today, off the menu, breakfast after 11:30) is not in the sum (decision 17.11.2026) */
+const cartTotals = (lines: GuestCartLine[]) => ({ n: lines.reduce((a, l) => a + l.q, 0), sum: r2(lines.reduce((a, l) => a + (l.block ? 0 : l.sum || 0), 0)), open: lines.some((l) => l.sum == null && !l.block),
+  blocked: lines.filter((l) => !!l.block).map((l) => l.key) });
 
 /** the bill request of a phone would cover these lines now */
 export function billWant(s: TableSession, lines: BillLine[], gid: string, split: "one" | "guests" | "dishes"): BillLine[] {
@@ -313,9 +320,25 @@ export function billWant(s: TableSession, lines: BillLine[], gid: string, split:
   const open = lines.filter((b) => !b.out && !b.paid && !covered.has(b.key));
   return split === "one" ? open : split === "guests" ? open.filter((b) => b.l.guest === gid) : open.filter((b) => s.picks[b.key] === gid);
 }
-/** does the next QR send wait for the waiter: no confirmed QR order yet in this sitting, or a steak without its weight */
-export function sendToWaiter(s: TableSession, orders: Order[], lines: { id: string }[]): boolean {
-  return !orders.some((o) => o.channel === "qr" && o.status !== "cancelled") || lines.some((l) => !!(byId[l.id] && byId[l.id].per100));
+/** A phone the waiter has "seen": it was at the table before the first QR order was confirmed, or one of its dishes is in
+    a confirmed QR order. A phone that came later (the code is permanent and stays in a browser's history) sends its first
+    order through the waiter (decision 17.11.2026, check 1 of the QR table). */
+export function phoneSeen(s: Pick<TableSession, "guests">, orders: Order[], gid: string): boolean {
+  const qr = orders.filter((o) => o.channel === "qr" && o.status !== "cancelled");
+  if (!qr.length) return false;
+  const g = s.guests.find((x) => x.id === gid);
+  if (!g) return false;
+  const first = Math.min(...qr.map((o) => Date.parse(o.createdAt)));
+  return Date.parse(g.at) <= first || qr.some((o) => o.lines.some((l) => l.guest === gid));
+}
+/** does the next QR send wait for the waiter: no confirmed QR order yet in this sitting, a steak without its weight, or a
+    dish (or the sender) from a phone the waiter has not seen yet (phoneSeen) */
+export function sendToWaiter(s: Pick<TableSession, "guests">, orders: Order[], lines: { id: string; who?: string }[], by?: string | null): boolean {
+  if (!orders.some((o) => o.channel === "qr" && o.status !== "cancelled")) return true;
+  if (lines.some((l) => !!(byId[l.id] && byId[l.id].per100))) return true;
+  const who = new Set(lines.map((l) => l.who).filter((w): w is string => !!w));
+  if (by) who.add(by);
+  return [...who].some((w) => !phoneSeen(s, orders, w));
 }
 
 export interface FloorEnv { table: Pick<HallTable, "id" | "n" | "zone">; settings: Settings; today: SoldOutToday }
@@ -360,7 +383,7 @@ export function guestViewOf(ctx: Ctx, s: TableSession, orders: Order[], env: Flo
     canOrder: s.status === "open" && st.kitchen,
     lunch: LUNCH_TABLE_MISSING,
     settings: { callCooldown: env.settings.callCooldown, callManager: env.settings.callManager },
-    cart: { lines: cart, ...cartTotals(cart), toWaiter: sendToWaiter(s, orders, s.cart) },
+    cart: { lines: cart, ...cartTotals(cart), toWaiter: sendToWaiter(s, orders, s.cart, gid) },
     pending: s.pending && pend ? { at: s.pending.at, phone: phoneOf(s.pending.by) || 0, lines: pend, ...cartTotals(pend) } : null,
     rejected: s.rejected ? { at: s.rejected.at, reason: s.rejected.reason, text: REJECT_REASONS[s.rejected.reason].guest, n: s.rejected.n } : null,
     orders: gOrders, total, paid, rest: r2(total - paid),
@@ -372,13 +395,15 @@ export function guestViewOf(ctx: Ctx, s: TableSession, orders: Order[], env: Flo
       want: gid ? { one: opt("one"), guests: opt("guests"), dishes: opt("dishes") } : null,
     },
     rating: rate ? { happy: rate.happy, sent: rate.sent, code: rate.code, pct: RATING_DISCOUNT, at: rate.at } : null,
-    canRate: !!gid && canRate(s, gid),
+    canRate: !!gid && canRate(s, gid, orders),
     google: RESTAURANT.googleReview,
   };
 }
-/** the rating comes with the bill: after this phone asked for it, after someone asked for the whole bill, or after the close */
-export function canRate(s: TableSession, gid: string): boolean {
-  return s.orders.length > 0 && (s.status === "closed" || !!s.bills[gid] || Object.keys(s.bills).some((k) => s.bills[k].split === "one"));
+/** the rating comes with the bill (after this phone asked for it, after someone asked for the whole bill, or after the
+    close), and only to a phone that ordered something in this sitting: one -10% code per such phone (decision 17.11.2026) */
+export function canRate(s: TableSession, gid: string, orders: Order[]): boolean {
+  const ordered = orders.some((o) => o.status !== "cancelled" && o.lines.some((l) => l.guest === gid));
+  return ordered && (s.status === "closed" || !!s.bills[gid] || Object.keys(s.bills).some((k) => s.bills[k].split === "one"));
 }
 
 /* ---------- real time ---------- */

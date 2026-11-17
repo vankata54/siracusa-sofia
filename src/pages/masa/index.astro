@@ -19,6 +19,7 @@ import Skeleton from "../../modules/masa/Skeleton.astro";
 @keyframes wlArt{from{transform:rotate(-40deg) scale(.86); opacity:0}to{transform:none; opacity:1}}
 @media (prefers-reduced-motion: reduce){ .wl-art{animation:none} }
 .wl-t{margin:6px 0 0; font-size:60px; line-height:.95; letter-spacing:-.055em; font-weight:800}
+@container app (max-width:370px){ .wl-t{font-size:52px} }
 .wl-z{display:flex; align-items:center; gap:8px; margin:8px 0 0; font-size:24px; font-weight:800; letter-spacing:-.03em}
 .wl-z .ic{color:var(--ok)}
 .wl-lead{margin:14px 0 0; font-size:17px; color:var(--ink); max-width:30ch; text-wrap:pretty}
@@ -41,7 +42,8 @@ import Skeleton from "../../modules/masa/Skeleton.astro";
 .now .d{display:block; font-size:14px; color:var(--muted); font-weight:600}
 .now > .ic{margin-left:auto; color:var(--muted); flex:none}
 .wl-menu{padding-top:44px}
-.wl-menu .chips{margin-bottom:16px}
+.wl-menu .chips{margin-top:0; margin-bottom:16px; list-style:none}
+.wl-menu .chips li{flex:none}
 .wl-menu .chip{text-decoration:none; min-height:48px}
 .wl-menu .rail .dcard{flex-basis:188px}
 .wl-menu .dcard .open{font:inherit; border:0; background:transparent; color:inherit; padding:0; text-align:left; cursor:pointer}

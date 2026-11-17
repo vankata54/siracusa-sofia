@@ -11,12 +11,13 @@ import { getSettings } from "./settings.ts";
 import { soldOutToday, outNow } from "./menu.ts";
 import { MSG, removedMsg, createTableOrder, checkTableLines, tableKitchenOpen, tableBlock, TABLE_MSG } from "./orders.ts";
 import { CODE_PREFIX, CODE_DIGITS, RATING_DISCOUNT } from "./codes.ts";
+import { tableFeedback } from "./feedback.ts";
 import { byId, removedById, ORDER_RULES, RESTAURANT } from "../lib/data.ts";
 import { parseMods } from "../lib/pricing.ts";
 import { sofiaYmd } from "../lib/time.ts";
 import {
   FLOOR_MSG, CALL_KINDS, MAX_PHONES, CALL_NOTE_MAX, RATING_TEXT_MAX, FLOOR_UNDO_MS, lockKey, openSessionOf, saveSession, newSession, sessionOrders,
-  floorEnv, guestViewOf, emitSession, emitCall, closeIfStale, callState, billLines, billWant, sendToWaiter, canRate, phoneLabel, phoneOf,
+  floorEnv, guestViewOf, emitSession, emitCall, closeIfStale, callState, billLines, billWant, sendToWaiter, canRate, phoneLabel, phoneOf, ZONE_NAME,
   type CallKind, type TableSession, type FloorGuest, type FloorCartLine, type GuestView,
 } from "./floor.ts";
 
@@ -141,12 +142,15 @@ export async function guestCartAdd(ctx: Ctx, code: string, tok: string, p: { id:
     return changed(ctx, s, g.id);
   });
 }
-/** the counter of a line (any line of the table); 0 removes it */
-export async function guestCartQty(ctx: Ctx, code: string, tok: string, key: string, q: number): Promise<GuestView> {
+/** the counter of a line (any line of the table); 0 removes it. q: the number, or a change "+1" / "-1" (two phones pressing
+    "+" at the same moment both count) */
+export async function guestCartQty(ctx: Ctx, code: string, tok: string, key: string, q: number | string): Promise<GuestView> {
   return withGuest(ctx, code, tok, async (s, g) => {
     mustBeOpen(s);
-    const v = qtyOf(q, 0), l = s.cart.find((x) => x.key === String(key));
+    const l = s.cart.find((x) => x.key === String(key));
     if (!l) throw new CoreError("not_found", FLOOR_MSG.line, 404);
+    const d = typeof q === "string" && /^[+-][1-9]\d?$/.test(q) ? +q : null;
+    const v = qtyOf(d == null ? q : Math.max(0, l.q + d), 0);
     if (v === 0) s.cart = s.cart.filter((x) => x !== l); else l.q = v;
     return changed(ctx, s, g.id);
   });
@@ -158,19 +162,25 @@ export async function guestCartRemove(ctx: Ctx, code: string, tok: string, key: 
     const l = s.cart.find((x) => x.key === String(key)) || null;
     if (!l) throw new CoreError("not_found", FLOOR_MSG.line, 404);
     s.cart = s.cart.filter((x) => x !== l);
+    /* kept a few seconds for "Отмени" (only this line comes back) */
+    const nowMs = nowDate(ctx).getTime();
+    s.gone = [...(s.gone || []).filter((x) => nowMs - Date.parse(x.at) <= FLOOR_UNDO_MS), { line: l, at: iso(ctx), by: g.id }];
     return { view: await changed(ctx, s, g.id), gone: l };
   });
 }
-/** "Отмени" after a removal: the line comes back as it was (its phone, its changes), checked again */
+/** "Отмени" after a removal: only a line this phone removed in the last FLOOR_UNDO_MS comes back, by its key, as it was
+    (its phone, its changes), checked again like "+" (the kitchen's hours, sold out) */
 export async function guestCartRestore(ctx: Ctx, code: string, tok: string, line: Partial<FloorCartLine>): Promise<GuestView> {
   return withGuest(ctx, code, tok, async (s, g) => {
     mustBeOpen(s);
-    const l = line && typeof line === "object" ? line : {};
-    const q = qtyOf(l.q, 1), d = await dishFor(ctx, l.id, l.mods);
-    const who = s.guests.some((x) => x.id === l.who) ? (l.who as string) : g.id;
+    tableKitchenOpen(ctx, "guest");
+    const key = line && typeof line === "object" && typeof line.key === "string" ? line.key : "", nowMs = nowDate(ctx).getTime();
+    const i = (s.gone || []).findIndex((x) => x.line.key === key && x.by === g.id && nowMs - Date.parse(x.at) <= FLOOR_UNDO_MS);
+    if (i < 0 || s.cart.some((x) => x.key === key)) throw new CoreError("not_found", FLOOR_MSG.restoreGone, 404);
+    const l = s.gone![i].line, d = await dishFor(ctx, l.id, l.mods);
     if (s.cart.length >= ORDER_RULES.maxLines) throw new CoreError("too_many", TABLE_MSG.guest.lines, 422);
-    const key = typeof l.key === "string" && /^[0-9a-f]{10}$/.test(l.key) && !s.cart.some((x) => x.key === l.key) ? l.key : rid(5);
-    s.cart.push({ key, id: d.id, q, mods: d.mods, who, at: iso(ctx) });
+    s.gone!.splice(i, 1);
+    s.cart.push({ key: l.key, id: d.id, q: l.q, mods: d.mods, who: s.guests.some((x) => x.id === l.who) ? l.who : g.id, at: iso(ctx) });
     return changed(ctx, s, g.id);
   });
 }
@@ -190,7 +200,7 @@ export async function guestSend(ctx: Ctx, code: string, tok: string): Promise<{ 
     if (s.pending) { try { const pc = checkTableLines(ctx, s.pending.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods })), today, "later", "guest"); n += pc.n; sub += pc.sub; } catch { /* the waiter sees it when he confirms */ } }
     if (n > ORDER_RULES.maxPortions || sub > ORDER_RULES.maxTotal || all.length > ORDER_RULES.maxLines) throw new CoreError("too_big", TABLE_MSG.guest.big, 422);
     const now = iso(ctx);
-    if (s.pending || sendToWaiter(s, orders, s.cart)) {
+    if (s.pending || sendToWaiter(s, orders, s.cart, g.id)) {
       /* the timer of the waiting order does not start again when more dishes join it */
       s.pending = s.pending ? { ...s.pending, lines: all } : { at: now, by: g.id, lines: s.cart };
       s.cart = []; s.rejected = null;
@@ -312,12 +322,15 @@ export async function guestPick(ctx: Ctx, code: string, tok: string, keys: strin
 
 /* ---------- the rating ("Останахте ли доволни?") ---------- */
 /** One rating per phone at the table (the answer and the text can change, the code stays): -10% "SC10-…" from the codes
-    of the core for both answers; the Google link is shown for both answers and never brings a discount. The text reaches
-    only the manager. Also after the table is closed. */
+    of the core for both answers, only for a phone that ordered something at the table; the Google link is shown for both
+    answers and never brings a discount. The text of "Не" goes to the admin's "Обратна връзка" (the manager reads it),
+    never to the other phones. Also after the table is closed. */
 export async function guestRate(ctx: Ctx, code: string, tok: string, p: { happy: boolean; text?: string }): Promise<{ view: GuestView; code: string; pct: number; google: string | null; googleMissing: boolean }> {
-  return withGuest(ctx, code, tok, async (s, g) => {
+  return withGuest(ctx, code, tok, async (s, g, t) => {
     if (!p || typeof p.happy !== "boolean") throw Object.assign(new CoreError("invalid", FLOOR_MSG.rateAnswer, 422), { fields: { happy: FLOOR_MSG.rateAnswer } });
-    if (!canRate(s, g.id)) throw new CoreError("not_finished", FLOOR_MSG.rateEarly, 409);
+    const orders = await sessionOrders(ctx, s);
+    if (!orders.some((o) => o.status !== "cancelled" && o.lines.some((l) => l.guest === g.id))) throw new CoreError("not_ordered", FLOOR_MSG.rateNone, 409);
+    if (!canRate(s, g.id, orders)) throw new CoreError("not_finished", FLOOR_MSG.rateEarly, 409);
     const text = p.text ? String(p.text).trim().slice(0, RATING_TEXT_MAX) : "", now = iso(ctx);
     let r = s.ratings[g.id], doc = r ? await ctx.repo.get<Rating>(COL.ratings, r.ratingId) : null;
     if (!r || !doc) {
@@ -330,6 +343,8 @@ export async function guestRate(ctx: Ctx, code: string, tok: string, p: { happy:
       r = { ...r, happy: p.happy, sent: r.sent || !!text, at: now };
     }
     await ctx.repo.put(COL.ratings, doc);
+    /* "Не" with a text: into the admin's "Обратна връзка" (Клиенти), where the manager reads it (decision 17.11.2026) */
+    if (text && !p.happy) await tableFeedback(ctx, { table: t.n, zone: ZONE_NAME[t.zone], text, rating: doc.id });
     s.ratings[g.id] = r;
     await saveSession(ctx, s);
     /* the staff hear that a rating came (never the text); the other phones see nothing of it */

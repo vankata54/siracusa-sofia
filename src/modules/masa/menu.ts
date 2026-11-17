@@ -50,7 +50,7 @@ function tableCard(): string {
   v.cart.lines.forEach((l) => { by[l.phone] = (by[l.phone] || 0) + l.q; });
   const order = [M.me(), ...v.phones.map((p) => p.phone).filter((p) => p !== M.me())];
   const parts = order.filter((p) => by[p]).map((p) => '<span class="nw">' + M.esc(M.name(p)) + ": " + by[p] + "</span>");
-  return '<a class="tbl" href="' + M.href("cart") + '" data-tbl><span class="avs">' + v.phones.map((p) => M.av(p.phone)).join("") + "</span><span><b>" + L("Обща количка на масата", "Shared table cart") + '</b><span class="d">' + (parts.length ? parts.join(" · ") : L("Още е празна", "Still empty")) + "</span></span>" + M.ic("caret-right", 20) + "</a>";
+  return '<a class="tbl" href="' + M.href("cart") + '" data-tbl><span class="avs">' + order.map((p) => M.av(p)).join("") + "</span><span><b>" + L("Обща количка на масата", "Shared table cart") + '</b><span class="d">' + (parts.length ? parts.join(" · ") : L("Още е празна", "Still empty")) + "</span></span>" + M.ic("caret-right", 20) + "</a>";
 }
 function qchipsHTML(c: Chip[]): string {
   if (!c.length) return "";
@@ -79,7 +79,7 @@ function build() {
       '<div class="mm-top"><div class="mm-h"><h1 class="h1" id="mm-h">' + L("Меню", "Menu") + '</h1><p class="lead" data-mlead></p></div><div data-tblbox></div></div>' +
       '<div class="mnotes" data-notes></div>' +
       '<div class="sbox" role="search"><label class="vh" for="mq">' + L("Търсете ястие или съставка", "Search a dish or ingredient") + "</label>" + ic("magnifying-glass", 22) +
-        '<input id="mq" type="search" placeholder="' + L("Търсете: пица, бурата, кебапчета", "Search: pizza, burrata") + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button class="clr" type="button" data-qclr aria-label="' + L("Изчисти търсенето", "Clear search") + '" hidden>' + ic("x", 20) + "</button></div>" +
+        '<input id="mq" type="search" placeholder="' + L("Търсете: пица, бурата, кебапчета", "Search: pizza, burrata, kebapcheta") + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button class="clr" type="button" data-qclr aria-label="' + L("Изчисти търсенето", "Clear search") + '" hidden>' + ic("x", 20) + "</button></div>" +
       "<div data-qchips></div>" +
       '<div class="chips fchips" data-fchips role="group" aria-label="' + L("Филтри", "Filters") + '"></div>' +
       '<div class="mstat"><p data-count aria-live="polite"></p><button class="link" type="button" data-clr hidden>' + ic("x", 18) + L("Изчисти", "Clear") + "</button></div>" +
@@ -127,7 +127,7 @@ function results() {
   requestAnimationFrame(spy);
 }
 /** what a row shows from the view: who has it in the cart, "+" or not */
-const sig = (x: Dish) => D.inCartTag(x) + "|" + D.orderable(x) + "|" + D.breakfastLate(x) + "|" + SC.isOut(x);
+const sig = (x: Dish) => D.inCartTag(x) + "|" + D.orderable(x) + "|" + D.breakfastLate(x) + "|" + SC.isOut(x) + "|" + M.offline;
 function patchRows() {
   M.main.querySelectorAll<HTMLElement>("[data-row]").forEach((r) => {
     const x = SC.byId[r.dataset.row!];
@@ -146,6 +146,8 @@ function spy() {
   secs.forEach((s) => { if (s.getBoundingClientRect().top < off) id = s.dataset.cat || null; });
   if (id === active) return;
   active = id;
+  /* back at the top: the chips from their start */
+  if (!id) M.main.querySelector<HTMLElement>("[data-cats]")?.scrollTo({ left: 0, behavior: SC.reduce ? "auto" : "smooth" });
   M.main.querySelectorAll<HTMLElement>("[data-go]").forEach((a) => {
     const on = a.dataset.go === id;
     a.setAttribute("aria-current", String(on));
@@ -160,7 +162,7 @@ function alSheet() {
   const s = M.openSheet({ title: L("Алергени", "Allergens"), html: '<p class="muted" style="margin:0 0 6px">' + L("Отметнете какво не ядете. Скриваме ястията, които го съдържат по състава.", "Tick what you don’t eat. We hide dishes that contain it.") + '</p><div class="flist">' +
     SC.ALLERGENS.map((a) => '<label class="check"><input type="checkbox" data-alk="' + a[0] + '"' + (st.a.indexOf(a[0]) > -1 ? " checked" : "") + '><span class="fi">' + M.ic(a[2], 22) + '</span><span class="ft"><b>' + a[1] + "</b><small>" + SC.items.filter((x) => x.al.indexOf(a[0]) > -1).length + L(" ястия по състава", " dishes by ingredients") + "</small></span></label>").join("") +
     '</div><div class="sh-foot"><button class="pill pill-soft" type="button" data-shclr>' + L("Изчисти", "Clear") + '</button><button class="pill pill-red" type="button" data-shok>' + L("Покажи ", "Show ") + "<span data-n></span></button></div>" });
-  const upd = () => { results(); s.el.querySelector("[data-n]")!.textContent = M.dishes(groups().reduce((a, g) => a + g.it.length, 0)); };
+  const upd = () => { M.keep(results); s.el.querySelector("[data-n]")!.textContent = M.dishes(groups().reduce((a, g) => a + g.it.length, 0)); };
   s.el.addEventListener("change", (e) => { const k = (e.target as HTMLInputElement).dataset.alk; if (!k) return; st.a = st.a.filter((z) => z !== k); if ((e.target as HTMLInputElement).checked) st.a.push(k); upd(); });
   s.el.querySelector<HTMLElement>("[data-shclr]")!.onclick = () => { st.a = []; s.el.querySelectorAll("input").forEach((i) => { i.checked = false; }); upd(); };
   s.el.querySelector<HTMLElement>("[data-shok]")!.onclick = () => s.close();
@@ -178,7 +180,7 @@ function bar() {
   cbar!.hidden = !n;
   cbar!.setAttribute("aria-label", L("Количка на масата", "Table cart"));
   if (!n) return;
-  const who = [...new Set(v.cart.lines.map((l) => l.phone))].sort((a, b) => a - b);
+  const me = M.me(), who = [...new Set(v.cart.lines.map((l) => l.phone))].sort((a, b) => (a === me ? -1 : b === me ? 1 : a - b));
   cbar!.querySelector("[data-cav]")!.innerHTML = who.map((p) => M.av(p, true)).join("");
   cbar!.querySelector("[data-cn]")!.innerHTML = "<b>" + M.dishes(n) + "</b>" + L("на масата", "at the table");
   cbar!.classList.toggle("off", !v.kitchen.open);
@@ -209,15 +211,15 @@ const m = mountMasa({
   },
 });
 M = m;
-syncMenu(() => { if (m.view && built) { lastKey = ""; render(m, "remote"); } });
+syncMenu(() => { if (m.view && built) { lastKey = ""; m.keep(() => render(m, "remote")); } });
 
 m.main.addEventListener("click", (e) => {
   const t = (e.target as Element).closest<HTMLElement>("button, a");
   if (!t) return;
   if (t.dataset.go) { e.preventDefault(); document.getElementById("c-" + t.dataset.go)?.scrollIntoView({ behavior: SC.reduce ? "auto" : "smooth" }); return; }
-  if (t.dataset.f) { const id = t.dataset.f; st.f = st.f.indexOf(id) > -1 ? st.f.filter((z) => z !== id) : st.f.concat(id); results(); return; }
+  if (t.dataset.f) { const id = t.dataset.f; st.f = st.f.indexOf(id) > -1 ? st.f.filter((z) => z !== id) : st.f.concat(id); m.keep(results); return; }
   if (t.hasAttribute("data-al")) { alSheet(); return; }
-  if (t.hasAttribute("data-clr")) { st = { q: "", f: [], a: [] }; $<HTMLInputElement>("#mq").value = ""; $("[data-qclr]").hidden = true; results(); return; }
-  if (t.dataset.qtoggle) { st.q = toggle(st.q, t.dataset.qtoggle); $<HTMLInputElement>("#mq").value = st.q; $("[data-qclr]").hidden = !st.q; results(); return; }
+  if (t.hasAttribute("data-clr")) { st = { q: "", f: [], a: [] }; $<HTMLInputElement>("#mq").value = ""; $("[data-qclr]").hidden = true; results(); $<HTMLInputElement>("#mq").focus({ preventScroll: true }); return; }
+  if (t.dataset.qtoggle) { st.q = toggle(st.q, t.dataset.qtoggle); $<HTMLInputElement>("#mq").value = st.q; $("[data-qclr]").hidden = !st.q; m.keep(results); return; }
   if (t.hasAttribute("data-qclr")) { const q = $<HTMLInputElement>("#mq"); q.value = ""; st.q = ""; t.hidden = true; results(); q.focus(); return; }
 });

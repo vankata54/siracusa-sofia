@@ -25,7 +25,7 @@ function sub(l: GuestCartLine): string {
   const x = SC.byId[l.id], L = M.L;
   if (l.per100) return (x ? M.fmt(x.p) + " " : "") + L("за 100 гр. · грамажът след рязане", "per 100 g · weighed after cutting");
   const w = x ? D.gnb(x) : "";
-  return M.fmt(l.unit || 0) + (w ? " · " + w : "");
+  return M.fmt(l.unit || 0) + (w ? ' <span class="nw">· ' + w + "</span>" : "");
 }
 const BLOCK: Record<string, [string, string]> = { sold_out: ["Изчерпано днес", "Sold out today"], removed: ["Вече не е в менюто", "No longer on the menu"], lunch: ["Обедното меню не се поръчва от масата", "The lunch menu is not ordered from the table"], breakfast: ["Закуските са до 11:30", "Breakfast is served until 11:30"] };
 
@@ -33,15 +33,18 @@ function draftHTML(): string {
   const v = M.view, L = M.L, n = v.cart.n, sent = v.orders.length || v.pending;
   const head = '<div class="blk-h"><h2 class="h3">' + (sent ? L("Още за поръчване", "More to order") : L("За поръчване", "To order")) + "</h2>" + (n ? '<span class="muted small">' + M.dishes(n) + "</span>" : "") + "</div>";
   if (!n && sent) return "<section>" + head + '<div class="mnote">' + M.ic("shopping-bag", 24) + "<div><b>" + L("Нищо ново за поръчване", "Nothing new to order") + "</b><p>" + L("Каквото добави някой на масата, ще се появи тук.", "Whatever anyone at the table adds will show up here.") + '</p><div class="acts"><a class="pill pill-line" href="' + M.href("menu") + '">' + M.ic("fork-knife", 20) + L("Към менюто", "Go to the menu") + "</a></div></div></div></section>";
-  if (!n) return "<section>" + head + '<div class="shell"><div class="core empty cempty"><span class="ill">' + M.ic("shopping-bag", 40) + '</span><h3 class="h3">' + L("Количката е празна. Какво ви се хапва?", "Your cart is empty. What are you craving?") + "</h3><p>" + L("Каквото добави всеки на масата, се появява тук.", "Whatever anyone at the table adds shows up here.") + '</p><a class="pill pill-red" href="' + M.href("menu") + '">' + M.ic("fork-knife", 20) + L("Към менюто", "Go to the menu") + "</a></div></div></section>";
-  const phones = [...new Set(v.cart.lines.map((l) => l.phone))].sort((a, b) => a - b);
+  const open = v.kitchen.open;
+  if (!n) return "<section>" + head + '<div class="shell"><div class="core empty cempty"><span class="ill">' + M.ic("shopping-bag", 40) + '</span><h3 class="h3">' + (open ? L("Количката е празна. Какво ви се хапва?", "Your cart is empty. What are you craving?") : L("Количката е празна.", "Your cart is empty.")) + "</h3><p>" + (open ? L("Каквото добави всеки на масата, се появява тук.", "Whatever anyone at the table adds shows up here.") : M.kitchenWhy() + ".") + '</p><a class="pill ' + (open ? "pill-red" : "pill-line") + '" href="' + M.href("menu") + '">' + M.ic("fork-knife", 20) + L("Към менюто", "Go to the menu") + "</a></div></div></section>";
+  const me = M.me(), phones = [...new Set(v.cart.lines.map((l) => l.phone))].sort((a, b) => (a === me ? -1 : b === me ? 1 : a - b));
   return "<section>" + head + '<div class="shell"><div class="core">' + phones.map((p) => {
-    const ls = v.cart.lines.filter((l) => l.phone === p), sum = ls.reduce((a, l) => a + (l.sum || 0), 0);
+    const ls = v.cart.lines.filter((l) => l.phone === p), sum = ls.reduce((a, l) => a + (l.block ? 0 : l.sum || 0), 0);
     return '<div class="grp"><div class="grp-h">' + M.av(p) + "<b>" + M.esc(M.name(p)) + '</b><span class="price">' + M.fmt(sum) + "</span></div>" +
       ls.map((l) => {
         const x = SC.byId[l.id], canMore = !!x && D.orderable(x) && !l.block;
         return '<div class="cl" data-key="' + l.key + '">' + pic(l.id) + '<span><span class="nm">' + M.esc(l.name) + '</span><span class="sub">' + sub(l) + "</span>" + (l.block ? '<span class="blk">' + M.ic("warning-circle", 16) + L(BLOCK[l.block][0], BLOCK[l.block][1]) + "</span>" : "") + "</span>" +
-          '<span class="counter" role="group" aria-label="' + L("Брой: ", "Quantity: ") + M.esc(l.name) + '"><button type="button" data-q="-1" data-k="' + l.key + '" aria-label="' + (l.q > 1 ? L("Намали", "Decrease") : L("Махни", "Remove")) + '">' + M.ic(l.q > 1 ? "minus" : "trash", 20) + "</button><output>" + l.q + '</output><button type="button" data-q="1" data-k="' + l.key + '" aria-label="' + L("Увеличи", "Increase") + '"' + (canMore ? "" : ' aria-disabled="true"') + ">" + M.ic("plus", 20) + "</button></span></div>";
+          /* a line that cannot be sent: only "Махни" (no counter) */
+          (l.block ? '<button class="pill pill-line rm" type="button" data-q="-' + l.q + '" data-k="' + l.key + '" aria-label="' + L("Махни ", "Remove ") + M.esc(l.name) + '">' + M.ic("trash", 18) + L("Махни", "Remove") + "</button>" :
+          '<span class="counter" role="group" aria-label="' + L("Брой: ", "Quantity: ") + M.esc(l.name) + '"><button type="button" data-q="-1" data-k="' + l.key + '" aria-label="' + (l.q > 1 ? L("Намали", "Decrease") : L("Махни", "Remove")) + '">' + M.ic(l.q > 1 ? "minus" : "trash", 20) + "</button><output>" + l.q + '</output><button type="button" data-q="1" data-k="' + l.key + '" aria-label="' + L("Увеличи", "Increase") + '"' + (canMore ? "" : ' aria-disabled="true"') + ">" + M.ic("plus", 20) + "</button></span>") + "</div>";
       }).join("") + "</div>";
   }).join("") + '</div></div><p class="note-auto" style="margin-top:10px">' + M.ic("users-three", 18) + "<span>" + L("Всеки на масата може да промени количката. Промените се виждат веднага на всички телефони.", "Anyone at the table can change the cart. Changes show at once on every phone.") + "</span></p></section>";
 }
@@ -64,8 +67,10 @@ function sentHTML(): string {
 function sendState(): { ok: boolean; txt: string; retry?: boolean } {
   const v = M.view, L = M.L;
   if (M.offline) return { ok: false, txt: L("Няма връзка · Опитай пак", "No connection · Try again"), retry: true };
-  if (!v.kitchen.open) return { ok: false, txt: v.kitchen.before ? L("Кухнята отваря в 10:00", "The kitchen opens at 10:00") : L("Кухнята приема поръчки до 22:30", "The kitchen takes orders until 22:30") };
+  if (!v.kitchen.open) return { ok: false, txt: M.kitchenWhy() };
   if (!v.cart.n) return { ok: false, txt: L("Добавете ястие от менюто", "Add a dish from the menu") };
+  /* a sold-out dish stops the send until it is removed (decision 17.11.2026) */
+  if (v.cart.blocked.length) return { ok: false, txt: L("Първо махнете изчерпаното", "First remove what is sold out") };
   const first = v.cart.toWaiter || !!v.pending;
   return { ok: true, txt: (first ? L("Изпрати към сервитьора · ", "Send to the waiter · ") : L("Изпрати към кухнята · ", "Send to the kitchen · ")) + M.fmt(v.cart.sum) };
 }
@@ -75,6 +80,13 @@ function rejHTML(): string {
   return '<div class="mnote warn" role="alert">' + M.ic("hand-waving", 24) + "<div><b>" + L("Сервитьорът отказа поръчката", "The waiter declined the order") + "</b><p>" + L(r.text, REJECT_EN[r.reason] || r.text) + " " + L("Ястията са обратно в количката. Ако все пак ги искате, изпратете ги пак или повикайте сервитьора.", "The dishes are back in the cart. If you still want them, send them again or call a waiter.") + "</p>" +
     '<div class="acts"><a class="pill pill-red" href="' + M.href("call") + '">' + M.ic("bell-ringing", 20) + L("Повикай сервитьор", "Call a waiter") + '</a><button class="pill pill-line" type="button" data-rejok>' + L("Разбрах", "OK") + "</button></div></div></div>";
 }
+/** a sold-out dish in the cart: out of the sum, the send waits until it is removed */
+function blockedNote(): string {
+  const v = M.view, L = M.L, b = v.cart.lines.filter((l) => l.block);
+  if (!b.length || !v.kitchen.open) return "";
+  const names = b.map((l) => "„" + M.esc(l.name) + "“").join(", ");
+  return '<p class="how warn" role="status">' + M.ic("warning-circle", 20) + "<span>" + names + (b.length > 1 ? L(" не могат да се поръчат сега. Махнете ги, за да изпратите останалото.", " cannot be ordered now. Remove them to send the rest.") : L(" не може да се поръча сега. Махнете го, за да изпратите останалото.", " cannot be ordered now. Remove it to send the rest.")) + "</span></p>";
+}
 function sendBtn(cls: string): string {
   const s = sendState();
   if (s.retry) return '<button class="pill pill-ink ' + cls + '" type="button" data-mretry>' + M.ic("arrow-clockwise", 20) + s.txt + "</button>";
@@ -82,15 +94,18 @@ function sendBtn(cls: string): string {
 }
 function sideHTML(): string {
   const v = M.view, L = M.L, first = v.cart.toWaiter || !!v.pending, sentSum = v.total + (v.pending ? v.pending.sum : 0), had = v.orders.length || v.pending;
-  const steak = v.cart.toWaiter && v.orders.length > 0;
+  const steak = v.cart.toWaiter && v.orders.length > 0 && v.cart.lines.some((l) => l.per100);
+  const late = v.cart.toWaiter && v.orders.some((o) => o.channel === "qr") && !steak;
+  const nOk = v.cart.lines.reduce((a, l) => a + (l.block ? 0 : l.q), 0);
   return '<div class="side"><div class="shell"><div class="core sum"><h2 class="h3" style="margin:0 0 4px">' + L("За изпращане", "To send") + "</h2>" +
-    '<div class="kv"><span>' + M.dishes(v.cart.n) + '</span><span class="price">' + M.fmt(v.cart.sum) + (v.cart.open ? " +" : "") + "</span></div>" +
+    '<div class="kv"><span>' + M.dishes(nOk) + '</span><span class="price">' + M.fmt(v.cart.sum) + (v.cart.open ? " +" : "") + "</span></div>" +
     (had ? '<div class="kv"><span>' + L("Сметка на масата досега", "Table bill so far") + '</span><span class="price">' + M.fmt(sentSum) + "</span></div>" +
       '<div class="kv tot"><span><b>' + L("Общо с новите", "Total with the new ones") + '</b></span><span class="price">' + M.fmt(sentSum + v.cart.sum) + "</span></div>" : "") +
     (!v.kitchen.open ? "" : '<p class="how">' + M.ic(first ? "hourglass" : "cooking-pot", 20) + "<span>" +
-      (steak ? L("Стекът „за 100 гр.“ минава през сервитьора: той отбелязва грамажа и праща поръчката в кухнята.", "A steak “per 100 g” goes through the waiter: they note the weight and send the order to the kitchen.")
+      (late ? L("Първата поръчка от нов телефон на масата я потвърждава сервитьорът, после отива в кухнята.", "The first order from a new phone at the table is confirmed by the waiter, then it goes to the kitchen.")
+        : steak ? L("Стекът „за 100 гр.“ минава през сервитьора: той отбелязва грамажа и праща поръчката в кухнята.", "A steak “per 100 g” goes through the waiter: they note the weight and send the order to the kitchen.")
         : first ? L("Първата поръчка я потвърждава сервитьорът, после отива в кухнята.", "The waiter confirms the first order, then it goes to the kitchen.") : L("Сервитьорът вече потвърди масата: тази поръчка отива направо в кухнята.", "The waiter has already confirmed your table: this order goes straight to the kitchen.")) + "</span></p>") +
-    sendBtn("pill-lg pill-block send") + "</div></div>" +
+    blockedNote() + sendBtn("pill-lg pill-block send") + "</div></div>" +
     '<div class="shell"><a class="core billcard" href="' + M.href("bill") + '"><span class="ci">' + M.ic("receipt", 24) + "</span><span><b>" + L("Поискай сметката", "Ask for the bill") + '</b><span class="d">' + L("В брой или с карта, заедно или поотделно", "Cash or card, together or split") + "</span></span>" + M.ic("caret-right", 20) + "</a></div></div>";
 }
 
@@ -131,7 +146,7 @@ document.addEventListener("click", async (e) => {
     if (q <= 0) {
       const r = await m.act(() => masaApi.cartRemove(m.code, l.key), { busy: t });
       if (r && r.gone) { const gone = r.gone; m.toast(L("Махнахме ", "Removed ") + l.name, () => { void m.act(() => masaApi.cartRestore(m.code, gone)); }); }
-    } else await m.act(() => masaApi.cartQty(m.code, l.key, q), { busy: t });
+    } else await m.act(() => masaApi.cartQty(m.code, l.key, t.dataset.q === "1" ? "+1" : "-1"), { busy: t }); /* a change, not a number: two phones pressing together both count */
     return;
   }
   if (t.hasAttribute("data-rejok")) { await m.act(() => masaApi.rejectedOk(m.code), { busy: t }); return; }

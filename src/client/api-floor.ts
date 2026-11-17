@@ -137,7 +137,7 @@ export const masaApi = {
   get: pick((c, code: string) => glocal(code, c.floor.view(code, token())), (code) => gpost<GuestView>(code, "view")),
   cartAdd: pick((c, code: string, id: string, o: { q?: number; mods?: string[] } = {}) => glocal(code, c.floor.cartAdd(code, token(), { id, q: o.q, mods: o.mods })),
     (code: string, id: string, o: { q?: number; mods?: string[] } = {}) => gpost<GuestView>(code, "cart/add", { id, q: o.q, mods: o.mods })),
-  cartQty: pick((c, code: string, key: string, q: number) => glocal(code, c.floor.cartQty(code, token(), key, q)), (code, key, q) => gpost<GuestView>(code, "cart/qty", { key, q })),
+  cartQty: pick((c, code: string, key: string, q: number | "+1" | "-1") => glocal(code, c.floor.cartQty(code, token(), key, q)), (code, key, q) => gpost<GuestView>(code, "cart/qty", { key, q })),
   cartRemove: pick((c, code: string, key: string) => glocal(code, c.floor.cartRemove(code, token(), key)), (code, key) => gpost<{ view: GuestView; gone: FloorCartLine | null }>(code, "cart/remove", { key })),
   cartRestore: pick((c, code: string, gone: Partial<FloorCartLine>) => glocal(code, c.floor.cartRestore(code, token(), gone)), (code, gone) => gpost<GuestView>(code, "cart/restore", { line: gone })),
   send: pick((c, code: string) => glocal<SendResult>(code, c.floor.send(code, token())), (code) => gpost<SendResult>(code, "send")),

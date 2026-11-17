@@ -201,3 +201,100 @@ test("the menu: the shared search (Latin, „без …“), the filters, the al
     await K.ctx.close();
   }
 });
+
+test("no connection on the menu: „+“ is off and says so, nothing flies, nothing is added", async ({ page, browser, baseURL, context }) => {
+  const errs = watch(page);
+  const n = tableN(page, 6), t = await codeOf(browser, baseURL!, n);
+  const W = await staff(browser, baseURL!, "waiter");
+  await W.clear(n);
+  const A = tok("offplus" + n), G = guest(W.r, t.code, A);
+  try {
+    await G.open(true);
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), A);
+    await page.goto("/masa/" + t.code + "/menu/" + PV);
+    const plus = page.locator('[data-row="tarator"] [data-madd]');
+    await expect(plus).toBeVisible();
+    await context.setOffline(true);
+    await expect(page.locator(".mnote.bad")).toContainText("Няма връзка");
+    await expect(plus).toHaveAttribute("aria-disabled", "true");
+    await expect(plus).toHaveAttribute("aria-label", /няма връзка/);
+    await plus.dispatchEvent("click");
+    await expect(page.locator(".toast")).toContainText("Ястието не е добавено");
+    await expect(page.locator(".fly")).toHaveCount(0);
+    await context.setOffline(false);
+    await expect(plus).not.toHaveAttribute("aria-disabled", "true");
+    expect((await G.post("view")).cart.n).toBe(0);
+    expect(errs).toEqual([]);
+  } finally { await context.setOffline(false); await W.clear(n).catch(() => {}); await W.ctx.close(); }
+});
+
+test("a dish sold out while in the cart: „Изчерпано днес“ with „Махни“, out of the sum, the send stopped until it is removed", async ({ page, browser, baseURL }) => {
+  const errs = watch(page);
+  const n = tableN(page, 6), t = await codeOf(browser, baseURL!, n);
+  const W = await staff(browser, baseURL!, "waiter"), K = await staff(browser, baseURL!, "kitchen");
+  await W.clear(n);
+  const A = tok("soldcart" + n), G = guest(W.r, t.code, A);
+  try {
+    await G.open(true); await G.add("tiramisu"); await G.add("sufle");
+    expect((await K.r.put("/api/admin/menu/sufle/sold-out", { data: { out: true } })).status()).toBe(200);
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), A);
+    await page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    const line = page.locator(".cl", { hasText: "Суфле" });
+    await expect(line.locator(".blk")).toHaveText("Изчерпано днес");
+    await expect(line.locator(".rm")).toHaveText("Махни");
+    await expect(page.locator(".sum .kv").first()).toContainText("1 ястие4,09 €");
+    await expect(page.locator(".sum .how.warn")).toContainText("„Суфле“ не може да се поръча сега. Махнете го, за да изпратите останалото.");
+    await expect(page.locator("[data-nosend]").filter({ visible: true })).toHaveText("Първо махнете изчерпаното");
+    await line.locator(".rm").click();
+    await expect(page.locator(".cl", { hasText: "Суфле" })).toHaveCount(0);
+    await expect(page.locator("[data-send]").filter({ visible: true })).toHaveText("Изпрати към сервитьора · 4,09 €");
+    expect(errs).toEqual([]);
+  } finally { await K.r.put("/api/admin/menu/sufle/sold-out", { data: { out: false } }); await K.ctx.close(); await W.clear(n).catch(() => {}); await W.ctx.close(); }
+});
+
+test("the focus stays: after „+“, a filter, the cart counter and a change from another phone; the timers are not read every second", async ({ page, browser, baseURL }) => {
+  const errs = watch(page);
+  const n = tableN(page, 6), t = await codeOf(browser, baseURL!, n);
+  const W = await staff(browser, baseURL!, "waiter");
+  await W.clear(n);
+  const A = tok("focus-a" + n), B = tok("focus-b" + n), G = guest(W.r, t.code, A), H = guest(W.r, t.code, B);
+  const active = () => page.evaluate(() => { const a = document.activeElement as HTMLElement; return a === document.body ? "BODY" : a.tagName + Object.keys(a.dataset).map((k) => "[" + k + "=" + a.dataset[k] + "]").join(""); });
+  try {
+    await G.open(true); await H.open(true);
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), A);
+    await page.goto("/masa/" + t.code + "/menu/" + PV);
+    const plus = page.locator('[data-row="tarator"] [data-madd]');
+    await plus.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-row="tarator"] .incart')).toBeVisible();
+    expect(await active()).toBe("BUTTON[madd=tarator]");
+    await page.locator('[data-f="veg"]').focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-f="veg"]')).toHaveAttribute("aria-pressed", "true");
+    expect(await active()).toBe("BUTTON[f=veg]");
+    await page.locator('[data-f="veg"]').press("Enter");
+    /* another phone adds while the focus is on "+" */
+    await plus.focus();
+    await H.add("tarator");
+    await expect(page.locator('[data-row="tarator"] .incart')).toContainText(/Телефон \d/);
+    expect(await active()).toBe("BUTTON[madd=tarator]");
+    /* the cart counter */
+    await page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    const inc = page.locator(".cl", { hasText: "Таратор" }).first().locator('[data-q="1"]');
+    await inc.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".cl", { hasText: "Таратор" }).first().locator("output")).toHaveText("2");
+    expect(await active()).toMatch(/^BUTTON\[q=1\]\[k=/);
+    /* the timers: role="timer", not announced (aria-live off) */
+    await G.call("water");
+    await page.goto("/masa/" + t.code + "/povikvane/" + PV);
+    const tm = page.locator(".coming [data-wt]");
+    await expect(tm).toHaveAttribute("role", "timer");
+    await expect(tm).toHaveAttribute("aria-live", "off");
+    await page.locator('[data-call="order"]').focus();
+    await H.call("other");
+    await expect(page.locator(".coming", { hasText: "Друго" })).toBeVisible();
+    expect(await active()).toBe("BUTTON[call=order]");
+    expect(errs).toEqual([]);
+  } finally { await W.clear(n).catch(() => {}); await W.ctx.close(); }
+});

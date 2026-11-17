@@ -34,7 +34,7 @@ test("the bill by dishes from two phones, the rest, „Всичко вече е 
     await page.locator('[data-split="dishes"]').click();
     await expect(page.locator(".bl.pick", { hasText: "Шопска салата" }).locator("input")).toBeChecked();
     await expect(page.locator(".mine .price")).toHaveText("4,75 €");
-    await expect(page.locator(".unas")).toHaveText(/Още никой не плаща: 2 ястия\s*9,80 €/);
+    await expect(page.locator(".unas")).toHaveText(/Още никой не плаща: 2\sястия\s*9,80\s€/);
     /* phone 2 sees it locked, live */
     await p2.page.locator('[data-split="dishes"]').click();
     const taken = p2.page.locator(".bl.taken", { hasText: "Шопска салата" });
@@ -62,6 +62,10 @@ test("the bill by dishes from two phones, the rest, „Всичко вече е 
     await expect(p3.page.locator("[data-req]")).toHaveText("Всичко вече е поискано");
     await expect(p3.page.locator("[data-req]")).toHaveAttribute("aria-disabled", "true");
     await expect(p3.page.locator(".mnote .oth")).toHaveCount(2);
+    /* the -10% code only for a phone that ordered something (decision 17.11.2026): phone 3 has no rating, the core refuses */
+    await expect(p3.page.locator(".rate")).toHaveCount(0);
+    const r3 = await W.r.post("/api/floor/t/" + t.code + "/rate", { data: { g: C, happy: true } });
+    expect([r3.status(), (await r3.json()).error]).toEqual([409, "not_ordered"]);
 
     /* the rating: „Да“ → the code and the Google line; „Не“ → the text for the manager, the code and the Google line */
     await expect(page.locator(".rate h2")).toHaveText("Останахте ли доволни?");
@@ -81,12 +85,16 @@ test("the bill by dishes from two phones, the rest, „Всичко вече е 
     await expect(p2.page.locator("#fbe")).toHaveText("Напишете няколко думи, за да го изпратим.");
     await p2.page.locator("#fb").fill("Чакахме дълго за сметката.");
     await p2.page.locator("[data-fb]").click();
-    await expect(p2.page.locator(".fbsent")).toContainText("Изпратихме го на управителя.");
+    await expect(p2.page.locator(".fbsent")).toContainText("Благодарим, изпратихме го.");
+    await expect(p2.page.locator(".fbsent")).toContainText("Управителят ще го прочете.");
     /* the codes are personal and different; phone 1 never sees phone 2's answer */
     expect(await page.locator(".code [data-code]").textContent()).not.toBe(await p2.page.locator(".code [data-code]").textContent());
     await expect(page.locator(".fbsent")).toHaveCount(0);
-    /* the text reaches the manager */
-    const M = await staff(browser, baseURL!, "admin");
+    /* the text reaches the manager: the admin's „Обратна връзка“ (Клиенти) with the source „QR маса, Маса N“, without a phone */
+    const M = await staff(browser, baseURL!, "manager");
+    const fb = await M.ok(M.r.get("/api/admin/messages?kind=feedback"));
+    const row = fb.rows.find((x: { message: string }) => x.message === "Чакахме дълго за сметката.");
+    expect(row).toMatchObject({ name: expect.stringMatching(new RegExp("^QR маса, Маса " + n + "\\b")), topic: "Оценка от масата", contact: "" });
     const rt = await M.ok(M.r.get("/api/floor/ratings"));
     expect(JSON.stringify(rt)).toContain("Чакахме дълго за сметката.");
     await M.ctx.close();

@@ -108,10 +108,11 @@ test("the waiter rejects the first order: the reason, the dishes back in the car
   const n = tableN(page, 1), t = await codeOf(browser, baseURL!, n);
   const W = await staff(browser, baseURL!, "waiter");
   await W.clear(n);
-  const A = tok("rej-a" + n), G = guest(W.r, t.code, A);
+  const A = tok("rej-a" + n), B = tok("rej-b" + n), G = guest(W.r, t.code, A);
   try {
-    await G.open(true); await G.add("shopska-salata"); await G.send();
-    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), A);
+    await G.open(true); await guest(W.r, t.code, B).open(true); await G.add("shopska-salata"); await G.send();
+    /* this page is the OTHER phone: the dishes come back to it without "Телефон N добави …" (nobody added them) */
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), B);
     await page.goto("/masa/" + t.code + "/kolichka/" + PV);
     await expect(page.locator(".wait h2")).toBeVisible();
     await W.reject(n, "gaveup");
@@ -119,6 +120,9 @@ test("the waiter rejects the first order: the reason, the dishes back in the car
     await expect(note).toContainText("Сервитьорът отбеляза, че сте се отказали от нея.");
     await expect(note.locator("a", { hasText: "Повикай сервитьор" })).toHaveAttribute("href", "/masa/" + t.code + "/povikvane/");
     await expect(page.locator(".cl", { hasText: "Шопска салата" })).toHaveCount(1);
+    await page.waitForTimeout(600);
+    await expect(page.locator(".toast")).not.toContainText("добави");
+    await expect(page.locator(".cl.flash")).toHaveCount(0);
     await expect(page.locator("[data-send]").filter({ visible: true })).toContainText("Изпрати към сервитьора");
     await note.locator("[data-rejok]").click();
     await expect(page.locator(".mnote", { hasText: "Сервитьорът отказа поръчката" })).toHaveCount(0);
@@ -162,5 +166,37 @@ test("the time in the views follows the preview clock", async ({ page, browser, 
     await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), A);
     await page.goto("/masa/" + t.code + "/kolichka/" + PV);
     await expect(page.locator(".wait .meta")).toContainText("изпратено в " + CLOCK);
+  } finally { await W.clear(n).catch(() => {}); await W.ctx.close(); }
+});
+
+test("a phone that comes after the first confirmed order sends its first order through the waiter", async ({ page, browser, baseURL }) => {
+  const errs = watch(page);
+  const n = tableN(page, 3), t = await codeOf(browser, baseURL!, n);
+  const W = await staff(browser, baseURL!, "waiter");
+  await W.clear(n);
+  const A = tok("late-a" + n), X = tok("late-x" + n), G = guest(W.r, t.code, A);
+  try {
+    await G.open(true); await G.add("tiramisu"); await G.send(); await W.confirm(n);
+    /* the first phone: the next order goes straight to the kitchen */
+    await G.add("shopska-salata");
+    expect((await G.send()).to).toBe("kitchen");
+    /* a phone opening the label's address later (an old guest's history): its first order waits for the waiter */
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), X);
+    await page.goto("/masa/" + t.code + "/" + PV);
+    await page.goto("/masa/" + t.code + "/menu/" + PV);
+    await page.locator('[data-row="kebapcheta"] [data-madd]').click();
+    await expect(page.locator(".toast")).toContainText("Добавено в общата количка");
+    await page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    await expect(page.locator(".sum .how")).toContainText("Първата поръчка от нов телефон на масата я потвърждава сервитьорът");
+    const send = page.locator("[data-send]").filter({ visible: true });
+    await expect(send).toHaveText("Изпрати към сервитьора · 7,61 €");
+    await send.click();
+    await expect(page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
+    /* the waiter sees the new phone's order to confirm */
+    const tb = await W.table(n);
+    expect(tb.pending.lines.map((l: { name: string; phone: number }) => l.name)).toEqual(["Кебапчета"]);
+    await W.confirm(n);
+    await expect(page.locator(".wait")).toHaveCount(0);
+    expect(errs).toEqual([]);
   } finally { await W.clear(n).catch(() => {}); await W.ctx.close(); }
 });

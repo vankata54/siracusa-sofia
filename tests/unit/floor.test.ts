@@ -718,3 +718,69 @@ describe("the waiter's search", () => {
     expect(await core.floor.search(w, "")).toEqual({ tables: [], orders: [], reservations: null, soldOut: [] });
   });
 });
+
+describe("the QR table after check 1 (decision 17.11.2026)", () => {
+  it("a phone that comes after the first confirmed order sends its first order through the waiter; then it goes to the kitchen", async () => {
+    const { core, t } = mk(), s = await people(core), code = await codeOf(core, s.admin, 9), C = "c".repeat(32);
+    await core.floor.open(code, A);
+    await core.floor.cartAdd(code, A, { id: pizza.id });
+    await core.floor.send(code, A);
+    await core.floor.qrConfirm(s.waiter, 9);
+    t.now += 60_000;
+    /* the first phone: straight to the kitchen */
+    expect((await core.floor.cartAdd(code, A, { id: salad.id })).cart.toWaiter).toBe(false);
+    expect((await core.floor.send(code, A)).to).toBe("kitchen");
+    /* a phone that came later (an old guest with the address in the history): through the waiter */
+    const v = await core.floor.open(code, C, true);
+    expect(v.me!.phone).toBe(2);
+    expect((await core.floor.cartAdd(code, C, { id: dessert.id })).cart.toWaiter).toBe(true);
+    /* also when the first phone sends the late phone's dish */
+    expect((await core.floor.view(code, A)).cart.toWaiter).toBe(true);
+    expect((await core.floor.send(code, A)).to).toBe("waiter");
+    await core.floor.qrConfirm(s.waiter, 9);
+    /* seen by the waiter now: the next one goes to the kitchen */
+    await core.floor.cartAdd(code, C, { id: dessert.id });
+    expect((await core.floor.send(code, C)).to).toBe("kitchen");
+  });
+
+  it("the -10% code only for a phone that ordered; the text of „Не“ in the admin's feedback, with the table", async () => {
+    const { core } = mk(), s = await people(core), code = await codeOf(core, s.admin, 8), C = "c".repeat(32);
+    await core.floor.open(code, A); await core.floor.open(code, B); await core.floor.open(code, C);
+    await core.floor.cartAdd(code, A, { id: pizza.id }); await core.floor.cartAdd(code, B, { id: salad.id });
+    await core.floor.send(code, A); await core.floor.qrConfirm(s.waiter, 8);
+    await core.floor.bill(code, A, { pay: "cash", split: "one" });
+    expect((await core.floor.view(code, C)).canRate).toBe(false);
+    await expect(core.floor.rate(code, C, { happy: true })).rejects.toMatchObject(err("not_ordered", 409));
+    expect((await core.floor.view(code, B)).canRate).toBe(true);
+    const r = await core.floor.rate(code, B, { happy: false });
+    expect(r.code).toMatch(/^SC10-\d+$/);
+    await core.floor.rate(code, B, { happy: false, text: "Чакахме дълго." });
+    const fb = await core.customersAdmin.feedback(s.manager, "feedback");
+    expect(fb.rows[0]).toMatchObject({ name: "QR маса, Маса 8 · Салон", message: "Чакахме дълго.", topic: "Оценка от масата", contact: "", inquiry: false });
+  });
+
+  it("a sold-out dish in the cart is out of the sum and stops the send; „+1“ / „-1“ count; „Отмени“ brings back only the removed line", async () => {
+    const { core, t } = mk(), s = await people(core), code = await codeOf(core, s.admin, 7);
+    await core.floor.open(code, A); await core.floor.open(code, B);
+    await core.floor.cartAdd(code, A, { id: pizza.id });
+    let v = await core.floor.cartAdd(code, B, { id: pizza2.id });
+    await core.menu.setSoldOut(pizza2.id, true, "kitchen");
+    v = await core.floor.view(code, A);
+    expect(v.cart).toMatchObject({ n: 2, sum: pizza.p, blocked: [v.cart.lines[1].key] });
+    expect(v.cart.lines[1].block).toBe("sold_out");
+    await expect(core.floor.send(code, A)).rejects.toMatchObject(err("sold_out", 409));
+    /* two phones press "+" together: both count */
+    const k = v.cart.lines[0].key;
+    await Promise.all([core.floor.cartQty(code, A, k, "+1"), core.floor.cartQty(code, B, k, "+1")]);
+    expect((await core.floor.view(code, A)).cart.lines[0].q).toBe(3);
+    expect((await core.floor.cartQty(code, A, k, "-1")).cart.lines[0].q).toBe(2);
+    /* „Отмени“: only the line this phone removed, a few seconds */
+    const rm = await core.floor.cartRemove(code, A, k);
+    await expect(core.floor.cartRestore(code, B, rm.gone!)).rejects.toMatchObject(err("not_found", 404));
+    await expect(core.floor.cartRestore(code, A, { key: "0123456789", id: salad.id, q: 50, who: "p2", mods: [] })).rejects.toMatchObject(err("not_found", 404));
+    expect((await core.floor.cartRestore(code, A, rm.gone!)).cart.lines.find((l) => l.key === k)).toMatchObject({ q: 2, phone: 1 });
+    const rm2 = await core.floor.cartRemove(code, A, k);
+    t.now += 16_000;
+    await expect(core.floor.cartRestore(code, A, rm2.gone!)).rejects.toMatchObject(err("not_found", 404));
+  });
+});

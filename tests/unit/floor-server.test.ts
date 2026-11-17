@@ -50,6 +50,14 @@ describe("the hall live: routes", async () => {
     ["POST", "/api/floor/shift/start", { tables: [] }, W], ["GET", "/api/staff/search?q=12", null, W],
     ["GET", "/api/floor/shift/view", null, BOSS], ["POST", "/api/floor/shift/tables", { who: "waiter", tables: [1] }, BOSS], ["GET", "/api/floor/ratings", null, BOSS],
   ];
+  it("the waiter's order over HTTP with the same rid twice is made once (the route passes the rid to the core)", async () => {
+    const body = { rid: "srv-rid-" + "12345678", lines: [{ id: pizza.id, q: 1 }] };
+    const a = await (await req("POST", "/api/floor/table/18/order", "waiter", body)).json();
+    const b = await (await req("POST", "/api/floor/table/18/order", "waiter", body)).json();
+    expect(b.orders).toEqual(a.orders);
+    expect(a.orders).toHaveLength(1);
+  });
+
   it("401 without a session and 403 for a role without the right on every staff route", async () => {
     for (const [m, u, b] of ROUTES) expect([m, u, (await req(m, u, null, b ?? undefined)).status]).toEqual([m, u, 401]);
     for (const [m, u, b, ok] of ROUTES) for (const r of ROLES) {

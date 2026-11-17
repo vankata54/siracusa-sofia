@@ -96,7 +96,8 @@ export async function initCustomers(): Promise<void> {
     const sh = shown[f.id];
     return '<div class="who"><b>' + esc(f.name) + "</b><span>" + (sh ? '<a href="' + (f.mode === "email" ? "mailto:" : "tel:") + esc(sh) + '">' + esc(f.mode === "email" ? sh : fmtPhone(sh)) + "</a>" : esc(f.contact)) + "</span></div>";
   }
-  const contactBtn = (f: FeedbackRow) => '<button class="pill pill-line" type="button" data-contact="' + esc(f.id) + '">' + (f.mode === "email" ? ic("envelope-simple", 18) + "Пиши" : ic("phone", 18) + "Обади се") + "</button>";
+  /* a rating from a QR table has no contact (the guest is anonymous): no "Пиши" / "Обади се" */
+  const contactBtn = (f: FeedbackRow) => !f.contact ? "" : '<button class="pill pill-line" type="button" data-contact="' + esc(f.id) + '">' + (f.mode === "email" ? ic("envelope-simple", 18) + "Пиши" : ic("phone", 18) + "Обади се") + "</button>";
   function iqHTML() {
     const ord: Record<string, number> = { new: 0, called: 1, done: 2 };
     const L = IQ.slice().sort((a, b) => (ord[a.status] - ord[b.status]) || (b.createdAt < a.createdAt ? -1 : 1));

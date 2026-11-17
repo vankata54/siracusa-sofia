@@ -21,7 +21,7 @@ function cats() {
 }
 
 function nowCard(M: Masa) {
-  const v = M.view, L = M.L, n = v.cart.n, sent = v.orders.reduce((a, r) => a + r.lines.length, 0);
+  const v = M.view, L = M.L, n = v.cart.n, sent = v.orders.reduce((a, r) => a + r.lines.reduce((b, l) => b + l.q, 0), 0);
   const line = n ? L("В общата количка: ", "In the table cart: ") + M.dishes(n) + " · " + M.fmt(v.cart.sum)
     : sent ? L("Поръчани: ", "Ordered: ") + M.dishes(sent) : L("Количката още е празна", "The cart is still empty");
   const ph = [M.me(), ...v.phones.map((p) => p.phone).filter((p) => p !== M.me())];
@@ -37,7 +37,7 @@ function render(M: Masa) {
       '<div class="wl-grid"><div>' +
         '<div class="wl-hero"><div class="wl-art" aria-hidden="true"><div class="pic">' + (hero ? SC.art(hero) : "") + "</div></div>" +
           '<p class="eyebrow">' + L("Добре дошли в Siracusa", "Welcome to Siracusa") + "</p>" +
-          '<h1 class="wl-t" id="wl-h">' + L("Маса ", "Table ") + v.table.n + "</h1>" +
+          '<h1 class="wl-t" id="wl-h">' + L("Маса", "Table") + "\u00a0" + v.table.n + "</h1>" +
           '<p class="wl-z">' + ic(v.table.zone === "garden" ? "tree" : "chair", 26) + M.esc(M.zone()) + "</p>" +
           (v.kitchen.open ? '<p class="wl-lead">' + L("Поръчайте от телефона", "Order from your phone") + " <span>" + L("- сервитьорът потвърждава първата поръчка.", "- the waiter confirms your first order.") + "</span></p></div>"
             : '<p class="wl-lead">' + L("Разгледайте менюто", "Browse the menu") + " <span>" + L("и повикайте сервитьор, ако ви трябва нещо.", "and call a waiter if you need anything.") + "</span></p></div>") +
@@ -56,7 +56,7 @@ function render(M: Masa) {
         '<p class="note-auto">' + ic("lock", 18) + "<span>" + L("Без вход и без парола. Масата се затваря със сметката.", "No sign-in, no password. The table closes with the bill.") + "</span></p>" +
       "</div></div>" +
       '<div class="wl-menu"><div class="sec-h"><h2 class="h2">' + L("Менюто", "The menu") + '</h2><a class="link" href="' + M.href("menu") + '">' + L("Цялото меню", "Full menu") + ic("caret-right", 18) + "</a></div>" +
-        '<div class="chips" role="list">' + cats().map((c) => '<a class="chip" role="listitem" href="' + M.href("menu", "c=" + c.id) + '">' + M.esc(c.n) + "</a>").join("") + "</div>" +
+        '<ul class="chips wl-cats" aria-label="' + L("Категории", "Categories") + '">' + cats().map((c) => '<li><a class="chip" href="' + M.href("menu", "c=" + c.id) + '">' + M.esc(c.n) + "</a></li>").join("") + "</ul>" +
         '<div class="rail">' + P.map(D.card).join("") + "</div>" +
         (lang === "en" ? '<p class="note-auto" style="margin-top:14px">' + ic("info", 18) + '<span>Dish names are in Bulgarian for now. <span class="missing">[ЛИПСВА: английски имена и състав на ястията]</span></span></p>' : "") +
       "</div>" +

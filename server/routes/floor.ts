@@ -17,8 +17,9 @@
      POST /api/floor/t/:code/bill          {g, pay, split}             cash | card; one | guests | dishes
      POST /api/floor/t/:code/pick          {g, keys, on}               "По ястия"
      POST /api/floor/t/:code/rate          {g, happy, text?}           -> {view, code, pct, google, googleMissing}
-   Limits (off in the test mode): 600 calls per phone and 6000 per address in 10 minutes (the guests of the restaurant
-   share one Wi-Fi address); wrong codes: 30 per address in 10 minutes.
+   Limits (off in the test mode): 600 calls per phone and 20000 per address in 10 minutes (the guests of the restaurant
+   share one Wi-Fi address); "call" 12 and "send" 10 per phone in 10 minutes; wrong codes: 30 per address in 10 minutes
+   (only the wrong ones count).
 
    THE STAFF (the section "Сервитьор"; the main admin, the owner and the manager always):
      GET  /api/floor/hall                                       the hall live
@@ -66,14 +67,21 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
 
   /* ---------- the guests ---------- */
   type G = { code: string; g: string; b: Record<string, any>; f: ReturnType<typeof cf>["floor"] };
-  /** the limits, the body and the phone's token; a wrong code counts against the address */
-  const guest = (path: string, fn: (x: G) => Promise<unknown>) => app.post("/api/floor/t/:code/" + path, async (c) => {
+  /** the limits, the body and the phone's token. Only a WRONG code counts against the address (30 in 10 min): a request
+      with a right code never meets that limit (the guests share one Wi-Fi address; decision 17.11.2026). own: a smaller
+      limit of this kind of request per phone (calls, sends) */
+  const guest = (path: string, fn: (x: G) => Promise<unknown>, own?: [number, string]) => app.post("/api/floor/t/:code/" + path, async (c) => {
     const b = await body(c), g = String(b.g || ""), a = ip(c);
-    limit("fl-ip:" + a, 6000, 10, GUEST_BUSY);
+    limit("fl-ip:" + a, 20000, 10, GUEST_BUSY);
     limit("fl-g:" + a + ":" + g.slice(0, 64), 600, 10, GUEST_BUSY);
-    const undoMiss = limit("fl-miss:" + a, 30, 10, GUEST_BUSY);
-    try { const r = await fn({ code: c.req.param("code") as string, g, b, f: cf(c).floor }); undoMiss(); return c.json(r as object); }
-    catch (e) { if (!(e instanceof CoreError && e.status === 404 && e.message === HALL_MSG.qrGone)) undoMiss(); throw e; }
+    const undoOwn = own ? limit("fl-" + path + ":" + g.slice(0, 64), own[0], 10, own[1]) : () => {};
+    try { return c.json((await fn({ code: c.req.param("code") as string, g, b, f: cf(c).floor })) as object); }
+    catch (e) {
+      if (!(e instanceof CoreError && e.status < 500 && e.status !== 404)) undoOwn();
+      /* a wrong code: counted; over the limit the answer is 429 instead of 404 */
+      if (e instanceof CoreError && e.status === 404 && e.message === HALL_MSG.qrGone) limit("fl-miss:" + a, 30, 10, GUEST_BUSY);
+      throw e;
+    }
   });
   guest("open", (x) => x.f.open(x.code, x.g, x.b.fresh === true));
   guest("view", (x) => x.f.view(x.code, x.g));
@@ -81,9 +89,9 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
   guest("cart/qty", (x) => x.f.cartQty(x.code, x.g, String(x.b.key || ""), x.b.q));
   guest("cart/remove", (x) => x.f.cartRemove(x.code, x.g, String(x.b.key || "")));
   guest("cart/restore", (x) => x.f.cartRestore(x.code, x.g, x.b.line || {}));
-  guest("send", (x) => x.f.send(x.code, x.g));
+  guest("send", (x) => x.f.send(x.code, x.g), [10, "Твърде много поръчки за кратко време. Повикайте сервитьор."]);
   guest("rejected-ok", (x) => x.f.rejectedOk(x.code, x.g));
-  guest("call", (x) => x.f.call(x.code, x.g, x.b.kind as CallKind, x.b.note));
+  guest("call", (x) => x.f.call(x.code, x.g, x.b.kind as CallKind, x.b.note), [12, "Твърде много повиквания за кратко време. Махнете на сервитьора."]);
   guest("call/cancel", (x) => x.f.callCancel(x.code, x.g, x.b.kind as CallKind));
   guest("call/restore", (x) => x.f.callRestore(x.code, x.g, x.b.kind as CallKind));
   guest("bill", (x) => x.f.bill(x.code, x.g, { pay: x.b.pay, split: x.b.split }));
@@ -97,7 +105,7 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
   app.get("/api/floor/ratings", async (c) => c.json(await core.floor.ratings(await staff(c))));
   app.get("/api/floor/table/:ref", async (c) => c.json(await cf(c).floor.table(await staff(c), ref(c))));
   app.post("/api/floor/table/:ref/seat", async (c) => c.json(await cf(c).floor.seat(await staff(c), ref(c))));
-  app.post("/api/floor/table/:ref/order", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.order(s, ref(c), { lines: b.lines, note: b.note } as StaffOrderInput), 201); });
+  app.post("/api/floor/table/:ref/order", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.order(s, ref(c), { lines: b.lines, note: b.note, rid: b.rid } as StaffOrderInput), 201); });
   app.post("/api/floor/table/:ref/qr/confirm", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrConfirm(s, ref(c), b.grams && typeof b.grams === "object" ? b.grams : {})); });
   app.post("/api/floor/table/:ref/qr/reject", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrReject(s, ref(c), b.reason as RejectReason)); });
   app.post("/api/floor/table/:ref/qr/undo", async (c) => c.json(await cf(c).floor.qrRejectUndo(await staff(c), ref(c))));

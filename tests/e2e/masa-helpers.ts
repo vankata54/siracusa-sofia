@@ -49,7 +49,7 @@ export const tokenOf = async (page: Page) => page.evaluate(() => localStorage.ge
 export const tok = (_seed: string) => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
 
 /** the waiter (and the kitchen) through their API, on the preview clock */
-export async function staff(browser: Browser, baseURL: string, who: "waiter" | "kitchen" | "admin" = "waiter") {
+export async function staff(browser: Browser, baseURL: string, who: "waiter" | "kitchen" | "admin" | "manager" = "waiter") {
   const ctx = await browser.newContext({ baseURL, extraHTTPHeaders: H });
   await signIn(ctx.request, who);
   const r = ctx.request;

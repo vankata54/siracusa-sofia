@@ -26,7 +26,7 @@ function linesHTML(pick: boolean): string {
   const free = new Set(v.bill.free);
   return '<div class="shell"><div class="core lines">' + ls.map((l) => {
     const owner = v.bill.picks[l.key], on = owner === M.me();
-    const body = '<span class="nm">' + (l.q > 1 ? l.q + " × " : "") + M.esc(l.name) + "</span>" + M.whoTag(l.phone, l.who) + '<span class="price">' + (l.out ? L("Изчерпано", "Sold out") : M.fmt(l.sum)) + "</span>";
+    const body = '<span class="nm">' + (l.q > 1 ? l.q + " × " : "") + M.esc(l.name) + "</span>" + M.whoTag(l.phone, l.who) + '<span class="price">' + (l.out ? L("Изчерпано днес", "Sold out today") : M.fmt(l.sum)) + "</span>";
     if (!pick || l.out) return '<div class="bl">' + body + (l.paid ? '<span class="payer me">' + L("Платено", "Paid") + "</span>" : "") + "</div>";
     const lock = (txt: string) => '<div class="bl pick taken"><input type="checkbox" checked disabled aria-label="' + M.esc(l.name) + ": " + M.esc(txt) + '">' + body + '<span class="payer">' + M.esc(txt) + "</span></div>";
     if (l.paid) return lock(L("Платено", "Paid"));
@@ -67,7 +67,7 @@ function reqHTML(): string {
   }
   const at = waitedAt();
   return (done ? head(L("Сметката е платена", "The bill is paid"), L("Масата е затворена. Благодарим, че бяхте при нас!", "The table is closed. Thank you for coming!"), true)
-    : head(L("Сервитьорът идва със сметката", "The waiter is bringing the bill") + (at ? ' · <span class="t">' + L("чакате ", "waiting ") + "<span data-wt>" + M.mmss(M.since(at)) + "</span></span>" : ""), L("Поискахте в ", "You asked at ") + M.clock(B!.at), false)) +
+    : head(L("Сервитьорът идва със сметката", "The waiter is bringing the bill") + (at ? ' · <span class="t">' + L("чакате ", "waiting ") + "<span data-wt role=\"timer\" aria-live=\"off\">" + M.mmss(M.since(at)) + "</span></span>" : ""), L("Поискахте в ", "You asked at ") + M.clock(B!.at), false)) +
     '<div class="kvs"><div class="kv"><span>' + L("Плащане", "Payment") + "</span><span>" + L(PAY[B!.pay][0], PAY[B!.pay][1]) + '</span></div><div class="kv"><span>' + L("Разделяне", "Split") + "</span><span>" + L(SPLIT[B!.split][0], SPLIT[B!.split][1]) + "</span></div>" +
     (B!.split !== "one" ? '<div class="kv"><span>' + L("Вашата част", "Your share") + '</span><span class="price">' + M.fmt(B!.sum) + "</span></div>"
       : '<div class="kv"><span>' + (B!.sum < v.total - 0.001 ? L("Останалото", "The rest") : L("Общо за масата", "Table total")) + '</span><span class="price">' + M.fmt(B!.sum) + "</span></div>") + "</div>" +
@@ -87,7 +87,7 @@ function othersHTML(): string {
 
 function codeHTML(): string {
   const r = M.view.rating!, L = M.L;
-  return '<div class="code ember-card"><span class="k">' + L("Вашият код за -" + r.pct + "% от следващата поръчка", "Your code for " + r.pct + "% off your next order") + '</span><div class="row"><span class="v" data-code>' + M.esc(r.code) + '</span><button class="pill pill-ink" type="button" data-copy>' + M.ic("copy", 18) + L("Копирай кода", "Copy code") + "</button></div><p>" + L("За следваща поръчка от сайта или на масата. Един код на телефонен номер.", "For your next order on the website or at the table. One code per phone number.") + "</p></div>";
+  return '<div class="code ember-card"><span class="k">' + L("Вашият код за -" + r.pct + "% от следващата поръчка", "Your code for " + r.pct + "% off your next order") + '</span><div class="row"><span class="v" data-code>' + M.esc(r.code) + '</span><button class="pill pill-ink" type="button" data-copy>' + M.ic("copy", 18) + L("Копирай кода", "Copy code") + "</button></div><p>" + L("За следваща поръчка от сайта или на масата. Кодът е за телефон, от който е поръчано на масата: по един на телефон.", "For your next order on the website or at the table. The code is for a phone that ordered at the table: one per phone.") + "</p></div>";
 }
 function googleHTML(big: boolean): string {
   const L = M.L, g = M.view.google;
@@ -107,7 +107,7 @@ function rateHTML(): string {
   let ans = "";
   if (a === "yes") ans = '<div class="ans"><h3 tabindex="-1" data-focus>' + L("Благодарим! Радваме се, че ви хареса.", "Thank you! We are glad you liked it.") + "</h3>" + codeHTML() + sep + googleHTML(true) + change + "</div>";
   if (a === "no") ans = '<div class="ans"><h3 tabindex="-1" data-focus>' + L("Съжаляваме. Благодарим, че ни казвате.", "We are sorry. Thank you for telling us.") + "</h3>" +
-    (r!.sent ? '<div class="fbsent">' + M.ic("check-circle", 22) + "<span><b>" + L("Изпратихме го на управителя.", "We sent it to the manager.") + '</b><br><span class="muted">' + L("Ще го прочете лично.", "They will read it personally.") + "</span></span></div>"
+    (r!.sent ? '<div class="fbsent">' + M.ic("check-circle", 22) + "<span><b>" + L("Благодарим, изпратихме го.", "Thank you, we sent it.") + '</b><br><span class="muted">' + L("Управителят ще го прочете.", "The manager will read it.") + "</span></span></div>"
       : '<div class="field"><label for="fb">' + L("Как да подобрим обслужването?", "How can we improve our service?") + '</label><textarea class="input" id="fb" rows="4" maxlength="2000" aria-describedby="fbh' + (R.err ? " fbe" : "") + '"' + (R.err ? ' aria-invalid="true"' : "") + ">" + M.esc(R.fb) + '</textarea><span class="help" id="fbh">' + L("Стига само до управителя.", "Only the manager reads it.") + "</span>" + (R.err ? '<span class="err" id="fbe">' + R.err + "</span>" : "") + "</div>" +
         '<button class="pill pill-red pill-lg pill-block" type="button" data-fb>' + M.ic("paper-plane-right", 20) + L("Изпрати на управителя", "Send to the manager") + "</button>") +
     codeHTML() + sep + googleHTML(false) + change + "</div>";
@@ -166,8 +166,8 @@ m.main.addEventListener("click", async (e) => {
   const t = (e.target as Element).closest<HTMLElement>("button, a");
   if (!t || !m.view) return;
   const L = m.L;
-  if (t.dataset.pay) { C.pay = t.dataset.pay as "cash" | "card"; render(m); return; }
-  if (t.dataset.split) { C.split = t.dataset.split as Split; render(m); if (C.split === "dishes") void autoPick(); return; }
+  if (t.dataset.pay) { C.pay = t.dataset.pay as "cash" | "card"; m.keep(() => render(m)); return; }
+  if (t.dataset.split) { C.split = t.dataset.split as Split; m.keep(() => render(m)); if (C.split === "dishes") void autoPick(); return; }
   if (t.hasAttribute("data-req")) {
     if (t.getAttribute("aria-disabled")) { m.toast(t.dataset.why || ""); return; }
     const r = await m.act(() => masaApi.bill(m.code, { pay: C.pay, split: C.split }), { busy: t });
@@ -202,5 +202,5 @@ m.main.addEventListener("change", async (e) => {
   const i = e.target as HTMLInputElement, k = i.dataset.pick;
   if (!k) return;
   const r = await m.act(() => masaApi.pick(m.code, k, i.checked));
-  if (!r) render(m);
+  if (!r) m.keep(() => render(m));
 });

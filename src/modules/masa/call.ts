@@ -23,17 +23,17 @@ const callName = (k: CallKind) => M.L(CALLS[k].bg, CALLS[k].en);
 
 function liveHTML(): string {
   const v = M.view, L = M.L, mg = v.settings.callManager;
-  const served = ORDER.find((k) => stateOf(k) === "cool");
+  const served = ORDER.filter((k) => stateOf(k) === "cool");
   return v.calls.active.map((c) => {
     const k = c.kind as CallKind;
     return '<div class="shell" role="status"><div class="core coming"><span class="bell">' + M.ic("bell-ringing", 30) + "</span>" +
-      "<h2>" + L("Сервитьорът идва", "A waiter is on the way") + ' · <span class="t">' + L("чакате ", "waiting ") + '<span data-wt="' + k + '">' + M.mmss(waited(k)) + "</span></span></h2>" +
+      "<h2>" + L("Сервитьорът идва", "A waiter is on the way") + ' · <span class="t">' + L("чакате ", "waiting ") + '<span data-wt="' + k + '" role="timer" aria-live="off">' + M.mmss(waited(k)) + "</span></span></h2>" +
       '<p class="what">' + M.esc(callName(k)) + (c.note ? ": „" + M.esc(c.note) + "“" : "") + " · " + L("повикан в ", "called at ") + M.clock(c.at) + "</p>" +
       '<div class="more">' + (late(k) ? '<p class="mgr">' + M.ic("warning", 20) + "<span>" + L("Чакате над " + mg + " мин. Известихме и управителя.", "You have waited over " + mg + " min. We have told the manager too.") + "</span></p>"
         : "<p>" + L("Сервитьорът вижда номера на масата и колко чакате. Ако не отговори до " + mg + " мин, известието отива и при управителя.", "The waiter sees your table number and how long you have waited. If nobody answers within " + mg + " min, the manager is told too.") + "</p>") +
       (k === "bill" ? '<a class="link" href="' + M.href("bill") + '">' + M.ic("receipt", 20) + L("Виж сметката", "See the bill") + "</a>" : '<button class="link" type="button" data-cancel="' + k + '">' + M.ic("x", 18) + L("Отмени повикването", "Cancel the call") + "</button>") + "</div></div></div>";
   }).join("") +
-    (served && !v.calls.active.length ? '<div class="served" role="status">' + M.ic("check-circle", 24) + "<span><b>" + L("Обслужено", "Done") + "</b> · " + M.esc(callName(served)) + ". " + L("Сервитьорът го отбеляза.", "The waiter marked it.") + "</span></div>" : "");
+    (served.length && !v.calls.active.length ? '<div class="served" role="status">' + M.ic("check-circle", 24) + "<span><b>" + L("Обслужено", "Done") + "</b> · " + M.esc(served.map(callName).join(", ")) + ". " + (served.length > 1 ? L("Сервитьорът ги отбеляза.", "The waiter marked them.") : L("Сервитьорът го отбеляза.", "The waiter marked it.")) + "</span></div>" : "");
 }
 
 function tileHTML(k: CallKind): string {
@@ -41,10 +41,10 @@ function tileHTML(k: CallKind): string {
   const inner = '<span class="ti">' + M.ic(c.icon, 30) + "</span><b>" + L(c.bg, c.en) + "</b>";
   if (k === "bill") {
     const req = v.bill.mine || v.bill.others.find((o) => o.split === "one") || null;
-    return '<a class="tile' + (on ? " on" : "") + '" href="' + M.href("bill") + '"><span class="tgo">' + M.ic("caret-right", 20) + "</span>" + inner + '<span class="d">' + (req ? L("Поискана в ", "Asked at ") + M.clock(req.at) : L(c.sub[0], c.sub[1])) + "</span></a>";
+    return '<a class="tile' + (on ? " on" : "") + '" href="' + M.href("bill") + '"><span class="tgo">' + M.ic("caret-right", 20) + "</span>" + inner + '<span class="d">' + (req ? L("Поискана в ", "Asked at ") + M.clock(req.at) : M.offline ? L("Виж сметката", "See the bill") : L(c.sub[0], c.sub[1])) + "</span></a>";
   }
-  if (on) return '<button class="tile on" type="button" aria-disabled="true" data-locked="' + k + '" aria-describedby="why">' + inner + '<span class="tmsg">' + L("Вече повикахме", "Already called") + '</span><span class="lock">' + M.ic("timer", 18) + L("чакате ", "waiting ") + '<span class="t" data-wt="' + k + '">' + M.mmss(waited(k)) + "</span></span></button>";
-  if (s === "cool") return '<button class="tile" type="button" aria-disabled="true" data-locked="' + k + '" aria-describedby="why">' + inner + '<span class="tmsg">' + L("Сервитьорът току-що дойде", "The waiter has just been here") + '</span><span class="lock">' + M.ic("timer", 18) + L("Пак след ", "Again in ") + '<span class="t" data-lt="' + k + '">' + M.mmss(left(k)) + "</span></span></button>";
+  if (on) return '<button class="tile on" type="button" aria-disabled="true" data-locked="' + k + '" aria-describedby="why">' + inner + '<span class="tmsg">' + L("Вече повикахме", "Already called") + '</span><span class="lock">' + M.ic("timer", 18) + L("чакате ", "waiting ") + '<span class="t" data-wt="' + k + '" role="timer" aria-live="off">' + M.mmss(waited(k)) + "</span></span></button>";
+  if (s === "cool") return '<button class="tile" type="button" aria-disabled="true" data-locked="' + k + '" aria-describedby="why">' + inner + '<span class="tmsg">' + L("Сервитьорът току-що дойде", "The waiter has just been here") + '</span><span class="lock">' + M.ic("timer", 18) + L("Пак след ", "Again in ") + '<span class="t" data-lt="' + k + '" role="timer" aria-live="off">' + M.mmss(left(k)) + "</span></span></button>";
   return '<button class="tile" type="button" data-call="' + k + '"' + (M.offline || v.status !== "open" ? ' aria-disabled="true"' : "") + ">" + inner + '<span class="d">' + L(c.sub[0], c.sub[1]) + "</span></button>";
 }
 
@@ -65,7 +65,7 @@ function render(m: Masa) {
 
 function tick(m: Masa) {
   M = m;
-  if (key() !== renderKey) { render(m); return; }
+  if (key() !== renderKey) { m.keep(() => render(m)); return; }
   M.main.querySelectorAll<HTMLElement>("[data-wt]").forEach((s) => { s.textContent = M.mmss(waited(s.dataset.wt as CallKind)); });
   M.main.querySelectorAll<HTMLElement>("[data-lt]").forEach((s) => { s.textContent = M.mmss(left(s.dataset.lt as CallKind)); });
 }
@@ -97,7 +97,7 @@ m.main.addEventListener("click", async (e) => {
   }
   if (t.dataset.locked) {
     const k = t.dataset.locked as CallKind, act = stateOf(k) === "active";
-    hl = true; render(m);
+    hl = true; m.keep(() => render(m));
     m.toast(act ? L("Вече повикахме. Сервитьорът вижда, че чакате " + m.mmss(waited(k)) + ".", "Already called. The waiter sees you have waited " + m.mmss(waited(k)) + ".") : L("Сервитьорът току-що дойде. Пак след " + m.mmss(left(k)) + ".", "The waiter has just been here. Again in " + m.mmss(left(k)) + "."));
     m.main.querySelector("#why")?.scrollIntoView({ block: "nearest", behavior: SC.reduce ? "auto" : "smooth" });
     return;

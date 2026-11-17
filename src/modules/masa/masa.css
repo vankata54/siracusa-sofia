@@ -171,3 +171,14 @@ main:focus{outline:none}
 .legend .stp .ic{color:inherit}
 .nw{white-space:nowrap}
 [aria-busy="true"]{cursor:progress}
+
+/* ---------- after the code review 1 ---------- */
+/* whole sentences in the sheets and the forms: 16px (14px only for meta) */
+.dsh .note-auto,.sheet .note-auto,.oth .help,.rate .field .err,.mlog .err{font-size:16px}
+.plus.off{opacity:.35; cursor:not-allowed}
+.cl .blk{white-space:nowrap}
+.cl .rm{min-height:48px; padding:0 16px; gap:6px}
+.sum .how.warn .ic{color:var(--warn)}
+.unas > span{display:inline-flex; align-items:center; gap:8px}
+.mnote .oth{align-items:flex-start}
+.mnote .oth .av{margin-top:1px}
