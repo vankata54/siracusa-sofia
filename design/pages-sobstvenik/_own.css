@@ -385,3 +385,23 @@ body.ow-toast-on .sa-pen-btn{opacity:0; pointer-events:none}
   .ow-app.has-pen .ow-bnav a:first-child{min-width:48px; margin-right:-6px}
   .ow-penslot{right:4px}
 }
+
+/* значката на молива (брой препоръки с нов статус) е вътре в кръга, не до ръба на екрана */
+.ow-penslot .sa-pen-btn .sa-pen-n{top:-4px; right:0}
+
+/* листът „Профил“ (като при управителя): списък с връзки, „Затвори“ в хапче */
+.ow-setlist{display:grid; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); overflow:hidden; margin:0 0 4px}
+.ow-setlist > * + *{border-top:1px solid var(--line)}
+.ow-setrow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:76px; padding:12px 14px; text-decoration:none; color:var(--ink)}
+.ow-setrow:hover{background:color-mix(in srgb, var(--surface-2) 50%, transparent)}
+.ow-setrow .si{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center}
+.ow-setrow b{display:block; font-size:17px; font-weight:800; line-height:1.25}
+.ow-setrow small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35}
+.ow-sh3{margin:16px 0 6px; font-size:16px; font-weight:800}
+.ow-ov .sheet-h .hb{background:var(--surface-2); padding:0 14px; font-weight:800; font-size:15px; flex:none}
+
+/* иконата и процентът са едно цяло; думите след тях се пренасят като текст */
+.ow-d .p{display:inline-flex; align-items:center; gap:4px; white-space:nowrap}
+.ow-d.dchip{border-radius:16px; padding:4px 12px 4px 8px}
+.td-hero .cmp .ow-d, .td-hero .mini .ow-d{display:block; white-space:normal}
+.td-hero .cmp .ow-d .p, .td-hero .mini .ow-d .p{display:inline-flex; vertical-align:-3px}

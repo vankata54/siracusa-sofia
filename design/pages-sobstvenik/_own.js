@@ -35,7 +35,7 @@ O.pct = function(cur, prev){ if (!prev) return null; return Math.round((cur - pr
 /* разлика: знак, процент и дума; цветът е само на иконата (никога сам). inv: „повече“ е лошо (неявили се, разход) */
 O.delta = function(cur, prev, o){ o = o || {}; var p = O.pct(cur, prev); if (p == null) return o.none != null ? o.none : '';
   var cls = p === 0 ? "flat" : ((p > 0) !== !!o.inv ? "up" : "down"), word = p === 0 ? "без промяна" : p > 0 ? (o.more || "повече") : (o.less || "по-малко");
-  return '<span class="ow-d ' + cls + (o.chip ? ' dchip' : '') + '">' + ic(p === 0 ? "minus" : p > 0 ? "caret-up" : "caret-down", 18) + (p > 0 ? "+" : "") + p + '%' + '<small><span class="w">' + word + '</span>' + (o.vs ? ' ' + esc(o.vs) : '') + '</small></span>'; };
+  return '<span class="ow-d ' + cls + (o.chip ? ' dchip' : '') + '">' + '<span class="p">' + ic(p === 0 ? "minus" : p > 0 ? "caret-up" : "caret-down", 18) + (p > 0 ? "+" : "") + p + '%</span>' + '<small><span class="w">' + word + '</span>' + (o.vs ? ' ' + esc(o.vs) : '') + '</small></span>'; };
 
 /* ---------- права и сесия ---------- */
 O.allowed = function(){ return !!A.me && O.ALLOWED.indexOf(A.me.role) > -1; };
@@ -159,7 +159,8 @@ O.line = function(id, labels, cur, prev, o){ o = o || {}; var n = labels.length,
   var py = null; if (pc && prev){ var ix = Math.round(pc.x / 100 * (n - 1)); if (prev[ix] != null) py = 100 - prev[ix] / nice * 100; }
   /* подписът не стои върху линията на обичайното: ако тя е точно над точката, подписът е под нея */
   var below = py != null && py < pc.y && pc.y - py < 18;
-  var labs = (pc && o.curLabel ? '<span class="elab ' + (below || pc.y < 15 ? 'bl' : 'l') + '" style="left:' + pc.x + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
+  var bl = below || (pc && pc.y < 15), lx = pc ? (bl && o.nowX != null ? Math.max(pc.x, o.nowX) : pc.x) : 0; /* вдясно: след линията „сега“, не върху нея */
+  var labs = (pc && o.curLabel ? '<span class="elab ' + (bl ? 'bl' : 'l') + '" style="left:' + lx + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
   var now = o.nowX != null ? '<i class="now" style="left:' + o.nowX + '%"></i>' : '';
   return '<div class="ow-plot" data-plot="' + id + '" data-line="1">' + yAxis(nice, o.fmt0 || o.fmt) + '<div class="area">' + grid() + svg + now + dots + labs + '</div>' + xLabels(labels, o.xn, o.ticks, true) + '</div>'; };
 O.legend = function(items){ return '<ul class="ow-lgd">' + items.map(function(x){ return '<li><i class="' + (x[1] || '') + '"></i>' + esc(x[0]) + '</li>'; }).join("") + '</ul>'; };
@@ -242,9 +243,13 @@ O.confirm = function(o, onOk){ var s = O.sheet({title:o.title, noReturn:!!o.noRe
 /* ---------- профил ---------- */
 var THEMES = [["system","Авто","circles-three"],["light","Светла","sun"],["dark","Тъмна","moon"]];
 function openProfile(){ var r = A.role(A.me.role);
+  /* по образеца на листа „Профил“ в модула на управителя: връзките с подзаглавие къде водят, после темата, изходът долу */
+  function row(href, icon, t, sub, extra){ return '<a class="ow-setrow" href="' + href + '"' + (extra || '') + '><span class="si">' + ic(icon, 22) + '</span><span><b>' + t + '</b><small>' + sub + '</small></span>' + ic("caret-right", 20) + '</a>'; }
   O.sheet({title:"Профил", html:'<div class="ow-prof"><span class="ow-av" aria-hidden="true">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><span class="ow-muted">' + esc(r ? r.n : A.me.role) + '</span></div></div>' +
-    '<p class="label" style="margin:0 0 8px" id="ow-thl">Тема</p><div class="seg" role="group" aria-labelledby="ow-thl">' + THEMES.map(function(t){ return '<button type="button" data-ow="settheme" data-v="' + t[0] + '" aria-pressed="' + (A.prefs.theme === t[0]) + '">' + ic(t[2], 20) + t[1] + '</button>'; }).join("") + '</div>' +
-    '<div class="ow-plinks"><a class="pill pill-line pill-lg" href="../pages-admin/dashboard.html" data-home="admin">' + ic("squares-four", 22) + 'Към админа</a><a class="pill pill-line pill-lg" href="../pages-admin/notes.html">' + ic("pencil-simple", 22) + 'Моите препоръки</a><a class="pill pill-line pill-lg" href="../pages-upravitel/now.html">' + ic("users-three", 22) + 'Смяната сега</a></div>',
+    '<div class="ow-setlist">' + row("../pages-upravitel/now.html", "users-three", "Смяната сега", "Модулът на управителя: залата, кухнята, шофьорите") +
+      row("../pages-admin/dashboard.html", "squares-four", "Към админа", "Пълната работа: поръчки, резервации, меню, отчети", ' data-home="admin"') +
+      row("../pages-admin/notes.html#src=" + esc(A.me.role), "pencil-simple", "Моите препоръки", "Какво предложи с молива и докъде е стигнало") + '</div>' +
+    '<h3 class="ow-sh3" id="ow-thl">Тема</h3><div class="seg" role="group" aria-labelledby="ow-thl">' + THEMES.map(function(t){ return '<button type="button" data-ow="settheme" data-v="' + t[0] + '" aria-pressed="' + (A.prefs.theme === t[0]) + '">' + ic(t[2], 20) + t[1] + '</button>'; }).join("") + '</div>',
     foot:'<button class="pill pill-line pill-lg" type="button" data-ow="logout">' + ic("sign-out", 22) + 'Изход</button>'}); }
 
 /* ---------- търсачката: зарежда се при първото отваряне (../ds/search.js + _find.js) ---------- */

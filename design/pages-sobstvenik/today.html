@@ -36,7 +36,6 @@
 @container app (max-width:400px){ .td-live{grid-template-columns:repeat(2,minmax(0,1fr))} .td-live a:last-child{grid-column:1 / -1; min-height:0} }
 @container app (min-width:1240px){ .td-live{grid-template-columns:repeat(2,minmax(0,1fr))} .td-live a:last-child{grid-column:1 / -1; min-height:0} }
 .td-hero .mini .ow-d{display:block; white-space:normal}
-.td-hero .mini .ow-d .ic{display:inline-block; vertical-align:-3px; margin-right:2px}
 @container app (min-width:1240px){ .td-wait .ow-li{flex-wrap:wrap} .td-wait .ow-li .end{width:100%; padding-left:56px} }
 .td-wait .pill{min-height:48px; padding:0 16px; flex:none}
 .td-wait .tx b{display:block}
@@ -76,9 +75,14 @@ O.todaySales = function(){ if (!H.todayFilter) return A.todaySales();
   var t = A.todayKey(), l = H.todayOrders().filter(function(o){ return o.status !== "cancelled" && A.todayKey(new Date(o.ts)) === t; });
   var sum = l.reduce(function(a, o){ return a + (typeof o.total === "number" ? o.total : A.seed.sums(o).total); }, 0); return {sum:Math.round(sum * 100) / 100, n:l.length}; };
 /* заети маси: същото правило като в модула на управителя (A.sh.seated: поръчки на масата и седнали без поръчка) */
-function liveTables(){ if (A.sh && A.sh.seated){ var sh = A.seed && A.seed.shift ? A.seed.shift() : A.data.get("shift", null); return Object.keys(A.sh.seated(sh)).length; }
+function liveTables(){ if (A.sh && A.sh.seated){ var sh = A.data.get("shift", null);
+    /* като всички A.seed.*: попълва смяната само ако ключът липсва (по A.now(), без примерно състояние), за да са заетите маси същите като при управителя */
+    if (!sh && A.seed && A.seed.shift){ try{ sh = A.seed.shift(); }catch(e){} sh = A.data.get("shift", null); }
+    return Object.keys(A.sh.seated(sh)).length; }
   var set = {}; A.orders().forEach(function(o){ if (o.channel === "table" && o.table && A.FIN.indexOf(o.status) < 0 && o.status !== "cancelled") set[o.table] = 1; }); return Object.keys(set).length; }
 
+/* примерното състояние, избрано в модула на управителя (sa-shift.demo; само се чете): „вечерен пик“ или „нищо не чака“ */
+function demoName(){ var sh = A.data.get("shift", null), d = (sh && sh.demo) || (A.sh && A.sh.demo ? A.sh.demo() : ""), N = (A.sh && A.sh.DEMO_NAME) || {rush:"вечерен пик", calm:"нищо не чака"}; return N[d] || ""; }
 function draw(){
   if (st === "loading"){ body.innerHTML = O.skel(4, "Зареждаме деня …"); return; }
   if (st === "error"){ body.innerHTML = O.error("Поръчките са запазени. Опитай пак след малко."); return; }
@@ -101,7 +105,7 @@ function draw(){
     '<div><div class="sum">' + SC.fmt(sales.sum) + '</div><div class="of">от ' + A.plural(sales.n, "поръчка", "поръчки") + '</div></div>' +
     (empty ? '' : '<div class="cmp">' + O.delta(sales.sum, usualUp.rev, {chip:true, vs:vs}) + '<span class="lw">' + LAST[s0.dow] + ' по това време: <b>' + SC.fmt(lw.rev) + '</b></span></div>') +
     '<div class="mini"><div><span class="k">Среден бон</span><b>' + SC.fmt(avg) + '</b>' + (empty ? '' : O.delta(avg, usualAvg, {vs:"от обичайния"})) + '</div><div><span class="k">Отказани днес</span><b>' + (td.cancelled || 0) + '</b><span class="ow-note">не влизат в оборота</span></div></div>' +
-    '<div class="ft">' + O.sample() + '<a class="link" href="../pages-admin/reports.html#p=today">Пълният отчет в админа' + ic("caret-right", 18) + '</a></div></section>';
+    '<div class="ft">' + O.sample(demoName() ? "Примерни данни: " + demoName() : "") + '<a class="link" href="../pages-admin/reports.html#p=today">Пълният отчет в админа' + ic("caret-right", 18) + '</a></div></section>';
   /* „Чака те“: само за собственика */
   var W = O.waits();
   h += '<section class="ow-card td-wait" aria-labelledby="td-w" data-edit-id="own.today.waiting"><header><div><h2 id="td-w">Чака те</h2></div></header>' +

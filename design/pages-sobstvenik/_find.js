@@ -107,7 +107,7 @@ OF.bindField = function(inp){ if (inp._of) return; inp._of = 1; var wrap = inp.p
   function opts(){ return Array.prototype.slice.call(box.querySelectorAll("a.ow-fr")); }
   function draw(){ var v = inp.value.trim(); clr.hidden = !v; box.innerHTML = OF.results(v); box.hidden = false; var n = opts().length; cnt.textContent = v ? (n ? A.plural(n, "резултат", "резултата") + ". Стрелка надолу влиза в тях." : "Нищо не намерихме") : ""; }
   function hide(){ box.hidden = true; }
-  inp.addEventListener("focus", function(){ if (box.hidden) draw(); }); inp.addEventListener("input", function(){ more = {}; draw(); });
+  inp.addEventListener("focus", function(){ if (box.hidden && !quiet) draw(); }); inp.addEventListener("input", function(){ more = {}; draw(); });
   clr.addEventListener("mousedown", function(e){ e.preventDefault(); }); clr.addEventListener("click", function(){ inp.value = ""; draw(); inp.focus(); });
   box.addEventListener("mousedown", function(e){ if (!e.target.closest("a")) e.preventDefault(); });
   box.addEventListener("click", function(e){ if (onBody(e, inp, draw)) inp.focus(); });
@@ -119,7 +119,8 @@ OF.bindField = function(inp){ if (inp._of) return; inp._of = 1; var wrap = inp.p
     if (e.key === "ArrowDown"){ e.preventDefault(); (o[i + 1] || o[i]).focus(); } else if (e.key === "ArrowUp"){ e.preventDefault(); if (i > 0) o[i - 1].focus(); else inp.focus(); }
     else if (e.key === "Escape"){ e.preventDefault(); inp.focus(); } });
   /* Esc от бутона „Изчисти“: затваря панела, фокусът е в полето */
-  clr.addEventListener("keydown", function(e){ if (e.key === "Escape"){ e.preventDefault(); hide(); inp.focus(); } });
+  var quiet = false;
+  clr.addEventListener("keydown", function(e){ if (e.key === "Escape"){ e.preventDefault(); hide(); quiet = true; inp.focus(); quiet = false; } });
   wrap.addEventListener("focusout", function(){ setTimeout(function(){ if (!wrap.contains(document.activeElement)) hide(); }, 150); });
   document.addEventListener("keydown", function(e){ if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "") && inp.offsetParent){ e.preventDefault(); inp.focus(); } });
   draw(); };

@@ -98,19 +98,19 @@ function draw(){
   if (one){ var hrs = H.hours(cur), ph = H.hours(prev);
     h += O.card({page:"trends", id:"main", cls:"wall", title:"Оборот по час", sub:H.fd(g.R[0]) + (g.upTo ? " до " + g.upTo : ""),
       inner:O.cols("main", hrs.map(function(x){ var v = cur.hrev[+x[0]] || 0; return {l:x[0] + ":00", v:Math.round(v), t:x[0] + ":00 - " + x[0] + ":59", tv:SC.fmt(v) + " · " + A.plural(x[1], "поръчка", "поръчки")}; }), {fmt:O.eur0, xn:5, prev:ph.map(function(x){ return prev.hrev[+x[0]] || 0; }), prevTip:function(i){ return " · сравнение " + SC.fmt(prev.hrev[10 + i] || 0); }}) + O.legend([["Избраният ден"], [cmpName, "ln prev"]]),
-      table:{head:["Час","Оборот","Поръчки","Сравнение"], rows:hrs.map(function(x){ return [x[0] + ":00", SC.fmt(cur.hrev[+x[0]] || 0), x[1], SC.fmt(prev.hrev[+x[0]] || 0)]; })}}); }
+      table:{head:["Час","Оборот","Поръчки",cmpName], rows:hrs.map(function(x){ return [x[0] + ":00", SC.fmt(cur.hrev[+x[0]] || 0), x[1], SC.fmt(prev.hrev[+x[0]] || 0)]; })}}); }
   else { var pd = prev.days, hasToday = g.R[1] === H.TODAY;
     h += O.card({page:"trends", id:"main", cls:"wall", title:"Оборот по ден",
       inner:O.cols("main", cur.days.map(function(d){ return {l:dayL(d.k, cur.days.length), v:Math.round(d.rev), hi:d.k === H.TODAY, t:H.fd(d.k), tv:SC.fmt(d.rev) + " · " + A.plural(d.orders, "поръчка", "поръчки")}; }), {fmt:O.eur0, xn:cur.days.length > 14 ? 4 : 7, prev:pd.map(function(d){ return d.rev; }), prevTip:function(i){ return pd[i] ? " · сравнение " + SC.fmt(pd[i].rev) : ""; }}) +
         O.legend([["Избраният период"]].concat(hasToday ? [["Днес (до " + A.hm(A.now()) + ")", "r"]] : []).concat([[cmpName, "ln prev"]])),
-      table:{head:["Ден","Оборот","Поръчки","Сравнение"], rows:cur.days.map(function(d, i){ return [H.fd(d.k, true), SC.fmt(d.rev), d.orders, pd[i] ? SC.fmt(pd[i].rev) : "-"]; })}}); }
+      table:{head:["Ден","Оборот","Поръчки",cmpName], rows:cur.days.map(function(d, i){ return [H.fd(d.k, true), SC.fmt(d.rev), d.orders, pd[i] ? SC.fmt(pd[i].rev) : "-"]; })}}); }
   h += '</div><div class="ow-grid">' + heat(cur) + '</div>';
   /* малките карти: колони без дупки */
   h += '<div class="ow-mas">';
   /* по канал: делът е с дума, разликата на свой ред */
   h += O.card({page:"trends", id:"ch", title:"По канал", sub:"Оборот", inner:O.hbars(CHI.map(function(i){ var c = cur.ch[i], p = prev.ch[i], sh = cur.rev ? Math.round(c.rev / cur.rev * 100) : 0; return {n:CHN[i][0], icon:CHN[i][1], v:c.rev, vt:SC.fmt(c.rev), sub:sh + "% от оборота · " + A.plural(c.o, "поръчка", "поръчки"), d:dl(c.rev, p.rev)}; })) +
       '<p class="ow-note">По телефона: ' + A.missing("поръчките по телефона отпреди") + '</p>',
-    table:{head:["Канал","Оборот","Дял от оборота","Поръчки","Сравнение"], rows:CHI.map(function(i){ return [CHN[i][0], SC.fmt(cur.ch[i].rev), (cur.rev ? Math.round(cur.ch[i].rev / cur.rev * 100) : 0) + "%", cur.ch[i].o, SC.fmt(prev.ch[i].rev)]; })}});
+    table:{head:["Канал","Оборот","Дял от оборота","Поръчки",cmpName], rows:CHI.map(function(i){ return [CHN[i][0], SC.fmt(cur.ch[i].rev), (cur.rev ? Math.round(cur.ch[i].rev / cur.rev * 100) : 0) + "%", cur.ch[i].o, SC.fmt(prev.ch[i].rev)]; })}});
 
   var top = Object.keys(cur.dish).map(function(id){ var x = SC.byId[id]; return {x:x, q:cur.dish[id], r:cur.dish[id] * x.p}; }).sort(function(a, b){ return topBy === "q" ? b.q - a.q : b.r - a.r; }).slice(0, 8), tmax = top.length ? (topBy === "q" ? top[0].q : top[0].r) : 1;
   h += O.card({page:"trends", id:"top", anchor:"top", title:"Най-поръчвани ястия", sub:"Примерни бройки",
