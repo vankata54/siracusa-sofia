@@ -1,6 +1,8 @@
 import { test, expect, type Page, type BrowserContext, type APIRequestContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Маса" of the waiter (/servitor/masa/#n, src/modules/servitor/table.ts) on the real server: a QR order of a guest
    appears live, "Отивам" → "Обслужено" (+ "Отмени"), "Потвърди и прати" with the grams of a steak (the error over 2000 гр.),

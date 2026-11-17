@@ -1,19 +1,11 @@
 ---
-/* /shofyor/: "Моите доставки", the first screen of the driver's app. Here is only the shared phone frame
-   (src/modules/staff/frame.ts): the body of the screen is written by its author in src/modules/shofyor/ and drawn into
-   st.main (the action bar in st.bar: add bar: true). Until then the page shows ONE state: the waiting skeleton, then the
-   empty state of the prototype (on "ти": decision 16.11.2026).
-   For the author: the search field of the first screen comes with
-     homeFind: { text: "Търси № или адрес…", label: "Търси в моите доставки: номер, адрес" }, search: <provider> */
+/* /shofyor/: „Моите доставки“, the first screen of the driver's app (src/modules/shofyor/list.ts; design/pages-shofyor/list.html). */
 import Staff from "../../modules/staff/Staff.astro";
+import "../../modules/shofyor/shofyor.css";
 ---
 <Staff module="driver" title="Моите доставки" nav>
 <script>
-import { mountStaff } from "../../modules/staff/frame.ts";
-mountStaff({ module: "driver", screen: "list", tab: "list", title: "Моите доставки" }).then((st) => {
-  if (!st) return;
-  st.main.innerHTML = '<section class="st-sec">' + st.empty({ title: "Няма доставки за теб", text: "Когато кухнята приготви поръчка за теб, телефонът ще вибрира и тя ще се появи тук." }) + "</section>";
-  st.synced();
-});
+import { initList } from "../../modules/shofyor/list.ts";
+void initList();
 </script>
 </Staff>

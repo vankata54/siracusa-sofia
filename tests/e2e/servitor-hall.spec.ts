@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { admin, newWaiter, signInCtx, startShift, endShift, guest, freeTable, errors, serious, ready, layout, rnd } from "./servitor-helpers.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Залата" of the waiter (/servitor/; design/pages-servitor/tables.html) on the real server: the counters, "Чакат сега"
    live from a guest's call, "Отивам" → "Обслужено" (+ "Отмени"), the tiles of my tables and of the whole hall, the search

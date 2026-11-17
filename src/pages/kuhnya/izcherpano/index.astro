@@ -1,16 +1,45 @@
 ---
-/* /kuhnya/izcherpano/: "Изчерпано днес" (design/pages-kuhnya/item-out.html). The frame is ready (the right tab, the row of the counters, the
-   skeleton); the body of the screen is drawn into k.main by its own file in src/modules/kuhnya/ (see the API at the top
-   of frame.ts). */
+/* /kuhnya/izcherpano/: "Изчерпано днес" (src/modules/kuhnya/izcherpano.ts; the approved prototype: design/pages-kuhnya/item-out.html).
+   The styles of the screen are the prototype's, 1:1 (only tokens); the body is drawn by the script into the frame's main. */
 import Kitchen from "../../../modules/kuhnya/Kitchen.astro";
 ---
 <Kitchen title="Изчерпано днес" page="izcherpano">
 <script>
-import { mountKitchen } from "../../../modules/kuhnya/frame.ts";
-mountKitchen({ page: "izcherpano", title: "Изчерпано днес" }).then((k) => {
-  if (!k) return;
-  /* THE SCREEN COMES HERE: draw into k.main (it shows the skeleton until then) and set the row with k.strip(() => ({counts, pills})) */
-  k.main.dataset.screen = "izcherpano";
-});
+import { initIzcherpano } from "../../../modules/kuhnya/izcherpano.ts";
+initIzcherpano();
 </script>
 </Kitchen>
+<style is:global>
+.io{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; align-items:start}
+.io-h{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:6px}
+.eff{display:flex; flex-wrap:wrap; gap:6px 18px; margin:10px 0 0; padding:0; list-style:none; font-size:16px; color:var(--muted); font-weight:600}
+.eff li{display:flex; gap:6px; align-items:center}
+.eff .ic{color:var(--ok)}
+.cath{font-size:15px; font-weight:800; color:var(--muted); margin:22px 0 10px; letter-spacing:.01em}
+.cath span{font-weight:600}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px}
+.tile{position:relative; display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:12px; min-height:132px; padding:16px 14px 14px 18px; border:0; border-radius:20px; background:var(--surface); box-shadow:var(--hi), inset 0 0 0 2px var(--line); color:var(--ink); text-align:left; cursor:pointer; font:inherit}
+.tile:active{transform:scale(.98)}
+.tile b{font-size:21px; line-height:1.2; letter-spacing:-.015em}
+.tile small{display:block; font-size:15px; color:var(--muted); font-weight:600; margin-top:2px}
+.tile .act{align-self:stretch; justify-content:center; display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border-radius:999px; background:var(--surface-2); font-weight:800; font-size:15px; white-space:nowrap}
+.tile.out{background:var(--surface-2); box-shadow:inset 0 0 0 2.5px var(--warn)}
+.tile.out b{color:var(--muted); text-decoration:line-through; text-decoration-thickness:2px}
+.tile.out .act{background:var(--ink); color:var(--bg)}
+.tile .st{display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--warn)}
+/* light theme: the word in the text colour (contrast), the colour only on the icon (README, "Контраст в светла тема") */
+html[data-theme="light"] .tile .st{color:var(--ink)}
+html[data-theme="light"] .tile .st .ic{color:var(--warn)}
+.side{position:sticky; top:0; padding:18px; display:grid; gap:4px}
+.side h2{margin:0; font-size:24px; letter-spacing:-.03em; font-weight:800; display:flex; align-items:center; gap:10px}
+.side h2 .n{min-width:32px; height:32px; padding:0 9px; border-radius:16px; background:var(--warn); color:var(--bg); display:inline-grid; place-items:center; font-size:17px}
+.orow{display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding:14px 0; border-top:1px solid var(--line)}
+.orow b{font-size:20px; line-height:1.2; letter-spacing:-.01em}
+.orow small{display:block; font-size:15px; color:var(--muted); font-weight:600; margin-top:2px}
+.orow .kb{min-height:56px; font-size:17px}
+.side .foot2{margin:8px 0 0; font-size:15px; color:var(--muted); display:flex; gap:8px}
+.side .foot2 .ic{flex:none}
+.side .none{font-size:17px; color:var(--muted); margin:8px 0}
+@container app (max-width:1100px){ .io{grid-template-columns:minmax(0,1fr) 320px} .tiles{grid-template-columns:repeat(auto-fill, minmax(220px,1fr))} }
+@container app (max-width:899px){ .io{grid-template-columns:1fr} .side{position:static; order:-1} }
+</style>

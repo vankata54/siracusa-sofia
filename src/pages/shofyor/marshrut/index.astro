@@ -1,0 +1,11 @@
+---
+/* /shofyor/marshrut/: the route (src/modules/shofyor/route.ts; design/pages-shofyor/route.html). */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/shofyor/shofyor.css";
+---
+<Staff module="driver" title="Маршрут" nav>
+<script>
+import { initRoute } from "../../../modules/shofyor/route.ts";
+void initRoute();
+</script>
+</Staff>

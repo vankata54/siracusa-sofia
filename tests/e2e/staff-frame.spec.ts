@@ -1,6 +1,8 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* The shared phone frame of the staff apps "Сервитьор" (/servitor/) and "Шофьор" (/shofyor/): src/modules/staff/frame.ts.
    Checks: the guard (no session, another role, the roles that may look), the top buttons Търси · Молив · Смяна (48 px,
@@ -17,6 +19,18 @@ const USER: Record<string, [string, string]> = {
   admin: [E.ADMIN_USER || "admin", E.ADMIN_PASSWORD], owner: ["owner", E.OWNER_PASSWORD], waiter: ["waiter", E.WAITER_PASSWORD],
   driver: ["driver", E.DRIVER_PASSWORD], kitchen: ["kitchen", E.KITCHEN_PASSWORD], marketing: ["marketing", E.MARKETING_PASSWORD],
 };
+/* the driver's screens need an open shift (without one /shofyor/ goes to /shofyor/vhod/, the car and the km). Before
+   every test (inside the floor lock: the driver's own specs open and end shifts too), with the car's last km, so the
+   other specs can still start theirs. */
+test.beforeEach(async ({ playwright, baseURL }) => {
+  if (!E.DRIVER_PASSWORD) return;
+  const r = await playwright.request.newContext({ baseURL });
+  if ((await r.post("/api/auth/login", { data: { username: "driver", password: E.DRIVER_PASSWORD } })).ok()) {
+    const st = await (await r.get("/api/driver/state")).json();
+    if (!st.shift) { const car = (st.cars || [])[0]; await r.post("/api/driver/start", { data: { car: car ? car.id : "a1", km: (car && car.lastKm) || 48250 } }); }
+  }
+  await r.dispose();
+});
 async function signIn(ctx: BrowserContext, role: keyof typeof USER) {
   const r = await ctx.request.post("/api/auth/login", { data: { username: USER[role][0], password: USER[role][1] } });
   expect(r.status(), "sign-in " + role).toBe(200);
@@ -48,6 +62,11 @@ const st = "(window.SCStaff)";
    hall and no real-time stream (the other specs change the hall in parallel) */
 async function quiet(page: Page) {
   await page.route("**/api/stream**", (r) => r.abort());
+  /* the driver: the deliveries other specs left ready in the shared test database are not this test's business */
+  await page.route("**/api/driver/list**", async (r) => {
+    const res = await r.fetch(), b = await res.json();
+    await r.fulfill({ response: res, json: { ...b, waiting: [], active: [], done: [], next: null, sum: { ...(b.sum || {}), active: 0, cash: 0, done: 0 } } });
+  });
   await page.route("**/api/floor/hall", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ now: new Date().toISOString(),
     me: { username: "waiter", name: "Сервитьор", onShift: false, since: null, tables: [] }, tables: [], calls: [], qr: [],
     counters: { queue: 0, calls: 0, qr: 0, ready: 0, readyTables: 0, free: 0, busy: 0 }, settings: { warnMin: 2, callManager: 5, qrManager: 3, callCooldown: 3 } }) }));
@@ -142,7 +161,7 @@ for (const app of APPS) {
 
   test(`${app.role}: the tabs lead to the screens of the app; the badges count, hide at 0 and can be grey`, async ({ page, context }) => {
     await signIn(context, app.role);
-    if (app.role === "waiter") await quiet(page);
+    await quiet(page);
     await open(page, app.path);
     const nav = page.locator(".st-nav");
     await expect(nav).toHaveAttribute("aria-label", app.role === "waiter" ? "Приложение на сервитьора" : "Приложение на шофьора");
@@ -282,8 +301,9 @@ test("the driver's sheet has the navigation app; it is remembered on the device"
   await expect(sh.locator('[data-act="navapp"][data-v="waze"]')).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(`${st}.navApp()`)).toBe("waze");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("st-prefs")!).nav)).toBe("waze");
-  /* the rows of the shift come from the screen through a hook; here the frame alone */
-  await expect(sh.locator(".kvs .kv")).toHaveCount(2);
+  /* the rows of the shift come from the screen through a hook (the driver: the car, since, the start km) */
+  await expect(sh.locator(".kvs .kv")).toHaveCount(5);
+  await expect(sh.locator(".kvs")).toContainText("Автомобил 1 · смени");
 });
 
 test("the theme: Авто / Светла / Тъмна / По часа, remembered on the device and set before the first paint", async ({ page, context }) => {
@@ -443,7 +463,11 @@ test("no connection, the driver: the strip says what waits and „Виж“ open
   await context.setOffline(true);
   const strip = page.locator(".st-net");
   await expect(strip.locator("span")).toHaveText("Няма връзка. Записите се пазят тук.");
-  await expect(strip.locator("button")).toHaveText("Опитай пак");
+  /* the driver's screen keeps the steps on the phone: "Виж" opens them (src/modules/shofyor/app.ts) */
+  await expect(strip.locator("button")).toHaveText("Виж");
+  await strip.locator("button").click();
+  await expect(page.locator(".st-sheetwrap.on h2")).toHaveText("Чакат връзка");
+  await page.keyboard.press("Escape");
   await expect(page.locator("main")).toBeVisible();
   await expect(page.locator(".st-app > .offline")).toBeHidden();
   await expect(page.locator(".st-nav")).not.toHaveClass(/stale/);
@@ -574,6 +598,7 @@ test("the session cannot be read: „Няма връзка с ресторант
   await page.locator("[data-boot-retry]").click();
   await expect(page.locator(".st-app:not([data-boot]) .st-me")).toBeVisible();
   await expect(page.locator(".st-top h1")).toHaveText("Залата");
+  await expect(page.locator("main [data-sv] h2").first()).toBeVisible(); /* the hall has drawn itself: it will not draw over the error below */
   /* an error of a screen's load: the frame draws it, "Опитай пак" asks the screen again */
   await page.evaluate(`window.__reload = 0; ${st}.onReload(() => { window.__reload++; ${st}.main.innerHTML = "<p id='again'>заредено</p>"; }); window.__kind = ${st}.fail(new Error("x"))`);
   expect(await page.evaluate("window.__kind")).toBe("error");

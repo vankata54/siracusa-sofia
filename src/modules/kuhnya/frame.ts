@@ -8,7 +8,9 @@
    mountKitchen({page, title?}): Promise<KFrame | null>
        guard + the frame (top bar, the row of the counters, "Търси" and "Молив", the toast, the ticker, real time, no
        connection, the heartbeat). page: "queue" | "izcherpano" | "natovareno" | "izpalneni" | "obsht-izgled". null = left
-       the page (no session, no rights, no section chosen on this tablet -> /kuhnya/vhod/, "all" on the queue -> "Общ изглед").
+       the page (no session -> toSignIn(): the PIN on a known device, else the password; no rights; no section chosen on
+       this tablet -> /kuhnya/vhod/; "all" on the queue -> "Общ изглед", except queue#s=<section>: the head chef looks at
+       the queue of that section, the heartbeat stays "all").
    KFrame:
      me, cfg, boss, sec ("topla" … | "all"), all, secName   who, the settings (cfg.sections, cfg.soon, cfg.undoSec …), the tablet's section
      main                                 <main class="kmain">: the screen draws here (a skeleton is there until it does)
@@ -46,7 +48,8 @@
    data-suggest, data-lang, data-cookie, data-cookie-settings: never give a button of the kitchen one of these names
    (a button with data-more opens the site's sheet "Още" and makes the whole screen inert).
 
-   On the tablet (localStorage, try/catch): sk-sec, sk-theme, sk-sound, sk-device, sk-outbox. Nothing else is kept. */
+   On the tablet (localStorage, try/catch): sk-sec, sk-theme, sk-sound, sk-device, sk-outbox, sk-secs (vhod.ts: the names of
+   the sections for the PIN step before the sign-in). Nothing else is kept. */
 import "sc-icons:list-checks,x,check-circle,squares-four,hourglass,caret-down,magnifying-glass,bell,bell-ringing,warning,speaker-high,speaker-slash,wifi-slash,warning-circle,arrow-clockwise,arrow-counter-clockwise,arrow-left,arrow-right,calendar-check,flame,fire,cooking-pot,pizza,bowl-food,chef-hat,fork-knife,moped,storefront,minus,plus,note,check,sign-in,sign-out,sun,moon,info";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
@@ -108,6 +111,15 @@ export function trapFocus(box: HTMLElement, onEsc: () => void): () => void {
 }
 
 /* ---------- the guard ---------- */
+/** no session (or it expired): on a known device the kitchen signs in with the PIN (/kuhnya/vhod/, vhod.ts), on any
+    other device with the user name and the password (/admin/vhod/); both come back here (#next=) */
+let leaving = false;
+export async function toSignIn(): Promise<void> {
+  if (leaving) return; leaving = true;
+  let known = false;
+  try { const { pinApi } = await import("../../client/api-floor.ts"); known = (await pinApi.people("kitchen")).known; } catch { /* the password form */ }
+  location.replace(known ? murl.kuhnya("vhod", "next=" + encodeURIComponent(murl.here())) : aurl.login(murl.here()));
+}
 export interface KGuard { me: Me; cfg: KConfigView; /** the main admin, the owner, the manager: they come from the admin */ boss: boolean }
 const STAFF_APPS = ["waiter", "kitchen", "driver"];
 function bootFail(e: unknown): void {
@@ -123,14 +135,14 @@ export async function kitchenGuard(): Promise<KGuard | null> {
   document.documentElement.dataset.theme = theme();
   let me: Me | null = null;
   try { me = await session(); } catch (e) { bootFail(e); return null; }
-  if (!me) { location.replace(aurl.login(murl.here())); return null; }
+  if (!me) { void toSignIn(); return null; }
   const role = me.user.role, boss = ["admin", "owner", "manager"].includes(role);
   const home = () => { location.replace(ROLES[role] && STAFF_APPS.includes(role) && role !== "kitchen" ? aurl.app(role) : aurl.home()); };
   if (!(boss || role === "kitchen" || me.sections.includes("kitchen"))) { home(); return null; }
   let cfg: KConfigView;
   try { cfg = await kitchenApi.config(); }
   catch (e) {
-    if (e instanceof ApiError && e.status === 401) { location.replace(aurl.login(murl.here())); return null; }
+    if (e instanceof ApiError && e.status === 401) { void toSignIn(); return null; }
     if (e instanceof ApiError && e.status === 403) { home(); return null; }
     bootFail(e); return null;
   }
@@ -180,8 +192,12 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   const g = await kitchenGuard();
   if (!g) return null;
   const { me, cfg, boss } = g, page = opts.page;
-  const sec = tabletSec(cfg);
-  if (!sec) { location.replace(murl.kuhnya("vhod")); return null; }
+  const tab = tabletSec(cfg);
+  if (!tab) { location.replace(murl.kuhnya("vhod")); return null; }
+  /* the head chef looks at the queue of one section from "Общ изглед" (queue#s=skara, as the prototype); the heartbeat
+     stays the tablet's own ("all") */
+  const peek = tab === K_ALL && page === "queue" ? murl.hash().get("s") || "" : "";
+  const sec = peek && cfg.sections.some((x) => x.id === peek) ? peek : tab;
   const all = sec === K_ALL;
   /* the head chef has no queue of his own: "Общ изглед" (as queue.html#s=all in the prototype) */
   if (all && (page === "queue" || page === "izpalneni")) { location.replace(murl.kuhnya("obsht-izgled")); return null; }
@@ -275,7 +291,7 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
         return false;
       };
       const r = had ? await flushOutbox(box, (q: Queued) => { cur = q.id; return run(q); }, wait) : { sent: 0, dropped: [] as string[], stopped: false };
-      if (auth) { location.replace(aurl.login(murl.here())); return; }
+      if (auth) { void toSignIn(); return; }
       if (r.stopped) { flushing = null; lost(); return; }
       const was = off; off = false; lastOk = now(); paintNet(); drawStrip();
       flushing = null;
@@ -287,8 +303,8 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
     return flushing;
   }
   const beatOnce = async (): Promise<boolean> => {
-    try { const r = await kitchenApi.beat(sec, { device }); sync(r.now); return true; }
-    catch (e) { if (e instanceof ApiError && e.status === 401) { location.replace(aurl.login(murl.here())); return false; } if (isOffline(e)) lost(); return false; }
+    try { const r = await kitchenApi.beat(tab, { device }); sync(r.now); return true; }
+    catch (e) { if (e instanceof ApiError && e.status === 401) { void toSignIn(); return false; } if (isOffline(e)) lost(); return false; }
   };
   /** is the server there again */
   async function probe(): Promise<boolean> {
@@ -299,7 +315,7 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
     try { const r = await fn(); lastOk = now(); if (off && !flushing) void back(); return r; }
     catch (e) {
       if (isOffline(e)) lost();
-      else if (e instanceof ApiError && e.status === 401) location.replace(aurl.login(murl.here()));
+      else if (e instanceof ApiError && e.status === 401) void toSignIn();
       throw e;
     }
   }

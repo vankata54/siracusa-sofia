@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { PV, codeOf, phone, staff, tableN, watch, guest, tok } from "./masa-helpers.ts";
 import { E } from "./own-server.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* QR маса · the bill from two (and three) phones: „По ястия“ with the shared picks („Телефон 1 плаща“ locked, „Още никой
    не плаща“ / „Всички ястия са разпределени“), „Поискай моята част“, the other phone's line without its sum, „Поискай

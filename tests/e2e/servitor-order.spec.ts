@@ -1,6 +1,8 @@
 import { test, expect, type Page, type BrowserContext, type APIRequestContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Нова поръчка" of the waiter (/servitor/porachka/#n, src/modules/servitor/order.ts) on the real server: "За коя маса?",
    the search of the site (Cyrillic and Latin, forgiving spelling, one clear button), "+", a note to the kitchen,

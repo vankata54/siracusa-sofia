@@ -1,6 +1,8 @@
 import { test, expect, type Page, type BrowserContext, type APIRequestContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Часовник" of the waiter (/servitor/chasovnik/, src/modules/servitor/watch.ts) on the live data: a guest's call shows
    on both faces (round 232 px, rectangular 204 × 244 px; always dark) with "Отивам" → "Обслужено" (+ "Отмени"), and the

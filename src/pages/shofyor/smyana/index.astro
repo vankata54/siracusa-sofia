@@ -1,0 +1,11 @@
+---
+/* /shofyor/smyana/: the end of the shift (src/modules/shofyor/shift.ts; design/pages-shofyor/shift.html). */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/shofyor/shofyor.css";
+---
+<Staff module="driver" title="Край на смяната" nav>
+<script>
+import { initShift } from "../../../modules/shofyor/shift.ts";
+void initShift();
+</script>
+</Staff>

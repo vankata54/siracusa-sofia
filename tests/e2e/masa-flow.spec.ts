@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { CLOCK, PV, codeOf, phone, staff, tableN, watch, guest, tok } from "./masa-helpers.ts";
 import { E } from "./own-server.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* QR маса: the whole flow with TWO phones (two browser contexts) on the real server: both add to the shared cart, one
    changes the other's line, "Изпрати към сервитьора" waits, the waiter confirms (a third context, signed in as the

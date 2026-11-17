@@ -1,10 +1,37 @@
 ---
-/* /kuhnya/vhod/: the section of this tablet (src/modules/kuhnya/vhod.ts; design/pages-kuhnya/login.html). */
+/* /kuhnya/vhod/: the section of this tablet and the personal PIN on a known device (src/modules/kuhnya/vhod.ts;
+   design/pages-kuhnya/login.html). Before the sign-in the core does not give the kitchen's settings: #k-secs carries the
+   default names of the sections from the build (the tablet keeps the names it read last, "sk-secs", and they win). */
 import Kitchen from "../../../modules/kuhnya/Kitchen.astro";
+import { DEFAULT_KITCHEN, K_MISSING } from "../../../core/kitchen-base.ts";
+const secs = JSON.stringify({ sections: DEFAULT_KITCHEN.sections.map((s) => ({ id: s.id, n: s.n, icon: s.icon })), all: { n: "Общ изглед", icon: "chef-hat" }, cond: K_MISSING.sections });
 ---
 <Kitchen title="Вход" page="vhod">
+<script type="application/json" id="k-secs" set:html={secs}></script>
 <script>
 import { initVhod } from "../../../modules/kuhnya/vhod.ts";
 initVhod();
 </script>
 </Kitchen>
+<style is:global>
+/* the PIN step (login.html), 1:1 */
+.dots{display:flex; justify-content:center; gap:18px; padding:6px 0}
+.dots i{width:22px; height:22px; border-radius:50%; box-shadow:inset 0 0 0 2.5px var(--line-strong)}
+.dots i.on{background:var(--ink); box-shadow:none}
+.dots.err i{box-shadow:inset 0 0 0 2.5px var(--danger)}
+.dots.err i.on{background:var(--danger)}
+.pin [data-pin]{display:grid; gap:16px}
+.pinpad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.pinpad button{min-height:72px; border:0; border-radius:22px; background:var(--surface-2); color:var(--ink); font:inherit; font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-items:center}
+.pinpad button:active{transform:scale(.96); background:var(--surface-3)}
+.pinpad .fn{font-size:17px}
+.perr{min-height:24px; margin:0; text-align:center; font-size:16px; font-weight:700; color:var(--danger)}
+.pin .first{display:flex; gap:10px; align-items:flex-start; margin:0; font-size:17px; line-height:1.4; color:var(--ink)}
+.pin .first .ic{flex:none; margin-top:1px; color:var(--muted)}
+.pin a.kb{text-decoration:none}
+.pin .kb[disabled]{opacity:.7; cursor:default}
+.pin .pw{margin:-4px 0 0; text-align:center; font-size:16px}
+.pin .pw a{display:inline-flex; align-items:center; min-height:48px; padding:0 12px; color:var(--ink); font-weight:700; text-underline-offset:4px}
+@container app (max-width:1100px){ .pinpad button{min-height:64px} }
+@container app (max-width:899px){ .pin [data-pin]{gap:10px} .pinpad button{min-height:56px} }
+</style>

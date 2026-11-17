@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { admin, newWaiter, signInCtx, startShift, endShift, guest, freeTable, errors, serious, layout } from "./servitor-helpers.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Вход и смяна" of the waiter (/servitor/vhod/; design/pages-servitor/login.html) on the real server: an unknown phone
    starts with the password (one line why), the errors under the fields, „Покажи / Скрий“; the personal PIN on a known

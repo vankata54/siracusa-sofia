@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { admin, kitchen, newWaiter, signInCtx, startShift, endShift, guest, freeTable, cook, errors, serious, ready } from "./servitor-helpers.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Повиквания" (/servitor/povikvania/; design/pages-servitor/calls.html) and "Готови" (/servitor/gotovi/; ready.html) on
    the real server: ONE queue number (the badge and "За мен N"), the QR order to confirm with "Отвори масата", "Отивам" →

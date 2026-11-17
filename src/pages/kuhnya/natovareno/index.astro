@@ -1,16 +1,53 @@
 ---
-/* /kuhnya/natovareno/: "Натоварено" (design/pages-kuhnya/busy.html). The frame is ready (the right tab, the row of the counters, the
-   skeleton); the body of the screen is drawn into k.main by its own file in src/modules/kuhnya/ (see the API at the top
-   of frame.ts). */
+/* /kuhnya/natovareno/: "Натоварено" (src/modules/kuhnya/natovareno.ts; the approved prototype: design/pages-kuhnya/busy.html).
+   The styles of the screen are the prototype's, 1:1 (only tokens); the body is drawn by the script into the frame's main. */
 import Kitchen from "../../../modules/kuhnya/Kitchen.astro";
 ---
 <Kitchen title="Натоварено" page="natovareno">
 <script>
-import { mountKitchen } from "../../../modules/kuhnya/frame.ts";
-mountKitchen({ page: "natovareno", title: "Натоварено" }).then((k) => {
-  if (!k) return;
-  /* THE SCREEN COMES HERE: draw into k.main (it shows the skeleton until then) and set the row with k.strip(() => ({counts, pills})) */
-  k.main.dataset.screen = "natovareno";
-});
+import { initNatovareno } from "../../../modules/kuhnya/natovareno.ts";
+initNatovareno();
 </script>
 </Kitchen>
+<style is:global>
+.bz{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:16px; align-items:start}
+.sw{padding:24px; display:grid; gap:16px}
+.sw.on{box-shadow:var(--hi), var(--shadow), inset 0 0 0 4px var(--ember)}
+.sw h1{display:flex; align-items:center; gap:12px}
+.state{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:18px; background:var(--surface-2); font-size:18px; font-weight:700}
+.state i{width:16px; height:16px; border-radius:50%; background:var(--off); flex:none}
+.sw.on .state{background:var(--ember); color:var(--on-ember)}
+.sw.on .state i{background:var(--on-ember)}
+.state small{display:block; font-size:15px; font-weight:600; opacity:.85}
+.sw .big{min-height:88px; font-size:22px; width:100%}
+.kb.ember{background:var(--ember); color:var(--on-ember)}
+.why{margin:0; padding:0; list-style:none; display:grid; gap:8px; font-size:17px; color:var(--muted)}
+.why li{display:flex; gap:10px; align-items:flex-start}
+.why .ic{color:var(--ink); margin-top:2px; flex:none}
+.why li.rem{color:var(--ink); font-weight:700}
+.why li.rem .ic{color:var(--warn)}
+.fx{padding:22px}
+.fx h2,.lg2 h2{margin:0 0 4px; font-size:24px; letter-spacing:-.03em; font-weight:800}
+.fx .klead{font-size:16px; margin:0}
+.fx table{width:100%; border-collapse:collapse; margin-top:8px}
+.fx th{font-size:15px; font-weight:800; color:var(--muted); text-align:left; padding:8px 0}
+.fx th:not(:first-child),.fx td:not(:first-child){text-align:right}
+.fx td{padding:14px 0; border-top:1px solid var(--line); font-size:19px; font-weight:700; vertical-align:top}
+.fx td small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.fx td.now{font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.fx td.was{color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+.fx .on td.now{color:var(--ink)}
+.fx .plus15{display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:14px; font-weight:800; vertical-align:3px}
+.cust{margin-top:14px; display:grid; gap:8px}
+.cust .lbl{font-size:15px; font-weight:800; color:var(--muted)}
+.cust .lbl.thin{font-weight:600}
+.cust .status{position:static; pointer-events:auto; display:flex; align-items:center; gap:10px; min-height:52px; padding:8px 16px; border-radius:26px; background:var(--surface-2); font-size:16px; transform:none; opacity:1}
+.cust .dot{width:10px; height:10px; border-radius:50%; background:var(--ok); flex:none}
+.cust .dot.warn{background:var(--warn)}
+.lg2{grid-column:1 / -1; padding:20px 22px}
+.lrow{display:grid; grid-template-columns:150px 1fr; gap:12px; padding:12px 0; border-top:1px solid var(--line); font-size:18px}
+.lrow b{font-variant-numeric:tabular-nums}
+.lrow small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.lg2 .none{font-size:17px; color:var(--muted); margin:8px 0 0}
+@container app (max-width:899px){ .bz{grid-template-columns:1fr} }
+</style>

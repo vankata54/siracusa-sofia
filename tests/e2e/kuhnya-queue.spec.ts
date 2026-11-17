@@ -1,6 +1,8 @@
 import { test, expect, type APIRequestContext, type Browser, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* Кухня · Опашка (/kuhnya/, src/modules/kuhnya/queue.ts + find.ts) on real orders: a delivery from the site and a pickup
    placed through the public API by a second browser context (the customer), never sample data. A new order arrives live

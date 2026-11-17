@@ -3,6 +3,8 @@ import { PV, codeOf, phone, staff, tableN, watch, tok } from "./masa-helpers.ts"
 import { E } from "./own-server.ts";
 import { ownServer, signIn } from "./own-server.ts";
 import { assertPortFree } from "./_port.ts";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* QR маса · „Повикай сервитьор“: the call with a live timer from the core's time, the second phone sees it, „Отмени
    повикването“ with „Отмени“, „Друго“ with a few words; the waiter „Отивам“ / „Обслужено“ → the same call is locked

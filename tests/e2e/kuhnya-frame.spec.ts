@@ -1,6 +1,8 @@
 import { test, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
+import { floorLock } from "./_floor-lock.ts";
+floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* Кухня, the frame of the module (src/modules/kuhnya/frame.ts, vhod.ts) on the tablet sizes of the approved prototype:
    1280 × 800, 1024 × 768 and 768 × 1024 (portrait), dark (default) and light. The guard and the roles, the choice of the
@@ -125,10 +127,9 @@ test("@desktop the screens of the module: the right tab, the frame, the place fo
     await expect(page.locator("a, button").filter({ hasText: /Нова поръчка|Количка|Поръчай/ })).toHaveCount(0);
     expect(await page.locator('meta[name="robots"]').getAttribute("content")).toContain("noindex");
   }
-  /* the screens written after the frame: the skeleton with a hidden status and a clean mount point */
+  /* the screens written after the frame draw into its main (tests/e2e/kuhnya-screens.spec.ts) */
   await page.goto("/kuhnya/izcherpano/"); await ready(page);
-  await expect(page.locator('main[data-screen="izcherpano"] .kskel')).toHaveCount(3);
-  await expect(page.locator("main [role=status]")).toHaveText("Зареждаме …");
+  await expect(page.locator("main#main.kmain .tile").first()).toBeVisible();
   /* "Натоварено" is reached from the key in the row of the queue (a section has no tab for it) */
   await page.goto("/kuhnya/"); await ready(page);
   const busy = page.locator('.kstrip a.kpill[href="/kuhnya/natovareno/"]');
@@ -270,8 +271,9 @@ test("@desktop the theme: dark by default, light by choice on this tablet, befor
   await page.goto("/kuhnya/vhod/");
   await page.locator("[data-out]").click();
   await expect(page).toHaveURL(/\/admin\/vhod\//);
+  /* a known device (a password sign-in was made here): the kitchen comes back with the PIN (tests/e2e/kuhnya-pin.spec.ts) */
   await page.goto("/kuhnya/");
-  await expect(page).toHaveURL(/\/admin\/vhod\/#next=%2Fkuhnya%2F$/);
+  await expect(page).toHaveURL(/\/kuhnya\/vhod\/#next=%2Fkuhnya%2F$/);
   expect(errs).toEqual([]);
   await ctx.close();
 });

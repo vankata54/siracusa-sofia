@@ -1,0 +1,11 @@
+---
+/* /shofyor/gorivo/: fuel (src/modules/shofyor/fuel.ts; design/pages-shofyor/fuel.html). */
+import Staff from "../../../modules/staff/Staff.astro";
+import "../../../modules/shofyor/shofyor.css";
+---
+<Staff module="driver" title="Гориво" nav>
+<script>
+import { initFuel } from "../../../modules/shofyor/fuel.ts";
+void initFuel();
+</script>
+</Staff>
