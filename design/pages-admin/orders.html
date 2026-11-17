@@ -369,7 +369,7 @@ function phoneOrder(){ if (!CAN_PHONE) return; var m0 = mnow(), lunchOn = m0 >= 
       '<div class="field"><label for="po-note">Бележка към кухнята <span class="muted" style="font-weight:600">(по желание)</span></label><textarea class="input" id="po-note" rows="2" placeholder="Например: без лук на пицата, звънецът не работи">' + esc(F.note) + '</textarea></div>' +
       '<fieldset class="po-sec"><legend>Плащане</legend><div class="seg po-pay" role="group" aria-label="Плащане">' + [["cash","В брой"],["card","Карта при получаване"],["voucher","Ваучер"]].map(function(p){ return '<button type="button" data-ppay="' + p[0] + '" aria-pressed="' + (F.pay === p[0]) + '">' + p[1] + '</button>'; }).join("") + '</div></fieldset>' +
       '<dl class="od-tot po-sum" data-psum style="margin:0">' + sumHTML() + '</dl></form>'; }
-  var s = A.sheet({title:"Нова поръчка по телефон", focus:"#po-tel", html:formHTML(), foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok' + (closed ? ' disabled' : '') + '>' + ic("chef-hat",22) + '<span data-plabel>Към кухнята</span></button>'});
+  var s = A.sheet({title:"Нова поръчка по телефон", onClose:dropNew, focus:"#po-tel", html:formHTML(), foot:'<button class="pill pill-line pill-lg" type="button" data-x>Откажи</button><button class="pill pill-red pill-lg" type="button" data-ok' + (closed ? ' disabled' : '') + '>' + ic("chef-hat",22) + '<span data-plabel>Към кухнята</span></button>'});
   var b = s.body;
   function label(){ var t = sums(); s.foot.querySelector("[data-plabel]").textContent = F.lines.length ? "Към кухнята · " + SC.fmt(t.total) + (t.fee == null ? " + такса" : "") : "Към кухнята"; }
   function refresh(part){ if (part === "res"){ b.querySelector("[data-pres]").innerHTML = resultsHTML(); }
@@ -408,7 +408,9 @@ function phoneOrder(){ if (!CAN_PHONE) return; var m0 = mnow(), lunchOn = m0 >= 
     A.audit("order.create", "Поръчка по телефон № " + no + ": " + (F.mode === "delivery" ? "доставка, " + F.zone : "вземане") + ", " + SC.fmt(t.total) + (t.fee == null ? " + такса" : ""), no);
     A.toast("№ " + no + " е в кухнята" + (o.slot !== "asap" ? " за " + o.slot : ""), {undo:function(){ D.list = D.list.filter(function(z){ return z.no !== no; }); save(); draw(true); A.audit("order.status", "Отменена поръчка по телефон № " + no, no); }}); }; }
 document.addEventListener("click", function(e){ if (e.target.closest("[data-phone]")) phoneOrder(); });
-if (A.hash.phone || st === "phone") setTimeout(phoneOrder, 300);
+/* #new=… (връзка от модула Управител) отваря формата направо; затварянето чисти #new от адреса */
+function dropNew(){ if (A.hash["new"] == null) return; var h = Object.assign({}, A.hash); delete h["new"]; A.setHash(h); }
+if (A.hash.phone || st === "phone" || A.hash["new"] === "phone") setTimeout(function(){ phoneOrder(); if (!CAN_PHONE) dropNew(); }, 300);
 
 })();
 </script>

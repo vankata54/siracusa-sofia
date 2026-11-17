@@ -317,7 +317,7 @@ function seatWaitlist(r){ var free = TABLES.filter(function(x){ return x.seats >
 
 /* ---------- нова резервация (правилата на ядрото: 11:00-21:30, до 92 дни, маса по местата, блокиран номер) ---------- */
 function newRes(){ var f = {date:day < TODAY ? TODAY : day, time:"", people:2, table:"", name:"", phone:"", occasion:"", note:""};
-  var s = A.sheet({title:"Нова резервация", html:'<form class="form" novalidate data-nf>' +
+  var s = A.sheet({title:"Нова резервация", onClose:dropNew, html:'<form class="form" novalidate data-nf>' +
     '<div class="two"><div class="field"><label for="nr-d">Ден</label><input class="input" id="nr-d" type="date" min="' + TODAY + '" max="' + addD(TODAY, 92) + '" value="' + f.date + '"></div>' +
     '<div class="field"><label for="nr-t">Час</label><select class="input" id="nr-t"><option value="">Изберете</option>' + SLOTS.map(function(x){ return '<option>' + x + '</option>'; }).join("") + '</select></div></div>' +
     '<div class="two"><div class="field"><label for="nr-p">Хора</label><input class="input" id="nr-p" type="number" inputmode="numeric" min="1" max="60" value="2"></div>' +
@@ -376,6 +376,9 @@ document.addEventListener("click", function(e){ var t;
   if (e.target.closest("[data-bladd]")){ addBlock(); return; }
   if (e.target.closest("[data-new]")){ newRes(); return; }
 });
+/* #new=… (връзка от модула Управител) отваря формата направо; затварянето чисти #new от адреса */
+function dropNew(){ if (A.hash["new"] == null) return; var h = Object.assign({}, A.hash); delete h["new"]; A.setHash(h); }
+if (A.hash["new"] === "1") setTimeout(newRes, 300);
 body.addEventListener("change", function(e){ if (e.target.matches("[data-fsel]")){ flt = e.target.value; hashSync(); draw(); var x = body.querySelector("[data-fsel]"); x && x.focus({preventScroll:true}); } });
 body.addEventListener("input", function(e){ if (e.target.id !== "rs-q") return; q = e.target.value; var pos = e.target.selectionStart; draw(); var i = body.querySelector("#rs-q"); i.focus(); try{ i.setSelectionRange(pos, pos); }catch(x){} });
 })();
