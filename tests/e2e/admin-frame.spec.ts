@@ -90,7 +90,9 @@ test("sign-in by role: the main admin -> the dashboard, the waiter -> /servitor/
   await expect(page).toHaveURL(/\/admin\/vhod\//);
   await page.fill("#u", USER.waiter[0]); await page.fill("#p", USER.waiter[1]); await page.click("[data-go]");
   await expect(page).toHaveURL(/\/servitor\/$/);
-  await expect(page.locator("h1")).toHaveText("Модулът ти идва скоро");
+  /* the waiter's app: the phone frame of stage D (src/modules/staff/frame.ts; its own checks: staff-frame.spec.ts) */
+  await expect(page.locator(".st-top h1")).toHaveText("Залата");
+  await expect(page.locator(".st-nav a")).toHaveCount(4);
   await expect(page.locator(".sa-side, .sa-bnav")).toHaveCount(0);
   /* a staff member on an admin address goes to the module */
   await page.goto("/admin/roles/");
@@ -182,12 +184,12 @@ test("„Звук“ is remembered on this device; „Звук: докоснет
 
 test("@phone 360: no horizontal scroll on the sign-in, the dashboard, a section and a module", async ({ page, context }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  const over = () => page.evaluate(() => Math.max(document.documentElement.scrollWidth - innerWidth, ...[...document.querySelectorAll(".sa-scroller, .sm-app, .lg")].map((s) => s.scrollWidth - s.clientWidth)));
+  const over = () => page.evaluate(() => Math.max(document.documentElement.scrollWidth - innerWidth, ...[...document.querySelectorAll(".sa-scroller, .sm-app, .st-app, .lg")].map((s) => s.scrollWidth - s.clientWidth)));
   await page.goto("/admin/vhod/"); await expect(page.locator("h1")).toBeVisible(); expect(await over()).toBeLessThanOrEqual(0);
   await signIn(context, "admin");
   await dashboard(page); expect(await over()).toBeLessThanOrEqual(0);
   await page.goto("/admin/settings/"); await expect(page.locator(".sa-h1")).toBeVisible(); expect(await over()).toBeLessThanOrEqual(0);
-  await page.goto("/shofyor/"); await expect(page.locator("h1")).toBeVisible(); expect(await over()).toBeLessThanOrEqual(0);
+  await page.goto("/shofyor/"); await expect(page.locator(".st-app:not([data-boot]) .st-top h1")).toHaveText("Моите доставки"); expect(await over()).toBeLessThanOrEqual(0);
   /* the sheet "Търсене и раздели" */
   await page.goto("/admin/"); await page.locator('.sa-bnav [data-sa="sections"]').click();
   await expect(page.locator(".sheetwrap.on h2")).toHaveText("Търсене и раздели");

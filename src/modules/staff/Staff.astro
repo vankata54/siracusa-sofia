@@ -1,0 +1,71 @@
+---
+/* The page of a screen of the staff apps "Сервитьор" and "Шофьор" (/servitor/..., /shofyor/...): its own head (noindex,
+   no canonical, no og, not in the sitemap), the font, the theme of this device without a flash ("st-prefs": Авто / Светла /
+   Тъмна / По часа = dark 18:00-07:00 in Sofia), tokens.css + components.css + staff.css. No chrome of the site (header,
+   footer, bottom nav, cart, assistant, cookie banner) and nothing of the admin's styles.
+   Until the session is read the page shows the waiting skeleton in the shape of the frame; src/modules/staff/frame.ts
+   (mountStaff) takes it away and draws the real frame.
+
+     <Staff module="waiter" title="Залата" nav>
+       <script>
+         import { mountStaff } from "../../modules/staff/frame.ts";
+         mountStaff({ module: "waiter", screen: "tables", tab: "tables", title: "Залата" }).then((st) => { if (!st) return; … });
+       </script>
+     </Staff>
+
+   About the hidden ".device": src/client/api.ts imports two small modules of the shared runtime chunk; loading that chunk
+   runs src/client/sc.ts, which expects the elements of Base.astro (the same as in src/layouts/Admin.astro). */
+import "../../styles/tokens.css";
+import "../../styles/components.css";
+import "../../styles/preview.css"; /* --pv-bg: the page behind the phone column on a wide screen */
+import "./staff.css";
+import "../../lib/icons-all.ts"; /* server only */
+import latinFont from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import cyrFont from "@fontsource-variable/manrope/files/manrope-cyrillic-wght-normal.woff2?url";
+
+export interface Props {
+  module: "waiter" | "driver";
+  /** the title of the screen: "<title>Залата | Siracusa · Персонал</title>" and the waiting top bar */
+  title: string;
+  /** the screen has the bottom nav (the waiting skeleton keeps its place) */
+  nav?: boolean;
+  /** data-page on <html> (default: "app-<module>") */
+  page?: string;
+}
+const p = Astro.props;
+const demo = typeof __DEMO__ !== "undefined" && __DEMO__;
+const path = Astro.url.pathname;
+const depth = path.replace(/^\/|\/?index\.html$/g, "").split("/").filter(Boolean).length;
+const root = depth ? "../".repeat(depth) : "./";
+const suffix = p.module === "driver" ? "Шофьор" : "Персонал";
+const fontCss = `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${cyrFont}) format("woff2-variations"),url(${cyrFont}) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}` +
+  `@font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(${latinFont}) format("woff2-variations"),url(${latinFont}) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}`;
+/* the theme of this device before the first paint (the same rule as applyTheme() in frame.ts) */
+const boot = `(function(){var d=document.documentElement,t="system",h;try{t=JSON.parse(localStorage.getItem("st-prefs")||"{}").theme||"system"}catch(e){}if(t==="hour"){try{h=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Sofia",hour:"2-digit",hour12:false}).format(new Date())%24}catch(e){h=new Date().getHours()}t=h>=18||h<7?"dark":"light"}if(t==="light"||t==="dark")d.dataset.theme=t})();`;
+---
+<!doctype html>
+<html lang="bg" data-root={root} data-demo={demo ? "1" : undefined} data-page={p.page || "app-" + p.module} data-staff={p.module}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{p.title} | Siracusa · {suffix}</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F2F2EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href={cyrFont} as="font" type="font/woff2" crossorigin>
+<link rel="preload" href={latinFont} as="font" type="font/woff2" crossorigin>
+<style is:inline set:html={fontCss}></style>
+<script is:inline set:html={boot}></script>
+</head>
+<body class="st">
+<a class="vh skip" href="#main">Към съдържанието</a>
+<div class="device" style="display:none" aria-hidden="true"><div data-scroller><div data-main></div></div></div><div data-ov style="display:none" aria-hidden="true"></div>
+<div class:list={["st-app", { nonav: !p.nav }]} data-boot>
+  <header class="st-top"><div class="tt"><h1>{p.title}</h1><span>&nbsp;</span></div></header>
+  <main id="main"><div class="st-skel" aria-hidden="true"><div class="skel s"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><span class="vh" role="status">Зареждаме …</span></main>
+</div>
+{p.nav && <div class="st-ov" data-boot aria-hidden="true"><div class="st-nav ph"></div></div>}
+<slot />
+</body>
+</html>
