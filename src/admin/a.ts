@@ -255,6 +255,18 @@ export function chime() {
   } catch { /* no audio */ }
 }
 function soundLabel(): [string, string] { return !soundOn() ? ["Звук изкл.", "bell"] : audioReady ? ["Звук вкл.", "bell-ringing"] : ["Звук: докоснете", "bell"]; }
+/* the same key in another frame (the module of the manager draws its own button, on "ти"): it hears every change */
+const soundSubs: (() => void)[] = [];
+/** fn runs whenever the key "Звук" may look different: on / off, or the first touch unlocked the sound */
+export function onSoundChange(fn: () => void) { soundSubs.push(fn); }
+/** has the first touch unlocked the sound of the browser (never kept between loads) */
+export const soundReady = () => audioReady;
+/** the key "Звук" was pressed: remembered on this device ("sa-sound"), two tones when it is turned on; returns the new state */
+export function toggleSound(): boolean {
+  try { localStorage.setItem("sa-sound", soundOn() ? "off" : "on"); } catch { /* ignore */ }
+  unlock(); syncSound(); if (soundOn()) chime();
+  return soundOn();
+}
 export function syncSound() {
   const l = soundLabel();
   $$('[data-sa="sound"]').forEach((b) => {
@@ -264,26 +276,38 @@ export function syncSound() {
     b.setAttribute("aria-label", l[0] + " · нови поръчки" + (soundOn() && !audioReady ? ", тръгва след първото докосване" : ""));
     b.classList.toggle("wait", soundOn() && !audioReady);
   });
+  soundSubs.forEach((f) => f());
 }
 /* the badge "Поръчки" blinks until the orders are seen (opened "Поръчки", "Виж" or a link to the orders) */
 const ALERT = "sa-order-alert";
 export function ordersSeen() { ssSet(ALERT, null); markFresh(); }
 export function markFresh() { const on = !!ssGet(ALERT); $$('[data-badge="orders"], [data-fresh="orders"]').forEach((el) => el.classList.toggle("fresh", on)); }
+/** the new online order that is not seen yet (the blinking badge), or null */
+export function freshOrder(): { no: string; at: number } | null { try { return JSON.parse(ssGet(ALERT) || "null"); } catch { return null; } }
 let watching = false;
-function watchOrders() {
+/** ONE watcher of the new online orders for the admin and for the module of the manager (BUILD-TODO, step 6): it marks the
+    order as not seen (the blinking badge; the same key in both), plays the two tones (unless `silent`: the owner has no
+    sound) and calls onNew; every other change of the orders calls onChange. Only for the roles with "Поръчки"; once a page. */
+export function watchNewOrders(h: { onNew(d: { no: string }): void; onChange?(): void; silent?: boolean }): void {
   if (watching || !can("orders")) return; watching = true;
+  const changed = () => { if (h.onChange) h.onChange(); };
   api.on("order.created", (raw) => {
     const d = (raw || {}) as { no?: string; status?: string; channel?: string };
     /* online = from the site (web, office); an order typed by the staff (waiter, phone) or from a QR table is not "new online" */
     const online = !d.channel || d.channel === "web" || d.channel === "office";
-    if (!d.no || (d.status && d.status !== "accepted") || !online) { refreshSoon(); return; }
+    if (!d.no || (d.status && d.status !== "accepted") || !online) { changed(); return; }
     ssSet(ALERT, JSON.stringify({ no: d.no, at: Date.now() }));
-    chime();
+    if (!h.silent) chime();
+    h.onNew({ no: d.no });
+  });
+  api.on("order.status", changed);
+}
+function watchOrders() {
+  watchNewOrders({ onNew: (d) => {
     toast("Нова онлайн поръчка №\u00a0" + d.no, { action: { label: "Виж", href: aurl.section("orders", "n=" + d.no) }, ms: 6000, queue: true });
     if (A.onNewOrder) A.onNewOrder({ no: d.no });
     refreshSoon();
-  });
-  api.on("order.status", refreshSoon);
+  }, onChange: refreshSoon });
 }
 function watchNotes() { api.on("note.created", refreshSoon); api.on("note.status", refreshSoon); }
 
@@ -383,19 +407,25 @@ export function bootFail(e: unknown) {
 }
 
 /* ---------- the pencil (src/admin/pencil.ts, its own author): loaded after sign-in ---------- */
-export function mountPen(module: string, slot?: HTMLElement) {
-  if (!A.me) return;
+/* the modules of the manager and the owner by the name of their folder: the notes know them as "manager" / "owner"
+   (src/core/notes.ts), and the pencil there writes recommendations only, whatever the role (decision 15.11.2026) */
+const BOSS_PEN: Record<string, string> = { upravitel: "manager", sobstvenik: "owner" };
+/** returns false when there is no pencil here (no session, or the page is inside the frame of "Модулите на живо") */
+export function mountPen(module: string, slot?: HTMLElement): boolean {
+  if (!A.me) return false;
   /* inside the frame of "Модулите на живо" the pencil of the preview points here; no second one */
-  try { if (window.frameElement && window.frameElement.closest(".pv-dev")) return; } catch { /* another origin */ }
+  try { if (window.frameElement && window.frameElement.closest(".pv-dev")) return false; } catch { /* another origin */ }
+  const boss = BOSS_PEN[module];
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
-      module, who: who(), sectionNotes: can("notes"), slot, notesHref: aurl.section("notes"),
+      module: boss || module, who: who(), sectionNotes: boss ? false : can("notes"), slot, notesHref: aurl.section("notes"),
       badge: A.summary && !isMainAdmin() ? A.summary.waiting.notes.changedN : 0,
       /* the ember bar under the top bar of the admin (BRIEF, decision 3 of the chief); the staff apps have no top bar of the admin */
-      barTop: APPS.includes(module) ? undefined : [8, 88],
+      barTop: APPS.includes(module) || boss ? undefined : [8, 88],
       onSave: async (n) => { await adminApi.createNote(n); refreshSoon(); },
     });
   }).catch(() => { /* without the pencil the page still works */ });
+  return true;
 }
 function syncPen() { const on = !!A.pen && A.pen.on(); $$('[data-sa="pen"]').forEach((b) => b.setAttribute("aria-pressed", String(on))); }
 
@@ -604,7 +634,7 @@ document.addEventListener("click", (e) => {
   if (a === "side") { prefs.side = prefs.side === "mini" ? "open" : "mini"; savePrefs(); if (A.app) A.app.dataset.side = prefs.side; refreshSide(); return; }
   if (a === "pen") { if (A.pen) { A.pen.toggle(); syncPen(); } return; }
   if (a === "soon") { e.preventDefault(); soonSheet(t.dataset.id || ""); return; }
-  if (a === "sound") { try { localStorage.setItem("sa-sound", soundOn() ? "off" : "on"); } catch { /* ignore */ } unlock(); syncSound(); if (soundOn()) chime(); toast(soundOn() ? "Звукът за нови поръчки е включен" : "Звукът за нови поръчки е изключен"); return; }
+  if (a === "sound") { toast(toggleSound() ? "Звукът за нови поръчки е включен" : "Звукът за нови поръчки е изключен"); return; }
   if (a === "retry") { location.reload(); return; }
 });
 window.addEventListener("resize", () => toastUp());

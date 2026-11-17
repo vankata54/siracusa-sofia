@@ -72,12 +72,17 @@ export const MODULES: Mod[] = [
   { id: "watch", n: "Часовник", ic: "clock", what: "Повикване и готово ястие на китката на сервитьора.", who: "Сервитьорите", dev: "phone", sec: "waiter", screens: ["watch"] },
   { id: "kitchen", n: "Кухня", ic: "chef-hat", what: "Опашката на всяка секция, изчерпано днес, натоварено.", who: "Готвачите", dev: "tablet", sec: "kitchen", screens: ["login", "queue", "item-out", "busy", "done", "summary"] },
   { id: "driver", n: "Шофьор", ic: "moped", what: "Доставките, маршрут, гориво, край на смяната.", who: "Шофьорите", dev: "phone", sec: "driver", screens: ["login", "list", "delivery", "route", "fuel", "shift"] },
-  { id: "manager", n: "Управител", ic: "briefcase", soon: true, what: "Смяната на живо: зала, кухня, доставки, закъснения и известия към управителя.", who: "Управителя", roles: ["owner", "manager"], screens: [] },
-  { id: "owner", n: "Собственик", ic: "chart-bar", soon: true, what: "Оборот и отчети, финанси и гориво, сравнение на периоди.", who: "Собственика", roles: ["owner"], screens: [] },
+  { id: "manager", n: "Управител", ic: "briefcase", what: "Смяната на живо: какво става сега, залата, екипът, какво чака управителя.", who: "Управителя и собственика", dev: "phone", roles: ["owner", "manager"], screens: ["now", "hall", "team", "more"] },
+  { id: "owner", n: "Собственик", ic: "chart-bar", what: "Оборот днес, тенденции, финанси и гориво, решения.", who: "Собственика", dev: "phone", roles: ["owner"], screens: ["today", "trends", "finance", "decisions"] },
   { id: "admin", n: "Админ", ic: "shield-check", what: "Този панел: разделите, ролите и правата, моливът за бележки.", who: "Агенцията, собственика, управителя", dev: "desktop", roles: ["owner", "manager", "marketing"],
     screens: ["dashboard", "notes", "roles", "login", "menu", "lunch", "zones", "offers", "events", "orders", "reservations", "hall", "qr", "customers", "reports", "staff", "audit", "settings"] },
 ];
-
+/** the screens of the modules of the manager and the owner (stage D, step 6): key, name, logical address. The dashboard
+    opens the first one; "Модулите на живо" shows them when src/admin/preview.ts learns them (a request to the chief). */
+export const MOD_SCREENS: Record<string, [string, string, string][]> = {
+  manager: [["now", "Сега", "/upravitel/"], ["hall", "Залата", "/upravitel/zalata/"], ["team", "Екипът", "/upravitel/ekipat/"], ["more", "Още", "/upravitel/oshte/"]],
+  owner: [["today", "Днес", "/sobstvenik/"], ["trends", "Тенденции", "/sobstvenik/tendentsii/"], ["finance", "Финанси и гориво", "/sobstvenik/finansi/"], ["decisions", "Решения", "/sobstvenik/reshenia/"]],
+};
 
 /* The admin addresses that still show "Скоро" (src/admin/soon.ts) in stage C, part 1: every section key of SECTIONS that
    has a screen in the admin prototype, and the live preview. Without a page: "dashboard" (/admin/), "site" (the dashboard

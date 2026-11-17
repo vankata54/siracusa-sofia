@@ -1,0 +1,863 @@
+/* Siracusa · „Управител“ и „Собственик“: ЕДНА рамка за двата модула (src/modules/boss/frame.ts) и класовете за съдържанието.
+   От design/pages-upravitel/_mgr.css и design/pages-sobstvenik/_own.css (одобрените прототипи). Само токените от
+   src/styles/tokens.css; тъмната тема идва от тях. Ширините са с @container app (никога @media за ширина).
+
+   1. РАМКАТА (bs-): пише я frame.ts, екраните не я пипат.
+      .bs-app (колоната със съдържанието, контейнер app) · .bs-top (горна лента) · .bs-net (без връзка) · .bs-main (<main>) ·
+      .bs-ov (неподвижният слой, също контейнер app: .bs-rail, .bs-nav, .bs-penslot, .bs-sheetwrap, .bs-toast, .bs-find).
+      Двата модула се различават само по няколко числа от прототипите си ([data-mod="sobstvenik"]).
+   2. СЪДЪРЖАНИЕТО НА „УПРАВИТЕЛ“ (mg-), 1:1 от прототипа: .mg-blk .mg-h .mg-cnt(.hot) .mg-card(.pad) .mg-list .mg-link
+      .mg-note .mg-grid(.c3, > .all) .mg-tag(.red .ember .warn .ok .line) .mg-dot .mg-day .mg-pulse .mg-kpi(.wide .hot)
+      .mg-occ .mg-occl .now-grid .mg-probs .mg-prob(.hot .warn .ember .solved .gone) .mg-allok .mg-wrow .mg-wgrp .mg-busy
+      .mg-secs .mg-sec .mg-offtag .mg-out .mg-orow .mg-switch .mg-seg .mg-tiles .mg-tile(.free .busy .res .wait .qr .ready
+      .call .bill) .mg-legend .mg-zone .mg-rrow .mg-acts .mg-person .mg-ph .mg-stats .mg-stat .mg-chips .mg-tno .mg-stops
+      .mg-cash .mg-err .mg-kv .mg-scheme (.sv-*) .mg-hero .mg-tiles2 .mg-sect .mg-themes .mg-setrow .mg-skel .mg-banner
+      .mg-empty .mg-sample .mg-demo .mg-foot3 .mg-cmp .mg-pick .mg-tsel · търсачката: .mg-fres .mg-fscope .mg-fchips
+      .mg-fgrp .mg-fband .mg-frow .mg-fmore .mg-fempty .mg-fwait · .tnum .nw
+   3. СЪДЪРЖАНИЕТО НА „СОБСТВЕНИК“ (ow-), 1:1 от прототипа: .ow-grid(> .w2 .wall) .ow-sh .ow-card .ow-shell .ow-lead
+      .ow-muted .ow-note .ow-row .ow-num .ow-tag(.soon .ok .warn) .ow-d(.up .down .flat .dchip .wrap) .ow-banner .ow-empty
+      .ow-skel .ow-noperm .ow-switch .ow-li .ow-per .ow-cust .ow-meta .ow-kpis .ow-kpi .ow-plot .ow-tip .ow-lgd .ow-hb
+      .ow-top10 .ow-heat .ow-scale .ow-segbar .ow-big .ow-tbtn .ow-tablewrap .ow-table .ow-mas · търсачката: .ow-fscope
+      .ow-fchips .ow-fg .ow-fr .ow-fband .ow-fmore .ow-fnone
+   Листът, известието, търсачката и профилът са общи (bs-) и за двата модула. */
+
+/* ================= РАМКАТА ================= */
+/* admin.css (обвивката Admin.astro) спира скрола на документа; модулите скролват документа (CODE-GUIDE, раздел 4) */
+html[data-page^="boss"], html[data-page^="boss"] body{height:auto; min-height:100%; overflow:visible}
+html[data-page^="boss"]{scroll-padding-top:104px; scroll-padding-bottom:112px}
+html[data-page^="boss"].bs-lock{overflow:hidden}
+
+.bs-app, .bs-ov{--bs-top:72px}
+.bs-app[data-mod="sobstvenik"], .bs-ov[data-mod="sobstvenik"]{--bs-top:76px}
+.bs-app{position:relative; z-index:0; min-height:100dvh; background:var(--bg); color:var(--ink); container-type:inline-size; container-name:app; overflow-x:clip}
+.bs-col{min-width:0}
+.bs-main{max-width:1240px; margin:0 auto; padding:4px 16px 0}
+.bs-main:focus{outline:none}
+.bs-app[data-mod="sobstvenik"] .bs-main{padding-top:16px}
+/* място под съдържанието: долната лента (72 + 10) и отстояние, за да се скролне и последният елемент над нея */
+.bs-end{height:calc(112px + env(safe-area-inset-bottom))}
+
+/* ---------- горна лента (телефон): заглавие + „Управител · Siracusa“; вдясно Търси, Звук, профил ---------- */
+.bs-top{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:4px; min-height:var(--bs-top); padding:8px 8px 8px 16px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:0 1px 0 var(--glass-line)}
+.bs-app[data-mod="sobstvenik"] .bs-top{padding:10px 10px 10px 18px; gap:8px}
+.bs-tt{flex:1; min-width:0; display:grid; line-height:1.1}
+.bs-tt h1{margin:0; font-size:26px; font-weight:800; letter-spacing:-.035em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bs-tt span{font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px}
+/* „Финанси и гориво“ не се реже на 360: до два реда */
+.bs-app[data-mod="sobstvenik"] .bs-tt h1{line-height:1.2; white-space:normal; overflow-wrap:anywhere; text-overflow:clip; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2}
+.bs-app[data-mod="sobstvenik"] .bs-tt span{line-height:1.3; margin-top:0}
+.bs-tb{position:relative; display:grid; justify-items:center; align-content:center; gap:4px; min-width:56px; height:56px; padding:0 6px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:14px; line-height:1; cursor:pointer; flex:none; white-space:nowrap; text-decoration:none; -webkit-tap-highlight-color:transparent}
+.bs-app[data-mod="sobstvenik"] .bs-tb{font-weight:700; gap:2px}
+.bs-tb:hover{background:var(--surface-2)}
+.bs-tb:active{transform:scale(.95)}
+.bs-tb .ic{width:24px; height:24px; color:var(--ink)}
+.bs-tb .lg{display:none}
+.bs-snd[aria-pressed="false"] .ic{color:var(--muted)}
+.bs-snd.wait{background:var(--ember-soft)}
+.bs-snd.wait .ic{color:var(--ink)}
+.bs-toadmin{display:none}
+.bs-dsearch{display:none}
+.bs-me{flex:none; display:inline-flex; align-items:center; gap:10px; min-height:48px; margin-left:4px; padding:0; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; cursor:pointer}
+.bs-av{width:48px; height:48px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-weight:800; font-size:19px; flex:none}
+.bs-me .who{display:none}
+.bs-me:active{transform:scale(.95)}
+
+/* без връзка: лента под горната лента */
+.bs-net{position:sticky; top:var(--bs-top); z-index:29; display:flex; align-items:center; gap:10px; min-height:56px; padding:6px 8px 6px 16px; background:var(--ember); color:var(--on-ember); font-weight:700; font-size:15px; line-height:1.3}
+.bs-net[hidden]{display:none}
+.bs-net .ic{flex:none}
+.bs-net span{flex:1; min-width:0}
+.bs-net button{flex:none; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font:inherit; font-weight:800; font-size:15px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px}
+
+/* ---------- неподвижният слой: лентите, моливът, листовете, известието, търсачката ----------
+   Отделен от колоната, за да стоят лентите върху екрана и там, където контейнерът става рамка за position:fixed.
+   Той също е контейнер „app“: правилата @container важат и за лентите. */
+.bs-ov{position:fixed; inset:0; z-index:40; pointer-events:none; container-type:inline-size; container-name:app}
+.bs-ov > *{pointer-events:auto}
+
+/* ---------- долна лента (телефон) ---------- */
+/* плътен фон (не стъкло): думите на разделите са с контраст AA, каквото и да минава отдолу при скрол */
+.bs-nav{position:absolute; z-index:40; left:8px; right:72px; bottom:calc(10px + env(safe-area-inset-bottom)); height:72px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding:0 4px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.bs-nav a, .bs-rail a.it{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:56px; border-radius:999px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; line-height:1.1; text-align:center; white-space:nowrap; -webkit-tap-highlight-color:transparent}
+.bs-nav a .ic, .bs-rail a.it .ic{width:26px; height:26px}
+.bs-ov[data-mod="sobstvenik"] .bs-nav a .ic, .bs-ov[data-mod="sobstvenik"] .bs-rail a.it .ic{width:24px; height:24px}
+.bs-nav a[aria-current="page"], .bs-rail a.it[aria-current="page"]{color:var(--ink)}
+.bs-nav a[aria-current="page"] .ic, .bs-rail a.it[aria-current="page"] .ic{color:var(--red)}
+.bs-n{position:absolute; top:3px; left:calc(50% + 6px); min-width:24px; height:24px; padding:0 6px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800; line-height:24px; text-align:center; font-variant-numeric:tabular-nums}
+.bs-n[hidden]{display:none}
+/* нова онлайн поръчка: значката мига спокойно, докато поръчката не е видяна */
+.bs-n.fresh{background:var(--ember); color:var(--on-ember); animation:bsblink 1.6s var(--ease-std) infinite}
+@keyframes bsblink{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+/* „намалено движение“: без мигане, значката е в жар с думата „Нова“, в средата над иконата (не опира в съседния раздел) */
+@media (prefers-reduced-motion: reduce){ .bs-n.fresh{animation:none; left:50%; top:-10px; transform:translateX(-50%); padding:0 8px; white-space:nowrap} .bs-n.fresh::after{content:" Нова"} }
+/* без връзка: значките са сиви (числата може да са стари); --muted вместо --off на прототипа: числото е с контраст AA */
+.bs-ov.stale .bs-n{background:var(--muted); color:var(--bg); animation:none}
+/* без молив (в рамката на „Модулите на живо“): лентата е на цялата ширина */
+.bs-ov.nopen .bs-nav{right:8px}
+/* „Собственик“: до молива думите са с естествената си ширина („Тенденции“ не се свива), разстоянията са равни */
+.bs-ov[data-mod="sobstvenik"]:not(.nopen) .bs-nav{grid-template-columns:repeat(4,auto); justify-content:space-evenly; padding:0}
+.bs-ov[data-mod="sobstvenik"]:not(.nopen) .bs-nav a{min-width:48px; padding:0 2px}
+@container app (max-width:380px){
+  .bs-ov[data-mod="sobstvenik"]:not(.nopen) .bs-nav{display:flex; justify-content:space-between; padding:0 8px 0 2px}
+  .bs-ov[data-mod="sobstvenik"]:not(.nopen) .bs-nav a{min-width:0; padding:0; letter-spacing:-.01em}
+  .bs-ov[data-mod="sobstvenik"]:not(.nopen) .bs-nav a:first-child{min-width:48px}
+}
+
+/* ---------- моливът (src/admin/pencil.ts, slot): на телефон кръг 56 px на реда на долната лента, вдясно от нея
+   (лентата е по-къса с 56 + 8 px, центровете съвпадат); от 900 px най-долу в лявата лента. Никога над съдържанието.
+   Скрит само докато е отворен лист или търсачката. ---------- */
+.bs-penslot{position:absolute; z-index:41; right:8px; bottom:calc(18px + env(safe-area-inset-bottom)); width:56px; height:56px}
+.bs-penslot:empty{display:none}
+.bs-penslot .sa-pen-btn{position:relative; width:56px; height:56px; min-width:56px; min-height:56px; padding:0; border-radius:50%; justify-content:center; gap:0; background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:15px}
+.bs-penslot .sa-pen-btn > span:not(.sa-pen-n){position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+/* значката на молива (препоръки с нов статус) е вътре в кръга, не до ръба на екрана */
+.bs-penslot .sa-pen-btn .sa-pen-n{top:-4px; right:0}
+html.bs-hidepen .bs-penslot{visibility:hidden}
+
+/* ---------- лява лента (компютър) ---------- */
+.bs-rail{display:none}
+
+/* ---------- листове (отдолу на телефон, вдясно на компютър) ---------- */
+.bs-ov > .bs-sheetwrap{position:absolute; inset:0; z-index:80; pointer-events:none}
+.bs-sheetwrap .scrim{position:absolute; inset:0; width:100%; height:100%; border:0; padding:0; background:var(--scrim); opacity:0; transition:opacity var(--t-slow) var(--ease); cursor:pointer}
+.bs-sheet{position:absolute; left:50%; bottom:6px; width:min(calc(100% - 12px), 520px); max-height:88dvh; display:flex; flex-direction:column; background:var(--surface); color:var(--ink); border-radius:34px; padding:10px 18px 18px; transform:translate(-50%,110%); transition:transform var(--t-slow) var(--ease); box-shadow:var(--shadow-lg)}
+.bs-ov > .bs-sheetwrap.on{pointer-events:auto}
+.bs-sheetwrap.on .scrim{opacity:1}
+.bs-sheetwrap.on .bs-sheet{transform:translate(-50%,0)}
+.bs-sheet .handle{width:42px; height:5px; border-radius:3px; background:var(--line-strong); margin:4px auto 10px; flex:none}
+.bs-sheet .sh{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; flex:none}
+.bs-sheet .sh h2{margin:0; font-size:24px; font-weight:800; letter-spacing:-.03em; line-height:1.2; min-width:0; flex:1}
+.bs-sheet .sh h2:focus{outline:none}
+.bs-x{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:800; font-size:15px; cursor:pointer; flex:none}
+.bs-sheet .body{overflow-y:auto; overscroll-behavior:contain; flex:1; min-height:0; padding-bottom:4px}
+.bs-sheet .sfoot{flex:none; display:flex; flex-wrap:wrap; gap:8px; padding-top:14px}
+.bs-sheet .sfoot .pill{flex:1 1 auto; min-height:56px; font-size:17px}
+.bs-sheet p{margin:0 0 12px}
+.bs-sheet h3{margin:16px 0 6px; font-size:16px; font-weight:800}
+/* профилът: името и ролята, списък с връзки (къде води всяка), тема */
+.bs-prof{display:flex; align-items:center; gap:12px; margin:4px 0 14px}
+.bs-prof b{display:block; font-size:19px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
+.bs-prof small{display:block; font-size:14px; font-weight:700; color:var(--muted)}
+.bs-setlist{display:grid; border-radius:26px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); overflow:hidden}
+.bs-setlist > * + *{border-top:1px solid var(--line)}
+
+/* ---------- известие (едно наведнъж, с „Отмени“), горе под лентата: не е под пръста ---------- */
+.bs-ov > .bs-toast{position:absolute; left:50%; top:calc(var(--bs-top) + 8px); z-index:95; transform:translate(-50%,-160%); opacity:0; pointer-events:none; display:flex; align-items:center; gap:10px; min-height:56px; width:max-content; max-width:min(560px, calc(100% - 24px)); padding:4px 6px 4px 20px; border-radius:30px; background:var(--ink); color:var(--bg); font-weight:700; line-height:1.3; box-shadow:var(--shadow-lg); transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+.bs-ov > .bs-toast.on{transform:translate(-50%,0); opacity:1; pointer-events:auto}
+.bs-toast .tx{padding:10px 0; min-width:0}
+.bs-toast .acts{display:flex; gap:6px; flex:none}
+.bs-toast button, .bs-toast a{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--red); color:var(--on-red); font:inherit; font-weight:800; font-size:16px; cursor:pointer; white-space:nowrap; text-decoration:none}
+.bs-toast .sec{background:transparent; color:var(--bg); box-shadow:inset 0 0 0 1.5px currentColor}
+.bs-toast.solo{padding-right:20px}
+
+/* ---------- търсачката: цял екран на телефон, панел под полето на компютър ---------- */
+.bs-ov > .bs-find{position:absolute; inset:0; z-index:85; display:flex; justify-content:center; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity var(--t-base) var(--ease)}
+.bs-ov > .bs-find.on{opacity:1; pointer-events:auto}
+.bs-find .fwin{position:relative; width:100%; height:100%; display:flex; flex-direction:column; background:var(--bg); transform:translateY(-12px); transition:transform var(--t-slow) var(--ease)}
+.bs-find.on .fwin{transform:none}
+.bs-find .fhead{flex:none; display:flex; align-items:center; gap:6px; padding:8px 8px 10px 12px; box-shadow:0 1px 0 var(--line)}
+.bs-q{position:relative; flex:1; min-width:0}
+.bs-q > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.bs-q .input{min-height:56px; padding-left:50px; padding-right:56px; border-radius:999px; font-size:17px; background:var(--surface); -webkit-appearance:none; appearance:none}
+/* само един бутон за изчистване (нашият) */
+.bs-q .input::-webkit-search-cancel-button{-webkit-appearance:none; appearance:none; display:none}
+.bs-q .clr{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:48px; height:48px; border:0; border-radius:50%; background:var(--surface-2); color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.bs-q .clr[hidden]{display:none}
+.bs-q .k[hidden]{display:none}
+.bs-find .fx{display:grid; justify-items:center; align-content:center; gap:4px; min-width:56px; min-height:56px; padding:0 8px; border:0; border-radius:16px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:14px; line-height:1; cursor:pointer}
+.bs-find .fbody{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:4px 16px 40px}
+
+/* ================= СЪДЪРЖАНИЕ: Управител (класове mg-, 1:1 от design/pages-upravitel/_mgr.css) ================= */
+.tnum{font-variant-numeric:tabular-nums}
+/* ---------- блокове и карти ---------- */
+.mg-blk{margin-top:28px; min-width:0}
+.mg-blk:first-child{margin-top:12px}
+.mg-h{display:flex; align-items:center; gap:10px; min-height:48px; margin:0 0 12px}
+.mg-h h2{margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em; line-height:1.15}
+/* броячът до заглавието: свой клас (не .cnt от sc.css, който е значка с position:absolute) */
+.mg-cnt{position:static; min-width:32px; height:32px; padding:0 10px; border-radius:16px; display:inline-grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:16px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums}
+.mg-cnt.hot{background:var(--red); color:var(--on-red); box-shadow:none}
+.mg-h .more{margin-left:auto}
+.mg-h p{margin:0; font-size:14px; color:var(--muted); font-weight:600}
+.mg-card{border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.mg-card.pad{padding:18px}
+.mg-list{display:grid}
+.mg-list > * + *{border-top:1px solid var(--line)}
+.mg-link{display:inline-flex; align-items:center; gap:4px; min-height:48px; padding:0 4px; border:0; background:transparent; color:var(--red); font:inherit; font-weight:800; font-size:16px; text-decoration:none; cursor:pointer; white-space:nowrap}
+.mg-link .ic{width:18px; height:18px}
+.mg-note{display:flex; gap:8px; align-items:flex-start; margin:10px 2px 0; font-size:14px; color:var(--muted); font-weight:600; line-height:1.4}
+.mg-note .ic{flex:none; margin-top:1px}
+.mg-grid{display:grid; gap:0 20px; align-items:start}
+.mg-grid > .mg-blk:first-child{margin-top:12px}
+
+/* етикет със статус: икона + дума (цветът никога сам) */
+.mg-tag{display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 12px 0 9px; border-radius:999px; background:var(--surface-2); color:var(--ink); font-size:14px; font-weight:800; line-height:1.15; white-space:nowrap}
+.mg-tag.red{background:var(--red); color:var(--on-red)}
+.mg-tag.ember{background:var(--ember); color:var(--on-ember)}
+.mg-tag.warn{background:transparent; box-shadow:inset 0 0 0 1.5px var(--warn)}
+.mg-tag.warn .ic{color:var(--warn)}
+.mg-tag.ok{background:transparent; box-shadow:inset 0 0 0 1.5px var(--ok)}
+.mg-tag.ok .ic{color:var(--ok)}
+.mg-tag.line{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted)}
+.mg-dot{width:10px; height:10px; border-radius:50%; flex:none; background:var(--ok); display:inline-block}
+.mg-dot.off{background:var(--warn)}
+
+/* ---------- ден и статус ---------- */
+.mg-day{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:14px 2px 0; font-size:15px; font-weight:700; color:var(--muted)}
+.mg-day b{color:var(--ink); font-weight:800}
+.mg-day .st{display:inline-flex; align-items:center; gap:8px}
+.mg-day .st .mg-dot.warn{background:var(--warn)}
+.mg-day .st .mg-dot.closed{background:var(--off)}
+
+/* ---------- пулсът на смяната (числата водят към мястото си) ---------- */
+.mg-pulse{margin-top:14px; padding:6px; border-radius:30px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+.mg-pulse .in{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.mg-kpi{position:relative; display:grid; align-content:start; gap:2px; min-height:116px; padding:14px 14px 12px 16px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); text-decoration:none; transition:transform var(--t-fast) var(--ease); min-width:0}
+.mg-kpi:active{transform:scale(.98)}
+.mg-kpi .lb{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:800; color:var(--muted); line-height:1.2}
+.mg-kpi .lb .ic{color:var(--ink); flex:none}
+.mg-kpi .v{font-size:40px; font-weight:800; letter-spacing:-.05em; line-height:1.05; font-variant-numeric:tabular-nums; margin-top:4px}
+.mg-kpi .v small{font-size:18px; letter-spacing:-.02em; color:var(--muted); font-weight:800; margin-left:4px}
+.mg-kpi .ft{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.mg-kpi .go{position:absolute; right:12px; top:14px; color:var(--muted)}
+.mg-kpi.wide{grid-column:1/-1; grid-template-columns:minmax(0,1fr) auto; align-items:center; min-height:0}
+.mg-kpi.wide .v{grid-row:2}
+.mg-kpi.wide .bar{grid-column:1/-1}
+.mg-kpi.hot{background:var(--red); color:var(--on-red)}
+.mg-kpi.hot .lb,.mg-kpi.hot .ft,.mg-kpi.hot .go,.mg-kpi.hot .lb .ic{color:var(--on-red)}
+.mg-occ{display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--surface-3); margin-top:10px}
+.mg-occ i{display:block; height:100%; background:var(--ink)}
+.mg-occ i + i{background:var(--muted); border-left:2px solid var(--surface)}
+.mg-occl{display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; font-size:14px; font-weight:700; color:var(--muted)}
+.mg-occl span{display:inline-flex; align-items:center; gap:6px}
+.mg-occl i{width:10px; height:10px; border-radius:3px; background:var(--ink)}
+.mg-occl span + span i{background:var(--muted)}
+
+/* ---------- „Сега“: подредбата (телефон: проблемите над пулса, ако има; компютър: пулсът горе, после колоните) ---------- */
+.now-grid{display:grid; grid-template-columns:minmax(0,1fr); column-gap:20px; align-items:start}
+.now-day{order:0} .now-pulse{order:2} .now-probs{order:3} .now-wait{order:4} .now-kit{order:5}
+.now-grid.has-probs .now-probs{order:1}
+.now-grid.has-probs .now-probs{margin-top:12px}
+.now-grid.has-probs .now-pulse .mg-pulse{margin-top:28px}
+/* ---------- „Проблеми сега“ ---------- */
+.mg-probs{display:grid; gap:12px}
+.mg-prob{position:relative; display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:4px 12px; align-items:center; padding:14px 14px 14px 14px; border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.mg-prob .pi{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); grid-row:1/3; align-self:start}
+.mg-prob .pt{min-width:0}
+.mg-prob .pt b{display:block; font-size:18px; font-weight:800; letter-spacing:-.02em; line-height:1.25}
+.mg-prob .pt small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:2px}
+.mg-prob .tm{display:grid; justify-items:end; align-self:start; line-height:1}
+.mg-prob .tm b{font-size:26px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.mg-prob .tm span{font-size:14px; font-weight:700; color:var(--muted); margin-top:4px; white-space:nowrap}
+.mg-prob .pa{grid-column:2/-1; display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.mg-prob .pa .pill{min-height:52px; font-size:16px; padding:0 18px}
+.mg-prob .pa .pill.grow{flex:1 1 auto}
+.mg-prob.hot{box-shadow:inset 0 0 0 2.5px var(--red), var(--shadow)}
+.mg-prob.hot .pi{background:var(--red); color:var(--on-red)}
+.mg-prob.hot .tm b{color:var(--red)}
+.mg-prob.warn{box-shadow:inset 0 0 0 2.5px var(--warn), var(--shadow)}
+.mg-prob.warn .pi{background:transparent; color:var(--warn); box-shadow:inset 0 0 0 2px var(--warn)}
+.mg-prob.warn .tm b{color:var(--warn)}
+.mg-prob.ember .pi{background:var(--ember); color:var(--on-ember)}
+.mg-prob .rank{position:absolute; top:-9px; left:18px; display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 10px; border-radius:12px; background:var(--red); color:var(--on-red); font-size:14px; font-weight:800}
+.mg-prob.gone{opacity:0; transform:scale(.98); transition:opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease)}
+.mg-allok{display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:26px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.mg-allok .ic{color:var(--ok); flex:none}
+.mg-allok b{display:block; font-size:18px; font-weight:800; letter-spacing:-.02em}
+.mg-allok span{display:block; font-size:15px; color:var(--muted); font-weight:600}
+
+/* ---------- „Чака те“: редове с действие на място ---------- */
+.mg-wrow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:4px 12px; align-items:center; min-height:76px; padding:12px 14px 12px 14px}
+.mg-wrow .wi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--ink); flex:none; font-weight:800; font-size:17px; font-variant-numeric:tabular-nums}
+.mg-wrow .wt{min-width:0}
+.mg-wrow .wt b{display:block; font-size:17px; font-weight:800; line-height:1.25; letter-spacing:-.01em}
+.mg-wrow .wt small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:2px}
+.mg-wrow .wa{display:flex; gap:6px; align-items:center}
+.mg-wrow .wa .pill{min-height:52px; padding:0 18px}
+.mg-wrow.flash{animation:mgflash 1.8s var(--ease-std) 2}
+@keyframes mgflash{0%,100%{background:transparent}40%{background:var(--ember-soft)}}
+.mg-wgrp{padding:14px 16px 0; font-size:14px; font-weight:800; color:var(--muted); letter-spacing:.01em; display:flex; align-items:center; gap:8px; border-top:0 !important}
+.mg-wgrp + .mg-wrow{border-top:0 !important}
+.mg-wgrp ~ .mg-wgrp{border-top:1px solid var(--line) !important; margin-top:4px; padding-top:16px}
+
+/* ---------- кухнята ---------- */
+.mg-busy{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:center; padding:16px 14px 16px 18px; border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.mg-busy b{display:flex; align-items:center; gap:10px; font-size:20px; font-weight:800; letter-spacing:-.02em}
+.mg-busy .sub{grid-column:1/-1; font-size:15px; font-weight:600; color:var(--muted); line-height:1.4}
+.mg-busy .sub q{quotes:"„" "“"; color:var(--ink); font-weight:800}
+.mg-busy.on{background:var(--ember); color:var(--on-ember)}
+.mg-busy.on .sub,.mg-busy.on .sub q{color:var(--on-ember)}
+.mg-busy.on .mg-switch input:checked + .tr{background:var(--ink)}
+.mg-secs{margin-top:12px}
+.mg-sec{display:grid; grid-template-columns:40px minmax(0,1fr) auto; gap:2px 12px; align-items:center; min-height:72px; padding:10px 16px 10px 14px}
+.mg-sec .si{width:40px; height:40px; border-radius:12px; background:var(--surface-2); display:grid; place-items:center}
+.mg-sec .sn b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.mg-sec .sn small{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted); margin-top:2px}
+.mg-sec .sn small.off{color:var(--ink)}
+.mg-sec .mg-offtag{grid-column:2/-1; justify-self:start}
+.mg-offtag{display:inline-flex; align-items:center; gap:6px; min-height:32px; margin-top:2px; padding:0 12px 0 9px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:16px; font-weight:800; white-space:nowrap}
+.mg-wout{display:flex; margin-top:6px}
+.mg-busy.off{opacity:.7}
+.mg-more{width:100%; margin-top:12px}
+.mg-prob.solved{background:var(--surface-2); box-shadow:none}
+.mg-prob.solved .pi{background:var(--surface); color:var(--ok)}
+.mg-prob.solved .pt b{color:var(--muted)}
+.mg-demo{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px; padding:6px 6px 6px 16px; border-radius:24px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); font-weight:600}
+.mg-demo span{flex:1 1 200px}
+.mg-demo .pill{min-height:48px}
+.mg-demowrap:empty{display:none}
+.nw{white-space:nowrap}
+.mg-sec .sc{display:grid; justify-items:end; gap:4px; text-align:right}
+.mg-sec .sc span{display:inline-flex; align-items:baseline; gap:5px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
+.mg-sec .sc b{font-size:22px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; letter-spacing:-.03em; line-height:1}
+.mg-sec .sc .late{min-height:28px; padding:0 10px; border-radius:999px; background:var(--red); color:var(--on-red); align-items:center}
+.mg-sec .sc .late b{color:var(--on-red); font-size:16px}
+.mg-out{margin-top:12px}
+.mg-orow{display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:72px; padding:10px 14px}
+.mg-orow .pic{width:48px; height:48px; border-radius:14px}
+.mg-orow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.mg-orow small{display:block; font-size:14px; font-weight:600; color:var(--muted)}
+.mg-orow .pill{min-height:48px; padding:0 16px}
+
+/* превключвател 48 px (като .sa-switch в админа) */
+.mg-switch{position:relative; display:inline-grid; place-items:center; width:68px; height:52px; flex:none; cursor:pointer}
+.mg-switch input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
+.mg-switch .tr{width:56px; height:34px; border-radius:17px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line-strong); position:relative; transition:background-color var(--t-base) var(--ease)}
+.mg-switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:28px; height:28px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.mg-switch input:checked + .tr{background:var(--ok)}
+.mg-switch input:checked + .tr::after{transform:translateX(22px)}
+.mg-switch input:focus-visible + .tr{outline:3px solid var(--red); outline-offset:2px}
+/* ---------- залата: плочки на масите ---------- */
+.mg-seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2)}
+.mg-seg button{min-height:52px; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; padding:0 10px}
+.mg-seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:var(--shadow)}
+.mg-seg .n{font-variant-numeric:tabular-nums; opacity:.7; font-weight:700}
+.mg-tiles{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+.mg-tile{position:relative; display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto auto; gap:6px 10px; align-items:start; min-height:124px; padding:12px 12px 12px 14px; border:0; border-radius:24px; background:var(--surface); color:var(--ink); text-align:left; font:inherit; cursor:pointer; box-shadow:var(--hi), var(--shadow); transition:transform var(--t-fast) var(--ease); min-width:0}
+.mg-tile:active{transform:scale(.97)}
+.mg-tile .no{font-size:36px; font-weight:800; letter-spacing:-.05em; line-height:.95; font-variant-numeric:tabular-nums}
+.mg-tile .tm{justify-self:end; font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.2; text-align:right; white-space:nowrap}
+.mg-tile .tm small{display:block; font-size:14px; font-weight:700; opacity:.75}
+.mg-tile .w{grid-column:1/-1; display:flex; align-items:center; gap:6px; font-size:15px; font-weight:800; line-height:1.2}
+.mg-tile .who{grid-column:1/-1; display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; opacity:.8; line-height:1.2; min-width:0}
+.mg-tile .who span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mg-tile.free{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.mg-tile.free .w{color:var(--ok)}
+.mg-tile.busy{background:var(--surface-2); box-shadow:none}
+.mg-tile.res{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.mg-tile.wait{box-shadow:inset 0 0 0 2.5px var(--warn)}
+.mg-tile.wait .w{color:var(--warn)}
+.mg-tile.qr{box-shadow:inset 0 0 0 2.5px var(--red)}
+.mg-tile.qr .w{color:var(--red)}
+.mg-tile.ready{background:var(--ember); color:var(--on-ember); box-shadow:none}
+.mg-tile.call,.mg-tile.bill{background:var(--red); color:var(--on-red); box-shadow:none}
+.mg-tile.call .who,.mg-tile.bill .who,.mg-tile.call .tm small,.mg-tile.bill .tm small,.mg-tile.ready .who,.mg-tile.ready .tm small{opacity:1}
+.mg-tile .lock{position:absolute; right:12px; bottom:12px; opacity:.75}
+.mg-legend{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
+.mg-zone + .mg-zone{margin-top:24px}
+.mg-zone h3{margin:0 0 10px; font-size:18px; font-weight:800; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
+.mg-zone h3 .muted{font-size:14px; font-weight:700}
+
+/* резервации до края на вечерта */
+.mg-rrow{display:grid; grid-template-columns:64px minmax(0,1fr) auto; gap:4px 12px; align-items:center; min-height:76px; padding:12px 14px}
+.mg-rrow .rt{font-size:22px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.mg-rrow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.mg-rrow small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35}
+.mg-rrow .pill{min-height:48px; padding:0 16px}
+.mg-acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+.mg-acts .pill{flex:1 1 auto}
+/* ---------- екипът ---------- */
+.mg-person{padding:16px 16px 16px 18px}
+.mg-person + .mg-person{margin-top:12px}
+.mg-ph{display:flex; align-items:center; gap:12px}
+.mg-ph .av{width:48px; height:48px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; flex:none; color:var(--ink)}
+.mg-ph b{display:block; font-size:19px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
+.mg-ph small{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted)}
+.mg-ph .mg-tag{margin-left:auto}
+.mg-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:14px}
+.mg-stat{padding:10px 12px; border-radius:18px; background:var(--surface-2); min-width:0}
+.mg-stat span{display:block; font-size:14px; font-weight:700; color:var(--muted); line-height:1.2}
+.mg-stat b{display:block; font-size:24px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1.15; margin-top:2px}
+.mg-stat.hot{background:var(--red); color:var(--on-red)}
+.mg-stat.hot span{color:var(--on-red)}
+.mg-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.mg-tno{display:inline-grid; place-items:center; min-width:40px; height:36px; padding:0 8px; border-radius:12px; background:var(--surface-2); font-weight:800; font-size:16px; font-variant-numeric:tabular-nums}
+.mg-tno.call{background:var(--red); color:var(--on-red)}
+.mg-tno.busy{background:var(--ink); color:var(--bg)}
+.mg-person .pill.change{margin-top:14px; width:100%}
+.mg-stops{margin:12px 0 0; padding:0; list-style:none; display:grid; gap:0}
+.mg-stops li{display:grid; grid-template-columns:32px minmax(0,1fr) auto; gap:10px; align-items:center; min-height:56px; padding:8px 0; border-top:1px solid var(--line)}
+.mg-stops li:first-child{border-top:0}
+.mg-stops .no{width:32px; height:32px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-weight:800; font-size:15px}
+.mg-stops li.next .no{background:var(--red); color:var(--on-red)}
+.mg-stops b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.mg-stops small{display:block; font-size:14px; font-weight:600; color:var(--muted); line-height:1.35}
+.mg-cash{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; align-items:baseline; margin-top:12px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.mg-cash span{font-size:15px; font-weight:700}
+.mg-cash .price{font-size:20px}
+.mg-cash small{grid-column:1/-1; font-size:14px; color:var(--muted); font-weight:600}
+.mg-cash.now{background:var(--ember); color:var(--on-ember)}
+.mg-cash.now small{color:var(--on-ember)}
+.mg-err{display:flex; align-items:center; gap:8px; margin:4px 0 0; color:var(--danger); font-weight:700}
+.mg-kv{display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:10px 0; font-size:16px}
+.mg-kv + .mg-kv{border-top:1px solid var(--line)}
+.mg-kv span:first-child{color:var(--muted); font-weight:700; font-size:15px}
+.mg-kv b{font-weight:800; text-align:right}
+
+/* схемата на курса (стилизирана, като pages-shofyor/route.html; не е карта) */
+.mg-scheme{margin-top:12px; border-radius:22px; padding:5px; background:var(--surface-2)}
+.mg-scheme .in{border-radius:18px; background:var(--surface); overflow:hidden}
+.mg-scheme .in svg{display:block; width:100%; height:auto}
+.mg-scheme .cap{display:flex; align-items:flex-start; gap:6px; padding:8px 8px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.sv-zone{fill:var(--surface-2)}
+.sv-zl{fill:var(--muted); font:700 19px var(--font)}
+.sv-path{fill:none; stroke:var(--ink); stroke-width:4; stroke-linecap:round; stroke-linejoin:round}
+.sv-ret{fill:none; stroke:var(--muted); stroke-width:2.5; stroke-dasharray:6 7; stroke-linecap:round}
+.sv-stop{fill:var(--ink)} .sv-stop-t{fill:var(--bg); font:800 19px var(--font); text-anchor:middle; dominant-baseline:central}
+.sv-stop.next{fill:var(--red)} .sv-stop-t.next{fill:var(--on-red)}
+.sv-home{fill:var(--red)} .sv-home-t{fill:var(--on-red)}
+.sv-car{fill:var(--ember); stroke:var(--surface); stroke-width:3}
+.sv-car-i{fill:var(--on-ember)}
+
+/* ---------- „Още“ ---------- */
+.mg-hero{display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:4px 14px; align-items:center; padding:18px; border-radius:28px; background:var(--red); color:var(--on-red); text-decoration:none; box-shadow:var(--shadow); min-height:96px}
+.mg-hero .hi{width:56px; height:56px; border-radius:50%; background:var(--on-red); color:var(--red); display:grid; place-items:center}
+.mg-hero b{display:block; font-size:21px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
+.mg-hero small{display:block; font-size:15px; font-weight:600; opacity:.9; line-height:1.35; margin-top:2px}
+.mg-tiles2{display:grid; grid-template-columns:1fr; gap:10px}
+.mg-sect{display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:2px 14px; align-items:center; min-height:84px; padding:14px 14px 14px 16px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); color:var(--ink); text-decoration:none; transition:transform var(--t-fast) var(--ease)}
+.mg-sect:active{transform:scale(.98)}
+.mg-sect .si{width:48px; height:48px; border-radius:16px; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.mg-sect b{display:block; font-size:18px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
+.mg-sect small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:2px}
+.mg-sect .go{color:var(--muted)}
+.mg-themes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; max-width:480px; padding:4px; border-radius:22px; background:var(--surface-2)}
+.mg-themes button{min-height:52px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px}
+.mg-themes button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.mg-setrow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:76px; padding:12px 14px; text-decoration:none; color:var(--ink); border:0; background:transparent; font:inherit; text-align:left; width:100%; cursor:pointer}
+.mg-setrow .si{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center}
+.mg-setrow b{display:block; font-size:17px; font-weight:800; line-height:1.25}
+.mg-setrow small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35}
+/* ---------- състояния: скелет, празно, грешка, без права, банер ---------- */
+.mg-skel{display:grid; gap:12px; margin-top:16px}
+.mg-skel .skel{height:76px; border-radius:24px}
+.mg-skel .skel.s{height:132px; border-radius:30px}
+.mg-banner{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 12px; align-items:start; margin-top:16px; padding:16px 18px; border-radius:24px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger), var(--shadow)}
+.mg-banner .ic{color:var(--danger); margin-top:2px}
+.mg-banner b{display:block; font-size:18px; font-weight:800; letter-spacing:-.02em}
+.mg-banner p{margin:4px 0 0; color:var(--muted); font-weight:600}
+.mg-banner .pill{grid-column:2; justify-self:start; margin-top:8px}
+.mg-empty{display:grid; justify-items:center; gap:10px; text-align:center; padding:44px 20px 28px}
+.mg-empty .ill{width:104px; height:104px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ok)}
+.mg-empty .ill.lock{color:var(--ink)}
+.mg-empty h2{margin:6px 0 0; font-size:26px; font-weight:800; letter-spacing:-.03em; line-height:1.15}
+.mg-empty p{margin:0; color:var(--muted); max-width:36ch; font-weight:600}
+.mg-empty .pill{margin-top:8px}
+.mg-sample{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:0 10px; border-radius:999px; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted); font-size:14px; font-weight:700; white-space:nowrap}
+/* три варианта един под друг (адрес извън зоните): главното е последно, до палеца */
+.mg-foot3{display:grid; gap:8px; width:100%}
+.mg-foot3 .pill{width:100%; justify-content:center}
+.mg-cmp{display:grid; gap:8px; margin:4px 0 12px}
+.mg-cmp > div{display:grid; gap:2px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.mg-cmp > div.now{background:var(--ember); color:var(--on-ember)}
+.mg-cmp span{font-size:14px; font-weight:700; opacity:.8}
+.mg-cmp b{font-size:18px; font-weight:800; letter-spacing:-.01em}
+.mg-pick{display:grid; gap:8px; margin:4px 0}
+.mg-pick button{display:flex; align-items:center; gap:12px; min-height:60px; padding:0 16px; border:0; border-radius:18px; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:800; font-size:17px; cursor:pointer; text-align:left}
+.mg-pick button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.mg-pick button small{margin-left:auto; font-size:14px; font-weight:700; opacity:.8}
+.mg-tsel{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 12px}
+.mg-tsel button{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; min-height:64px; border:0; border-radius:18px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--ink); font:inherit; cursor:pointer}
+.mg-tsel button b{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
+.mg-tsel button small{font-size:14px; font-weight:700; color:var(--muted); line-height:1.1}
+.mg-tsel button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+.mg-tsel button[aria-pressed="true"] small{color:var(--bg); opacity:.8}
+.mg-tsel button.chg{outline:3px dashed var(--ember); outline-offset:2px}
+.mg-fres{max-width:760px; margin:0 auto}
+.mg-fscope{margin:14px 2px 0; font-size:15px; color:var(--muted); font-weight:600; line-height:1.4}
+.mg-fchips{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0}
+.mg-fchips .chip{min-height:48px}
+.mg-fchips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
+.mg-fgrp{margin-top:20px}
+.mg-fgrp > h2{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:-.02em}
+.mg-fgrp > h2 .muted{font-size:14px; font-weight:700}
+.mg-fband{display:flex; align-items:center; gap:10px; margin:16px 0 4px; padding:10px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; font-weight:800; line-height:1.3}
+.mg-fband .ic{color:var(--red); flex:none}
+.mg-fband.unk{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--warn)}
+.mg-fband.unk .ic{color:var(--warn)}
+.mg-fband small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-top:2px}
+.mg-frow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:68px; padding:8px 6px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink); text-decoration:none; text-align:left; width:100%; font:inherit; cursor:pointer; border-radius:0}
+.mg-frow:focus,.mg-frow:hover{background:var(--surface-2)}
+.mg-frow .fi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--ink); flex:none; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.mg-frow .fi.call,.mg-frow .fi.bill{background:var(--red); color:var(--on-red)}
+.mg-frow .fi.ready{background:var(--ember); color:var(--on-ember)}
+.mg-frow .fi.free{background:var(--surface); color:var(--ok); box-shadow:inset 0 0 0 1.5px var(--ok)}
+.mg-frow .pic{width:44px; height:44px; border-radius:14px}
+.mg-frow b{display:block; font-size:16px; font-weight:800; line-height:1.25}
+.mg-frow small{display:block; font-size:14px; font-weight:600; color:var(--muted); line-height:1.3; margin-top:2px}
+.mg-frow .fr{font-size:15px; font-weight:800; white-space:nowrap; text-align:right}
+.mg-frow .fr .out{display:inline-flex; align-items:center; gap:4px; color:var(--warn); font-size:14px}
+.mg-fmore{min-height:48px; margin-top:4px}
+.mg-fempty{display:grid; justify-items:center; gap:8px; text-align:center; padding:40px 12px 0}
+.mg-fempty .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
+.mg-fempty h2{margin:4px 0 0; font-size:22px; font-weight:800; letter-spacing:-.02em}
+.mg-fempty p{margin:0; color:var(--muted); max-width:34ch; font-weight:600}
+.mg-fwait{margin:16px 2px 0; color:var(--muted); font-weight:600}
+
+/* ================= СЪДЪРЖАНИЕ: Собственик (класове ow-, 1:1 от design/pages-sobstvenik/_own.css) ================= */
+.ow-grid{display:grid; gap:16px; grid-template-columns:minmax(0,1fr); align-items:start}
+.ow-grid + .ow-grid, .ow-grid + .ow-sh, .ow-sh + .ow-grid{margin-top:16px}
+.ow-sh{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin:28px 4px 12px}
+.ow-sh:first-child{margin-top:4px}
+.ow-sh h2{margin:0; font-size:22px; letter-spacing:-.03em; line-height:1.2}
+.ow-sh p{margin:0; color:var(--muted); font-weight:600; font-size:15px}
+.ow-card{min-width:0; grid-template-columns:minmax(0,1fr); scroll-margin-top:96px; padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; align-content:start}
+.ow-card > h2, .ow-card > header h2{margin:0; font-size:20px; letter-spacing:-.025em; line-height:1.25}
+.ow-card > header{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:8px 12px}
+.ow-card > header > div{min-width:0; flex:1 1 150px}
+.ow-card > header small, .ow-card h2 small{display:block; font-size:14px; font-weight:700; letter-spacing:0; color:var(--muted); margin-top:2px; line-height:1.35}
+.ow-card p{margin:0}
+.ow-shell{padding:6px; border-radius:var(--r-shell); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); min-width:0}
+.ow-lead{margin:0 4px 16px; font-size:17px; color:var(--muted)}
+.ow-muted{color:var(--muted)}
+.ow-note{font-size:16px; color:var(--muted); font-weight:500; line-height:1.45}
+.ow-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px}
+.ow-num{font-variant-numeric:tabular-nums; white-space:nowrap}
+/* ---------- кнопки и малки части ---------- */
+.ow-tag{display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:3px 10px; border-radius:999px; font-size:14px; font-weight:700; line-height:1.25; color:var(--muted); box-shadow:inset 0 0 0 1.5px var(--line-strong); white-space:normal; width:fit-content; max-width:100%}
+.ow-tag.soon{background:var(--chip-dark); color:var(--on-chip-dark); box-shadow:none}
+.ow-tag.soon .ic{color:var(--ember)}
+.ow-tag.ok{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ok)} .ow-tag.ok .ic{color:var(--ok)}
+.ow-tag.warn{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn)} .ow-tag.warn .ic{color:var(--warn)}
+.ow-d{display:inline-flex; flex-wrap:wrap; align-items:center; gap:0 4px; font-size:15px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap; max-width:100%}
+.ow-d .ic{flex:none}
+.ow-d.up .ic{color:var(--ok)} .ow-d.down .ic{color:var(--danger)} .ow-d.flat .ic{color:var(--muted)}
+.ow-d small{font-size:14px; font-weight:600; color:var(--muted); margin-left:3px; white-space:normal}
+.ow-d small .w{white-space:nowrap}
+.ow-d.dchip{min-height:32px; padding:0 12px 0 8px; border-radius:999px; background:var(--surface-2)}
+.ow-banner{display:flex; align-items:center; gap:14px; min-height:60px; padding:12px 12px 12px 18px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); line-height:1.4}
+.ow-banner > .ic{flex:none}
+.ow-banner .tx{flex:1; min-width:0}
+.ow-banner .tx b{display:block; font-size:17px}
+.ow-banner.warn{box-shadow:inset 0 0 0 2px var(--warn)} .ow-banner.warn > .ic{color:var(--warn)}
+.ow-banner.danger{box-shadow:inset 0 0 0 2px var(--danger)} .ow-banner.danger > .ic{color:var(--danger)}
+.ow-banner.ok > .ic{color:var(--ok)}
+.ow-banner.ember{background:var(--ember); color:var(--on-ember)}
+.ow-banner .pill{flex:none}
+@container app (max-width:560px){ .ow-banner{flex-wrap:wrap} .ow-banner .pill{width:100%} }
+.ow-empty{display:grid; justify-items:center; gap:10px; padding:36px 16px; text-align:center}
+.ow-empty .ill{width:96px; height:96px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.ow-empty h2{margin:6px 0 0; font-size:22px; letter-spacing:-.02em; text-wrap:balance}
+.ow-empty p{margin:0; color:var(--muted); max-width:46ch}
+.ow-skel{display:grid; gap:12px}
+.ow-skel .skel{height:120px}
+.ow-skel .skel.s{height:56px; width:60%}
+.ow-noperm{max-width:560px; margin:32px auto}
+.ow-switch{position:relative; display:inline-grid; place-items:center; width:64px; height:48px; flex:none; cursor:pointer}
+.ow-switch input{position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer}
+.ow-switch .tr{width:52px; height:32px; border-radius:16px; background:var(--surface-3); box-shadow:inset 0 0 0 1px var(--line); position:relative; transition:background-color var(--t-base) var(--ease)}
+.ow-switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--t-base) var(--ease)}
+.ow-switch input:checked + .tr{background:var(--ok)}
+.ow-switch input:checked + .tr::after{transform:translateX(20px)}
+.ow-switch input:focus-visible + .tr{outline:3px solid var(--red); outline-offset:2px}
+.ow-li{display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 0; border-top:1px solid var(--line); color:inherit; text-decoration:none}
+.ow-li:first-child{border-top:0}
+.ow-li .si{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.ow-li .tx{flex:1; min-width:0; display:grid; gap:2px}
+.ow-li .tx b{font-size:16px; line-height:1.3}
+.ow-li .tx small{font-size:15px; color:var(--muted); font-weight:600; line-height:1.35}
+.ow-li .end{flex:none; display:flex; align-items:center; gap:6px}
+a.ow-li:hover .tx b{text-decoration:underline; text-underline-offset:3px}
+
+/* ---------- период и сравнение ---------- */
+.ow-per{display:grid; gap:10px; margin-bottom:16px}
+.ow-per .seg{grid-auto-flow:row; grid-template-columns:repeat(3,minmax(0,1fr))}
+.ow-per .seg button{min-height:52px; font-size:16px; padding:0 6px; text-align:center; line-height:1.15}
+.ow-per .cmp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ow-per .cmp button{font-size:15px; font-weight:700; padding:6px 8px}
+.ow-per .lbl{font-size:14px; font-weight:700; color:var(--muted); margin:0 4px}
+.ow-per .pp, .ow-per .pc{display:grid; gap:6px; min-width:0}
+.ow-cust{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end}
+.ow-cust .field{flex:1 1 150px; max-width:220px}
+.ow-meta{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; margin:0 4px 16px; color:var(--muted); font-weight:600; font-size:15px}
+.ow-meta b{color:var(--ink)}
+/* ---------- числа (KPI) ---------- */
+.ow-kpis{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.ow-kpi{min-width:0; display:grid; gap:4px; align-content:start; padding:16px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); color:inherit; text-decoration:none}
+.ow-kpi .l{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.ow-kpi b{font-size:28px; line-height:1.1; letter-spacing:-.04em; white-space:nowrap}
+.ow-kpi b small{font-size:17px; color:var(--muted); letter-spacing:0}
+@container app (max-width:380px){ .ow-kpi b{font-size:24px} .ow-kpi{padding:14px} }
+.ow-kpis > .ow-kpi:last-child:nth-child(odd){grid-column:1 / -1}
+/* ---------- графики: прости SVG и HTML, текстът е в HTML с токените ---------- */
+.ow-plot{position:relative; display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 10px}
+/* числата на оста Y стоят на своите линии: 3 реда по 16 px в 196 px, изместени с 8 px нагоре и надолу */
+.ow-plot .ya{display:grid; align-content:space-between; text-align:right; font-size:14px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; height:196px; margin:-8px 0}
+.ow-plot .ya span{line-height:16px; white-space:nowrap}
+.ow-plot .area{position:relative; height:180px}
+.ow-plot .grid{position:absolute; inset:0; display:grid; align-content:space-between; pointer-events:none}
+.ow-plot .grid i{display:block; height:1px; background:var(--line)}
+.ow-plot .grid i:last-child{background:var(--line-strong)}
+.ow-plot .cols{position:absolute; inset:0; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); align-items:end; gap:2px}
+.ow-plot .cols span{display:flex; justify-content:center; align-items:flex-end; height:100%}
+.ow-plot .cols i{display:block; width:100%; max-width:24px; border-radius:4px 4px 0 0; background:var(--ink); transition:opacity var(--t-fast) var(--ease)}
+.ow-plot .cols i.hi{background:var(--red)}
+.ow-plot .cols i.ns{background:var(--red); border-radius:4px 4px 0 0}
+.ow-plot .cols .st{flex-direction:column; justify-content:flex-end; align-items:center}
+.ow-plot .cols .st i + i{border-radius:0; margin-top:0}
+.ow-plot:hover .cols i{opacity:.55}
+.ow-plot .cols span.on i{opacity:1}
+.ow-plot svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none}
+.ow-plot svg .ln{fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke}
+.ow-plot svg .ln.cur{stroke:var(--ink)} .ow-plot svg .ln.prev{stroke:var(--off)} .ow-plot svg .wash{fill:var(--ink); opacity:.08}
+.ow-plot .dot{position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 2px var(--surface); pointer-events:none}
+.ow-plot .dot.prev{background:var(--off)}
+.ow-plot .now{position:absolute; top:0; bottom:0; width:0; border-left:1px solid var(--line-strong); pointer-events:none}
+.ow-plot .elab{position:absolute; transform:translate(-50%, calc(-100% - 12px)); font-size:14px; font-weight:800; white-space:nowrap; pointer-events:none}
+.ow-plot .elab.l{transform:translate(calc(-100% + 6px), calc(-100% - 10px))}
+.ow-plot .elab.dn{transform:translate(calc(-100% - 10px), -50%)}
+/* без фон: подписът е над точката и вляво (там днешната линия вече е минала под него) или, ако линията на обичайното е точно отгоре, вдясно под точката (там днешна линия няма) */
+.ow-plot .elab.l{transform:translate(calc(-100% - 2px), calc(-100% - 10px))}
+.ow-plot .elab.bl{transform:translate(10px, 4px)}
+.ow-plot .elab.l.bl{transform:translate(10px, 4px)}
+.ow-plot .xa{grid-column:2; position:relative; height:22px; font-size:14px; color:var(--muted); font-weight:600; margin-top:8px; font-variant-numeric:tabular-nums}
+.ow-plot .xa span{position:absolute; top:0; white-space:nowrap}
+.ow-tip{position:absolute; z-index:3; pointer-events:none; padding:8px 12px; border-radius:14px; background:var(--ink); color:var(--bg); font-size:15px; font-weight:700; line-height:1.3; white-space:nowrap; transform:translate(-50%, calc(-100% - 10px)); box-shadow:var(--shadow-lg)}
+.ow-tip small{display:block; font-size:14px; font-weight:600; opacity:.85}
+.ow-lgd{display:flex; flex-wrap:wrap; gap:6px 16px; margin:0; padding:0; list-style:none; font-size:14px; font-weight:700; color:var(--muted)}
+.ow-lgd li{display:inline-flex; align-items:center; gap:6px}
+.ow-lgd i{width:12px; height:12px; border-radius:3px; background:var(--ink)}
+.ow-lgd i.ln{height:3px; width:18px; border-radius:2px}
+.ow-lgd i.prev{background:var(--off)} .ow-lgd i.r{background:var(--red)}
+.ow-hb{display:grid; gap:14px}
+.ow-hb .r{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; align-items:baseline}
+.ow-hb .r .n{display:flex; align-items:center; gap:8px; font-weight:700; min-width:0}
+.ow-hb .r .n .ic{color:var(--muted)}
+.ow-hb .r .n span{min-width:0; line-height:1.3}
+.ow-hb .r .v{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
+.ow-hb .r .s{grid-column:1 / -1; font-size:15px; font-weight:600; color:var(--muted); margin-top:-2px; line-height:1.4}
+.ow-hb .r .dd{grid-column:1 / -1; margin-top:-4px}
+.ow-hb .r .tr{grid-column:1 / -1; height:10px; border-radius:5px; background:var(--surface-2); overflow:hidden}
+.ow-hb .r .tr i{display:block; height:100%; border-radius:5px; background:var(--ink); transform-origin:left; animation:ow-grow 600ms var(--ease) both}
+@keyframes ow-grow{from{transform:scaleX(0)} to{transform:none}}
+.ow-top10{display:grid}
+.ow-top10 .r{display:grid; grid-template-columns:24px 44px minmax(0,1fr) auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line)}
+.ow-top10 .r:first-child{border-top:0}
+.ow-top10 .k{font-weight:800; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
+.ow-top10 .pic{width:44px; height:44px; border-radius:14px}
+.ow-top10 .n{min-width:0}
+.ow-top10 .n b{display:block; font-size:16px; line-height:1.3; overflow-wrap:anywhere}
+.ow-top10 .n .tr{height:6px; border-radius:3px; background:var(--surface-2); margin-top:6px; overflow:hidden}
+.ow-top10 .n .tr i{display:block; height:100%; background:var(--ember); border-radius:3px}
+.ow-top10 .v{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.ow-top10 .v small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+.ow-top10 .r.mark{background:var(--ember-soft); border-radius:14px; padding-left:6px; padding-right:6px}
+/* топлинна карта ден × час: една тоналност (мастило), по-тъмно = повече */
+.ow-heat{display:grid; grid-template-columns:34px repeat(13,minmax(0,1fr)); gap:2px; font-size:14px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums}
+.ow-heat .c{height:26px; border-radius:4px; background:var(--surface-2)}
+.ow-heat .h{text-align:center; white-space:nowrap; overflow:visible}
+.ow-heat .d{display:flex; align-items:center}
+.ow-heat .c.l1{background:color-mix(in srgb, var(--ink) 14%, var(--surface-2))}
+.ow-heat .c.l2{background:color-mix(in srgb, var(--ink) 32%, var(--surface-2))}
+.ow-heat .c.l3{background:color-mix(in srgb, var(--ink) 52%, var(--surface-2))}
+.ow-heat .c.l4{background:color-mix(in srgb, var(--ink) 74%, var(--surface-2))}
+.ow-heat .c.l5{background:var(--ink)}
+.ow-scale{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted)}
+.ow-scale i{width:18px; height:14px; border-radius:3px; background:var(--surface-2)}
+.ow-scale i.l1{background:color-mix(in srgb, var(--ink) 14%, var(--surface-2))} .ow-scale i.l3{background:color-mix(in srgb, var(--ink) 52%, var(--surface-2))} .ow-scale i.l5{background:var(--ink)}
+/* сегментирана лента (дял) */
+.ow-segbar{display:flex; gap:2px; height:12px; border-radius:6px; overflow:hidden; background:var(--surface-2)}
+.ow-segbar i{display:block; height:100%; background:var(--ink)}
+.ow-segbar i.b{background:var(--off)}
+.ow-big{font-size:40px; line-height:1.05; letter-spacing:-.045em; font-weight:800; white-space:nowrap}
+@container app (max-width:380px){ .ow-big{font-size:34px} }
+.ow-tbtn{min-height:48px; font-size:15px; padding:0 14px}
+/* таблица (алтернатива на графиката); на телефон редовете стават карти */
+.ow-tablewrap{min-width:0; overflow-x:auto}
+/* всяка карта е контейнер: в тясна карта (и на телефон) таблицата става карти, без хоризонтален скрол */
+.ow-card{container-type:inline-size; container-name:card}
+.ow-table{width:100%; border-collapse:collapse; font-size:16px}
+.ow-table th{font-size:14px; font-weight:700; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap}
+.ow-table td, .ow-table tbody th{padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; font-weight:600; font-size:16px; color:var(--ink)}
+.ow-table tbody tr:last-child td, .ow-table tbody tr:last-child th{border-bottom:0}
+.ow-table .r{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+.ow-fscope{margin:14px 0 0; font-size:15px; color:var(--muted)}
+.ow-fchips{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0}
+.ow-fchips .chip{min-height:48px}
+.ow-fchips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
+.ow-fg{margin-top:18px}
+.ow-fg > h2{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 4px; font-size:17px; font-weight:800; letter-spacing:-.02em}
+.ow-fg > h2 small{font-size:14px; color:var(--muted); font-weight:700}
+.ow-fr{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:64px; padding:8px 4px; border-bottom:1px solid var(--line); color:var(--ink); text-decoration:none; border-radius:4px}
+.ow-fr:hover, .ow-fr.sel{background:var(--surface-2)}
+.ow-fr .fi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.ow-fr .pic{width:44px; height:44px; border-radius:14px}
+.ow-fr b{display:block; font-size:16px; line-height:1.25}
+.ow-fr small{display:block; font-size:14px; color:var(--muted); font-weight:600; line-height:1.3; margin-top:2px}
+.ow-fr .fv{text-align:right; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; font-size:15px}
+.ow-fr .fv small{font-weight:600}
+.ow-fband{display:flex; align-items:center; gap:8px; margin:18px 0 4px; min-height:44px; padding:6px 14px 6px 12px; border-radius:999px; background:var(--surface-2); font-size:15px; font-weight:800}
+.ow-fband .ic{color:var(--muted)}
+.ow-fband.unk{border-radius:18px; background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong); align-items:flex-start; padding:10px 14px}
+.ow-fband.unk .ic{color:var(--warn); margin-top:2px}
+.ow-fband.unk small{display:block; font-weight:600; color:var(--muted); font-size:14px}
+.ow-fmore{margin-top:4px}
+.ow-fnone{padding:28px 8px; text-align:center; color:var(--muted)}
+.ow-fnone b{display:block; color:var(--ink); font-size:18px; margin-bottom:4px}
+/* разликата на тесни места: иконата и думите в един ред, който се пренася като текст */
+.ow-d.wrap{display:block; white-space:normal}
+.ow-d.wrap .ic{display:inline-block; vertical-align:-3px; margin-right:2px}
+/* иконата и процентът са едно цяло; думите след тях се пренасят като текст */
+.ow-d .p{display:inline-flex; align-items:center; gap:4px; white-space:nowrap}
+.ow-d.dchip{border-radius:16px; padding:4px 12px 4px 8px}
+.td-hero .cmp .ow-d, .td-hero .mini .ow-d{display:block; white-space:normal}
+.td-hero .cmp .ow-d .p, .td-hero .mini .ow-d .p{display:inline-flex; vertical-align:-3px}
+
+/* ---------- „Собственик“: таблица → карти в тясна карта, избраното в превключвателите, колони без дупки ---------- */
+/* всяка карта е контейнер: в тясна карта (и на телефон) таблицата става карти, без хоризонтален скрол */
+.ow-card{container-type:inline-size; container-name:card}
+@container card (max-width:600px){
+  .ow-table, .ow-table tbody, .ow-table tr, .ow-table td, .ow-table tbody th{display:block}
+  .ow-table thead{display:none}
+  .ow-table tbody tr{padding:10px 0; border-bottom:1px solid var(--line)}
+  .ow-table tbody tr:last-child{border-bottom:0}
+  .ow-table td{display:flex; justify-content:space-between; gap:12px; padding:4px 0; border:0; text-align:right}
+  .ow-table td::before{content:attr(data-label); font-size:14px; font-weight:700; color:var(--muted); text-align:left}
+  .ow-table [data-main]{display:block; text-align:left; font-weight:800; font-size:17px; padding:4px 0; border:0; overflow-wrap:anywhere; white-space:normal}
+}
+/* скелетът на „Управител“: вътрешният блок е без втори отстъп */
+.mg-skel .mg-skel{margin:0}
+/* избраното в превключвателите (период, сравнение): плътно мастило, ясно и в тъмна тема */
+.bs-app[data-mod="sobstvenik"] .seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
+/* малките карти без дупки: колони отгоре надолу (1 / 2 / 3) */
+.ow-mas{columns:1; column-gap:16px; margin-top:16px}
+.ow-mas > *{break-inside:avoid; margin:0 0 16px; width:100%}
+
+/* ================= ШИРИНИ (само @container app) ================= */
+@container app (max-width:380px){
+  .bs-top{padding-left:12px; gap:2px}
+  .bs-tt h1{font-size:23px}
+  .bs-app[data-mod="sobstvenik"] .bs-top{padding-left:18px; gap:8px}
+  .bs-app[data-mod="sobstvenik"] .bs-tt h1{font-size:24px}
+  .bs-app[data-mod="upravitel"] .bs-tb{min-width:52px; padding:0 4px}
+  .mg-kpi{padding:12px 10px 10px 12px; min-height:108px}
+  .mg-kpi .v{font-size:34px}
+  .mg-prob{grid-template-columns:44px minmax(0,1fr) auto; padding:12px}
+  .mg-prob .pi{width:44px; height:44px}
+  .mg-prob .pa{grid-column:1/-1}
+  .mg-prob .tm b{font-size:22px}
+  .mg-tile .no{font-size:32px}
+  .mg-sec .sc{gap:10px}
+  .mg-stats{grid-template-columns:1fr 1fr}
+  .mg-stats .mg-stat:last-child{grid-column:1/-1}
+}
+@container app (max-width:440px){
+  .mg-rrow{grid-template-columns:64px minmax(0,1fr)}
+  .mg-rrow > .pill,.mg-rrow > .mg-tag{grid-column:2; justify-self:start; margin-top:6px}
+  .mg-wrow{grid-template-columns:44px minmax(0,1fr); padding:12px 14px}
+  .mg-wrow .wa{grid-column:2; margin-top:6px}
+}
+@container app (min-width:560px){
+  .mg-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mg-pulse .in{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .mg-tiles2{grid-template-columns:1fr 1fr}
+}
+
+/* ---------- компютър: лява лента 104 px, решетка 2 колони от 900, 3 от 1240 ---------- */
+@container app (min-width:900px){
+  /* рамката */
+  .bs-only-p{display:none !important}
+  .bs-nav{display:none}
+  .bs-rail{display:flex; flex-direction:column; align-items:center; gap:6px; position:absolute; z-index:41; left:0; top:0; bottom:0; width:104px; padding:16px 8px 92px; background:var(--surface); box-shadow:inset -1px 0 0 var(--line); overflow-y:auto}
+  .bs-rail .brand{display:grid; justify-items:center; gap:2px; padding:6px 0 14px; text-decoration:none; color:var(--ink)}
+  .bs-rail .brand b{font-size:18px; letter-spacing:-.05em; font-weight:800}
+  .bs-rail .brand small{font-size:14px; color:var(--muted); font-weight:700}
+  .bs-rail a.it{width:88px; min-height:76px; border-radius:22px; flex:none}
+  .bs-rail a.it:hover{background:var(--surface-2)}
+  .bs-rail a.it[aria-current="page"]{background:var(--surface-2)}
+  .bs-rail a.it .bs-n{left:calc(50% + 8px); top:6px}
+  /* моливът най-долу в лявата лента, в средата ѝ */
+  .bs-penslot{left:24px; right:auto; bottom:24px}
+  .bs-ov[data-mod="sobstvenik"] .bs-penslot{bottom:16px}
+  .bs-ov[data-mod="sobstvenik"] .bs-penslot .sa-pen-btn:not([aria-pressed="true"]){background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line)}
+  .bs-col{margin-left:104px}
+  .bs-top, .bs-app[data-mod="sobstvenik"] .bs-top{padding:12px 32px; gap:10px; min-height:84px; background:var(--bg); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:0 1px 0 var(--line)}
+  .bs-app, .bs-ov, .bs-app[data-mod="sobstvenik"], .bs-ov[data-mod="sobstvenik"]{--bs-top:84px}
+  .bs-tt h1, .bs-app[data-mod="sobstvenik"] .bs-tt h1{font-size:30px}
+  .bs-app[data-mod="upravitel"] .bs-tt span{font-size:15px}
+  .bs-tb, .bs-app[data-mod="sobstvenik"] .bs-tb{grid-auto-flow:column; gap:8px; min-height:52px; height:52px; padding:0 16px; border-radius:999px; font-size:15px; font-weight:800; background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+  .bs-tb .ic{width:22px; height:22px}
+  .bs-tb .sm{display:none}
+  .bs-tb .lg{display:inline}
+  .bs-snd.wait{background:var(--ember-soft)}
+  .bs-toadmin{display:inline-flex; min-height:52px; flex:none}
+  .bs-net{padding-left:32px}
+  .bs-main, .bs-app[data-mod="sobstvenik"] .bs-main{padding:8px 32px 0}
+  .bs-app[data-mod="sobstvenik"] .bs-main{padding-top:24px}
+  .bs-end{height:48px}
+  .bs-sheet{left:auto; right:24px; top:24px; bottom:24px; width:460px; max-height:none; transform:translateX(110%)}
+  .bs-sheetwrap.on .bs-sheet{transform:none}
+  .bs-sheet .handle{display:none}
+  .bs-ov > .bs-toast{top:96px; left:calc(50% + 52px)}
+  /* полето „Търси“ вдясно, до „Звук“ и „Към админа“; панелът с резултатите не излиза извън колоната (frame.ts) */
+  .bs-dsearch{display:block; position:relative; width:min(340px, 30vw); flex:none}
+  .bs-dsearch .bs-q .input{min-height:52px; font-size:16px}
+  .bs-dsearch .bs-q .k{position:absolute; right:14px; top:50%; transform:translateY(-50%); min-width:28px; height:28px; border-radius:8px; display:grid; place-items:center; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted); font-size:14px; font-weight:800}
+  .bs-app[data-mod="sobstvenik"] .bs-dsearch .bs-q .k{display:none}
+  .bs-dpanel{position:absolute; top:calc(100% + 8px); left:0; width:620px; max-height:min(72vh, 720px); overflow-y:auto; overscroll-behavior:contain; padding:4px 18px 18px; border-radius:26px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); z-index:60}
+  .bs-dpanel .mg-fres{max-width:none}
+  .bs-me .who{display:block; text-align:left; line-height:1.25}
+  .bs-me .who b{display:block; font-size:15px}
+  .bs-me .who small{display:block; font-size:14px; color:var(--muted); font-weight:600}
+
+  /* съдържанието на „Управител“ */
+  .mg-legend{display:grid; grid-template-columns:repeat(4,max-content)}
+  .mg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mg-grid > .mg-blk:nth-child(-n+2){margin-top:12px}
+  .mg-grid .all{grid-column:1/-1}
+  .mg-pulse .in{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .mg-kpi.wide{grid-column:auto; grid-template-columns:minmax(0,1fr); align-items:start}
+  .mg-kpi.wide .v{grid-row:auto}
+  .mg-kpi{min-height:132px}
+  .mg-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mg-tiles2{grid-template-columns:1fr}
+  .mg-tsel{grid-template-columns:repeat(4,minmax(0,1fr))}
+  /* „Сега“: пулсът горе, после 2 колони (проблемите вляво на два реда, „Чака те“ и кухнята вдясно) */
+  .now-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .now-day,.now-pulse{grid-column:1/-1}
+  .now-day{order:0} .now-pulse{order:1} .now-probs,.now-grid.has-probs .now-probs{order:2; grid-row:span 2; margin-top:28px} .now-wait{order:3} .now-kit{order:4}
+  .now-grid.has-probs .now-pulse .mg-pulse{margin-top:14px}
+
+  /* съдържанието на „Собственик“ */
+  .ow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ow-grid > .w2, .ow-grid > .wall{grid-column:1 / -1}
+  .ow-per .pp .seg{grid-template-columns:repeat(6,auto); justify-content:start; width:max-content}
+  .ow-per .seg button{padding:0 14px; white-space:nowrap}
+  .ow-per .pc .seg{width:max-content}
+  .ow-kpis{grid-template-columns:repeat(auto-fit, minmax(150px,1fr))}
+  .ow-kpis > .ow-kpi:last-child:nth-child(odd){grid-column:auto}
+  .ow-heat .c{height:30px}
+  .ow-heat{gap:3px}
+  .ow-mas{columns:2}
+}
+@container app (min-width:900px) and (max-width:1239px){
+  .bs-me .who{display:none}
+  .bs-snd .lg{display:none}
+  .bs-snd .sm{display:inline}
+  .bs-dsearch{width:min(280px, 28vw)}
+  .bs-tt{min-width:max-content}
+}
+@container app (min-width:1240px){
+  .mg-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mg-grid.c3 > .mg-blk:nth-child(-n+3){margin-top:12px}
+  .now-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .now-probs,.now-grid.has-probs .now-probs{grid-row:auto}
+  .now-wait,.now-kit{margin-top:28px}
+  .mg-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .mg-tiles2{grid-template-columns:1fr}
+  .ow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ow-grid > .w2{grid-column:span 2}
+  .ow-per{grid-template-columns:auto auto; justify-content:space-between; align-items:end; gap:10px 16px}
+  .ow-per .ow-cust{grid-column:1 / -1}
+  .ow-mas{columns:3}
+}

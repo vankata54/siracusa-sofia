@@ -1,0 +1,19 @@
+---
+/* /upravitel/ekipat/: „Екипът“ на модула „Управител“ (design/pages-upravitel/team.html).
+   Тук е само рамката (src/modules/boss/frame.ts: горна лента, раздели, молив, профил, търсачка, без връзка, права) с
+   активен раздел „team“. Тялото на екрана го пише авторът на екрана в src/modules/upravitel/ и го закача по-долу. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../modules/boss/boss.css";
+---
+<Admin title="Екипът" page="boss-upravitel-team">
+<script>
+import { mountBoss } from "../../../modules/boss/frame.ts";
+mountBoss({ module: "upravitel", tab: "team", title: "Екипът" }).then((boss) => {
+  /* null: без сесия (към входа), друга роля (към нейното начало) или „Нямаш права за този екран.“ (вече е нарисувано) */
+  if (!boss) return;
+  /* ЕКРАНЪТ „Екипът“ СЕ ЗАКАЧА ТУК: boss.body държи скелета (boss.skeleton()), докато дойдат първите данни;
+     после boss.body.innerHTML = …, boss.loaded() след всяко успешно зареждане, boss.onRetry(…) за „Опитай пак“,
+     boss.onLive(…) за събитията на живо. API-то е описано най-горе във frame.ts. */
+});
+</script>
+</Admin>

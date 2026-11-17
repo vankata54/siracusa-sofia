@@ -1,6 +1,7 @@
 /* THE ONLY PLACE FOR THE ADDRESSES OF THE ADMIN AND THE STAFF MODULES (decision of the chief 15.11.2026):
      sign-in /admin/vhod/, dashboard /admin/, sections /admin/<key of SECTIONS>/ (/admin/notes/, /admin/roles/ ...),
-     the live preview /admin/preview/, the staff modules /servitor/, /kuhnya/, /shofyor/.
+     the live preview /admin/preview/, the staff modules /servitor/, /kuhnya/, /shofyor/ (their screens and the modules of
+     the manager and the owner are in src/modules/routes.ts; here only what #next= needs to know about them).
    The same rule as src/lib/routes.ts: the server build gets "/admin/notes/", the demo build relative "../notes/index.html"
    (scripts/relativize.mjs does the same for the HTML).
    "Logical" addresses ("/admin/notes/#s=new") are what #next= carries: the same in the server and in the demo. */
@@ -15,6 +16,15 @@ if (typeof document !== "undefined") {
 /** the staff apps (decision 15.11.2026: waiter, kitchen and driver work in their own module, full screen) */
 export const STAFF_APPS: Record<string, string> = { waiter: "servitor/", kitchen: "kuhnya/", driver: "shofyor/" };
 export type StaffApp = "waiter" | "kitchen" | "driver";
+/* the modules a signed-in person may be sent back to after the sign-in (#next=): the first folder of the address -> the key
+   that decides who may open it (the staff apps: their section; "upravitel" / "sobstvenik": by role, BOSS_ROLES).
+   One screen below the module and parameters in "#" are allowed ("/upravitel/zalata/#t=12"). */
+const MODULE_KEYS: Record<string, string> = { servitor: "waiter", kuhnya: "kitchen", shofyor: "driver", upravitel: "upravitel", sobstvenik: "sobstvenik" };
+const MODULE_RE = /^\/(servitor|kuhnya|shofyor|upravitel|sobstvenik)\/((?:[a-z-]+\/)?)(#[^\s]*)?$/;
+/** who opens the modules of the manager and the owner (BRIEF-STEP5, section 5): the owner sees both ("Смяната сега") */
+export const BOSS_ROLES: Record<string, string[]> = { upravitel: ["admin", "owner", "manager"], sobstvenik: ["admin", "owner"] };
+/** the own module of the role, for "Къде продължаваш?" after the sign-in */
+export const BOSS_HOME: Record<string, "upravitel" | "sobstvenik"> = { manager: "upravitel", owner: "sobstvenik" };
 
 const go = (path: string, hash?: string) => (cfg.demo ? cfg.root + path + (path === "" || path.endsWith("/") ? "index.html" : "") : "/" + path) + (hash ? "#" + hash : "");
 
@@ -33,17 +43,19 @@ export const aurl = {
   app: (role: string) => go(STAFF_APPS[role] || "admin/"),
   /** the logical address of a section ("/admin/notes/") */
   logical: (key: string, hash?: string) => "/admin/" + (key === "dashboard" ? "" : key + "/") + (hash ? "#" + hash : ""),
-  /** "/admin/notes/#s=new" or a staff module ("/kuhnya/") -> href; anything else (another site, the sign-in itself) -> null */
+  /** "/admin/notes/#s=new" or the address of a module of the staff ("/kuhnya/", "/upravitel/zalata/#t=12") -> href;
+      anything else (another site, the sign-in itself) -> null */
   fromLogical(l: string | null | undefined): string | null {
-    const v = String(l || ""), app = /^\/(servitor|kuhnya|shofyor)\/$/.exec(v);
-    if (app) return go(app[1] + "/");
+    const v = String(l || ""), app = MODULE_RE.exec(v);
+    if (app) return go(app[1] + "/" + app[2], app[3] ? app[3].slice(1) : undefined);
     const m = /^\/admin\/((?:[a-z-]+\/){0,2})(#[^\s]*)?$/.exec(v);
     if (!m || m[1] === "vhod/") return null;
     return go("admin/" + m[1], m[2] ? m[2].slice(1) : undefined);
   },
-  /** the section key of a logical address ("/admin/notes/" -> "notes", "/admin/" -> "dashboard", "/kuhnya/" -> "kitchen") */
+  /** the key of a logical address: a section ("/admin/notes/" -> "notes", "/admin/" -> "dashboard"), the section of a staff
+      module ("/kuhnya/" -> "kitchen") or the module of the manager / the owner ("/upravitel/zalata/" -> "upravitel") */
   keyOf(l: string): string {
-    const app = Object.keys(STAFF_APPS).find((k) => l === "/" + STAFF_APPS[k]); if (app) return app;
+    const app = MODULE_RE.exec(l); if (app) return MODULE_KEYS[app[1]];
     const m = /^\/admin\/([a-z-]+)\//.exec(l); return m ? m[1] : "dashboard";
   },
   /** this page as a logical address (server: the path; demo: the path below the site root, without index.html) */

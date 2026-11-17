@@ -2,7 +2,8 @@
 .lg{position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; background:var(--bg); container-type:inline-size; container-name:app}
 .lg-in{min-height:100%; display:grid; grid-template-columns:minmax(0,1fr)}
 .lg-art{display:none}
-.lg-main{display:grid; align-content:center; justify-items:center; padding:28px 16px 40px}
+/* една колона minmax(0,1fr): без нея дълго съдържание разширява кутията и на 360 отстъпът вдясно се губи */
+.lg-main{display:grid; grid-template-columns:minmax(0,1fr); align-content:center; justify-items:center; padding:28px 16px 40px}
 .lg-box{width:100%; max-width:440px}
 .lg-brand{display:flex; align-items:center; gap:10px; margin:0 0 28px}
 .lg-brand .word{font-size:26px}
@@ -21,6 +22,53 @@
 .lg-forgot .ic{margin-top:2px}
 .lg-off{margin:0 0 20px}
 .lg-in-as{margin:0 0 20px}
+.lg-acts{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+/* „Къде продължаваш?“ (управител и собственик): на телефон модулът е първи и главен, от 960 двете карти са равни */
+.lg-box.wide{max-width:560px}
+.ch{display:grid; gap:20px; container-type:inline-size; container-name:ch}
+.ch h1:focus{outline:none}
+.ch .lead{margin:10px 0 0}
+.ch-cards{display:grid; gap:10px}
+.ch-card{position:relative; display:grid; grid-template-columns:56px minmax(0,1fr) 44px; gap:14px; align-items:center; min-height:76px; padding:14px 14px 14px 16px; border-radius:var(--r-core); background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line); text-decoration:none; transition:transform var(--t-base) var(--ease)}
+.ch-card:hover{transform:translateY(-2px)}
+.ch-card:active{transform:scale(.98)}
+.ch-card:focus-visible{outline:3px solid var(--red); outline-offset:3px}
+.ch-card .si{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.ch-card .tx{display:grid; gap:2px; min-width:0}
+.ch-card b{font-size:20px; letter-spacing:-.02em; line-height:1.2}
+.ch-card small{font-size:16px; color:var(--muted); font-weight:600; line-height:1.35}
+.ch-card .arr{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2)}
+.ch-card .rem{grid-column:2 / -1; justify-self:start; margin-top:2px}
+.ch-card.main{min-height:112px; background:var(--ink); color:var(--bg); box-shadow:var(--shadow-lg)}
+.ch-card.main b{font-size:24px}
+.ch-card.main small{color:var(--bg); opacity:.8}
+.ch-card.main .si{background:var(--red); color:var(--on-red)}
+.ch-card.main .arr{background:var(--bg); color:var(--ink)}
+.ch-card.main .rem{color:var(--bg); box-shadow:inset 0 0 0 1.5px currentColor; background:transparent}
+.ch-also{display:flex; align-items:center; gap:10px; min-height:52px; padding:0 4px; color:var(--ink); font-weight:700; font-size:16px; text-decoration:underline; text-underline-offset:4px}
+.ch-also .ic{color:var(--red); flex:none}
+.ch-rem{display:flex; align-items:flex-start; gap:6px; margin-left:-6px}
+.ch-rem label.tx{display:grid; gap:2px; padding-top:12px; cursor:pointer; font-weight:700; font-size:16px; line-height:1.35}
+.ch-rem label.tx small{font-weight:600; font-size:15px; color:var(--muted)}
+.ch-foot{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding-top:4px; border-top:1px solid var(--line)}
+.ch-foot p{margin:0; flex:1 1 200px; color:var(--muted); font-size:15px; padding-top:12px}
+.ch-foot .pill{margin-top:12px}
+@container app (min-width:960px){
+  .ch-card.main{min-height:76px; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line)}
+  .ch-card.main b{font-size:20px}
+  .ch-card.main small{color:var(--muted); opacity:1}
+  .ch-card.main .si{background:var(--surface-2); color:var(--red)}
+  .ch-card.main .arr{background:var(--surface-2); color:var(--ink)}
+  .ch-card.main .rem{color:var(--ink)}
+}
+@container ch (min-width:520px){
+  .ch-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ch-card{grid-template-columns:minmax(0,1fr) 44px; grid-template-rows:auto 1fr; align-items:start; min-height:188px; padding:18px}
+  .ch-card .si{grid-column:1; grid-row:1}
+  .ch-card .arr{grid-column:2; grid-row:1}
+  .ch-card .tx{grid-column:1 / -1; grid-row:2; align-self:end}
+  .ch-card .rem{grid-column:1 / -1; grid-row:3}
+}
 /* desktop: editorial split, the dishes of the real menu on plates */
 @container app (min-width:960px){
   .lg-in{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}

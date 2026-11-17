@@ -1,9 +1,11 @@
 /* /admin/: the dashboard (design/pages-admin/dashboard.html, version 4, 1:1), from adminApi.summary():
    "Чака те" first (only what the role sees, each with its count and a button straight to the action; empty: "Нищо не чака.
    Всичко е наред."), then "Днес" (for the owner and the main admin first "Днес: X € от N поръчки"; "Примерни данни" only if
-   the sales say so), "Модулите" (Управител and Собственик "Скоро"; "Отвори на живо" -> /admin/preview/#m=...), "Разделите" by
-   groups (each section to its own address). A new online order redraws everything from one place. */
-import "sc-icons:wallet,receipt,calendar-check,clock,pencil-simple,eye,warning-circle,check-circle,caret-right,arrow-up-right,info";
+   the sales say so), "Модулите" ("Отвори на живо" -> /admin/preview/#m=...; Управител and Собственик open their first
+   screen), "Разделите" by groups (each section to its own address). The manager and the owner get "Отвори приложението"
+   on top, to their own module (step 5; a remembered choice of "Къде продължаваш?" follows them there).
+   A new online order redraws everything from one place. */
+import "sc-icons:wallet,receipt,calendar-check,clock,pencil-simple,eye,warning-circle,check-circle,caret-right,arrow-up-right,info,briefcase,chart-bar";
 import { statusHTML } from "../lib/chrome-core.ts";
 import { events } from "../lib/events.ts";
 import { ZONES, RESTAURANT } from "../lib/consts.ts";
@@ -13,6 +15,8 @@ import { adminApi } from "../client/api-admin.ts";
 import type { Summary } from "../core/index.ts";
 import { A, mount, can, isMainAdmin, modCan, loadSummary, markFresh, skel, failHTML, offline, soonTag, ic, esc, fmt, plural, MODULES, GROUPS, SEC, ROLES, secHref, sofiaToday, sofiaHM, hm, fmtYmd, dateLong, type Mod } from "./a.ts";
 import { aurl } from "./routes.ts";
+import { MOD_SCREENS } from "./sections.ts";
+import { bossModuleOf, bossHref, switchHome } from "../modules/boss/home.ts";
 
 export async function initDashboard(): Promise<void> {
   const t = sofiaHM(), h = t.h;
@@ -29,9 +33,15 @@ export async function initDashboard(): Promise<void> {
   const asRole = me.user.name === (ROLES[me.user.role] && ROLES[me.user.role].n);
   const h1 = document.querySelector(".sa-h1"); if (h1) h1.textContent = asRole ? hello : hello + ", " + me.user.name.split(" ")[0];
   const site = MODULES.find((m) => m.id === "site")!;
-  if (modCan(site)) {
+  /* the manager and the owner: "Отвори приложението" to their own module on top; "Сайтът на живо" stays beside it */
+  const own = bossModuleOf(me.user.role), ownMod = own ? MODULES.find((m) => m.id === me.user.role) : null;
+  const acts = (own && ownMod ? '<a class="pill pill-red pill-lg" href="' + bossHref(own) + '" data-home="app" data-edit-id="admin.dashboard.openapp">' + ic(ownMod.ic, 22) + "Отвори приложението</a>" : "") +
+    (modCan(site) ? '<a class="pill ' + (own ? "pill-line" : "pill-ink") + ' pill-lg" href="' + aurl.preview("m=site&p=home&d=phone") + '">' + ic("eye", 22) + "Сайтът на живо</a>" : "");
+  if (acts) {
     const head = document.querySelector(".sa-head");
-    head?.insertAdjacentHTML("beforeend", '<div class="sa-acts"><a class="pill pill-ink pill-lg" href="' + aurl.preview("m=site&p=home&d=phone") + '">' + ic("eye", 22) + "Сайтът на живо</a></div>");
+    head?.insertAdjacentHTML("beforeend", '<div class="sa-acts">' + acts + "</div>");
+    /* a remembered choice after the sign-in follows where the person goes */
+    head?.addEventListener("click", (e) => { if ((e.target as Element).closest('a[data-home="app"]')) switchHome(me.user.username, "app"); });
   }
   const menuN = +(document.documentElement.dataset.menuN || 0), lunchDate = document.documentElement.dataset.lunchDate || "";
 
@@ -94,7 +104,7 @@ export async function initDashboard(): Promise<void> {
       const n = m.screens.length;
       return '<article class="mod sa-rise d' + (i % 4) + '" data-edit-id="admin.dashboard.module.' + m.id + '"><div class="vis">' + glyph(m) + '<span class="cnt">' + plural(n, "екран", "екрана") + '</span><span class="dv">' + (m.id === "watch" ? "Часовник" : DEV[m.dev || ""] || "") + "</span></div>" +
         '<div class="body"><h3>' + esc(m.n) + "</h3><p>" + esc(m.what) + '</p><p class="who">За: <span>' + esc(m.who) + "</span></p></div>" +
-        '<div class="act"><a class="pill pill-line open" href="' + aurl.preview("m=" + m.id + "&p=" + m.screens[0] + "&d=" + (m.dev || "phone")) + '" aria-label="Отвори на живо: ' + esc(m.n) + '"><span class="lg">Отвори на живо</span><span class="sm">На живо</span><span class="knob">' + ic("arrow-up-right", 20) + "</span></a></div></article>";
+        '<div class="act"><a class="pill pill-line open" href="' + (MOD_SCREENS[m.id] ? aurl.fromLogical(MOD_SCREENS[m.id][0][2]) : aurl.preview("m=" + m.id + "&p=" + m.screens[0] + "&d=" + (m.dev || "phone"))) + '" aria-label="Отвори на живо: ' + esc(m.n) + '"><span class="lg">Отвори на живо</span><span class="sm">На живо</span><span class="knob">' + ic("arrow-up-right", 20) + "</span></a></div></article>";
     };
     const mods = MODULES.filter(modCan);
 

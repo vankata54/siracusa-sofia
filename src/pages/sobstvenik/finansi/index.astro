@@ -1,0 +1,19 @@
+---
+/* /sobstvenik/finansi/: „Финанси и гориво“ на модула „Собственик“ (design/pages-sobstvenik/finance.html).
+   Тук е само рамката (src/modules/boss/frame.ts: горна лента, раздели, молив, профил, търсачка, без връзка, права) с
+   активен раздел „finance“. Тялото на екрана го пише авторът на екрана в src/modules/sobstvenik/ и го закача по-долу. */
+import Admin from "../../../layouts/Admin.astro";
+import "../../../modules/boss/boss.css";
+---
+<Admin title="Финанси и гориво" page="boss-sobstvenik-finance">
+<script>
+import { mountBoss } from "../../../modules/boss/frame.ts";
+mountBoss({ module: "sobstvenik", tab: "finance", title: "Финанси и гориво" }).then((boss) => {
+  /* null: без сесия (към входа), друга роля (към нейното начало) или „Нямаш права за този екран.“ (вече е нарисувано) */
+  if (!boss) return;
+  /* ЕКРАНЪТ „Финанси и гориво“ СЕ ЗАКАЧА ТУК: boss.body държи скелета (boss.skeleton()), докато дойдат първите данни;
+     после boss.body.innerHTML = …, boss.loaded() след всяко успешно зареждане, boss.onRetry(…) за „Опитай пак“,
+     boss.onLive(…) за събитията на живо. API-то е описано най-горе във frame.ts. */
+});
+</script>
+</Admin>
