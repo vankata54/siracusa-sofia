@@ -88,4 +88,16 @@ describe("the modules together on the real cores", () => {
     /* the driver never got the customer's phone */
     expect(JSON.stringify(await core.driver.get(s.driver, o.no))).not.toContain("0888123456");
   });
+
+  it("the waiter's order sent twice with the same id (a lost answer, the offline outbox) is made only once", async () => {
+    const { core, repo } = mk(), s = await people(core);
+    const input = { rid: "r-" + "a1b2c3d4e5f6", lines: [{ id: pizza.id, q: 1 }] };
+    const a = await core.floor.order(s.waiter, 7, input);
+    const b = await core.floor.order(s.waiter, 7, input);
+    expect(b.orders).toEqual(a.orders);
+    expect((await repo.list<Order>("orders")).filter((o) => o.table && o.channel === "waiter")).toHaveLength(1);
+    /* a new id is a new order */
+    const c = await core.floor.order(s.waiter, 7, { ...input, rid: "r-" + "f6e5d4c3b2a1" });
+    expect(c.orders).not.toEqual(a.orders);
+  });
 });

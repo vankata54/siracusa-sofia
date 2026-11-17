@@ -1,0 +1,42 @@
+---
+/* /servitor/masa/#12: "Маса" of the waiter (design/pages-servitor/table.html). The screen is src/modules/servitor/table.ts;
+   here the page (src/modules/staff/Staff.astro) and the styles of this screen only (the prototype's own <style>). */
+import Staff from "../../../modules/staff/Staff.astro";
+---
+<Staff module="waiter" title="Маса">
+<script>
+import { mountTable } from "../../../modules/servitor/table.ts";
+void mountTable();
+</script>
+</Staff>
+<style is:global>
+[data-page="table"] .thead{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap}
+[data-page="table"] .thead .meta{display:grid; gap:4px}
+[data-page="table"] .thead .meta span{font-weight:700; color:var(--muted)}
+[data-page="table"] .oline .serve{margin-left:auto}
+[data-page="table"] .oline .serve .pill{min-height:48px}
+[data-page="table"] .oline .sub .g{font-size:14px; color:var(--muted); font-weight:600}
+[data-page="table"] .oline .mods{font-size:15px; color:var(--muted); font-weight:600}
+[data-page="table"] .oline.served .q{opacity:.75}
+[data-page="table"] .ono{margin:12px 0 0}
+[data-page="table"] .onote{display:flex; gap:6px; align-items:center; color:var(--warn); font-weight:700; font-size:15px}
+[data-page="table"] .tot{display:flex; justify-content:space-between; align-items:baseline; padding:16px 4px 0; font-size:20px; font-weight:800}
+[data-page="table"] .reqs{display:grid; gap:8px}
+[data-page="table"] .reqrow{display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:8px 16px 8px 10px; border:0; border-radius:22px; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 2px var(--red), var(--shadow); text-align:left; cursor:pointer; font:inherit}
+[data-page="table"] .reqrow .ri{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--red); color:var(--on-red); flex:none}
+[data-page="table"] .reqrow > span:nth-child(2){flex:1; min-width:0; display:grid}
+[data-page="table"] .reqrow b{font-size:16px; font-weight:800}
+[data-page="table"] .reqrow small{font-size:14px; color:var(--muted); font-weight:700}
+[data-page="table"] .ocard.queued{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
+[data-page="table"] .qlist{margin:8px 0; padding:0 0 0 20px; display:grid; gap:4px; font-weight:700}
+.paidrow{display:flex; align-items:center; gap:8px; color:var(--ok); font-weight:800}
+.splitcard{border-radius:22px; background:var(--surface-2); padding:12px 14px}
+.splitcard + .splitcard{margin-top:10px}
+.splitcard .hd{display:flex; justify-content:space-between; align-items:baseline; font-weight:800; font-size:18px}
+.splitcard .ln{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:3px 0}
+.splitcard .acts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+.st-sheet .chk small{font-size:14px; font-weight:700}
+.st-sheet .grams{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.st-sheet .grams .chip{justify-content:center; font-variant-numeric:tabular-nums; padding:0 4px; min-width:0}
+.st-sheet .pill[aria-busy="true"],.st-bar .pill[aria-busy="true"]{opacity:.7}
+</style>

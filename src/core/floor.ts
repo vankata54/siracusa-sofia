@@ -125,6 +125,8 @@ export interface TableSession {
   rejected: { at: Iso; reason: RejectReason; n: number; keys: string[]; by: string; pendingAt: Iso; pendingBy: string } | null;
   /** the numbers of the sitting's orders */
   orders: string[];
+  /** the waiter's order ids already made at this table (core/floor-staff.ts staffOrder: no double order after a resend) */
+  rids?: Record<string, string[]>;
   calls: FloorCall[];
   bills: Record<string, FloorBillReq>;
   /** "По ястия": line key -> the phone that pays it */

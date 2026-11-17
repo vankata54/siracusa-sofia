@@ -320,7 +320,11 @@ export interface StaffOrderInput {
   lines: { id: string; q: number; mods?: string[]; note?: string; grams?: number | null; guest?: string }[];
   /** a note for the whole order */
   note?: string;
+  /** the phone's id of this order (the same when it is sent again after a lost answer or from the offline outbox):
+      a repeated id returns the orders made the first time, never a second order */
+  rid?: string;
 }
+const RID = /^[A-Za-z0-9_-]{8,40}$/;
 const GUEST = /^Гост ([1-9]|1\d|20)$/;
 /** The waiter's order for a table (no payment, no address, no customer cart): added to the table's sitting; a free table
     gets a sitting. Everything is checked before anything is saved. Returns the numbers and the table. */
@@ -331,7 +335,9 @@ export async function staffOrder(ctx: Ctx, s: StaffCtx, ref: string | number, in
   const f: Record<string, string> = {};
   lines.forEach((l, i) => { if (l.guest && !GUEST.test(l.guest)) f["lines." + i + ".guest"] = FLOOR_MSG.sGuest; });
   if (Object.keys(f).length) invalid(f);
+  const rid = typeof inp.rid === "string" && RID.test(inp.rid) ? inp.rid : "";
   return onTable(ctx, ref, true, async (sit, t) => {
+    if (rid && sit.rids && sit.rids[rid]) return { ...(await done(ctx, s, t, sit)), orders: sit.rids[rid] };
     tableKitchenOpen(ctx, "staff");
     checkTableLines(ctx, lines, await soldOutToday(ctx), "required", "staff");
     const groups = new Map<string, TableLine[]>();
@@ -345,6 +351,7 @@ export async function staffOrder(ctx: Ctx, s: StaffCtx, ref: string | number, in
     /* the waiter is at the table taking the order: the call "Поръчка" is served */
     const now = iso(ctx), served = sit.calls.filter((c) => c.kind === "order" && !c.done);
     served.forEach((c) => { c.done = { how: "served", at: now, by: s.user.username, auto: true }; });
+    if (rid) { const keep = Object.entries(sit.rids || {}).slice(-49); sit.rids = Object.fromEntries([...keep, [rid, nos]]); }
     await audit(ctx, s.user.username, "floor.order", nos.join(","), { table: t.n, orders: nos, total, bills: [...groups.keys()] });
     const d = await done(ctx, s, t, sit);
     served.forEach((c) => emitCall(ctx, sit, c));

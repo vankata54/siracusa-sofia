@@ -70,7 +70,9 @@ describe("runtime size: what the bundler puts into the shared chunk", () => {
         if (!/\.(ts|astro)$/.test(f) || rel === "src/client/sc-sheet.ts") continue;
         const src = fs.readFileSync(p, "utf8");
         /* a call in the code, not a mention in a comment */
-        if (!/\.sheet\(/.test(src.replace(/\/\*[\s\S]*?\*\//g, ""))) continue;
+        /* the admin and the modules have sheets of their own frames (A.sheet, st.sheet, boss.sheet …): only SC.sheet counts there */
+        const own = /^src\/(admin|modules)\//.test(rel);
+        if (!(own ? /\bSC\.sheet\(/ : /\.sheet\(/).test(src.replace(/\/\*[\s\S]*?\*\//g, ""))) continue;
         callers.push(rel);
         /* src/client/suggest.ts is imported by the unit tests (no DOM): its browser entry suggest-open.ts brings the sheet */
         const entry = rel === "src/client/suggest.ts" ? fs.readFileSync("src/client/suggest-open.ts", "utf8") : src;

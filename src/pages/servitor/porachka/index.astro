@@ -1,0 +1,49 @@
+---
+/* /servitor/porachka/#12: "Нова поръчка" of the waiter (design/pages-servitor/order.html); without # it asks "За коя
+   маса?". The screen is src/modules/servitor/order.ts; here the page and the styles of this screen only. */
+import Staff from "../../../modules/staff/Staff.astro";
+---
+<Staff module="waiter" title="Нова поръчка" nav>
+<script>
+import { mountOrder } from "../../../modules/servitor/order.ts";
+void mountOrder();
+</script>
+</Staff>
+<style is:global>
+[data-page="order"] .billrow{display:flex; gap:8px; align-items:center; margin-top:10px}
+[data-page="order"] .billrow .st-seg{flex:1}
+[data-page="order"] .billrow .st-seg button{min-height:52px; font-size:16px}
+[data-page="order"] .pick .tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+[data-page="order"] .pick .tgrid .tile{min-height:96px}
+[data-page="order"] .pick .tile .w{flex-wrap:wrap}
+[data-page="order"] .cattiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+[data-page="order"] .cattile > span{min-width:0; overflow-wrap:break-word}
+/* the narrow phone (360): the long words ("Свободна", "Гарнитури") stay inside their tiles */
+@container app (max-width:370px){
+  [data-page="order"] .pick .tile{padding:10px 8px 10px 10px}
+  [data-page="order"] .cattile{gap:10px; padding:10px 10px 10px 8px; font-size:15px}
+  [data-page="order"] .cattile .pic{width:44px; height:44px; border-radius:14px}
+}
+[data-page="order"] .schips{display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 8px}
+[data-page="order"] .schips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
+[data-page="order"] .res-h{font-size:14px; font-weight:800; color:var(--muted); margin:6px 0 0}
+[data-page="order"] .out-b{display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 10px; border-radius:999px; background:var(--surface); color:var(--warn); box-shadow:inset 0 0 0 1.5px currentColor; font-size:14px; font-weight:800; white-space:nowrap}
+[data-page="order"] .sent{display:grid; justify-items:center; text-align:center; gap:10px; padding:40px 16px 0}
+[data-page="order"] .sent .ill{width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background:var(--ok); color:var(--on-ok); animation:stpop var(--t-spring) var(--ease)}
+[data-page="order"] .sent.kept .ill{background:var(--ember); color:var(--on-ember)}
+[data-page="order"] .sent h1{outline:0}
+[data-page="order"] .sent .btns{display:grid; gap:8px; width:100%; margin-top:16px}
+@keyframes stpop{from{transform:scale(.6); opacity:0}to{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){ [data-page="order"] .sent .ill{animation:none} }
+.st-sheet .sum-line{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 0}
+.st-sheet .sum-line + .sum-line{border-top:1px solid var(--line)}
+.st-sheet .sum-line .nm{font-weight:700; line-height:1.25}
+.st-sheet .sum-line .nb{display:flex; gap:6px; align-items:center; color:var(--warn); font-weight:700; font-size:15px; margin-top:2px}
+.st-sheet .sum-line .counter{background:var(--surface-2)}
+.st-sheet .notebtn{display:inline-flex; align-items:center; gap:4px; min-height:48px; padding:0 12px 0 8px; border:0; border-radius:999px; background:transparent; color:var(--red); font-weight:800; font-size:15px; cursor:pointer}
+.st-sheet .rfl{margin:0; text-align:center}
+.st-sheet textarea.input{padding-top:14px; padding-bottom:14px; min-height:72px; resize:vertical; font:inherit}
+.st-sheet .grams{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.st-sheet .grams .chip{justify-content:center; font-variant-numeric:tabular-nums; padding:0 4px; min-width:0}
+.st-bar .pill[aria-busy="true"],.st-sheet .pill[aria-busy="true"]{opacity:.7}
+</style>

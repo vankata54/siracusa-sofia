@@ -1,0 +1,61 @@
+---
+/* /servitor/chasovnik/: "Часовник" of the waiter (design/pages-servitor/watch.html): the two watch faces on the live data
+   of the hall. The screen is src/modules/servitor/watch.ts; here the page and the styles of the faces (always dark:
+   the local scope .st-dark of staff.css). */
+import Staff from "../../../modules/staff/Staff.astro";
+---
+<Staff module="waiter" title="Часовник">
+<script>
+import { mountWatch } from "../../../modules/servitor/watch.ts";
+void mountWatch();
+</script>
+</Staff>
+<style is:global>
+[data-page="watch"] .wsec{padding:24px 16px 0}
+[data-page="watch"] .wsec h2{margin:0 0 14px; font-size:22px; font-weight:800; letter-spacing:-.03em}
+[data-page="watch"] .wsub{margin:-8px 0 14px; color:var(--muted)}
+[data-page="watch"] .wnote{display:flex; gap:10px; align-items:flex-start; margin:0; color:var(--muted); font-size:15px; line-height:1.4}
+[data-page="watch"] .wnote .ic{color:var(--red); flex:none; margin-top:1px}
+[data-page="watch"] .pair{display:flex; flex-wrap:wrap; justify-content:center; gap:20px; align-items:center}
+[data-page="watch"] .dev{display:grid; justify-items:center; gap:8px; margin:0}
+[data-page="watch"] .dev figcaption{font-size:14px; font-weight:700; color:var(--muted)}
+/* bezels: always dark, like the hardware */
+[data-page="watch"] .w{position:relative; padding:10px; background:var(--surface-3); box-shadow:0 0 0 1px var(--line-strong), var(--shadow-lg); touch-action:pan-y}
+[data-page="watch"] .w.round{width:232px; height:232px; border-radius:50%}
+[data-page="watch"] .w.rect{width:204px; height:244px; border-radius:52px}
+[data-page="watch"] .face{position:relative; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--ink); display:grid; align-content:center; justify-items:center; text-align:center; gap:4px}
+[data-page="watch"] .round .face{border-radius:50%; padding:22px 26px}
+[data-page="watch"] .rect .face{border-radius:42px; padding:16px 14px; align-content:space-between}
+[data-page="watch"] .rect .face.idle{align-content:center; gap:10px}
+[data-page="watch"] .face .mid{display:grid; gap:6px; justify-items:center}
+[data-page="watch"] .face .wtop{display:flex; align-items:center; justify-content:center; gap:6px; min-height:20px; font-size:15px; font-weight:800; color:var(--muted)}
+[data-page="watch"] .face .t{font-size:30px; font-weight:800; letter-spacing:-.04em; line-height:1}
+[data-page="watch"] .round .face .t{font-size:28px}
+[data-page="watch"] .face .why{display:flex; align-items:center; justify-content:center; gap:6px; font-size:18px; font-weight:800; line-height:1.15}
+[data-page="watch"] .face .tm{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
+[data-page="watch"] .face .btn{width:100%; min-height:56px; border:0; border-radius:999px; background:var(--red); color:var(--on-red); font:inherit; font-size:19px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; margin-top:4px}
+[data-page="watch"] .face .btn:active{transform:scale(.96)}
+[data-page="watch"] .face .btn[aria-busy="true"]{opacity:.7}
+[data-page="watch"] .round .face .btn{min-height:52px; width:150px; font-size:18px}
+[data-page="watch"] .face.call .why{color:var(--red)}
+[data-page="watch"] .face.call.warn .tm{color:var(--warn)}
+[data-page="watch"] .face.call.late{box-shadow:inset 0 0 0 4px var(--red)}
+[data-page="watch"] .face.ready .why{color:var(--ember)}
+[data-page="watch"] .face.ready .btn{background:var(--ember); color:var(--on-ember)}
+[data-page="watch"] .face.ok .btn{background:var(--ok); color:var(--on-ok)}
+[data-page="watch"] .face.ok .why{color:var(--ok)}
+[data-page="watch"] .round .face.ok{padding-bottom:34px}
+[data-page="watch"] .face .pager{display:flex; gap:6px; justify-content:center}
+[data-page="watch"] .face .pager span{width:8px; height:8px; border-radius:50%; background:var(--line-strong)}
+[data-page="watch"] .face .pager span.on{background:var(--ink)}
+[data-page="watch"] .face .big{color:var(--ok)}
+[data-page="watch"] .face .warn{color:var(--warn)}
+[data-page="watch"] .face .muted{font-size:15px; font-weight:700; line-height:1.3; color:var(--muted); max-width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+[data-page="watch"] .vib{display:grid; gap:10px}
+[data-page="watch"] .vib .r{display:flex; align-items:center; gap:12px; width:100%; min-height:56px; padding:12px 14px; border:0; border-radius:22px; background:var(--surface); color:var(--ink); box-shadow:var(--hi), var(--shadow); font:inherit; text-align:left; cursor:pointer}
+[data-page="watch"] .vib .r .lb{flex:1; min-width:0; display:grid; line-height:1.25}
+[data-page="watch"] .vib .r .vw{font-size:14px; font-weight:700; color:var(--muted)}
+[data-page="watch"] .vib .r.on{box-shadow:inset 0 0 0 2px var(--red), var(--shadow)}
+[data-page="watch"] .vib .bars{display:flex; gap:4px; align-items:center}
+[data-page="watch"] .vib .bars i{display:block; height:12px; border-radius:6px; background:var(--ink)}
+</style>
