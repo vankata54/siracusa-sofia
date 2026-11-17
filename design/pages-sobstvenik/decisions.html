@@ -46,13 +46,17 @@
 .dc-row[aria-current="true"] .n{background:var(--ink); color:var(--bg)}
 .dc-row .t{min-width:0}
 .dc-row .t b{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:16px; line-height:1.35}
-.dc-row .t small{display:block; font-size:14px; color:var(--muted); font-weight:600; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dc-row .t small{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:14px; color:var(--muted); font-weight:600; margin-top:2px; line-height:1.35}
 .dc-row .s{white-space:nowrap}
 @container app (max-width:420px){ .dc-row{grid-template-columns:minmax(0,1fr) auto; padding:10px 14px} .dc-row .n{display:none} }
 .dc-g .it{display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
 .dc-g .it:first-of-type{border-top:0}
 .dc-g .ill{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); flex:none}
 .dc-g b{display:block}
+.dc-ns .nw{white-space:nowrap}
+.dc-ro{display:flex; gap:12px; align-items:flex-start; margin:0; padding:14px 16px; border-radius:18px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.dc-ro .ic{flex:none; color:var(--muted); margin-top:2px}
+#dc-nh:focus{outline:none}
 </style>
 </head>
 <body>
@@ -74,59 +78,57 @@ var body = O.mount({page:"decisions", title:"Решения", states:[["","Об�
 if (!body) return;
 A.liveHash = true;
 var filt = A.hash.f === "done" ? "done" : "wait", cur = A.hash.q || "", other = false, otherErr = "", otherVal = "";
-var SECN = {r:"За собственика: решения", m:"За собственика: модулите"};
+var SECN = {r:"За собственика: решения", m:"За собственика: модулите"}, CAN = O.canAnswer();
 function fmtDef(t){ return esc(t).replace(/\[ЛИПСВА(?::\s*([^\]]*))?\]/g, function(m, x){ return '<span class="missing">[ЛИПСВА' + (x ? ': ' + x : '') + ']</span>'; }); }
 function qById(id){ return O.QUESTIONS.filter(function(q){ return q.id === id; })[0] || null; }
-function idxOf(q){ return O.QUESTIONS.indexOf(q) + 1; }
+function grpName(q){ return q.sec === "r" ? (q.id === "v1" ? "Решения за ресторанта · ваучери" : "Решения за ресторанта") : q.grp; }
 var NSN = {"new":"при агенцията, чака преглед", approved:"одобрен, агенцията го прилага", doing:"агенцията го прилага", review:"приложен, чака публикуване", published:"приложен", rejected:"агенцията ще се обади"};
 
 function draw(){
   if (st === "loading"){ body.innerHTML = O.skel(4, "Зареждаме решенията …"); return; }
-  if (st === "error"){ body.innerHTML = O.error("Не успяхме да заредим решенията. Отговорите ти са запазени; опитай пак."); return; }
-  var ans = st === "empty" ? allAnswered() : O.answers(), wait = O.QUESTIONS.filter(function(q){ return !ans[q.id]; }), done = O.QUESTIONS.filter(function(q){ return ans[q.id]; });
-  var list = filt === "wait" ? wait : done;
-  if (!cur || !qById(cur) || (list.indexOf(qById(cur)) < 0 && !A.hash.q)) cur = list[0] ? list[0].id : "";
+  if (st === "error"){ body.innerHTML = O.error("Отговорите ти са запазени. Опитай пак след малко."); return; }
   var h = '';
-  if (st === "drop") h += O.banner({tone:"warn", icon:"warning", title:"Отклонение днес", text:'<span class="ow-muted">Поръчките днес са под обичайното за деня.</span>', action:'<a class="pill pill-line" href="today.html#st=drop">' + ic("house", 20) + 'Към „Днес“</a>'}) + '<div style="height:16px"></div>';
-  h += '<p class="ow-lead">Тук решаваш. Отговорите отиват при агенцията като препоръка от собственика.</p>';
-  h += '<div class="ow-grid">';
-  h += noshowHTML();
-  h += '</div>';
-  /* въпросите */
-  h += '<div class="ow-sh" id="questions"><h2>Въпроси от агенцията</h2><p>' + A.plural(done.length, "отговорен", "отговорени") + ' от ' + O.QUESTIONS.length + '</p></div>';
-  h += '<div class="dc-prog" aria-hidden="true"><div class="bar"><i style="width:' + (done.length / O.QUESTIONS.length * 100) + '%"></i></div></div><div style="height:14px"></div>';
-  h += '<div class="seg dc-filter" role="group" aria-label="Покажи"><button type="button" data-f="wait" aria-pressed="' + (filt === "wait") + '">Чакат отговор · ' + wait.length + '</button><button type="button" data-f="done" aria-pressed="' + (filt === "done") + '">Отговорени · ' + done.length + '</button></div>';
-  var q = qById(cur);
-  h += '<div class="dc-wrap"><div class="dc-main">';
-  if (!list.length) h += '<section class="ow-card">' + (filt === "wait" ? O.empty({icon:"check-circle", title:"Всички въпроси са с отговор.", text:"Благодарим! Агенцията ги преглежда. Отговорите са в „Отговорени“.", action:'<button class="pill pill-line pill-lg" type="button" data-f="done">Виж отговорите</button>'}) : O.empty({icon:"chat-circle-dots", title:"Още няма отговорени въпроси.", text:"Започни от първия: един бутон, ако си съгласен с варианта по подразбиране.", action:'<button class="pill pill-line pill-lg" type="button" data-f="wait">Към въпросите</button>'})) + '</section>';
-  else if (q) h += focusHTML(q, ans[q.id], list);
-  h += '</div>';
-  /* списъкът по групи */
-  if (list.length){ var groups = []; list.forEach(function(x){ var gname = x.sec === "r" ? "Решения за ресторанта" : x.grp; var g = groups.filter(function(y){ return y.n === gname; })[0]; if (!g){ g = {n:gname, l:[]}; groups.push(g); } g.l.push(x); });
-    h += '<div class="dc-list">' + groups.map(function(g){ return '<h3>' + esc(g.n) + ' · ' + g.l.length + '</h3><div class="rows">' + g.l.map(function(x){ var a = ans[x.id];
-      return '<button class="dc-row" type="button" data-q="' + x.id + '" aria-current="' + (x.id === cur) + '"><span class="n">' + esc(x.n) + '</span><span class="t"><b>' + esc(x.text) + '</b><small>' + (a ? (a.q.answer === "default" ? "Съгласен" : "Друго: " + esc(a.q.other)) : "По подразбиране: " + fmtDef(x.def)) + '</small></span><span class="s">' + (a ? '<span class="ow-tag ok">' + ic("check", 16) + 'Отговорен</span>' : ic("caret-right", 20)) + '</span></button>'; }).join("") + '</div>'; }).join("") + '</div>'; }
-  h += '</div>';
+  if (st === "drop") h += O.banner({tone:"warn", icon:"warning", title:"Оборотът днес е под обичайното", text:'<span class="ow-muted">Подробно в „Днес“.</span>', action:'<a class="pill pill-line" href="today.html#st=drop">' + ic("house", 20) + 'Към „Днес“</a>'}) + '<div style="height:16px"></div>';
+  h += '<p class="ow-lead">' + (CAN ? 'Тук решаваш. Отговорите отиват при агенцията като препоръка от собственика.' : 'На въпросите от агенцията отговаря собственикът. Тук ги виждаш само за четене.') + '</p>';
+  h += '<div class="ow-grid">' + noshowHTML() + '</div>';
+  h += '<div class="ow-sh" id="questions"><h2>Въпроси от агенцията</h2></div>';
+  /* „Нищо не чака“ (само в прототипа): празното съобщение, без измислени отговори */
+  if (st === "empty"){ h += '<section class="ow-card">' + O.empty({icon:"check-circle", title:"Нищо не чака отговор", text:"Когато агенцията има въпрос към теб, той идва тук и в „Чака те“ на „Днес“."}) + '</section>'; }
+  else { var ans = O.answers(), wait = O.QUESTIONS.filter(function(q){ return !ans[q.id]; }), done = O.QUESTIONS.filter(function(q){ return ans[q.id]; }), list = filt === "wait" ? wait : done;
+    if (!cur || !qById(cur) || list.indexOf(qById(cur)) < 0) cur = list[0] ? list[0].id : "";
+    h += '<p class="ow-note" style="margin:-6px 4px 10px">' + done.length + ' от ' + O.QUESTIONS.length + ' са с отговор.</p><div class="dc-prog" aria-hidden="true"><div class="bar"><i style="width:' + (done.length / O.QUESTIONS.length * 100) + '%"></i></div></div><div style="height:14px"></div>';
+    h += '<div class="seg dc-filter" role="group" aria-label="Покажи"><button type="button" data-f="wait" aria-pressed="' + (filt === "wait") + '">Чакат отговор · ' + wait.length + '</button><button type="button" data-f="done" aria-pressed="' + (filt === "done") + '">Отговорени · ' + done.length + '</button></div>';
+    var q = qById(cur);
+    h += '<div class="dc-wrap"><div class="dc-main">';
+    if (!list.length) h += '<section class="ow-card">' + (filt === "wait" ? O.empty({icon:"check-circle", title:"Всички въпроси са с отговор", text:"Благодарим! Агенцията ги преглежда. Отговорите са в „Отговорени“.", action:'<button class="pill pill-line pill-lg" type="button" data-f="done">Виж отговорите</button>'}) : O.empty({icon:"chat-circle-dots", title:"Още няма отговорени въпроси", text:CAN ? "Започни от първия: един бутон, ако си съгласен с варианта по подразбиране." : "Собственикът още не е отговорил.", action:'<button class="pill pill-line pill-lg" type="button" data-f="wait">Към въпросите</button>'})) + '</section>';
+    else if (q) h += focusHTML(q, ans[q.id], list);
+    h += '</div>';
+    if (list.length){ var groups = []; list.forEach(function(x){ var gname = grpName(x).split(" · ")[0]; var g = groups.filter(function(y){ return y.n === gname; })[0]; if (!g){ g = {n:gname, l:[]}; groups.push(g); } g.l.push(x); });
+      h += '<div class="dc-list">' + groups.map(function(g){ return '<h3>' + esc(g.n) + ' · ' + g.l.length + '</h3><div class="rows">' + g.l.map(function(x){ var a = ans[x.id];
+        return '<button class="dc-row" type="button" data-q="' + x.id + '" aria-current="' + (x.id === cur) + '"><span class="n" aria-hidden="true">' + (x.n ? esc(x.n) : ic("ticket", 20)) + '</span><span class="t"><b>' + esc(x.text) + '</b><small>' + (a ? (a.q.answer === "default" ? "Съгласен с варианта по подразбиране" : "Друго: " + esc(a.q.other)) : "По подразбиране: " + fmtDef(x.def)) + '</small></span><span class="s">' + (a ? '<span class="ow-tag ok">' + ic("check", 16) + 'Отговорен</span>' : ic("caret-right", 20)) + '</span></button>'; }).join("") + '</div>'; }).join("") + '</div>'; }
+    h += '</div>'; }
   h += '<div style="height:24px"></div><div class="ow-grid">' + googleHTML() + '</div>';
   body.innerHTML = h;
-  var ta = body.querySelector("#dc-other"); if (ta){ ta.value = otherVal; }
+  var ta = body.querySelector("#dc-other"); if (ta) ta.value = otherVal;
 }
-function allAnswered(){ var m = {}; O.QUESTIONS.forEach(function(q){ m[q.id] = {q:{answer:"default"}, status:"new"}; }); return m; }
 function focusHTML(q, a, list){ var i = list.indexOf(q), canDef = O.hasDefault(q);
-  var h = '<section class="dc-q" id="dc-focus" aria-labelledby="dc-qt" data-edit-id="own.decisions.question" data-qid="' + q.id + '"><div class="eye"><span><b>Въпрос ' + (i + 1) + ' от ' + list.length + '</b></span><span>' + esc(q.sec === "r" ? "Решения за ресторанта" : q.grp) + ' · т. ' + esc(q.n) + '</span></div>' +
+  var h = '<section class="dc-q" id="dc-focus" aria-labelledby="dc-qt" data-edit-id="own.decisions.question" data-qid="' + q.id + '"><div class="eye"><span><b>Въпрос ' + (i + 1) + ' от ' + list.length + '</b></span><span>' + esc(grpName(q)) + (q.n ? ' · т. ' + esc(q.n) : '') + '</span></div>' +
     '<h3 id="dc-qt">' + esc(q.text) + '</h3>' +
-    '<div class="dc-def"><small>Вариант по подразбиране (така работи системата сега)</small><span>' + (canDef ? fmtDef(q.def) : A.missing("още няма вариант; напиши своя отговор")) + '</span></div>';
-  if (a && a.q && !other){ h += '<div class="dc-ans" role="status">' + ic("check-circle", 24) + '<span><b>' + (a.q.answer === "default" ? "Съгласен с варианта по подразбиране" : "Твоят отговор: " + esc(a.q.other)) + '</b><span class="ow-muted">' + (a.createdAt ? 'Изпратен ' + esc(A.ago(a.createdAt)) + ' · ' : '') + esc(NSN[a.status] || "при агенцията") + '</span></span></div>' +
-      '<div class="dc-acts"><button class="pill pill-line pill-lg" type="button" data-change>' + ic("pencil-simple", 22) + 'Промени отговора</button>' + (i < list.length - 1 ? '<button class="pill pill-soft pill-lg" type="button" data-next>Следващ' + ic("caret-right", 22) + '</button>' : '') + '</div>'; }
-  else if (other || !canDef){ h += '<div class="dc-other"><div class="field"><label for="dc-other">Твоят отговор</label><textarea class="input" id="dc-other" rows="3" placeholder="Например: само в брой засега"' + (otherErr ? ' aria-invalid="true" aria-describedby="dc-oe"' : '') + '></textarea>' + (otherErr ? '<span class="err" id="dc-oe">' + esc(otherErr) + '</span>' : '<span class="help">Пиши свободно, агенцията ще се обади, ако нещо не е ясно.</span>') + '</div>' +
-      '<div class="ow-row"><button class="pill pill-red pill-lg" type="button" data-send>' + ic("paper-plane-right", 22) + 'Изпрати отговора</button>' + (canDef ? '<button class="pill pill-line pill-lg" type="button" data-cancel>Откажи</button>' : '') + '</div></div>'; }
+    '<div class="dc-def"><small>' + (canDef ? 'Вариант по подразбиране (така работи системата сега)' : 'Сега в системата') + '</small><span>' + fmtDef(q.def || "[ЛИПСВА]") + '</span></div>';
+  if (a && a.q && !other){ h += '<div class="dc-ans" role="status">' + ic("check-circle", 24) + '<span><b>' + (a.q.answer === "default" ? "Съгласен с варианта по подразбиране" : "Отговор: " + esc(a.q.other)) + '</b><span class="ow-muted">' + (a.updatedAt ? 'Изпратен ' + esc(A.ago(a.updatedAt)) + ' · ' : '') + esc(NSN[a.status] || "при агенцията") + ((a.history || []).filter(function(x){ return x.note; }).length ? ' · отговорът е сменян' : '') + '</span></span></div>' +
+      '<div class="dc-acts">' + (CAN ? '<button class="pill pill-line pill-lg" type="button" data-change>' + ic("pencil-simple", 22) + 'Промени отговора</button>' : '') + (i < list.length - 1 ? '<button class="pill pill-soft pill-lg" type="button" data-next>Следващ' + ic("caret-right", 22) + '</button>' : '') + '</div>'; }
+  else if (!CAN) h += '<p class="dc-ro">' + ic("lock", 22) + '<span><b>Отговаря собственикът.</b> Тук въпросът е само за четене.</span></p>' + (i < list.length - 1 ? '<div class="dc-acts"><button class="pill pill-soft pill-lg" type="button" data-next>Следващ' + ic("caret-right", 22) + '</button></div>' : '');
+  else if (other || !canDef){ h += '<div class="dc-other"><div class="field"><label for="dc-other">Твоят отговор</label><textarea class="input" id="dc-other" rows="3" placeholder="Напиши с няколко думи"' + (otherErr ? ' aria-invalid="true" aria-describedby="dc-oe"' : '') + '></textarea>' + (otherErr ? '<span class="err" id="dc-oe">' + esc(otherErr) + '</span>' : '<span class="help">Пиши свободно, агенцията ще се обади, ако нещо не е ясно.</span>') + '</div>' +
+      '<div class="ow-row"><button class="pill pill-red pill-lg" type="button" data-send>' + ic("paper-plane-right", 22) + 'Изпрати отговора</button>' + (canDef && a ? '<button class="pill pill-line pill-lg" type="button" data-agree>' + ic("check", 22) + 'Съгласен с варианта</button>' : '') + (a && a.q ? '<button class="pill pill-line pill-lg" type="button" data-cancel>Откажи</button>' : canDef ? '' : '') + (!a && canDef ? '<button class="pill pill-line pill-lg" type="button" data-cancel>Откажи</button>' : '') + '</div></div>'; }
   else h += '<div class="dc-acts"><button class="pill pill-red pill-lg" type="button" data-agree>' + ic("check", 22) + 'Съгласен</button><button class="pill pill-line pill-lg" type="button" data-other>' + ic("chat-circle-dots", 22) + 'Друго</button></div>';
-  h += '<p class="ow-note">Агенцията прилага отговора. Нищо не се сменя, докато тя не го одобри.</p></section>';
+  if (CAN) h += '<p class="ow-note">Агенцията прилага отговора. Нищо не се сменя, докато тя не го одобри.</p>';
+  h += '</section>';
   return h; }
 function noshowHTML(){ var bl = st === "empty" ? {} : (A.data.get("blocks", {}) || {}), keys = Object.keys(bl), pend = keys.filter(function(k){ return bl[k].status === "pending"; }), blk = keys.filter(function(k){ return bl[k].status === "blocked"; });
   var lim = (A.data.get("settings", {}) || {}).noShowLimit || 2;
-  return '<section class="ow-card wall" id="noshow" aria-labelledby="dc-nh" data-edit-id="own.decisions.noshow"><header><div><h2 id="dc-nh">Неявили се за блокиране<small>След ' + A.plural(lim, "неявяване", "неявявания") + ' номерът чака решение. Решават собственик, управител или главен админ.</small></h2></div></header>' +
+  return '<section class="ow-card wall" id="noshow" aria-labelledby="dc-nh" data-edit-id="own.decisions.noshow"><header><div><h2 id="dc-nh" tabindex="-1">Неявили се за блокиране<small>След ' + A.plural(lim, "неявяване", "неявявания") + ' номерът чака решение. Решават собственик, управител или главен админ.</small></h2></div></header>' +
     (pend.length ? '<div class="dc-ns">' + pend.map(function(k){ var b = bl[k];
-      return '<div class="it"><div><b>' + esc(b.name || "Без име") + '</b><span class="ow-muted"> · ' + esc(A.maskPhone(k)) + ' · ' + A.plural(b.count || 2, "неявяване", "неявявания") + '</span></div><p class="ow-note">Блокиран номер не може да резервира онлайн и да прави профил.</p>' +
+      return '<div class="it"><div><b>' + esc(b.name || "Без име") + '</b><span class="ow-muted"> · <span class="nw">' + esc(A.maskPhone(k)) + '</span> · <span class="nw">' + A.plural(b.count || 2, "неявяване", "неявявания") + '</span></span></div><p class="ow-note">Блокиран номер не може да резервира онлайн и да прави профил.</p>' +
         '<div class="ow-row"><button class="pill pill-ink pill-lg" type="button" data-bl="block" data-ph="' + esc(k) + '">' + ic("lock", 22) + 'Блокирай</button><button class="pill pill-line pill-lg" type="button" data-bl="dismiss" data-ph="' + esc(k) + '">Не блокирай</button></div></div>'; }).join("") + '</div>'
       : '<p class="td-ok" style="display:flex;gap:12px;align-items:center;margin:0">' + ic("check-circle", 26).replace('class="ic"', 'class="ic" style="color:var(--ok)"') + '<span><b>Няма неявили се за решение.</b></span></p>') +
     '<p class="ow-note">' + (blk.length ? A.plural(blk.length, "блокиран номер", "блокирани номера") + '. ' : '') + 'Целият списък и отблокирането: <a class="link" href="../pages-admin/reservations.html#blocks">Резервации · Блокиране' + ic("caret-right", 18) + '</a></p></section>'; }
@@ -134,16 +136,19 @@ function googleHTML(){ return '<section class="ow-card" id="google" aria-labelle
   '<div class="it"><span class="ill">' + ic("clock", 22) + '</span><span><b>Работно време от едно място</b><span class="ow-muted">Сменяш часовете в админа, Google се обновява сам.</span> ' + A.missing("достъп до Google Business Profile API") + '</span></div>' +
   '<div class="it"><span class="ill">' + ic("star", 22) + '</span><span><b>Рейтинг и отзиви</b>' + A.missing("рейтинг и линк за отзив") + '</span></div></div></section>'; }
 
-/* отговор: бележка в sa-notes при главния админ (препоръка, не сменя системата) */
-function answer(q, kind, text){ var now = A.now().toISOString(), id = Math.random().toString(36).slice(2, 10);
+/* отговор: ЕДНА бележка на въпрос в sa-notes (препоръка към главния админ, не сменя системата); нов отговор заменя предишния, с история */
+function answer(q, kind, text){ var nowIso = A.now().toISOString(), old = O.answers()[q.id], was = old ? JSON.parse(JSON.stringify(old)) : null;
   var t = kind === "default" ? "Съгласен с варианта по подразбиране: „" + q.def + "“." : "Друго: " + text;
-  var n = {id:id, module:"sobstvenik", url:"/pages-sobstvenik/decisions.html#q=" + q.id, selector:'[data-qid="' + q.id + '"]', editId:"own.decisions.question",
-    text:"Отговор на въпрос от агенцията (" + SECN[q.sec] + ", т. " + q.n + "): „" + q.text + "“ " + t, elementText:q.text.slice(0, 500), viewport:{w:window.innerWidth, h:window.innerHeight}, screenshot:null,
-    author:A.who(), source:{type:"staff", role:A.me.role, user:A.me.user}, status:"new", createdAt:now, updatedAt:now, kind:"answer",
+  var fields = {module:"sobstvenik", url:"/pages-sobstvenik/decisions.html#q=" + q.id, selector:'[data-qid="' + q.id + '"]', editId:"own.decisions.question",
+    text:"Отговор на въпрос от агенцията (" + SECN[q.sec] + (q.n ? ", т. " + q.n : "") + "): „" + q.text + "“ " + t, elementText:q.text.slice(0, 500), viewport:{w:window.innerWidth, h:window.innerHeight}, screenshot:null,
+    author:A.who(), source:{type:"staff", role:A.me.role, user:A.me.user}, status:"new", updatedAt:nowIso, kind:"answer",
     q:{id:q.id, n:q.n, sec:SECN[q.sec], group:q.grp, text:q.text, def:q.def, answer:kind, other:kind === "other" ? text : ""}};
-  A.notes.add(n); A.audit("note.create", "Отговор на въпрос т. " + q.n + " (" + (q.sec === "r" ? "решения" : "модулите") + "): " + (kind === "default" ? "Съгласен" : "Друго"), id);
-  return n; }
-function next(){ var ans = O.answers(), w = O.QUESTIONS.filter(function(x){ return !ans[x.id]; }); return w[0] ? w[0].id : ""; }
+  var n;
+  if (old){ n = Object.assign({}, old, fields); n.history = (old.history || []).concat([{status:"new", at:nowIso, who:A.me.name, note:"Сменен отговор (беше: " + (old.q.answer === "default" ? "Съгласен" : "Друго: " + old.q.other) + ")"}]); A.notes.put(n); }
+  else { n = Object.assign({id:Math.random().toString(36).slice(2, 10), createdAt:nowIso, history:[{status:"new", at:nowIso, who:A.me.name}]}, fields); A.notes.add(n); }
+  A.audit("note.create", (old ? "Сменен отговор на въпрос " : "Отговор на въпрос ") + (q.n ? "т. " + q.n + " " : "") + "(" + (q.sec === "r" ? "решения" : "модулите") + "): " + (kind === "default" ? "Съгласен" : "Друго"), n.id);
+  return {n:n, was:was}; }
+function next(){ var w = O.unanswered(); return w[0] ? w[0].id : ""; }
 function focusCard(){ var f = body.querySelector("#dc-focus"); if (f){ f.scrollIntoView({block:"start", behavior:"smooth"}); var t = f.querySelector("h3"); t.setAttribute("tabindex", "-1"); t.focus({preventScroll:true}); } }
 function sync(){ var h = Object.assign({}, A.hash, {f:filt === "done" ? "done" : "", q:cur}); A.setHash(h); }
 
@@ -151,28 +156,33 @@ O.redraw = draw;
 draw();
 if (location.hash.indexOf("noshow") > -1 || location.hash.indexOf("google") > -1){ var t0 = document.getElementById(location.hash.indexOf("noshow") > -1 ? "noshow" : "google"); t0 && setTimeout(function(){ t0.scrollIntoView({block:"start"}); }, 60); }
 else if (A.hash.q){ setTimeout(focusCard, 80); }
+window.addEventListener("storage", function(e){ if (/^sa-(blocks|notes)$/.test(e.key || "")) draw(); });
 body.addEventListener("input", function(e){ if (e.target.id === "dc-other") otherVal = e.target.value; });
 body.addEventListener("click", function(e){ var t, q = qById(cur);
   if ((t = e.target.closest("[data-f]"))){ filt = t.dataset.f; cur = ""; other = false; otherErr = ""; draw(); sync(); var b = body.querySelector('[data-f="' + filt + '"]'); b && b.focus({preventScroll:true}); return; }
   if ((t = e.target.closest("[data-q]"))){ cur = t.dataset.q; other = false; otherErr = ""; otherVal = ""; draw(); sync(); focusCard(); return; }
-  if (e.target.closest("[data-other]") || e.target.closest("[data-change]")){ other = true; otherErr = ""; otherVal = ""; draw(); var ta = body.querySelector("#dc-other"); ta && ta.focus(); return; }
-  if (e.target.closest("[data-cancel]")){ other = false; otherErr = ""; draw(); return; }
+  if (e.target.closest("[data-other]") || e.target.closest("[data-change]")){ var a0 = O.answers()[cur]; other = true; otherErr = ""; otherVal = a0 && a0.q && a0.q.answer === "other" ? a0.q.other : ""; draw(); var ta = body.querySelector("#dc-other"); if (ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } return; }
+  if (e.target.closest("[data-cancel]")){ other = false; otherErr = ""; draw(); focusCard(); return; }
   if (e.target.closest("[data-next]")){ var l = (filt === "wait" ? O.unanswered() : O.QUESTIONS.filter(function(x){ return O.answers()[x.id]; })), i = l.indexOf(q); cur = l[i + 1] ? l[i + 1].id : cur; draw(); sync(); focusCard(); return; }
-  if (e.target.closest("[data-agree]") || e.target.closest("[data-send]")){ if (st === "empty") return;
+  if (e.target.closest("[data-agree]") || e.target.closest("[data-send]")){ if (!CAN) return;
     var kind = e.target.closest("[data-agree]") ? "default" : "other", txt = (otherVal || "").trim();
     if (kind === "other" && txt.length < 2){ otherErr = "Напиши отговора си."; draw(); var ta2 = body.querySelector("#dc-other"); ta2 && ta2.focus(); return; }
-    var n = answer(q, kind, txt), was = cur; other = false; otherErr = ""; otherVal = "";
+    var r = answer(q, kind, txt), was = cur; other = false; otherErr = ""; otherVal = "";
     if (filt === "wait") cur = next(); draw(); sync(); focusCard();
-    O.toast(st === "offline" ? "Записано на телефона, тръгва само, щом има връзка." : "Отговорът е при агенцията (т. " + q.n + ")", {undo:function(){ A.notes.remove(n.id); A.audit("note.delete", "Отменен отговор на въпрос т. " + q.n, n.id); cur = was; draw(); sync(); focusCard(); }});
+    O.toast(st === "offline" ? "Записано на телефона, тръгва само, щом има връзка." : (r.was ? "Отговорът е сменен (т. " + q.n + ")" : "Отговорът е при агенцията" + (q.n ? " (т. " + q.n + ")" : "")), {undo:function(){
+      if (r.was){ A.notes.put(r.was); A.audit("note.status", "Върнат предишният отговор на въпрос т. " + q.n, r.n.id); } else { A.notes.remove(r.n.id); A.audit("note.delete", "Отменен отговор на въпрос т. " + q.n, r.n.id); }
+      cur = was; draw(); sync(); focusCard(); }});
     return; }
   if ((t = e.target.closest("[data-bl]"))){ var ph = t.dataset.ph, bl = A.data.get("blocks", {}) || {}, b = bl[ph]; if (!b) return; var who = b.name || A.maskPhone(ph);
-    if (t.dataset.bl === "block") O.confirm({title:"Блокирай " + who + "?", text:"Номерът " + esc(A.maskPhone(ph)) + " няма да може да резервира онлайн и да прави профил. Отблокира се от „Резервации“ в админа.", ok:"Блокирай", icon:"lock", danger:true}, function(){ act("block", ph, who); });
+    if (t.dataset.bl === "block") O.confirm({title:"Да блокирам ли?", noReturn:true, text:"<b>" + esc(who) + "</b>, номер " + esc(A.maskPhone(ph)) + ", няма да може да резервира онлайн и да прави профил. Отблокира се от „Резервации“ в админа.", ok:"Блокирай", icon:"lock", danger:true}, function(){ act("block", ph, who); });
     else act("dismiss", ph, who); return; }
 });
 function act(a, ph, who){ var bl = A.data.get("blocks", {}) || {}, b = bl[ph]; if (!b) return;
   if (a === "block"){ b.status = "blocked"; b.at = A.now().toISOString(); b.by = A.me.name; A.audit("customer.block", "Блокиран номер " + A.maskPhone(ph) + " (" + who + ")", ph); }
   else { delete bl[ph]; A.audit("customer.block", "Не е блокиран: " + A.maskPhone(ph) + " (" + who + ")", ph); }
   A.data.set("blocks", bl); draw();
+  /* фокусът: на заглавието на картата (бутонът, от който е тръгнало, вече го няма) */
+  var hd = document.getElementById("dc-nh"); hd && hd.focus({preventScroll:true});
   /* без „Отмени“: ядрото не връща точно предишното (решение 16.11) */
   O.toast((a === "block" ? who + " е блокиран." : who + " не е блокиран.") + (st === "offline" ? " Записано на телефона, тръгва само, щом има връзка." : ""), {action:{label:"Резервации", href:"../pages-admin/reservations.html#blocks"}}); }
 })();

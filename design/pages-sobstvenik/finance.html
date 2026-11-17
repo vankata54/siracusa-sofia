@@ -21,13 +21,21 @@
 .fi-kv > div:first-child{border-top:0}
 .fi-kv span{min-width:0; line-height:1.35}
 .fi-kv span small{display:block; font-size:15px; color:var(--muted); font-weight:600}
-.fi-kv b{font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
+.fi-kv b{font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; max-width:62%}
+.fi-kv b .missing{white-space:normal}
 .fi-kv .tot{border-top:2px solid var(--line-strong); font-size:18px}
 .fi-drv{display:grid; gap:10px}
 .fi-drv > div{padding:14px; border-radius:18px; background:var(--surface-2); display:grid; gap:6px}
 .fi-drv .hd{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
 .fi-drv .hd b{font-size:18px}
 .fi-big{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px}
+.tr-two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.tr-two > div{padding:12px 14px; border-radius:18px; background:var(--surface-2); display:grid; gap:2px; min-width:0}
+.tr-two .k{font-size:14px; font-weight:700; color:var(--muted)}
+.tr-two b{font-size:24px; letter-spacing:-.03em; white-space:nowrap}
+.tr-two .ow-d{white-space:normal}
+.fi-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@container app (max-width:420px){ .fi-three{grid-template-columns:repeat(2,minmax(0,1fr))} .fi-three > div:last-child{grid-column:1 / -1} }
 .fi-cost .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
 </style>
 </head>
@@ -39,6 +47,7 @@
 <script src="../pages-admin/_seed-orders.js"></script>
 <script src="../pages-admin/_res-lib.js"></script>
 <script src="../pages-admin/_seed-res.js"></script>
+<script src="../pages-upravitel/_seed-shift.js"></script>
 <script src="../pages-admin/_pencil.js"></script>
 <script src="../pages-admin/_pen-mount.js" data-auto="false"></script>
 <script src="_history.js"></script>
@@ -49,84 +58,87 @@ var ic = O.ic, esc = O.esc, st = O.st;
 var body = O.mount({page:"finance", title:"Финанси и гориво", states:O.STATES});
 if (!body) return;
 A.liveHash = true;
-function f2(v){ return v.toFixed(1).replace(".", ","); }
-/* сборове за период: плащане (H.extra) и гориво (H.fuel) */
-function money(a, b){ var o = {pay:{cash:0, card:0, voucher:0, tcash:0, tcard:0}, fuel:{km:0, l:0, eur:0, deliv:0, by:[{km:0, l:0, eur:0, n:0}, {km:0, l:0, eur:0, n:0}], car:[{km:0, l:0, eur:0}, {km:0, l:0, eur:0}], saved:0, routes:0, shorter:0}, days:[]};
-  for (var k = a; k <= b; k = H.addD(k, 1)){ var d = H.empty && k !== H.TODAY ? null : H.day(k), e = d && d.orders ? H.extra(k) : null, f = d && d.orders ? H.fuel(k) : {km:0, l:0, eur:0, deliv:0, by:[{km:0, l:0, eur:0, n:0}, {km:0, l:0, eur:0, n:0}], car:[{km:0, l:0, eur:0}, {km:0, l:0, eur:0}], saved:0, routes:0, shorter:0};
+function f1(v){ return v.toFixed(1).replace(".", ","); }
+var ZERO = function(){ return {km:0, l:0, eur:0, deliv:0, by:[{km:0, l:0, eur:0, n:0}, {km:0, l:0, eur:0, n:0}], car:[{km:0, l:0, eur:0}, {km:0, l:0, eur:0}], saved:0, routes:0, shorter:0}; };
+/* сборове за период: плащане (H.extra) и гориво (H.fuel; днес от sa-orders, същите доставки като парите в брой) */
+function money(a, b){ var o = {pay:{cash:0, card:0, voucher:0, tcash:0, tcard:0}, fuel:ZERO(), days:[]};
+  for (var k = a; k <= b; k = H.addD(k, 1)){ var d = H.empty && k !== H.TODAY ? null : H.day(k), e = d && d.orders ? H.extra(k) : null, f = d && d.orders ? H.fuel(k) : ZERO();
     if (e) Object.keys(o.pay).forEach(function(p){ o.pay[p] += e.pay[p]; });
     ["km","l","eur","deliv","saved","routes","shorter"].forEach(function(x){ o.fuel[x] += f[x]; }); [0, 1].forEach(function(i){ ["km","l","eur","n"].forEach(function(x){ o.fuel.by[i][x] += f.by[i][x] || 0; }); ["km","l","eur"].forEach(function(x){ o.fuel.car[i][x] += f.car[i][x]; }); });
-    o.days.push({k:k, f:f}); }
+    o.days.push({k:k, f:f, rev:d ? d.rev : 0}); }
   return o; }
-/* парите в брой днес: от sa-orders (доставени с „В брой“, по шофьор; на път = още в колата) */
+/* парите в брой днес: от sa-orders (същите поръчки като „По шофьор“ за днес); предаденото е от смяната на управителя, ако го има */
 function cashToday(){ var by = {}; H.DRIVERS.forEach(function(n){ by[n] = {done:0, nd:0, road:0, nr:0}; });
-  A.orders().forEach(function(o){ if (o.mode !== "delivery" || o.pay !== "cash" || !o.driver || !by[o.driver]) return; var v = typeof o.total === "number" ? o.total : 0;
+  H.todayOrders().forEach(function(o){ if (o.mode !== "delivery" || o.pay !== "cash" || !o.driver || !by[o.driver]) return; var v = typeof o.total === "number" ? o.total : 0;
     if (o.status === "delivered"){ by[o.driver].done += v; by[o.driver].nd++; } else if (o.status === "on_way"){ by[o.driver].road += v; by[o.driver].nr++; } });
   return by; }
+function handed(){ var sh = A.data.get("shift", null); if (!sh) return null; var h = sh.handed || sh.cashHanded; if (h == null) return null; if (typeof h === "number") return h; return Object.keys(h).reduce(function(a, k){ return a + (+h[k] || 0); }, 0); }
 function draw(){
   if (st === "loading"){ body.innerHTML = O.skel(5, "Смятаме финансите …"); return; }
-  if (st === "error"){ body.innerHTML = O.periodHTML() + O.error("Не успяхме да сметнем финансите. Нищо не е изгубено; опитай пак."); return; }
+  if (st === "error"){ body.innerHTML = O.periodHTML() + O.error("Нищо не е изгубено. Опитай пак след малко."); return; }
   var X = O.aggs(), g = X.g, cur = X.cur, prev = X.prev, empty = H.empty, M = money(g.R[0], g.R[1]), P = money(g.C[0], g.C[1]);
-  if (g.upTo){ var fr = prev.orders && H.agg(g.C[0], g.C[1]).orders ? prev.orders / H.agg(g.C[0], g.C[1]).orders : 1; ["km","l","eur","deliv","saved"].forEach(function(x){ P.fuel[x] *= fr; }); Object.keys(P.pay).forEach(function(p){ P.pay[p] *= fr; }); }
+  if (g.upTo){ var full = H.agg(g.C[0], g.C[1]).orders, fr = full ? prev.orders / full : 1; ["km","l","eur","deliv","saved"].forEach(function(x){ P.fuel[x] *= fr; }); Object.keys(P.pay).forEach(function(p){ P.pay[p] *= fr; }); }
   function dl(a, b, inv){ return empty ? '' : O.delta(a, b, {inv:inv}); }
-  var per = M.fuel.deliv ? M.fuel.eur / M.fuel.deliv : 0, pper = P.fuel.deliv ? P.fuel.eur / P.fuel.deliv : 0;
+  var per = M.fuel.deliv ? M.fuel.eur / M.fuel.deliv : 0, pper = P.fuel.deliv ? P.fuel.eur / P.fuel.deliv : 0, isToday = g.R[1] === H.TODAY && g.one;
   var h = '';
-  if (st === "drop") h += O.banner({tone:"warn", icon:"warning", title:"Отклонение днес", text:'<span class="ow-muted">Поръчките днес са под обичайното за деня. Подробно в „Днес“.</span>', action:'<a class="pill pill-line" href="today.html#st=drop">' + ic("house", 20) + 'Към „Днес“</a>'}) + '<div style="height:16px"></div>';
+  if (st === "drop") h += O.banner({tone:"warn", icon:"warning", title:"Оборотът днес е под обичайното", text:'<span class="ow-muted">Подробно в „Днес“.</span>', action:'<a class="pill pill-line" href="today.html#st=drop">' + ic("house", 20) + 'Към „Днес“</a>'}) + '<div style="height:16px"></div>';
   h += O.periodHTML();
-  h += '<div class="fi-acts"><p class="ow-meta"><span><b>' + esc(g.label) + '</b> · спрямо ' + esc(g.cmpLabel) + '</span>' + O.sample("Горивото и плащанията: примерни данни") + '</p><button class="pill pill-red pill-lg" type="button" data-csv>' + ic("export", 22) + 'Изтегли CSV</button></div>';
-  if (empty || !cur.orders){ h += '<section class="ow-card">' + (empty ? O.empty({icon:"hourglass", title:"Още събираме история.", text:"Финансите за минали дни и сравнението идват след 4 седмици. Днешните пари в брой са по-долу, щом има доставки.", action:''}) : O.empty({icon:"wallet", title:"Няма приходи за този период.", text:"Избери друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'})) + '</section>' + (empty ? '<div style="height:16px"></div><div class="ow-grid">' + cashCard() + '</div>' : ''); body.innerHTML = h; return; }
+  var noData = empty || !cur.orders;
+  h += '<div class="fi-acts"><p class="ow-meta"><span><b>' + esc(g.label) + '</b> · спрямо ' + esc(g.cmpLabel) + '</span>' + O.sample() + '</p>' + (noData ? '' : '<button class="pill pill-red pill-lg" type="button" data-csv>' + ic("export", 22) + 'Изтегли CSV</button>') + '</div>';
+  if (noData){ h += '<section class="ow-card">' + (empty ? O.empty({icon:"hourglass", title:"Още събираме история", text:"Финансите за минали дни и сравнението идват след 4 седмици. Днешните пари в брой са по-долу."}) : O.empty({icon:"wallet", title:"Няма приходи за този период", text:"Избери друг период.", action:'<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>'})) + '</section>' + (empty ? '<div class="ow-mas">' + cashCard() + '</div>' : ''); body.innerHTML = h; return; }
   h += '<div class="ow-kpis fi-kpis" data-edit-id="own.finance.kpi">' + kpi("Приходи", SC.fmt(cur.rev), dl(cur.rev, prev.rev)) + kpi("Гориво", SC.fmt(M.fuel.eur), dl(M.fuel.eur, P.fuel.eur, true)) +
     kpi("Гориво на доставка", SC.fmt(per), dl(per, pper, true)) + kpi("Изминати", Math.round(M.fuel.km).toLocaleString("bg-BG") + ' <small>км</small>', dl(M.fuel.km, P.fuel.km, true)) + '</div>';
-  h += '<div class="ow-grid fi-grid">';
-  /* приходи по начин на плащане */
-  var p = M.pay, pp = P.pay, rows = [["В брой","money",p.cash,pp.cash,"Доставка, вземане, офис"],["Карта при получаване","credit-card",p.card,pp.card,"Доставка, вземане, офис"],["Ваучер","ticket",p.voucher,pp.voucher,"Ваучери за храна"],["На маса в брой","money",p.tcash,pp.tcash,""],["На маса с карта","credit-card",p.tcard,pp.tcard,""]], tot = rows.reduce(function(a, r){ return a + r[2]; }, 0);
-  h += O.card({page:"finance", id:"pay", anchor:"pay", title:"Приходи по начин на плащане", sub:"Сбор " + SC.fmt(tot),
-    inner:O.hbars(rows.map(function(r){ return {n:r[0], icon:r[1], v:r[2], vt:SC.fmt(r[2]), sub:(tot ? Math.round(r[2] / tot * 100) : 0) + "%" + (r[4] ? " · " + r[4] : "") + " " + dl(r[2], r[3])}; })) + '<p class="ow-note">Касовата бележка се издава на място; онлайн плащане няма (въпрос 1 към собственика). ' + O.sample() + '</p>',
-    table:{head:["Начин","Сума","Дял","Сравнение"], rows:rows.map(function(r){ return [r[0], SC.fmt(r[2]), (tot ? Math.round(r[2] / tot * 100) : 0) + "%", SC.fmt(r[3])]; })}});
-  /* гориво по ден */
-  var fd = M.days, pf = P.days;
-  h += O.card({page:"finance", id:"fuel", anchor:"fuel", cls:"w2", title:"Гориво по ден", sub:Math.round(M.fuel.km) + " км · " + f2(M.fuel.l) + " л · " + SC.fmt(M.fuel.eur) + " · линията е " + (O.per.cmp === "year" ? "миналата година" : "предишният период"),
-    inner:(g.one ? O.hbars([{n:"Литри", icon:"drop", v:M.fuel.l, vt:f2(M.fuel.l) + " л", sub:dl(M.fuel.l, P.fuel.l, true)}, {n:"Сума", icon:"wallet", v:M.fuel.eur, vt:SC.fmt(M.fuel.eur), sub:dl(M.fuel.eur, P.fuel.eur, true)}, {n:"Километри", icon:"path", v:M.fuel.km, vt:Math.round(M.fuel.km) + " км", sub:dl(M.fuel.km, P.fuel.km, true)}])
-      : O.cols("fuel", fd.map(function(d){ return {l:H.fd(d.k, true).replace(/^.., /, ""), v:Math.round(d.f.eur * 100) / 100, hi:d.k === H.TODAY, t:H.fd(d.k), tv:SC.fmt(d.f.eur) + " · " + f2(d.f.l) + " л · " + Math.round(d.f.km) + " км"}; }), {fmt:O.eur0, xn:6, prev:pf.map(function(d){ return d.f.eur; }), prevTip:function(i){ return pf[i] ? " · сравнение " + SC.fmt(pf[i].f.eur) : ""; }}) + O.legend([["Избраният период"], [O.per.cmp === "year" ? "Миналата година" : "Предишният период", "ln prev"]])) +
-      '<p class="ow-note">Цена на горивото: ' + A.missing("цена на горивото") + '; в примера е от бележките на шофьорите (средно ' + (M.fuel.l ? (M.fuel.eur / M.fuel.l).toFixed(2).replace(".", ",") : "0,00") + ' €/л). ' + O.sample() + '</p>',
-    table:{head:["Ден","Км","Литри","Сума","Доставки"], rows:fd.map(function(d){ return [H.fd(d.k, true), Math.round(d.f.km), f2(d.f.l), SC.fmt(d.f.eur), d.f.deliv]; })}});
-  /* по шофьор и по автомобил */
-  h += O.card({page:"finance", id:"drv", title:"По шофьор", sub:"Доставки, км, литри, сума",
-    inner:O.hbars(H.DRIVERS.map(function(n, i){ var b = M.fuel.by[i]; return {n:n, icon:"user", v:b.eur, vt:SC.fmt(b.eur), sub:A.plural(b.n, "доставка", "доставки") + " · " + Math.round(b.km) + " км · " + f2(b.l) + " л"}; })) + '<p class="ow-note">Имената на шофьорите: ' + A.missing("персонал") + '. ' + O.sample() + '</p>',
-    table:{head:["Шофьор","Доставки","Км","Литри","Сума"], rows:H.DRIVERS.map(function(n, i){ var b = M.fuel.by[i]; return [n, b.n, Math.round(b.km), f2(b.l), SC.fmt(b.eur)]; })}});
-  h += O.card({page:"finance", id:"car", title:"По автомобил", sub:"Реалният разход от зарежданията",
-    inner:'<div class="fi-kv">' + H.CARS.map(function(n, i){ var c = M.fuel.car[i]; return '<div><span>' + n + '<small>' + A.missing("марка и рег. №") + '</small></span><b>' + (c.km ? f2(c.l / c.km * 100) : "0,0") + ' л/100 км</b></div>'; }).join("") + '</div>' +
-      '<p class="ow-note">По паспорт: ' + A.missing("разход л/100 км") + '. Тук е сметнатото от литрите и километрите в примера. ' + O.sample() + '</p>',
-    table:{head:["Автомобил","Км","Литри","Сума","л/100 км"], rows:H.CARS.map(function(n, i){ var c = M.fuel.car[i]; return [n, Math.round(c.km), f2(c.l), SC.fmt(c.eur), c.km ? f2(c.l / c.km * 100) : "0,0"]; })}});
-  /* цена на доставка спрямо таксата; спестено от по-краткия път */
+  /* гориво по ден (на цял ред) */
+  var fd = M.days, pf = P.days, cmpName = O.per.cmp === "year" ? "Миналата година" : g.cmpShort === "предишния период" ? "Предишният период" : "Същият ден миналата седмица";
+  h += '<div class="ow-grid">' + O.card({page:"finance", id:"fuel", anchor:"fuel", cls:"wall", title:"Гориво по ден", sub:Math.round(M.fuel.km) + " км · " + f1(M.fuel.l) + " л · " + SC.fmt(M.fuel.eur),
+    inner:(g.one ? '<div class="tr-two fi-three"><div><span class="k">Литри</span><b>' + f1(M.fuel.l) + ' л</b>' + dl(M.fuel.l, P.fuel.l, true) + '</div><div><span class="k">Сума</span><b>' + SC.fmt(M.fuel.eur) + '</b>' + dl(M.fuel.eur, P.fuel.eur, true) + '</div><div><span class="k">Километри</span><b>' + Math.round(M.fuel.km) + ' км</b>' + dl(M.fuel.km, P.fuel.km, true) + '</div></div>'
+      : O.cols("fuel", fd.map(function(d){ return {l:fd.length <= 7 ? H.fd(d.k, true).slice(0, 2) : H.fd(d.k, true).replace(/^.., /, ""), v:Math.round(d.f.eur * 100) / 100, hi:d.k === H.TODAY, t:H.fd(d.k), tv:SC.fmt(d.f.eur) + " · " + f1(d.f.l) + " л · " + Math.round(d.f.km) + " км"}; }), {fmt:O.eur0, xn:fd.length > 14 ? 4 : 7, prev:pf.map(function(d){ return d.f.eur; }), prevTip:function(i){ return pf[i] ? " · сравнение " + SC.fmt(pf[i].f.eur) : ""; }}) +
+        O.legend([["Сума за гориво"]].concat(g.R[1] === H.TODAY ? [["Днес (до сега)", "r"]] : []).concat([[cmpName, "ln prev"]]))) +
+      '<p class="ow-note">Цена на горивото: ' + A.missing("цена на горивото") + '. По бележките от зарежданията средно ' + (M.fuel.l ? (M.fuel.eur / M.fuel.l).toFixed(2).replace(".", ",") : "0,00") + ' €/л. ' + O.sample() + '</p>',
+    table:{head:["Ден","Км","Литри","Сума","Доставки"], rows:fd.map(function(d){ return [H.fd(d.k, true), Math.round(d.f.km), f1(d.f.l), SC.fmt(d.f.eur), d.f.deliv]; })}}) + '</div>';
+  h += '<div class="ow-mas">';
+  /* приходи по начин на плащане: делът с дума, разликата на свой ред */
+  var p = M.pay, pp = P.pay, rows = [["В брой","money",p.cash,pp.cash,"доставка, вземане, офис"],["Карта при получаване","credit-card",p.card,pp.card,"доставка, вземане, офис"],["Ваучер","ticket",p.voucher,pp.voucher,"ваучери за храна"],["На маса в брой","money",p.tcash,pp.tcash,""],["На маса с карта","credit-card",p.tcard,pp.tcard,""]], tot = rows.reduce(function(a, r){ return a + r[2]; }, 0);
+  h += O.card({page:"finance", id:"pay", anchor:"pay", title:"Приходи по начин на плащане", sub:"Общо " + SC.fmt(tot),
+    inner:O.hbars(rows.map(function(r){ return {n:r[0], icon:r[1], v:r[2], vt:SC.fmt(r[2]), sub:(tot ? Math.round(r[2] / tot * 100) : 0) + "% от приходите" + (r[4] ? " · " + r[4] : ""), d:dl(r[2], r[3])}; })) + '<p class="ow-note">Плаща се само на място; касовата бележка се издава там. ' + O.sample() + '</p>',
+    table:{head:["Начин","Сума","Дял от приходите","Сравнение"], rows:rows.map(function(r){ return [r[0], SC.fmt(r[2]), (tot ? Math.round(r[2] / tot * 100) : 0) + "%", SC.fmt(r[3])]; })}});
+  h += O.card({page:"finance", id:"drv", title:"По шофьор", sub:isToday ? "Днес: тръгналите доставки" : "Доставки, км, литри, сума",
+    inner:O.hbars(H.DRIVERS.map(function(n, i){ var b = M.fuel.by[i]; return {n:n, icon:"user", v:b.eur, vt:SC.fmt(b.eur), sub:A.plural(b.n, "доставка", "доставки") + " · " + Math.round(b.km) + " км · " + f1(b.l) + " л"}; })) + '<p class="ow-note">' + A.missing("имената на шофьорите") + ' ' + O.sample() + '</p>',
+    table:{head:["Шофьор","Доставки","Км","Литри","Сума"], rows:H.DRIVERS.map(function(n, i){ var b = M.fuel.by[i]; return [n, b.n, Math.round(b.km), f1(b.l), SC.fmt(b.eur)]; })}});
+  h += cashCard();
+  h += O.card({page:"finance", id:"car", title:"По автомобил", sub:"Разход от зарежданията",
+    inner:'<div class="fi-kv">' + H.CARS.map(function(n, i){ var c = M.fuel.car[i]; return '<div><span>' + n + '<small>' + A.missing("марка и рег. №") + '</small></span><b>' + (c.km ? f1(c.l / c.km * 100) : "0,0") + ' л/100 км</b></div>'; }).join("") + '</div>' +
+      '<p class="ow-note">Разход по паспорт: ' + A.missing("разход л/100 км") + '. ' + O.sample() + '</p>',
+    table:{head:["Автомобил","Км","Литри","Сума","л/100 км"], rows:H.CARS.map(function(n, i){ var c = M.fuel.car[i]; return [n, Math.round(c.km), f1(c.l), SC.fmt(c.eur), c.km ? f1(c.l / c.km * 100) : "0,0"]; })}});
   var paid = SC.ZONES.filter(function(z){ return !z.free; }), free = SC.ZONES.filter(function(z){ return z.free; });
-  h += '<section class="ow-card" aria-labelledby="h-dc" data-edit-id="own.finance.delivery"><header><div><h2 id="h-dc">Цена на една доставка<small>Само горивото, спрямо таксата</small></h2></div></header>' +
+  h += '<section class="ow-card" aria-labelledby="h-dc" data-edit-id="own.finance.delivery"><header><div><h2 id="h-dc">Цена на една доставка<small>Горивото, спрямо таксата</small></h2></div></header>' +
     '<div class="fi-big"><span class="ow-big">' + SC.fmt(per) + '</span>' + dl(per, pper, true) + '</div>' +
     '<div class="fi-kv"><div><span>Такса в ' + A.plural(free.length, "квартал", "квартала") + '<small>' + esc(free.map(function(z){ return z.n; }).join(", ")) + '</small></span><b>безплатна</b></div>' +
     '<div><span>Такса в ' + esc(paid.map(function(z){ return z.n; }).join(" и ")) + '</span><b>' + A.missing("такса в €") + '</b></div></div>' +
-    '<p class="ow-note">Заплата на шофьора и амортизация не са сметнати: ' + A.missing("разходи за шофьор и кола") + '. ' + O.sample() + '</p></section>';
-  h += '<section class="ow-card" aria-labelledby="h-sv" data-edit-id="own.finance.saved"><header><div><h2 id="h-sv">Спестено от по-краткия път<small>Път Б вместо Път А</small></h2></div></header>' +
+    '<p class="ow-note">Без заплатата на шофьора и колата: ' + A.missing("разходи за шофьор и кола") + '. ' + O.sample() + '</p></section>';
+  h += '<section class="ow-card" aria-labelledby="h-sv" data-edit-id="own.finance.saved"><header><div><h2 id="h-sv">Спестено от по-краткия път</h2></div></header>' +
     '<div class="fi-big"><span class="ow-big">' + SC.fmt(M.fuel.saved) + '</span>' + dl(M.fuel.saved, P.fuel.saved) + '</div>' +
-    '<p>Шофьорите са избрали по-краткия път в <b>' + M.fuel.shorter + ' от ' + A.plural(M.fuel.routes, "курс", "курса") + '</b>.</p><p class="ow-note">Маршрутите са с VROOM / OSRM, без трафик (въпрос 20 към собственика). ' + O.sample() + '</p></section>';
-  h += cashCard();
-  h += '<section class="ow-card fi-cost" id="cost" aria-labelledby="h-co" data-edit-id="own.finance.cost"><span class="ill">' + ic("scales", 28) + '</span><h2 id="h-co">Себестойност на храната</h2><p>Печалба по ястие и матрицата на менюто искат себестойност: ' + A.missing("себестойност на ястията") + '. Щом се въведе в менюто на админа, сметката се появява тук.</p></section>';
-  h += '</div><p class="ow-note" style="margin:20px 4px 0">Отчетът за гориво в админа е „Скоро“. Поръчките и оборотът: <a class="link" href="../pages-admin/reports.html' + (O.per.per === "7" ? '' : '#p=' + O.per.per) + '">Отчети' + ic("caret-right", 18) + '</a></p>';
+    '<p>Шофьорът вижда два пътя: по-бързия и по-краткия. По-краткия е избрал в <b>' + M.fuel.shorter + ' от ' + A.plural(M.fuel.routes, "курс", "курса") + '</b>.</p><p class="ow-note">Пътищата се смятат без задръстванията. ' + O.sample() + '</p></section>';
+  h += '<section class="ow-card fi-cost" id="cost" aria-labelledby="h-co" data-edit-id="own.finance.cost"><span class="ill">' + ic("scales", 28) + '</span><h2 id="h-co">Себестойност на храната</h2><p>Печалба по ястие се смята, щом в менюто има себестойност: ' + A.missing("себестойност на ястията") + '.</p></section>';
+  h += '</div><p class="ow-note" style="margin:4px 4px 0">Поръчките и оборотът по дни: <a class="link" href="../pages-admin/reports.html' + (O.per.per === "7" ? '' : '#p=' + O.per.per) + '">Отчети в админа' + ic("caret-right", 18) + '</a></p>';
   body.innerHTML = h; O.bindTips(body); }
 function kpi(l, v, d){ return '<div class="ow-kpi"><span class="l">' + esc(l) + '</span><b>' + v + '</b>' + (d || '') + '</div>'; }
-function cashCard(){ var by = cashToday(), sum = 0, road = 0; Object.keys(by).forEach(function(n){ sum += by[n].done; road += by[n].road; });
-  return '<section class="ow-card w2" id="cash" aria-labelledby="h-ca" data-edit-id="own.finance.cash"><header><div><h2 id="h-ca">Пари в брой от шофьорите<small>Днес, до ' + A.hm(A.now()) + ' · от поръчките</small></h2></div></header>' +
+function cashCard(){ var by = cashToday(), sum = 0, hd = handed(); Object.keys(by).forEach(function(n){ sum += by[n].done; });
+  return '<section class="ow-card" id="cash" aria-labelledby="h-ca" data-edit-id="own.finance.cash"><header><div><h2 id="h-ca">Пари в брой от шофьорите<small>Днес, до ' + A.hm(A.now()) + '</small></h2></div></header>' +
     '<div class="fi-drv">' + H.DRIVERS.map(function(n){ var b = by[n]; return '<div><div class="hd"><b>' + n + '</b><span class="ow-tag warn">' + ic("hourglass", 16) + 'За предаване</span></div>' +
-      '<div class="fi-kv"><div><span>В брой от доставени<small>' + A.plural(b.nd, "поръчка", "поръчки") + '</small></span><b>' + SC.fmt(b.done) + '</b></div><div><span>Още на път<small>' + A.plural(b.nr, "поръчка", "поръчки") + ', влиза след доставка</small></span><b>' + SC.fmt(b.road) + '</b></div>' +
-      '<div><span>Начално ресто, гориво в брой<small>Вижда се в края на смяната</small></span><b>' + A.missing("ресто") + '</b></div><div class="tot"><span>За предаване</span><b>' + SC.fmt(b.done) + '</b></div></div></div>'; }).join("") + '</div>' +
-    '<div class="fi-kv"><div><span>Предадени днес</span><b>' + SC.fmt(0) + '</b></div><div class="tot"><span>За предаване общо</span><b>' + SC.fmt(sum) + '</b></div></div>' +
-    '<p class="ow-note">Предават се в края на смяната на ' + A.missing("на кого: управител или каса") + ' (въпрос 25). Поръчките и шофьорите са ' + O.sample().replace('<span class="ow-tag">', '<span class="ow-tag" style="display:inline-flex">') + '</p></section>'; }
+      '<div class="fi-kv"><div><span>Доставени, платени в брой<small>' + A.plural(b.nd, "поръчка", "поръчки") + '</small></span><b>' + SC.fmt(b.done) + '</b></div><div><span>Още на път<small>' + A.plural(b.nr, "поръчка", "поръчки") + '</small></span><b>' + SC.fmt(b.road) + '</b></div>' +
+      '<div><span>Начално ресто и гориво в брой</span><b>' + A.missing("ресто") + '</b></div><div class="tot"><span>За предаване</span><b>' + SC.fmt(b.done) + '</b></div></div></div>'; }).join("") + '</div>' +
+    '<div class="fi-kv"><div><span>Предадени днес</span><b>' + (hd == null ? A.missing("отбелязва се в края на смяната") : SC.fmt(hd)) + '</b></div><div class="tot"><span>За предаване общо</span><b>' + SC.fmt(Math.max(0, sum - (hd || 0))) + '</b></div></div>' +
+    '<p class="ow-note">Предават се в края на смяната на ' + A.missing("управител или каса") + '. ' + O.sample() + '</p></section>'; }
 
 O.redraw = draw;
 draw();
 O.bindPeriod(body, draw);
 ["fuel","cash","pay","cost"].forEach(function(k){ if (location.hash.indexOf(k) > -1){ var t = document.getElementById(k); t && setTimeout(function(){ t.scrollIntoView({block:"start"}); }, 60); } });
-body.addEventListener("click", function(e){ if (!e.target.closest("[data-csv]")) return; var R = O.ranges().R, M = money(R[0], R[1]);
-  var rows = [["Ден","Оборот €","Доставки","Км","Литри","Гориво €","Гориво на доставка €"]].concat(M.days.map(function(d){ var r = H.empty && d.k !== H.TODAY ? 0 : H.day(d.k).rev; return [d.k, r.toFixed(2).replace(".", ","), d.f.deliv, Math.round(d.f.km), d.f.l.toFixed(1).replace(".", ","), d.f.eur.toFixed(2).replace(".", ","), (d.f.deliv ? d.f.eur / d.f.deliv : 0).toFixed(2).replace(".", ",")]; }));
-  var ok = A.download("siracusa-finansi-" + R[0] + "-" + R[1] + ".csv", "﻿# Примерни данни\n" + rows.map(function(r){ return r.join(";"); }).join("\n"), "text/csv");
+window.addEventListener("storage", function(e){ if (/^sa-(orders|shift)$/.test(e.key || "")){ H.reset(); var y = O.scroller.scrollTop; draw(); O.scroller.scrollTop = y; } });
+body.addEventListener("click", function(e){ if (!e.target.closest("[data-csv]")) return; var g = O.ranges(), R = g.R, M = money(R[0], R[1]), P = money(g.C[0], g.C[1]);
+  var rows = [["Ден","Оборот €","Доставки","Км","Литри","Гориво €","Гориво на доставка €","Сравнение: ден","Сравнение: гориво €"]].concat(M.days.map(function(d, i){ var c = P.days[i]; return [d.k, d.rev.toFixed(2).replace(".", ","), d.f.deliv, Math.round(d.f.km), d.f.l.toFixed(1).replace(".", ","), d.f.eur.toFixed(2).replace(".", ","), (d.f.deliv ? d.f.eur / d.f.deliv : 0).toFixed(2).replace(".", ","), c ? c.k : "", c ? c.f.eur.toFixed(2).replace(".", ",") : ""]; }));
+  var ok = A.download("siracusa-finansi-" + R[0] + "-" + R[1] + "-primerni-danni.csv", "﻿" + rows.map(function(r){ return r.join(";"); }).join("\n") + "\nПримерни данни", "text/csv");
   O.toast(ok ? "Изтеглено: " + A.plural(M.days.length, "ден", "дни") + " в CSV" : "Файлът не се изтегли. Опитай пак."); });
 })();
 </script>

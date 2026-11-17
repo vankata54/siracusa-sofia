@@ -75,8 +75,8 @@ H.PERIODS = [["today","Днес"],["yday","Вчера"],["7","7 дни"],["30","
 H.range = function(per, cust){ if (per === "today") return [TODAY, TODAY]; if (per === "yday") return [addD(TODAY, -1), addD(TODAY, -1)]; if (per === "7") return [addD(TODAY, -6), TODAY]; if (per === "30") return [addD(TODAY, -29), TODAY];
   if (per === "month") return [TODAY.slice(0, 8) + "01", TODAY]; return [cust.a, cust.b]; };
 H.prevRange = function(a, b, per){ var n = span(a, b); if (per === "month"){ var d = parse(a); d.setUTCMonth(d.getUTCMonth() - 1); var pa = ymd(d); return [pa, addD(pa, n - 1)]; } return [addD(a, -n), addD(a, -1)]; };
-/* същият период миналата година: същите дати (29 февруари → 28 февруари) */
-H.yearRange = function(a, b){ function y(k){ var p = k.split("-"); var t = (+p[0] - 1) + "-" + p[1] + "-" + p[2]; return p[1] === "02" && p[2] === "29" ? (+p[0] - 1) + "-02-28" : t; } return [y(a), y(b)]; };
+/* същият период миналата година */
+H.yearRange = function(a, b){ return [addD(a, -364), addD(b, -364)]; }; /* същият ден от седмицата (364 дни назад), както GA4 „по ден от седмицата“ */
 /* „Днес“ се сравнява до същия час: часовете до h (целият час h, както в отчетите); с m: само изминалата част от час h */
 H.cutAt = function(o, h, m){ var tot = 0, part = 0, rv = 0; Object.keys(o.hour).forEach(function(k){ tot += o.hour[k]; var f = +k < h ? 1 : +k === h ? (m == null ? 1 : m / 60) : 0; part += o.hour[k] * f; rv += (o.hrev[k] || 0) * f; });
   var f = tot ? part / tot : 0, x = JSON.parse(JSON.stringify(o)); x.orders = m == null ? part : Math.round(part * 10) / 10; x.rev = rv; x.ch.forEach(function(c){ c.o = Math.round(c.o * f); c.rev = c.rev * f; }); return x; };
@@ -107,7 +107,13 @@ H.extra = function(k){ var d = dayData(k), r = rng("ow-x" + k), online = d.ch[0]
   return e; };
 /* горивото: 2 шофьора, 2 автомобила (като в модула на шофьора); км по броя на доставките, литри и € са примерни */
 H.DRIVERS = ["Шофьор 1","Шофьор 2"]; H.CARS = ["Автомобил 1","Автомобил 2"];
+/* днес: доставките по шофьор са от sa-orders (тръгналите: „На път“ и „Доставена“), същите като парите в брой; км на доставка са примерни */
+H.TODAY_RUN = ["on_way","delivered"];
 H.fuel = function(k){ var d = dayData(k), r = rng("ow-f" + k), deliv = d.ch[0].o + d.ch[3].o, out = {km:0, l:0, eur:0, deliv:deliv, by:[{km:0, l:0, eur:0, n:0}, {km:0, l:0, eur:0, n:0}], car:[{km:0, l:0, eur:0}, {km:0, l:0, eur:0}], saved:0, routes:0, shorter:0};
+  if (d.live){ var perKm0 = [7.6 + r() * .6, 8.8 + r() * .7], price0 = 1.33 + r() * .06; out.deliv = 0;
+    H.todayOrders().forEach(function(o){ var i = H.DRIVERS.indexOf(o.driver); if (i < 0 || o.mode !== "delivery" || H.TODAY_RUN.indexOf(o.status) < 0) return; var rr = rng("ow-k" + o.no), km = 4.2 + rr() * 2.4, l = km * perKm0[i] / 100, eur = l * price0;
+      out.deliv++; out.by[i].n++; out.by[i].km += km; out.by[i].l += l; out.by[i].eur += eur; out.car[i].km += km; out.car[i].l += l; out.car[i].eur += eur; out.km += km; out.l += l; out.eur += eur; });
+    out.routes = out.deliv ? Math.max(1, Math.round(out.deliv / 3)) : 0; out.shorter = Math.round(out.routes * .4); out.saved = out.shorter * 1.6 * perKm0[0] / 100 * price0; return out; }
   if (!deliv) return out;
   var share = .5 + r() * .2, perKm = [7.6 + r() * .6, 8.8 + r() * .7], price = 1.33 + r() * .06;
   [0, 1].forEach(function(i){ var n = i === 0 ? Math.round(deliv * share) : deliv - Math.round(deliv * share), km = n * (4.2 + r() * 2.4), l = km * perKm[i] / 100, eur = l * price;

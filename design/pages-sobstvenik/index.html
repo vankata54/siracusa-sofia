@@ -36,7 +36,7 @@
 <script>
 (function(){
 var ic = O.ic, esc = O.esc;
-var body = O.mount({page:"index", title:"Собственик", docTitle:"Всички екрани", public:true});
+var body = O.mount({page:"index", title:"Всички екрани", public:true});
 if (!body) return;
 var S = [
   ["today.html","house","Днес","„Днес: X € от N поръчки“ (същото число като таблото на админа), спрямо същия ден миналата седмица до същия час; среден бон; известие при отклонение; „Чака те“; на живо; оборот по час спрямо обичайното; по канал; последните 7 дни.",
@@ -45,14 +45,14 @@ var S = [
     [["","7 дни"],["p=30","30 дни"],["p=today","Днес"],["p=month&c=year","Месец срещу миналата година"],["dish=pitsa-margarita","Ястие: Маргарита"],["empty","Без история"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]],
   ["finance.html","wallet","Финанси и гориво","Приходи по начин на плащане, гориво по ден, шофьор и автомобил, цена на доставка спрямо таксата, спестено от по-краткия път, парите в брой от шофьорите, себестойност [ЛИПСВА].",
     [["","7 дни"],["p=30","30 дни"],["p=today","Днес"],["empty","Без история"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]],
-  ["decisions.html","list-checks","Решения","Неявили се за блокиране; „Въпроси от агенцията“ (52, дословно от OPEN-QUESTIONS) със „Съгласен“ / „Друго“, отговорът отива в „Бележки“; Google профил „Скоро“.",
+  ["decisions.html","list-checks","Решения","Неявили се за блокиране; „Въпроси от агенцията“ (" + O.QUESTIONS.length + ", дословно от OPEN-QUESTIONS; отговаря само собственикът) със „Съгласен“ / „Друго“, отговорът отива в „Бележки“; Google профил „Скоро“.",
     [["","Обичайно"],["f=done","Отговорени"],["q=m25","Въпрос: парите на шофьора"],["empty","Нищо не чака"],["loading","Зареждане"],["error","Грешка"],["offline","Без връзка"]]]
 ];
 function stHref(f, s){ if (!s) return f; return f + "#" + (/=/.test(s) ? s : "st=" + s); }
-var who = A.me ? 'Влязъл си като <b>' + esc(A.me.name) + '</b> (' + esc(A.roleName(A.me.role)) + ').' : 'Не си влязъл.';
+var who = A.me ? 'Сега си влязъл като <b>' + esc(A.me.name) + '</b> (' + esc(A.roleName(A.me.role)) + ').' : 'Не си влязъл.';
 body.innerHTML = '<p class="ow-lead" style="color:var(--ink)">Модулът на собственика: оборот, тенденции, финанси и гориво, решения. Телефон (360, 390) като приложение и компютър (1024, 1440). Пълните отчети и работа са в админа.</p>' +
   '<section class="ow-card" style="margin-bottom:16px"><h2>Влез като</h2><p>' + who + '</p><div class="ix-who">' +
-  [["owner","Собственик"],["admin","Главен админ"],["manager","Управител (отива в „Смяната“)"]].map(function(r){ return '<button class="pill ' + (A.me && A.me.role === r[0] ? 'pill-ink' : 'pill-line') + '" type="button" data-as="' + r[0] + '">' + ic("sign-in", 20) + esc(r[1]) + '</button>'; }).join("") +
+  [["owner","Собственик"],["admin","Главен админ"],["manager","Управител"]].map(function(r){ return '<button class="pill ' + (A.me && A.me.role === r[0] ? 'pill-ink' : 'pill-line') + '" type="button" data-as="' + r[0] + '">' + ic("sign-in", 20) + esc(r[1]) + '</button>'; }).join("") +
   '<a class="pill pill-line" href="../pages-admin/login.html#next=../pages-sobstvenik/today.html">' + ic("lock", 20) + 'Вход в админа</a></div></section>' +
   '<div class="ix-scr">' + S.map(function(s){ return '<div><a class="it" href="' + s[0] + '"><span class="ico">' + ic(s[1], 26) + '</span><span><b>' + s[2] + '</b><span class="d">' + esc(s[3]) + '</span></span>' + ic("caret-right", 22) + '</a>' +
     '<div class="ix-st">' + s[4].map(function(x){ return '<a class="chip" href="' + stHref(s[0], x[0]) + '">' + esc(x[1]) + '</a>'; }).join("") + '</div></div>'; }).join("") + '</div>' +
