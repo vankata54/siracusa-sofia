@@ -21,6 +21,7 @@ import { reportsRoutes } from "./routes/reports.ts";
 import { staffAdminRoutes } from "./routes/staff-admin.ts";
 import { kitchenRoutes } from "./routes/kitchen.ts";
 import { siteRoutes as siteDataRoutes } from "./routes/site.ts";
+import { driverRoutes } from "./routes/driver.ts";
 import { createPublisher, astroBuild, buildHash, type BuildFn, type Publisher } from "./publish.ts";
 import type { SiteBuild } from "../src/core/site-data.ts";
 import { SqliteRepo } from "./db/repo.ts";
@@ -176,7 +177,7 @@ export function createApp(opts: AppOpts) {
       if (origin && host !== c.req.header("host")) return c.json({ error: "origin", message: "Забранен адрес." }, 403);
       /* body size: 2 MB for a note with a screenshot, 64 KB for everything else (never a 2 MB password through scrypt) */
       /* a photo of the menu up to 5 MB, the whole draft of the menu up to 2 MB */
-      const max = c.req.path === "/api/admin/media" ? 5 * 1024 * 1024 + 1024 : /^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? 2_100_000 : 65_536, len = +(c.req.header("content-length") || 0);
+      const max = c.req.path === "/api/admin/media" || c.req.path === "/api/driver/receipt" ? 5 * 1024 * 1024 + 1024 : /^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? 2_100_000 : 65_536, len = +(c.req.header("content-length") || 0);
       if (len > max) return c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
     }
     c.header("Cache-Control", "no-store");
@@ -197,7 +198,7 @@ export function createApp(opts: AppOpts) {
      2 MB for a note with a screenshot, 5 MB for a photo of the menu, 64 KB for everything else */
   const tooLarge = (c: Context) => c.json({ error: "too_large", message: "Заявката е твърде голяма." }, 413);
   const LIMITS = { small: bodyLimit({ maxSize: 65_536, onError: tooLarge }), notes: bodyLimit({ maxSize: 2_100_000, onError: tooLarge }), media: bodyLimit({ maxSize: 5_300_000, onError: tooLarge }) };
-  app.use("/api/*", (c, next) => (["GET", "HEAD", "OPTIONS"].includes(c.req.method) ? next() : (/^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? LIMITS.notes : /^\/api\/admin\/media/.test(c.req.path) ? LIMITS.media : LIMITS.small)(c, next)));
+  app.use("/api/*", (c, next) => (["GET", "HEAD", "OPTIONS"].includes(c.req.method) ? next() : (/^\/api\/admin\/(notes|menu\/draft)/.test(c.req.path) ? LIMITS.notes : /^\/api\/(admin\/media|driver\/receipt)/.test(c.req.path) ? LIMITS.media : LIMITS.small)(c, next)));
 
   /* ---------- public data ---------- */
   app.get("/api/health", (c) => c.json({ ok: true }));
@@ -504,6 +505,8 @@ export function createApp(opts: AppOpts) {
   siteDataRoutes(app, { ...adm, publisher: () => publisher });
   /* stage D, the kitchen (server/routes/kitchen.ts) */
   kitchenRoutes(app, adm);
+  /* the driver (core/driver.ts): the shift, the deliveries, fuel (+ the photo of a receipt), the manager's views */
+  driverRoutes(app, { ...adm, mediaDir });
 
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 

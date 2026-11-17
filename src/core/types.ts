@@ -79,7 +79,9 @@ export interface Order {
   /** delivery: the driver's username, the course (one trip) it rides in, "Взех" / "Пристигнах" (ISO) and a problem
       the driver reported ("nobody" | "address" | "refused") */
   driver?: string; course?: string; pickedAt?: Iso; arrivedAt?: Iso;
-  problem?: { kind: "nobody" | "address" | "refused"; at: Iso; note?: string; solved?: "returned" | "delivered" | "" } | null;
+  problem?: { kind: "nobody" | "address" | "refused"; at: Iso; note?: string; solved?: "returned" | "delivered" | ""; solvedAt?: Iso } | null;
+  /** "Доставена · взех X €" (core/driver.ts): what the driver took at the door: cash (the sum), or the card / voucher as such */
+  collected?: { pay: PayMethod; sum: number; at: Iso; by: string; feeMissing?: boolean } | null;
   /** the manager's notes on the order ("Обади се на клиента": called, accepted without a sold-out dish ...) */
   staffNotes?: { at: Iso; by: string; text: string }[];
   /** the kitchen: minutes added to the deadline because the order was placed while "Натоварено" was on (core/kitchen-base.ts) */

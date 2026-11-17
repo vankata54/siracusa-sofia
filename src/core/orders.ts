@@ -263,7 +263,10 @@ export type PublicOrder = Pick<Order, "id" | "no" | "mode" | "channel" | "status
   "eta" | "at" | "sched" | "slot" | "placedAt" | "ts" | "createdAt" | "updatedAt" | "discKind" | "codeDisc" | "profileDisc"> &
   { lines: Order["lines"]; key?: string; times: Partial<Record<OrderStatus, string>>; changes: number;
     /** "Откажи" in the admin: why (the customer sees it) */
-    reason?: string };
+    reason?: string;
+    /** the driver (core/driver.ts): "Шофьорът е пред входа" since (ISO, only while "На път"), and hold: the driver
+        reported a problem (a neutral state: never which one, never who the driver is) */
+    arrivedAt?: string; hold?: boolean };
 
 /** What the tracking page needs, nothing personal: no name, phone, e-mail, address, note, profile, code. */
 export function publicOrder(o: Order, withKey = false): PublicOrder {
@@ -274,6 +277,8 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course })),
     times: o.times || { accepted: o.createdAt }, changes: o.changes || 0,
   };
+  if (o.status === "on_way" && o.arrivedAt) p.arrivedAt = o.arrivedAt;
+  if (o.problem && o.problem.solved !== "delivered" && !FINISHED.includes(o.status) && o.status !== "cancelled") p.hold = true;
   if (withKey && o.key) p.key = o.key;
   if (o.status === "cancelled" && o.reason) p.reason = o.reason;
   return p;

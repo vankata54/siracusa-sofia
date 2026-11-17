@@ -461,3 +461,56 @@ test("tracking: the loading words come into the live region after it is on the p
   await expect(st).toHaveAttribute("role", "status");
   await expect(st).toHaveText("Зареждаме поръчката…");
 });
+
+test("tracking: 'Шофьорът е пред входа' live, when the driver presses 'Пристигнах' (core/driver.ts)", async ({ page, request, playwright, baseURL }) => {
+  const E = env();
+  test.skip(!E.MANAGER_PASSWORD || !E.DRIVER_PASSWORD, "no .env with staff passwords");
+  const errors = watch(page);
+  const o = await makeOrder(request);
+  const { staff, set } = await staffCtx(playwright, baseURL);
+  await set(o.no, "cooking"); await set(o.no, "ready");
+  /* the driver: his shift (already open when the other project started it), then his steps through the driver's API */
+  const driver = await playwright.request.newContext({ baseURL });
+  expect((await driver.post("/api/auth/login", { data: { username: "driver", password: E.DRIVER_PASSWORD } })).ok()).toBe(true);
+  /* both projects share the account: the shift is opened by whoever comes first and closed by whoever finishes last */
+  const shift = async () => {
+    const st = await (await driver.get("/api/driver/state")).json();
+    const car = st.cars.find((c: { busyBy: string | null }) => !c.busyBy);
+    if (!st.shift) expect([201, 409]).toContain((await driver.post("/api/driver/start", { data: { car: car.id, km: (car.lastKm || 1000) + 1 } })).status());
+  };
+  await shift();
+  let tk = await driver.post("/api/driver/take", { data: { nos: [o.no] } });
+  if (tk.status() === 409 && (await tk.json()).error === "no_shift") { await shift(); tk = await driver.post("/api/driver/take", { data: { nos: [o.no] } }); }
+  expect(tk.status()).toBe(200);
+  await cookies(page);
+  /* the live stream of this order must be open before the driver acts (an event sent earlier is never repeated) */
+  const stream = page.waitForResponse((r) => r.url().includes("/api/stream") && r.url().includes("order=" + o.no));
+  await page.goto(trk(o));
+  await expect(page.locator(".tl li.now .nm")).toHaveText("Готова");
+  await stream;
+  expect((await driver.post("/api/driver/go", { data: { nos: [o.no] } })).status()).toBe(200);
+  await expect(page.locator(".tl li.now .nm")).toHaveText("На път");
+  await expect(page.locator(".say")).toHaveText("Шофьорът е на път към вас");
+  const ar = await driver.post("/api/driver/deliveries/" + o.no + "/arrive");
+  expect(ar.status()).toBe(200);
+  const arrivedAt = (await ar.json()).deliveries[0].arrivedAt as string;
+  await expect(page.locator(".say")).toHaveText("Шофьорът е пред входа");
+  await expect(page.locator(".elab")).toHaveText("Пред входа от");
+  await expect(page.locator(".enum.clock b")).toHaveText(sofia(new Date(arrivedAt)));
+  await expect(page.locator(".sub")).toContainText("Плащате при получаване");
+  await expect(page.locator(".tl li.now .nm")).toHaveText("На път");
+  await expect(page.locator(".toast", { hasText: "Шофьорът е пред входа" })).toBeVisible();
+  /* nothing about the driver reaches the customer */
+  const pub = await (await request.get("/api/orders/" + o.no + "-" + o.key)).json();
+  expect(pub.arrivedAt).toBe(arrivedAt);
+  expect(JSON.stringify(pub)).not.toMatch(/"driver"|pickedAt|"phone"/);
+  await noHScroll(page);
+  expect((await driver.post("/api/driver/deliveries/" + o.no + "/deliver", { data: {} })).status()).toBe(200);
+  await expect(page.locator(".elab")).toHaveText("Доставена в");
+  await expect(page.locator(".say")).toHaveText("Добър апетит!");
+  /* leave no open shift behind (409 while the other project still has its order in the car) */
+  const now = await (await driver.get("/api/driver/state")).json();
+  if (now.shift) expect([200, 409]).toContain((await driver.post("/api/driver/end", { data: { km: now.shift.lastKm, handed: true } })).status());
+  await driver.dispose(); await staff.dispose();
+  expect(errors).toEqual([]);
+});

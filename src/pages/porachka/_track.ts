@@ -118,6 +118,8 @@ export function startTracking(main: HTMLElement) {
   function finished() { const n = stages().length; return isD() ? k() >= n - 1 : k() >= n; }
   const cur = () => { const a = stages(); return a[Math.min(k(), a.length - 1)]; };
   const cancelled = () => o().status === "cancelled" && S.sim.k == null;
+  /** "Пристигнах" from the driver (core/driver.ts): the order is on the way and he is at the door */
+  const arrived = () => isD() && o().status === "on_way" && !!o().arrivedAt && S.sim.k == null && !S.sim.sample;
 
   /* time: minutes since the order (real ms since ts), the promised minutes, the start on the shop clock */
   function elapsed() { const e = (Date.now() - (o().ts || Date.now())) / 60000; return Math.max(0, e); }
@@ -231,6 +233,9 @@ export function startTracking(main: HTMLElement) {
       label = D ? "Доставена в" : "Взехте я в";
       big = '<span class="enum clock"><b>' + clock(doneAt()) + "</b></span>";
       say = "Добър апетит!"; sub = "Благодарим, че поръчахте от нас.";
+    } else if (arrived()) {
+      label = "Пред входа от"; big = '<span class="enum clock"><b>' + clock(atOf(o().arrivedAt) ?? SC.minutes()) + "</b></span>";
+      say = "Шофьорът е пред входа"; sub = 'Чака ви с поръчката. Плащате при получаване: <span class="price">' + SC.fmt(o().total) + "</span>.";
     } else if (sc && sc.left > 45 && !(!D && c.id === "ready")) {
       /* pre-order: "Приета за <ден, час>" (docs/OPEN-QUESTIONS.md); the minutes count only in the last 45 min */
       label = (c.id === "acc" ? "Приета за " : "За ") + (sc.tomorrow ? "утре, " : "днес, ") + SC.dateLong(sc.date);
@@ -514,7 +519,7 @@ export function startTracking(main: HTMLElement) {
     const c = cur(), D = isD();
     if (cancelled()) return "Поръчката е отказана";
     if (finished()) return D ? "Поръчката е доставена" : "Добър апетит!";
-    return c.id === "cook" ? cookSay() : c.id === "ready" ? (D ? "Поръчката е готова" : "Поръчката ви е готова") : c.id === "way" ? "Поръчката тръгна към вас" : "Получихме поръчката ви";
+    return c.id === "cook" ? cookSay() : c.id === "ready" ? (D ? "Поръчката е готова" : "Поръчката ви е готова") : c.id === "way" ? (arrived() ? "Шофьорът е пред входа" : "Поръчката тръгна към вас") : "Получихме поръчката ви";
   }
   function focusRate() {
     const h = main.querySelector<HTMLElement>("[data-focus]"); if (h) h.focus({ preventScroll: true });
@@ -558,14 +563,15 @@ export function startTracking(main: HTMLElement) {
   function takeOrder(x: Order) {
     if (x.key && !S.key) S.key = x.key;
     S.o = Object.assign({}, S.o || fromSaved() || {}, x) as Order;
-    if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x));
+    if (!x.arrivedAt) delete S.o.arrivedAt; /* the API sends it only while the driver is at the door */
+    if (saved && String(saved.no) === S.no) SC.store("sc-order", Object.assign({}, saved, x, { arrivedAt: x.arrivedAt }));
   }
   async function load(opts: { quiet?: boolean } = {}) {
     if (!S.no) { S.view = "none"; render(); return; }
     if (S.sim.sample) return;
     if (loading) { again = true; return; }
     loading = true;
-    const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false, wasCancelled = S.o ? cancelled() : false;
+    const before = S.o ? k() : -1, wasFinished = S.o ? finished() : false, wasCancelled = S.o ? cancelled() : false, wasArrived = S.o ? arrived() : false;
     try {
       const x = (await api.orders.get(trackId())) as Order | null;
       if (!x) throw new ApiError("not_found", "Няма такава поръчка.", 404);
@@ -573,7 +579,7 @@ export function startTracking(main: HTMLElement) {
       clearTimeout(retryT);
       S.offline = !!P.offline; S.updated = SC.minutes(); S.view = "order";
       render({ soft: true }); syncAddress();
-      if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished || cancelled() !== wasCancelled)) announce();
+      if (opts.quiet && before > -1 && (k() !== before || finished() !== wasFinished || cancelled() !== wasCancelled || (arrived() && !wasArrived))) announce();
     } catch (e) {
       const err = e as ApiError;
       if (err && err.code === "not_found") { S.o = null; S.view = "notfound"; }

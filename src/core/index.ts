@@ -26,6 +26,7 @@ import * as custAdm from "./customers-admin.ts";
 import * as reportsMod from "./reports.ts";
 import * as staffAdm from "./staff-admin.ts";
 import * as kitchenMod from "./kitchen.ts";
+import * as driverMod from "./driver.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -60,6 +61,13 @@ export { STAFF_MSG, PIN_ROLES, RANK, type StaffRow } from "./staff-admin.ts";
 export { K_ALL, K_MSG, K_MISSING, KS_TEXT, DEFAULT_KITCHEN, TABLET_ALIVE_SEC, KITCHEN_BEAT_SEC, KITCHEN_UNDO_SEC, BUSY_REMIND_MIN, type KitchenConfig, type KSectionDef, type KState, type KTimer, type KKind,
   type KSrc, type KLineView, type KSecState, type KOther, type KTicket, type KLater, type KBusy, type KConfigView, type KConfigPatch, type KQueue, type KAct, type KDoneRow, type KDone, type KTablet,
   type KSummary, type KOutItem, type KOutRow, type KSoldOut, type KOutResult, type KBusyView, type KFound, type KSearch, type KOpt } from "./kitchen.ts";
+/* the driver (core/driver.ts): the screens import the types and the words through src/client/api-driver.ts */
+export {
+  DRIVER_MSG, DRIVER_MISSING, DRIVER_UNDO_MS, DELIVERY_LABEL, PROBLEM_LABEL, PROBLEM_KINDS, ANSWER_LABEL, ASK_ANSWERS, DRIVER_STATUS_LABEL, NAV_APPS, DEFAULT_CARS, ARRIVED_TEXT, RECEIPT_MAX, RECEIPT_PER_HOUR,
+  type DeliveryState, type ProblemKind, type AskAnswer, type DriverStatus, type NavApp, type RoutePick, type DriverCar, type CarView, type ShiftView, type DriverState, type ShiftStart,
+  type Delivery, type DriverList, type AskView, type RouteView, type RouteOption, type StepResult, type ArriveResult, type FuelView, type FuelPage, type FuelInput, type FuelReport,
+  type ShiftTotals, type ShiftSummary, type DriverRow, type DriversView, type DriverShift, type DriverAsk, type FuelEntry,
+} from "./driver.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;
 type Bound<M> = { [K in keyof M]: M[K] extends (ctx: Ctx, ...a: never[]) => unknown ? Tail<M[K]> : never };
@@ -137,6 +145,15 @@ export function createCore(ctx: Ctx) {
       done: kitchenMod.kitchenDone, back: kitchenMod.kitchenBack, seen: kitchenMod.kitchenSeen, doneToday: kitchenMod.kitchenDoneToday, summary: kitchenMod.kitchenSummary,
       soldOut: kitchenMod.kitchenSoldOut, setOut: kitchenMod.kitchenSetOut, busy: kitchenMod.kitchenBusy, setBusy: kitchenMod.kitchenSetBusy, beat: kitchenMod.kitchenBeat,
       tablets: kitchenMod.kitchenTablets, search: kitchenMod.kitchenSearch,
+    }),
+    /* the driver: the shift, the deliveries, a problem, the question to the manager, the route, fuel, the end of the shift,
+       and what the manager and the owner see (core/driver.ts; the rights are inside every function) */
+    driver: bind(ctx, {
+      state: driverMod.state, start: driverMod.start, prefs: driverMod.prefs, changeCar: driverMod.changeCar, saveCars: driverMod.saveCars,
+      list: driverMod.list, get: driverMod.get, take: driverMod.take, go: driverMod.go, arrive: driverMod.arrive, deliver: driverMod.deliver,
+      problem: driverMod.problem, returned: driverMod.returned, undo: driverMod.undo, ask: driverMod.ask, asks: driverMod.asks, answer: driverMod.answer, answerUndo: driverMod.answerUndo,
+      route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck,
+      shift: driverMod.shift, end: driverMod.end, drivers: driverMod.drivers, search: driverMod.search,
     }),
     audit: bind(ctx, { log: auditMod.audit, list: auditMod.listAudit }),
   };
