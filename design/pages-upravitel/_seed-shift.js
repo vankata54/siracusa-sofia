@@ -1,11 +1,11 @@
 /* Siracusa · Управител: смяната на живо (ключ sa-shift) и общите правила за нея (A.sh).
    Зарежда се след ../pages-admin/_admin.js, _seed-orders.js, _res-lib.js, _seed-res.js. Не вика A.mount.
-   - A.seed.shift(opts) попълва sa-shift само ако липсва или ако се смени денят, часът на прототипа, поръчките (sa-orders.at) или профилът.
-   - Профили (само в прототипа, „Само в прототипа“ → състоянието): "normal" (данните на админа както са), "rush" (вечерен пик: добавя
-     примерни поръчки и номерира деня наново по час, повиквания над 5 мин, QR без потвърждение, таблет без връзка, адрес извън зоните,
-     изчерпано в приета поръчка), "calm" (нищо не чака: приетите са в кухнята, закъснелите са доставени, резервациите са потвърдени).
-     Смяната на профила пресъздава sa-orders и sa-reservations (както смяната на часа в админа), така че админът вижда същите числа.
-   - sa-shift: {v, date, time, profile, ordersAt, open,
+   - A.seed.shift() попълва sa-shift само ако липсва или ако се смени денят, часът на прототипа или поръчките (sa-orders.at, sa-orders.demo).
+   - Примерни данни (само в прототипа, SH.applyDemo): "rush" (вечерен пик: още поръчки по-рано във времето със следващите номера, повиквания
+     над 5 мин, QR без потвърждение, таблет без връзка, адрес извън зоните, изчерпано в приета поръчка) и "calm" (нищо не чака). Пресъздават
+     sa-orders и sa-reservations ВЕДНЪЖ, при избора (както смяната на часа в админа), и пишат sa-orders.demo; "normal" връща данните по часа.
+     Нищо не се помни отделно: смени ли админът часа, поръчките са обичайни и demo изчезва.
+   - sa-shift: {v:2, date, time, demo, ordersAt, open,
        waiters:[{id, name:"Сервитьор 1", tables:[номера], since:ISO, avgSec}],   // масите на всеки (решение 15.11: управителят ги сменя)
        walkins:{"8":{since:ISO, guests}},                                          // седнали без резервация, още без поръчка
        calls:[{id, n, why:"call"|"bill", at:ISO, taken:null|{by, at, assigned}}],  // повикванията (над 5 мин отиват при управителя)
@@ -93,7 +93,10 @@ function rushOrders(d){ var t = now().getTime(), m = mins(), extra = [];
   /* фиксираните маси на примерния ден не се дублират: пиковите маси заменят по-старите на същата маса */
   var busyT = extra.filter(function(o){ return o.channel === "table"; }).map(function(o){ return o.table; });
   var list = d.list.filter(function(o){ return !(o.channel === "table" && busyT.indexOf(o.table) > -1 && !SH.fin(o)); }).concat(extra);
-  list.sort(function(a, b){ return a.ts - b.ts; }); list.forEach(function(o, i){ o.no = String(1042 + i); });
+  /* номерата на примерния ден не се сменят (дневникът и админът сочат същите поръчки): пиковите получават следващите номера по час */
+  var max = Math.max.apply(null, [1041].concat(d.list.map(function(o){ return +o.no || 0; })));
+  extra.sort(function(a, b){ return a.ts - b.ts; }).forEach(function(o, i){ o.no = String(max + 1 + i); });
+  list.sort(function(a, b){ return a.ts - b.ts; });
   d.list = list; return d; }
 
 /* нищо не чака: приетите са в кухнята, закъснелите са готови или доставени */
@@ -103,26 +106,34 @@ function calmOrders(d){ var t = now().getTime();
     if (SH.late(o)){ if (o.status === "on_way"){ o.status = "delivered"; o.times.delivered = iso(t - 2 * MIN); } else if (o.status !== "ready"){ o.status = "ready"; o.times.ready = iso(t - 2 * MIN); } } });
   return d; }
 
-SH.PROFILES = ["normal","rush","calm"];
+SH.DEMOS = ["rush","calm"];
+SH.DEMO_NAME = {rush:"вечерен пик", calm:"нищо не чака"};
+/* примерните данни, които сега са в sa-orders: "rush" | "calm" | "" (полето demo на документа; админът го пресъздава при смяна на часа и то изчезва само) */
+SH.demo = function(){ var d = A.data.get("orders", null); return d && SH.DEMOS.indexOf(d.demo) > -1 ? d.demo : ""; };
+SH.rushOk = function(){ var m = mins(); return m >= 660 && m < 1350; };
+/* „Само в прототипа“: пресъздава данните ВЕДНЪЖ, при избора (както смяната на часа в админа). "normal" връща данните по часа на админа.
+   Връща false, ако пикът е извън часовете на кухнята (11:00-22:30). */
+SH.applyDemo = function(kind){ var day = A.todayKey();
+  if (kind === "rush" && !SH.rushOk()) return false;
+  var d = A.seed.makeOrders(); if (kind === "rush"){ d = rushOrders(d); d.demo = "rush"; } if (kind === "calm"){ d = calmOrders(d); d.demo = "calm"; }
+  A.data.set("orders", d);
+  if (A.seed.reservations) A.seed.reservations(true);
+  if (kind === "calm"){ var rs = A.data.get("reservations", []); rs.forEach(function(r){ if (r.date === day && r.status === "new") r.status = "confirmed"; }); A.data.set("reservations", rs);
+    var bl = A.data.get("blocks", {}) || {}; Object.keys(bl).forEach(function(k){ if (bl[k] && bl[k].status === "pending") delete bl[k]; }); A.data.set("blocks", bl); }
+  A.seed.shift({force:true}); return true; };
+
 A.seed = A.seed || {};
-/* opts: {profile, force} */
+/* sa-shift се пресъздава само ако липсва или се смени денят, часът на прототипа или поръчките (sa-orders.at / demo); никога заради профил */
 A.seed.shift = function(opts){ opts = opts || {};
-  var cur = A.data.get("shift", null), want = SH.PROFILES.indexOf(opts.profile) > -1 ? opts.profile : (cur && cur.profile) || "normal";
-  var ord = A.data.get("orders", null), day = A.todayKey();
-  var fresh = !cur || opts.force || cur.v !== 1 || cur.date !== day || cur.time !== A.protoTime || cur.profile !== want || !ord || !ord.list || ord.at !== cur.ordersAt;
+  var cur = A.data.get("shift", null), ord = A.data.get("orders", null), day = A.todayKey();
+  if (!ord || !ord.list) ord = A.seed.orders();
+  var want = SH.DEMOS.indexOf(ord.demo) > -1 ? ord.demo : "normal";
+  var fresh = !cur || opts.force || cur.v !== 2 || cur.date !== day || cur.time !== A.protoTime || ord.at !== cur.ordersAt || (cur.demo || "normal") !== want;
   if (!fresh) return cur;
-  var profileChanged = cur && cur.profile !== want;
-  /* смяна на профила: поръчките и резервациите се пресъздават (като смяната на часа в админа), после профилът ги променя */
-  if (profileChanged || (want !== "normal" && (!cur || !ord || ord.at !== cur.ordersAt))){
-    var d = A.seed.makeOrders(); if (want === "rush") d = rushOrders(d); if (want === "calm") d = calmOrders(d); A.data.set("orders", d);
-    if (A.seed.reservations) A.seed.reservations(true);
-    if (want === "calm"){ var rs = A.data.get("reservations", []); rs.forEach(function(r){ if (r.date === day && r.status === "new") r.status = "confirmed"; }); A.data.set("reservations", rs);
-      var bl = A.data.get("blocks", {}) || {}; Object.keys(bl).forEach(function(k){ if (bl[k] && bl[k].status === "pending") delete bl[k]; }); A.data.set("blocks", bl); } }
-  ord = A.data.get("orders", null) || A.seed.orders();
   var t = now().getTime(), m = mins(), open = m >= 600 && m < 1380, kitchen = m >= 600 && m < 1350;
   var start = m < 960 ? 600 : 960; /* обедна смяна от 10:00, вечерна от 16:00 */
   var since = iso(t - (m - start) * MIN);
-  var S = {v:1, date:day, time:A.protoTime, profile:want, ordersAt:ord.at, open:open, at:iso(t),
+  var S = {v:2, date:day, time:A.protoTime, demo:want, ordersAt:ord.at, open:open, at:iso(t),
     waiters:m >= 600 ? [{id:"w1", name:"Сервитьор 1", tables:W1.slice(), since:since, avgSec:want === "rush" ? 164 : 92},
                     {id:"w2", name:"Сервитьор 2", tables:W2.slice(), since:since, avgSec:want === "rush" ? 211 : 128}] : [],
     walkins:{}, calls:[], qr:[], asks:[], ack:{},
@@ -144,6 +155,5 @@ A.seed.shift = function(opts){ opts = opts || {};
       if (oz) S.asks.push({id:"a1", type:"outzone", driver:oz.driver || "Шофьор 2", no:oz.no, at:iso(t - 3 * MIN - 20 * SEC)}); } }
   A.data.set("shift", S); return S; };
 
-/* профилът от адреса (#st=rush / calm / normal); другите състояния (offline, loading …) не пипат данните */
-SH.ensure = function(st){ return A.seed.shift(SH.PROFILES.indexOf(st) > -1 ? {profile:st} : {}); };
+SH.ensure = function(){ return A.seed.shift(); };
 })();

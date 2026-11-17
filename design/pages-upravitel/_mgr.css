@@ -17,12 +17,14 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-tb{position:relative; display:grid; justify-items:center; align-content:center; gap:4px; min-width:56px; height:56px; padding:0 6px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:14px; line-height:1; cursor:pointer; flex:none; white-space:nowrap; text-decoration:none; -webkit-tap-highlight-color:transparent}
 .mg-tb:hover{background:var(--surface-2)}
 .mg-tb:active{transform:scale(.95)}
-.mg-tb .ic{width:24px; height:24px; color:var(--red)}
+.mg-tb .ic{width:24px; height:24px; color:var(--ink)}
 .mg-tb .lg{display:none}
 .mg-snd[aria-pressed="false"] .ic{color:var(--muted)}
 .mg-snd.wait{background:var(--ember-soft)}
 .mg-snd.wait .ic{color:var(--ink)}
-.mg-me{flex:none; width:48px; height:48px; margin-left:4px; border:0; border-radius:50%; background:var(--ink); color:var(--bg); font:inherit; font-weight:800; font-size:18px; cursor:pointer; display:grid; place-items:center}
+.mg-toadmin{display:none}
+.mg-me{flex:none; display:inline-flex; align-items:center; gap:10px; min-height:48px; margin-left:4px; padding:0; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; cursor:pointer}
+.mg-me .av{width:48px; height:48px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-weight:800; font-size:19px; flex:none}
 .mg-me .who{display:none}
 .mg-me:active{transform:scale(.95)}
 .mg-only-d{display:none !important}
@@ -34,7 +36,7 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-net button{flex:none; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font:inherit; font-weight:800; font-size:15px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px}
 
 /* ---------- долна лента (телефон): Сега · Залата · Екипът · Още ---------- */
-.mg-nav{position:fixed; z-index:40; left:50%; bottom:calc(10px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 16px), 520px); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+.mg-nav{position:fixed; z-index:40; left:8px; right:72px; bottom:calc(10px + env(safe-area-inset-bottom)); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .mg-nav a,.mg-rail a{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:56px; border-radius:999px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; line-height:1.1; text-align:center; -webkit-tap-highlight-color:transparent}
 .mg-nav a .ic,.mg-rail a .ic{width:26px; height:26px}
 .mg-nav a[aria-current="page"],.mg-rail a[aria-current="page"]{color:var(--ink)}
@@ -43,6 +45,15 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-n.fresh{background:var(--ember); color:var(--on-ember); animation:mgblink 1.6s var(--ease-std) infinite}
 @keyframes mgblink{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 .mg-nav.stale .mg-n{background:var(--off); color:var(--bg)}
+.mg-app.nopen .mg-nav{right:8px}
+@media (prefers-reduced-motion: reduce){ .mg-n.fresh::after{content:" Нова"} .mg-n.fresh{padding:0 8px} }
+/* моливът (../pages-admin/_pen-mount.js, slot): на телефон кръг 56 px на реда на долната лента, вдясно от нея (центровете съвпадат);
+   от 900 px най-долу в лявата лента. Никога над съдържанието. Скрит само докато е отворен лист или търсачката. */
+.mg-penslot{position:fixed; z-index:41; right:8px; bottom:calc(18px + env(safe-area-inset-bottom)); width:56px; height:56px}
+.mg-penslot:empty{display:none}
+.mg-penslot .sa-pen-btn{position:relative !important; top:auto !important; bottom:auto !important; left:auto !important; right:auto !important; width:56px !important; height:56px !important; min-width:56px !important; min-height:56px !important; padding:0 !important; border-radius:50% !important; justify-content:center !important; box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow) !important; -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px)}
+.mg-penslot .sa-pen-btn > span:not(.sa-pen-n){position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+html.mg-hidepen .mg-penslot{visibility:hidden}
 
 /* ---------- лява лента (компютър) ---------- */
 .mg-rail{display:none}
@@ -50,10 +61,11 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 /* ---------- блокове и карти ---------- */
 .mg-blk{margin-top:28px; min-width:0}
 .mg-blk:first-child{margin-top:12px}
-.mg-h{display:flex; align-items:center; gap:10px; min-height:40px; margin:0 0 12px}
+.mg-h{display:flex; align-items:center; gap:10px; min-height:48px; margin:0 0 12px}
 .mg-h h2{margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em; line-height:1.15}
-.mg-h .cnt{min-width:30px; height:30px; padding:0 9px; border-radius:15px; display:inline-grid; place-items:center; background:var(--surface-2); font-size:15px; font-weight:800; font-variant-numeric:tabular-nums}
-.mg-h .cnt.hot{background:var(--red); color:var(--on-red)}
+/* броячът до заглавието: свой клас (не .cnt от sc.css, който е значка с position:absolute) */
+.mg-cnt{position:static; min-width:32px; height:32px; padding:0 10px; border-radius:16px; display:inline-grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--line-strong); font-size:16px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums}
+.mg-cnt.hot{background:var(--red); color:var(--on-red); box-shadow:none}
 .mg-h .more{margin-left:auto}
 .mg-h p{margin:0; font-size:14px; color:var(--muted); font-weight:600}
 .mg-card{border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
@@ -110,6 +122,13 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-occl i{width:10px; height:10px; border-radius:3px; background:var(--ink)}
 .mg-occl span + span i{background:var(--muted)}
 
+/* ---------- „Сега“: подредбата (телефон: проблемите над пулса, ако има; компютър: пулсът горе, после колоните) ---------- */
+.now-grid{display:grid; grid-template-columns:minmax(0,1fr); column-gap:20px; align-items:start}
+.now-day{order:0} .now-pulse{order:2} .now-probs{order:3} .now-wait{order:4} .now-kit{order:5}
+.now-grid.has-probs .now-probs{order:1}
+.now-grid.has-probs .now-probs{margin-top:12px}
+.now-grid.has-probs .now-pulse .mg-pulse{margin-top:28px}
+
 /* ---------- „Проблеми сега“ ---------- */
 .mg-probs{display:grid; gap:12px}
 .mg-prob{position:relative; display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:4px 12px; align-items:center; padding:14px 14px 14px 14px; border-radius:26px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
@@ -165,6 +184,19 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-sec .sn b{display:block; font-size:16px; font-weight:800; line-height:1.25}
 .mg-sec .sn small{display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--muted); margin-top:2px}
 .mg-sec .sn small.off{color:var(--ink)}
+.mg-sec .mg-offtag{grid-column:2/-1; justify-self:start}
+.mg-offtag{display:inline-flex; align-items:center; gap:6px; min-height:32px; margin-top:2px; padding:0 12px 0 9px; border-radius:999px; background:var(--ember); color:var(--on-ember); font-size:16px; font-weight:800; white-space:nowrap}
+.mg-wout{display:flex; margin-top:6px}
+.mg-busy.off{opacity:.7}
+.mg-more{width:100%; margin-top:12px}
+.mg-prob.solved{background:var(--surface-2); box-shadow:none}
+.mg-prob.solved .pi{background:var(--surface); color:var(--ok)}
+.mg-prob.solved .pt b{color:var(--muted)}
+.mg-demo{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px; padding:6px 6px 6px 16px; border-radius:24px; background:var(--ember-soft); box-shadow:inset 0 0 0 1.5px var(--ember); font-weight:600}
+.mg-demo span{flex:1 1 200px}
+.mg-demo .pill{min-height:48px}
+.mg-demowrap:empty{display:none}
+.nw{white-space:nowrap}
 .mg-sec .sc{display:grid; justify-items:end; gap:4px; text-align:right}
 .mg-sec .sc span{display:inline-flex; align-items:baseline; gap:5px; font-size:14px; font-weight:700; color:var(--muted); white-space:nowrap}
 .mg-sec .sc b{font-size:22px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; letter-spacing:-.03em; line-height:1}
@@ -210,6 +242,7 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-tile.qr .w{color:var(--red)}
 .mg-tile.ready{background:var(--ember); color:var(--on-ember); box-shadow:none}
 .mg-tile.call,.mg-tile.bill{background:var(--red); color:var(--on-red); box-shadow:none}
+.mg-tile.call .who,.mg-tile.bill .who,.mg-tile.call .tm small,.mg-tile.bill .tm small,.mg-tile.ready .who,.mg-tile.ready .tm small{opacity:1}
 .mg-tile .lock{position:absolute; right:12px; bottom:12px; opacity:.75}
 .mg-legend{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
 .mg-zone + .mg-zone{margin-top:24px}
@@ -251,10 +284,13 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-stops li.next .no{background:var(--red); color:var(--on-red)}
 .mg-stops b{display:block; font-size:16px; font-weight:800; line-height:1.25}
 .mg-stops small{display:block; font-size:14px; font-weight:600; color:var(--muted); line-height:1.35}
-.mg-cash{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
+.mg-cash{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; align-items:baseline; margin-top:12px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}
 .mg-cash span{font-size:15px; font-weight:700}
 .mg-cash .price{font-size:20px}
-.mg-cash small{flex-basis:100%; font-size:14px; color:var(--muted); font-weight:600}
+.mg-cash small{grid-column:1/-1; font-size:14px; color:var(--muted); font-weight:600}
+.mg-cash.now{background:var(--ember); color:var(--on-ember)}
+.mg-cash.now small{color:var(--on-ember)}
+.mg-err{display:flex; align-items:center; gap:8px; margin:4px 0 0; color:var(--danger); font-weight:700}
 .mg-kv{display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:10px 0; font-size:16px}
 .mg-kv + .mg-kv{border-top:1px solid var(--line)}
 .mg-kv span:first-child{color:var(--muted); font-weight:700; font-size:15px}
@@ -264,16 +300,16 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-scheme{margin-top:12px; border-radius:22px; padding:5px; background:var(--surface-2)}
 .mg-scheme .in{border-radius:18px; background:var(--surface); overflow:hidden}
 .mg-scheme .in svg{display:block; width:100%; height:auto}
-.mg-scheme .cap{display:flex; align-items:center; gap:6px; padding:8px 8px 4px; font-size:14px; font-weight:700; color:var(--muted)}
+.mg-scheme .cap{display:flex; align-items:flex-start; gap:6px; padding:8px 8px 4px; font-size:14px; font-weight:700; color:var(--muted)}
 .sv-zone{fill:var(--surface-2)}
-.sv-zl{fill:var(--muted); font:700 14px var(--font)}
+.sv-zl{fill:var(--muted); font:700 19px var(--font)}
 .sv-path{fill:none; stroke:var(--ink); stroke-width:4; stroke-linecap:round; stroke-linejoin:round}
 .sv-ret{fill:none; stroke:var(--muted); stroke-width:2.5; stroke-dasharray:6 7; stroke-linecap:round}
-.sv-stop{fill:var(--ink)} .sv-stop-t{fill:var(--bg); font:800 16px var(--font); text-anchor:middle; dominant-baseline:central}
+.sv-stop{fill:var(--ink)} .sv-stop-t{fill:var(--bg); font:800 19px var(--font); text-anchor:middle; dominant-baseline:central}
 .sv-stop.next{fill:var(--red)} .sv-stop-t.next{fill:var(--on-red)}
 .sv-home{fill:var(--red)} .sv-home-t{fill:var(--on-red)}
 .sv-car{fill:var(--ember); stroke:var(--surface); stroke-width:3}
-.sv-car-t{fill:var(--on-ember); font:800 14px var(--font); text-anchor:middle; dominant-baseline:central}
+.sv-car-i{fill:var(--on-ember)}
 
 /* ---------- „Още“ ---------- */
 .mg-hero{display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:4px 14px; align-items:center; padding:18px; border-radius:28px; background:var(--red); color:var(--on-red); text-decoration:none; box-shadow:var(--shadow); min-height:96px}
@@ -287,7 +323,7 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-sect b{display:block; font-size:18px; font-weight:800; letter-spacing:-.02em; line-height:1.2}
 .mg-sect small{display:block; font-size:15px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:2px}
 .mg-sect .go{color:var(--muted)}
-.mg-themes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:4px; border-radius:22px; background:var(--surface-2)}
+.mg-themes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; max-width:480px; padding:4px; border-radius:22px; background:var(--surface-2)}
 .mg-themes button{min-height:52px; border:0; border-radius:18px; background:transparent; color:var(--ink); font:inherit; font-weight:800; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px}
 .mg-themes button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 .mg-setrow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:76px; padding:12px 14px; text-decoration:none; color:var(--ink); border:0; background:transparent; font:inherit; text-align:left; width:100%; cursor:pointer}
@@ -338,13 +374,13 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-pick button{display:flex; align-items:center; gap:12px; min-height:60px; padding:0 16px; border:0; border-radius:18px; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:800; font-size:17px; cursor:pointer; text-align:left}
 .mg-pick button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 .mg-pick button small{margin-left:auto; font-size:14px; font-weight:700; opacity:.8}
-.mg-tsel{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:6px 0 12px}
+.mg-tsel{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 12px}
 .mg-tsel button{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; min-height:64px; border:0; border-radius:18px; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--ink); font:inherit; cursor:pointer}
 .mg-tsel button b{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
 .mg-tsel button small{font-size:14px; font-weight:700; color:var(--muted); line-height:1.1}
 .mg-tsel button[aria-pressed="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
 .mg-tsel button[aria-pressed="true"] small{color:var(--bg); opacity:.8}
-.mg-tsel button.chg::after{content:""; position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%; background:var(--ember)}
+.mg-tsel button.chg{outline:3px dashed var(--ember); outline-offset:2px}
 .mg-sheet h3{margin:16px 0 6px; font-size:16px; font-weight:800}
 
 /* ---------- известие (едно наведнъж, с „Отмени“) ---------- */
@@ -355,11 +391,6 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-toast button,.mg-toast a{display:inline-flex; align-items:center; gap:6px; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--red); color:var(--on-red); font:inherit; font-weight:800; font-size:16px; cursor:pointer; white-space:nowrap; text-decoration:none}
 .mg-toast .sec{background:transparent; color:var(--bg); box-shadow:inset 0 0 0 1.5px currentColor}
 .mg-toast.solo{padding-right:20px}
-
-/* моливът (../pages-admin/_pen-mount.js): над долната лента на телефон, скрит при отворен лист, търсачка или известие */
-html.mg-phone .sa-pen-btn:not(.in-slot){top:auto !important; bottom:calc(96px + env(safe-area-inset-bottom)) !important; right:12px !important; left:auto !important}
-html.mg-wide .sa-pen-btn:not(.in-slot){top:auto !important; bottom:24px !important; right:24px !important; left:auto !important}
-html.mg-hidepen .sa-pen-btn{opacity:0 !important; pointer-events:none !important}
 
 /* ---------- търсачката: цял екран на телефон, панел под полето на компютър ---------- */
 .mg-find{position:fixed; inset:0; z-index:85; display:flex; justify-content:center; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity var(--t-base) var(--ease)}
@@ -410,6 +441,7 @@ html.mg-hidepen .sa-pen-btn{opacity:0 !important; pointer-events:none !important
 .mg-proto p{margin:6px 0 0; font-size:14px; color:var(--muted); font-weight:600}
 .mg-proto .row{flex-wrap:wrap; gap:6px}
 .mg-proto .chip{min-height:48px; font-size:15px; padding:0 14px; text-decoration:none}
+.mg-proto .chip[aria-current="true"]{background:var(--ink); color:var(--bg); box-shadow:none}
 
 @container app (max-width:380px){
   .mg-top{padding-left:12px; gap:2px}
@@ -442,21 +474,25 @@ html.mg-hidepen .sa-pen-btn{opacity:0 !important; pointer-events:none !important
   .mg-dsearch.mg-only-d{display:block !important}
   .mg-only-p{display:none !important}
   .mg-nav{display:none}
-  .mg-rail{display:flex; flex-direction:column; align-items:center; gap:6px; position:fixed; z-index:41; left:0; top:0; bottom:0; width:104px; padding:14px 8px; background:var(--surface); box-shadow:1px 0 0 var(--line)}
-  .mg-rail .brand{display:grid; justify-items:center; gap:4px; margin:4px 0 18px; text-decoration:none; color:var(--ink)}
-  .mg-rail .brand .word{font-size:18px}
-  .mg-rail .brand small{display:inline-block; padding:2px 8px; border-radius:999px; background:var(--surface-2); font-size:14px; font-weight:800; color:var(--muted)}
+  .mg-rail{display:flex; flex-direction:column; align-items:center; gap:6px; position:fixed; z-index:41; left:0; top:0; bottom:0; width:104px; padding:16px 8px 92px; background:var(--surface); box-shadow:inset -1px 0 0 var(--line)}
+  .mg-rail .brand{display:grid; justify-items:center; gap:2px; padding:6px 0 14px; text-decoration:none; color:var(--ink)}
+  .mg-rail .brand b{font-size:18px; letter-spacing:-.05em; font-weight:800}
+  .mg-rail .brand small{font-size:14px; color:var(--muted); font-weight:700}
   .mg-rail a.it{width:88px; min-height:76px; border-radius:22px}
+  .mg-rail a.it:hover{background:var(--surface-2)}
   .mg-rail a.it[aria-current="page"]{background:var(--surface-2)}
   .mg-rail a.it .mg-n{left:calc(50% + 8px); top:6px}
+  /* моливът най-долу в лявата лента, в средата ѝ */
+  .mg-penslot{left:24px; right:auto; bottom:24px}
   .mg-col{margin-left:104px}
-  .mg-top{padding:10px 24px 10px 32px; gap:10px; min-height:84px}
-  .mg-tt h1{font-size:32px}
+  .mg-top{padding:12px 32px; gap:10px; min-height:84px; background:var(--bg); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:0 1px 0 var(--line)}
+  .mg-tt h1{font-size:30px}
   .mg-tt span{font-size:15px}
-  .mg-tb{grid-auto-flow:column; gap:8px; min-height:52px; height:52px; padding:0 16px; border-radius:999px; font-size:15px; background:var(--surface-2)}
+  .mg-tb{grid-auto-flow:column; gap:8px; min-height:52px; height:52px; padding:0 16px; border-radius:999px; font-size:15px; background:transparent; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
   .mg-tb .ic{width:22px; height:22px}
   .mg-tb .sm{display:none}
   .mg-tb .lg{display:inline}
+  .mg-toadmin{display:inline-flex; min-height:52px}
   .mg-net{top:84px; padding-left:32px}
   .mg-main{padding:8px 32px 0}
   .mg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -472,31 +508,38 @@ html.mg-hidepen .sa-pen-btn{opacity:0 !important; pointer-events:none !important
   .mg-sheet{left:auto; right:24px; top:24px; bottom:24px; width:460px; max-height:none; transform:translateX(110%)}
   .mg-sheetwrap.on .mg-sheet{transform:none}
   .mg-sheet .handle{display:none}
+  .mg-tsel{grid-template-columns:repeat(4,minmax(0,1fr))}
   .mg-toast{top:96px; left:calc(50% + 52px)}
   .mg-proto{margin-top:56px}
-  .mg-end{height:96px}
-  /* поле за търсене в горната лента и панел с резултатите под него */
-  .mg-dsearch{position:relative; width:min(340px, 32vw)}
+  .mg-end{height:48px}
+  /* „Сега“: пулсът горе, после 2 колони (проблемите вляво на два реда, „Чака те“ и кухнята вдясно) */
+  .now-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .now-day,.now-pulse{grid-column:1/-1}
+  .now-day{order:0} .now-pulse{order:1} .now-probs,.now-grid.has-probs .now-probs{order:2; grid-row:span 2; margin-top:28px} .now-wait{order:3} .now-kit{order:4}
+  .now-grid.has-probs .now-pulse .mg-pulse{margin-top:14px}
+  /* полето „Търси“ вдясно, до „Звук“ и „Към админа“ (като в модула Собственик); панелът с резултатите не излиза извън колоната (JS) */
+  .mg-dsearch{position:relative; width:min(340px, 30vw); flex:none}
   .mg-dsearch .mg-q .input{min-height:52px; font-size:16px}
   .mg-dsearch .mg-q .k{position:absolute; right:14px; top:50%; transform:translateY(-50%); min-width:28px; height:28px; border-radius:8px; display:grid; place-items:center; box-shadow:inset 0 0 0 1.5px var(--line-strong); color:var(--muted); font-size:14px; font-weight:800}
-  .mg-dpanel{position:absolute; right:0; top:calc(100% + 8px); width:min(620px, calc(100vw - 180px)); max-height:min(72vh, 720px); overflow-y:auto; overscroll-behavior:contain; padding:4px 18px 18px; border-radius:26px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); z-index:60}
+  .mg-dpanel{position:fixed; width:620px; max-height:min(72vh, 720px); overflow-y:auto; overscroll-behavior:contain; padding:4px 18px 18px; border-radius:26px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); z-index:60}
   .mg-dpanel .mg-fres{max-width:none}
-  .mg-me{width:auto; height:52px; padding:0 14px 0 6px; border-radius:999px; background:var(--surface-2); color:var(--ink); gap:10px; grid-auto-flow:column; font-size:16px}
-  .mg-me .av{width:40px; height:40px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; font-size:17px}
-  .mg-me .who{display:grid; text-align:left; line-height:1.15}
-  .mg-me .who small{font-size:14px; color:var(--muted); font-weight:700}
+  .mg-me .who{display:block; text-align:left; line-height:1.25}
+  .mg-me .who b{display:block; font-size:15px}
+  .mg-me .who small{display:block; font-size:14px; color:var(--muted); font-weight:600}
 }
 @container app (min-width:900px) and (max-width:1239px){
   .mg-me .who{display:none}
-  .mg-me{padding:0 6px}
   .mg-snd .lg{display:none}
   .mg-snd .sm{display:inline}
-  .mg-dsearch{width:min(280px, 30vw)}
+  .mg-dsearch{width:min(280px, 28vw)}
   .mg-tt{min-width:max-content}
 }
 @container app (min-width:1240px){
   .mg-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .mg-grid.c3 > .mg-blk:nth-child(-n+3){margin-top:12px}
+  .now-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .now-probs,.now-grid.has-probs .now-probs{grid-row:auto}
+  .now-wait,.now-kit{margin-top:28px}
   .mg-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .mg-tiles2{grid-template-columns:1fr 1fr}
+  .mg-tiles2{grid-template-columns:1fr}
 }

@@ -10,47 +10,60 @@ var MGF = window.MGF = {};
 function lat(s){ return S.latin(String(s || "")).replace(/[^a-z0-9: ]+/g, " ").replace(/\s+/g, " ").trim(); }
 function digits(s){ return String(s || "").replace(/\D/g, ""); }
 var ADM = "../pages-admin/";
-var STOP = ["маса","маси","masa","masi","table","на","за","с","и","no","номер"];
-function hit(w, list){ return list.some(function(x){ var l = lat(x); return w.length >= 3 && (l.indexOf(w) === 0 || w.indexOf(l.slice(0, Math.max(3, l.length - 1))) === 0); }); }
+var STOP = ["маса","маси","masa","masi","table","на","за","с","и","в","от","до","no","номер","nomer"];
+var TABLEW = ["маса","маси","masa","masi","table"];
+/* съвпадение на дума: поне 3 букви от двете страни (кратки служебни думи като „и“, „с“ не съвпадат с всичко); 2-буквени думи само цели („qr“) */
+function hit(w, list){ return list.some(function(x){ var l = lat(x); if (!l) return false;
+  if (w.length < 3 || l.length < 3) return w === l;
+  return l.indexOf(w) === 0 || w.indexOf(l.slice(0, Math.max(3, l.length - 1))) === 0; }); }
 var TWORDS = {free:["свободна","свободни","свободно"], busy:["заета","заети"], call:["вика","повикване","повиквания"], bill:["сметка","сметки"], qr:["qr","кюар"], wait:["чака","чакат"], ready:["готово","готови"], res:["резервирана","резервирани"]};
+var PEOPLE = ["сервитьор","сервитьори","шофьор","шофьори","servitor","sofyor","shofyor","waiter","driver"];
 
-function search(raw){ var q = lat(raw), words = q.split(" ").filter(function(w){ return w && STOP.indexOf(w) < 0; }), txt = words.filter(function(w){ return !/^\d/.test(w); });
-  var nums = raw.match(/\d+/g) || [], time = raw.match(/\b(\d{1,2}):(\d{2})\b/), dq = digits(raw), r = {tables:[], orders:[], res:[], staff:[], out:[], secs:[], dish:null};
+function search(raw){ var q = lat(raw), all = q.split(" ").filter(Boolean), words = all.filter(function(w){ return STOP.indexOf(w) < 0; }), txt = words.filter(function(w){ return !/^\d/.test(w); });
+  var nums = raw.match(/\d+/g) || [], time = raw.match(/\b(\d{1,2}):(\d{2})\b/), dq = digits(raw), r = {tables:[], orders:[], res:[], staff:[], out:[], secs:[], dish:null, first:""};
   if (!q) return r;
+  var tableWord = all.some(function(w){ return TABLEW.indexOf(w) > -1; });
+  /* човек от смяната: „Сервитьор 2“, „шофьор 1“ (числото е част от името, не маса) */
+  var person = txt.some(function(w){ return hit(w, PEOPLE); }) && !tableWord;
+  var sh = MG.shift();
+  if (person){ (sh.waiters || []).concat(sh.drivers || []).forEach(function(p){ var kind = p.id.charAt(0) === "w" ? "waiter" : "driver", base = kind === "waiter" ? ["сервитьор","сервитьори","servitor","waiter"] : ["шофьор","шофьори","sofyor","shofyor","driver"];
+      if (!txt.some(function(w){ return hit(w, base); })) return; var n = p.name.replace(/\D/g, "");
+      if (nums.length && nums.indexOf(n) < 0) return; r.staff.push({p:p, kind:kind}); });
+    if (r.staff.length) r.first = "s"; }
   var zone = txt.some(function(w){ return hit(w, ["салон"]); }) ? "salon" : txt.some(function(w){ return hit(w, ["градина"]); }) ? "garden" : null;
   var sts = Object.keys(TWORDS).filter(function(k){ return txt.some(function(w){ return hit(w, TWORDS[k]); }); });
-  var kOut = txt.some(function(w){ return hit(w, ["изчерпано","изчерпани","изчерпан"]) || w === "out"; });
+  var kOut = txt.some(function(w){ return hit(w, ["изчерпано","изчерпани","изчерпан","izcherpano"]) || w === "out"; });
   var kRes = txt.some(function(w){ return hit(w, ["резервация","резервации","резерв"]); });
-  /* маси: номер (1-2 цифри), статус с дума, зона */
-  var tn = time ? [] : nums.filter(function(n){ return n.length <= 2; });
-  if (A.can("hall") || A.can("reservations")){ MG.tableStates().forEach(function(x){ var ok = false;
+  if (kOut){ r.out = A.soldOutToday().map(function(id){ return SC.byId[id]; }).filter(Boolean); r.first = r.first || "x"; }
+  /* маси: номер (1-2 цифри), статус с дума, зона; не когато числото е на човек */
+  var tn = time || person ? [] : nums.filter(function(n){ return n.length <= 2; });
+  if (!kOut && (A.can("hall") || A.can("reservations"))){ MG.tableStates().forEach(function(x){ var ok = false;
       if (tn.length) ok = tn.some(function(n){ return String(x.n) === n; }); else if (sts.length || zone) ok = true; else return;
-      if (sts.length && sts.indexOf(x.st) < 0 && !(sts.indexOf("busy") > -1 && x.seated)) ok = false; if (zone && x.zone !== zone) ok = false; if (ok) r.tables.push(x); }); }
+      if (sts.length && sts.indexOf(x.st) < 0 && !(sts.indexOf("busy") > -1 && x.seated)) ok = false; if (zone && x.zone !== zone) ok = false; if (ok) r.tables.push(x); });
+    if (r.tables.length && tn.length) r.first = r.first || "t"; }
   /* поръчки: № (поне 3 цифри от началото) или поне 3 цифри от телефона; име „Клиент 7“ */
-  if (A.can("orders")){ A.orders().forEach(function(o){ var h = false;
-      if (dq.length >= 3 && !time) h = o.no.indexOf(dq) === 0 || (dq.length >= 3 && digits(o.phone).indexOf(dq) > -1);
-      if (!h && txt.length && !sts.length && !kOut) h = (" " + lat(o.name) + " ").indexOf(" " + q + " ") > -1;
+  if (A.can("orders") && !person && !kOut){ A.orders().forEach(function(o){ var h = false;
+      if (dq.length >= 3 && !time) h = o.no.indexOf(dq) === 0 || digits(o.phone).indexOf(dq) > -1;
+      if (!h && txt.length && !sts.length) h = (" " + lat(o.name) + " ").indexOf(" " + q + " ") > -1;
       if (h) r.orders.push(o); });
-    r.orders.sort(function(a, b){ return (b.no === dq) - (a.no === dq) || b.ts - a.ts; }); }
-  /* резервации днес и напред: час, маса, име, телефон */
-  if (A.can("reservations")){ var today = A.todayKey(); A.reservations().forEach(function(x){ if (x.date < today || x.status === "cancelled") return; var h = kRes && x.date === today;
+    r.orders.sort(function(a, b){ return (b.no === dq) - (a.no === dq) || b.ts - a.ts; });
+    if (r.orders.length && r.orders[0].no === dq) r.first = "o"; }
+  /* резервации днес и напред: час, маса (с „маса 12“ само масата, не часа 12:…), име, телефон */
+  if (A.can("reservations") && !person && !kOut){ var today = A.todayKey(); A.reservations().forEach(function(x){ if (x.date < today || x.status === "cancelled") return; var h = kRes && x.date === today;
       if (!h && time) h = x.time === (time[1].length < 2 ? "0" : "") + time[1] + ":" + time[2];
-      if (!h && !time && tn.length && x.date === today){ var t = MG.tableByN(tn[0]); h = (t && x.table === t.id) || x.time.indexOf(tn[0].padStart(2, "0") + ":") === 0; }
+      if (!h && !time && tn.length && x.date === today){ var t = MG.tableByN(tn[0]); h = (t && x.table === t.id) || (!tableWord && x.time.indexOf(tn[0].padStart(2, "0") + ":") === 0); }
       if (!h && dq.length >= 3 && !time) h = digits(x.phone).indexOf(dq) > -1;
-      if (!h && txt.length && !sts.length && !kRes) h = (" " + lat(x.name + " " + (x.occasion || "")) + " ").indexOf(" " + q) > -1 && q.length >= 3;
+      if (!h && txt.length && !sts.length && !kRes) h = q.length >= 3 && (" " + lat(x.name + " " + (x.occasion || "")) + " ").indexOf(" " + q) > -1;
       if (h) r.res.push(x); });
     r.res.sort(function(a, b){ return (a.date + a.time < b.date + b.time) ? -1 : 1; }); }
-  /* персоналът на смяната */
-  var sh = MG.shift();
-  (sh.waiters || []).concat(sh.drivers || []).forEach(function(p){ if (txt.length && (hit(txt[0], [p.name.split(" ")[0]]) || lat(p.name) === q || (lat(p.name).indexOf(q) === 0 && q.length >= 3))) r.staff.push({p:p, kind:p.id.charAt(0) === "w" ? "waiter" : "driver"}); });
-  SH.SECTIONS.forEach(function(s){ if (txt.length && (txt.some(function(w){ return hit(w, s.n.split(" ").concat(["кухня","кухнята"])); }))) r.staff.push({p:{name:s.n, id:s.id}, kind:"kitchen", sec:s}); });
-  /* изчерпано днес */
-  if (kOut) r.out = A.soldOutToday().map(function(id){ return SC.byId[id]; }).filter(Boolean);
-  /* разделите на админа (само разрешените) */
-  if (txt.length && !sts.length) r.secs = A.searchSections(raw).filter(function(s){ return !s.soon; });
-  /* ястията: общото ядро; не за чисти числа и часове */
+  /* секциите на кухнята (по думите от името, без съюзите) */
+  if (!person && !kOut) SH.SECTIONS.forEach(function(s){ var ws = s.n.split(" ").filter(function(w){ return w.length >= 3; }).concat(["кухня","кухнята"]); if (txt.length && txt.some(function(w){ return hit(w, ws); })) r.staff.push({p:{name:s.n, id:s.id}, kind:"kitchen", sec:s}); });
+  /* разделите на админа: само по името (не по описанието), само разрешените; без „оборот“ (решение 15.11, т. 5) */
+  if (txt.length && !sts.length && !person && !kOut) r.secs = A.visibleSections().filter(function(s){ if (s.soon) return false; var ws = (s.n + " " + s.short).split(" ").filter(function(w){ return w.length >= 3; });
+    return txt.every(function(w){ return hit(w, ws); }); });
+  /* ястията: общото ядро; не за чисти числа, часове, хора и служебни думи */
   var dishQ = raw.replace(/\d+(:\d+)?/g, " ").trim();
-  if (dishQ && !sts.length && !kOut && !kRes && (A.can("menu") || A.can("lunch"))){ var sd = S.searchDishes(SC.items.map(SC.searchable), dishQ), back = function(l){ return l.map(function(d){ return d.src; }); };
+  if (dishQ && !sts.length && !kOut && !kRes && !person && !tableWord && (A.can("menu") || A.can("lunch"))){ var sd = S.searchDishes(SC.items.map(SC.searchable), dishQ), back = function(l){ return l.map(function(d){ return d.src; }); };
     r.dish = {query:sd.query, band:sd.band, name:back(sd.name), comp:back(sd.comp), rest:back(sd.rest), unknown:back(sd.unknown)}; }
   return r; }
 
@@ -75,10 +88,9 @@ function grp(title, list, row, key, max){ if (!list.length) return ""; max = max
 
 function results(raw){ seq = 0; var r = search(raw), d = r.dish, h = "", chips = S.chips(raw);
   if (chips.length) h += '<div class="mg-fchips" role="group" aria-label="Как разбрахме търсенето">' + chips.map(function(c){ return '<button class="chip' + (c.without ? ' without' : '') + '" type="button" data-tog="' + esc(c.word) + '" aria-pressed="' + c.without + '" aria-label="' + (c.without ? "без " + esc(c.label) + ", покажи и с " + esc(c.label) : esc(c.label) + ", покажи без " + esc(c.label)) + '">' + (c.without ? ic("minus", 18) + 'без ' + esc(c.label) : esc(c.label) + ' ' + ic("x", 16)) + '</button>'; }).join("") + '</div>';
-  var dq = digits(raw), exactO = r.orders.length && r.orders[0].no === dq;
-  var parts = [["t", grp("Маси", r.tables, tRow, "t", 6)], ["o", grp("Поръчки", r.orders, oRow, "o", 5)], ["r", grp("Резервации", r.res, rRow, "r", 4)], ["s", grp("Персоналът на смяната", r.staff, sRow, "s", 6)], ["x", grp("Изчерпано днес", r.out, dRow, "x", 8)]];
-  if (exactO) parts.unshift(parts.splice(1, 1)[0]);
-  h += parts.map(function(p){ return p[1]; }).join("");
+  var parts = {t:grp("Маси", r.tables, tRow, "t", 6), o:grp("Поръчки", r.orders, oRow, "o", 5), r:grp("Резервации", r.res, rRow, "r", 4), s:grp(r.first === "s" ? "Хората на смяната" : "Персоналът на смяната", r.staff, sRow, "s", 6), x:grp("Изчерпано днес", r.out, dRow, "x", 8)};
+  var order = ["t","o","r","s","x"]; if (r.first){ order.splice(order.indexOf(r.first), 1); order.unshift(r.first); }
+  h += order.map(function(k){ return parts[k]; }).join("");
   if (d){ var exc = d.query.exc.map(function(w){ return w.label; });
     h += grp(d.query.inc.length || !exc.length ? "Ястия" : "Ястия без " + exc.join(" и "), d.query.inc.length || !exc.length ? d.name : d.rest, dRow, "d", 6);
     if (d.comp.length) h += '<div class="mg-fband">' + ic("bowl-food", 20) + '<span>' + esc(d.band) + '</span></div>' + d.comp.slice(0, more.c ? 60 : 6).map(dRow).join("") + (d.comp.length > 6 && !more.c ? '<button class="mg-link mg-fmore" type="button" role="option" id="mgf-m-c" data-fmore="c">' + ic("caret-down", 18) + 'Покажи още ' + (d.comp.length - 6) + '</button>' : '');
@@ -113,7 +125,7 @@ function bind(inp, box, clr, onEsc, wrapFn){ var sel = -1;
 /* телефон: цял екран, полето горе, „Затвори“ */
 MGF.open = function(q0){ var w = document.createElement("div"); w.className = "mg-find"; w.setAttribute("role", "dialog"); w.setAttribute("aria-modal", "true"); w.setAttribute("aria-label", "Търси");
   w.innerHTML = '<div class="fwin"><div class="fhead"><form class="mg-q" role="search" onsubmit="return false"><label class="vh" for="mgfq">Търси маса, поръчка, резервация, човек от смяната или ястие</label>' + ic("magnifying-glass", 22) +
-    '<input class="input" id="mgfq" type="search" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Маса, №, час, ястие…" aria-controls="mgfr" aria-autocomplete="list"><button class="clr" type="button" aria-label="Изчисти търсенето" hidden>' + ic("x", 20) + '</button></form>' +
+    '<input class="input" id="mgfq" type="search" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Маса, №, час, ястие" aria-controls="mgfr" aria-autocomplete="list"><button class="clr" type="button" aria-label="Изчисти търсенето" hidden>' + ic("x", 20) + '</button></form>' +
     '<button class="fx" type="button" data-fclose>' + ic("x", 24) + '<span>Затвори</span></button></div><div class="fbody" id="mgfr" role="listbox" aria-label="Резултати" aria-live="polite"></div></div>';
   document.body.appendChild(w); MG.penHide("find", true);
   var inp = w.querySelector("#mgfq"), body = w.querySelector(".fbody"), clr = w.querySelector(".clr"), prev = document.activeElement, bg = [MG.app].filter(Boolean); bg.forEach(function(el){ el.inert = true; });
@@ -131,12 +143,18 @@ MGF.open = function(q0){ var w = document.createElement("div"); w.className = "m
 
 /* компютър: полето в горната лента и панел под него */
 MGF.desktop = function(inp){ if (inp._mgf) return; inp._mgf = 1; var wrap = inp.closest(".mg-dsearch"), box = wrap.querySelector(".mg-dpanel"), clr = wrap.querySelector(".clr"), k = wrap.querySelector(".k");
-  function show(){ box.hidden = false; inp.setAttribute("aria-expanded", "true"); }
+  /* панелът е под полето, но никога под лявата лента и извън колоната: позицията се смята от колоната (на 1024 полето е тясно) */
+  function place(){ var col = MG.app.querySelector(".mg-col").getBoundingClientRect(), f = inp.getBoundingClientRect(), w = Math.min(620, col.width - 48), left = Math.min(f.right - w, col.right - 24 - w); left = Math.max(col.left + 24, left);
+    box.style.width = w + "px"; box.style.left = left + "px"; box.style.top = (f.bottom + 8) + "px"; box.style.maxHeight = Math.max(240, window.innerHeight - f.bottom - 24) + "px"; }
+  function show(){ place(); box.hidden = false; inp.setAttribute("aria-expanded", "true"); }
   function hide(){ box.hidden = true; inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); }
-  function esc0(){ hide(); inp.blur(); }
+  /* второто Esc затваря панела, фокусът остава в полето */
+  function esc0(){ hide(); }
   var draw = bind(inp, box, clr, esc0, function(v){ k.hidden = !!v; show(); });
   inp.addEventListener("focus", function(){ draw(); });
+  inp.addEventListener("click", function(){ if (box.hidden) draw(); });
   inp.addEventListener("blur", function(){ setTimeout(function(){ if (!wrap.contains(document.activeElement)) hide(); }, 160); });
+  window.addEventListener("resize", function(){ if (!box.hidden) place(); }); window.addEventListener("scroll", function(){ if (!box.hidden) place(); }, {passive:true});
   document.addEventListener("click", function(e){ if (!wrap.contains(e.target)) hide(); });
   if (document.activeElement === inp) draw(); };
 MGF.search = search; /* за проверките в прототипа */

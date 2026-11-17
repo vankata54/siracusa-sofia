@@ -28,16 +28,16 @@ var main = MG.mount({page:"team", title:"Екипът", section:"staff"});
 if (!main) return;
 var ic = MG.ic, esc = MG.esc, fmt = MG.fmt, SH = A.sh;
 if (!A.can("staff")){ main.innerHTML = MG.noperm("staff"); return; }
-if (MG.st === "loading"){ main.innerHTML = MG.skel(4, "Зареждаме смяната …"); return; }
+if (MG.st === "loading"){ main.innerHTML = MG.skel(4, "Зареждаме смяната…"); return; }
 if (MG.st === "error"){ main.innerHTML = MG.error("Кой е на смяна не се зареди. Опитай пак след малко."); return; }
 
 /* ---------- сервитьори ---------- */
 function waiters(s, T){ if (!s.waiters.length) return '<section class="mg-blk" id="waiters"><div class="mg-h"><h2>Сервитьори</h2></div>' + MG.empty({icon:"moon", title:"Смяната още не е започнала", text:"Сервитьорите избират масите си при вход. Тук ги виждаш, щом влязат."}) + '</section>';
-  return '<section class="mg-blk" id="waiters" aria-labelledby="h-w"><div class="mg-h"><h2 id="h-w">Сервитьори</h2><span class="cnt">' + s.waiters.length + '</span></div>' + s.waiters.map(function(w){
+  return '<section class="mg-blk" id="waiters" aria-labelledby="h-w"><div class="mg-h"><h2 id="h-w">Сервитьори</h2><span class="mg-cnt">' + s.waiters.length + '</span></div>' + s.waiters.map(function(w){
     var mine = T.filter(function(x){ return w.tables.indexOf(x.n) > -1; }), calls = s.calls.filter(function(c){ return !c.taken && w.tables.indexOf(c.n) > -1; }).length + s.qr.filter(function(q){ return w.tables.indexOf(q.n) > -1; }).length, busy = mine.filter(function(x){ return x.seated; }).length;
     return '<article class="mg-card mg-person" data-wid="' + w.id + '"><div class="mg-ph"><span class="av">' + ic("user", 24) + '</span><div><b>' + esc(w.name) + '</b><small>' + (A.minutes() >= 1380 ? '<span class="mg-dot off" aria-hidden="true"></span>Смяната приключи · беше от ' + MG.hm(w.since) : '<span class="mg-dot" aria-hidden="true"></span>На смяна от ' + MG.hm(w.since)) + '</small></div></div>' +
-      '<div class="mg-stats"><div class="mg-stat"><span>Маси</span><b>' + w.tables.length + '</b></div><div class="mg-stat' + (calls ? ' hot' : '') + '"><span>Чакат го</span><b>' + calls + '</b></div><div class="mg-stat"><span>Отговор средно</span><b>' + MG.mmss(w.avgSec) + '</b></div></div>' +
-      '<p class="mg-note">' + ic("info", 16) + '<span>„Отговор средно“: от повикване до „Отивам“, днес. ' + MG.sample() + '</span></p>' +
+      '<div class="mg-stats"><div class="mg-stat"><span>Маси</span><b>' + w.tables.length + '</b></div><div class="mg-stat' + (calls ? ' hot' : '') + '"><span>Чакат го</span><b>' + calls + '</b></div><div class="mg-stat"><span>Отговор</span><b>' + MG.mmss(w.avgSec) + '</b></div></div>' +
+      '<p class="mg-note">' + ic("info", 16) + '<span>„Отговор“: средно от повикване до „Отивам“, днес. ' + MG.sample() + '</span></p>' +
       '<div class="mg-chips" aria-label="Масите на ' + esc(w.name) + ': ' + w.tables.join(", ") + '">' + mine.map(function(x){ return '<span class="mg-tno ' + (x.call || x.qr ? "call" : x.seated ? "busy" : "") + '" title="Маса ' + x.n + ': ' + MG.TST[x.st][0] + '">' + x.n + '</span>'; }).join("") + '</div>' +
       '<p class="mg-note" style="margin-top:8px">' + busy + ' заети · плътно: заета, червено: вика или QR</p>' +
       '<button class="pill pill-line pill-lg change" type="button" data-change="' + w.id + '">' + ic("chair", 22) + 'Смени масите</button></article>'; }).join("") + '</section>'; }
@@ -47,33 +47,37 @@ function kitchen(){ var k = A.settings().kitchen, secs = MG.kitchen();
   return '<section class="mg-blk" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухня</h2><a class="mg-link more" href="../pages-kuhnya/summary.html#s=all">Екранът ' + ic("arrow-up-right", 18) + '</a></div>' +
     '<a class="mg-card mg-setrow" href="now.html#go=kitchen" style="margin-bottom:12px' + (k.busy ? ';background:var(--ember);color:var(--on-ember)' : '') + '"><span class="si">' + ic("hourglass", 22) + '</span><span><b>Натоварено: ' + (k.busy ? 'включено' : 'изключено') + '</b><small' + (k.busy ? ' style="color:inherit"' : '') + '>' + (k.busy ? 'От ' + esc(k.busyBy || "кухнята") + (k.busyAt ? ' в ' + MG.hm(k.busyAt) : '') + ' · около ' + k.etaBusyMin + ' мин' : 'Гостите виждат „около ' + k.etaMin + ' мин“') + '</small></span>' + ic("caret-right", 20) + '</a>' +
     '<div class="mg-card mg-list">' + secs.map(function(s){ return '<div class="mg-sec"><span class="si">' + ic(s.sec.ic, 22) + '</span><div class="sn"><b>' + esc(s.sec.n) + '</b>' +
-      (s.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът е на линия</small>' : '<small class="off"><span class="mg-dot off" aria-hidden="true"></span>' + ic("warning-circle", 16) + 'Няма връзка от ' + MG.hm(s.seen) + '</small>') + '</div>' +
-      '<div class="sc"><span><b>' + s.wait + '</b>' + (s.wait === 1 ? 'чака' : 'чакат') + '</span>' + (s.late ? '<span class="late">' + ic("warning", 14) + '<b>' + s.late + '</b>' + (s.late === 1 ? 'закъснява' : 'закъсняват') + '</span>' : '') + '</div></div>'; }).join("") + '</div>' +
+      (s.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът работи</small>' : '') + '</div>' +
+      '<div class="sc"><span><b>' + s.wait + '</b>' + (s.wait === 1 ? 'чака' : 'чакат') + '</span>' + (s.late ? '<span class="late">' + ic("warning", 14) + '<b>' + s.late + '</b>' + (s.late === 1 ? 'закъснява' : 'закъсняват') + '</span>' : '') + '</div>' + (s.online ? '' : '<span class="mg-offtag">' + ic("warning-circle", 18) + 'Таблетът е без връзка от ' + MG.hm(s.seen) + '</span>') + '</div>'; }).join("") + '</div>' +
     '<p class="mg-note">' + ic("info", 16) + '<span>Секциите и кое ястие къде се готви са условни ' + MG.missing("секции на кухнята") + '.</span></p></section>'; }
 
 /* ---------- шофьори ---------- */
-var POS = {home:[126,146], "Дружба 2":[170,150], "Дружба 1":[150,64], "Гара Искър":[56,52], "НПЗ Искър":[290,70], "Бусманци":[296,192], "Горубляне":[118,224], out:[30,130]};
-var LBL = {"Дружба 1":-38, "Дружба 2":-34, "НПЗ Искър":-38, "Бусманци":46, "Горубляне":46, "Гара Искър":-38};
+var POS = {home:[126,150], "Дружба 2":[186,158], "Дружба 1":[150,70], "Гара Искър":[60,58], "НПЗ Искър":[290,74], "Бусманци":[296,196], "Горубляне":[112,226], out:[34,144]};
+/* надписите на кварталите: под или над елипсата, далеч от маркерите; шрифтът е 19 в viewBox 360, т.е. поне 14 px на 284 px ширина (360) */
+var LBL = {"Дружба 1":[16,-40], "Дружба 2":[34,46], "НПЗ Искър":[0,-40], "Бусманци":[0,50], "Горубляне":[0,50], "Гара Искър":[-2,-40]};
 function scheme(dr){ var P0 = POS.home, pts = dr.road.map(function(o, i){ var p = POS[o.zone] || POS.out; return [p[0] + i * 6, p[1] + i * 4]; }), path = "M" + P0.join(","), prev = P0;
   pts.forEach(function(p){ var mx = (prev[0] + p[0]) / 2 + (p[1] - prev[1]) * .12, my = (prev[1] + p[1]) / 2 - (p[0] - prev[0]) * .12; path += " Q" + mx.toFixed(1) + "," + my.toFixed(1) + " " + p.join(","); prev = p; });
-  var o0 = dr.road[0], f = Math.min(.6, Math.max(.2, MG.secSince(o0.times && o0.times.on_way || o0.ts) / 60 / 18)), car = [P0[0] + (pts[0][0] - P0[0]) * f, P0[1] + (pts[0][1] - P0[1]) * f], last = pts[pts.length - 1];
-  return '<div class="mg-scheme"><div class="in"><svg viewBox="0 0 360 272" role="img" aria-label="Схема на курса на ' + esc(dr.d.name) + ': ресторантът, ' + A.plural(dr.road.length, "адрес", "адреса") + ' по ред и колата. Не е карта; списъкът е същият.">' +
-    Object.keys(LBL).map(function(z){ var p = POS[z]; return '<ellipse class="sv-zone" cx="' + p[0] + '" cy="' + p[1] + '" rx="52" ry="30"/><text class="sv-zl" x="' + p[0] + '" y="' + (p[1] + LBL[z]) + '" text-anchor="middle">' + z + '</text>'; }).join("") +
-    (dr.road.some(function(o){ return !o.zone; }) ? '<text class="sv-zl" x="' + POS.out[0] + '" y="' + (POS.out[1] - 26) + '">извън</text>' : '') +
+  /* колата: на пътя към първия адрес, по-близо до средата, за да не стои върху S или спирката */
+  var o0 = dr.road[0], f = Math.min(.62, Math.max(.38, MG.secSince(o0.times && o0.times.on_way || o0.ts) / 60 / 18)), car = [P0[0] + (pts[0][0] - P0[0]) * f, P0[1] + (pts[0][1] - P0[1]) * f], last = pts[pts.length - 1];
+  var moped = (window.SC_ICONS || {})["moped"] || "";
+  return '<div class="mg-scheme"><div class="in"><svg viewBox="0 0 360 292" role="img" aria-label="Схема на курса на ' + esc(dr.d.name) + ': ресторантът, ' + A.plural(dr.road.length, "адрес", "адреса") + ' по ред и колата. Не е карта; списъкът е същият.">' +
+    Object.keys(LBL).map(function(z){ var p = POS[z]; return '<ellipse class="sv-zone" cx="' + p[0] + '" cy="' + p[1] + '" rx="50" ry="28"/>'; }).join("") +
+    Object.keys(LBL).map(function(z){ var p = POS[z]; return '<text class="sv-zl" x="' + (p[0] + LBL[z][0]) + '" y="' + (p[1] + LBL[z][1]) + '" text-anchor="middle">' + z + '</text>'; }).join("") +
+    (dr.road.some(function(o){ return !o.zone; }) ? '<text class="sv-zl" x="' + (POS.out[0] - 22) + '" y="' + (POS.out[1] + 42) + '">извън</text>' : '') +
     '<path class="sv-ret" d="M' + last.join(",") + ' L' + P0.join(",") + '"/><path class="sv-path" d="' + path + '"/>' +
-    '<rect class="sv-home" x="' + (P0[0] - 17) + '" y="' + (P0[1] - 17) + '" width="34" height="34" rx="10"/><text class="sv-stop-t sv-home-t" x="' + P0[0] + '" y="' + P0[1] + '">S</text>' +
-    pts.map(function(p, i){ var c = i === 0 ? "next" : ""; return '<circle class="sv-stop ' + c + '" cx="' + p[0] + '" cy="' + p[1] + '" r="16"/><text class="sv-stop-t ' + c + '" x="' + p[0] + '" y="' + p[1] + '">' + (i + 1) + '</text>'; }).join("") +
-    '<circle class="sv-car" cx="' + car[0].toFixed(1) + '" cy="' + car[1].toFixed(1) + '" r="13"/><text class="sv-car-t" x="' + car[0].toFixed(1) + '" y="' + car[1].toFixed(1) + '">' + esc(dr.d.name.replace(/\D/g, "")) + '</text></svg></div>' +
-    '<div class="cap">' + ic("info", 16) + 'Схема, не е карта. S е ресторантът, жълтото е колата на живо, червено е следващият адрес.</div></div>'; }
+    '<rect class="sv-home" x="' + (P0[0] - 18) + '" y="' + (P0[1] - 18) + '" width="36" height="36" rx="10"/><text class="sv-stop-t sv-home-t" x="' + P0[0] + '" y="' + P0[1] + '">S</text>' +
+    pts.map(function(p, i){ var c = i === 0 ? "next" : ""; return '<circle class="sv-stop ' + c + '" cx="' + p[0] + '" cy="' + p[1] + '" r="17"/><text class="sv-stop-t ' + c + '" x="' + p[0] + '" y="' + p[1] + '">' + (i + 1) + '</text>'; }).join("") +
+    '<circle class="sv-car" cx="' + car[0].toFixed(1) + '" cy="' + car[1].toFixed(1) + '" r="17"/><svg x="' + (car[0] - 11).toFixed(1) + '" y="' + (car[1] - 11).toFixed(1) + '" width="22" height="22" viewBox="0 0 256 256" class="sv-car-i">' + moped + '</svg></svg></div>' +
+    '<div class="cap">' + ic("info", 16) + '<span>Схема, не е карта. S е ресторантът, жълтото кръгче е колата на живо, червеното е следващият адрес.</span></div></div>'; }
 function drivers(){ var D = MG.drivers(), end = A.minutes() >= 1260 || A.minutes() < 600;
   if (!D.length) return '<section class="mg-blk" id="drivers"><div class="mg-h"><h2>Шофьори</h2></div>' + MG.empty({icon:"moon", title:"Няма шофьор на смяна", text:"Доставките са от 10:00 до 21:00."}) + '</section>';
-  return '<section class="mg-blk" id="drivers" aria-labelledby="h-d"><div class="mg-h"><h2 id="h-d">Шофьори</h2><span class="cnt">' + D.length + '</span></div>' + D.map(function(dr){ var st = MG.DST[dr.st];
+  return '<section class="mg-blk" id="drivers" aria-labelledby="h-d"><div class="mg-h"><h2 id="h-d">Шофьори</h2><span class="mg-cnt">' + D.length + '</span></div>' + D.map(function(dr){ var st = MG.DST[dr.st];
     var stops = dr.road.map(function(o, i){ var l = SH.late(o); return '<li class="' + (i === 0 ? 'next' : '') + '"><span class="no">' + (i + 1) + '</span><span><b>№ ' + esc(o.no) + ' · ' + esc(o.zone || "извън зоните") + '</b><small>' + esc(o.addr || "") + '</small></span>' + (l ? MG.tag("warn", "clock", "+" + SH.lateMin(o) + " мин") : MG.tag("", "clock", "навреме")) + '</li>'; }).join("");
-    return '<article class="mg-card mg-person" id="' + dr.d.id + '"><div class="mg-ph"><span class="av">' + ic("moped", 24) + '</span><div><b>' + esc(dr.d.name) + '</b><small>На смяна от ' + MG.hm(dr.d.since) + '</small></div>' + MG.tag(dr.st === "road" ? "ember" : "", st[1], st[0]) + '</div>' +
+    return '<article class="mg-card mg-person" id="' + dr.d.id + '"><div class="mg-ph"><span class="av">' + ic("moped", 24) + '</span><div><b>' + esc(dr.d.name) + '</b><small>' + (MG.shiftOver() ? 'Смяната приключи · беше от\u00a0' + MG.hm(dr.d.since) : 'На смяна от\u00a0' + MG.hm(dr.d.since)) + '</small></div>' + MG.tag(dr.st === "road" ? "ember" : "", st[1], st[0]) + '</div>' +
       (dr.road.length ? '<h3 style="margin:16px 0 0;font-size:16px;font-weight:800">Курсът · ' + A.plural(dr.road.length, "адрес", "адреса") + '</h3><ol class="mg-stops">' + stops + '</ol>' + scheme(dr)
         : '<p class="mg-note" style="font-size:15px">' + (dr.st === "back" ? "Връща се към ресторанта след последната доставка." : "В ресторанта, без поръчки за доставяне.") + '</p>') +
       '<div class="mg-kv" style="margin-top:8px"><span>Кола</span><b>' + MG.missing("коли") + '</b></div><div class="mg-kv"><span>Доставени днес</span><b>' + dr.done.length + '</b></div>' +
-      '<div class="mg-cash"' + (end ? ' style="background:var(--ember);color:var(--on-ember)"' : '') + '><span>' + (end ? 'За предаване сега' : 'За предаване в края на смяната') + '</span><span class="price">' + fmt(dr.cash) + '</span><small' + (end ? ' style="color:inherit"' : '') + '>В брой от доставените поръчки. Предава се на ' + MG.missing("на кого") + '.</small></div></article>'; }).join("") +
+      '<div class="mg-cash' + (end ? ' now' : '') + '"><span>' + (end ? 'За предаване сега' : 'За предаване в края на смяната') + '</span><b class="price">' + fmt(dr.cash).replace(" ", "\u00a0") + '</b><small>В брой от доставените поръчки. Предава се на ' + MG.missing("на кого") + '.</small></div></article>'; }).join("") +
     '<p class="mg-note">' + ic("lock", 16) + '<span>Мястото на шофьора се вижда само по време на доставка и само от собственика и управителя.</span></p></section>'; }
 
 function render(){ var s = MG.shift(), T = MG.tableStates();
@@ -83,15 +87,15 @@ MG.onRender(render);
 /* ---------- „Смени масите“ (решение 15.11: управителят може; известие до сервитьора) ---------- */
 function changeSheet(wid){ var s = MG.shift(), w = s.waiters.filter(function(x){ return x.id === wid; })[0], other = s.waiters.filter(function(x){ return x.id !== wid; })[0], sel = w.tables.slice(), T = MG.tableStates();
   function grid(z){ return '<h3>' + MG.ZONE[z] + '</h3><div class="mg-tsel">' + T.filter(function(x){ return x.zone === z; }).map(function(x){ var on = sel.indexOf(x.n) > -1, was = w.tables.indexOf(x.n) > -1, ow = MG.waiterOf(x.n, s);
-    return '<button type="button" data-n="' + x.n + '" aria-pressed="' + on + '" class="' + (on !== was ? 'chg' : '') + '" aria-label="Маса ' + x.n + (on ? ', на ' + esc(w.name) : ow ? ', на ' + esc(ow.name) : '') + '"><b>' + x.n + '</b><small>' + (on ? 'негова' : ow ? "колега" : 'свободна') + '</small></button>'; }).join("") + '</div>'; }
+    return '<button type="button" data-n="' + x.n + '" aria-pressed="' + on + '" class="' + (on !== was ? 'chg' : '') + '" aria-label="Маса ' + x.n + ', ' + (on ? 'негова' : ow ? esc(ow.name) : 'свободна') + '"><b>' + x.n + '</b><small>' + (on ? 'негова' : ow ? esc(ow.name) : 'свободна') + '</small></button>'; }).join("") + '</div>'; }
   function body(){ var add = sel.filter(function(n){ return w.tables.indexOf(n) < 0; }), rem = w.tables.filter(function(n){ return sel.indexOf(n) < 0; });
     return '<p>Докосни маса, за да я дадеш на ' + esc(w.name) + ' или да я махнеш. Махнатите отиват при ' + esc(other ? other.name : "колегата") + '.</p>' + grid("salon") + grid("garden") +
-      '<p class="mg-note" role="status">' + ic("info", 16) + '<span>' + (add.length || rem.length ? (add.length ? 'Добавени: ' + add.join(", ") + '. ' : '') + (rem.length ? 'Махнати: ' + rem.join(", ") + '. ' : '') : 'Още нищо не е сменено. ') + 'Сервитьорът получава известие на телефона.</span></p>'; }
+      (sel.length ? '' : '<p class="mg-err" role="alert">' + ic("warning", 18) + 'Остави поне една маса на ' + esc(w.name) + '.</p>') + '<p class="mg-note" role="status">' + ic("info", 16) + '<span>' + (add.length || rem.length ? (add.length ? 'Добавени: ' + add.join(", ") + '. ' : '') + (rem.length ? 'Махнати: ' + rem.join(", ") + '. ' : '') : 'Още нищо не е сменено. ') + 'Сервитьорът получава известие на телефона.</span></p>'; }
   var sh = MG.sheet({title:"Масите на " + w.name, html:body(), foot:'<button class="pill pill-line pill-lg" type="button" data-no>Откажи</button><button class="pill pill-red pill-lg" type="button" data-save>' + ic("check", 22) + 'Запази масите</button>'});
   sh.body.addEventListener("click", function(e){ var b = e.target.closest("[data-n]"); if (!b) return; var n = +b.dataset.n, i = sel.indexOf(n); if (i > -1) sel.splice(i, 1); else sel.push(n);
-    var y = sh.body.scrollTop; sh.body.innerHTML = body(); sh.body.scrollTop = y; var nb = sh.body.querySelector('[data-n="' + n + '"]'); nb && nb.focus({preventScroll:true}); });
+    var y = sh.body.scrollTop; sh.body.innerHTML = body(); sh.body.scrollTop = y; sv.disabled = !sel.length; var nb = sh.body.querySelector('[data-n="' + n + '"]'); nb && nb.focus({preventScroll:true}); });
   sh.foot.querySelector("[data-no]").onclick = sh.close;
-  sh.foot.querySelector("[data-save]").onclick = function(){ sh.close(); MG.setTables(wid, sel); }; }
+  var sv = sh.foot.querySelector("[data-save]"); sv.onclick = function(){ if (!sel.length) return; sh.close(); MG.setTables(wid, sel); }; }
 main.addEventListener("click", function(e){ var b = e.target.closest("[data-change]"); if (b) changeSheet(b.dataset.change); });
 MG.onHash = function(h){ if (h.go){ var el = document.getElementById(h.go); el && setTimeout(function(){ el.scrollIntoView({block:"start"}); }, 60); } };
 MG.onHash(A.hash);

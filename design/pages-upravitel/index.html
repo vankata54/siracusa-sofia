@@ -22,7 +22,7 @@
 .scr b{display:block; font-size:19px; letter-spacing:-.02em}
 .scr .d{display:block; font-size:15px; color:var(--muted); line-height:1.4; margin-top:2px; font-weight:600}
 .scr .st{display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0 66px}
-.scr .st a{text-decoration:none; min-height:44px; font-size:14px}
+.scr .st a{text-decoration:none; min-height:48px; font-size:15px}
 @container app (max-width:520px){ .scr .st{margin-left:0} .ix h1{font-size:32px} }
 @container app (min-width:900px){ .scr{grid-template-columns:1fr 1fr} .ix{padding-top:48px} }
 </style>
@@ -46,12 +46,12 @@ var S = [
 ];
 function login(role){ var a = A.ACCOUNTS.filter(function(x){ return x[1] === role; })[0]; A.login(a[0]); A.audit("staff.login", "Вход (прототип, модул „Управител“)"); location.href = "now.html"; }
 document.getElementById("main").innerHTML = '<span class="eye">' + ic("briefcase", 18) + 'Етап D · жив прототип · Управител</span><h1>Смяната на телефона</h1>' +
-  '<p class="lead">Бързият екран за деня: какво става сега, кой къде е, кое закъснява и какво чака мен. На телефон като приложение (360, 390), на компютър в 2-3 колони (1024, 1440). Пълната работа е в админа; оттук водят връзки към същия раздел. Данните са ключовете на админа (sa-), смяната е sa-shift. Часът на прототипа е 19:42.</p>' +
+  '<p class="lead">Бързият екран за деня: какво става сега, кой къде е, кое закъснява и какво ме чака. На телефон е като приложение, на компютър е в две-три колони. Пълната работа е в админа: оттук водят връзки към същия раздел. Числата са същите като в админа. Часът на прототипа е 19:42.</p>' +
   '<div class="who"><button class="pill pill-red pill-lg" type="button" data-as="manager">' + ic("sign-in", 22) + 'Влез като Управител</button><button class="pill pill-ink pill-lg" type="button" data-as="owner">' + ic("sign-in", 22) + 'Влез като Собственик</button><button class="pill pill-line pill-lg" type="button" data-as="admin">' + ic("sign-in", 22) + 'Влез като Главен админ</button></div>' +
   (A.me ? '<p class="mg-note" style="font-size:15px">' + ic("user", 16) + '<span>Влязъл: ' + esc(A.who()) + '</span></p>' : '') +
   '<div class="mg-h" style="margin-top:36px"><h2>Екраните и състоянията</h2></div><div class="scr">' + S.map(function(s){ return '<article><a class="hd" href="' + s[0] + '"><span class="ico">' + ic(s[1], 26) + '</span><span><b>' + s[2] + '</b><span class="d">' + s[3] + '</span></span>' + ic("caret-right", 22) + '</a>' +
     '<div class="st">' + ST.map(function(x){ return '<a class="chip" href="' + s[0] + (x[0] ? '#st=' + x[0] : '#st=normal') + '">' + esc(x[1]) + '</a>'; }).join("") + s[4].map(function(x){ return '<a class="chip" href="' + s[0] + '#' + x[0] + '">' + esc(x[1]) + '</a>'; }).join("") + '</div></article>'; }).join("") + '</div>' +
-  '<p class="mg-note" style="margin-top:24px">' + ic("info", 16) + '<span>Без вход екраните водят към входа на админа. „Вечерен пик“ и „Нищо не чака“ пресъздават примерните поръчки и резервации и за админа; „Обичайно“ ги връща. Описание и [ЛИПСВА]: README.md в папката.</span></p>';
+  '<p class="mg-note" style="margin-top:24px">' + ic("info", 16) + '<span>Без вход екраните водят към входа на админа. „Вечерен пик“ и „Нищо не чака“ пресъздават примерните поръчки и резервации веднъж, при избора (виждат се и в админа); „Обичайно“ ги връща.</span></p>';
 document.addEventListener("click", function(e){ var b = e.target.closest("[data-as]"); if (b) login(b.dataset.as); });
 })();
 </script>

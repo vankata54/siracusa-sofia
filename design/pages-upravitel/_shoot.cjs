@@ -4,7 +4,7 @@
         [--session=manager|owner|admin|waiter|none] [--click="sel|sel"] [--eval="js"] [--wait=1500] [--h=2400] [--full]
         [--only=390-light,1440-dark] [--tag=x] [--keep]
    Прави 1440, 1024, 390 и 360, светла и тъмна (8 снимки). Проверява хоризонтален скрол, текст под 14px, цели под 44 px,
-   дали кръглият „Молив“ застъпва нещо, което се натиска (най-долу на страницата), и показва грешките в конзолата. */
+   дали кръглият „Молив“ застъпва нещо, което се натиска (на стъпки по 80 px по целия скрол), и показва грешките в конзолата. */
 const { chromium } = require('playwright');
 const http = require('http'); const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -51,25 +51,29 @@ server.listen(0, '127.0.0.1', async () => {
           if (fs < 14 && !seen.has(el.tagName + el.className)) { seen.add(el.tagName + el.className); r.small.push(fs + 'px ' + el.tagName.toLowerCase() + '.' + String(el.className).slice(0, 30) + ' "' + el.textContent.trim().slice(0, 30) + '"'); } });
         document.querySelectorAll('a[href], button, input, select, [role=switch]').forEach(el => { const rc = el.getBoundingClientRect(); const cs = getComputedStyle(el); if (!rc.width || cs.visibility === 'hidden' || el.closest('[hidden], .vh, sa-pen-ui, .mg-proto')) return;
           if (el.tagName === 'INPUT' && (el.type === 'checkbox')) { const s = el.parentElement.getBoundingClientRect(); if (s.height < 44 || s.width < 44) r.tiny.push('switch ' + Math.round(s.width) + 'x' + Math.round(s.height)); return; }
-          if (rc.height < 44 || rc.width < 44) r.tiny.push(el.tagName.toLowerCase() + '.' + String(el.className).slice(0, 24) + ' ' + Math.round(rc.width) + 'x' + Math.round(rc.height) + ' "' + (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24) + '"'); });
+          if (rc.height < 48 || rc.width < 48) r.tiny.push(el.tagName.toLowerCase() + '.' + String(el.className).slice(0, 24) + ' ' + Math.round(rc.width) + 'x' + Math.round(rc.height) + ' "' + (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24) + '"'); });
         return r; });
       if (chk.hs.length) notes.push(tag + ' ХОРИЗОНТАЛЕН СКРОЛ: ' + chk.hs.join(', '));
       if (chk.small.length) notes.push(tag + ' текст под 14px: ' + chk.small.slice(0, 6).join(' | '));
-      if (chk.tiny.length) notes.push(tag + ' цели под 44px: ' + chk.tiny.slice(0, 6).join(' | '));
+      if (chk.tiny.length) notes.push(tag + ' цели под 48px: ' + chk.tiny.slice(0, 6).join(' | '));
       await p.screenshot({ path: `${out}/${name}-${tag}.png`, fullPage: !!opt.full });
-      /* моливът най-долу на страницата: не стои върху нищо, което се натиска */
+      /* моливът: стои в реда на долната лента (телефон) или в лявата лента (компютър), т.е. никога над съдържанието; проверено на стъпки по 80 px.
+         Под неподвижните ленти съдържанието минава при скрол: това е лентата, не моливът. */
       const pen = await p.evaluate(async () => { const btn = document.querySelector('.sa-pen-btn'); if (!btn) return 'няма молив';
-        window.scrollTo(0, document.documentElement.scrollHeight); await new Promise(r => setTimeout(r, 250));
-        const b = btn.getBoundingClientRect(); if (!b.width || getComputedStyle(btn).opacity === '0') return 'моливът е скрит';
-        const hit = []; document.querySelectorAll('a[href], button, input, [role=switch]').forEach(el => { if (el === btn || btn.contains(el) || el.closest('[hidden], sa-pen-ui')) return; const r = el.getBoundingClientRect(); if (!r.width) return;
-          if (r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top) hit.push((el.textContent || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 24)); });
-        return hit.length ? 'МОЛИВЪТ ЗАСТЪПВА: ' + hit.join(' | ') : 'ok'; });
+        const bad = new Set(), H = document.documentElement.scrollHeight;
+        for (let y = 0; y <= H; y += 80){ window.scrollTo(0, y); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const b = btn.getBoundingClientRect(); if (!b.width || getComputedStyle(btn).visibility === 'hidden') continue;
+          const nav = document.querySelector('.mg-nav'), rail = document.querySelector('.mg-rail'), nr = nav && nav.getBoundingClientRect(), rr = rail && rail.getBoundingClientRect();
+          const inNav = nr && nr.width && b.top >= nr.top - 2 && b.bottom <= nr.bottom + 2 && b.left >= nr.right, inRail = rr && rr.width && b.left >= rr.left && b.right <= rr.right;
+          if (!inNav && !inRail) bad.add('извън лентите @' + y + ' (' + Math.round(b.left) + ',' + Math.round(b.top) + ')');
+          if (nr && nr.width && b.left < nr.right) bad.add('върху долната лента @' + y); }
+        window.scrollTo(0, 0); return bad.size ? 'МОЛИВЪТ: ' + Array.from(bad).slice(0, 4).join(' | ') : 'ok'; });
       if (pen !== 'ok' && pen !== 'няма молив') notes.push(tag + ' ' + pen);
       if (opt.end) await p.screenshot({ path: `${out}/${name}-${tag}-end.png` });
       await ctx.close();
     }
   } finally { await b.close(); server.close(); }
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
-  console.log(notes.length ? 'CHECKS:\n' + notes.join('\n') : 'checks ok (no horizontal scroll, no text < 14px, targets >= 44px, pencil clear)');
+  console.log(notes.length ? 'CHECKS:\n' + notes.join('\n') : 'checks ok (no horizontal scroll, no text < 14px, targets >= 48px, pencil clear)');
   console.log('screenshots in', out, 'as', name + '-*.png');
 });

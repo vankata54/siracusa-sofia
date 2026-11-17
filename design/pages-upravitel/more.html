@@ -27,7 +27,7 @@
 var main = MG.mount({page:"more", title:"Още", section:"dashboard"});
 if (!main) return;
 var ic = MG.ic, esc = MG.esc, ADM = MG.ADMIN;
-if (MG.st === "loading"){ main.innerHTML = MG.skel(5, "Зареждаме разделите …"); return; }
+if (MG.st === "loading"){ main.innerHTML = MG.skel(5, "Зареждаме разделите…"); return; }
 if (MG.st === "error"){ main.innerHTML = MG.error("Разделите на админа не се заредиха. Опитай пак след малко."); return; }
 
 /* разделите на админа, които ролята вижда (пълната работа е там; тук само връзки, без копия) */
@@ -35,19 +35,20 @@ var SECS = [["orders","Поръчки","orders.html","Всички поръчк�
   ["reservations","Резервации","reservations.html","Денят по часове, маси, неявили се, блокиране"],
   ["menu","Меню и изчерпано","menu.html#f=out","Ястия, цени, „Изчерпано днес“ и „Върни“"],
   ["lunch","Обедно меню","lunch.html","Седмичният график пн-пт и ПИН за персонала"],
-  ["reports","Отчети","reports.html#p=today","Поръчки, канали, часове, топ ястия"],
+  ["reports","Отчети","reports.html","Поръчки, канали, часове, топ ястия"],
   ["staff","Персонал","staff.html","Потребители, роли, пароли и ПИН"],
-  ["settings","Настройки","settings.html","„Натоварено“ и минутите, задържане на маса, часове"]];
+  ["settings","Настройки","settings.html","„Натоварено“ и минутите, часове"]];
 function render(){ var list = SECS.filter(function(s){ return A.can(s[0]); }), ph = A.can("orders");
   main.innerHTML = '<div class="mg-grid">' +
     '<section class="mg-blk" aria-labelledby="h-a"><div class="mg-h"><h2 id="h-a">Бързо</h2></div>' +
-      (ph ? '<a class="mg-hero" href="' + ADM + 'orders.html#st=phone"><span class="hi">' + ic("phone", 28) + '</span><span><b>Нова поръчка по телефон</b><small>Телефон на клиента, доставка или вземане, час. Формата е в админа.</small></span>' + ic("caret-right", 24) + '</a>' : '') +
+      (ph ? '<a class="mg-hero" href="' + ADM + 'orders.html#new=phone"><span class="hi">' + ic("phone", 28) + '</span><span><b>Нова поръчка по телефон</b><small>Телефон на клиента, доставка или вземане, час. Формата е в админа.</small></span>' + ic("caret-right", 24) + '</a>' : '') +
       '<div class="mg-card mg-list" style="margin-top:12px">' +
-        '<a class="mg-setrow" href="' + ADM + 'reservations.html#d=' + A.todayKey() + '&new=1"><span class="si">' + ic("calendar-check", 22) + '</span><span><b>Нова резервация</b><small>Формата е в „Резервации“ на админа</small></span>' + ic("caret-right", 20) + '</a>' +
+        '<a class="mg-setrow" href="' + ADM + 'reservations.html#new=1"><span class="si">' + ic("calendar-check", 22) + '</span><span><b>Нова резервация</b><small>Формата е в „Резервации“ на админа</small></span>' + ic("caret-right", 20) + '</a>' +
         '<a class="mg-setrow" href="' + ADM + 'notes.html#src=' + esc(A.me.role) + '"><span class="si">' + ic("pencil-simple", 22) + '</span><span><b>Моите препоръки</b><small>Какво предложи с молива и докъде е стигнало</small></span>' + ic("caret-right", 20) + '</a>' +
-        '<a class="mg-setrow" href="' + ADM + 'dashboard.html" data-home="admin"><span class="si">' + ic("squares-four", 22) + '</span><span><b>Към админа</b><small>Таблото и пълната работа на компютър</small></span>' + ic("caret-right", 20) + '</a></div></section>' +
-    '<section class="mg-blk" aria-labelledby="h-s"><div class="mg-h"><h2 id="h-s">Разделите на админа</h2><span class="cnt">' + list.length + '</span></div>' +
-      (list.length ? '<div class="mg-tiles2">' + list.map(function(s){ var x = A.SEC[s[0]]; return '<a class="mg-sect" href="' + ADM + s[2] + '"><span class="si">' + ic(x.ic, 24) + '</span><span><b>' + esc(s[1]) + '</b><small>' + esc(s[3]) + '</small></span><span class="go">' + ic("arrow-up-right", 20) + '</span></a>'; }).join("") + '</div>'
+        (MG.isOwner() ? '<a class="mg-setrow" href="' + MG.OWN + '" data-keephome><span class="si">' + ic("chart-bar", 22) + '</span><span><b>Към Собственик</b><small>Твоят модул: оборот, тенденции, решения</small></span>' + ic("caret-right", 20) + '</a>' : '') +
+        '<a class="mg-setrow" href="' + ADM + 'dashboard.html"' + MG.homeAttr() + '><span class="si">' + ic("squares-four", 22) + '</span><span><b>Към админа</b><small>Таблото и пълната работа на компютър</small></span>' + ic("caret-right", 20) + '</a></div></section>' +
+    '<section class="mg-blk" aria-labelledby="h-s"><div class="mg-h"><h2 id="h-s">Разделите на админа</h2><span class="mg-cnt">' + list.length + '</span></div>' +
+      (list.length ? '<div class="mg-card mg-list">' + list.map(function(s){ var x = A.SEC[s[0]]; return '<a class="mg-setrow" href="' + ADM + s[2] + '"><span class="si">' + ic(x.ic, 22) + '</span><span><b>' + esc(s[1]) + '</b><small>' + esc(s[3]) + '</small></span>' + ic("arrow-up-right", 20) + '</a>'; }).join("") + '</div>'
         : MG.empty({icon:"lock", lock:true, title:"Няма раздели за тази роля", text:"Помоли главния админ за права."})) + '</section>' +
     '<section class="mg-blk all" aria-labelledby="h-v"><div class="mg-h"><h2 id="h-v">Изглед и звук</h2></div><div class="mg-card pad">' +
       '<p class="label" style="margin:0 0 8px">Тема</p>' + MG.themesHTML() +
