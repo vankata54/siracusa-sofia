@@ -367,6 +367,9 @@ html.mg-hidepen .mg-penslot{visibility:hidden}
 .mg-sheet .body{overflow-y:auto; overscroll-behavior:contain; flex:1; min-height:0; padding-bottom:4px}
 .mg-sheet .sfoot{flex:none; display:flex; flex-wrap:wrap; gap:8px; padding-top:14px}
 .mg-sheet .sfoot .pill{flex:1 1 auto; min-height:56px; font-size:17px}
+/* три варианта един под друг (адрес извън зоните): главното е последно, до палеца */
+.mg-foot3{display:grid; gap:8px; width:100%}
+.mg-foot3 .pill{width:100%; justify-content:center}
 .mg-sheet p{margin:0 0 12px}
 .mg-cmp{display:grid; gap:8px; margin:4px 0 12px}
 .mg-cmp > div{display:grid; gap:2px; padding:12px 14px; border-radius:18px; background:var(--surface-2)}

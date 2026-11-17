@@ -7,10 +7,12 @@
      алтернатива) и подсказка при посочване. Плотът е прост SVG в токените (чете се и в тъмна тема), надписите са HTML.
    - Всички суми са „10,22 €“; само делениците на осите са цели („1000 €“, „2 поръчки“). Себестойност [ЛИПСВА].
    - „Изтегли CSV“: по дни. Без лични данни (ядрото не ги дава).
+   - Без раздела „Финанси и гориво“ (управителят по подразбиране; решение 17.11) ядрото не дава суми (`money: false`):
+     екранът е без „Оборот“ и „Среден бон“, графиката е поръчки по ден / час, каналът е дял от поръчките, CSV е без суми.
    Адреси: #p=today|yday|30|month|custom (7 дни по подразбиране), #c=0 без сравнение, #a=&b= за „Период“. */
 import "sc-icons:export,chart-bar,list-bullets,minus,caret-up,caret-down,globe,phone,chair,briefcase,scales,sparkle,info";
-import { reportsApi, ApiError, type Report, type Period } from "../client/api-admin-3.ts";
-import { A, mount, toast, skel, failHTML, offline, empty, missing, soonTag, sample, sofiaYmd, sofiaHM, hm, fmtYmd, esc, ic, fmt, plural } from "./a.ts";
+import { reportsApi, ApiError, type Report, type ReportView, type Period } from "../client/api-admin-3.ts";
+import { A, can, mount, toast, skel, failHTML, offline, empty, missing, soonTag, sample, sofiaYmd, sofiaHM, hm, fmtYmd, esc, ic, fmt, plural } from "./a.ts";
 import { aurl } from "./routes.ts";
 
 function readHash(): Record<string, string> { const o: Record<string, string> = {}; location.hash.slice(1).split("&").forEach((kv) => { const i = kv.indexOf("="); if (i > 0) o[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); }); return o; }
@@ -68,6 +70,8 @@ export async function initReports(): Promise<void> {
     actions: '<button class="pill pill-line" type="button" data-csv>' + ic("export", 20) + "Изтегли CSV</button>" });
   if (!body) return;
   const root = body;
+  /* the sums only with "finance" (the core sends null without it); the line under the title says the same */
+  if (!can("finance")) { const sub = document.querySelector(".sa-sub"); if (sub) sub.textContent = "Поръчки за избрания период, по канал и по час, най-поръчваните ястия, резервации и неявили се. Сравнение с предишния период."; }
   const TODAY = sofiaYmd();
   const h0 = readHash();
   let per = P.some((p) => p[0] === h0.p) ? h0.p : "7", cmp = h0.c !== "0";
@@ -76,7 +80,7 @@ export async function initReports(): Promise<void> {
   if (cust.a > cust.b) cust = { a: cust.b, b: cust.a };
   if (span(cust.a, cust.b) > 92) cust.a = addD(cust.b, -91);
   const showTbl: Record<string, boolean> = {};
-  let R: Report | null = null, offlineNote = false, art: Art | null = null, seq = 0;
+  let R: Report | null = null, M = true, offlineNote = false, art: Art | null = null, seq = 0;
   import("./reports-art.ts").then((m) => { art = m as Art; if (R) draw(); }).catch(() => { /* the plates stay empty */ });
 
   const hashSync = () => writeHash({ p: per === "7" ? "" : per, c: cmp ? "" : "0", a: per === "custom" ? cust.a : "", b: per === "custom" ? cust.b : "" });
@@ -86,7 +90,8 @@ export async function initReports(): Promise<void> {
     try {
       const r = await reportsApi.get({ period: CORE[per], from: per === "custom" ? cust.a : undefined, to: per === "custom" ? cust.b : undefined, compare: cmp });
       if (my !== seq) return;
-      R = r; offlineNote = false; draw();
+      /* with "finance" the report has every sum (Report); without it (money: false) draw() never reads a sum */
+      R = r as Report; M = r.money !== false; offlineNote = false; draw();
     } catch (e) {
       if (my !== seq) return;
       if (e instanceof ApiError && e.status === 401) { location.replace(aurl.login(aurl.here())); return; }
@@ -130,10 +135,12 @@ export async function initReports(): Promise<void> {
       if (A.scroller) A.scroller.scrollTop = y; return;
     }
     const hrs = r.byHour, pk = hrs.reduce((a, h) => (h.orders > a.orders ? h : a), { hour: -1, orders: 0, revenue: 0 });
-    const main: Col[] = one ? hrs.map((h) => ({ l: hh(h.hour), v: h.revenue, t: hh(h.hour) + " - " + pad(h.hour) + ":59", tv: fmt(h.revenue) + " · " + plural(h.orders, "поръчка", "поръчки") }))
-      : r.byDay.map((d) => ({ l: fd(d.date, true).replace(/^.., /, ""), v: d.revenue, hi: d.date === TODAY && d.revenue > 0, t: fd(d.date), tv: fmt(d.revenue) + " · " + plural(d.orders, "поръчка", "поръчки") }));
-    const todayRed = !one && r.byDay.some((d) => d.date === TODAY && d.revenue > 0);
-    const chMax = Math.max(1, ...r.byChannel.map((c) => c.revenue)), tq = r.top.length ? r.top[0].q : 1, nsr = r.noShowPct;
+    /* without money the main chart counts the orders (by day; for one day the hours are already "Поръчки по час") */
+    const sumTv = (rev: number, n: number) => (M ? fmt(rev) + " · " : "") + plural(n, "поръчка", "поръчки");
+    const main: Col[] = one ? hrs.map((h) => ({ l: hh(h.hour), v: M ? h.revenue : h.orders, t: hh(h.hour) + " - " + pad(h.hour) + ":59", tv: sumTv(h.revenue, h.orders) }))
+      : r.byDay.map((d) => ({ l: fd(d.date, true).replace(/^.., /, ""), v: M ? d.revenue : d.orders, hi: d.date === TODAY && (M ? d.revenue : d.orders) > 0, t: fd(d.date), tv: sumTv(d.revenue, d.orders) }));
+    const todayRed = !one && r.byDay.some((d) => d.date === TODAY && (M ? d.revenue : d.orders) > 0);
+    const chMax = Math.max(1, ...r.byChannel.map((c) => (M ? c.revenue : c.orders))), tq = r.top.length ? r.top[0].q : 1, nsr = r.noShowPct;
     const picOf = (id: string, n: string) => { const d = art && art.byId[id]; return d ? '<div class="pic" role="img" aria-label="' + esc(n) + ' (илюстрация)">' + art!.artSvg(d) + "</div>" : '<div class="pic" aria-hidden="true"></div>'; };
     tips = {
       main,
@@ -141,23 +148,25 @@ export async function initReports(): Promise<void> {
       res: r.byDay.map((d) => ({ t: fd(d.date), tv: plural(d.reservations, "резервация", "резервации") + (d.noShows ? ", " + d.noShows + " неявили се" : "") })),
     };
     root.innerHTML = off + head +
-      '<div class="kp" data-edit-id="admin.reports.kpi">' +
+      '<div class="kp' + (M ? "" : " n3") + '" data-edit-id="admin.reports.kpi">' +
         '<div><span class="l">Поръчки' + (r.cancelled ? " (+" + r.cancelled + " отказ" + (r.cancelled === 1 ? "ана" : "ани") + ")" : "") + "</span><b>" + r.orders + "</b>" + delta(r.orders, pr?.orders) + "</div>" +
-        '<div><span class="l">Оборот</span><b>' + fmt(r.revenue) + "</b>" + delta(r.revenue, pr?.revenue) + "</div>" +
-        '<div><span class="l">Среден бон</span><b>' + fmt(r.avg) + "</b>" + delta(r.avg, pr?.avg) + "</div>" +
+        (M ? '<div><span class="l">Оборот</span><b>' + fmt(r.revenue) + "</b>" + delta(r.revenue, pr?.revenue) + "</div>" +
+          '<div><span class="l">Среден бон</span><b>' + fmt(r.avg) + "</b>" + delta(r.avg, pr?.avg) + "</div>" : "") +
         '<div><span class="l">Резервации</span><b>' + r.reservations + "</b>" + delta(r.reservations, pr?.reservations) + "</div>" +
         '<div><span class="l">Неявили се</span><b>' + r.noShows + (r.reservations ? ' <span style="font-size:18px;color:var(--muted)">(' + nsr + "%)</span>" : "") + "</b>" + delta(r.noShows, pr?.noShows, true) + "</div></div>" +
       '<div class="rp-g two">' +
-        chartCard("main", one ? "Оборот по час" : "Оборот по ден", one ? fd(r.from) : todayRed ? "Днес" + (r.to === TODAY ? " (до " + hhNow() + ")" : "") + " е в червено" : "", colChart("main", main, { money: true, xn: one ? 7 : 6 }),
-          { head: one ? ["Час", "Оборот", "Поръчки"] : ["Ден", "Оборот", "Поръчки"], rows: one ? hrs.map((h) => [hh(h.hour), fmt(h.revenue), h.orders]) : r.byDay.map((d) => [fd(d.date), fmt(d.revenue), d.orders]) }) +
-        chartCard("ch", "По канал", "Оборот и дял", '<div class="rp-hb">' + r.byChannel.slice().sort((a, b) => b.revenue - a.revenue).map((c) =>
-          '<div class="r"><span class="n">' + ic(CH_IC[c.channel] || "globe", 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + esc(c.label) + '</span><span class="v">' + fmt(c.revenue) + "<small>" + c.share + "% · " + c.orders + '</small></span><span class="tr" aria-hidden="true"><i style="width:' + (c.revenue / chMax) * 100 + '%"></i></span></div>').join("") + "</div>",
-          { head: ["Канал", "Оборот", "Дял", "Поръчки"], rows: r.byChannel.map((c) => [c.label, fmt(c.revenue), c.share + "%", c.orders]) },
+        (M || !one ? chartCard("main", M ? (one ? "Оборот по час" : "Оборот по ден") : "Поръчки по ден", one ? fd(r.from) : todayRed ? "Днес" + (r.to === TODAY ? " (до " + hhNow() + ")" : "") + " е в червено" : "", colChart("main", main, { money: M, xn: one ? 7 : 6 }),
+          M ? { head: one ? ["Час", "Оборот", "Поръчки"] : ["Ден", "Оборот", "Поръчки"], rows: one ? hrs.map((h) => [hh(h.hour), fmt(h.revenue), h.orders]) : r.byDay.map((d) => [fd(d.date), fmt(d.revenue), d.orders]) }
+            : { head: ["Ден", "Поръчки"], rows: r.byDay.map((d) => [fd(d.date), d.orders]) }) : "") +
+        chartCard("ch", "По канал", M ? "Оборот и дял" : "Поръчки и дял", '<div class="rp-hb">' + r.byChannel.slice().sort((a, b) => (M ? b.revenue - a.revenue : b.orders - a.orders)).map((c) =>
+          '<div class="r"><span class="n">' + ic(CH_IC[c.channel] || "globe", 18).replace('class="ic"', 'class="ic" style="display:inline-block;vertical-align:-3px;margin-right:6px;color:var(--muted)"') + esc(c.label) + '</span><span class="v">' + (M ? fmt(c.revenue) + "<small>" + c.share + "% · " + c.orders + "</small>" : plural(c.orders, "поръчка", "поръчки") + "<small>" + c.share + "%</small>") + '</span><span class="tr" aria-hidden="true"><i style="width:' + ((M ? c.revenue : c.orders) / chMax) * 100 + '%"></i></span></div>').join("") + "</div>",
+          M ? { head: ["Канал", "Оборот", "Дял", "Поръчки"], rows: r.byChannel.map((c) => [c.label, fmt(c.revenue), c.share + "%", c.orders]) }
+            : { head: ["Канал", "Поръчки", "Дял"], rows: r.byChannel.map((c) => [c.label, c.orders, c.share + "%"]) },
           '<p class="muted" style="margin:0;font-size:15px">„Сайт“ е доставка и вземане от сайта; „Маса“ е QR масата и сервитьорът.</p>') +
       '</div><div style="height:16px"></div><div class="rp-g two">' +
-        chartCard("top", "Най-поръчвани ястия", "По бройки за периода", r.top.length ? '<div class="rp-top">' + r.top.map((t, i) => '<div class="r"><span class="k">' + (i + 1) + "</span>" + picOf(t.id, t.name) + '<span class="n"><b>' + esc(t.name) + '</b><span class="tr" aria-hidden="true"><i style="width:' + (t.q / tq) * 100 + '%"></i></span></span><span class="v">' + t.q + "<small>" + fmt(t.revenue) + "</small></span></div>").join("") + "</div>"
+        chartCard("top", "Най-поръчвани ястия", "По бройки за периода", r.top.length ? '<div class="rp-top">' + r.top.map((t, i) => '<div class="r"><span class="k">' + (i + 1) + "</span>" + picOf(t.id, t.name) + '<span class="n"><b>' + esc(t.name) + '</b><span class="tr" aria-hidden="true"><i style="width:' + (t.q / tq) * 100 + '%"></i></span></span><span class="v">' + t.q + (M ? "<small>" + fmt(t.revenue) + "</small>" : "") + "</span></div>").join("") + "</div>"
           : '<p class="muted" style="margin:0">Още няма поръчани ястия за периода.</p>',
-          { head: ["Ястие", "Бройки", "Оборот"], rows: r.top.map((t) => [t.name, t.q, fmt(t.revenue)]) }) +
+          M ? { head: ["Ястие", "Бройки", "Оборот"], rows: r.top.map((t) => [t.name, t.q, fmt(t.revenue)]) } : { head: ["Ястие", "Бройки"], rows: r.top.map((t) => [t.name, t.q]) }) +
         '<div style="display:grid;gap:16px;align-content:start">' +
         chartCard("hour", "Поръчки по час", pk.orders ? "Най-натоварено: " + hh(pk.hour) : "", colChart("hour", hrs.map((h) => ({ l: hh(h.hour), v: h.orders, hi: h.hour === pk.hour && pk.orders > 0, t: "", tv: "" })), { xn: 7 }),
           { head: ["Час", "Поръчки"], rows: hrs.map((h) => [hh(h.hour), h.orders]) }) +
@@ -165,7 +174,7 @@ export async function initReports(): Promise<void> {
           colChart("res", r.byDay.map((d) => ({ l: fd(d.date, true).replace(/^.., /, ""), v: d.reservations - d.noShows, v2: d.noShows, t: "", tv: "" })), { xn: 6 }) + '<ul class="lgd"><li><i></i>Дошли и предстоящи</li><li><i class="r"></i>Неявили се</li></ul>',
           { head: ["Ден", "Резервации", "Неявили се"], rows: r.byDay.map((d) => [fd(d.date), d.reservations, d.noShows]) }) +
         "</div></div>" +
-      '<div style="height:16px"></div><section class="ch cost" data-edit-id="admin.reports.cost"><span class="ill">' + ic("scales", 30) + '</span><h2>Печалба по ястие</h2><p class="muted" style="margin:0">Матрицата „популярност срещу печалба“ и марж на ястие искат себестойност: ' + missing("себестойност на ястията") + ". Щом се въведе в менюто, отчетът се появява тук.</p></section>" +
+      (M ? '<div style="height:16px"></div><section class="ch cost" data-edit-id="admin.reports.cost"><span class="ill">' + ic("scales", 30) + '</span><h2>Печалба по ястие</h2><p class="muted" style="margin:0">Матрицата „популярност срещу печалба“ и марж на ястие искат себестойност: ' + missing("себестойност на ястията") + ". Щом се въведе в менюто, отчетът се появява тук.</p></section>" : "") +
       '<div style="height:16px"></div><div class="rp-soon">' + soonTag() + "<span><b>Отчети по имейл</b> всеки понеделник в 6:00 и на 1-во число (PDF), известие при отклонение.</span></div>";
     if (A.scroller) A.scroller.scrollTop = y;
     bindTips();
@@ -214,7 +223,8 @@ export async function initReports(): Promise<void> {
   document.addEventListener("click", (e) => {
     if (!(e.target as Element).closest("[data-csv]")) return;
     if (!R) { toast("Отчетът още се смята."); return; }
-    const rows = [["Ден", "Поръчки", "Оборот €", "Среден бон €", "Резервации", "Неявили се"]].concat(R.byDay.map((d) => [d.date, String(d.orders), d.revenue.toFixed(2).replace(".", ","), (d.orders ? d.revenue / d.orders : 0).toFixed(2).replace(".", ","), String(d.reservations), String(d.noShows)]));
+    const rows = M ? [["Ден", "Поръчки", "Оборот €", "Среден бон €", "Резервации", "Неявили се"]].concat(R.byDay.map((d) => [d.date, String(d.orders), d.revenue.toFixed(2).replace(".", ","), (d.orders ? d.revenue / d.orders : 0).toFixed(2).replace(".", ","), String(d.reservations), String(d.noShows)]))
+      : [["Ден", "Поръчки", "Резервации", "Неявили се"]].concat(R.byDay.map((d) => [d.date, String(d.orders), String(d.reservations), String(d.noShows)]));
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + rows.map((r) => r.join(";")).join("\n")], { type: "text/csv;charset=utf-8" }));
     a.download = "siracusa-otchet-" + R.from + "-" + R.to + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
     toast("Отчетът е изтеглен (CSV)");

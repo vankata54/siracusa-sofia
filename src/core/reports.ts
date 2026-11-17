@@ -2,11 +2,14 @@
    30 days, this month, from-to up to 92 days) the orders (without the cancelled, "+N отказани"), the turnover (the
    orders' totals), the average bill, by channel, by hour, by day, the top dishes, the reservations and the no-shows,
    and the same numbers for the period before ("Сравни с предишния"; today: yesterday until the same time).
-   No personal data (no names, phones, addresses). The cost of the dishes is [ЛИПСВА: себестойност] (null). */
+   No personal data (no names, phones, addresses). The cost of the dishes is [ЛИПСВА: себестойност] (null).
+   Money (turnover, average bill, the sums by channel, hour, day and dish) only with the section "finance" (the main admin
+   and the owner by default; decision 17.11.2026, OPEN-QUESTIONS 7: the manager is like the owner without finances): without
+   it every sum is null and `money` is false, so the manager sees orders, reservations and no-shows, never a sum. */
 import { COL, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, type Channel, type Order, type Reservation } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
-import { need, round2 } from "./rights.ts";
+import { need, may, round2 } from "./rights.ts";
 import { validYmd } from "./reservations.ts";
 import { CHANNEL_LABEL } from "./orders-admin.ts";
 import { sofiaYmd, addDaysYmd, minutes } from "../lib/time.ts";
@@ -28,7 +31,12 @@ export interface Report extends Totals {
   /** [ЛИПСВА: себестойност на ястията] */
   cost: null;
   sample: boolean;
+  /** false without the section "finance": every sum above is null */
+  money: boolean;
 }
+/** what a role without "finance" gets: the same report with every sum null */
+type NoMoney<T> = { [K in keyof T]: K extends "revenue" | "avg" ? null : T[K] extends (infer U)[] ? NoMoney<U>[] : T[K] extends object | null ? NoMoney<T[K]> : T[K] };
+export type ReportView = Report | (NoMoney<Report> & { money: false });
 
 const dayOf = (o: Order) => sofiaYmd(new Date(o.ts || o.createdAt));
 const minOf = (o: Order) => +o.placedAt.slice(0, 2) * 60 + +o.placedAt.slice(3);
@@ -60,7 +68,18 @@ export function periodRange(today: string, p: Period, from?: string, to?: string
   }
 }
 
-export async function report(ctx: Ctx, s: StaffCtx, q: { period?: Period; from?: string; to?: string; compare?: boolean } = {}): Promise<Report> {
+/** every sum to null (revenue, avg; share by turnover becomes the share by orders) */
+export function withoutMoney(r: Report): ReportView {
+  const t = (x: object): Record<string, unknown> => { const o: Record<string, unknown> = { ...x }; if ("revenue" in o) o.revenue = null; if ("avg" in o) o.avg = null; return o; };
+  const n = r.byChannel.reduce((a, c) => a + c.orders, 0);
+  return {
+    ...t(r), money: false,
+    byChannel: r.byChannel.map((c) => ({ ...t(c), share: n ? Math.round((c.orders / n) * 100) : 0 })),
+    byHour: r.byHour.map(t), byDay: r.byDay.map(t), top: r.top.map(t), prev: r.prev ? t(r.prev) : null,
+  } as unknown as ReportView;
+}
+
+export async function report(ctx: Ctx, s: StaffCtx, q: { period?: Period; from?: string; to?: string; compare?: boolean } = {}): Promise<ReportView> {
   need(s, "reports");
   const today = sofiaYmd(nowDate(ctx)), period: Period = (["today", "yesterday", "7", "30", "month", "custom"] as Period[]).includes(q.period as Period) ? (q.period as Period) : "today";
   const { from, to } = periodRange(today, period, q.from, q.to);
@@ -95,8 +114,9 @@ export async function report(ctx: Ctx, s: StaffCtx, q: { period?: Period; from?:
     const po = all.filter((o) => inR(dayOf(o), pf, pt) && (!onlyToday || minOf(o) <= now));
     prev = { ...totals(po, res.filter((r) => inR(r.date, pf, pt))), from: pf, to: pt };
   }
-  return {
+  const full: Report = {
     period, from, to, days, until: onlyToday ? String(Math.floor(now / 60)).padStart(2, "0") + ":" + String(now % 60).padStart(2, "0") : null,
-    ...t, byChannel, byHour, byDay, top, prev, cost: null, sample: orders.some((o) => (o as Order & { sample?: boolean }).sample),
+    ...t, byChannel, byHour, byDay, top, prev, cost: null, sample: orders.some((o) => (o as Order & { sample?: boolean }).sample), money: true,
   };
+  return may(s, "finance") ? full : withoutMoney(full);
 }

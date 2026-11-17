@@ -11,7 +11,7 @@
 .rp-meta b{color:var(--ink)}
 .rp-meta .sa-tag{white-space:normal; height:auto; min-height:28px; padding-top:3px; padding-bottom:3px}
 .kp{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden; margin-bottom:16px}
-@container page (min-width:900px){ .kp{grid-template-columns:repeat(5, minmax(0,1fr))} }
+@container page (min-width:900px){ .kp{grid-template-columns:repeat(5, minmax(0,1fr))} .kp.n3{grid-template-columns:repeat(3, minmax(0,1fr))} }
 @container page (max-width:899px){ .kp > div:last-child{grid-column:1 / -1} }
 .kp > div{padding:16px 18px; display:grid; gap:4px; box-shadow:inset -1px -1px 0 var(--line); min-width:0}
 .kp .l{font-size:14px; font-weight:700; color:var(--muted)}
@@ -22,7 +22,7 @@
 .dl small{font-size:14px; font-weight:600; color:var(--muted)}
 @container page (max-width:600px){ .dl small{display:none} }
 .rp-g{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
-@container page (min-width:980px){ .rp-g.two{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} }
+@container page (min-width:980px){ .rp-g.two{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} .rp-g.two > :only-child{grid-column:1 / -1} }
 .ch{padding:18px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); display:grid; gap:12px; min-width:0; align-content:start}
 .ch > header{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 12px}
 .ch h2{margin:0; font-size:20px; letter-spacing:-.025em}

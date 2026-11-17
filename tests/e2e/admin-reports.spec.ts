@@ -9,7 +9,7 @@ function env(): Record<string, string> {
   try { return Object.fromEntries(fs.readFileSync(".env", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()])); } catch { return {}; }
 }
 const E = env();
-const USER: Record<string, [string, string]> = { admin: [E.ADMIN_USER || "admin", E.ADMIN_PASSWORD], marketing: ["marketing", E.MARKETING_PASSWORD], owner: ["owner", E.OWNER_PASSWORD] };
+const USER: Record<string, [string, string]> = { admin: [E.ADMIN_USER || "admin", E.ADMIN_PASSWORD], marketing: ["marketing", E.MARKETING_PASSWORD], owner: ["owner", E.OWNER_PASSWORD], manager: ["manager", E.MANAGER_PASSWORD] };
 async function signIn(ctx: BrowserContext, role: keyof typeof USER) {
   const r = await ctx.request.post("/api/auth/login", { data: { username: USER[role][0], password: USER[role][1] } });
   expect(r.status(), "sign-in " + role).toBe(200);
@@ -92,6 +92,28 @@ test("marketing (without „Отчети“) gets „Нямате права“;
   await page.goto("/admin/reports/");
   await expect(page.locator(".sa-noperm h1")).toHaveText("Нямате права за този раздел.");
   expect((await context.request.get("/api/admin/reports")).status()).toBe(403);
+});
+
+test("the manager (without „Финанси и гориво“) sees orders and reservations, never a sum (decision 17.11)", async ({ page, context }) => {
+  const errs = errors(page);
+  await signIn(context, "manager");
+  const r = (await (await context.request.get("/api/admin/reports?period=7")).json()) as Rep & { money: boolean };
+  expect(r.money).toBe(false);
+  expect(r.revenue).toBeNull();
+  await open(page);
+  await expect(page.locator(".kp")).toBeVisible();
+  const main = page.locator("main");
+  await expect(main).not.toContainText("Оборот");
+  await expect(main).not.toContainText("Среден бон");
+  await expect(main).not.toContainText("€");
+  await expect(page.locator(".sa-sub")).not.toContainText("оборот");
+  if (!isPhone(page)) await expect(page.locator('[aria-labelledby="h-main"] h2')).toContainText("Поръчки по ден");
+  /* the CSV has no sums either */
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.locator("[data-csv]").first().click()]);
+  const csv = fs.readFileSync((await dl.path())!, "utf8");
+  expect(csv).toContain("Поръчки");
+  expect(csv).not.toMatch(/Оборот|€/);
+  expect(errs).toEqual([]);
 });
 
 test("the error state and „Опитай пак“", async ({ page, context }) => {

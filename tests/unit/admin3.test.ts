@@ -453,6 +453,34 @@ describe("reports", () => {
     await expect(core.reports.get(s.owner, { period: "custom", from: "2026-01-01", to: "2026-11-16" })).rejects.toMatchObject({ code: "invalid" });
     await expect(core.reports.get(s.owner, { period: "custom", from: "2026-11-10", to: "2026-11-20" })).rejects.toMatchObject({ code: "invalid" });
   });
+  it("money only with 'finance' (decision 17.11, OPEN-QUESTIONS 7): the manager gets the report without a single sum", async () => {
+    const core = mk(); const { s, tok } = await people(core);
+    const a = await web(core), b = await web(core, { phone: "0888123457" });
+    const own = await core.reports.get(s.owner, { period: "7" }), adm = await core.reports.get(s.admin, { period: "7" });
+    expect(own.money).toBe(true); expect(adm.money).toBe(true);
+    expect(own.revenue).toBeCloseTo(a.total + b.total, 2);
+    for (const period of ["today", "7", "month"] as const) {
+      const r = await core.reports.get(s.manager, { period });
+      expect(r.money).toBe(false);
+      /* the counts stay */
+      expect(r).toMatchObject({ orders: 2, revenue: null, avg: null });
+      expect(r.prev).toMatchObject({ revenue: null, avg: null });
+      /* no sum anywhere: every revenue / avg in the whole answer is null */
+      const sums: unknown[] = [];
+      JSON.stringify(r, (k, v) => { if (k === "revenue" || k === "avg") sums.push(v); return v; });
+      expect(sums.length).toBeGreaterThan(10);
+      expect(sums.every((v) => v === null)).toBe(true);
+      /* the share by channel is by orders, not by turnover */
+      expect(r.byChannel.find((x) => x.channel === "web")).toMatchObject({ orders: 2, share: 100 });
+      expect(JSON.stringify(r)).not.toContain(String(Math.round((a.total + b.total) * 100) / 100));
+    }
+    /* "finance" given in "Роли и права" opens the sums; taken away closes them */
+    const manSections = (await core.staff.bySession(tok.manager))!.sections;
+    await core.staff.setRole("manager", [...manSections, "finance"], "admin");
+    expect((await core.reports.get((await core.staff.bySession(tok.manager))!, { period: "7" })).money).toBe(true);
+    await core.staff.setRole("manager", manSections, "admin");
+    expect((await core.reports.get((await core.staff.bySession(tok.manager))!, { period: "7" })).money).toBe(false);
+  });
 });
 
 describe("staff", () => {

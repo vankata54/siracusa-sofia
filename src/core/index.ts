@@ -53,7 +53,7 @@ export { ZONE_MSG, type ZonesView, type ZonePatch } from "./zones.ts";
 export { OFFER_MSG, type OffersView, type OfferPatch, type Voucher, type CodeCheck } from "./offers-admin.ts";
 export { EVENT_MSG, type EventView, type EventInput } from "./events-admin.ts";
 export { UNDO_MS, CUST_MSG, type CustomerRow, type CustomerDetail, type FeedbackRow, type FeedbackStatus } from "./customers-admin.ts";
-export { REPORT_MSG, REPORT_MAX_DAYS, type Report, type Period } from "./reports.ts";
+export { REPORT_MSG, REPORT_MAX_DAYS, type Report, type ReportView, type Period } from "./reports.ts";
 export { STAFF_MSG, PIN_ROLES, RANK, type StaffRow } from "./staff-admin.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;

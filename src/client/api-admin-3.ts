@@ -10,14 +10,14 @@ import type { Core } from "./api-types.ts";
 import type {
   StaffCtx, OrderStatus, ReservationStatus, OrderRow, OrderDetail, OrdersQuery, PhoneOrderInput, ResRow, ResDay, BlockRow, HallView, HallData, QrRow,
   ZonesView, ZonePatch, OffersView, OfferPatch, OfferRow, Voucher, CodeCheck, EventView, EventInput, EventRow, CustomerRow, CustomerDetail, FeedbackRow,
-  FeedbackStatus, Report, Period, StaffRow, RoleId, SiteBuild, Zone,
+  FeedbackStatus, Report, ReportView, Period, StaffRow, RoleId, SiteBuild, Zone,
 } from "./api-types-3.ts";
 import type { ReservationInput } from "../core/reservations.ts";
 
 export { ApiError };
 export type {
   OrderRow, OrderDetail, OrdersQuery, PhoneOrderInput, ResRow, ResDay, BlockRow, HallView, HallData, QrRow, ZonesView, ZonePatch, OffersView, OfferPatch, OfferRow,
-  Voucher, CodeCheck, EventView, EventInput, EventRow, CustomerRow, CustomerDetail, FeedbackRow, FeedbackStatus, Report, Period, StaffRow, SiteBuild,
+  Voucher, CodeCheck, EventView, EventInput, EventRow, CustomerRow, CustomerDetail, FeedbackRow, FeedbackStatus, Report, ReportView, Period, StaffRow, SiteBuild,
 };
 
 /** the demo: the staff session of this browser (401 without it); the section is checked by the core function */
@@ -130,7 +130,7 @@ export const customersAdminApi = {
 export const reportsApi = {
   /** period: today | yesterday | 7 | 30 | month | custom (from, to; up to 92 days: 422); compare: the period before */
   get: pick(async (c, f: { period?: Period; from?: string; to?: string; compare?: boolean } = {}) => c.reports.get(await g(c), f),
-    (f = {}) => http<Report>("GET", "admin/reports" + q({ period: f.period, from: f.from, to: f.to, compare: f.compare === false ? 0 : undefined }))),
+    (f = {}) => http<ReportView>("GET", "admin/reports" + q({ period: f.period, from: f.from, to: f.to, compare: f.compare === false ? 0 : undefined }))),
 };
 
 /* ---------- Персонал ---------- */
