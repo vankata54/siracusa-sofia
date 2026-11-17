@@ -66,7 +66,8 @@ body{background:var(--bg)}
 
 /* ---------- лява лента (компютър) и долна лента (телефон) ---------- */
 .ow-rail{display:none}
-.ow-bnav{position:absolute; left:10px; right:10px; bottom:12px; z-index:30; height:72px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+/* плътна, като долната лента на управителя (през стъклото прозираха бутони и графики) */
+.ow-bnav{position:absolute; left:8px; right:8px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:30; height:72px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); padding:0 4px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .ow-bnav a, .ow-rail a{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:56px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; border-radius:999px; white-space:nowrap}
 .ow-bnav a[aria-current="page"], .ow-rail a[aria-current="page"]{color:var(--ink)}
 .ow-bnav a[aria-current="page"] .ic, .ow-rail a[aria-current="page"] .ic{color:var(--red)}
@@ -356,9 +357,9 @@ body.ow-toast-on .sa-pen-btn{opacity:0; pointer-events:none}
 /* моливът (решение на шефа, кръг 1): в свое място, не плаващ над съдържанието.
    Телефон: на реда на долната лента, вдясно от нея (лентата е по-къса с 56 + 8 px; долните ръбове и центровете съвпадат).
    От 900 px: най-долу в лявата лента, центриран. Кръгъл, 56 px, само икона, aria-label „Молив“ */
-.ow-penslot{position:absolute; right:10px; bottom:20px; z-index:31; width:56px; height:56px}
+.ow-penslot{position:absolute; right:8px; bottom:calc(18px + env(safe-area-inset-bottom)); z-index:31; width:56px; height:56px}
 .ow-penslot:empty{display:none}
-.ow-app.has-pen .ow-bnav{right:74px}
+.ow-app.has-pen .ow-bnav{right:72px}
 .ow-penslot .sa-pen-btn.in-slot{position:relative; width:56px; height:56px; min-width:56px; min-height:56px; padding:0; border-radius:50%; justify-content:center; gap:0; background:var(--glass); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow); font-size:15px}
 .ow-penslot .sa-pen-btn.in-slot span:not(.sa-pen-n){position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 .ow-penslot .sa-pen-btn.in-slot[aria-pressed="true"]{background:var(--ember)}
@@ -370,20 +371,16 @@ body.ow-toast-on .sa-pen-btn{opacity:0; pointer-events:none}
 /* долната лента до молива: думите с естествената си ширина (цел поне 48 px), разстоянията равни (поне 8 px между думите на 360) */
 .ow-app.has-pen .ow-bnav{grid-template-columns:repeat(4, auto); justify-content:space-evenly; padding:0}
 .ow-app.has-pen .ow-bnav a{min-width:48px; padding:0 2px}
-@container app (max-width:400px){
-  .ow-app.has-pen .ow-bnav{left:6px; right:70px}
-  .ow-penslot{right:6px}
-}
+
 /* разликата на тесни места: иконата и думите в един ред, който се пренася като текст */
 .ow-d.wrap{display:block; white-space:normal}
 .ow-d.wrap .ic{display:inline-block; vertical-align:-3px; margin-right:2px}
 
-/* 360-380 px: думите в долната лента с точно 12 px между тях и поне 8 px до ръба; „Днес“ е цел 48 px */
+/* 360-380 px: думите в долната лента с поне 8 px между тях и до ръбовете на лентата; „Днес“ е цел 48 px (текстът му е в средата) */
 @container app (max-width:380px){
-  .ow-app.has-pen .ow-bnav{display:flex; justify-content:flex-end; column-gap:12px; left:4px; right:68px; padding:0 8px 0 0}
-  .ow-app.has-pen .ow-bnav a{min-width:0; padding:0}
-  .ow-app.has-pen .ow-bnav a:first-child{min-width:48px; margin-right:-6px}
-  .ow-penslot{right:4px}
+  .ow-app.has-pen .ow-bnav{display:flex; justify-content:space-between; padding:0 8px 0 2px}
+  .ow-app.has-pen .ow-bnav a{min-width:0; padding:0; letter-spacing:-.01em}
+  .ow-app.has-pen .ow-bnav a:first-child{min-width:48px}
 }
 
 /* значката на молива (брой препоръки с нов статус) е вътре в кръга, не до ръба на екрана */
