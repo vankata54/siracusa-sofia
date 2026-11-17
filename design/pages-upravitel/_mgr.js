@@ -113,7 +113,7 @@ MG.shiftOver = function(){ return A.minutes() >= 1380; };
 MG.counts = function(){ var ts = MG.tableStates(), s = MG.shift(), p = MG.problems().filter(function(x){ return !x.done; }), w = MG.waits(), nm = A.minutes(), end = Math.min(nm + 120, 1380);
   var dup = p.filter(function(x){ return x.kind === "out" && w.orders.some(function(o){ return o.no === x.no; }); }).length;
   return {tables:ts.length, seated:ts.filter(function(x){ return !!x.seated; }).length, salon:ts.filter(function(x){ return x.seated && x.zone === "salon"; }).length, garden:ts.filter(function(x){ return x.seated && x.zone === "garden"; }).length,
-    inWork:A.ordersInWork().length, late:A.orders().filter(SH.late).length, calls:(s.calls || []).filter(function(c){ return !c.taken; }).length,
+    inWork:A.ordersInWork().length, late:A.orders().filter(function(o){ return SH.late(o) && !(s.ack || {})["late:" + o.no]; }).length, lateSeen:A.orders().filter(function(o){ return SH.late(o) && (s.ack || {})["late:" + o.no]; }).length, calls:(s.calls || []).filter(function(c){ return !c.taken; }).length,
     res2:MG.resAhead().filter(function(r){ var m = MG.resMin(r); return m >= nm && m <= end; }).length, resEnd:end, closed:nm >= 1380 || nm < 600, probs:p.length, waits:w.n, now:p.length + w.n - dup}; };
 
 /* ---------- действия (пишат в ключовете на админа и в дневника; всяко с „Отмени“) ---------- */
@@ -235,13 +235,13 @@ MG.badges = function(){ if (!MG.app || MG.st === "loading" || MG.st === "error")
 function topHTML(o){ var me = A.me;
   return '<header class="mg-top"><div class="mg-tt"><h1>' + esc(o.title) + '</h1><span>Управител · Siracusa</span></div>' +
     '<div class="mg-dsearch mg-only-d" role="search"><div class="mg-q"><label class="vh" for="mg-q">Търси маса, поръчка, резервация, човек от смяната или ястие</label>' + ic("magnifying-glass", 20) +
-      '<input class="input" id="mg-q" type="search" placeholder="Търси: маса, №, ястие" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mg-dres"><span class="k" aria-hidden="true">/</span><button class="clr" type="button" data-mg="dclr" aria-label="Изчисти търсенето" hidden>' + ic("x", 18) + '</button></div>' +
-      '<div class="mg-dpanel" id="mg-dres" role="listbox" aria-label="Резултати" hidden></div></div>' +
+      '<input class="input" id="mg-q" type="search" placeholder="Търси: маса, №, ястие" autocomplete="off" spellcheck="false"><span class="k" aria-hidden="true">/</span><button class="clr" type="button" data-mg="dclr" aria-label="Изчисти търсенето" hidden>' + ic("x", 18) + '</button></div>' +
+      '<div class="mg-dpanel" id="mg-dres" role="region" aria-label="Резултати от търсенето" hidden></div></div>' +
     '<button class="mg-tb mg-only-p" type="button" data-mg="find">' + ic("magnifying-glass", 24) + '<span class="sm">Търси</span></button>' +
     (MG.hasSound() ? '<button class="mg-tb mg-snd" type="button" data-mg="sound"></button>' : '') +
     (MG.isOwner() ? '<a class="pill pill-line mg-toadmin" href="' + MG.OWN + '" data-keephome>' + ic("chart-bar", 20) + 'Към Собственик</a>' : '') +
     '<a class="pill pill-line mg-toadmin" href="' + MG.ADMIN + 'dashboard.html"' + MG.homeAttr() + '>' + ic("squares-four", 20) + 'Към админа</a>' +
-    '<button class="mg-me" type="button" data-mg="profile" aria-label="Профил: ' + esc(me.name) + ', ' + esc(A.roleName(me.role)) + '"><span class="av" aria-hidden="true">' + esc(A.initials(me.name)) + '</span><span class="who" aria-hidden="true"><b>' + esc(me.name) + '</b><small>' + esc(A.roleName(me.role)) + '</small></span></button></header>'; }
+    '<button class="mg-me" type="button" data-mg="profile"><span class="av" aria-hidden="true">' + esc(A.initials(me.name)) + '</span><span class="who"><b>' + esc(me.name) + '</b><small>' + esc(A.roleName(me.role)) + '</small></span><span class="vh">Профил на ' + esc(me.name) + '</span></button></header>'; }
 function navLinks(cur, cls){ var keep = MG.offline ? "#st=offline" : "";
   return MG.PAGES.map(function(p){ return '<a class="' + cls + '" href="' + p[3] + keep + '"' + (cur === p[0] ? ' aria-current="page"' : '') + '>' + ic(p[2], 26) + '<span>' + p[1] + '</span>' + (p[0] === "now" ? '<span class="vh mg-nbv"></span><span class="mg-n" data-nb="now" aria-hidden="true" hidden>0</span>' : '') + '</a>'; }).join(""); }
 /* лентата „Примерни данни“, докато поръчките са от „Вечерен пик“ / „Нищо не чака“ */
@@ -262,7 +262,7 @@ function takeDemo(){ var st = MG.st; if (SH.DEMOS.indexOf(st) < 0 && st !== "nor
   var ok = st === "normal" ? (SH.applyDemo("normal"), true) : SH.applyDemo(st);
   var h = Object.assign({}, A.hash); delete h.st; var q = Object.keys(h).map(function(k){ return encodeURIComponent(k) + (h[k] ? "=" + encodeURIComponent(h[k]) : ""); }).join("&");
   history.replaceState(null, "", location.pathname + (q ? "#" + q : "")); A.hash = h; MG.st = "";
-  MG.demoMsg = ok ? (st === "normal" ? "" : "Примерни данни: " + SH.DEMO_NAME[st] + ". Виждат се и в админа.") : "Вечерният пик е само между 11:00 и 22:30. Смени часа в „Само в прототипа“."; }
+  MG.demoMsg = ok ? "" : "Вечерният пик е само между 11:00 и 22:30. Смени часа в „Само в прототипа“."; }
 
 MG.mount = function(o){ o = o || {};
   MG.page = o.page; MG.file = (MG.PAGES.filter(function(p){ return p[0] === o.page; })[0] || [0,0,0,"now.html"])[3];
@@ -276,7 +276,7 @@ MG.mount = function(o){ o = o || {};
   document.title = o.title + " | Siracusa · Управител";
   document.body.classList.add("mg");
   var app = document.createElement("div"); app.className = "mg-app"; app.dataset.page = o.page;
-  app.innerHTML = '<nav class="mg-rail" aria-label="Раздели на модула"><a class="brand" href="now.html" aria-label="Siracusa · Управител, към „Сега“"><b>Siracusa</b><small>Управител</small></a>' + navLinks(o.page, "it") + '</nav>' +
+  app.innerHTML = '<nav class="mg-rail" aria-label="Раздели на модула"><a class="brand" href="now.html" title="Към „Сега“"><b>Siracusa</b><small>Управител</small></a>' + navLinks(o.page, "it") + '</nav>' +
     '<div class="mg-col">' + topHTML(o) +
       (MG.offline ? '<div class="mg-net" role="status">' + ic("warning-circle", 22) + '<span>Няма връзка · Показваме данните от ' + A.hm(new Date(nowMs() - MIN)) + '</span><button type="button" data-mg="retry">' + ic("arrow-clockwise", 18) + 'Опитай пак</button></div>' : '') +
       '<div class="mg-main mg-demowrap">' + demoHTML() + '</div><main id="main" class="mg-main"></main><div class="mg-main">' + protoHTML(o) + '</div><div class="mg-end"></div></div>' +
@@ -350,7 +350,7 @@ MG.loadFind = function(cb){ if (window.MGF && window.SCSearch) return cb && cb()
 var THEMES = [["system","Авто","circles-three"],["light","Светла","sun"],["dark","Тъмна","moon"]];
 MG.themesHTML = function(){ return '<div class="mg-themes" role="group" aria-label="Тема">' + THEMES.map(function(t){ return '<button type="button" data-mg="theme" data-v="' + t[0] + '" aria-pressed="' + ((A.prefs.theme || "system") === t[0]) + '">' + ic(t[2], 20) + t[1] + '</button>'; }).join("") + '</div>'; };
 function openProfile(){ var r = A.role(A.me.role);
-  MG.sheet({title:"Профил", html:'<div class="mg-ph" style="margin:4px 0 14px"><span class="av" style="background:var(--ink);color:var(--bg);font-weight:800;font-size:19px">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><small>' + esc(r.n) + ' · потребител ' + esc(A.me.user) + '</small></div></div>' +
+  MG.sheet({title:"Профил", html:'<div class="mg-ph" style="margin:4px 0 14px"><span class="av" style="background:var(--ink);color:var(--bg);font-weight:800;font-size:19px">' + esc(A.initials(A.me.name)) + '</span><div><b>' + esc(A.me.name) + '</b><small>' + esc(r.n) + '</small></div></div>' +
     '<div class="mg-card mg-list" style="box-shadow:inset 0 0 0 1.5px var(--line-strong)">' +
       (MG.isOwner() ? '<a class="mg-setrow" href="' + MG.OWN + '" data-keephome><span class="si">' + ic("chart-bar", 22) + '</span><span><b>Към Собственик</b><small>Твоят модул: оборот, тенденции, решения</small></span>' + ic("caret-right", 20) + '</a>' : '') +
       '<a class="mg-setrow" href="' + MG.ADMIN + 'dashboard.html"' + MG.homeAttr() + '><span class="si">' + ic("squares-four", 22) + '</span><span><b>Към админа</b><small>Пълната работа: поръчки, резервации, меню, отчети</small></span>' + ic("caret-right", 20) + '</a>' +

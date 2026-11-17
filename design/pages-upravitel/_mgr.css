@@ -36,7 +36,8 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 .mg-net button{flex:none; min-height:48px; padding:0 16px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font:inherit; font-weight:800; font-size:15px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px}
 
 /* ---------- долна лента (телефон): Сега · Залата · Екипът · Още ---------- */
-.mg-nav{position:fixed; z-index:40; left:8px; right:72px; bottom:calc(10px + env(safe-area-inset-bottom)); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
+/* плътен фон (не стъкло): думите на разделите са с контраст AA, каквото и да минава отдолу при скрол (axe, кръг 2) */
+.mg-nav{position:fixed; z-index:40; left:8px; right:72px; bottom:calc(10px + env(safe-area-inset-bottom)); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--surface); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .mg-nav a,.mg-rail a{position:relative; display:grid; justify-items:center; align-content:center; gap:3px; min-height:56px; border-radius:999px; text-decoration:none; color:var(--muted); font-size:14px; font-weight:700; line-height:1.1; text-align:center; -webkit-tap-highlight-color:transparent}
 .mg-nav a .ic,.mg-rail a .ic{width:26px; height:26px}
 .mg-nav a[aria-current="page"],.mg-rail a[aria-current="page"]{color:var(--ink)}
@@ -46,7 +47,8 @@ body.mg{background:var(--bg); min-height:100%; height:auto}
 @keyframes mgblink{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 .mg-nav.stale .mg-n{background:var(--off); color:var(--bg)}
 .mg-app.nopen .mg-nav{right:8px}
-@media (prefers-reduced-motion: reduce){ .mg-n.fresh::after{content:" Нова"} .mg-n.fresh{padding:0 8px} }
+/* „намалено движение“: без мигане, значката е в жар с думата „Нова“, в средата над иконата (не опира в съседния раздел) */
+@media (prefers-reduced-motion: reduce){ .mg-n.fresh::after{content:" Нова"} .mg-n.fresh{left:50%; top:-10px; transform:translateX(-50%); padding:0 8px; white-space:nowrap} }
 /* моливът (../pages-admin/_pen-mount.js, slot): на телефон кръг 56 px на реда на долната лента, вдясно от нея (центровете съвпадат);
    от 900 px най-долу в лявата лента. Никога над съдържанието. Скрит само докато е отворен лист или търсачката. */
 .mg-penslot{position:fixed; z-index:41; right:8px; bottom:calc(18px + env(safe-area-inset-bottom)); width:56px; height:56px}
@@ -245,6 +247,7 @@ html.mg-hidepen .mg-penslot{visibility:hidden}
 .mg-tile.call .who,.mg-tile.bill .who,.mg-tile.call .tm small,.mg-tile.bill .tm small,.mg-tile.ready .who,.mg-tile.ready .tm small{opacity:1}
 .mg-tile .lock{position:absolute; right:12px; bottom:12px; opacity:.75}
 .mg-legend{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
+@container app (min-width:900px){ .mg-legend{display:grid; grid-template-columns:repeat(4,max-content)} }
 .mg-zone + .mg-zone{margin-top:24px}
 .mg-zone h3{margin:0 0 10px; font-size:18px; font-weight:800; letter-spacing:-.02em; display:flex; align-items:center; gap:8px}
 .mg-zone h3 .muted{font-size:14px; font-weight:700}
@@ -410,15 +413,15 @@ html.mg-hidepen .mg-penslot{visibility:hidden}
 .mg-fchips .chip{min-height:48px}
 .mg-fchips .chip.without{background:var(--ink); color:var(--bg); box-shadow:none}
 .mg-fgrp{margin-top:20px}
-.mg-fgrp > h3{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:-.02em}
-.mg-fgrp > h3 .muted{font-size:14px; font-weight:700}
+.mg-fgrp > h2{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:-.02em}
+.mg-fgrp > h2 .muted{font-size:14px; font-weight:700}
 .mg-fband{display:flex; align-items:center; gap:10px; margin:16px 0 4px; padding:10px 14px; border-radius:16px; background:var(--surface-2); font-size:15px; font-weight:800; line-height:1.3}
 .mg-fband .ic{color:var(--red); flex:none}
 .mg-fband.unk{background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--warn)}
 .mg-fband.unk .ic{color:var(--warn)}
 .mg-fband small{display:block; font-size:14px; font-weight:600; color:var(--muted); margin-top:2px}
 .mg-frow{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; min-height:68px; padding:8px 6px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink); text-decoration:none; text-align:left; width:100%; font:inherit; cursor:pointer; border-radius:0}
-.mg-frow[aria-selected="true"],.mg-frow:hover{background:var(--surface-2)}
+.mg-frow:focus,.mg-frow:hover{background:var(--surface-2)}
 .mg-frow .fi{width:44px; height:44px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; color:var(--ink); flex:none; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
 .mg-frow .fi.call,.mg-frow .fi.bill{background:var(--red); color:var(--on-red)}
 .mg-frow .fi.ready{background:var(--ember); color:var(--on-ember)}
@@ -431,7 +434,7 @@ html.mg-hidepen .mg-penslot{visibility:hidden}
 .mg-fmore{min-height:48px; margin-top:4px}
 .mg-fempty{display:grid; justify-items:center; gap:8px; text-align:center; padding:40px 12px 0}
 .mg-fempty .ill{width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
-.mg-fempty h3{margin:4px 0 0; font-size:22px; font-weight:800; letter-spacing:-.02em}
+.mg-fempty h2{margin:4px 0 0; font-size:22px; font-weight:800; letter-spacing:-.02em}
 .mg-fempty p{margin:0; color:var(--muted); max-width:34ch; font-weight:600}
 .mg-fwait{margin:16px 2px 0; color:var(--muted); font-weight:600}
 
