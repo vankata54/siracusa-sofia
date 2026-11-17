@@ -206,7 +206,9 @@ test("axe: no serious on the sign-in, the dashboard, a section, „Нямате 
   expect(await serious(page)).toEqual([]);
   await page.goto("/admin/menu/"); await expect(page.locator(".mn-sum")).toBeVisible();
   expect(await serious(page)).toEqual([]);
-  await page.goto("/kuhnya/"); await expect(page.locator("h1")).toBeVisible();
+  /* the kitchen is a real module now (its own specs: kuhnya-frame, kuhnya-queue): an owner without a section chosen on this
+     device gets the choice of the section */
+  await page.goto("/kuhnya/"); await expect(page).toHaveURL(/\/kuhnya\/vhod\/$/); await expect(page.locator("h1")).toHaveText("Коя е секцията на този таблет?");
   expect(await serious(page)).toEqual([]);
 });
 

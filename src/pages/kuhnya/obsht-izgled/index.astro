@@ -1,0 +1,16 @@
+---
+/* /kuhnya/obsht-izgled/: "Общ изглед" (design/pages-kuhnya/summary.html). The frame is ready (the right tab, the row of the counters, the
+   skeleton); the body of the screen is drawn into k.main by its own file in src/modules/kuhnya/ (see the API at the top
+   of frame.ts). */
+import Kitchen from "../../../modules/kuhnya/Kitchen.astro";
+---
+<Kitchen title="Общ изглед" page="obsht-izgled">
+<script>
+import { mountKitchen } from "../../../modules/kuhnya/frame.ts";
+mountKitchen({ page: "obsht-izgled", title: "Общ изглед" }).then((k) => {
+  if (!k) return;
+  /* THE SCREEN COMES HERE: draw into k.main (it shows the skeleton until then) and set the row with k.strip(() => ({counts, pills})) */
+  k.main.dataset.screen = "obsht-izgled";
+});
+</script>
+</Kitchen>

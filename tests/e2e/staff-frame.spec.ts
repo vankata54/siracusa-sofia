@@ -179,7 +179,9 @@ for (const app of APPS) {
     if (await pick.isVisible()) await pick.click(); /* touch: the first tap outlines */
     await expect(sh.locator("h2")).toHaveText("Какво да подобрим?");
     await expect(page.locator(".st-sheetwrap")).toHaveCount(0);
+    await expect(sh.locator("textarea")).toBeFocused(); /* the sheet is up (two frames after it is drawn) */
     await page.keyboard.press("Escape");
+    await expect(page.locator("sa-pen-ui")).not.toHaveAttribute("data-pen-sheet", "");
     await expect(page.locator("sa-pen-ui .sw")).not.toHaveClass(/on/);
     await page.locator("main .st-empty h2").click();
     if (await pick.isVisible()) await pick.click();

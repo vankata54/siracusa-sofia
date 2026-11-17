@@ -1,0 +1,338 @@
+/* Кухня: общата рамка за таблета на секцията (хоризонтално 1024-1280, проверено и 768 вертикално). Пренесено 1:1 от
+   design/pages-kuhnya/_kitchen.css (без панела „Само в прототипа“) + входът (login.html), скелетите и грешката.
+   Само токени от src/styles/tokens.css. Тъмна тема по подразбиране (по-малко отблясъци); светлата е по избор на таблета.
+   Размери за четене от 1,5-2 м: артикули 25px, номер и таймер 40px, бройки с tabular-nums. Ширините само с @container app.
+   Класове за другите екрани: .kpage .kh1 .klead .kcard .kgrid .kseg .kb (.ink .ok .red .line .hold) .kpill (.on .ask)
+   .kcount (.sep .late) .tag .miss .kempty .kskel .num. */
+
+html[data-page^="k-"],html[data-page^="k-"] body{height:100%; overflow:hidden}
+html[data-page^="k-"] body{background:var(--bg)}
+.kd{position:fixed; inset:0; display:grid; grid-template-rows:auto auto minmax(0,1fr); background:var(--bg); color:var(--ink); container-type:inline-size; container-name:app}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- top bar ---------- */
+.kbar{display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--surface); box-shadow:0 1px 0 var(--line); min-width:0}
+.ksec{display:flex; align-items:center; gap:12px; min-height:56px; padding:0 16px 0 8px; border-radius:999px; text-decoration:none; color:inherit; flex:none; max-width:34%}
+.ksec:active{transform:scale(.98)}
+.ksec .si{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red); flex:none}
+.ksec b{display:flex; align-items:center; gap:4px; font-size:24px; line-height:1.1; letter-spacing:-.03em; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ksec small{display:flex; align-items:center; gap:2px; font-size:14px; font-weight:700; color:var(--muted)}
+.ksec > span{min-width:0}
+.ktabs{display:flex; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2); margin:0 auto; min-width:0}
+.ktabs a{display:inline-flex; align-items:center; gap:8px; min-height:52px; padding:0 18px; border-radius:999px; text-decoration:none; font-weight:800; font-size:17px; color:var(--muted); white-space:nowrap}
+.ktabs a[aria-current="page"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.ktabs a[aria-current="page"] .ic{color:var(--red)}
+.ktabs .n{min-width:28px; height:28px; padding:0 8px; border-radius:14px; background:var(--ink); color:var(--bg); display:inline-grid; place-items:center; font-size:15px; font-variant-numeric:tabular-nums}
+.ktabs .n.warn{background:var(--warn); color:var(--bg)}
+.kclock{display:flex; align-items:center; gap:10px; flex:none}
+.kclock b{font-size:34px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1}
+.net{display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:800; color:var(--muted); white-space:nowrap}
+.net i{width:12px; height:12px; border-radius:50%; background:var(--ok); flex:none}
+.net.off{color:var(--danger)}
+.net.off i{background:var(--danger)}
+@container app (max-width:1300px){ .ktabs a{padding:0 15px} }
+@container app (max-width:1180px){ .ktabs a{padding:0 14px; font-size:16px} .ktabs a .ic{display:none} }
+@container app (max-width:1100px){ .kclock{flex-direction:column-reverse; align-items:flex-end; gap:2px} .kclock b{font-size:28px} }
+@container app (max-width:1050px){ .ksec small{display:none} .ksec b{font-size:22px} .ktabs a{padding:0 10px} }
+@container app (max-width:899px){
+  .kbar{flex-wrap:wrap; row-gap:8px}
+  .ksec{max-width:none; flex:1}
+  .ktabs{order:3; width:100%; margin:0}
+  .ktabs a{flex:1; justify-content:center; padding:0 6px}
+}
+
+/* ---------- strip under the bar: counts, alerts, busy, sound ---------- */
+.kstrip{display:flex; align-items:center; gap:10px; padding:10px 16px 0; min-height:66px; flex-wrap:nowrap}
+.kstrip > *{flex:none}
+.kstrip > .kcount{flex:1 1 auto; flex-wrap:nowrap; white-space:nowrap}
+.kstrip > .koff{flex:1 1 100%}
+.kstrip:has(.koff){flex-wrap:wrap}
+/* до 1100px броячите (и известието на тяхно място) са на свой ред, бутоните под тях: лентата не подскача */
+.kstrip{flex-wrap:wrap; justify-content:flex-end; row-gap:8px; column-gap:10px}
+.kstrip > .kcount{flex:1 1 100%; min-height:48px}
+.kcount{flex:1 1 auto; min-width:0; min-height:52px; display:flex; align-items:center; gap:6px; font-size:18px; font-weight:700; color:var(--muted); flex-wrap:wrap; overflow:hidden}
+.kcount b{color:var(--ink); font-size:22px; font-variant-numeric:tabular-nums}
+.kcount .sep{width:1px; height:22px; background:var(--line-strong); margin:0 8px}
+.kcount .late b{color:var(--danger)}
+.kpill{display:inline-flex; align-items:center; gap:8px; min-height:52px; padding:0 18px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; text-decoration:none; cursor:pointer; white-space:nowrap}
+.kpill:active{transform:scale(.97)}
+.kpill.ask{box-shadow:inset 0 0 0 2px var(--ember)} /* „Звук: докоснете“: кани към докосване */
+.kpill.on{background:var(--ember); color:var(--on-ember)}
+.kpill .sub{font-weight:600; opacity:.8}
+.knew{display:inline-flex; align-items:center; gap:10px; min-height:52px; padding:0 8px 0 18px; border:0; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:18px; cursor:pointer; animation:knew 520ms var(--ease) both}
+.knew .go2{display:inline-flex; align-items:center; gap:4px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:15px}
+@keyframes knew{from{transform:translateY(-10px); opacity:0}to{transform:none; opacity:1}}
+/* нова поръчка: спокойно мигане (ореол в жар, 2,4 сек.), докато поръчката не се отвори („Виж“), не започне или не се отметне ред.
+   При „намалено движение“ не мига: остават цветът (жар) и думата „Нова“. */
+.knew{animation:knew 520ms var(--ease) both, kglow 1.2s ease-in-out 520ms infinite alternate}
+@keyframes kglow{from{box-shadow:0 0 0 0 var(--ember-soft)}to{box-shadow:0 0 0 8px var(--ember-soft)}}
+.tk.isnew .tag.new{animation:ktag 1.2s ease-in-out infinite alternate}
+@keyframes ktag{from{opacity:1}to{opacity:.6}}
+@media (prefers-reduced-motion: reduce){ .knew,.tk.isnew,.tk.arr,.tk.isnew .tag.new{animation:none} }
+
+/* offline banner replaces the strip content */
+.koff{flex:1; display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:12px 12px 12px 18px; border-radius:22px; background:var(--surface); box-shadow:inset 0 0 0 3px var(--danger)}
+.koff .ic{color:var(--danger)}
+.koff > div > b{display:block; font-size:20px; letter-spacing:-.01em}
+.koff p{margin:2px 0 0; font-size:16px; color:var(--muted)}
+.koff ol{margin:6px 0 0; padding-left:20px; font-size:16px; display:flex; flex-wrap:wrap; gap:0 28px}
+.koff li{padding-left:2px}
+.koff{flex-basis:100%}
+.koff + .kcount{min-height:52px}
+
+/* ---------- main area ---------- */
+.kmain{min-height:0; overflow:auto; position:relative}
+.kpage{padding:16px 16px 40px; max-width:1280px; margin:0 auto}
+.kh1{font-size:30px; line-height:1.1; letter-spacing:-.035em; font-weight:800; margin:0}
+.klead{font-size:18px; color:var(--muted); margin:6px 0 0}
+
+/* ---------- queue: FIFO columns, oldest on the left ---------- */
+.kq{height:100%; display:flex; gap:12px; overflow-x:auto; overflow-y:hidden; padding:12px 16px 16px; scroll-snap-type:x proximity; scroll-padding:0 16px; scrollbar-width:thin; overscroll-behavior-x:contain}
+.kq::after{content:""; flex:0 0 4px}
+.tk{position:relative; flex:0 0 calc((100cqw - 32px - 76px - 36px) / 3); height:100%; display:flex; flex-direction:column; scroll-snap-align:start; border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-strong); overflow:hidden; transition:transform var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease)}
+@container app (min-width:1400px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 48px) / 4)} }
+@container app (max-width:1099px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 24px) / 2)} }
+@container app (max-width:899px){ .tk{flex-basis:calc((100cqw - 32px - 40px - 24px) / 2)} .tk-h{padding-left:16px; padding-right:16px} }
+.tk.soon{box-shadow:inset 0 0 0 4px var(--warn)}
+.tk.late{box-shadow:inset 0 0 0 4px var(--danger)}
+.tk.late::after{content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 0 0 9px var(--danger); pointer-events:none; animation:kpulse 2.4s ease-in-out infinite alternate}
+@keyframes kpulse{from{opacity:.0}to{opacity:.55}}
+/* „Нова“ не скрива закъснението: рамката в жар е само докато поръчката е в срок; етикетът „Нова“ остава */
+.tk.ok.isnew{box-shadow:inset 0 0 0 4px var(--ember)}
+.tk.arr{animation:kin 600ms var(--ease) both}
+@keyframes kin{from{transform:translateX(40px); opacity:0}to{transform:none; opacity:1}}
+.tk.gone{transform:translateY(-24px) scale(.96); opacity:0}
+
+.tk-h{padding:14px 18px 12px; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; align-items:end; border-bottom:2px solid var(--line)}
+.tk-k{display:flex; align-items:center; gap:6px; font-size:17px; font-weight:800; color:var(--muted); white-space:nowrap; min-width:0}
+.tk-k span{overflow:hidden; text-overflow:ellipsis}
+.tk-k.pick{color:var(--ink)}
+.tk-t{font-size:40px; line-height:1.05; font-weight:800; letter-spacing:-.04em; white-space:nowrap; font-variant-numeric:tabular-nums; margin-top:2px}
+.tmr{text-align:right; grid-row:1 / span 2; grid-column:2; align-self:end}
+.tmr small{display:flex; justify-content:flex-end; align-items:center; gap:4px; font-size:16px; font-weight:800; color:var(--muted); white-space:nowrap}
+.tmr b{display:block; font-size:40px; line-height:1.05; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.tk.soon .tmr small,.tk.soon .tmr b{color:var(--warn)}
+.tk.late .tmr small,.tk.late .tmr b{color:var(--danger)}
+.tk-m{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; font-size:16px; font-weight:600; color:var(--muted)}
+.tk-m b{color:var(--ink); font-weight:800}
+.tag{display:inline-flex; align-items:center; gap:5px; min-height:28px; padding:0 10px; border-radius:999px; font-size:15px; font-weight:800; background:var(--surface-2); color:var(--ink)}
+.tag.new{background:var(--ember); color:var(--on-ember)}
+.tag.cook{background:var(--ink); color:var(--bg)}
+.tag.sched{background:var(--ink); color:var(--bg)}
+.tag.busy{box-shadow:inset 0 0 0 1.5px var(--ember)}
+
+.tk-b{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
+.ln{display:grid; grid-template-columns:62px minmax(0,1fr) 40px; gap:4px 8px; align-items:start; width:100%; min-height:72px; padding:14px 14px 14px 18px; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; cursor:pointer; color:inherit}
+.ln:active{background:var(--surface-2)}
+.ln .q{font-size:26px; line-height:1.15; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; white-space:nowrap}
+.ln .nm{font-size:25px; line-height:1.18; font-weight:700; letter-spacing:-.015em; overflow-wrap:anywhere}
+.ln .nm small{font-size:18px; font-weight:700; color:var(--muted); white-space:nowrap}
+.ln .ck{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 2px var(--line-strong); color:transparent; margin-top:-2px}
+.ln.done .ck{background:var(--ok); color:var(--on-ok); box-shadow:none}
+.ln.done .q,.ln.done .nm{color:var(--muted); text-decoration:line-through; text-decoration-thickness:2px}
+.ln.done .md{opacity:.55}
+.mds{grid-column:2 / 4; display:flex; flex-wrap:wrap; gap:6px}
+.md{display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:0 12px 0 8px; border-radius:999px; font-size:19px; font-weight:800; line-height:1.1}
+.md.no{color:var(--red); box-shadow:inset 0 0 0 2.5px var(--red)}
+.md.add{background:var(--ember-soft); color:var(--ink); box-shadow:inset 0 0 0 2px var(--ember)}
+.md.out{background:var(--red); color:var(--on-red); padding-left:10px}
+.md.nt{background:var(--surface-2); color:var(--ink); font-weight:700; padding-left:10px}
+.tk-note{margin:12px 14px 4px; padding:10px 14px; border-radius:16px; display:flex; gap:10px; align-items:flex-start; font-size:19px; font-weight:800; line-height:1.25; box-shadow:inset 0 0 0 2.5px var(--warn)}
+.tk-note .ic{color:var(--warn); margin-top:1px}
+.tk-o{margin:12px 14px 12px; padding:10px 14px; border-radius:16px; background:var(--surface-2); color:var(--muted)}
+.tk-o h4{margin:0 0 4px; font-size:14px; font-weight:800; letter-spacing:.02em}
+.tk-o div{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:8px; align-items:baseline; font-size:17px; font-weight:600; line-height:1.3; padding:3px 0}
+.tk-o .num{white-space:nowrap}
+.tk-o .oout{color:var(--red); font-size:14px; font-weight:800; white-space:nowrap}
+.tk-o .os{display:inline-flex; align-items:center; gap:4px; color:var(--ink); font-size:15px !important;  font-size:14px; font-weight:800; white-space:nowrap}
+.tk-o .os.done .ic{color:var(--ok)}
+.tk-o .os.cook .ic{color:var(--red)}
+.tk-o .os.wait{color:var(--muted)}
+
+.tk-f{display:grid; grid-template-columns:1fr 1.35fr; gap:8px; padding:10px; border-top:2px solid var(--line)}
+.tk-f.one{grid-template-columns:1fr}
+.kb{position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:64px; padding:0 14px; border:0; border-radius:999px; font-weight:800; font-size:19px; cursor:pointer; white-space:nowrap; color:var(--ink); background:var(--surface-2); line-height:1.1}
+.kb:active{transform:scale(.97)}
+.kb.ink{background:var(--ink); color:var(--bg)}
+.kb.ok{background:var(--ok); color:var(--on-ok)}
+.kb.red{background:var(--red); color:var(--on-red)}
+.kb.line{background:transparent; box-shadow:inset 0 0 0 2px var(--line-strong)}
+.kb .lbl{position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px}
+.kb .lbl small{font-size:14px; font-weight:700; opacity:.85}
+/* press-and-hold 1 s: a fill grows under the label (transform only) */
+.kb.hold::before{content:""; position:absolute; inset:0; background:var(--ink); opacity:.22; transform:scaleX(0); transform-origin:left}
+.kb.hold.holding::before{transform:scaleX(1); transition:transform 1000ms linear}
+.kb.hold .lbl{flex-direction:column; gap:0}
+.kb.hold .lbl > span{display:inline-flex; align-items:center; gap:8px}
+.kb.hold{touch-action:none; -webkit-user-select:none; user-select:none}
+.kb.hold .lbl small{font-size:15px}
+.kb.hold.hint{background:var(--ember); color:var(--on-ember)}
+
+/* "още поръчки" hint at the right edge */
+.kmore{position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:60px; padding:16px 0; border:0; border-radius:24px 0 0 24px; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer}
+.kmore b{font-size:26px; line-height:1; font-variant-numeric:tabular-nums}
+.kmore small{font-size:14px; font-weight:700}
+.kmore[hidden]{display:none}
+
+/* empty queue */
+.kempty{height:100%; display:grid; place-items:center; text-align:center; padding:24px}
+.kempty .ill{width:120px; height:120px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--ok); margin:0 auto 18px}
+.kempty h2{font-size:36px; letter-spacing:-.035em; margin:0; font-weight:800}
+.kempty p{font-size:20px; color:var(--muted); margin:8px 0 0}
+
+/* ---------- toast with 10 s "Върни" ---------- */
+.kstripw{position:relative; min-width:0}
+/* Търси и Молив: вдясно на реда с броячите (K.placeTools го центрира по броячите; броячите и известието с „Върни“ оставят място за него).
+   Така не застъпват картите, бутоните „По-късно“, „Звук“, „Натоварено“, „Нова“ и лентата „Няма връзка“, и лентата не пораства. */
+.ktools{position:absolute; right:16px; top:36px; transform:translateY(-50%); z-index:31; display:flex; align-items:center; gap:10px}
+.kstrip > .kcount{padding-right:var(--toolsw, 0px)}
+@container app (max-width:899px){ .kstrip > .kcount{flex-wrap:wrap; white-space:normal; row-gap:4px} .kstrip > .kcount > span{white-space:nowrap} }
+.kpenslot{display:contents}
+.ktools .sa-pen-btn{position:static; display:inline-flex; align-items:center; gap:8px; min-height:52px; height:52px; padding:0 18px; border:0; border-radius:999px; background:var(--surface-2) !important; color:var(--ink) !important; font:inherit; font-weight:800; font-size:16px; line-height:1; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; cursor:pointer; white-space:nowrap}
+.ktools .sa-pen-btn.in-slot{box-shadow:none}
+.ktools .sa-pen-btn svg{width:22px; height:22px; color:var(--red)}
+.ktools .sa-pen-btn[aria-pressed="true"]{background:var(--ember) !important; color:var(--on-ember) !important}
+.ktools .sa-pen-btn[aria-pressed="true"] svg{color:var(--on-ember)}
+.ktools .kpill .ic{color:var(--red)}
+/* таблет вертикално: двата бутона стават „икона над дума“, за да стоят на един ред с „По-късно“, „Звук“ и „Натоварено“ */
+@container app (max-width:899px){ .ktools{gap:4px; right:12px}
+  .ktools .kpill,.ktools .sa-pen-btn{display:grid; justify-items:center; align-content:center; gap:3px; min-width:60px; height:56px; min-height:56px; padding:0 8px; border-radius:18px; font-size:14px; line-height:1} }
+.ktoasts{position:absolute; left:16px; top:36px; width:600px; transform:translateY(-50%); z-index:30; display:grid; pointer-events:none}
+.kt{pointer-events:auto; position:relative; overflow:hidden; display:flex; align-items:center; gap:10px; min-height:52px; height:52px; width:100%; padding:4px 4px 4px 16px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:700; box-shadow:var(--shadow-lg); animation:ktin 360ms var(--ease) both}
+.kt .ic{color:var(--ok); flex:none}
+.kt span{flex:1; min-width:0; line-height:1.25}
+.kt span{line-height:1.2; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kt > .ic{width:24px; height:24px}
+.kt span b{margin-right:8px}
+.kt span small{display:inline; margin-left:6px; font-size:15px; font-weight:600; opacity:.8}
+.kt button{flex:none; min-height:48px; padding:0 22px; border:0; border-radius:999px; background:var(--bg); color:var(--ink); font-weight:800; font-size:18px; cursor:pointer; font-variant-numeric:tabular-nums}
+.kt i{position:absolute; left:0; right:0; bottom:0; height:4px; background:var(--ember); transform-origin:left; animation:ktbar linear both}
+@keyframes ktin{from{transform:translateY(16px); opacity:0}to{transform:none; opacity:1}}
+@keyframes ktbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ---------- shared blocks for the other screens ---------- */
+.kcard{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 0 0 0 1px var(--line)}
+.kgrid{display:grid; gap:12px}
+.kseg{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:var(--surface-2)}
+.kseg button{min-height:52px; padding:0 18px; border:0; border-radius:999px; background:transparent; font-weight:800; font-size:16px; cursor:pointer; color:var(--muted)}
+.kseg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.miss{color:var(--muted); font-style:italic; text-decoration:underline dashed 1px; text-underline-offset:4px}
+
+/* ---------- left edge: older cards scrolled out of view ---------- */
+.kless{position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:5; display:grid; justify-items:center; gap:2px; width:96px; padding:14px 0; border:0; border-radius:0 24px 24px 0; background:var(--ink); color:var(--bg); font-weight:800; box-shadow:var(--shadow-lg); cursor:pointer; text-align:center}
+.kless b{font-size:24px; line-height:1; font-variant-numeric:tabular-nums}
+.kless small{font-size:14px; font-weight:700; line-height:1.15}
+.kless .late{color:var(--danger); background:var(--bg); border-radius:10px; padding:3px 5px; margin-top:4px; text-align:center}
+.kless[hidden]{display:none}
+
+/* ---------- "По-късно": orders for a later time ---------- */
+.klater{position:relative}
+.kpanel{position:absolute; right:0; top:60px; z-index:40; width:min(460px, calc(100vw - 32px)); padding:14px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); display:grid; gap:4px}
+.kpanel h3{margin:0 0 4px; font-size:20px; letter-spacing:-.02em}
+.kpanel p{margin:0 0 6px; font-size:15px; color:var(--muted)}
+.lrow2{display:grid; grid-template-columns:auto 1fr auto; gap:4px 12px; align-items:center; padding:10px 0; border-top:1px solid var(--line)}
+.lrow2 b{font-size:19px}
+.lrow2 small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.lrow2 .when{text-align:right; font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
+.lrow2 .when small{font-weight:700}
+
+/* ---------- „Търси“: чакащите поръчки на секцията (номер, маса, ястие) ---------- */
+.kfind{position:fixed; inset:0; z-index:120; display:flex; justify-content:center; align-items:flex-start; padding:12px 16px; background:var(--scrim); opacity:0; pointer-events:none; transition:opacity var(--t-base) var(--ease)}
+.kfind.on{opacity:1; pointer-events:auto}
+.kfind .fwin{width:min(760px, 100%); max-height:calc(100dvh - 24px); display:flex; flex-direction:column; border-radius:28px; background:var(--surface); color:var(--ink); box-shadow:var(--shadow-lg), inset 0 0 0 1px var(--line); transform:translateY(-12px); transition:transform var(--t-slow) var(--ease)}
+.kfind.on .fwin{transform:none}
+.kfind .fhead{flex:none; display:flex; align-items:center; gap:10px; padding:12px 12px 12px 16px; border-bottom:1px solid var(--line)}
+.kfind .fs{position:relative; flex:1; min-width:0}
+.kfind .fs > .ic{position:absolute; left:18px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none}
+.kfind .fs .input{min-height:60px; padding-left:52px; padding-right:60px; border-radius:999px; font-size:20px; background:var(--bg)}
+.kfind .fs input[type="search"]::-webkit-search-cancel-button,.kfind .fs input[type="search"]::-webkit-search-decoration{-webkit-appearance:none; appearance:none; display:none}
+.kfind .fs .clr{position:absolute; right:6px; top:6px; width:48px; height:48px; border:0; border-radius:50%; background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer}
+.kfind .fs .clr[hidden]{display:none}
+.kfind .fbody{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:6px 16px 18px}
+.kfind .fscope{margin:10px 0 0; font-size:16px; color:var(--muted)}
+.kfind .fchips{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.kfind .fchips button{min-height:52px; padding:0 18px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font-weight:800; font-size:16px; cursor:pointer}
+.kfind h3{display:flex; justify-content:space-between; align-items:baseline; margin:18px 0 4px; font-size:20px; letter-spacing:-.02em}
+.kfind h3 .muted{font-size:15px; font-weight:700; color:var(--muted)}
+.kfrow{display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; width:100%; min-height:76px; padding:10px 6px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink); text-align:left; font:inherit; cursor:pointer; border-radius:14px}
+.kfrow:hover{background:var(--surface-2)}
+.kfrow .fi{width:52px; height:52px; border-radius:16px; background:var(--surface-2); display:grid; place-items:center; color:var(--red)}
+.kfrow b{display:block; font-size:22px; font-weight:800; letter-spacing:-.02em; line-height:1.15}
+.kfrow small{display:block; font-size:16px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:2px}
+.kfrow small strong{color:var(--ink)}
+.kfrow .tm{text-align:right; font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.kfrow .tm small{font-size:14px; font-weight:800}
+.kfrow.late .tm{color:var(--danger)} .kfrow.soon .tm{color:var(--warn)}
+.kfempty{text-align:center; padding:30px 10px 10px}
+.kfempty b{display:block; font-size:24px}
+.kfempty p{margin:6px 0 0; font-size:17px; color:var(--muted)}
+.tk.found{outline:4px solid var(--ember); outline-offset:3px}
+
+/* ---------- само в кода (няма ги в прототипа) ---------- */
+/* главен админ, собственик, управител: пътят обратно към таблото, на мястото на бутона „Прототип“ (икона над дума) */
+.kboss{flex:none; display:grid; justify-items:center; align-content:center; gap:3px; min-width:60px; height:56px; padding:0 8px; border-radius:18px; background:var(--surface-2); color:var(--ink); font-size:14px; font-weight:800; line-height:1; text-decoration:none}
+.kboss .ic{color:var(--red)}
+.kboss:active{transform:scale(.97)}
+/* числото в „По-късно“ */
+.kpill .n{min-width:26px; height:26px; padding:0 7px; border-radius:13px; background:var(--ink); color:var(--bg); display:inline-grid; place-items:center; font-size:15px; font-variant-numeric:tabular-nums}
+.kcount .late .ic{display:inline; vertical-align:-3px; color:var(--danger)}
+.tk-o .oout .ic{display:inline; vertical-align:-1px}
+.kt button .ic{display:inline; vertical-align:-4px; margin-right:6px; color:inherit}
+.kt.plain{padding-right:16px}
+.koff .still{margin:6px 0 0; font-size:15px; font-weight:700; color:var(--ink)}
+.koff .kb{min-width:150px}
+.koff .kb[disabled]{opacity:.6; cursor:default}
+.kpanel:focus{outline:none}
+.kempty .ill.bad{color:var(--danger)}
+.kempty .kb{margin-top:18px}
+.kempty p.sm{font-size:17px}
+/* зареждане: скелет (aria-hidden) + скрит role="status" */
+.kskel{border-radius:var(--r-core); background:var(--surface); box-shadow:inset 0 0 0 2px var(--line); position:relative; overflow:hidden}
+.kskel::after{content:""; position:absolute; inset:0; background:linear-gradient(100deg, transparent 20%, var(--surface-2) 50%, transparent 80%); transform:translateX(-100%); animation:kskel 1.4s linear infinite}
+@keyframes kskel{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion: reduce){ .kskel::after{animation:none; opacity:0} }
+.kq .kskel{flex:0 0 calc((100cqw - 32px - 76px - 36px) / 3); height:100%}
+@container app (min-width:1400px){ .kq .kskel{flex-basis:calc((100cqw - 32px - 76px - 48px) / 4)} }
+@container app (max-width:1099px){ .kq .kskel{flex-basis:calc((100cqw - 32px - 76px - 24px) / 2)} }
+@container app (max-width:899px){ .kq .kskel{flex-basis:calc((100cqw - 32px - 40px - 24px) / 2)} }
+.kpage .kskel{height:120px; margin-top:12px}
+.kboot .kbar{min-height:76px}
+.kboot .kstrip{min-height:66px}
+
+/* ---------- вход: изборът на секция (login.html; стъпката с ПИН идва в [data-pin]) ---------- */
+.lg{position:fixed; inset:0; overflow:auto; background:var(--bg); color:var(--ink); container-type:inline-size; container-name:app}
+.lg-in{min-height:100%; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(360px,.9fr); gap:28px; padding:28px; max-width:1280px; margin:0 auto; align-content:center}
+.lg-top{grid-column:1 / -1; display:flex; align-items:center; gap:14px}
+.lg-top .word{font-size:26px}
+.lg-top .muted{font-size:18px; font-weight:700}
+.lg-top .kboss{margin-left:auto}
+.lg h1{font-size:34px; letter-spacing:-.04em; line-height:1.05; margin:0 0 6px; font-weight:800}
+.lg .lead{font-size:18px}
+.secs{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px}
+.sct{position:relative; display:grid; grid-template-columns:auto 1fr; gap:4px 16px; align-items:center; min-height:120px; padding:18px 20px; border:0; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow), inset 0 0 0 2px var(--line); color:var(--ink); text-align:left; cursor:pointer; transition:transform var(--t-fast) var(--ease)}
+.sct:active{transform:scale(.98)}
+.sct .si{grid-row:1 / span 2; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+.sct b{font-size:26px; letter-spacing:-.03em; line-height:1.1}
+.sct b:only-of-type:last-child{grid-row:1 / span 2}
+.sct span.d{font-size:16px; color:var(--muted); font-weight:600; line-height:1.3}
+.sct[aria-pressed="true"]{box-shadow:var(--hi), var(--shadow), inset 0 0 0 4px var(--red)}
+.sct[aria-pressed="true"]::after{content:""; position:absolute; top:14px; right:14px; width:14px; height:14px; border-radius:50%; background:var(--red)}
+.sct.wide{grid-column:1 / -1; min-height:96px}
+.sct.wide .si{color:var(--ink)}
+.lg .note{margin-top:14px; font-size:15px; color:var(--muted); display:flex; gap:8px; align-items:flex-start}
+.pin{align-self:center; padding:22px; display:grid; gap:16px}
+.pin h2{margin:0; font-size:26px; letter-spacing:-.03em; font-weight:800}
+.pin h2 small{display:block; font-size:16px; color:var(--muted); font-weight:700; letter-spacing:0; margin-top:2px}
+.pin [data-pin]:empty{display:none}
+.pin .kb{width:100%}
+.lg-set{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding-top:14px; border-top:1px solid var(--line)}
+.lg-set .lbl{font-size:15px; font-weight:700; color:var(--muted); width:100%}
+.lg-set .kseg button{display:inline-flex; align-items:center; gap:8px}
+@container app (max-width:1100px){ .lg-in{grid-template-columns:minmax(0,1fr) 340px; gap:20px; padding:22px} .sct{padding:16px} .sct b{font-size:22px} .sct .si{width:52px; height:52px} .sct span.d{font-size:15px} }
+@container app (max-width:899px){
+  .lg-in{grid-template-columns:1fr; align-content:start; padding:20px 16px}
+  .pin{max-width:520px; width:100%; justify-self:center}
+  .lg h1{font-size:28px} .secs{margin-top:12px; gap:8px} .sct{min-height:76px; padding:12px 16px} .sct span.d{display:none} .sct .si{grid-row:auto; width:48px; height:48px} .sct.wide{min-height:76px}
+  .pin{padding:16px; gap:10px} .lg-top .word{font-size:22px}
+}
+@container app (max-width:520px){ .secs{grid-template-columns:1fr} }

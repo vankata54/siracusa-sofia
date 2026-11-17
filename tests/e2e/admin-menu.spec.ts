@@ -252,7 +252,7 @@ test("rights: marketing gets 403 and „Нямате права“, the kitchen 
   await signIn(k, "kitchen");
   const kp = await k.newPage();
   await kp.goto(BASE + "/admin/menu/");
-  await expect(kp).toHaveURL(/\/kuhnya\/$/);
+  await expect(kp).toHaveURL(/\/kuhnya\/(vhod\/)?$/); /* the module; on a device without a chosen section it asks for the section first */
   await k.close();
 });
 

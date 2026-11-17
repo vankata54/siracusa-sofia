@@ -422,7 +422,8 @@ export function mountPencil(o: PencilOptions): Pencil {
         if (e.shiftKey && act === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && act === z) { e.preventDefault(); a.focus(); }
       }
     });
-    requestAnimationFrame(() => requestAnimationFrame(() => { sw.classList.add("on"); ta.focus({ preventScroll: true }); }));
+    /* a quick Esc (or "Затвори") before these two frames must not open it again */
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (closeSheet !== close) return; sw.classList.add("on"); ta.focus({ preventScroll: true }); }));
   }
 
   let tt: ReturnType<typeof setTimeout> | undefined;

@@ -1,0 +1,21 @@
+---
+/* The shell of every screen of "Кухня": the layout of the staff modules (src/layouts/Admin.astro: noindex, no client
+   chrome of the site) + the styles of the module + the theme of the TABLET before the first paint (dark by default,
+   light by choice: "sk-theme") + the waiting screen until the frame is drawn (src/modules/kuhnya/frame.ts). */
+import Admin from "../../layouts/Admin.astro";
+import "./kitchen.css";
+
+export interface Props {
+  /** "<title>" until the frame sets its own ("Опашка · Скара Bertha | Кухня · Siracusa") */
+  title: string;
+  /** queue | izcherpano | natovareno | izpalneni | obsht-izgled | vhod */
+  page: string;
+}
+const p = Astro.props;
+const boot = `(function(){var t="dark";try{t=JSON.parse(localStorage.getItem("sk-theme")||'"dark"')}catch(e){}document.documentElement.dataset.theme=t==="light"?"light":"dark"})();`;
+---
+<Admin title={p.title} page={"k-" + p.page} boot={false}>
+<script is:inline set:html={boot}></script>
+<div class="kd kboot" data-kboot><div class="kbar" aria-hidden="true"></div><div class="kstrip" aria-hidden="true"></div><div class="kmain"><span class="vh" role="status">Зареждаме …</span></div></div>
+<slot />
+</Admin>

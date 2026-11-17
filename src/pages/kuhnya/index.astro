@@ -1,11 +1,10 @@
 ---
-/* /kuhnya/: the module "Кухня" until stage D: "Модулът ти идва скоро" (src/admin/staff-app.ts). */
-import Admin from "../../layouts/Admin.astro";
-import "../../admin/staff-app.css";
+/* /kuhnya/: the queue of the tablet's section (src/modules/kuhnya/queue.ts; the approved prototype: design/pages-kuhnya/queue.html). */
+import Kitchen from "../../modules/kuhnya/Kitchen.astro";
 ---
-<Admin title="Кухня" page="app-kitchen">
+<Kitchen title="Опашка" page="queue">
 <script>
-import { initStaffApp } from "../../admin/staff-app.ts";
-initStaffApp("kitchen");
+import { initQueue } from "../../modules/kuhnya/queue.ts";
+initQueue();
 </script>
-</Admin>
+</Kitchen>
