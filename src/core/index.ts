@@ -27,6 +27,12 @@ import * as reportsMod from "./reports.ts";
 import * as staffAdm from "./staff-admin.ts";
 import * as kitchenMod from "./kitchen.ts";
 import * as driverMod from "./driver.ts";
+/* stage D: the hall live (the QR table, the waiter, the shift) and the PIN sign-in on a known device */
+import * as floorB from "./floor.ts";
+import * as floorG from "./floor-guest.ts";
+import * as floorS from "./floor-staff.ts";
+import * as floorSh from "./floor-shift.ts";
+import * as pinMod from "./staff-pin.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -68,6 +74,13 @@ export {
   type Delivery, type DriverList, type AskView, type RouteView, type RouteOption, type StepResult, type ArriveResult, type FuelView, type FuelPage, type FuelInput, type FuelReport,
   type ShiftTotals, type ShiftSummary, type DriverRow, type DriversView, type DriverShift, type DriverAsk, type FuelEntry,
 } from "./driver.ts";
+export { FLOOR_MSG, CALL_KINDS, CALL_LABEL, CALL_STAFF, REJECT_REASONS, LINE_LABEL, MAX_PHONES, CALL_WARN_MIN, FLOOR_UNDO_MS, BILL_ALL,
+  type CallKind, type RejectReason, type LineSt, type TableSession, type FloorCartLine, type FloorPayment, type GuestView, type GuestCartLine, type GuestOrder, type GuestOrderLine, type GuestCall } from "./floor.ts";
+export { TABLE_STATE_LABEL, type TableStateKey, type HallLive, type HallTile, type HallCall, type HallQr, type TableDetail, type StaffBill, type StaffOrder, type StaffLine, type PendingLine,
+  type ReadyGroup, type StaffOrderInput, type StaffSearch, type TableRating } from "./floor-staff.ts";
+export { SHIFT_MSG, type WaiterShift, type ShiftMine, type WaiterShiftView, type ShiftRow } from "./floor-shift.ts";
+export { PIN_MSG, PIN_MODULES, PIN_LOGIN_DEVICE, PIN_LOGIN_PERSON, type PinModule, type PinPeople } from "./staff-pin.ts";
+export { TABLE_MSG, GRAMS_MIN, GRAMS_MAX, LUNCH_TABLE_MISSING, type TableOrderInput, type TableLine } from "./orders.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;
 type Bound<M> = { [K in keyof M]: M[K] extends (ctx: Ctx, ...a: never[]) => unknown ? Tail<M[K]> : never };
@@ -155,6 +168,20 @@ export function createCore(ctx: Ctx) {
       route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck,
       shift: driverMod.shift, end: driverMod.end, drivers: driverMod.drivers, search: driverMod.search,
     }),
+    /* ---------- stage D: the hall live (core/floor*.ts). The guests' calls take the table code and the phone's token; the
+       staff's take the staff member (StaffCtx) and check the right themselves ---------- */
+    floor: bind(ctx, {
+      open: floorG.guestOpen, view: floorG.guestView, stream: floorG.streamSession, cartAdd: floorG.guestCartAdd, cartQty: floorG.guestCartQty, cartRemove: floorG.guestCartRemove,
+      cartRestore: floorG.guestCartRestore, send: floorG.guestSend, rejectedOk: floorG.guestRejectedOk, call: floorG.guestCall, callCancel: floorG.guestCallCancel,
+      callRestore: floorG.guestCallRestore, bill: floorG.guestBill, pick: floorG.guestPick, rate: floorG.guestRate,
+      hall: floorS.hallLive, table: floorS.tableDetail, seat: floorS.seat, callTake: floorS.callTake, callDone: floorS.callDone, callUndo: floorS.callUndo,
+      qrConfirm: floorS.qrConfirm, qrReject: floorS.qrReject, qrRejectUndo: floorS.qrRejectUndo, order: floorS.staffOrder, serve: floorS.serve, unserve: floorS.unserve,
+      ready: floorS.ready, pay: floorS.pay, close: floorS.closeTable, search: floorS.staffSearch, ratings: floorS.tableRatings,
+      /* the kitchen changed a line of a table order: the guests of that sitting hear floor.session (server/app.ts) */
+      touched: floorB.sessionTouched,
+      shiftMine: floorSh.shiftMine, shiftStart: floorSh.shiftStart, shiftEnd: floorSh.shiftEnd, shiftView: floorSh.shiftView, shiftSetTables: floorSh.shiftSetTables,
+    }),
+    pin: bind(ctx, { people: pinMod.pinPeople, login: pinMod.pinLogin }),
     audit: bind(ctx, { log: auditMod.audit, list: auditMod.listAudit }),
   };
 }

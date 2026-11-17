@@ -2,6 +2,7 @@
 import { COL, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Role, type RoleId, type Session, type StaffUser } from "./types.ts";
 import { audit } from "./audit.ts";
+import { markDevice } from "./device.ts";
 
 export const STAFF_SESSION_TTL_MS = 12 * 3600_000;
 
@@ -110,7 +111,9 @@ async function failsOf(ctx: Ctx, id: string): Promise<Fails> {
   return f && (f.until > now || f.first > now - LOGIN_LOCK_MIN * 60_000) ? f : { id, n: 0, first: now, until: 0 };
 }
 
-export async function staffLogin(ctx: Ctx, username: string, password: string, addr = "local"): Promise<{ token: string; user: PublicStaff; expiresAt: number; home: string }> {
+/** device: the token of this device (the server's cookie "sc_kd"); a right password makes the device known, and only on a
+    known device the personal PIN works (core/staff-pin.ts, decision 17.11.2026) */
+export async function staffLogin(ctx: Ctx, username: string, password: string, addr = "local", device?: string | null): Promise<{ token: string; user: PublicStaff; expiresAt: number; home: string }> {
   if (!ctx.hasher) throw new Error("hasher missing");
   const uname = String(username || "").trim().toLowerCase().slice(0, 64), now = nowDate(ctx).getTime();
   const pw = String(password || "").slice(0, PASSWORD_MAX);
@@ -145,6 +148,7 @@ export async function staffLogin(ctx: Ctx, username: string, password: string, a
   u.lastLoginAt = iso(ctx);
   await ctx.repo.put(COL.staff, u);
   await audit(ctx, u.username, "staff.login");
+  await markDevice(ctx, device, u.username);
   return { token: s.id, user: publicStaff(u), expiresAt: s.expiresAt, home: homeOf(u.role) };
 }
 

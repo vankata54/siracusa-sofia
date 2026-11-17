@@ -10,7 +10,7 @@ import { DEFAULT_ROLES } from "./staff.ts";
 
 export const RES_MINUTES_DEFAULT = 120;
 /* noShowLimit, callCooldown, callManager: the open questions that are settings (OPEN-QUESTIONS 8 and modules 1), with the defaults */
-export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT, celebrationPrice: "offer", earlyDays: null, noShowLimit: 2, callCooldown: 3, callManager: 5 };
+export const DEFAULT_SETTINGS: Settings = { id: "main", kitchen: { ...KITCHEN_DEFAULT }, resMinutes: RES_MINUTES_DEFAULT, celebrationPrice: "offer", earlyDays: null, noShowLimit: 2, callCooldown: 3, callManager: 5, qrManager: 3 };
 /** what any page may read (GET /api/status): no internal settings */
 export function publicSettings(s: Settings) { return { kitchen: { busy: s.kitchen.busy, etaMin: s.kitchen.etaMin, etaBusyMin: s.kitchen.etaBusyMin }, celebrationPrice: s.celebrationPrice, earlyDays: s.earlyDays }; }
 
@@ -22,7 +22,7 @@ export async function getSettings(ctx: Ctx): Promise<Settings> {
 }
 
 export type SettingsPatch = { kitchen?: Partial<Settings["kitchen"]>; resMinutes?: number; celebrationPrice?: Settings["celebrationPrice"]; earlyDays?: number | null;
-  noShowLimit?: number; callCooldown?: number; callManager?: number };
+  noShowLimit?: number; callCooldown?: number; callManager?: number; qrManager?: number };
 
 export { settingsAllowed } from "./settings-guard.ts";
 
@@ -41,7 +41,7 @@ export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "sy
   if (celebrationPrice !== "estimate" && celebrationPrice !== "offer") f.celebrationPrice = "Изберете „ориентировъчна цена“ или „само оферта“.";
   const earlyDays = patch.earlyDays === undefined ? cur.earlyDays : patch.earlyDays;
   if (earlyDays !== null && (!Number.isInteger(earlyDays) || earlyDays < 1 || earlyDays > 365)) f.earlyDays = "Дните са цяло число от 1 до 365 (или празно).";
-  const int = (k: "noShowLimit" | "callCooldown" | "callManager", lo: number, hi: number, msg: string) => {
+  const int = (k: "noShowLimit" | "callCooldown" | "callManager" | "qrManager", lo: number, hi: number, msg: string) => {
     const v = patch[k] == null ? cur[k] : patch[k];
     if (!Number.isInteger(v) || (v as number) < lo || (v as number) > hi) f[k] = msg;
     return v as number;
@@ -49,6 +49,8 @@ export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "sy
   const noShowLimit = int("noShowLimit", 1, 5, "Неявяванията са цяло число от 1 до 5.");
   const callCooldown = int("callCooldown", 1, 15, "Минутите са цяло число от 1 до 15.");
   const callManager = int("callManager", 1, 30, "Минутите са цяло число от 1 до 30.");
+  /* a QR order nobody confirmed goes to the manager after this many minutes (decision 17.11.2026, answer 29: 3) */
+  const qrManager = int("qrManager", 1, 30, "Минутите са цяло число от 1 до 30.");
   if (Object.keys(f).length) throw Object.assign(new CoreError("invalid", "Проверете полетата.", 422), { fields: f });
   /* when "Натоварено" was turned on (the kitchen's reminder after 60 min, OPEN-QUESTIONS 15) */
   const busyAt = k.busy ? (cur.kitchen.busy ? cur.kitchen.busyAt || iso(ctx) : iso(ctx)) : null;
@@ -58,7 +60,7 @@ export async function updateSettings(ctx: Ctx, patch: SettingsPatch, actor = "sy
   let who = "";
   if (flip) { const u = (await ctx.repo.list<{ id: string; username: string; role: string }>(COL.staff, { username: actor } as never))[0]; who = by || DEFAULT_ROLES.find((r) => r.id === (u && u.role))?.n || actor; }
   const busyBy = k.busy ? (flip ? who : cur.kitchen.busyBy ?? null) : null;
-  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin, busyAt, busyBy }, resMinutes, celebrationPrice, earlyDays, noShowLimit, callCooldown, callManager, updatedAt: iso(ctx) };
+  const next: Settings = { id: "main", kitchen: { busy: !!k.busy, etaMin: k.etaMin, etaBusyMin: k.etaBusyMin, busyAt, busyBy }, resMinutes, celebrationPrice, earlyDays, noShowLimit, callCooldown, callManager, qrManager, updatedAt: iso(ctx) };
   await ctx.repo.put(COL.settings, next);
   setKitchen(next.kitchen);
   await audit(ctx, actor, "settings.update", "main", patch);

@@ -334,13 +334,16 @@ export function stepAllowed(o: Pick<Order, "mode" | "status" | "prevStatus">, to
   return pairs.some(([sec, a, b]) => has(sec) && o.status === a && to === b && j > -1);
 }
 
+/** who hears a status: the subscribers of the order, and for a table order the guests of its sitting (core/floor.ts) */
+const statusAudience = (o: Pick<Order, "no" | "session">) => ({ order: o.no, ...(o.session ? { table: o.session } : {}) });
+
 export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system", by?: { user: { role: string }; sections: string[] }, reason?: string): Promise<Order> {
   const o = await getOrder(ctx, no);
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
   if (status !== "cancelled" && FLOW[o.mode].indexOf(status) < 0) throw new CoreError("bad_status", "Невалиден статус за този вид поръчка.");
   if (by && !stepAllowed(o, status, by)) throw new CoreError("bad_step", "Тази стъпка не е позволена за поръчката сега. Опреснете страницата.", 409);
   /* the same status again (two people pressed it): nothing to write, no line in the log; the pages still hear it once more */
-  if (o.status === status) { emit(ctx, "order.status", { no: o.no, status, at: (o.times && o.times[status]) || o.updatedAt }, { order: o.no }); return o; }
+  if (o.status === status) { emit(ctx, "order.status", { no: o.no, status, at: (o.times && o.times[status]) || o.updatedAt }, statusAudience(o)); return o; }
   const now = iso(ctx);
   if (status === "cancelled" && o.status !== "cancelled") o.prevStatus = o.status;
   else if (status !== "cancelled") { delete o.prevStatus; delete o.reason; }
@@ -349,7 +352,7 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   o.status = status; o.updatedAt = now; o.times = { ...(o.times || { accepted: o.createdAt }), [status]: now };
   await ctx.repo.put(COL.orders, o);
   await audit(ctx, actor, "order.status", o.no, { status, ...(o.reason && status === "cancelled" ? { reason: o.reason } : {}) });
-  emit(ctx, "order.status", { no: o.no, status, at: now }, { order: o.no });
+  emit(ctx, "order.status", { no: o.no, status, at: now }, statusAudience(o));
   /* Web Push to the browsers that asked for it: in the background, a slow push service never delays the kitchen */
   pushStatus(ctx, o).catch(() => { /* logged by the sender */ });
   return o;
@@ -448,5 +451,136 @@ export async function changeOrder(ctx: Ctx, id: string, patch: OrderChange): Pro
   const o = ctx.repo.transaction ? await ctx.repo.transaction(apply) : await apply();
   await audit(ctx, "customer", "order.change", o.no, { slot: o.slot, total: o.total, mode: o.mode });
   emit(ctx, "order.changed", { no: o.no, slot: o.slot, total: o.total, mode: o.mode }, { order: o.no });
+  return o;
+}
+
+/* ---------- table orders (stage D, core/floor.ts): the guests' QR order and the waiter's "Нова поръчка" ----------
+   An order at a table has no customer, address, time slot, payment, code or bonus: channel "qr" | "waiter", mode "pickup",
+   `table` (the hall's table id), `session` (the sitting), `bill` ("Обща сметка" / "Гост 1"), `via` ("waiter": confirmed by
+   the waiter). The same checks as every order (checkLines: unknown and removed dishes, the quantity, the add-ons from the
+   menu, "Изчерпано днес") and the same price path (pricing.ts: the dish + its add-ons), plus the table's own rules:
+   - the kitchen takes orders 10:00-22:30; breakfast until 11:30;
+   - the lunch menu is not ordered from a table: [ЛИПСВА: обедно меню от масата] (OPEN-QUESTIONS, modules 6);
+   - a `per100` steak needs its weight: 100-2000 g per piece, the unit price is price * grams / 100 (OPEN-QUESTIONS, modules 7);
+   - a QR order keeps the limits of one online order (60 portions, 500 €); the waiter's order has none.
+   The texts follow who reads them: the guests ("вие") or the staff ("ти"), the codes are the same. */
+export interface TableLine { id: string; q: number; mods?: string[]; note?: string; grams?: number | null; guest?: string }
+export interface TableOrderInput {
+  table: string; tableN: number; session: string; channel: "qr" | "waiter"; lines: TableLine[]; note?: string; bill?: string; via?: "waiter" | "";
+  /** the staff member (the waiter's order, or the waiter who confirmed a QR order) */
+  by?: string;
+  /** who reads the errors (default: the staff for "waiter", the guests for "qr") */
+  speak?: "guest" | "staff";
+}
+export interface TableRow { id: string; name: string; q: number; mods: string[]; per100: boolean; grams: number | null;
+  /** null: a `per100` steak without its weight yet */
+  unit: number | null; sum: number | null; extra: number; cat: string; course: string; note?: string; guest?: string }
+export const GRAMS_MIN = 100, GRAMS_MAX = 2000, LINE_NOTE_MAX = 140, TABLE_NOTE_MAX = 300;
+export const LUNCH_TABLE_MISSING = "[ЛИПСВА: обедно меню от масата]";
+export const TABLE_MSG = {
+  guest: {
+    closedEarly: "Кухнята отваря в 10:00. Менюто е за разглеждане, а за нещо друго повикайте сервитьор.",
+    closed: "Кухнята приема поръчки до 22:30. За сметката или нещо друго повикайте сервитьор.",
+    breakfast: (n: string) => "„" + n + "“ е от закуските, а те са до 11:30. Махнете го от количката.",
+    lunch: "Обедното меню не се поръчва от телефона. Повикайте сервитьор.",
+    qty: "Броят на едно ястие е от 1 до " + ORDER_RULES.maxQty + ". За повече повикайте сервитьор.",
+    lines: "В една поръчка може до " + ORDER_RULES.maxLines + " различни ястия. За повече повикайте сервитьор.",
+    big: "За толкова голяма поръчка повикайте сервитьор.",
+    grams: "Грамажът е от " + GRAMS_MIN + " до " + GRAMS_MAX + " гр.",
+  },
+  staff: {
+    closedEarly: "Кухнята отваря в 10:00, затова изпращането е спряно.",
+    closed: "Кухнята приема поръчки до 22:30, затова изпращането е спряно. За нещо по изключение: управителят.",
+    breakfast: (n: string) => "„" + n + "“ е от закуските, а те са до 11:30. Махни го от поръчката.",
+    lunch: "Обедното меню не се въвежда на маса. " + LUNCH_TABLE_MISSING,
+    qty: "Броят на едно ястие е от 1 до " + ORDER_RULES.maxQty + ".",
+    lines: "В една поръчка може до " + ORDER_RULES.maxLines + " различни ястия. Раздели я на две.",
+    big: "QR поръчката е над " + ORDER_RULES.maxPortions + " порции или " + ORDER_RULES.maxTotal + " €. Откажи я и я въведи на части.",
+    grams: "Въведи грамажа: от " + GRAMS_MIN + " до " + GRAMS_MAX + " гр. За повече: две отделни парчета.",
+    empty: "Поръчката е празна.",
+    unknown: "Едно от ястията вече го няма в менюто. Обнови екрана.",
+  },
+};
+/** the kitchen takes table orders now (10:00-22:30): 409 "closed" otherwise */
+export function tableKitchenOpen(ctx: Ctx, speak: "guest" | "staff" = "guest"): void {
+  if (!state(ctx.clock).kitchen) throw new CoreError("closed", minutes(ctx.clock) < 600 ? TABLE_MSG[speak].closedEarly : TABLE_MSG[speak].closed, 409);
+}
+const isBreakfast = (x: { cat: string; course?: string }) => x.course === "breakfast" || x.cat === "zakuski";
+/** why this dish cannot be ordered from a table now ("" = it can): "lunch" | "breakfast" (the cart of the table marks the line) */
+export function tableBlock(ctx: Ctx, id: string): "" | "lunch" | "breakfast" {
+  const x = Object.prototype.hasOwnProperty.call(byId, id) ? byId[id] : undefined;
+  return !x ? "" : x.lunch ? "lunch" : isBreakfast(x) && !state(ctx.clock).breakfast ? "breakfast" : "";
+}
+/** The lines of a table order, checked and priced. grams: "required" (the order is made now) or "later" (the guests'
+    cart: the waiter enters the weight when he confirms; such a line has unit and sum null). */
+export function checkTableLines(ctx: Ctx, lines: TableLine[], today: SoldOutToday, grams: "required" | "later", speak: "guest" | "staff" = "guest"): { rows: TableRow[]; n: number; sub: number; open: boolean } {
+  const T = TABLE_MSG[speak], list = Array.isArray(lines) ? lines : [];
+  list.forEach((l, i) => {
+    const b = l && typeof l.id === "string" ? tableBlock(ctx, l.id) : "";
+    if (b === "lunch") throw Object.assign(new CoreError("lunch_table", T.lunch, 409), { lines: [l.id], fields: { ["lines." + i]: T.lunch } });
+    if (b === "breakfast") throw Object.assign(new CoreError("breakfast_closed", T.breakfast(byId[l.id].n), 409), { lines: [l.id], fields: { ["lines." + i]: T.breakfast(byId[l.id].n) } });
+  });
+  let cart: Cart;
+  try { cart = checkLines(ctx, { lines: list.map((l) => ({ id: l && l.id, q: l && l.q, mods: l && l.mods })) }, "pickup", today); }
+  catch (e) {
+    if (e instanceof CoreError) {
+      if (e.code === "bad_qty") e.message = T.qty;
+      else if (e.code === "too_many") e.message = T.lines;
+      else if (speak === "staff") e.message = e.code === "empty" ? TABLE_MSG.staff.empty : e.code === "unknown_item" ? TABLE_MSG.staff.unknown : e.message.replace("Махнете го от количката.", "Махни го от поръчката.");
+    }
+    throw e;
+  }
+  const P = price(cart, { clock: ctx.clock });
+  const f: Record<string, string> = {}, rows: TableRow[] = [];
+  let sub = 0, n = 0, open = false;
+  P.rows.forEach((r, i) => {
+    const src = list[i] || ({} as TableLine), x = r.x, extra = round2m(r.unit - x.p);
+    let g: number | null = null, unit: number | null = r.unit;
+    if (x.per100) {
+      const v = src.grams == null || (src.grams as unknown) === "" ? null : +src.grams;
+      if (v == null) { if (grams === "required") f["lines." + i + ".grams"] = T.grams; unit = null; open = true; }
+      else if (!Number.isInteger(v) || v < GRAMS_MIN || v > GRAMS_MAX) { f["lines." + i + ".grams"] = T.grams; unit = null; }
+      else { g = v; unit = round2m(round2m((x.p * v) / 100) + extra); }
+    }
+    const sum = unit == null ? null : round2m(unit * r.q);
+    const note = src.note == null ? "" : String(src.note).replace(/\s+/g, " ").trim().slice(0, LINE_NOTE_MAX);
+    const guest = src.guest == null ? "" : String(src.guest).trim().slice(0, 24);
+    rows.push({ id: x.id, name: x.n, q: r.q, mods: r.mods || [], per100: !!x.per100, grams: g, unit, sum, extra, cat: x.cat, course: x.course, ...(note ? { note } : {}), ...(guest ? { guest } : {}) });
+    n += r.q; if (sum != null) sub += sum;
+  });
+  if (Object.keys(f).length) invalid(f);
+  return { rows, n, sub: round2m(sub), open };
+}
+const round2m = (v: number): number => Math.round(v * 100) / 100;
+
+export async function createTableOrder(ctx: Ctx, i: TableOrderInput): Promise<Order> {
+  const speak = i.speak || (i.channel === "waiter" ? "staff" : "guest");
+  tableKitchenOpen(ctx, speak);
+  const c = checkTableLines(ctx, i.lines, await soldOutToday(ctx), "required", speak);
+  if (i.channel === "qr" && (c.n > ORDER_RULES.maxPortions || c.sub > ORDER_RULES.maxTotal)) throw new CoreError("too_big", TABLE_MSG[speak].big, 422);
+  const m = minutes(ctx.clock);
+  const make = async (): Promise<Order> => {
+    const no = String(await ctx.repo.seq("order_no", FIRST_ORDER_NO)), ts = nowDate(ctx), at = ts.toISOString();
+    const note = i.note ? String(i.note).replace(/\s+/g, " ").trim().slice(0, TABLE_NOTE_MAX) : "";
+    const o: Order = {
+      id: no, no, mode: "pickup", channel: i.channel,
+      lines: c.rows.map((r) => ({ id: r.id, q: r.q, mods: r.mods, extra: r.extra, name: r.name, unit: r.unit as number, cat: r.cat, course: r.course,
+        ...(r.note ? { note: r.note } : {}), ...(r.grams ? { grams: r.grams } : {}), ...(r.guest ? { guest: r.guest } : {}) })),
+      lunchOnly: false, zone: "", addr: "", pay: "cash", payLabel: "На масата", sub: c.sub, disc: 0, fee: 0, total: c.sub,
+      eta: null, at: "веднага", sched: "", slot: "asap", placedAt: hhmm(m), ts: ts.getTime(), status: "accepted",
+      name: "Маса " + i.tableN, phone: "", ...(note ? { note } : {}), marketing: false, userId: null, table: i.table, key: randomKey(8), discKind: "",
+      session: i.session, bill: i.bill || "Обща сметка", via: i.via || "", ...(i.by ? { by: String(i.by) } : {}),
+      times: { accepted: at }, createdAt: at, updatedAt: at,
+    };
+    /* the kitchen: the lines get `sec` and `ks: "wait"` like createOrder's, and "Натоварено" adds its minutes to the deadline */
+    const st = await getSettings(ctx);
+    await stampKitchen(ctx, o, st.kitchen.busy ? st.kitchen.etaBusyMin - st.kitchen.etaMin : 0);
+    await ctx.repo.put(COL.orders, o);
+    return o;
+  };
+  const o = ctx.repo.transaction ? await ctx.repo.transaction(make) : await make();
+  /* the kitchen and the hall hear it (staff only): a table order is not "a new online order" (order.created) */
+  emit(ctx, "order.new", { no: o.no, channel: o.channel, mode: o.mode, table: o.table, n: i.tableN, session: o.session, bill: o.bill, status: o.status, lines: c.n, total: o.total,
+    sched: "", slot: "asap", secs: [...new Set(o.lines.map((l) => l.sec))] });
   return o;
 }

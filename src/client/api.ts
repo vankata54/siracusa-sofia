@@ -50,11 +50,16 @@ export function trackId(no: string | number): string {
 /* ---------- real-time bus: subscription by key ---------- */
 type Fn = (data: unknown, type: string) => void;
 const subs = new Map<string, Set<Fn>>();
-const watching = { orders: new Set<string>(), offices: new Set<string>() };
-/** delivers an event to this page's listeners if the page may see it (public, its order, its office order, or staff) */
+/* table: the sitting at a QR table this page is a guest of (src/client/api-floor.ts): the table's code and the phone's token
+   for the server's stream, the id of the sitting for the demo bus */
+const watching = { orders: new Set<string>(), offices: new Set<string>(), table: null as { code: string; g: string; session: string } | null };
+/** delivers an event to this page's listeners if the page may see it (public, its order, its office order, its table, or staff) */
 export function busFire(type: string, data: unknown, to: Audience = {}) {
   const staff = (() => { try { return !!localStorage.getItem("sc-demo-staff"); } catch { return false; } })();
-  const ok = staff || !!to.public || (!!to.order && [...watching.orders].some((w) => w.split("-")[0] === to.order)) || (!!to.office && watching.offices.has(to.office));
+  const t = watching.table;
+  /* the demo has no server to pass a kitchen change on to the table: a line event of the sitting's own order is let through */
+  const mine = !!t && (to.table === t.session || (type === "order.line" && !!data && (data as { session?: string }).session === t.session));
+  const ok = staff || !!to.public || (!!to.order && [...watching.orders].some((w) => w.split("-")[0] === to.order)) || (!!to.office && watching.offices.has(to.office)) || mine;
   if (!ok) return;
   subs.get(type)?.forEach((f) => f(data, type));
   subs.get("*")?.forEach((f) => f(data, type));
@@ -68,6 +73,8 @@ function streamUrl(): string {
   const q = new URLSearchParams();
   if (watching.orders.size) q.set("order", [...watching.orders].join(","));
   if (watching.offices.size) q.set("office", [...watching.offices].join(","));
+  /* ts: only so that the address changes (and the stream reconnects) when a new sitting opens at the same table */
+  if (watching.table) { q.set("table", watching.table.code); q.set("g", watching.table.g); q.set("ts", watching.table.session); }
   const s = q.toString();
   return "/api/stream" + (s ? "?" + s : "");
 }
@@ -87,6 +94,7 @@ function connect() {
   for (const type of subs.keys()) if (type !== "*") es.addEventListener(type, (e) => { let d: unknown = null; try { d = JSON.parse((e as MessageEvent).data); } catch { /* ignore */ } subs.get(type)?.forEach((f) => f(d, type)); subs.get("*")?.forEach((f) => f(d, type)); });
 }
 function watchOrder(id: string) { if (!watching.orders.has(id)) { [...watching.orders].forEach((w) => { if (w.split("-")[0] === id.split("-")[0]) watching.orders.delete(w); }); watching.orders.add(id); if (subs.size) connect(); } }
+function watchTable(t: { code: string; g: string; session: string }) { const w = watching.table; if (!w || w.code !== t.code || w.g !== t.g || w.session !== t.session) { watching.table = { code: t.code, g: t.g, session: t.session }; if (subs.size) connect(); } }
 function watchOffice(code: string) { if (code && !watching.offices.has(code)) { watching.offices.add(code); if (subs.size) connect(); } }
 
 /* ---------- transport ---------- */
@@ -303,7 +311,8 @@ export const api = {
   },
 
   /** Follow an order / office order in real time without reading it first (api.orders.get / api.office.* do it themselves). */
-  watch(w: { order?: string | number; office?: string }) { if (w.order != null) watchOrder(trackId(w.order)); if (w.office) watchOffice(w.office); },
+  /** table: the sitting at a QR table (the table's code, the phone's token, the id of the sitting): api-floor.ts calls it */
+  watch(w: { order?: string | number; office?: string; table?: { code: string; g: string; session: string } }) { if (w.order != null) watchOrder(trackId(w.order)); if (w.office) watchOffice(w.office); if (w.table) watchTable(w.table); },
 
   /** Real-time: api.on("order.status", (data) => ...). Returns an unsubscribe function. "*" = everything this page may see.
       A page receives public events and only the events of the orders / office orders it has read or created. */

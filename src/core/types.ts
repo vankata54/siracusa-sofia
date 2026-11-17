@@ -159,6 +159,8 @@ export interface Rating {
   phone?: string;
   /** the order that used the code, once */
   usedBy?: string | null; usedAt?: Iso | null; updatedAt?: Iso;
+  /** a rating from the QR table (core/floor-guest.ts): the sitting and the phone ("p2"); orderNo is the sitting's first order */
+  session?: string; guest?: string;
 }
 
 /** Settings the admin / kitchen change (one document "main"). */
