@@ -159,7 +159,7 @@ O.line = function(id, labels, cur, prev, o){ o = o || {}; var n = labels.length,
   var py = null; if (pc && prev){ var ix = Math.round(pc.x / 100 * (n - 1)); if (prev[ix] != null) py = 100 - prev[ix] / nice * 100; }
   /* подписът не стои върху линията на обичайното: ако тя е точно над точката, подписът е под нея */
   var below = py != null && py < pc.y && pc.y - py < 18;
-  var labs = (pc && o.curLabel ? '<span class="elab' + (pc.x > 70 ? ' l' : '') + (below ? ' bl' : pc.y < 25 ? ' dn' : '') + '" style="left:' + pc.x + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
+  var labs = (pc && o.curLabel ? '<span class="elab ' + (below || pc.y < 15 ? 'bl' : 'l') + '" style="left:' + pc.x + '%;top:' + pc.y + '%">' + esc(o.curLabel) + '</span>' : '');
   var now = o.nowX != null ? '<i class="now" style="left:' + o.nowX + '%"></i>' : '';
   return '<div class="ow-plot" data-plot="' + id + '" data-line="1">' + yAxis(nice, o.fmt0 || o.fmt) + '<div class="area">' + grid() + svg + now + dots + labs + '</div>' + xLabels(labels, o.xn, o.ticks, true) + '</div>'; };
 O.legend = function(items){ return '<ul class="ow-lgd">' + items.map(function(x){ return '<li><i class="' + (x[1] || '') + '"></i>' + esc(x[0]) + '</li>'; }).join("") + '</ul>'; };
@@ -190,9 +190,11 @@ O.per = {per:"7", cmp:"prev", cust:{a:H.addD(H.TODAY, -13), b:H.TODAY}};
   if (h.a && h.b && /^\d{4}-\d\d-\d\d$/.test(h.a) && /^\d{4}-\d\d-\d\d$/.test(h.b)) O.per.cust = {a:h.a, b:h.b}; })();
 O.ranges = function(){ var p = O.per, R = H.range(p.per, p.cust), one = R[0] === R[1], day = p.per === "today" || p.per === "yday";
   var C = p.cmp === "year" ? [H.addD(R[0], -364), H.addD(R[1], -364)] : day ? [H.addD(R[0], -7), H.addD(R[1], -7)] : H.prevRange(R[0], R[1], p.per);
-  var upTo = p.per === "today" ? A.hm(A.now()) : "", cl = C[0] === C[1] ? H.fd(C[0], true) + (upTo ? " до " + upTo : "") : H.fd(C[0], true) + " - " + H.fd(C[1], true);
+  var upTo = p.per === "today" ? A.hm(A.now()) : "", yr = p.cmp === "year" ? " " + (+C[1].slice(0, 4)) : "";
+  /* годината е след датата, преди часа: „вт, 18 ное 2025 до 12:30“ */
+  var cl = C[0] === C[1] ? H.fd(C[0], true) + yr + (upTo ? " до " + upTo : "") : H.fd(C[0], true) + " - " + H.fd(C[1], true) + yr;
   return {R:R, C:C, one:one, upTo:upTo, label:one ? H.fd(R[0]) : H.fd(R[0], true) + " - " + H.fd(R[1], true),
-    cmpLabel:p.cmp === "year" ? "същите дни от седмицата миналата година: " + cl + " " + (+C[1].slice(0, 4)) : day ? "същия ден миналата седмица: " + cl : "предишния период: " + cl,
+    cmpLabel:p.cmp === "year" ? "същите дни от седмицата миналата година: " + cl : day ? "същия ден миналата седмица: " + cl : "предишния период: " + cl,
     cmpShort:p.cmp === "year" ? "миналата година" : day ? "същия ден миналата седмица" : "предишния период"}; };
 /* сборовете за избрания период и за сравнението (днес: до същата минута, както на „Днес“) */
 O.aggs = function(){ var g = O.ranges(), cur = H.agg(g.R[0], g.R[1]), prev = H.agg(g.C[0], g.C[1]), s = A.sofia(); if (g.upTo) prev = H.cutAt(prev, s.h, s.m); return {g:g, cur:cur, prev:prev}; };

@@ -35,6 +35,8 @@
 .dc-prog .bar i{display:block; height:100%; background:var(--ok); border-radius:4px}
 .dc-prog span{font-size:15px; font-weight:700; color:var(--muted)}
 .dc-filter{max-width:520px; margin:0 0 12px}
+.dc-filter .sm{display:none}
+@container app (max-width:380px){ .dc-filter .lg{display:none} .dc-filter .sm{display:inline} }
 @container app (min-width:1200px){ .dc-wrap{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start} .dc-main{position:sticky; top:100px} .dc-list h3:first-child{margin-top:0} }
 .dc-list h3{margin:20px 4px 8px; font-size:16px; font-weight:800; color:var(--muted)}
 .dc-list .rows{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
@@ -97,7 +99,7 @@ function draw(){
   else { var ans = O.answers(), wait = O.QUESTIONS.filter(function(q){ return !ans[q.id]; }), done = O.QUESTIONS.filter(function(q){ return ans[q.id]; }), list = filt === "wait" ? wait : done;
     if (!cur || !qById(cur) || list.indexOf(qById(cur)) < 0) cur = list[0] ? list[0].id : "";
     h += '<p class="ow-note" style="margin:-6px 4px 10px">' + done.length + ' от ' + O.QUESTIONS.length + ' са с отговор.</p><div class="dc-prog" aria-hidden="true"><div class="bar"><i style="width:' + (done.length / O.QUESTIONS.length * 100) + '%"></i></div></div><div style="height:14px"></div>';
-    h += '<div class="seg dc-filter" role="group" aria-label="Покажи"><button type="button" data-f="wait" aria-pressed="' + (filt === "wait") + '">Чакат отговор · ' + wait.length + '</button><button type="button" data-f="done" aria-pressed="' + (filt === "done") + '">Отговорени · ' + done.length + '</button></div>';
+    h += '<div class="seg dc-filter" role="group" aria-label="Покажи"><button type="button" data-f="wait" aria-pressed="' + (filt === "wait") + '"><span class="lg">Чакат отговор</span><span class="sm">Чакат</span>&nbsp;·&nbsp;' + wait.length + '</button><button type="button" data-f="done" aria-pressed="' + (filt === "done") + '">Отговорени&nbsp;·&nbsp;' + done.length + '</button></div>';
     var q = qById(cur);
     h += '<div class="dc-wrap"><div class="dc-main">';
     if (!list.length) h += '<section class="ow-card">' + (filt === "wait" ? O.empty({icon:"check-circle", title:"Всички въпроси са с отговор", text:"Благодарим! Агенцията ги преглежда. Отговорите са в „Отговорени“.", action:'<button class="pill pill-line pill-lg" type="button" data-f="done">Виж отговорите</button>'}) : O.empty({icon:"chat-circle-dots", title:"Още няма отговорени въпроси", text:CAN ? "Започни от първия: един бутон, ако си съгласен с варианта по подразбиране." : "Собственикът още не е отговорил.", action:'<button class="pill pill-line pill-lg" type="button" data-f="wait">Към въпросите</button>'})) + '</section>';

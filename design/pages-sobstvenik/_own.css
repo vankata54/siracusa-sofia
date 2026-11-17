@@ -103,10 +103,10 @@ body{background:var(--bg)}
 .ow-tag.soon .ic{color:var(--ember)}
 .ow-tag.ok{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--ok)} .ow-tag.ok .ic{color:var(--ok)}
 .ow-tag.warn{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--warn)} .ow-tag.warn .ic{color:var(--warn)}
-.ow-d{display:inline-flex; align-items:center; gap:4px; font-size:15px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+.ow-d{display:inline-flex; flex-wrap:wrap; align-items:center; gap:0 4px; font-size:15px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap; max-width:100%}
 .ow-d .ic{flex:none}
 .ow-d.up .ic{color:var(--ok)} .ow-d.down .ic{color:var(--danger)} .ow-d.flat .ic{color:var(--muted)}
-.ow-d small{font-size:14px; font-weight:600; color:var(--muted); margin-left:3px}
+.ow-d small{font-size:14px; font-weight:600; color:var(--muted); margin-left:3px; white-space:normal}
 .ow-d small .w{white-space:nowrap}
 .ow-d.dchip{min-height:32px; padding:0 12px 0 8px; border-radius:999px; background:var(--surface-2)}
 .ow-banner{display:flex; align-items:center; gap:14px; min-height:60px; padding:12px 12px 12px 18px; border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); line-height:1.4}
@@ -200,11 +200,13 @@ a.ow-li:hover .tx b{text-decoration:underline; text-underline-offset:3px}
 .ow-plot .dot{position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:var(--ink); box-shadow:0 0 0 2px var(--surface); pointer-events:none}
 .ow-plot .dot.prev{background:var(--off)}
 .ow-plot .now{position:absolute; top:0; bottom:0; width:0; border-left:1px solid var(--line-strong); pointer-events:none}
-.ow-plot .elab{position:absolute; transform:translate(-50%, calc(-100% - 10px)); font-size:14px; font-weight:800; white-space:nowrap; background:var(--surface); padding:0 4px; border-radius:6px; pointer-events:none}
+.ow-plot .elab{position:absolute; transform:translate(-50%, calc(-100% - 12px)); font-size:14px; font-weight:800; white-space:nowrap; pointer-events:none}
 .ow-plot .elab.l{transform:translate(calc(-100% + 6px), calc(-100% - 10px))}
 .ow-plot .elab.dn{transform:translate(calc(-100% - 10px), -50%)}
-.ow-plot .elab.bl{transform:translate(-50%, 10px)}
-.ow-plot .elab.l.bl{transform:translate(calc(-100% + 6px), 10px)}
+/* без фон: подписът е над точката и вляво (там днешната линия вече е минала под него) или, ако линията на обичайното е точно отгоре, вдясно под точката (там днешна линия няма) */
+.ow-plot .elab.l{transform:translate(calc(-100% - 2px), calc(-100% - 10px))}
+.ow-plot .elab.bl{transform:translate(10px, 4px)}
+.ow-plot .elab.l.bl{transform:translate(10px, 4px)}
 .ow-plot .xa{grid-column:2; position:relative; height:22px; font-size:14px; color:var(--muted); font-weight:600; margin-top:8px; font-variant-numeric:tabular-nums}
 .ow-plot .xa span{position:absolute; top:0; white-space:nowrap}
 .ow-tip{position:absolute; z-index:3; pointer-events:none; padding:8px 12px; border-radius:14px; background:var(--ink); color:var(--bg); font-size:15px; font-weight:700; line-height:1.3; white-space:nowrap; transform:translate(-50%, calc(-100% - 10px)); box-shadow:var(--shadow-lg)}
@@ -260,19 +262,21 @@ a.ow-li:hover .tx b{text-decoration:underline; text-underline-offset:3px}
 .ow-tbtn{min-height:48px; font-size:15px; padding:0 14px}
 /* таблица (алтернатива на графиката); на телефон редовете стават карти */
 .ow-tablewrap{min-width:0; overflow-x:auto}
+/* всяка карта е контейнер: в тясна карта (и на телефон) таблицата става карти, без хоризонтален скрол */
+.ow-card{container-type:inline-size; container-name:card}
 .ow-table{width:100%; border-collapse:collapse; font-size:16px}
 .ow-table th{font-size:14px; font-weight:700; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap}
 .ow-table td, .ow-table tbody th{padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; font-weight:600; font-size:16px; color:var(--ink)}
 .ow-table tbody tr:last-child td, .ow-table tbody tr:last-child th{border-bottom:0}
 .ow-table .r{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
-@container app (max-width:640px){
+@container card (max-width:600px){
   .ow-table, .ow-table tbody, .ow-table tr, .ow-table td, .ow-table tbody th{display:block}
   .ow-table thead{display:none}
   .ow-table tbody tr{padding:10px 0; border-bottom:1px solid var(--line)}
   .ow-table tbody tr:last-child{border-bottom:0}
   .ow-table td{display:flex; justify-content:space-between; gap:12px; padding:4px 0; border:0; text-align:right}
   .ow-table td::before{content:attr(data-label); font-size:14px; font-weight:700; color:var(--muted); text-align:left}
-  .ow-table [data-main]{display:block; text-align:left; font-weight:800; font-size:17px; padding:4px 0; border:0}
+  .ow-table [data-main]{display:block; text-align:left; font-weight:800; font-size:17px; padding:4px 0; border:0; overflow-wrap:anywhere; white-space:normal}
 }
 
 /* ---------- известие ---------- */
@@ -373,3 +377,11 @@ body.ow-toast-on .sa-pen-btn{opacity:0; pointer-events:none}
 /* разликата на тесни места: иконата и думите в един ред, който се пренася като текст */
 .ow-d.wrap{display:block; white-space:normal}
 .ow-d.wrap .ic{display:inline-block; vertical-align:-3px; margin-right:2px}
+
+/* 360-380 px: думите в долната лента с точно 12 px между тях и поне 8 px до ръба; „Днес“ е цел 48 px */
+@container app (max-width:380px){
+  .ow-app.has-pen .ow-bnav{display:flex; justify-content:flex-end; column-gap:12px; left:4px; right:68px; padding:0 8px 0 0}
+  .ow-app.has-pen .ow-bnav a{min-width:0; padding:0}
+  .ow-app.has-pen .ow-bnav a:first-child{min-width:48px; margin-right:-6px}
+  .ow-penslot{right:4px}
+}

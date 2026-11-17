@@ -118,6 +118,8 @@ OF.bindField = function(inp){ if (inp._of) return; inp._of = 1; var wrap = inp.p
   box.addEventListener("keydown", function(e){ var o = opts(), i = o.indexOf(document.activeElement); if (i < 0 && e.key !== "Escape") return;
     if (e.key === "ArrowDown"){ e.preventDefault(); (o[i + 1] || o[i]).focus(); } else if (e.key === "ArrowUp"){ e.preventDefault(); if (i > 0) o[i - 1].focus(); else inp.focus(); }
     else if (e.key === "Escape"){ e.preventDefault(); inp.focus(); } });
+  /* Esc от бутона „Изчисти“: затваря панела, фокусът е в полето */
+  clr.addEventListener("keydown", function(e){ if (e.key === "Escape"){ e.preventDefault(); hide(); inp.focus(); } });
   wrap.addEventListener("focusout", function(){ setTimeout(function(){ if (!wrap.contains(document.activeElement)) hide(); }, 150); });
   document.addEventListener("keydown", function(e){ if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "") && inp.offsetParent){ e.preventDefault(); inp.focus(); } });
   draw(); };
