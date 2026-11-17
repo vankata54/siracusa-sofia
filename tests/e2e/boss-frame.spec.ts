@@ -217,11 +217,13 @@ test("#next= to an address the role may not open is ignored (then the choice, or
   await formIn(page, "manager");
   await expect(page).toHaveURL(/\/admin\/orders\/$/);
   /* the waiter: always the own module */
+  await page.goto("about:blank");
   await page.context().clearCookies();
   await page.goto("/admin/vhod/#next=" + encodeURIComponent("/upravitel/"));
   await formIn(page, "waiter");
   await expect(page).toHaveURL(/\/servitor\/$/);
-  /* marketing: no module, the dashboard */
+  /* marketing: no module, the dashboard (first leave the waiter's app: it may still move on to its shift screen) */
+  await page.goto("about:blank");
   await page.context().clearCookies();
   await page.goto("/admin/vhod/#next=" + encodeURIComponent("/sobstvenik/finansi/"));
   await formIn(page, "marketing");
@@ -245,10 +247,10 @@ test("every tab of both modules: the frame, the right tab, the skeleton in the m
       await expect(bar.locator("a[aria-current=page] > span").first()).toHaveText(tabs.find((t) => t[2] === id)![1].split(" ")[0]);
       await expect(bar.locator((isPhone(page) ? "a" : "a.it") + " > span:first-of-type")).toHaveText(tabs.map((t) => t[1].split(" ")[0]));
       await expect(bar.locator(isPhone(page) ? "a" : "a.it").nth(1)).toHaveAttribute("href", tabs[1][0]);
-      /* the mount point of the screen: the skeleton (hidden from the reader) with a hidden status */
+      /* the mount point of the screen: the skeleton (hidden from the reader) with a hidden status, or the screen once its
+         author has filled it ("Управител": src/modules/upravitel, [data-upscr]) */
       const body = page.locator("#main [data-body]");
-      await expect(body.locator('[role="status"]')).toHaveText("Зареждаме…");
-      await expect(body.locator('[aria-hidden="true"] .skel').first()).toBeVisible();
+      await expect(body.locator('[aria-hidden="true"] .skel, [data-upscr]').first()).toBeVisible();
       /* the top bar: "Търси" (56 x 56 on the phone), the profile (48 x 48), no sound for the owner */
       if (isPhone(page)) { const b = (await page.locator('[data-bs="find"]').boundingBox())!; expect(b.width).toBeGreaterThanOrEqual(56); expect(b.height).toBe(56); }
       else { await expect(page.locator("#bs-q")).toBeVisible(); await expect(page.locator(".bs-top a.bs-toadmin").last()).toHaveText("Към админа"); }
@@ -276,12 +278,13 @@ test("the real rights: „Нямаш права за този екран.“ whe
   await expect(page.locator(isPhone(page) ? ".bs-nav a" : ".bs-rail a.it")).toHaveCount(4);
   await expect(page.locator(".bs-penslot .sa-pen-btn")).toBeVisible();
   expect(await axe(page)).toEqual([]);
-  /* "Залата": one of the two sections is enough */
+  /* "Залата": one of the two sections is enough (the skeleton, or the screen once it is filled) */
+  const drawn = page.locator('#main [data-body] [aria-hidden="true"] .skel, #main [data-upscr]').first();
   await page.goto("/upravitel/zalata/");
-  await expect(page.locator('#main [role="status"]')).toHaveText("Зареждаме…");
+  await expect(drawn).toBeVisible();
   await without(["hall"]);
   await page.goto("/upravitel/zalata/");
-  await expect(page.locator('#main [role="status"]')).toHaveText("Зареждаме…");
+  await expect(drawn).toBeVisible();
   await without(["hall", "reservations"]);
   await page.goto("/upravitel/zalata/");
   await expect(page.locator("#main h2")).toHaveText("Нямаш права за този екран.");
@@ -300,7 +303,9 @@ for (const [mod, role, path, coreMod] of [["upravitel", "manager", "/upravitel/"
       await page.goto(path);
       await ready(page, mod === "upravitel" ? "Сега" : "Днес");
       /* a long screen with things to press all the way down */
-      await page.evaluate(() => { document.querySelector("[data-body]")!.innerHTML = Array.from({ length: 30 }, (_, i) => '<p style="margin:0 0 12px"><button class="pill pill-ink" type="button" style="width:100%">Действие ' + (i + 1) + "</button></p>").join(""); });
+      /* (after the mount point, once a filled screen is drawn: it draws its own content again on every refresh) */
+      if (mod === "upravitel") await expect(page.locator("[data-upscr]")).toBeVisible();
+      await page.evaluate(() => { const d = document.createElement("div"); d.dataset.long = ""; d.innerHTML = Array.from({ length: 30 }, (_, i) => '<p style="margin:0 0 12px"><button class="pill pill-ink" type="button" style="width:100%">Действие ' + (i + 1) + "</button></p>").join(""); document.querySelector("#main")!.appendChild(d); });
       const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
       expect(max).toBeGreaterThan(600);
       for (let y = 0; ; y += 80) {
@@ -331,7 +336,7 @@ for (const [mod, role, path, coreMod] of [["upravitel", "manager", "/upravitel/"
         if (top >= max) break;
       }
       /* the last thing to press scrolls clear of the bottom nav (the empty space under the content) */
-      const lastOk = await page.evaluate(() => { const b = Array.from(document.querySelectorAll("[data-body] button")).pop()!.getBoundingClientRect(), n = document.querySelector(".bs-nav")!.getBoundingClientRect(); return n.height === 0 || b.bottom <= n.top; });
+      const lastOk = await page.evaluate(() => { const b = Array.from(document.querySelectorAll("[data-long] button")).pop()!.getBoundingClientRect(), n = document.querySelector(".bs-nav")!.getBoundingClientRect(); return n.height === 0 || b.bottom <= n.top; });
       expect(lastOk).toBe(true);
       expect(await noSideScroll(page)).toBe(true);
     }
@@ -342,7 +347,7 @@ for (const [mod, role, path, coreMod] of [["upravitel", "manager", "/upravitel/"
     await pen.click();
     await expect(pen).toHaveAttribute("aria-pressed", "true");
     /* a thing in the middle of the screen (the ember bar of the pencil is over the top of the page) */
-    await page.locator("[data-body] button").nth(4).click();
+    await page.locator("[data-long] button").nth(4).click();
     const ui = page.locator("sa-pen-ui");
     if (await ui.locator("[data-pick]").isVisible()) await ui.locator("[data-pick]").click();
     await expect(ui.locator(".sheet h2")).toHaveText("Какво да подобрим?");

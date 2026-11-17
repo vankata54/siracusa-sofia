@@ -128,6 +128,7 @@ export interface Problem {
 export interface WaitOrder {
   no: string; placedAt: string; ts: number; channel: Order["channel"]; channelName: string; mode: Order["mode"]; at: string; sched: string;
   name: string; phone: string; zone: string; lines: { name: string; q: number; out: boolean }[];
+  /** a table order: the number of the table (from the order's name "Маса 12") */ tableN?: number;
   /** the sum of THIS order (allowed) */ total: number;
   /** the sold-out dishes in it: "Приеми" asks first ("Обади се на клиента" / "Приеми без него") */ out: string[]; outAll: boolean; fresh: boolean;
 }
@@ -220,7 +221,8 @@ async function problemsOf(w: World): Promise<Problem[]> {
 
 function waitOrder(o: Order, freshNos: Set<string>): WaitOrder {
   const outN = [...new Set(o.lines.filter((l) => l.out).map((l) => l.name || l.id))];
-  return { no: o.no, placedAt: o.placedAt, ts: o.ts, channel: o.channel, channelName: chName(o), mode: o.mode, at: o.at, sched: o.sched, name: o.name, phone: maskPhone(o.phone), zone: o.zone,
+  const tm = /^Маса (\d+)$/.exec(o.name || "");
+  return { ...(tm && isTable(o) ? { tableN: +tm[1] } : {}), no: o.no, placedAt: o.placedAt, ts: o.ts, channel: o.channel, channelName: chName(o), mode: o.mode, at: o.at, sched: o.sched, name: o.name, phone: maskPhone(o.phone), zone: o.zone,
     lines: o.lines.map((l) => ({ name: l.name || l.id, q: l.q, out: !!l.out })), total: o.total, out: outN, outAll: o.lines.length > 0 && o.lines.every((l) => l.out), fresh: freshNos.has(o.no) };
 }
 async function kitchenOf(ctx: Ctx, s: StaffCtx): Promise<MgrKitchen> {

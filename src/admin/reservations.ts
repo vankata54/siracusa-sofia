@@ -223,6 +223,8 @@ export async function initReservations(): Promise<void> {
     setTimeout(() => { const sc = A.scroller!, top = box.getBoundingClientRect().top - sc.getBoundingClientRect().top; if (Math.abs(top - 96) > 4) sc.scrollTop += top - 96; }, 450);
   }
   window.addEventListener("hashchange", () => { if (/(^#|&)blocks(&|$)/.test(location.hash)) goBlocks(); });
+  /* #new=1: "Нова резервация" from the manager's module opens the form at once */
+  if (H.new) setTimeout(() => newRes(), 0);
   const hashSync = () => writeHash({ d: day === TODAY ? "" : day, f: flt });
   const byId = (id: string) => all().find((r) => r.id === id) || (QR || []).find((r) => r.id === id);
   const busy = new Set<string>();

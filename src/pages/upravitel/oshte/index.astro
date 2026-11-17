@@ -1,19 +1,14 @@
 ---
 /* /upravitel/oshte/: „Още“ на модула „Управител“ (design/pages-upravitel/more.html).
-   Тук е само рамката (src/modules/boss/frame.ts: горна лента, раздели, молив, профил, търсачка, без връзка, права) с
-   активен раздел „more“. Тялото на екрана го пише авторът на екрана в src/modules/upravitel/ и го закача по-долу. */
+   Рамката е src/modules/boss/frame.ts (горна лента, раздели, молив, профил, търсачка, без връзка, права); екранът е
+   src/modules/upravitel/more.ts (данните от ядрото през bossApi, src/client/api-boss.ts). */
 import Admin from "../../../layouts/Admin.astro";
 import "../../../modules/boss/boss.css";
+import "../../../modules/upravitel/upravitel.css";
 ---
 <Admin title="Още" page="boss-upravitel-more">
 <script>
-import { mountBoss } from "../../../modules/boss/frame.ts";
-mountBoss({ module: "upravitel", tab: "more", title: "Още" }).then((boss) => {
-  /* null: без сесия (към входа), друга роля (към нейното начало) или „Нямаш права за този екран.“ (вече е нарисувано) */
-  if (!boss) return;
-  /* ЕКРАНЪТ „Още“ СЕ ЗАКАЧА ТУК: boss.body държи скелета (boss.skeleton()), докато дойдат първите данни;
-     после boss.body.innerHTML = …, boss.loaded() след всяко успешно зареждане, boss.onRetry(…) за „Опитай пак“,
-     boss.onLive(…) за събитията на живо. API-то е описано най-горе във frame.ts. */
-});
+import { initMore } from "../../../modules/upravitel/more.ts";
+initMore();
 </script>
 </Admin>

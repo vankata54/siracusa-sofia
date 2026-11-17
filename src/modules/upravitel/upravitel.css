@@ -1,0 +1,17 @@
+/* Siracusa · „Управител“: само каквото екраните имат отделно в прототипа (design/pages-upravitel/hall.html, <style>).
+   Всичко останало е в src/modules/boss/boss.css (mg-*). Само токени; ширините с @container app. */
+.hl-sum{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:14px 2px 0; font-size:15px; font-weight:700; color:var(--muted)}
+.hl-sum b{color:var(--ink); font-size:17px; font-weight:800}
+.hl-zone-d{display:none}
+.hl-grid{display:grid; gap:0 24px; align-items:start}
+.hl-grid > .mg-blk{margin-top:28px}
+@container app (min-width:900px){
+  .hl-seg{display:none}
+  .hl-zone-d{display:block}
+  .hl-zone-p{display:none}
+  .hl-grid .mg-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@container app (min-width:1240px){
+  .hl-grid{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+  .hl-grid > .mg-blk{margin-top:20px}
+}

@@ -297,7 +297,7 @@ export function createApp(opts: AppOpts) {
     /* who may change what: core/settings.ts settingsNeed (the same check in the demo) */
     const s = await staff(c);
     settingsAllowed(s, b);
-    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays, noShowLimit: b.noShowLimit, callCooldown: b.callCooldown, callManager: b.callManager }, s.user.username));
+    return c.json(await core.settings.update({ kitchen: b.kitchen, resMinutes: b.resMinutes, celebrationPrice: b.celebrationPrice, earlyDays: b.earlyDays, noShowLimit: b.noShowLimit, callCooldown: b.callCooldown, callManager: b.callManager, qrManager: b.qrManager }, s.user.username));
   });
 
   /* ---------- rate limits (off in the test mode SC_PREVIEW_API=1) ---------- */
