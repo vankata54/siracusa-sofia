@@ -25,6 +25,7 @@ import * as eventsAdm from "./events-admin.ts";
 import * as custAdm from "./customers-admin.ts";
 import * as reportsMod from "./reports.ts";
 import * as staffAdm from "./staff-admin.ts";
+import * as kitchenMod from "./kitchen.ts";
 
 export * from "./types.ts";
 export * from "./repo.ts";
@@ -55,6 +56,10 @@ export { EVENT_MSG, type EventView, type EventInput } from "./events-admin.ts";
 export { UNDO_MS, CUST_MSG, type CustomerRow, type CustomerDetail, type FeedbackRow, type FeedbackStatus } from "./customers-admin.ts";
 export { REPORT_MSG, REPORT_MAX_DAYS, type Report, type ReportView, type Period } from "./reports.ts";
 export { STAFF_MSG, PIN_ROLES, RANK, type StaffRow } from "./staff-admin.ts";
+/* stage D, the kitchen (core/kitchen.ts; the screens import the types through src/client/api-kitchen.ts) */
+export { K_ALL, K_MSG, K_MISSING, KS_TEXT, DEFAULT_KITCHEN, TABLET_ALIVE_SEC, KITCHEN_BEAT_SEC, KITCHEN_UNDO_SEC, BUSY_REMIND_MIN, type KitchenConfig, type KSectionDef, type KState, type KTimer, type KKind,
+  type KSrc, type KLineView, type KSecState, type KOther, type KTicket, type KLater, type KBusy, type KConfigView, type KConfigPatch, type KQueue, type KAct, type KDoneRow, type KDone, type KTablet,
+  type KSummary, type KOutItem, type KOutRow, type KSoldOut, type KOutResult, type KBusyView, type KFound, type KSearch, type KOpt } from "./kitchen.ts";
 
 type Tail<F> = F extends (ctx: Ctx, ...a: infer A) => infer R ? (...a: A) => R : never;
 type Bound<M> = { [K in keyof M]: M[K] extends (ctx: Ctx, ...a: never[]) => unknown ? Tail<M[K]> : never };
@@ -126,6 +131,13 @@ export function createCore(ctx: Ctx) {
     }),
     reports: bind(ctx, { get: reportsMod.report }),
     staffAdmin: bind(ctx, { list: staffAdm.staffList, create: staffAdm.staffCreate, update: staffAdm.staffUpdate, setActive: staffAdm.staffSetActive, setPassword: staffAdm.staffSetPassword, setPin: staffAdm.staffSetPin, removePin: staffAdm.staffRemovePin }),
+    /* stage D, the kitchen: every function takes the staff member and checks the rights itself (core/kitchen.ts) */
+    kitchen: bind(ctx, {
+      config: kitchenMod.kitchenConfigView, setConfig: kitchenMod.kitchenSetConfig, queue: kitchenMod.kitchenQueue, start: kitchenMod.kitchenStart, line: kitchenMod.kitchenLine,
+      done: kitchenMod.kitchenDone, back: kitchenMod.kitchenBack, seen: kitchenMod.kitchenSeen, doneToday: kitchenMod.kitchenDoneToday, summary: kitchenMod.kitchenSummary,
+      soldOut: kitchenMod.kitchenSoldOut, setOut: kitchenMod.kitchenSetOut, busy: kitchenMod.kitchenBusy, setBusy: kitchenMod.kitchenSetBusy, beat: kitchenMod.kitchenBeat,
+      tablets: kitchenMod.kitchenTablets, search: kitchenMod.kitchenSearch,
+    }),
     audit: bind(ctx, { log: auditMod.audit, list: auditMod.listAudit }),
   };
 }

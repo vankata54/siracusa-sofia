@@ -9,7 +9,9 @@ import { audit } from "./audit.ts";
 import { byId, isOut, type Dish } from "../lib/data.ts";
 import { sofiaYmd } from "../lib/time.ts";
 
-export interface SoldOutDoc { id: "soldout"; date: string; out: Record<string, boolean>; updatedAt?: string }
+/** meta: who switched a dish and when (the kitchen's list "Изчерпано днес"): the account, and the name shown when the kitchen did it */
+export interface SoldOutMeta { at: string; by: string; as?: string }
+export interface SoldOutDoc { id: "soldout"; date: string; out: Record<string, boolean>; updatedAt?: string; meta?: Record<string, SoldOutMeta> }
 /** today's switches: dish id -> sold out (true) or back on (false); a dish without a switch follows the menu data */
 export type SoldOutToday = Record<string, boolean>;
 
@@ -27,7 +29,13 @@ export function outNow(x: Dish, today: SoldOutToday): boolean {
 }
 
 /** The kitchen or the admin turns "Изчерпано днес" on or off for one dish (also a lunch dish). */
-export async function setSoldOut(ctx: Ctx, dishId: string, out: boolean, actor = "system"): Promise<{ id: string; out: boolean }> {
+/** Who switched today's dishes and when (only the switches of today). */
+export async function soldOutMeta(ctx: Ctx): Promise<Record<string, SoldOutMeta>> {
+  const d = await ctx.repo.get<SoldOutDoc>(COL.settings, "soldout");
+  return d && d.date === sofiaYmd(nowDate(ctx)) && d.meta ? { ...d.meta } : {};
+}
+
+export async function setSoldOut(ctx: Ctx, dishId: string, out: boolean, actor = "system", as?: string): Promise<{ id: string; out: boolean }> {
   const id = String(dishId || "");
   if (!has(byId, id)) throw new CoreError("not_found", "Няма такова ястие в менюто.", 404);
   if (typeof out !== "boolean") throw Object.assign(new CoreError("invalid", "Изберете „Изчерпано днес“ или „Има“.", 422), { fields: { out: "Изберете „Изчерпано днес“ или „Има“." } });
@@ -35,7 +43,9 @@ export async function setSoldOut(ctx: Ctx, dishId: string, out: boolean, actor =
   /* the same as the data: no switch is needed (keeps the document small) */
   if (out === isOut(byId[id])) delete today[id];
   else today[id] = out;
-  const doc: SoldOutDoc = { id: "soldout", date: sofiaYmd(nowDate(ctx)), out: today, updatedAt: iso(ctx) };
+  const meta = await soldOutMeta(ctx);
+  if (out) meta[id] = { at: iso(ctx), by: actor, ...(as ? { as } : {}) }; else delete meta[id];
+  const doc: SoldOutDoc = { id: "soldout", date: sofiaYmd(nowDate(ctx)), out: today, updatedAt: iso(ctx), meta };
   await ctx.repo.put(COL.settings, doc);
   await audit(ctx, actor, out ? "menu.sold_out" : "menu.back", id);
   emit(ctx, "menu.soldout", { id, out }, { public: true });

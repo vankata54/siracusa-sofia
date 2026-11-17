@@ -13,6 +13,8 @@ export interface OrderLine { id: string; q: number; mods: string[]; extra: numbe
   /* ---- stage D, the modules (docs/MODULES-BRIEF.md, section 4); all optional, older orders have none ---- */
   /** the kitchen section at the time of the order (core/kitchen.ts) and the line's state there */
   sec?: string; ks?: "wait" | "cook" | "ready"; readyAt?: Iso;
+  /** "Започни" in the kitchen: when the section started this line ("готви се от 19:22") */
+  cookAt?: Iso;
   /** "Сервирах" (a table order): when the waiter served this line */
   servedAt?: Iso;
   /** marked "Изчерпано днес" after the order was accepted (the kitchen) */
@@ -80,6 +82,8 @@ export interface Order {
   problem?: { kind: "nobody" | "address" | "refused"; at: Iso; note?: string; solved?: "returned" | "delivered" | "" } | null;
   /** the manager's notes on the order ("Обади се на клиента": called, accepted without a sold-out dish ...) */
   staffNotes?: { at: Iso; by: string; text: string }[];
+  /** the kitchen: minutes added to the deadline because the order was placed while "Натоварено" was on (core/kitchen-base.ts) */
+  kBusy?: number;
   createdAt: Iso;
   updatedAt: Iso;
 }

@@ -19,6 +19,7 @@ import { eventsRoutes } from "./routes/events.ts";
 import { customersRoutes } from "./routes/customers.ts";
 import { reportsRoutes } from "./routes/reports.ts";
 import { staffAdminRoutes } from "./routes/staff-admin.ts";
+import { kitchenRoutes } from "./routes/kitchen.ts";
 import { siteRoutes as siteDataRoutes } from "./routes/site.ts";
 import { createPublisher, astroBuild, buildHash, type BuildFn, type Publisher } from "./publish.ts";
 import type { SiteBuild } from "../src/core/site-data.ts";
@@ -501,6 +502,8 @@ export function createApp(opts: AppOpts) {
   reportsRoutes(app, adm);
   staffAdminRoutes(app, adm);
   siteDataRoutes(app, { ...adm, publisher: () => publisher });
+  /* stage D, the kitchen (server/routes/kitchen.ts) */
+  kitchenRoutes(app, adm);
 
   app.all("/api/*", (c) => c.json({ error: "not_found", message: "Няма такъв адрес в API." }, 404));
 

@@ -29,6 +29,7 @@ import { byId, removedById, MENU_LUNCH_DATE, ORDER_RULES, type Zone } from "../l
 import { liveZone, zoneRule } from "./zones.ts";
 import { liveOffers, offerApplies, orderOfferContext } from "./offer-rules.ts";
 import { hhmm, normPhone } from "../lib/format.ts";
+import { stampKitchen } from "./kitchen-base.ts";
 
 export const FIRST_ORDER_NO = 1042;
 export const OFFER_OFF_MSG = "Тази отстъпка е изключена в момента.";
@@ -242,11 +243,14 @@ export async function createOrder(ctx: Ctx, input: OrderInput): Promise<Order> {
       key: randomKey(8), discKind: P.discKind, ...(channel === "phone" && input.by ? { by: String(input.by) } : {}), ...(useCode ? { code: codeIn.toUpperCase(), codeDisc: P.codeDisc } : {}), ...(P.discKind === "profile" ? { profileDisc: P.profileDisc } : {}),
       times: { accepted: ts.toISOString() }, createdAt: ts.toISOString(), updatedAt: ts.toISOString(),
     };
+    /* the kitchen (core/kitchen.ts): every line gets its section and ks "wait"; "+20 мин" only for an order placed under "Натоварено" */
+    await stampKitchen(ctx, o, settings.kitchen.busy ? settings.kitchen.etaBusyMin - settings.kitchen.etaMin : 0);
     await ctx.repo.put(COL.orders, o);
     return o;
   };
   const o = ctx.repo.transaction ? await ctx.repo.transaction(make) : await make();
   emit(ctx, "order.created", { no: o.no, mode: o.mode, total: o.total, status: o.status, channel: o.channel });
+  emit(ctx, "order.new", { no: o.no, channel: o.channel, mode: o.mode, table: o.table || null, session: o.session || null, sched: o.sched, slot: o.slot || "asap", secs: [...new Set(o.lines.map((l) => l.sec))] });
   return o;
 }
 
@@ -432,6 +436,7 @@ export async function changeOrder(ctx: Ctx, id: string, patch: OrderChange): Pro
       note: p.note !== undefined ? (String(p.note).trim().slice(0, 2000) || undefined) : o.note,
       changes: (o.changes || 0) + 1, changedAt: now, updatedAt: now,
     });
+    await stampKitchen(ctx, o);
     await ctx.repo.put(COL.orders, o);
     return o;
   };
