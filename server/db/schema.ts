@@ -69,4 +69,12 @@ export const loginFails = sqliteTable("login_fails", { ...doc });
 /* admin part 3: voucher codes SCV- ("Нови кодове" in "Оферти и ваучери"); the zones, hall, events, offers, QR codes are
    documents in `settings` (core/site-data.ts, core/hall.ts) */
 export const vouchers = sqliteTable("vouchers", { ...doc, used: text("used_by") });
+/* stage D, the modules (docs/MODULES-BRIEF.md): sittings at the tables, staff shifts, trusted devices (PIN sign-in), fuel,
+   the drivers' questions to the manager, small live documents of a module */
+export const tableSessions = sqliteTable("table_sessions", { ...doc, tableId: text("table_id"), status: text("status") }, (t) => [index("tsess_table").on(t.tableId, t.status)]);
+export const shifts = sqliteTable("shifts", { ...doc, userId: text("user_id"), role: text("role"), status: text("status") }, (t) => [index("shift_user").on(t.userId, t.status)]);
+export const devices = sqliteTable("devices", { ...doc });
+export const fuelLogs = sqliteTable("fuel_logs", { ...doc, userId: text("user_id") });
+export const driverAsks = sqliteTable("driver_asks", { ...doc, status: text("status") });
+export const moduleState = sqliteTable("module_state", { ...doc });
 export const counters = sqliteTable("counters", { name: text("name").primaryKey(), value: integer("value").notNull() });

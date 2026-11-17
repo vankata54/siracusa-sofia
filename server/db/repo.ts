@@ -22,12 +22,17 @@ const TABLES: Record<string, Cols> = {
   push_subs: { order_no: (d) => d.orderNo },
   notes_seen: {}, noshow_blocks: {}, login_fails: {},
   vouchers: { used_by: (d) => d.usedBy || null },
+  /* stage D, the modules */
+  table_sessions: { table_id: (d) => d.table, status: (d) => d.status },
+  shifts: { user_id: (d) => d.user, role: (d) => d.role, status: (d) => d.status },
+  devices: {}, fuel_logs: { user_id: (d) => d.user }, driver_asks: { status: (d) => d.status }, module_state: {},
 };
 /* where-keys that map 1:1 to a column (to filter in SQL); the rest is filtered in JS */
 const WHERE: Record<string, Record<string, string>> = {
   orders: { status: "status", phone: "phone", mode: "mode" }, reservations: { date: "date", time: "time", table: "table_id", phone: "phone", status: "status" },
   office_orders: { code: "code" }, subscriptions: { email: "email" }, users: { phone: "phone" }, staff_users: { username: "username" },
   sessions: { userId: "user_id" }, ratings: { orderNo: "order_no" }, feedback_notes: { status: "status", module: "module" }, push_subs: { orderNo: "order_no" },
+  table_sessions: { table: "table_id", status: "status" }, shifts: { user: "user_id", role: "role", status: "status" }, fuel_logs: { user: "user_id" }, driver_asks: { status: "status" },
 };
 const val = (v: unknown) => (typeof v === "boolean" ? Number(v) : v === undefined ? null : v);
 

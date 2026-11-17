@@ -38,13 +38,18 @@ export interface Ctx {
 
 /** Who may receive a real-time event: staff always; plus everyone ("public", data without personal details),
     or only the subscribers of one order / one office order (subscription by key). */
-export interface Audience { public?: boolean; order?: string; office?: string }
+export interface Audience { public?: boolean; order?: string; office?: string;
+  /** the guests of one sitting at a table (core/floor.ts: the id of the table session) */
+  table?: string }
 
 export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",
   subscriptions: "subscriptions", customers: "users", smsCodes: "sms_codes", sessions: "sessions", ratings: "ratings",
   notes: "feedback_notes", staff: "staff_users", roles: "roles", audit: "audit_log", settings: "settings", feedback: "feedback", bonusUsed: "bonus_used",
   push: "push_subs", notesSeen: "notes_seen", blocks: "noshow_blocks", loginFails: "login_fails", vouchers: "vouchers",
+  /* stage D, the modules: sittings at the tables (QR and waiter), the shifts of the staff (waiter, kitchen, driver),
+     trusted devices (PIN sign-in), fuel entries, the drivers' questions to the manager, small live documents of a module */
+  tableSessions: "table_sessions", shifts: "shifts", devices: "devices", fuel: "fuel_logs", asks: "driver_asks", modState: "module_state",
 } as const;
 
 export function nowDate(ctx: Ctx): Date { return ctx.now ? ctx.now() : new Date(); }

@@ -9,7 +9,18 @@ export const PAY_LABEL: Record<PayMethod, string> = { cash: "В брой", card:
 export type Channel = "web" | "qr" | "waiter" | "phone" | "office";
 
 /** cat and course: from the menu at the time of the order (the tracking page draws the step texts without the menu chunk) */
-export interface OrderLine { id: string; q: number; mods: string[]; extra: number; name?: string; unit?: number; cat?: string; course?: string }
+export interface OrderLine { id: string; q: number; mods: string[]; extra: number; name?: string; unit?: number; cat?: string; course?: string;
+  /* ---- stage D, the modules (docs/MODULES-BRIEF.md, section 4); all optional, older orders have none ---- */
+  /** the kitchen section at the time of the order (core/kitchen.ts) and the line's state there */
+  sec?: string; ks?: "wait" | "cook" | "ready"; readyAt?: Iso;
+  /** "Сервирах" (a table order): when the waiter served this line */
+  servedAt?: Iso;
+  /** marked "Изчерпано днес" after the order was accepted (the kitchen) */
+  out?: boolean;
+  /** a note for the kitchen on this line; the weight of a `per100` steak in grams; the guest of the table ("Гост 1") */
+  note?: string; grams?: number; guest?: string;
+  /** the payment (of the table's bill) that covered this line */
+  paid?: string }
 export interface Order {
   id: string;            // = String(no)
   no: string;            // "1042"
@@ -59,6 +70,16 @@ export interface Order {
   reason?: string;
   /** a phone order: the staff member who took it */
   by?: string;
+  /* ---- stage D, the modules (docs/MODULES-BRIEF.md, section 4) ---- */
+  /** a table order: the sitting at the table (core/floor.ts), the bill it belongs to ("Обща сметка" / "Гост 1"),
+      and "waiter" when a QR order went through the waiter's confirmation */
+  session?: string; bill?: string; via?: "waiter" | "";
+  /** delivery: the driver's username, the course (one trip) it rides in, "Взех" / "Пристигнах" (ISO) and a problem
+      the driver reported ("nobody" | "address" | "refused") */
+  driver?: string; course?: string; pickedAt?: Iso; arrivedAt?: Iso;
+  problem?: { kind: "nobody" | "address" | "refused"; at: Iso; note?: string; solved?: "returned" | "delivered" | "" } | null;
+  /** the manager's notes on the order ("Обади се на клиента": called, accepted without a sold-out dish ...) */
+  staffNotes?: { at: Iso; by: string; text: string }[];
   createdAt: Iso;
   updatedAt: Iso;
 }
@@ -138,7 +159,9 @@ export interface Rating {
 export interface Settings {
   id: "main";
   /** busyAt: when "Натоварено" was turned on (ISO; set by the core, null when off) */
-  kitchen: { busy: boolean; etaMin: number; etaBusyMin: number; busyAt?: string | null };
+  kitchen: { busy: boolean; etaMin: number; etaBusyMin: number; busyAt?: string | null;
+    /** who turned "Натоварено" on (the name shown: "Управител", "Кухня · Скара", "Главен готвач"); null when off */
+    busyBy?: string | null };
   /** how long a reservation holds the table, minutes (default 120, owner to confirm) */
   resMinutes: number;
   /** the celebration calculator: show an estimate to the guest, or only "Ще ви изпратим оферта" (OPEN-QUESTIONS 3) */
@@ -150,6 +173,8 @@ export interface Settings {
   /** the QR table: minutes between two same calls (3) and to the manager after (5) (OPEN-QUESTIONS, modules 1) */
   callCooldown: number;
   callManager: number;
+  /** a QR order nobody confirmed goes to the manager after this many minutes (decision 17.11.2026, answer 29: 3) */
+  qrManager?: number;
   updatedAt?: Iso;
 }
 

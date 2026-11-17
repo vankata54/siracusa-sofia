@@ -58,9 +58,11 @@ export interface AppOpts {
 }
 
 /* a real-time subscriber: staff (cookie) get everything; others only public events and the order / office they asked for */
-interface Sub { send: (type: string, data: unknown) => void; staff: boolean; orders: Set<string>; offices: Set<string> }
-export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices">, to: Audience): boolean {
-  return s.staff || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office));
+interface Sub { send: (type: string, data: unknown) => void; staff: boolean; orders: Set<string>; offices: Set<string>;
+  /** the table sessions (sittings) this subscriber is a guest of (core/floor.ts) */
+  tables?: Set<string> }
+export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices" | "tables">, to: Audience): boolean {
+  return s.staff || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office)) || (!!to.table && !!s.tables && s.tables.has(to.table));
 }
 
 /* compression for text responses (HTML, JS, CSS, SVG, JSON): brotli when the browser takes it, else gzip */
