@@ -462,6 +462,8 @@ html.mg-hidepen .mg-penslot{visibility:hidden}
   .mg-stats .mg-stat:last-child{grid-column:1/-1}
 }
 @container app (max-width:440px){
+  .mg-rrow{grid-template-columns:64px minmax(0,1fr)}
+  .mg-rrow > .pill,.mg-rrow > .mg-tag{grid-column:2; justify-self:start; margin-top:6px}
   .mg-wrow{grid-template-columns:44px minmax(0,1fr); padding:12px 14px}
   .mg-wrow .wa{grid-column:2; margin-top:6px}
 }

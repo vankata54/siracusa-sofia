@@ -113,7 +113,7 @@ MG.shiftOver = function(){ return A.minutes() >= 1380; };
 MG.counts = function(){ var ts = MG.tableStates(), s = MG.shift(), p = MG.problems().filter(function(x){ return !x.done; }), w = MG.waits(), nm = A.minutes(), end = Math.min(nm + 120, 1380);
   var dup = p.filter(function(x){ return x.kind === "out" && w.orders.some(function(o){ return o.no === x.no; }); }).length;
   return {tables:ts.length, seated:ts.filter(function(x){ return !!x.seated; }).length, salon:ts.filter(function(x){ return x.seated && x.zone === "salon"; }).length, garden:ts.filter(function(x){ return x.seated && x.zone === "garden"; }).length,
-    inWork:A.ordersInWork().length, late:A.orders().filter(function(o){ return SH.late(o) && !(s.ack || {})["late:" + o.no]; }).length, lateSeen:A.orders().filter(function(o){ return SH.late(o) && (s.ack || {})["late:" + o.no]; }).length, calls:(s.calls || []).filter(function(c){ return !c.taken; }).length,
+    inWork:A.ordersInWork().length, late:A.orders().filter(SH.late).length, lateOpen:A.orders().filter(function(o){ return SH.late(o) && !(s.ack || {})["late:" + o.no]; }).length, lateSeen:A.orders().filter(function(o){ return SH.late(o) && (s.ack || {})["late:" + o.no]; }).length, calls:(s.calls || []).filter(function(c){ return !c.taken; }).length,
     res2:MG.resAhead().filter(function(r){ var m = MG.resMin(r); return m >= nm && m <= end; }).length, resEnd:end, closed:nm >= 1380 || nm < 600, probs:p.length, waits:w.n, now:p.length + w.n - dup}; };
 
 /* ---------- действия (пишат в ключовете на админа и в дневника; всяко с „Отмени“) ---------- */

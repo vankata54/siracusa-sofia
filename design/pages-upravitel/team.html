@@ -56,10 +56,10 @@ function kitchen(){ var k = A.settings().kitchen, secs = MG.kitchen();
 var POS = {home:[150,130], "Дружба 2":[214,196], "Дружба 1":[156,62], "Гара Искър":[66,64], "НПЗ Искър":[290,76], "Бусманци":[302,206], "Горубляне":[104,236], out:[40,182]};
 /* надписите на кварталите: под или над елипсата, далеч от маркерите и пътя; шрифтът е 19 в viewBox 360, т.е. поне 14 px на 284 px ширина (360) */
 var LBL = {"Дружба 1":[0,-36], "Дружба 2":[0,48], "НПЗ Искър":[0,48], "Бусманци":[0,-36], "Горубляне":[0,48], "Гара Искър":[0,46]};
-function scheme(dr){ var P0 = POS.home, pts = dr.road.map(function(o, i){ var p = POS[o.zone] || POS.out; return [p[0] + i * 6, p[1] + i * 4]; }), path = "M" + P0.join(","), prev = P0;
+function scheme(dr){ var P0 = POS.home, pts = dr.road.map(function(o){ return (POS[o.zone] || POS.out).slice(); }), path = "M" + P0.join(","), prev = P0;
   pts.forEach(function(p){ var mx = (prev[0] + p[0]) / 2 + (p[1] - prev[1]) * .12, my = (prev[1] + p[1]) / 2 - (p[0] - prev[0]) * .12; path += " Q" + mx.toFixed(1) + "," + my.toFixed(1) + " " + p.join(","); prev = p; });
   /* колата: на пътя към първия адрес, по-близо до средата, за да не стои върху S или спирката */
-  var o0 = dr.road[0], dd = Math.hypot(pts[0][0] - P0[0], pts[0][1] - P0[1]), f = dd < 110 ? .5 : Math.min(.62, Math.max(.38, MG.secSince(o0.times && o0.times.on_way || o0.ts) / 60 / 18)), car = [P0[0] + (pts[0][0] - P0[0]) * f, P0[1] + (pts[0][1] - P0[1]) * f], last = pts[pts.length - 1];
+  var o0 = dr.road[0], f = .5, car = [P0[0] + (pts[0][0] - P0[0]) * f, P0[1] + (pts[0][1] - P0[1]) * f], last = pts[pts.length - 1];
   var moped = (window.SC_ICONS || {})["moped"] || "";
   return '<div class="mg-scheme"><div class="in"><svg viewBox="0 0 360 292" role="img" aria-label="Схема на курса на ' + esc(dr.d.name) + ': ресторантът, ' + A.plural(dr.road.length, "адрес", "адреса") + ' по ред и колата. Не е карта; списъкът е същият.">' +
     Object.keys(LBL).map(function(z){ var p = POS[z]; return '<ellipse class="sv-zone" cx="' + p[0] + '" cy="' + p[1] + '" rx="50" ry="28"/>'; }).join("") +
@@ -88,7 +88,7 @@ MG.onRender(render);
 /* ---------- „Смени масите“ (решение 15.11: управителят може; известие до сервитьора) ---------- */
 function changeSheet(wid){ var s = MG.shift(), w = s.waiters.filter(function(x){ return x.id === wid; })[0], other = s.waiters.filter(function(x){ return x.id !== wid; })[0], sel = w.tables.slice(), T = MG.tableStates();
   function grid(z){ return '<h3>' + MG.ZONE[z] + '</h3><div class="mg-tsel">' + T.filter(function(x){ return x.zone === z; }).map(function(x){ var on = sel.indexOf(x.n) > -1, was = w.tables.indexOf(x.n) > -1, ow = MG.waiterOf(x.n, s);
-    return '<button type="button" data-n="' + x.n + '" aria-pressed="' + on + '" class="' + (on !== was ? 'chg' : '') + '" aria-label="Маса ' + x.n + ', ' + (on ? 'негова' : ow ? esc(ow.name) : 'свободна') + '"><b>' + x.n + '</b><small>' + (on ? 'негова' : ow ? esc(ow.name) : 'свободна') + '</small></button>'; }).join("") + '</div>'; }
+    return '<button type="button" data-n="' + x.n + '" aria-pressed="' + on + '" class="' + (on !== was ? 'chg' : '') + '"><b><span class="vh">Маса </span>' + x.n + '</b><small>' + (on ? 'избрана' : ow ? esc(ow.name).replace(" ", "\u00a0") : 'свободна') + '</small></button>'; }).join("") + '</div>'; }
   function body(){ var add = sel.filter(function(n){ return w.tables.indexOf(n) < 0; }), rem = w.tables.filter(function(n){ return sel.indexOf(n) < 0; });
     return '<p>Докосни маса, за да я дадеш на ' + esc(w.name) + ' или да я махнеш. Махнатите отиват при ' + esc(other ? other.name : "колегата") + '.</p>' + grid("salon") + grid("garden") +
       (sel.length ? '' : '<p class="mg-err" id="mg-tablerr" role="alert">' + ic("warning", 18) + 'Записът е спрян: ' + esc(w.name) + ' трябва да има поне една маса.</p>') + '<p class="mg-note" role="status">' + ic("info", 16) + '<span>' + (add.length || rem.length ? (add.length ? 'Добавени: ' + add.join(", ") + '. ' : '') + (rem.length ? 'Махнати: ' + rem.join(", ") + '. ' : '') : 'Още нищо не е сменено. ') + 'Сервитьорът получава известие на телефона.</span></p>'; }
