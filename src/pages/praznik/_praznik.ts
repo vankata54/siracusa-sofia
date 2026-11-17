@@ -9,7 +9,6 @@
    #<type> (from /sabitia/) preselects the occasion. Only in preview (?preview=1): the panel "Само в прегледа"
    (price for the guest, -5% example, send error / offline) and the review states #demo-2, #demo-custom, #demo-3, #demo-sent. */
 import { SC } from "../../client/sc.ts";
-import "../../client/sc-sheet.ts"; /* SC.sheet() */
 import { api, ApiError } from "../../client/api.ts";
 import { sofiaYmd, addDaysYmd } from "../../lib/time.ts";
 import { previewPanel, callBtn, OFFLINE } from "../../lib/ui.ts";
@@ -21,6 +20,13 @@ import {
 
 interface Proto { price: "show" | "offer"; send: "ok" | "error" | "offline"; early: boolean }
 type MenuMod = typeof import("./_menu.ts");
+
+/* SC.sheet() ("Вашият празник", the only sheet of this page) is NOT a static import here: its code would make the first JS
+   file of the page bigger, and that file is downloaded before the browser even sees the files it imports (LCP +65..108 ms
+   on a phone over HTTP/1.1, decision 17.11.2026). The shared file of the sheet loads after the page has drawn itself
+   (the load event), and at once when a finger or the keyboard is on the button; the button waits for it (loadModule). */
+const sheetChunk = () => import("../../client/sc-sheet.ts");
+const sheetReady = (): Promise<unknown> => SC.loadModule(sheetChunk);
 
 export function start(): void {
   const { ic, esc } = SC;
@@ -237,13 +243,19 @@ export function start(): void {
     if (S.step === 2 && S.menu === "custom" && !M) { loadMenu().then(() => { updPicker(); onNext(); }).catch(() => { /* the picker shows the error */ }); return; }
     if (S.step < 3) { if (validate()) go(S.step + 1); } else submit();
   }
+  /* the sheet of "Вашият празник": after the page has drawn itself, and at once on a finger / the keyboard on the button */
+  const warmSheet = (e: Event) => { if ((e.target as Element | null)?.closest?.("[data-sum]")) sheetReady().catch(() => { /* tried again on the tap */ }); };
+  document.addEventListener("pointerdown", warmSheet, true);
+  document.addEventListener("focusin", warmSheet, true);
+  const later = () => { sheetReady().catch(() => { /* tried again on the tap */ }); };
+  if (document.readyState === "complete") setTimeout(later, 0); else addEventListener("load", later, { once: true });
   document.addEventListener("click", (e) => {
     const t = (e.target as HTMLElement).closest<HTMLElement>("button, a"); if (!t) return;
     if (!main.contains(t) && !SC.ov.contains(t)) return;
     const d = t.dataset;
     if (t.hasAttribute("data-next")) { const sw = t.closest(".sheetwrap"); if (sw) sw.querySelector<HTMLElement>("[data-close]")!.click(); onNext(); return; }
     if (t.hasAttribute("data-back")) { if (S.step > 1) go(S.step - 1); return; }
-    if (t.hasAttribute("data-sum")) { SC.sheet({ title: "Вашият празник", html: summaryHTML(view(), true) + '<button class="pill pill-red pill-lg pill-block" type="button" data-next style="margin-top:16px">' + nextLabel(view(), false) + "</button>" }); return; }
+    if (t.hasAttribute("data-sum")) { void sheetReady().then(() => SC.sheet({ title: "Вашият празник", html: summaryHTML(view(), true) + '<button class="pill pill-red pill-lg pill-block" type="button" data-next style="margin-top:16px">' + nextLabel(view(), false) + "</button>" })).catch(() => { /* no network: the next tap tries again */ }); return; }
     if (d.g) { S.guests = Math.max(G_MIN, Math.min(G_MAX, S.guests + +d.g)); setErr("e-guests"); changed(); return; }
     if (d.gset) { S.guests = +d.gset; setErr("e-guests"); changed(); return; }
     if (d.pe) { P.early = d.pe === "1"; saveProto(); renderProto(); updEarly(); updPkgs(); updSummary(); protoEl.querySelector<HTMLElement>('[data-pe="' + d.pe + '"]')?.focus(); return; }

@@ -61,7 +61,8 @@ describe("runtime size: what the bundler puts into the shared chunk", () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const callers: string[] = [], missing: string[] = [];
-    const IMPORTS_SHEET = /^\s*import\s+"[./]+(?:client\/)?sc-sheet\.ts";/m;
+    /* a static import (the page's own copy, scripts/sheet-copies.mjs) or import() of the shared file (/praznik/: after load) */
+    const IMPORTS_SHEET = /^\s*import\s+"[./]+(?:client\/)?sc-sheet\.ts";|import\("[./]+(?:client\/)?sc-sheet\.ts"\)/m;
     (function walk(d: string) {
       for (const f of fs.readdirSync(d)) {
         const p = path.join(d, f), rel = p.split(path.sep).join("/");
@@ -82,19 +83,6 @@ describe("runtime size: what the bundler puts into the shared chunk", () => {
     expect(sc).not.toMatch(/sc-sheet\.ts"/);
     expect(sc).toContain('import("./suggest-open.ts")');
     expect(fs.readFileSync("astro.config.mjs", "utf8")).not.toMatch(/sc-sheet/);
-  });
-  it("the menu constants (TAGS, FILTERS, COURSE_NAME) have one importer, lib/data.ts: they stay in the chunk of the menu", async () => {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-    const users: string[] = [];
-    (function walk(d: string) {
-      for (const f of fs.readdirSync(d)) {
-        const p = path.join(d, f);
-        if (fs.statSync(p).isDirectory()) walk(p);
-        else if (/\.(ts|astro|mjs)$/.test(f) && /from\s+"[^"]*consts-menu\.ts"/.test(fs.readFileSync(p, "utf8"))) users.push(p.split(path.sep).join("/"));
-      }
-    })("src");
-    expect(users).toEqual(["src/lib/data.ts"]);
   });
 });
 

@@ -3,8 +3,12 @@
    WHO LOADS IT:
      - a script that opens a sheet itself imports this file (a static import, so SC.sheet() answers at once, as before):
          import "../../client/sc-sheet.ts";
+       scripts/sheet-copies.mjs puts a copy into that page's own chunk (no extra file before the first paint);
      - the runtime's own sheets ("Още", "Бисквитки", the assistant, "Предложи подобрение") get it with their on-demand
-       chunks (sc-ui.ts, suggest.ts), which start loading already on pointerdown / focus of the button.
+       chunks (sc-ui.ts, suggest.ts), which start loading already on pointerdown / focus of the button; there it is the
+       shared file sc-sheet.*.js.
+   So one page can run this module twice (its copy and, after "Още", the shared file): only the first sets SC.sheet and
+   listens for Escape, the second does nothing.
    tests/unit/runtime.test.ts checks that every file that calls .sheet( imports this file. */
 import { SC, visible, type SheetOpts, type Sheet } from "./sc.ts";
 import { esc } from "../lib/format.ts";
@@ -110,11 +114,12 @@ export function sheet(opts: SheetOpts): Sheet {
   return { el: w, close };
 }
 
-SC.sheet = sheet;
-
-/* Escape closes the sheet on top */
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
-  const w = ov.querySelectorAll(".sheetwrap.on");
-  if (w.length) (w[w.length - 1].querySelector("[data-close]") as HTMLElement | null)?.click();
-});
+if (!SC.sheet) {
+  SC.sheet = sheet;
+  /* Escape closes the sheet on top */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const w = ov.querySelectorAll(".sheetwrap.on");
+    if (w.length) (w[w.length - 1].querySelector("[data-close]") as HTMLElement | null)?.click();
+  });
+}

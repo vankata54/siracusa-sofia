@@ -10,8 +10,7 @@ src/
   styles/               tokens.css + components.css (1:1 от design/ds/sc.css), preview.css (само за рамките в админа)
   data/                 menu.json (генериран от design/data/menu.js, не се пипа на ръка), menu.ts (типове)
   lib/                  чиста логика, без DOM; работи в Node и в браузъра
-    consts.ts           RESTAURANT, ZONES, ORDER_RULES, ALLERGENS ... (без менюто, малко; част от общия runtime)
-    consts-menu.ts      TAGS, FILTERS, COURSE_NAME: само през data.ts (остават във файла на менюто); event-cats.ts: EVENT_CATS
+    consts.ts           RESTAURANT, ZONES, ORDER_RULES, TAGS, ALLERGENS, FILTERS, EVENT_CATS ... (без менюто, малко; част от общия runtime)
     data.ts             менюто: items, byId, cats, catById, inCat, isOut, lunch, lunchIsToday (+ всичко от consts.ts)
     time.ts status.ts   now, minutes, setClock; state, status, eta, lastSaturday
     format.ts           fmt (10,22 €), esc, plural, dateLong („сб, 28 ноември“), dateShort, hhmm, normPhone
@@ -25,7 +24,7 @@ src/
                         бележки от молива, персонал и роли, дневник); хранилище по интерфейс Repo
   client/
     sc.ts               браузърният runtime на всяка страница (window.SC), БЕЗ менюто: под 30 KB (сега около 24 KB)
-    sc-sheet.ts         SC.sheet() и капанът на фокуса: внася го само скрипт, който отваря лист
+    sc-sheet.ts         SC.sheet() и капанът на фокуса: внася го само скрипт, който отваря лист (раздел 3а)
     sc-menu.ts          същият SC + менюто (SC.items, SC.byId, SC.dishCard, SC.suggest, SC.offers ...)
     api.ts              един клиент за всички екрани (сървър или демо)
   layouts/Base.astro    SEO head + обвивката на всяка страница
@@ -100,9 +99,9 @@ import { cats, inCat, dishCard, ic, url } from "../../lib/index.ts";
 - **`SC.url.dish("id")` без менюто** не знае категорията и връща менюто. Подай обект (`SC.url.dish(x)`) или внеси `sc-menu.ts`.
 - **Иконите:** на сървъра всяка икона се вгражда в HTML-а (Base зарежда пълния набор само там). В браузъра `SC.ic(име)` знае само регистрираните: тези от общия runtime (x, check, caret-right, phone, question), от `render.ts` (plus, fire, sparkle, leaf, pepper, clock) и тези, които страницата е внесла с `import "../lib/icons/<име>.ts"`. Непознатата икона излиза като „?“. Ако наистина трябват много, `await SC.icons()` зарежда всички (отделен файл 64 KB, само при нужда).
 - **Асистентът** се зарежда при първото отваряне.
-- **Листът (`SC.sheet`)** не е в общия runtime. Скрипт, който отваря лист, добавя `import "../client/sc-sheet.ts";` (статичен внос: `SC.sheet()` отговаря веднага, както преди). Без този ред `SC.sheet` липсва; unit тестът `runtime.test.ts` проверява всеки файл с `.sheet(`. Листовете на самия runtime („Още“, „Бисквитки“, асистентът, „Предложи подобрение“) го зареждат сами при първото натискане (от `pointerdown`).
-- **Какво влиза в общия файл `sc.*.js`:** модулите от списъка `RUNTIME` в `astro.config.mjs` и ВСИЧКО, което те внасят (и обикновен `export … from`). Затова модул от runtime-а внася само модули от runtime-а (пази го unit тест); останалото идва с `import()` или от страницата. `TAGS`, `FILTERS`, `COURSE_NAME` се внасят само от `lib/data.ts` (така остават във файла на менюто), `EVENT_CATS` от `lib/event-cats.ts`.
-- **Нов малък общ файл = нова заявка.** Модул, внесен от няколко страници с различни файлове, става отделен файл. Преди да изнесеш нещо от runtime-а, виж дали страниците не получават нов файл (сравни броя JS файлове на страница преди и след).
+- **Листът (`SC.sheet`)** не е в общия runtime. Скрипт, който отваря лист, добавя `import "../client/sc-sheet.ts";` (статичен внос: `SC.sheet()` отговаря веднага, както преди); `scripts/sheet-copies.mjs` слага копие на кода в JS файла на страницата, без отделна заявка (`/menu/` и категориите делят едно копие във файла на `_menu.ts`). Без този ред `SC.sheet` липсва; unit тестът `runtime.test.ts` проверява всеки файл с `.sheet(`. Листовете на самия runtime („Още“, „Бисквитки“, асистентът, „Предложи подобрение“) и `/praznik/` зареждат общия файл `sc-sheet.*.js` по-късно (`import()`: при натискане, от `pointerdown`/фокус, а `/praznik/` и след `load`). Общият файл никога не е в първото зареждане на страница: build-ът пада (`sheetOnFirstLoad` в `scripts/build-checks.mjs`).
+- **Какво влиза в общия файл `sc.*.js`:** модулите от списъка `RUNTIME` в `astro.config.mjs` и ВСИЧКО, което те внасят (и обикновен `export … from`). Затова модул от runtime-а внася само модули от runtime-а (пази го unit тест); останалото идва с `import()` или от страницата.
+- **Нов малък общ файл = нова заявка; по-голям първи файл = по-късно начало.** Модул, внесен от няколко страници с различни файлове, става отделен файл. А първият JS файл на страницата се сваля, преди браузърът да види файловете, които той внася: всеки байт там отлага цялата страница. Преди да изнесеш нещо от runtime-а, сравни броя и размера на JS файловете на всяка страница преди и след, и Lighthouse на телефон (поне 8 пускания, на смени, при HTTP/1.1 и HTTP/2; решение 17.11.2026).
 
 ## 4. Пренасяне на скрипт от прототипа
 
@@ -113,7 +112,7 @@ import { cats, inCat, dishCard, ic, url } from "../../lib/index.ts";
 3. **Скролът е на документа.** `SC.scroller.scrollTop`, `scrollTo`, `scrollBy`, `addEventListener("scroll")` и `getBoundingClientRect()` работят чрез тънка обвивка, но в нов код пиши `window.scrollY` / `window.scrollTo`. В `IntersectionObserver` смени `root: SC.scroller` с `root: null` (задължително, иначе не работи).
 4. Часът: `SC.state()`, `SC.minutes()` и т.н. четат часа в София; в преглед `?preview=1&t=21:30`. Слушай `document.addEventListener("sc:tick", ...)`, ако страницата трябва да се смени, когато мине часът.
 5. Нищо от `previewBar`/`pv-*` (панелът „Само в прототипа“ остава само ако страницата има симулирани състояния; пази го зад `SC.preview`).
-6. Типизиран импорт вместо глобала: `import { SC } from "../client/sc-menu.ts"` (с менюто) или `"../client/sc.ts"` (без). `SC.items`, `SC.byId`, `SC.cats`, `SC.inCat`, `SC.lunch`, `SC.art`, `SC.pic`, `SC.dishCard`, `SC.suggest`, `SC.offers`, `SC.TAGS`, `SC.FILTERS`, `SC.COURSE_NAME` съществуват само след `sc-menu.ts`. `SC.sheet` идва със `sc-sheet.ts` (раздел 3а). `SC.EVENT_CATS` и `SC.fromProto` вече няма: внасят се от `lib/event-cats.ts` и `lib/routes-proto.ts`.
+6. Типизиран импорт вместо глобала: `import { SC } from "../client/sc-menu.ts"` (с менюто) или `"../client/sc.ts"` (без). `SC.items`, `SC.byId`, `SC.cats`, `SC.inCat`, `SC.lunch`, `SC.art`, `SC.pic`, `SC.dishCard`, `SC.suggest`, `SC.offers` съществуват само след `sc-menu.ts`. `SC.sheet` идва със `sc-sheet.ts` (раздел 3а). `SC.fromProto` вече няма: внася се от `lib/routes-proto.ts`.
 7. Всяко `SC.ic("име")` в пренесения скрипт: провери, че иконата е внесена (`import "../lib/icons/име.ts"`).
 
 ## 5. Данни и действия: `api`

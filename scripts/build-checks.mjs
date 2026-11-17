@@ -57,6 +57,29 @@ function htmlFiles(dir) {
   return out;
 }
 
+/** Pages whose FIRST load (the entry scripts of the HTML and everything they import statically) contains the shared file
+    of the sheet (_astro/sc-sheet.*.js): one more request before the first paint (decision 17.11.2026). It must load only
+    after a tap or after the page has drawn itself; a page that opens a sheet at once has its own copy
+    (scripts/sheet-copies.mjs). @returns {string[]} */
+export function sheetOnFirstLoad(dir) {
+  const a = path.join(dir, "_astro");
+  if (!fs.existsSync(a)) return [];
+  const deps = new Map();
+  /* static imports only: import{…}from"./x.js", import"./x.js", export…from"./x.js" (never import("./x.js")) */
+  const imports = (f) => {
+    if (!deps.has(f)) {
+      const p = path.join(a, f), s = fs.existsSync(p) ? fs.readFileSync(p, "utf8") : "";
+      deps.set(f, [...s.matchAll(/(?:import|export)\s*(?:[^"'()]*?from\s*)?["']\.\/([\w.\-@]+\.js)["']/g)].map((m) => m[1]));
+    }
+    return deps.get(f);
+  };
+  return htmlFiles(dir).filter((p) => {
+    const seen = new Set(), go = (f) => { if (seen.has(f)) return; seen.add(f); imports(f).forEach(go); };
+    for (const m of fs.readFileSync(p, "utf8").matchAll(/<script[^>]*\ssrc="[^"]*_astro\/([\w.\-@]+\.js)"/g)) go(m[1]);
+    return [...seen].some((f) => /^sc-sheet\./.test(f));
+  }).map((p) => path.relative(dir, p));
+}
+
 /** robots.txt + sitemap.xml for a build folder */
 export function seoFiles(dir, site, demo) {
   if (demo) { fs.writeFileSync(path.join(dir, "robots.txt"), "User-agent: *\nDisallow: /\n"); return { urls: 0 }; }
@@ -139,6 +162,8 @@ export function buildChecks({ site, demo }) {
           if (s.bytes > SHEET_BUDGET) throw new Error("build-checks: the sheet chunk " + s.file + " is " + s.bytes + " B, over the budget of " + SHEET_BUDGET + " B (docs/DECISIONS.md 16.11.2026)");
           logger.info("sheet " + s.file + ": " + s.bytes + " / " + SHEET_BUDGET + " B");
         }
+        const early = sheetOnFirstLoad(d);
+        if (early.length) throw new Error("build-checks: the shared sheet file is in the first load of " + early.slice(0, 5).join(", ") + (early.length > 5 ? " and " + (early.length - 5) + " more" : "") + " (one more request before the first paint; docs/DECISIONS.md 17.11.2026)");
         if (!demo) {
           const long = longDescriptions(d);
           if (long.length) throw new Error("build-checks: meta description over " + DESCRIPTION_MAX + " characters: " + long.map((x) => x.page + " (" + x.length + ")").join(", "));

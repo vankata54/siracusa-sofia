@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { RUNTIME_BUDGET, UI_BUDGET, SHEET_BUDGET, runtimeSizes, uiSizes, sheetSizes, longDescriptions, seoFiles } from "../../scripts/build-checks.mjs";
+import { RUNTIME_BUDGET, UI_BUDGET, SHEET_BUDGET, runtimeSizes, uiSizes, sheetSizes, sheetOnFirstLoad, longDescriptions, seoFiles } from "../../scripts/build-checks.mjs";
 
 const root = path.resolve(__dirname, "../..");
 
@@ -32,6 +32,8 @@ describe("runtime budget and SEO files", () => {
       for (const s of uiSizes(path.join(root, d)) as { file: string; bytes: number }[]) expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(UI_BUDGET);
       /* the sheet (src/client/sc-sheet.ts) is its own chunk, out of the runtime, with its own budget (decision 16.11.2026) */
       for (const s of sheetSizes(path.join(root, d)) as { file: string; bytes: number }[]) expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(SHEET_BUDGET);
+      /* and it is never in the first load of a page (decision 17.11.2026) */
+      expect(sheetOnFirstLoad(path.join(root, d)), d).toEqual([]);
       expect(longDescriptions(path.join(root, d)), d).toEqual([]);
     }
   });

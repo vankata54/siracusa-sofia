@@ -6,7 +6,7 @@ import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Celebration, type NoShowBlock, type Reservation, type ReservationStatus, type Subscription } from "./types.ts";
 import { audit } from "./audit.ts";
 import { normPhone, hhmm } from "../lib/format.ts";
-import { EVENT_CATS } from "../lib/event-cats.ts";
+import { EVENT_CATS } from "../lib/consts.ts";
 import { liveHall, groupOf, seatsOf, closedTables } from "./hall.ts";
 import { minutes, sofiaYmd, addDaysYmd } from "../lib/time.ts";
 

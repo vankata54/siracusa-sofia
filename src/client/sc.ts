@@ -9,7 +9,7 @@
    the full icon set. Pages that need menu data import "./sc-menu.ts" (same SC object, with SC.items, SC.dishCard ...). */
 import * as F from "../lib/format.ts";
 import * as T from "../lib/status.ts";
-import { RESTAURANT, ZONES, ALLERGENS, allergenName } from "../lib/consts.ts";
+import { RESTAURANT, ZONES, TAGS, ALLERGENS, allergenName, FILTERS, EVENT_CATS, COURSE_NAME } from "../lib/consts.ts";
 import * as cartLib from "../lib/cart.ts";
 import { events, EVENT_SLUGS } from "../lib/events.ts";
 import { ic, loadAllIcons, statusHTML } from "../lib/chrome-core.ts";
@@ -128,8 +128,9 @@ function flash(btn: HTMLElement, html: string, ms?: number) {
   setTimeout(() => { if (btn.isConnected) { btn.classList.remove("done"); btn.innerHTML = old; } }, ms || 1200);
 }
 /* The bottom sheet (SC.sheet) and its focus trap are in ./sc-sheet.ts, NOT in this chunk (decision 16.11.2026, the runtime
-   budget). A script that opens a sheet imports that file: import "../client/sc-sheet.ts"; the runtime's own sheets ("Още",
-   "Бисквитки", the assistant, "Предложи подобрение") get it with their on-demand chunks. */
+   budget). A script that opens a sheet imports that file: import "../client/sc-sheet.ts" (scripts/sheet-copies.mjs puts a
+   copy into that page's own JS file); the runtime's own sheets ("Още", "Бисквитки", the assistant, "Предложи подобрение")
+   get the shared file sc-sheet.*.js with their on-demand chunks. */
 export type SheetOpts = { title?: string; html?: string; onClose?: () => void; returnTo?: () => Element | null };
 export type Sheet = { el: HTMLDivElement; close: () => void };
 export const visible = (el: Element | null | undefined): el is HTMLElement =>
@@ -288,9 +289,8 @@ export const SC = {
   fmt: F.fmt, esc: F.esc, ic, plural: F.plural, dateLong: F.dateLong, dateShort: F.dateShort, hhmm: F.hhmm, MON: F.MON, MONTHS: F.MONTHS, DAYS: F.DAYS,
   /** load the full icon set (lazy chunk); SC.ic works synchronously afterwards for every icon */
   icons: loadAllIcons,
-  /* constants (no menu). TAGS, FILTERS and COURSE_NAME come with the menu (./sc-menu.ts); EVENT_CATS is imported from
-     lib/event-cats.ts by the pages that need it (decision 16.11.2026, the runtime budget) */
-  RESTAURANT, ZONES, ALLERGENS, allergenName, EVENT_SLUGS,
+  /* constants (no menu) */
+  RESTAURANT, ZONES, TAGS, ALLERGENS, allergenName, FILTERS, EVENT_CATS, COURSE_NAME, EVENT_SLUGS,
   /* time */
   /** the lunch menu is for today (without the menu: the date is generated at build) */
   lunchIsToday: () => lunchIsToday(),

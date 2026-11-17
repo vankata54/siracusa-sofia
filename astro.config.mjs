@@ -4,6 +4,7 @@ import { defineConfig } from "astro/config";
 import crypto from "node:crypto";
 import { readEnv, staffFromEnv } from "./scripts/env.mjs";
 import { iconGroups } from "./scripts/icon-groups.mjs";
+import { sheetCopies } from "./scripts/sheet-copies.mjs";
 import { buildChecks } from "./scripts/build-checks.mjs";
 import { siteFile } from "./scripts/site-file.mjs";
 import fs from "node:fs";
@@ -59,7 +60,8 @@ export default defineConfig({
     /* import "sc-icons:moon,truck,info": the page's icons in ONE module inside the page's own chunk (scripts/icon-groups.mjs) */
     /* SITE_FILE (the server's rebuild after a change of the zones, hall, events or offers in the admin, server/publish.ts):
        the site data takes the place of src/lib/zones-data.ts, tables.ts, events.ts, events-extra.ts, offers-data.ts */
-    plugins: [menuFile(), siteFile(), iconGroups()],
+    /* a page that opens a sheet itself gets the sheet code in its own chunk, no extra file (scripts/sheet-copies.mjs) */
+    plugins: [menuFile(), siteFile(), iconGroups(), sheetCopies()],
     /* the shared runtime (src/client/sc.ts and the small lib modules it needs) is ONE chunk on every page */
     build: {
       rollupOptions: {

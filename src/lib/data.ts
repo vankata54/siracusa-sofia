@@ -5,8 +5,6 @@
 import { MENU, type Dish, type Category, type Menu, type MenuOpts } from "../data/menu.ts";
 import { ORDER_RULES } from "./consts.ts";
 export * from "./consts.ts";
-/* TAGS, FILTERS, COURSE_NAME: this file is their ONLY importer, so they stay in the chunk of the menu (lib/consts-menu.ts) */
-export * from "./consts-menu.ts";
 export type { Dish, Category, AllergenId, TagId, Course, Menu, MenuOpts, SwapGroup } from "../data/menu.ts";
 
 export const menu = MENU;
