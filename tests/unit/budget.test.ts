@@ -5,13 +5,15 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { RUNTIME_BUDGET, UI_BUDGET, runtimeSizes, uiSizes, longDescriptions, seoFiles } from "../../scripts/build-checks.mjs";
+import { RUNTIME_BUDGET, UI_BUDGET, SHEET_BUDGET, runtimeSizes, uiSizes, sheetSizes, longDescriptions, seoFiles } from "../../scripts/build-checks.mjs";
 
 const root = path.resolve(__dirname, "../..");
 
 describe("runtime budget and SEO files", () => {
   it("the budget is 30 000 bytes and the check runs after every build", () => {
     expect(RUNTIME_BUDGET).toBe(30000);
+    expect(UI_BUDGET).toBe(6000);
+    expect(SHEET_BUDGET).toBe(4000);
     const cfg = fs.readFileSync(path.join(root, "astro.config.mjs"), "utf8");
     expect(cfg).toMatch(/integrations:\s*\[buildChecks\(/);
   });
@@ -28,6 +30,8 @@ describe("runtime budget and SEO files", () => {
     /* the shared components (lib/ui.ts) have their own budget; indexable pages keep the description within 160 characters */
     for (const d of dirs) {
       for (const s of uiSizes(path.join(root, d)) as { file: string; bytes: number }[]) expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(UI_BUDGET);
+      /* the sheet (src/client/sc-sheet.ts) is its own chunk, out of the runtime, with its own budget (decision 16.11.2026) */
+      for (const s of sheetSizes(path.join(root, d)) as { file: string; bytes: number }[]) expect(s.bytes, d + "/_astro/" + s.file).toBeLessThanOrEqual(SHEET_BUDGET);
       expect(longDescriptions(path.join(root, d)), d).toEqual([]);
     }
   });
