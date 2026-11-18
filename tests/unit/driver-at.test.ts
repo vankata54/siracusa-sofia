@@ -96,6 +96,10 @@ describe("the rules of review 2 (flows)", () => {
     await expect(begin(core, s.driver, "a1", 98400)).rejects.toMatchObject({ status: 422, fields: { km: HIGH } });
     /* a wrong record is corrected by the main admin, the owner or the manager (with a line in the log); never the driver */
     await expect(core.driver.setCarKm(s.driver, "a1", 48000)).rejects.toEqual(code("forbidden", 403));
+    /* an open shift keeps its start km: the record never goes below it */
+    await begin(core, s.driver2, "a2", 31540);
+    await expect(core.driver.setCarKm(s.manager, "a2", 10)).rejects.toMatchObject({ status: 422, fields: { km: "Смяната на Шофьор 2 започна с 31\u00a0540 км. Километражът не може да е по-малко, докато е отворена." } });
+    expect((await core.driver.state(s.driver2)).shift!.kmStart).toBe(31540);
     const cars = await core.driver.setCarKm(s.manager, "a1", 48390);
     expect(cars.find((c) => c.id === "a1")!.lastKm).toBe(48390);
     expect((await core.audit.list()).find((x) => x.action === "driver.car_km")).toMatchObject({ actor: "manager", target: "a1", data: { from: 48400, to: 48390 } });

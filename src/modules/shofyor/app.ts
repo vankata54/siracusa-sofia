@@ -376,7 +376,8 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
     requestAnimationFrame(() => {
       const a = document.activeElement;
       if (a && a !== document.body && a.isConnected && !st.ov.querySelector(".st-toast")?.contains(a)) return;
-      const b = st.bar && st.bar.querySelector<HTMLElement>("button:not([disabled]), a[href]");
+      /* the red main button first: "Навигация" opens another app (one Enter must not leave the screen) */
+      const b = st.bar && (st.bar.querySelector<HTMLElement>(".pill-red:not([disabled]), .tl:not([disabled])") || st.bar.querySelector<HTMLElement>("button:not([disabled]), a[href]:not([target])"));
       (b || st.main).focus({ preventScroll: true });
     });
   }

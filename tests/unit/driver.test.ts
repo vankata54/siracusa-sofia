@@ -553,6 +553,7 @@ describe("fuel and the cash", () => {
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48249 })).rejects.toMatchObject({ fields: { km: "По-малко е от последно записания (48 250 км). Провери таблото." } });
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48300, cash: true })).rejects.toMatchObject({ fields: { sum: "Имаш 20,00 € в брой. Останалото плати с карта или питай управителя." } });
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48300, photo: "javascript:alert(1)" })).rejects.toMatchObject({ fields: { photo: "Снимката не се качи. Снимай бележката пак." } });
+    await core.driver.receiptKeep(s.driver, "a".repeat(64) + ".jpg"); /* the server stored his photo */
     const f1 = await core.driver.fuelAdd(s.driver, { litres: "30,5", sum: "45,75", km: "48 300", full: true, photo: "/api/driver/receipts/" + "a".repeat(64) + ".jpg" });
     expect(f1.entry).toMatchObject({ car: "a1", carName: "Автомобил 1", litres: 30.5, sum: 45.75, perLitre: 1.5, km: 48300, full: true, cash: false, photo: "/api/driver/receipts/" + "a".repeat(64) + ".jpg", atClock: "19:42" });
     expect(f1.lastKm).toBe(48300);

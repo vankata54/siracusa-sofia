@@ -126,6 +126,8 @@ export async function initDelivery(): Promise<void> {
     go.onclick = async () => {
       const v = inp.value.trim().replace(/\s/g, ""), n = parseFloat(v.replace(",", "."));
       if (!(n >= 0) || !/^\d+([.,]\d{1,2})?$/.test(v)) { er.textContent = "Въведи сумата, която взе, например 24,50."; inp.setAttribute("aria-invalid", "true"); inp.focus(); return; }
+      /* never less than the order (the core's words: the fee is added on top) */
+      if (n < x.total - 0.004) { er.textContent = "Сумата е поне " + fmt(x.total).replace(" €", "\u00a0€") + " (поръчката, таксата се добавя). Провери я."; inp.setAttribute("aria-invalid", "true"); inp.focus(); return; }
       go.disabled = true;
       try {
         const r = await drv.act({ k: "deliver", no: x.no, sum: v });

@@ -25,6 +25,9 @@ describe("the driver: routes", async () => {
   for (const r of ROLES) await core.staff.upsert({ username: r, name: r === "driver" ? "Шофьор 1" : r, role: r, password: PW });
   const cookie: Record<string, string> = {};
   for (const r of ROLES) cookie[r] = (await app.request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: r, password: PW }) })).headers.get("set-cookie")!.split(";")[0];
+  /* a second driver: a receipt is only for the one who took the photo */
+  await core.staff.upsert({ username: "driver2", name: "Шофьор 2", role: "driver", password: PW });
+  cookie.driver2 = (await app.request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "driver2", password: PW }) })).headers.get("set-cookie")!.split(";")[0];
   const req = (method: string, url: string, who?: RoleId, body?: unknown, headers: Record<string, string> = {}) =>
     app.request(url, { method, headers: { "content-type": "application/json", ...(who ? { cookie: cookie[who] } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
   const dish = items.find((x) => x.cat === "pitsi" && !x.t.includes("out"))!;
@@ -162,6 +165,11 @@ describe("the driver: routes", async () => {
     const got = await app.request(j.url, { headers: { cookie: cookie.driver } });
     expect([got.status, got.headers.get("content-type"), got.headers.get("x-content-type-options"), got.headers.get("cache-control")]).toEqual([200, "image/png", "nosniff", "private, max-age=31536000, immutable"]);
     expect((await app.request(j.url, { headers: { cookie: cookie.manager } })).status).toBe(200);
+    /* another driver neither sees it nor uses it */
+    expect((await app.request(j.url, { headers: { cookie: cookie.driver2 } })).status).toBe(403);
+    expect((await app.request("/api/driver/start", { method: "POST", headers: { "content-type": "application/json", cookie: cookie.driver2 }, body: JSON.stringify({ car: "a2", km: 31540 }) })).status).toBe(201);
+    const theirs = await app.request("/api/driver/fuel", { method: "POST", headers: { "content-type": "application/json", cookie: cookie.driver2 }, body: JSON.stringify({ litres: 5, sum: 8, km: 31600, photo: j.url }) });
+    expect([theirs.status, (await theirs.json()).fields]).toEqual([422, { photo: "Снимката не се качи. Снимай бележката пак." }]);
     /* a png signature followed by html is not a picture */
     expect((await up("driver", new Uint8Array([...PNG.slice(0, 8), ...new TextEncoder().encode("<html><script>alert(1)</script>")]))).status).toBe(415);
     /* fuel takes only a photo that is really there */
@@ -170,6 +178,9 @@ describe("the driver: routes", async () => {
     expect((await miss.json()).fields).toEqual({ photo: "Снимката не се качи. Снимай бележката пак." });
     const withPhoto = await req("POST", "/api/driver/fuel", "driver", { litres: 5, sum: 8, km: 48500, photo: j.url });
     expect((await withPhoto.json()).entry).toMatchObject({ photo: j.url, noPhoto: false });
+    /* one photo, one entry */
+    const twice = await req("POST", "/api/driver/fuel", "driver", { litres: 5, sum: 8, km: 48510, cash: false, photo: j.url });
+    expect([twice.status, (await twice.json()).fields]).toEqual([422, { photo: "Тази снимка вече е в друго зареждане. Снимай бележката на това." }]);
     expect((await core.audit.list()).map((x) => x.action)).toEqual(expect.arrayContaining(["fuel.receipt", "fuel.add"]));
   });
 });

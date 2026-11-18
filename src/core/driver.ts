@@ -134,6 +134,8 @@ export const DRIVER_MSG = {
   atLate: "Записът е по-стар от 30 минути и не се записва. Кажи на управителя какво е станало.",
   atBefore: (n: string) => "Записът за " + no(n) + " е отпреди предишната ѝ стъпка и не се записва.",
   kmCar: "Въведи километража на колата.",
+  kmShift: (who: string, km: number) => "Смяната на " + who + " започна с " + kmText(km) + " км. Километражът не може да е по-малко, докато е отворена.",
+  photoUsed: "Тази снимка вече е в друго зареждане. Снимай бележката на това.",
 };
 
 /* ---------- stored documents ---------- */
@@ -603,9 +605,10 @@ export async function setCarKm(ctx: Ctx, s: StaffCtx, car: string, km: number | 
     const v = whole(km);
     if (!(v > 0) || v > KM_MAX) bad({ km: DRIVER_MSG.kmCar });
     const was = d.km[c.id] ?? null;
-    d.km[c.id] = v;
+    /* an open shift with this car keeps its start km: the record is never put below it */
     const open = (await allShifts(ctx)).find((x) => x.status === "open" && x.car === c.id);
-    if (open && open.kmStart > v) { open.kmStart = v; await putShift(ctx, open); }
+    if (open && v < open.kmStart) bad({ km: DRIVER_MSG.kmShift(open.name, open.kmStart) });
+    d.km[c.id] = v;
     await putDoc(ctx, d);
     await audit(ctx, s.user.username, "driver.car_km", c.id, { from: was, to: v });
     return carViews(ctx, d, s.user.username);
@@ -1156,9 +1159,25 @@ export async function receiptCheck(ctx: Ctx, s: StaffCtx, f: { bytes: number; ex
   return { ok: true };
 }
 /** who may open the photo of a receipt (it is never public): a driver, the main admin, the owner, the manager */
-export function receiptAccess(s: StaffCtx): void {
+export async function receiptAccess(ctx: Ctx, s: StaffCtx, name: string): Promise<void> {
   if (!s || !s.user) throw new CoreError("auth", RIGHTS_MSG.auth, 401);
-  if (!(isBoss(s) || may(s, "driver"))) throw new CoreError("forbidden", RIGHTS_MSG.forbidden, 403);
+  if (isBoss(s)) return;
+  const r = (await receiptsDoc(ctx)).by[String(name || "")];
+  if (!(may(s, "driver") && r && r.user === s.user.username)) throw new CoreError("forbidden", RIGHTS_MSG.forbidden, 403);
+}
+/** COL.modState "driver-receipts": who uploaded each photo and the fuel entry that uses it (one entry per photo) */
+interface ReceiptsDoc { id: "driver-receipts"; by: Record<string, { user: string; at: Iso; used?: string }> }
+async function receiptsDoc(ctx: Ctx): Promise<ReceiptsDoc> {
+  const d = await ctx.repo.get<ReceiptsDoc>(COL.modState, "driver-receipts");
+  return { id: "driver-receipts", by: (d && d.by) || {} };
+}
+/** the server stored a photo for this driver (the name is its sha256 + type): only he may use it, once */
+export async function receiptKeep(ctx: Ctx, s: StaffCtx, name: string): Promise<void> {
+  need(s, "driver");
+  await lock(ctx, async () => {
+    const d = await receiptsDoc(ctx);
+    if (!d.by[name]) { d.by[name] = { user: s.user.username, at: iso(ctx) }; await ctx.repo.put(COL.modState, d); }
+  });
 }
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 function fuelView(e: FuelEntry, cars: DriverCar[], names: Map<string, string>): FuelView {
@@ -1209,13 +1228,18 @@ export async function fuelAdd(ctx: Ctx, s: StaffCtx, input: FuelInput): Promise<
     if (i.photo != null && i.photo !== "") {
       const p = String(i.photo);
       const ok = ctx.demo ? DATA.test(p) && p.length <= RECEIPT_DEMO_MAX : MEDIA.test(p) && (!ctx.mediaExists || ctx.mediaExists(p));
-      if (ok) photo = p; else f.photo = DRIVER_MSG.photo;
+      /* his own photo, not in another entry yet (a photo of a receipt counts once) */
+      const reg = !ctx.demo && ok ? (await receiptsDoc(ctx)).by[p.slice(RECEIPT_URL.length)] : undefined;
+      if (!ok || (!ctx.demo && (!reg || reg.user !== sh.user))) f.photo = DRIVER_MSG.photo;
+      else if (reg && reg.used) f.photo = DRIVER_MSG.photoUsed;
+      else photo = p;
     }
     if (Object.keys(f).length) bad(f);
     const cx = stepAt(ctx, sh, i.at);
     const now = iso(cx);
     const e: FuelEntry = { id: rid(8), user: sh.user, name: sh.name, shift: sh.id, car: sh.car, litres: round3(litres), sum: round2(sum!), km, full: i.full === true, cash, photo, noPhoto: !photo && i.noPhoto === true, at: now, createdAt: now };
     await ctx.repo.put(COL.fuel, e);
+    if (photo && !ctx.demo) { const r = await receiptsDoc(ctx), k = photo.slice(RECEIPT_URL.length); if (r.by[k]) { r.by[k].used = e.id; await ctx.repo.put(COL.modState, r); } }
     setKm(d, sh.car, km); await putDoc(ctx, d);
     await logStep(cx, sh.user, "fuel.add", e.id, { car: e.car, litres: e.litres, sum: e.sum, km, full: e.full, cash, photo: !!photo });
     course(cx, sh.user, "fuel");

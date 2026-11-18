@@ -18,7 +18,7 @@
      POST  /api/driver/route        {pick}   ·   POST /api/driver/route/move {no, dir}
      GET   /api/driver/fuel   ·   POST /api/driver/fuel {litres, sum, km, full, cash, photo, noPhoto}
      POST  /api/driver/receipt      (the body is the photo) {url: "/api/driver/receipts/<sha256>.<ext>"}; 30 an hour
-     GET   /api/driver/receipts/:name  the photo (a driver, the bosses; never public)
+     GET   /api/driver/receipts/:name  the photo (the driver who uploaded it, the bosses; never public)
      POST  /api/driver/cars/:id/km {km}  a wrong last km of a car (the bosses)
      GET   /api/driver/shift  ·   POST /api/driver/end {km, handed}
      GET   /api/driver/search?q=
@@ -35,7 +35,7 @@ import type { Hono } from "hono";
 import type { AdminDeps } from "./deps.ts";
 import { qv } from "./deps.ts";
 import { sniffImage } from "./menu.ts";
-import { CoreError, rid, DRIVER_MSG, RECEIPT_PER_HOUR, RECEIPT_URL, receiptAccess, type AskAnswer, type FuelInput, type ProblemKind, type RoutePick, type ShiftStart } from "../../src/core/index.ts";
+import { CoreError, rid, DRIVER_MSG, RECEIPT_PER_HOUR, RECEIPT_URL, type AskAnswer, type FuelInput, type ProblemKind, type RoutePick, type ShiftStart } from "../../src/core/index.ts";
 
 const MEDIA_TYPE: Record<string, string> = { webp: "image/webp", jpg: "image/jpeg", png: "image/png" };
 
@@ -76,8 +76,9 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string; recei
      RECEIPT_PER_HOUR an hour per person */
   const receiptsDir = d.receiptsDir;
   app.get("/api/driver/receipts/:name", async (c) => {
-    receiptAccess(await staff(c));
-    const name = c.req.param("name"), m = /^([a-f0-9]{64})\.(webp|jpg|png)$/.exec(name);
+    const name = c.req.param("name");
+    await core.driver.receiptAccess(await staff(c), name);
+    const m = /^([a-f0-9]{64})\.(webp|jpg|png)$/.exec(name);
     const file = m ? path.join(receiptsDir, name) : "";
     if (!m || !fs.existsSync(file)) return c.json({ error: "not_found", message: "Няма такава снимка." }, 404);
     return new Response(fs.readFileSync(file), { headers: { "content-type": MEDIA_TYPE[m[2]], "cache-control": "private, max-age=31536000, immutable", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'" } });
@@ -96,6 +97,7 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string; recei
     const file = path.join(receiptsDir, name);
     if (!fs.existsSync(file)) { const tmp = file + "." + rid(4) + ".tmp"; fs.writeFileSync(tmp, buf); fs.renameSync(tmp, file); }
     mine.push(t);
+    await core.driver.receiptKeep(s, name);
     await core.audit.log(s.user.username, "fuel.receipt", name, { bytes: buf.length });
     return c.json({ url: RECEIPT_URL + name, type: MEDIA_TYPE[ext!], bytes: buf.length }, 201);
   });

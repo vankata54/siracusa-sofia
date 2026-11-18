@@ -106,6 +106,8 @@ test("a web order arrives live, „Взех“ with „Отмени“, „Тр�
   /* the focus stays on the screen: the new main button (never <body>) */
   const focusIn = (sel: string) => page.evaluate((s) => !!document.activeElement && !!document.activeElement.closest(s), sel);
   await expect.poll(() => focusIn(".st-bar")).toBe(true);
+  /* on the main button, never "Навигация" (one Enter would open Google Maps) */
+  await expect.poll(() => page.evaluate(() => document.activeElement?.textContent?.trim())).toBe("Тръгвам");
   await toast(page).getByRole("button", { name: "Отмени" }).click();
   await expect(toast(page)).toContainText("Отменено.");
   await expect.poll(() => focusIn(".st-bar")).toBe(true);
@@ -248,6 +250,9 @@ test("an address outside the zones: „уточни с ресторанта“, 
   await page.fill("#took", "abc");
   await sh2.locator("[data-took]").click();
   await expect(page.locator("#took-e")).toHaveText("Въведи сумата, която взе, например 24,50.");
+  await page.fill("#took", "0");
+  await sh2.locator("[data-took]").click();
+  await expect(page.locator("#took-e")).toContainText("Сумата е поне");
   await page.fill("#took", "35,00");
   await sh2.locator("[data-took]").click();
   await expect(toast(page)).toContainText("№ " + o.no + " е доставена: взе 35,00 €.");
