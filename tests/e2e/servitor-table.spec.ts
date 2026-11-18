@@ -244,7 +244,7 @@ test("a QR order with a dish sold out meanwhile: „Изчерпано днес�
     await expect(toast(page)).toContainText("Първо махни „Пица Маргарита“: изчерпано днес.");
     await expect(bad.locator("[data-drop]")).toBeFocused();
     await bad.getByRole("button", { name: "Махни 2× Пица Маргарита" }).click();
-    await expect(toast(page)).toContainText("„Пица Маргарита“ е махнато от поръчката.");
+    await expect(toast(page)).toContainText("Махнато от поръчката: Пица Маргарита.");
     await expect(page.locator(".qrcard .oline")).toHaveCount(1);
     await expect(page.locator(".st-bar [data-confirm]")).toBeFocused();
     /* the guests see the order without it */

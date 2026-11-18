@@ -233,7 +233,7 @@ export async function mountTable(): Promise<void> {
   const dropLine = (b: HTMLElement, key: string) => act(b, async () => {
     const l = D && D.pending ? D.pending.lines.find((x) => x.key === key) : null;
     D = await floorApi.qrDrop(N!, key); render();
-    st.toast((l ? "„" + l.name + "“" : "Ястието") + " е махнато от поръчката.");
+    st.toast("Махнато от поръчката: " + (l ? l.name : "ястието") + ".");
     if (!focus($("[data-drop]", main))) focus($("[data-confirm]", bar));
   });
   function confirmQR(b: HTMLElement) {
