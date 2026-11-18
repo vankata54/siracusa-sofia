@@ -348,10 +348,11 @@ const statusAudience = (o: Pick<Order, "no" | "session">) => ({ order: o.no, ...
 export function alignKitchen(o: Order, from: OrderStatus, status: OrderStatus, now: string): number[] {
   const moved: number[] = [], ks = (l: OrderLine) => (l.ks === "cook" || l.ks === "ready" ? l.ks : "wait");
   const set = (l: OrderLine, i: number, to: "wait" | "cook" | "ready") => { l.ks = to; (l as OrderLine & { ksAt?: string }).ksAt = now; moved.push(i); };
+  /* a line the order was accepted without ("Приеми без него", "Махни") is only for reference: never moved */
   const lines = o.lines || [];
-  if (["ready", "on_way", "delivered", "picked_up"].includes(status)) lines.forEach((l, i) => { if (ks(l) !== "ready") { set(l, i, "ready"); l.readyAt = now; } });
-  else if (status === "cooking" && from !== "accepted" && from !== "cancelled" && lines.length && lines.every((l) => ks(l) === "ready")) lines.forEach((l, i) => { set(l, i, "cook"); delete l.readyAt; if (!l.cookAt) l.cookAt = now; });
-  else if (status === "accepted" && from !== "cancelled") lines.forEach((l, i) => { if (ks(l) !== "wait" && !l.servedAt) { set(l, i, "wait"); delete l.readyAt; delete l.cookAt; } });
+  if (["ready", "on_way", "delivered", "picked_up"].includes(status)) lines.forEach((l, i) => { if (!l.dropped && ks(l) !== "ready") { set(l, i, "ready"); l.readyAt = now; } });
+  else if (status === "cooking" && from !== "accepted" && from !== "cancelled" && lines.length && lines.every((l) => l.dropped || ks(l) === "ready")) lines.forEach((l, i) => { if (l.dropped) return; set(l, i, "cook"); delete l.readyAt; if (!l.cookAt) l.cookAt = now; });
+  else if (status === "accepted" && from !== "cancelled") lines.forEach((l, i) => { if (!l.dropped && ks(l) !== "wait" && !l.servedAt) { set(l, i, "wait"); delete l.readyAt; delete l.cookAt; } });
   return moved;
 }
 

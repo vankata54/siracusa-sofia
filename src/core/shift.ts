@@ -113,7 +113,7 @@ async function setQrTo(ctx: Ctx, session: string, to: QrTo | null): Promise<QrTo
     return was;
   });
 }
-interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times">;
+interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times"> & { /** "cooking": "Приеми без него" of a started order */ status?: "cooking" };
   /** "Смени масите": only the tables this action moved (table id, the shift user before and after; null: nobody) */ moves?: { t: string; from: string | null; to: string | null }[] }
 interface ShiftDoc { id: string; date: string; ack: Record<string, Ack>; qr: Record<string, Given>; calls: Record<string, Given>; undo: Record<string, UndoRec>; updatedAt?: Iso }
 const docId = (day: string) => "shift:" + day;
@@ -228,11 +228,13 @@ async function problemsOf(w: World): Promise<Problem[]> {
   /* a sold-out dish in an accepted delivery / pickup order (the kitchen marked the line `out`; OPEN-QUESTIONS 19) */
   for (const o of w.orders) {
     if ((o.status !== "accepted" && o.status !== "cooking") || isTable(o)) continue;
-    const names = [...new Set(o.lines.filter((l) => l.out).map((l) => l.name || l.id))];
-    if (!names.length || ack["out:" + o.no]) continue;
+    const waiting = o.status === "cooking" ? o.lines.some(undecided) : false;
+    const names = [...new Set(o.lines.filter((l) => (o.status === "cooking" ? undecided(l) : l.out)).map((l) => l.name || l.id))];
+    /* a sold-out line the kitchen waits for: the card stays until the decision, even after "Обади се" */
+    if (!names.length || (ack["out:" + o.no] && !waiting)) continue;
     out.push({ key: "out:" + o.no, kind: "out", sev: 95, tone: "ember", icon: "warning", title: "№ " + o.no + " · Изчерпано: " + names.join(", "),
       meta: chName(o) + " · " + (o.name || "") + " · " + (o.status === "accepted" ? "чака „Приеми“" : "в кухнята") + (lateMinOf(o, w.day, w.now, w.zoneMin) ? " · закъснява " + lateText(lateMinOf(o, w.day, w.now, w.zoneMin)) : "") + " · обади се и предложи друго",
-      since: null, lateMin: null, done: null, actions: o.status === "accepted" ? ["call", "without"] : ["call"], ref: { no: o.no, mode: o.mode } });
+      since: null, lateMin: null, done: null, actions: o.status === "accepted" || waiting ? ["call", "without"] : ["call"], ref: { no: o.no, mode: o.mode } });
   }
   /* late orders: a delivery grows twice as fast; the solved ones stay at the bottom ("решено") */
   for (const { o, m } of lateOrders(w)) {
@@ -483,13 +485,41 @@ export function sumsWithout(o: Order): Pick<Order, "sub" | "disc" | "total"> & {
 }
 /** "Приеми": straight to "Готви се" (answer 31). An order with a sold-out line is not sent quietly: 409 "has_out" (the screen
     asks "Обади се на клиента" / "Приеми без него"); without: true accepts it without the sold-out dishes (the sums again,
-    a note on the order, a line in the log). Returns the order's number and the "Отмени" id. */
+    a note on the order, a line in the log). Returns the order's number and the "Отмени" id.
+    "Приеми без него" works also for an order the kitchen has started ("Готви се") while a sold-out line still waits for the
+    decision (decision of the chief 18.11, round 3 of the kitchen): the line is left out, and when everything else is ready
+    the order becomes "Готова". */
+const undecided = (l: Order["lines"][number]) => !!l.out && !l.dropped && (l.ks || "wait") === "wait";
 export async function managerAccept(ctx: Ctx, s: StaffCtx, no: string, opt: { without?: boolean } = {}): Promise<{ no: string; status: OrderStatus; without: string[]; undo: { id: string; until: number } }> {
   needManager(s, "orders");
   const o0 = await getOrder(ctx, no);
-  if (o0.status !== "accepted") throw new CoreError("not_accepted", MGR_MSG.notAccepted, 409);
-  const names = [...new Set(o0.lines.filter((l) => l.out).map((l) => l.name || l.id))];
+  const cooking = o0.status === "cooking" && o0.lines.some(undecided);
+  if (o0.status !== "accepted" && !cooking) throw new CoreError("not_accepted", MGR_MSG.notAccepted, 409);
+  const names = [...new Set(o0.lines.filter((l) => (cooking ? undecided(l) : l.out)).map((l) => l.name || l.id))];
   if (names.length && o0.lines.every((l) => l.out)) throw new CoreError("all_out", MGR_MSG.allOut, 409);
+  if (cooking) {
+    if (!(opt && opt.without === true)) throw Object.assign(new CoreError("has_out", MGR_MSG.hasOut(names.join(", ")), 409), { out: names });
+    const before = { sub: o0.sub, disc: o0.disc, total: o0.total, codeDisc: o0.codeDisc, profileDisc: o0.profileDisc, staffNotes: o0.staffNotes, times: o0.times };
+    const o = await serial(ctx.repo, "order:" + o0.no, async () => {
+      const o = await getOrder(ctx, o0.no);
+      if (o.status !== "cooking" || !o.lines.some(undecided)) throw new CoreError("not_accepted", MGR_MSG.notAccepted, 409);
+      const idx: number[] = [];
+      o.lines.forEach((l, i) => { if (undecided(l)) { l.dropped = true; idx.push(i); } });
+      Object.assign(o, sumsWithout(o));
+      o.staffNotes = [...(o.staffNotes || []), { at: iso(ctx), by: s.user.username, text: MGR_MSG.without(names.join(", ")) }];
+      o.updatedAt = iso(ctx);
+      await ctx.repo.put(COL.orders, o);
+      emit(ctx, "order.line", { no: o.no, kind: "drop", sec: "all", status: o.status, table: o.table || null, session: o.session || null, lines: idx, at: iso(ctx) });
+      /* everything the kitchen makes is ready already: the order is "Готова" now */
+      const rest = o.lines.filter((l) => !l.dropped);
+      return rest.length && rest.every((l) => l.ks === "ready") ? setOrderStatus(ctx, o.no, "ready", s.user.username) : o;
+    });
+    await audit(ctx, s.user.username, "order.note", o0.no, { text: MGR_MSG.without(names.join(", ")), without: names, cooking: true });
+    const id = rid(6), at = iso(ctx);
+    await withDoc(ctx, async (d) => { d.undo[id] = { id, kind: "accept", at, by: s.user.username, no: o.no, order: { ...before, status: "cooking" } }; d.ack["out:" + o.no] = { at, by: s.user.username, name: s.user.name, what: "called" }; });
+    say(ctx, "order.accept", { no: o.no, without: names });
+    return { no: o.no, status: o.status, without: names, undo: { id, until: Date.parse(at) + MGR_UNDO_MS } };
+  }
   if (names.length && !(opt && opt.without === true)) throw Object.assign(new CoreError("has_out", MGR_MSG.hasOut(names.join(", ")), 409), { out: names });
   const snap = { sub: o0.sub, disc: o0.disc, total: o0.total, codeDisc: o0.codeDisc, profileDisc: o0.profileDisc, staffNotes: o0.staffNotes, times: o0.times };
   if (names.length) {
@@ -514,13 +544,16 @@ export async function managerAccept(ctx: Ctx, s: StaffCtx, no: string, opt: { wi
 export async function managerAcceptUndo(ctx: Ctx, s: StaffCtx, id: string): Promise<{ no: string; status: OrderStatus }> {
   needManager(s, "orders");
   const rec = await withDoc(ctx, async (d) => { const r = d.undo[String(id || "")]; if (!r || r.kind !== "accept" || r.by !== s.user.username || !fresh(ctx, r.at)) throw new CoreError("undo_late", MGR_MSG.undo, 409); return r; });
-  const o0 = await getOrder(ctx, rec.no!);
-  if (o0.status !== "cooking") throw new CoreError("undo_late", MGR_MSG.undo, 409);
-  if (o0.lines.some((l) => l.ks === "cook" || l.ks === "ready")) throw new CoreError("started", MGR_MSG.started, 409);
-  await setOrderStatus(ctx, o0.no, "accepted", s.user.username, s);
+  const o0 = await getOrder(ctx, rec.no!), wasCooking = rec.order?.status === "cooking";
+  /* the whole "Отмени" under the order's lock (the kitchen's tablets use the same) */
   await serial(ctx.repo, "order:" + o0.no, async () => {
+    const o1 = await getOrder(ctx, o0.no);
+    if (o1.status !== "cooking") throw new CoreError("undo_late", MGR_MSG.undo, 409);
+    /* "Приеми без него" of a started order: the left-out lines wait for the decision again; the status stays */
+    if (!wasCooking && o1.lines.some((l) => l.ks === "cook" || l.ks === "ready")) throw new CoreError("started", MGR_MSG.started, 409);
+    if (!wasCooking) await setOrderStatus(ctx, o0.no, "accepted", s.user.username, s);
     const o = await getOrder(ctx, o0.no), b = rec.order!;
-    o.sub = b.sub; o.disc = b.disc; o.total = b.total; o.times = b.times;
+    o.sub = b.sub; o.disc = b.disc; o.total = b.total; o.times = wasCooking ? o.times : b.times;
     for (const l of o.lines) delete l.dropped;
     if (b.codeDisc === undefined) delete o.codeDisc; else o.codeDisc = b.codeDisc;
     if (b.profileDisc === undefined) delete o.profileDisc; else o.profileDisc = b.profileDisc;
@@ -529,9 +562,9 @@ export async function managerAcceptUndo(ctx: Ctx, s: StaffCtx, id: string): Prom
     await ctx.repo.put(COL.orders, o);
   });
   await withDoc(ctx, async (d) => { delete d.undo[rec.id]; delete d.ack["out:" + o0.no]; });
-  await audit(ctx, s.user.username, "order.note", o0.no, { text: "Отменено: отново „Приета“", undo: true });
+  await audit(ctx, s.user.username, "order.note", o0.no, { text: wasCooking ? "Отменено: изчерпаното пак чака решение" : "Отменено: отново „Приета“", undo: true });
   say(ctx, "order.accept", { no: o0.no, undo: true });
-  return { no: o0.no, status: "accepted" };
+  return { no: o0.no, status: wasCooking ? "cooking" : "accepted" };
 }
 /** "Обади се на клиента": the whole number (answer 32), the call goes into the log (order.call) */
 export async function managerCallCustomer(ctx: Ctx, s: StaffCtx, no: string): Promise<{ no: string; name: string; phone: string; addr: string; zone: string; channelName: string }> {

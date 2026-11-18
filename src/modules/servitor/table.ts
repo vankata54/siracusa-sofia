@@ -77,7 +77,7 @@ export async function mountTable(): Promise<void> {
   const off = () => st.offAttr();
   const lineName = (l: { name: string; grams?: number | null }) => l.name + (l.grams ? " · " + l.grams + "\u00a0гр." : "");
   function lineStt(l: StaffLine): string {
-    if (l.out) return st.stt("wait", "Изчерпано днес", "clock");
+    if (l.out) return st.stt("wait", l.decide ? "Изчерпано днес · кухнята чака решение" : "Изчерпано днес", "clock");
     const k = LINE_KIND[l.st] || LINE_KIND.accepted;
     return st.stt(k[0], l.stLabel, k[1]);
   }
@@ -87,6 +87,8 @@ export async function mountTable(): Promise<void> {
       (l.note ? '<div class="note">' + ic("note", 18) + esc(l.note) + "</div>" : "") +
       '<div class="sub">' + lineStt(l) + '<span class="price">' + (l.out ? "<s>" + fmt(l.sum) + "</s>" : fmt(l.sum)) + "</span>" +
       (l.paid ? '<span class="paidrow sm">' + ic("check-circle", 18) + "Платено</span>" : "") +
+      /* sold out before the kitchen started it: the waiter decides ("Махни"; the kitchen does not make the order "Готова" before) */
+      (l.decide ? '<span class="serve"><button class="pill pill-line" type="button" data-outdrop="' + esc(l.key) + '" aria-label="Махни ' + esc(l.q + "× " + lineName(l)) + ' от поръчката"' + off() + ">" + ic("x", 20) + "Махни</button></span>" : "") +
       (l.st === "ready" && !l.out ? '<span class="serve"><button class="pill pill-red" type="button" data-serve="' + esc(l.key) + '" aria-label="Сервирах: ' + esc(l.q + "× " + lineName(l)) + '"' + off() + ">" + ic("check", 20) + "Сервирах</button></span>" : "") +
       "</div></div></div>";
   }
@@ -236,6 +238,12 @@ export async function mountTable(): Promise<void> {
     st.toast("Махнато от поръчката: " + (l ? l.name : "ястието") + ".");
     if (!focus($("[data-drop]", main))) focus($("[data-confirm]", bar));
   });
+  /* "Махни" a sent line the kitchen marked sold out before starting it: the kitchen stops waiting for it (core outDrop) */
+  const outDrop = (b: HTMLElement, key: string) => act(b, async () => {
+    D = await floorApi.outDrop(N!, key); render();
+    st.toast("Махнато от поръчката. Кухнята не го чака.");
+    if (!focus($("[data-outdrop]", main))) focus($("[data-serve]", main));
+  });
   function confirmQR(b: HTMLElement) {
     if (!D || !D.pending) return;
     const bad = D.pending.lines.filter((l) => l.block);
@@ -377,6 +385,7 @@ export async function mountTable(): Promise<void> {
     else if (b.hasAttribute("data-confirm")) confirmQR(b);
     else if (b.hasAttribute("data-reject")) rejectQR();
     else if (b.dataset.drop) void dropLine(b, b.dataset.drop);
+    else if (b.dataset.outdrop) void outDrop(b, b.dataset.outdrop);
     else if (b.hasAttribute("data-seat")) void seat(b);
     else if (b.hasAttribute("data-close-table")) { if (b.getAttribute("aria-disabled") === "true") st.toast(D && D.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря, след като сметката е платена."); else closeTable(); }
   });

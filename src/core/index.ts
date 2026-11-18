@@ -184,7 +184,7 @@ export function createCore(ctx: Ctx) {
       cartRestore: floorG.guestCartRestore, send: floorG.guestSend, rejectedOk: floorG.guestRejectedOk, call: floorG.guestCall, callCancel: floorG.guestCallCancel,
       callRestore: floorG.guestCallRestore, bill: floorG.guestBill, pick: floorG.guestPick, rate: floorG.guestRate,
       hall: floorS.hallLive, table: floorS.tableDetail, seat: floorS.seat, callTake: floorS.callTake, callDone: floorS.callDone, callUndo: floorS.callUndo,
-      qrConfirm: floorS.qrConfirm, qrReject: floorS.qrReject, qrRejectUndo: floorS.qrRejectUndo, qrDrop: floorS.qrDrop, order: floorS.staffOrder, serve: floorS.serve, unserve: floorS.unserve,
+      qrConfirm: floorS.qrConfirm, qrReject: floorS.qrReject, qrRejectUndo: floorS.qrRejectUndo, qrDrop: floorS.qrDrop, outDrop: floorS.outDrop, order: floorS.staffOrder, serve: floorS.serve, unserve: floorS.unserve,
       ready: floorS.ready, pay: floorS.pay, close: floorS.closeTable, search: floorS.staffSearch, ratings: floorS.tableRatings,
       /* the kitchen changed a line of a table order: the guests of that sitting hear floor.session (server/app.ts) */
       touched: floorB.sessionTouched,

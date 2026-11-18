@@ -137,6 +137,8 @@ html[data-page^="k-"] body{background:var(--bg)}
 .tk-b{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
 .ln{display:grid; grid-template-columns:62px minmax(0,1fr) 40px; gap:4px 8px; align-items:start; width:100%; min-height:72px; padding:14px 14px 14px 18px; border:0; border-bottom:1px solid var(--line); background:transparent; text-align:left; cursor:pointer; color:inherit}
 .ln:active{background:var(--surface-2)}
+/* sold out, not started: waits for the manager / the waiter (not a button) */
+.ln.outwait{cursor:default; grid-template-columns:62px minmax(0,1fr)} .ln.outwait:active{background:transparent} .ln.outwait .nm{color:var(--muted)} .ln.outwait .mds{grid-column:2 / 3}
 .ln .q{font-size:26px; line-height:1.15; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; white-space:nowrap}
 .ln .nm{font-size:25px; line-height:1.18; font-weight:700; letter-spacing:-.015em; overflow-wrap:anywhere}
 .ln .nm small{font-size:18px; font-weight:700; color:var(--muted); white-space:nowrap}

@@ -106,7 +106,8 @@ export async function orderCancel(ctx: Ctx, s: StaffCtx, no: string, reason: str
   const why = String(reason || "").replace(/\s+/g, " ").trim();
   if (!why || why.length > 200) invalid({ reason: ORDERS_MSG.reason });
   await getO(ctx, no);
-  await setOrderStatus(ctx, no, "cancelled", s.user.username, s, why);
+  /* under the order's lock, as the kitchen's tablets and "step" (review 2 of the kitchen, round 3) */
+  await serial(ctx.repo, "order:" + String(no || ""), () => setOrderStatus(ctx, no, "cancelled", s.user.username, s, why));
   return orderDetail(ctx, s, no);
 }
 /** one step forward / back (or back from "Отказана"): orders.ts stepAllowed */

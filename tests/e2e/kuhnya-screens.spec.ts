@@ -494,3 +494,91 @@ test("@desktop 1024, the evening rush: „Нова“, „По-късно“, �
   await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara" });
   await ctx.close();
 });
+
+/* ---------- кръг 3: a sold-out line waits for a decision (decision of the chief 18.11) ---------- */
+async function signedCtx(browser: Browser, username: string, password: string, vp = { width: 1280, height: 800 }) {
+  const ctx = await browser.newContext({ viewport: vp });
+  expect((await ctx.request.post("/api/auth/login", { data: { username, password } })).status(), "sign-in " + username).toBe(200);
+  return ctx;
+}
+
+test("@desktop a delivery with a sold-out dish: „Започни“ and „Готово“ leave it, the card says it waits; the manager „Приеми без него“ after „Започни“ makes it „Готова“", async ({ browser, request }) => {
+  test.setTimeout(90_000);
+  const DISH = "teleshki-sudzhuk";
+  const { ctx, page, errs } = await tablet(browser);
+  await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "skara" } });
+  const o = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }, { id: DISH, q: 1 }]);
+  try {
+    expect((await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: true, sec: "skara" } })).status()).toBe(200);
+    await page.goto("/kuhnya/");
+    const c = card(page, o.no);
+    await expect(c.locator(".ln.outwait")).toContainText("Изчерпано днес · чака решение");
+    await expect(c.locator(".ln.outwait")).not.toHaveAttribute("data-ln", /./);
+    await c.locator("[data-start]").click();
+    await hold(page, '.tk[data-no="' + o.no + '"] [data-done]');
+    await expect(toast(page)).toContainText("В поръчката има изчерпано ястие: чака решение.");
+    await expect(c).toBeVisible();
+    await expect(c.locator(".ln").first()).toHaveClass(/\bdone\b/);
+    expect((await queueOf(ctx)).tickets.find((t) => t.no === o.no)!.lines.map((l) => [l.ks, l.out])).toEqual([["ready", false], ["wait", true]]);
+    /* the manager decides in "Сега" (the problem stays after "Започни") */
+    const m = await signedCtx(browser, "manager", E.MANAGER_PASSWORD), mp = await m.newPage();
+    await mp.goto("/upravitel/?preview=1&t=19:42");
+    await expect(mp.locator("[data-upscr]")).toBeVisible();
+    const more = mp.locator('[data-a="allp"]'); if (await more.count()) await more.click();
+    const prob = mp.locator('.mg-prob[data-key="out:' + o.no + '"]');
+    await expect(prob).toContainText("в кухнята");
+    await prob.locator('[data-a="without"]').click();
+    await expect(prob).toHaveCount(0);
+    /* the kitchen: the card leaves by itself, the order is "Готова" without the dish */
+    await expect(c).toHaveCount(0);
+    await expect.poll(async () => ((await (await ctx.request.get("/api/kitchen/done?sec=skara")).json()) as { rows: { no: string }[] }).rows.some((r) => r.no === o.no)).toBe(true);
+    await m.close();
+    expect(errs).toEqual([]);
+  } finally {
+    await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "skara" } });
+    await ctx.close();
+  }
+});
+
+test("@desktop a table: the kitchen cannot finish an order with a sold-out dish; the waiter „Махни“ in the table screen and it is „Готова“", async ({ browser }) => {
+  test.setTimeout(90_000);
+  const DISH = "kapreze-s-beybi-motsarela", N = 18, CL = { "x-sc-clock": "19:30" };
+  const k = await signedCtx(browser, "kitchen", E.KITCHEN_PASSWORD);
+  const w = await signedCtx(browser, "waiter", E.WAITER_PASSWORD, { width: 390, height: 844 });
+  const free = async () => {
+    const d = await (await w.request.get("/api/floor/table/" + N, { headers: CL })).json();
+    if (!d.session) return;
+    if (d.pending) await w.request.post("/api/floor/table/" + N + "/qr/reject", { headers: CL, data: { reason: "test" } });
+    if (d.rest > 0) await w.request.post("/api/floor/table/" + N + "/pay", { headers: CL, data: { how: "cash" } });
+    await w.request.post("/api/floor/table/" + N + "/close", { headers: CL, data: { force: true } });
+  };
+  await k.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "studeni" } });
+  await free();
+  try {
+    const r = await w.request.post("/api/floor/table/" + N + "/order", { headers: CL, data: { lines: [{ id: DISH, q: 1 }, { id: "salata-sirakuza", q: 1 }] } });
+    expect(r.status(), await r.text()).toBe(201);
+    const no = ((await r.json()) as { bills: { orders: { no: string }[] }[] }).bills[0].orders.slice(-1)[0].no;
+    expect((await k.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: true, sec: "studeni" } })).status()).toBe(200);
+    expect((await k.request.post("/api/kitchen/orders/" + no + "/start", { data: { sec: "studeni" } })).status()).toBe(200);
+    const done = await (await k.request.post("/api/kitchen/orders/" + no + "/done", { data: { sec: "studeni" } })).json();
+    expect(done).toMatchObject({ status: "cooking", msg: "В поръчката има изчерпано ястие: чака решение." });
+    /* the waiter's table screen: the line says the kitchen waits, "Махни" */
+    const page = await w.newPage(), errs: string[] = [];
+    page.on("pageerror", (e) => errs.push(e.message));
+    await page.goto("/servitor/masa/?preview=1&t=19:30#" + N);
+    const drop = page.locator("[data-outdrop]");
+    await expect(drop).toHaveCount(1);
+    await expect(page.locator(".oline", { has: drop })).toContainText("Изчерпано днес · кухнята чака решение");
+    await drop.click();
+    await expect(page.locator(".st-toast.on")).toContainText("Махнато от поръчката. Кухнята не го чака.");
+    await expect(page.locator("[data-outdrop]")).toHaveCount(0);
+    /* the order is "Готова": the waiter has the salad in "Готови", the kitchen no longer has it */
+    await expect.poll(async () => ((await (await k.request.get("/api/kitchen/queue?sec=studeni")).json()) as { tickets: { no: string }[] }).tickets.some((t) => t.no === no)).toBe(false);
+    await expect(page.locator("[data-serve]")).toHaveCount(1);
+    expect(errs).toEqual([]);
+  } finally {
+    await k.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "studeni" } });
+    await free();
+    await k.close(); await w.close();
+  }
+});

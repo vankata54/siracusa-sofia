@@ -733,3 +733,82 @@ describe("проверка 1, кръг 2", () => {
     expect(sum.sections.find((x) => x.id === "pesht")!.out).toBe(2);
   });
 });
+
+describe("кръг 3: a sold-out line waits for a decision (decision of the chief 18.11)", () => {
+  it("delivery: „Започни“ and „Готово“ leave the sold-out line, the order never becomes „Готова“ with it; the manager decides after „Започни“ (and „Отмени“)", async () => {
+    const { core, k, s, line, delivery, order, events } = await mk("19:00");
+    const d = await delivery([line(KEBAP), line(VRAT), line(SALAD)]);
+    await core.kitchen.setOut(k, VRAT, true, { sec: "skara" });
+    /* the kitchen starts before the manager decides: the sold-out line stays waiting */
+    await core.kitchen.start(k, d.no, "skara");
+    expect((await order(d.no)).lines.map((l) => l.ks)).toEqual(["cook", "wait", "wait"]);
+    expect(await code(core.kitchen.line(k, d.no, 1, true, { sec: "skara" }))).toBe("out_wait:409");
+    const r = await core.kitchen.done(k, d.no, "skara");
+    expect(r.msg).toBe("В поръчката има изчерпано ястие: чака решение.");
+    expect(r.ticket!.lines.map((l) => [l.name, l.ks, l.out])).toEqual([["Кебапчета", "ready", false], ["Свински врат", "wait", true]]);
+    await core.kitchen.done(k, d.no, "studeni");
+    expect((await order(d.no)).status).toBe("cooking");   /* not "Готова": the sold-out line waits */
+    /* the manager still sees the problem with "Приеми без него" (also after "Започни" and after "Обади се") */
+    await core.shift.ack(s.manager, "out:" + d.no, "called");
+    const p = (await core.shift.now(s.manager)).problems.find((x) => x.key === "out:" + d.no)!;
+    expect(p.actions).toEqual(["call", "without"]);
+    expect(await code(core.shift.accept(s.manager, d.no))).toBe("has_out:409");
+    const a = await core.shift.accept(s.manager, d.no, { without: true });
+    expect(a).toMatchObject({ status: "ready", without: ["Свински врат"] });
+    const o = await order(d.no);
+    expect(o.lines.map((l) => [!!l.dropped, l.ks])).toEqual([[false, "ready"], [true, "wait"], [false, "ready"]]);
+    expect(o.total).toBeLessThan(d.total);
+    expect((await core.shift.now(s.manager)).problems.some((x) => x.key === "out:" + d.no)).toBe(false);
+    expect(events.some((e) => e.type === "order.line" && e.data.kind === "drop" && e.data.no === d.no)).toBe(true);
+    /* a dropped line cannot be ticked through the API */
+    expect(await code(core.kitchen.line(k, d.no, 1, true, { sec: "skara" }))).toBe("bad_line:422");
+    /* back in the menu: the left-out line stays out of the order */
+    await core.kitchen.setOut(k, VRAT, false, { sec: "skara" });
+    expect((await order(d.no)).lines[1]).toMatchObject({ dropped: true, out: true, ks: "wait" });
+  });
+
+  it("„Отмени“ after „Приеми без него“ of a started order: the line waits for the decision again, the status stays", async () => {
+    const { core, k, s, line, delivery, order } = await mk("19:00");
+    const d = await delivery([line(KEBAP), line(VRAT)]);
+    await core.kitchen.setOut(k, VRAT, true, { sec: "skara" });
+    await core.kitchen.start(k, d.no, "skara");
+    const a = await core.shift.accept(s.manager, d.no, { without: true });
+    expect(a.status).toBe("cooking");
+    expect(await core.shift.acceptUndo(s.manager, a.undo.id)).toMatchObject({ status: "cooking" });
+    const o = await order(d.no);
+    expect(o.lines[1].dropped).toBeUndefined();
+    expect(o.total).toBe(d.total);
+  });
+
+  it("a table: the waiter „Махни“ the sold-out line of a sent order; the order becomes „Готова“; not for a line the kitchen started or a line that is not sold out", async () => {
+    const { core, k, s, order } = await mk("19:00");
+    const t = await core.floor.order(s.waiter, 7, { lines: [{ id: PIZZA, q: 1 }, { id: "pitsa-kaprichoza", q: 1 }] });
+    const no = t.bills[0].orders[0].no;
+    await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+    await core.kitchen.start(k, no, "pesht");
+    await core.kitchen.done(k, no, "pesht");
+    expect((await order(no)).status).toBe("cooking");
+    const v = await core.floor.table(s.waiter, 7), ls = v.bills.flatMap((b) => b.orders.flatMap((x) => x.lines));
+    expect(ls.map((l) => [l.name, l.decide])).toEqual([["Пица Маргарита", true], [expect.any(String), false]]);
+    expect(await code(core.floor.outDrop(s.waiter, 7, ls[1].key))).toBe("not_out:409");
+    expect(await code(core.floor.outDrop(s.kitchen, 7, ls[0].key))).toBe("forbidden:403");
+    const after = await core.floor.outDrop(s.waiter, 7, ls[0].key);
+    expect(after.bills.flatMap((b) => b.orders.flatMap((x) => x.lines)).map((l) => [l.out, l.decide, l.sum > 0])).toEqual([[true, false, false], [false, false, true]]);
+    expect((await order(no)).status).toBe("ready");
+    expect((await core.audit.list({ limit: 50 })).some((e) => e.action === "floor.out_drop")).toBe(true);
+    expect(await code(core.floor.outDrop(s.waiter, 7, ls[0].key))).toBe("not_out:409");
+  });
+
+  it("an old action without `saw` (an outbox from before) never wins over a newer „Върни“", async () => {
+    const { core, k, at, line, delivery, order } = await mk("19:00");
+    const d = await delivery([line(KEBAP)]);
+    const t0 = at("19:02").getTime();
+    at("19:03"); await core.kitchen.done(k, d.no, "skara");
+    at("19:04"); await core.kitchen.back(k, d.no, "skara");
+    at("19:05");
+    expect(await code(core.kitchen.done(k, d.no, "skara", { at: t0 }))).toBe("conflict:409");
+    expect((await order(d.no)).status).toBe("cooking");
+    /* a fresh one without `saw` is fine */
+    expect((await core.kitchen.done(k, d.no, "skara")).status).toBe("ready");
+  });
+});

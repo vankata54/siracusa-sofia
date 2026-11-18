@@ -10,7 +10,7 @@ import { mountKitchen, ic, esc, reduceMotion, type KFrame } from "./frame.ts";
 import { kitchenApi, ApiError, type KAct, type KTicket, type KQueue } from "../../client/api-kitchen.ts";
 import { murl } from "../routes.ts";
 import type { KSaw } from "./outbox.ts";
-import { ticketHTML, ticketSig, timerAt, timerHTML, countsHTML, countsAt, laterRowHTML, lineText, tick, begin, finish, active, fifo } from "./view.ts";
+import { ticketHTML, ticketSig, timerAt, timerHTML, countsHTML, countsAt, laterRowHTML, lineText, tick, begin, finish, active, fifo, outWait } from "./view.ts";
 
 const $ = <T extends Element = HTMLElement>(sel: string, root: ParentNode) => root.querySelector<T>(sel);
 
@@ -165,7 +165,7 @@ function queueScreen(k: KFrame): void {
     } catch (e) { flying.set(no, Math.max(0, (flying.get(no) || 1) - 1)); throw e; }
   }
   /** what this tablet shows for the lines it acts on (the core writes the action only while they are still so) */
-  const sawOf = (t: KTicket, only?: number[]): KSaw => { const o: KSaw = {}; for (const l of t.lines) if (!only || only.includes(l.i)) o[l.i] = l.ks; return o; };
+  const sawOf = (t: KTicket, only?: number[]): KSaw => { const o: KSaw = {}; for (const l of t.lines) if ((!only || only.includes(l.i)) && !outWait(l)) o[l.i] = l.ks; return o; };
   /** after the notice of a card that left: the focus goes to the next card in the queue (never to <body>) */
   const nextFocus = (): HTMLElement | null => $<HTMLElement>(".tk [data-start], .tk [data-done], .tk .ln", main) || main;
   function onLine(no: string, i: number, kbd = false): void {

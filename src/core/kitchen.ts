@@ -75,6 +75,7 @@ export const K_MSG = {
   dish: "Няма такова ястие в менюто.",
   conflict: "Някой друг промени настройките на кухнята. Зареди ги пак.",
   changed: "Друг таблет промени поръчката. Виж я отново на екрана.",
+  outWait: "В поръчката има изчерпано ястие: чака решение.",
   boss: RIGHTS_MSG.boss,
 };
 const CLOSED_WORD: Partial<Record<OrderStatus, string>> = { ready: "готова", on_way: "на път", delivered: "доставена", picked_up: "взета", cancelled: "отказана" };
@@ -259,6 +260,10 @@ const missingOf = (cfg: KitchenConfig): string[] => [cfg.confirmed.sections ? ""
 const ksOf = (l: OrderLine): KState => (l.ks === "cook" || l.ks === "ready" ? l.ks : "wait");
 /** a line the kitchen makes: not one the manager accepted the order without ("Приеми без него": only for reference) */
 const cooked = (l: OrderLine) => !l.dropped;
+/** "Изчерпано днес" on a line the kitchen has not started: it waits for a decision (the manager for delivery and pickup,
+    the waiter for a table: "Махни"); never started, ticked or made "Готово", and the order cannot become "Готова" while it
+    waits (decision of the chief 18.11, round 3 of the kitchen) */
+export const outWaiting = (l: OrderLine): boolean => !!l.out && !l.dropped && (l.ks || "wait") === "wait";
 const idxOf = (cfg: KitchenConfig, o: Order, view: string): number[] => o.lines.map((_, i) => i).filter((i) => cooked(o.lines[i]) && (view === K_ALL || secOfLine(cfg, o.lines[i]) === view));
 /** one state of a section in an order, the same everywhere: чака / готви се / готово (null: no line of it) */
 export function secState(cfg: KitchenConfig, o: Order, sec: string): KState | null {
@@ -504,8 +509,10 @@ async function revert(ctx: Ctx, cx: Ctx, s: StaffCtx, o: Order, cfg: KitchenConf
 type KLine = OrderLine & { ksAt?: Iso };
 /** the state of the line changes now (the moment is kept for the check above) */
 export function setKs(l: OrderLine, ks: KState, at: Date): void { l.ks = ks; (l as KLine).ksAt = at.toISOString(); }
-function sawCheck(o: Order, saw: KOpt["saw"], at: Date, reached: (cur: KState) => boolean): void {
-  if (!saw || typeof saw !== "object") return;
+function sawCheck(o: Order, saw0: KOpt["saw"], at: Date, reached: (cur: KState) => boolean, idx: number[] = []): void {
+  /* without `saw` (an old outbox, the API): the lines the action acts on as they are now; only "changed after the action
+     was made" can refuse it then (an old "Готово" never wins over a newer "Върни"; review 2, round 3) */
+  const saw = saw0 && typeof saw0 === "object" ? saw0 : Object.fromEntries(idx.filter((i) => o.lines[i]).map((i) => [i, ksOf(o.lines[i])]));
   for (const k of Object.keys(saw)) {
     const i = +k, l = Number.isInteger(i) ? o.lines[i] : undefined, was = saw[k];
     if (!l || !["wait", "cook", "ready"].includes(was)) continue;
@@ -520,8 +527,8 @@ export async function kitchenStart(ctx: Ctx, s: StaffCtx, no: string, sec: strin
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const { o, changed } = await locked(ctx, no, async (o) => {
-    sawCheck(o, opt.saw, at0, (cur) => cur !== "wait");
-    const idx = idxOf(cfg, o, view).filter((i) => ksOf(o.lines[i]) === "wait");
+    sawCheck(o, opt.saw, at0, (cur) => cur !== "wait", idxOf(cfg, o, view));
+    const idx = idxOf(cfg, o, view).filter((i) => ksOf(o.lines[i]) === "wait" && !outWaiting(o.lines[i]));
     if (!idx.length) return { o, changed: idx };
     if (tooLate(o)) throw closedErr(o);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
@@ -549,7 +556,9 @@ export async function kitchenLine(ctx: Ctx, s: StaffCtx, no: string, i: number, 
     if (!l) throw Object.assign(new CoreError("bad_line", K_MSG.line, 422), { fields: { i: K_MSG.line } });
     const sec = secOfLine(cfg, l);
     if (view !== K_ALL && view !== sec) throw Object.assign(new CoreError("bad_line", K_MSG.lineSec, 422), { fields: { i: K_MSG.lineSec } });
-    sawCheck(o, opt.saw, at0, (cur) => (cur === "ready") === ready);
+    if (l.dropped) throw Object.assign(new CoreError("bad_line", K_MSG.line, 422), { fields: { i: K_MSG.line } });
+    if (ready && outWaiting(l)) throw Object.assign(new CoreError("out_wait", K_MSG.outWait, 409), { fields: { i: K_MSG.outWait } });
+    sawCheck(o, opt.saw, at0, (cur) => (cur === "ready") === ready, [k]);
     if ((ksOf(l) === "ready") === ready) return { o, sec, changed: [] as number[], told: NONE };
     if (tooLate(o)) throw closedErr(o, !ready);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
@@ -573,17 +582,20 @@ export async function kitchenDone(ctx: Ctx, s: StaffCtx, no: string, sec: string
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const r = await locked(ctx, no, async (o) => {
-    sawCheck(o, opt.saw, at0, (cur) => cur === "ready");
-    const mine = idxOf(cfg, o, view), idx = mine.filter((i) => ksOf(o.lines[i]) !== "ready");
-    if (!idx.length) return { o, changed: idx, told: NONE };
+    const mine = idxOf(cfg, o, view), blocked = mine.some((i) => outWaiting(o.lines[i]));
+    sawCheck(o, opt.saw, at0, (cur) => cur === "ready", mine.filter((i) => !outWaiting(o.lines[i])));
+    const idx = mine.filter((i) => ksOf(o.lines[i]) !== "ready" && !outWaiting(o.lines[i]));
+    const wait: Told = { notify: [], waiting: [], msg: K_MSG.outWait };
+    if (!idx.length) return { o, changed: idx, told: blocked ? wait : NONE };
     if (tooLate(o)) throw closedErr(o);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
     for (const i of idx) { setKs(o.lines[i], "ready", at); o.lines[i].readyAt = at.toISOString(); }
     o.updatedAt = at.toISOString();
     await ctx.repo.put(COL.orders, o);
     const x = await afterReady(ctx, cx, s, o, cfg, [...new Set(idx.map((i) => secOfLine(cfg, o.lines[i])))], idx, at);
-    await audit(ctx, s.user.username, "kitchen.done", o.no, { sec: view, lines: idx, at: at.toISOString() });
-    return { o: x.o, changed: idx, told: x.told };
+    await audit(ctx, s.user.username, "kitchen.done", o.no, { sec: view, lines: idx, at: at.toISOString(), ...(blocked ? { outWait: true } : {}) });
+    /* a sold-out line of the section waits for a decision: the card stays, the notice says why */
+    return { o: x.o, changed: idx, told: blocked ? { ...x.told, msg: K_MSG.outWait } : x.told };
   });
   return actResult(ctx, r.o, view, view, r.changed, r.told, !r.changed.length);
 }
@@ -595,8 +607,8 @@ export async function kitchenBack(ctx: Ctx, s: StaffCtx, no: string, sec: string
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const r = await locked(ctx, no, async (o) => {
-    sawCheck(o, opt.saw, at0, (cur) => cur !== "ready");
     const mine = idxOf(cfg, o, view), at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
+    sawCheck(o, opt.saw, at0, (cur) => cur !== "ready", Array.isArray(opt.lines) ? opt.lines.filter((i) => mine.includes(i)) : mine);
     let idx = mine;
     if (Array.isArray(opt.lines)) {
       if (opt.lines.some((i) => !Number.isInteger(i) || !o.lines[i])) throw Object.assign(new CoreError("bad_line", K_MSG.line, 422), { fields: { lines: K_MSG.line } });

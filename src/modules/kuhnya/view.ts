@@ -39,12 +39,14 @@ function modsHTML(l: KLineView): string {
   for (const a of l.add) h += a.out ? '<span class="md addout">' + ic("x", 18) + '<span class="vh">+ </span>' + esc(a.n) + " · изчерпано днес</span> "
     : '<span class="md add">' + ic("plus", 18) + '<span class="vh">+ </span>' + esc(a.n) + "</span> ";
   if (l.note) h += '<span class="md nt">' + ic("note", 18) + esc(l.note) + "</span> ";
-  if (l.out) h += '<span class="md out">' + ic("x", 18) + "Изчерпано днес</span>";
+  if (l.out) h += '<span class="md out">' + ic("x", 18) + "Изчерпано днес" + (l.ks === "wait" ? " · чака решение" : "") + "</span>";
   return h ? '<span class="mds">' + h + "</span>" : "";
 }
 /** a line of the section: one touch = ready (the whole row is the button). Its name is what is seen, in the same order
     (the spaces between the parts are for the name: the parts are grid items), then what a touch does. */
 export function lineHTML(l: KLineView): string {
+  /* sold out and not started: waits for the manager / the waiter; it is not cooked, so it is not a button */
+  if (outWait(l)) return '<div class="ln outwait"><span class="q">' + l.q + '&thinsp;×</span> <span class="nm">' + esc(l.name) + (l.weight ? " <small>" + esc(l.weight) + "</small>" : "") + "</span> " + modsHTML(l) + "</div>";
   const done = l.ks === "ready";
   return '<button class="ln' + (done ? " done" : "") + '" type="button" data-ln="' + l.i + '" aria-pressed="' + done + '">' +
     '<span class="q">' + l.q + '&thinsp;×</span> <span class="nm">' + esc(l.name) + (l.weight ? " <small>" + esc(l.weight) + "</small>" : "") + '</span> <span class="ck">' + ic("check", 24) + "</span>" + modsHTML(l) +
@@ -96,8 +98,10 @@ export function laterRowHTML(o: KLater): string {
 
 /* ---------- what the tablet shows at once (and keeps while there is no connection) ---------- */
 const copy = (t: KTicket): KTicket => ({ ...t, lines: t.lines.map((l) => ({ ...l })) });
+/** a sold-out line the kitchen has not started: waits for a decision (never cooked, ticked or made "Готово") */
+export const outWait = (l: { out: boolean; ks: KState }): boolean => l.out && l.ks === "wait";
 /** is there still a line of this view to cook */
-export const active = (t: KTicket): boolean => t.lines.some((l) => l.ks !== "ready");
+export const active = (t: KTicket): boolean => t.lines.some((l) => l.ks !== "ready" && !outWait(l));
 /** a line ready / not ready after all; the ticket is no longer "Нова" */
 export function tick(t: KTicket, i: number, ready: boolean): KTicket {
   const n = copy(t);
@@ -108,7 +112,7 @@ export function tick(t: KTicket, i: number, ready: boolean): KTicket {
 /** "Започни": the waiting lines are being cooked, "готви се от" now */
 export function begin(t: KTicket, now: number, hm: string): KTicket {
   const n = copy(t);
-  for (const l of n.lines) if (l.ks === "wait") l.ks = "cook";
+  for (const l of n.lines) if (l.ks === "wait" && !outWait(l)) l.ks = "cook";
   if (n.startedAt == null) { n.startedAt = now; n.startedHm = hm; }
   n.isNew = false;
   return n;
@@ -116,7 +120,7 @@ export function begin(t: KTicket, now: number, hm: string): KTicket {
 /** "Готово": every line of the view is ready; returns the lines it changed (for an exact "Върни") */
 export function finish(t: KTicket): { t: KTicket; changed: number[] } {
   const n = copy(t), changed: number[] = [];
-  for (const l of n.lines) if (l.ks !== "ready") { l.ks = "ready"; changed.push(l.i); }
+  for (const l of n.lines) if (l.ks !== "ready" && !outWait(l)) { l.ks = "ready"; changed.push(l.i); }
   n.isNew = false;
   return { t: n, changed };
 }

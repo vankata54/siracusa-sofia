@@ -62,6 +62,7 @@ export interface HallLive {
 export interface StaffLine {
   /** "<№>:<index>" */ key: string; no: string; idx: number; id: string; name: string; q: number; mods: string[]; note: string; grams: number | null; unit: number; sum: number;
   st: LineSt; stLabel: string; out: boolean; paid: boolean; /** "Телефон 2" (a QR line) / "Гост 1" / "" */ guest: string; readyAt: Iso | null; servedAt: Iso | null; canUnserve: boolean;
+  /** "Изчерпано днес" before the kitchen started it: the kitchen waits for "Махни" (outDrop) */ decide: boolean;
 }
 export interface StaffOrder { no: string; placedAt: string; ts: number; channel: "qr" | "waiter"; /** confirmed by a waiter */ via: boolean; source: string; by: string; note: string; status: OrderStatus; statusLabel: string; lines: StaffLine[]; sum: number }
 export interface StaffBill { name: string; sum: number; paid: number; rest: number; orders: StaffOrder[] }
@@ -179,6 +180,7 @@ async function detailOf(ctx: Ctx, me: StaffCtx, t: HallTable, s: TableSession | 
       key: x.key, no: x.no, idx: x.idx, id: x.l.id, name: x.l.name || x.l.id, q: x.l.q, mods: x.l.mods || [], note: x.l.note || "", grams: x.l.grams || null, unit: x.l.unit ?? 0, sum: x.sum,
       st: x.st, stLabel: LINE_LABEL[x.st], out: x.out, paid: x.paid, guest: guestOf(x.l.guest), readyAt: x.st === "ready" ? readyAtOf(x) : x.l.readyAt || null, servedAt: x.l.servedAt || null,
       /* only who served it (or the management) may take "Сервирах" back: the core refuses the others, the screen does not offer it */
+      decide: !!x.l.out && !x.l.dropped && (x.l.ks || "wait") === "wait" && ["accepted", "cooking"].includes(ord.status),
       canUnserve: !!x.l.servedAt && nowMs - Date.parse(x.l.servedAt) <= FLOOR_UNDO_MS && (!x.l.servedBy || x.l.servedBy === me.user.username || isBoss(me)),
     }));
     b.orders.push({ no: ord.no, placedAt: ord.placedAt, ts: ord.ts, channel: ord.channel === "waiter" ? "waiter" : "qr", via: ord.via === "waiter", source: ord.channel === "waiter" ? "от сервитьор" : "от QR", by: ord.by || "", note: ord.note || "", status: ord.status, statusLabel: tableLabel(ord), lines: ls, sum: sumOf(ls) });
@@ -315,6 +317,35 @@ export async function qrDrop(ctx: Ctx, s: StaffCtx, ref: string | number, key: s
     const x = byId[l.id];
     await audit(ctx, s.user.username, "floor.qr_drop", t.id, { n: t.n, id: l.id, q: l.q, out: !!(x && outNow(x, await soldOutToday(ctx))) });
     emit(ctx, "floor.qr", { table: t.id, n: t.n, session: sit.id, state: "pending", at: sit.pending.at, dropped: l.id });
+    return done(ctx, s, t, sit);
+  });
+}
+/** "Махни" on a line of a SENT table order that the kitchen marked "Изчерпано днес" before it started it (decision of the
+    chief 18.11, round 3 of the kitchen): the waiter (or the management) decides; the line stays in the order only for
+    reference (`dropped`), the kitchen no longer waits for it, the guests' view and the bill follow (it was never charged);
+    when everything else is ready the order is "Готова". The last line of an order cannot go this way (409 "last_line").
+    Log: floor.out_drop. */
+export const OUT_DROP_MSG = { notOut: "Това ястие вече не чака решение. Опресни масата." };
+export async function outDrop(ctx: Ctx, s: StaffCtx, ref: string | number, key: string): Promise<TableDetail> {
+  needFloor(s);
+  return onTable(ctx, ref, false, async (sit, t) => {
+    const b = billLines(await sessionOrders(ctx, sit)).find((x) => x.key === String(key || ""));
+    if (!b) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
+    let err: CoreError | null = null;
+    const o = await patchOrder(ctx, b.no, (o) => {
+      const l = o.lines[b.idx];
+      if (!l || !l.out || l.dropped || (l.ks || "wait") !== "wait" || !["accepted", "cooking"].includes(o.status)) { err = new CoreError("not_out", OUT_DROP_MSG.notOut, 409); return false; }
+      if (o.lines.every((x, i) => i === b.idx || x.dropped)) { err = new CoreError("last_line", FLOOR_MSG.sLastLine, 409); return false; }
+      l.dropped = true;
+      o.sub = sumOf(o.lines.filter((x) => !x.out).map((x) => ({ sum: r2((x.unit ?? 0) * x.q) }))); o.total = o.sub;
+    });
+    if (err) throw err;
+    if (!o) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
+    await audit(ctx, s.user.username, "floor.out_drop", t.id, { n: t.n, no: b.no, idx: b.idx, id: b.l.id, q: b.l.q });
+    emit(ctx, "order.line", { no: b.no, kind: "drop", sec: "all", idx: b.idx, lines: [b.idx], table: sit.table, session: sit.id, status: o.status }, { table: sit.id, order: b.no });
+    /* everything the kitchen makes is ready already: the order is "Готова" (the waiter sees it in "Готови") */
+    const rest = o.lines.filter((x) => !x.dropped);
+    if (o.status === "cooking" && rest.length && rest.every((x) => x.ks === "ready")) await setOrderStatus(ctx, o.no, "ready", s.user.username);
     return done(ctx, s, t, sit);
   });
 }
