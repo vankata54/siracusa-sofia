@@ -30,7 +30,8 @@ import { liveZones } from "./zones.ts";
 import { getSection } from "./site-data.ts";
 import { HALL_MISSING } from "./hall.ts";
 import type { TableSession } from "./floor.ts";
-import { sofiaYmd, addDaysYmd } from "../lib/time.ts";
+import { addDaysYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import { fmt } from "../lib/format.ts";
 
 /* ---------- rights, words ---------- */
@@ -67,6 +68,11 @@ export function needOwner(s: StaffCtx | null | undefined): StaffCtx {
   if (!OWNER_ROLES.includes(s.user.role)) throw new CoreError("forbidden", OWNER_MSG.forbidden, 403);
   return s;
 }
+/** a part of a screen that needs a section the role may lack (the floor, the drivers, the no-shows): without it the part
+    is left out (`hidden`), never the whole screen (the module is by role) */
+async function part<T>(p: Promise<T>): Promise<T | null> {
+  try { return await p; } catch (e) { if (e instanceof CoreError && e.status === 403) return null; throw e; }
+}
 /** sums only with "Финанси и гориво" */
 export const ownerMoney = (s: StaffCtx): boolean => may(s, "finance");
 const M = (money: boolean) => (v: number): number | null => (money ? round2(v) : null);
@@ -88,7 +94,7 @@ export interface OwnerToday {
   cancelled: number;
   /** the turnover from 10:00 cumulative, every 15 min, against the usual (money only; null without it) */
   byHour: { step: number; labels: string[]; cur: (number | null)[]; usual: number[]; nowIndex: number } | null;
-  live: { inWork: number; tables: { busy: number; total: number; /** [ЛИПСВА] while the plan of the hall is the conditional one */ missing: string }; reservations: { n: number; people: number; ahead: number; aheadPeople: number } };
+  live: { inWork: number; tables: { busy: number; total: number; /** [ЛИПСВА] while the plan of the hall is the conditional one */ missing: string; /** the role lacks the floor's sections */ hidden?: boolean }; reservations: { n: number; people: number; ahead: number; aheadPeople: number } };
   byChannel: { key: H.Ch5; label: string; orders: number; revenue: number | null }[];
   /** the last 7 days (today included) and the 7 before them ("7 дни по-рано"; the day a week ago only up to this minute,
       as today: never a whole day against a part of one) */
@@ -109,7 +115,10 @@ async function waitsOf(ctx: Ctx, s: StaffCtx, notes?: FeedbackNote[]): Promise<O
 export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
   needOwner(s);
   const money = ownerMoney(s), m = M(money), h = await H.loadHistory(ctx), day = h.today, cut = h.now, now = H.hm(cut);
-  const cur = H.slice(h, day, day), t = H.totals(cur), u = H.usual(h, day, cut), lw = addDaysYmd(day, -7), lwt = H.totals(H.slice(h, lw, lw, cut));
+  const lw = addDaysYmd(day, -7);
+  /* one read: the 14 days of "Последните 7 дни" and the 4 weeks of "обичайното" come from the cache by day */
+  const [cur, u, lws, d7s, w7s] = await Promise.all([H.slice(h, day, day), H.usual(h, day, cut), H.slice(h, lw, lw, cut), H.slice(h, addDaysYmd(day, -6), day), H.slice(h, addDaysYmd(day, -13), addDaysYmd(day, -8))]);
+  const t = H.totals(cur), lwt = H.totals(lws);
   const measure = money ? "revenue" : "orders", base = money ? u.revenue : u.orders, val = money ? t.revenue : t.orders;
   const p = H.pct(val, base), wd = H.dayName(day), label = "обичайното за " + wd + " до " + now;
   const alert = p != null && Math.abs(p) >= ALERT_PCT && u.orders >= ALERT_MIN_ORDERS
@@ -119,16 +128,16 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
   let byHour: OwnerToday["byHour"] = null;
   if (money) {
     const labels: string[] = []; for (let x = 600; x <= 1380; x += 15) labels.push(H.hm(x));
-    const days = u.days.map((d) => H.cumulative(H.slice(h, d, d).orders) as number[]);
+    const days = await Promise.all(u.days.map(async (d) => H.cumulative((await H.slice(h, d, d)).orders) as number[]));
     byHour = { step: 15, labels, cur: H.cumulative(cur.orders, 15, cut), usual: labels.map((_, i) => round2(days.reduce((a, d) => a + d[i], 0) / days.length)), nowIndex: Math.max(-1, Math.min(labels.length - 1, Math.ceil((cut - 600) / 15))) };
   }
   /* live: "В работа" (the admin's tab), the tables, the reservations of the evening */
-  const work = h.orders.filter((o) => H.dayOf(o) === day && !FINISHED.includes(o.status) && o.status !== "cancelled").length;
-  const hall = await hallLive(ctx, s);
-  const rs = h.reservations.filter((r) => r.date === day && (r.status === "new" || r.status === "confirmed" || r.status === "seated"));
+  const work = cur.orders.filter((o) => !FINISHED.includes(o.status) && o.status !== "cancelled").length;
+  const hall = await part(hallLive(ctx, s));
+  const rs = cur.res.filter((r) => r.status === "new" || r.status === "confirmed" || r.status === "seated");
   const ahead = rs.filter((r) => r.status !== "seated" && +r.time.slice(0, 2) * 60 + +r.time.slice(3) >= cut);
   /* the last 7 days and the 7 before */
-  const d7 = H.byDay(H.slice(h, addDaysYmd(day, -6), day)), w7 = [...H.byDay(H.slice(h, addDaysYmd(day, -13), addDaysYmd(day, -8))), ...H.byDay(H.slice(h, lw, lw, cut))];
+  const d7 = H.byDay(d7s), w7 = [...H.byDay(w7s), ...H.byDay(lws)];
   const plan = await getSection(ctx, "hall");
   const sumD = (l: H.DayRow[]) => ({ orders: l.reduce((a, d) => a + d.orders, 0), revenue: m(l.reduce((a, d) => a + d.revenue, 0)) });
   return {
@@ -139,7 +148,7 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
     lastWeek: { date: lw, sum: m(lwt.revenue), orders: lwt.orders, label: H.lastDayName(day) + " по това време" },
     avg: { value: money ? t.avg : null, usual: money ? (u.orders ? round2(u.revenue / u.orders) : 0) : null },
     cancelled: t.cancelled, byHour,
-    live: { inWork: work, tables: { busy: hall.tables.filter((x) => x.state !== "free").length, total: hall.tables.length, missing: plan.version ? "" : HALL_MISSING }, reservations: { n: rs.length, people: rs.reduce((a, r) => a + r.people, 0), ahead: ahead.length, aheadPeople: ahead.reduce((a, r) => a + r.people, 0) } },
+    live: { inWork: work, tables: hall ? { busy: hall.tables.filter((x) => x.state !== "free").length, total: hall.tables.length, missing: plan.version ? "" : HALL_MISSING } : { busy: 0, total: 0, missing: "", hidden: true }, reservations: { n: rs.length, people: rs.reduce((a, r) => a + r.people, 0), ahead: ahead.length, aheadPeople: ahead.reduce((a, r) => a + r.people, 0) } },
     byChannel: H.byChannel5(cur).map((c) => ({ ...c, revenue: m(c.revenue) })),
     last7: { days: d7.map((d, i) => ({ date: d.date, short: H.dayShort(d.date), orders: d.orders, revenue: m(d.revenue), weekAgo: { date: w7[i].date, orders: w7[i].orders, revenue: m(w7[i].revenue) } })), total: sumD(d7), weekAgo: sumD(w7) },
     waits: await waitsOf(ctx, s),
@@ -173,16 +182,19 @@ export interface OwnerTrends {
 }
 const totM = (t: H.Totals, money: boolean): TotalsM => ({ ...t, revenue: money ? t.revenue : null, avg: money ? t.avg : null });
 const csvNum = (v: number) => v.toFixed(2).replace(".", ",");
-function ranges(h: H.History, q: TrendQuery) {
+async function ranges(h: H.History, q: TrendQuery) {
   const period = H.asPeriod(q && q.period), { from, to } = H.periodRange(h.today, period, q && q.from, q && q.to), kind: H.Compare = q && q.compare === "year" ? "year" : "prev";
   const c = H.compareRange(period, from, to, kind), onlyToday = from === h.today && to === h.today;
-  return { period, from, to, kind, c, onlyToday, cur: H.slice(h, from, to), prev: H.slice(h, c.from, c.to, onlyToday ? h.now : null) };
+  const [cur, prev] = await Promise.all([H.slice(h, from, to), H.slice(h, c.from, c.to, onlyToday ? h.now : null)]);
+  return { period, from, to, kind, c, onlyToday, cur, prev };
 }
 
 export async function ownerTrends(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Promise<OwnerTrends> {
   needOwner(s);
-  const money = ownerMoney(s), m = M(money), h = await H.loadHistory(ctx), R = ranges(h, q);
-  const cd = H.byDay(R.cur), pd = H.byDay(R.prev), ch = H.byChannel(R.cur), pch = H.byChannel(R.prev), hr = H.byHour(R.cur), phr = H.byHour(R.prev);
+  const money = ownerMoney(s), m = M(money), h = await H.loadHistory(ctx), R = await ranges(h, q);
+  /* the hours of both periods (10-22 and every hour with orders), so that the comparison is aligned */
+  const hs = H.hoursOf(R.cur, R.prev);
+  const cd = H.byDay(R.cur), pd = H.byDay(R.prev), ch = H.byChannel(R.cur), pch = H.byChannel(R.prev), hr = H.byHour(R.cur, hs), phr = H.byHour(R.prev, hs);
   const nOrd = ch.reduce((a, c) => a + c.orders, 0), off = H.offers(R.cur);
   const dishRow = (d: H.DishRow) => ({ id: d.id, name: d.name, q: d.q, revenue: m(d.revenue) });
   let dish: OwnerTrends["dish"] = null;
@@ -198,7 +210,7 @@ export async function ownerTrends(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Pr
   const sample = R.cur.orders.some(H.isSample) || R.prev.orders.some(H.isSample);
   if (sample) csv.push(["Примерни данни"]);
   return {
-    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, money, sample, history: hasHistory(h),
+    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, money, sample, history: await H.hasBefore(ctx, h.today),
     cmp: { kind: R.kind, from: R.c.from, to: R.c.to },
     totals: totM(H.totals(R.cur), money), prev: totM(H.totals(R.prev), money),
     byDay: cd.map((d, i) => ({ date: d.date, orders: d.orders, revenue: m(d.revenue), reservations: d.reservations, noShows: d.noShows, cancelled: d.cancelled, cmp: { date: pd[i] ? pd[i].date : "", orders: pd[i] ? pd[i].orders : 0, revenue: m(pd[i] ? pd[i].revenue : 0) } })),
@@ -232,22 +244,20 @@ export interface OwnerFinance {
   /** one delivery: the fuel of the period per delivered order against the fee of each quarter ([ЛИПСВА] where unknown) */
   delivery: { delivered: number; fuelPer: number | null; prevFuelPer: number | null; fees: { zone: string; free: boolean; fee: number | null; missing: string | null }[]; driverCost: string };
   /** the drivers' cash today: still to hand over (open shifts) and handed over (closed today) */
-  cash: { date: string; rows: { user: string; name: string; open: boolean; toHand: number; handed: number | null }[]; toHand: number; handed: number; handTo: string };
+  cash: { date: string; rows: { user: string; name: string; open: boolean; toHand: number; handed: number | null }[]; toHand: number; handed: number; handTo: string; /** the role lacks "Шофьор" / "Персонал": the drivers on shift are not shown */ hidden?: boolean };
   cost: string; csv: string[][];
 }
-/** any order before today */
-const hasHistory = (h: H.History): boolean => h.orders.some((o) => H.dayOf(o) < h.today);
 /** the km of the drivers' shifts started in [from, to]: the finished legs and the last leg of a closed shift */
 function kmOf(shifts: DriverShift[], from: string, to: string): number | null {
   let km = 0, any = false;
   for (const x of shifts) {
-    const d = sofiaYmd(new Date(x.startedAt)); if (d < from || d > to) continue;
+    const d = shiftDay(new Date(x.startedAt)); if (d < from || d > to) continue;
     for (const l of x.legs || []) { km += Math.max(0, l.kmEnd - l.kmStart); any = true; }
     if (x.status === "closed" && typeof x.kmEnd === "number") { km += Math.max(0, x.kmEnd - x.kmStart); any = true; }
   }
   return any ? km : null;
 }
-function payOf(sl: H.Slice, sessions: TableSession[]): PayBlock {
+function payOf(sl: Pick<H.Slice, "orders" | "from" | "to">, sessions: TableSession[]): PayBlock {
   const r = (n: number) => round2(n), o = { cash: 0, card: 0, voucher: 0 }, t = { cash: 0, card: 0, unpaid: 0 };
   let tableRev = 0;
   for (const x of sl.orders) {
@@ -255,25 +265,26 @@ function payOf(sl: H.Slice, sessions: TableSession[]): PayBlock {
     if (H.chKey(x.channel) === "table") { tableRev += x.total || 0; continue; }
     o[x.pay === "card" ? "card" : x.pay === "voucher" ? "voucher" : "cash"] += x.total || 0;
   }
-  for (const s of sessions) for (const p of s.payments || []) { const d = sofiaYmd(new Date(p.at)); if (d >= sl.from && d <= sl.to) t[p.how === "card" ? "card" : "cash"] += p.sum; }
+  for (const s of sessions) for (const p of s.payments || []) { const d = shiftDay(new Date(p.at)); if (d >= sl.from && d <= sl.to) t[p.how === "card" ? "card" : "cash"] += p.sum; }
   t.unpaid = Math.max(0, tableRev - t.cash - t.card);
   return { online: { cash: r(o.cash), card: r(o.card), voucher: r(o.voucher) }, table: { cash: r(t.cash), card: r(t.card), unpaid: r(t.unpaid) }, total: r(o.cash + o.card + o.voucher + tableRev) };
 }
 export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Promise<OwnerFinance> {
   needOwner(s);
   if (!ownerMoney(s)) throw new CoreError("forbidden", OWNER_MSG.finance, 403);
-  const h = await H.loadHistory(ctx), R = ranges(h, q), sessions = await ctx.repo.list<TableSession>(COL.tableSessions);
+  const h = await H.loadHistory(ctx), R = await ranges(h, q);
+  const [sessions, prevSessions] = (await Promise.all([H.sessionsOf(ctx, R.from, R.to), H.sessionsOf(ctx, R.c.from, R.c.to)])) as TableSession[][];
   const fr = await fuelReport(ctx, s, { from: R.from, to: R.to }), pf = await fuelReport(ctx, s, { from: R.c.from, to: R.c.to });
   const isDel = (o: H.Slice["orders"][number]) => o.mode === "delivery" && o.status === "delivered";
   const delivered = R.cur.orders.filter(isDel).length, prevDelivered = R.prev.orders.filter(isDel).length;
   const zones = await liveZones(ctx);
   /* the cash of the drivers today */
-  const day = h.today, dv = await driversView(ctx, s), staff = new Map((await ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff)).map((u) => [u.username, u.name]));
+  const day = h.today, dv = await part(driversView(ctx, s)), staff = new Map((await ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff)).map((u) => [u.username, u.name]));
   const shifts = (await ctx.repo.list<DriverShift>(COL.shifts)).filter((x) => x.role === "driver");
-  const closed = shifts.filter((x) => x.status === "closed" && !!x.endedAt && sofiaYmd(new Date(x.endedAt)) === day && !!x.closing);
-  const rows = [...dv.drivers.map((d) => ({ user: d.user, name: d.name, open: true, toHand: round2(d.cash), handed: null as number | null })),
+  const closed = shifts.filter((x) => x.status === "closed" && !!x.endedAt && shiftDay(new Date(x.endedAt)) === day && !!x.closing);
+  const rows = [...(dv ? dv.drivers : []).map((d) => ({ user: d.user, name: d.name, open: true, toHand: round2(d.cash), handed: null as number | null })),
     ...closed.map((x) => ({ user: x.user, name: staff.get(x.user) || x.name, open: false, toHand: 0, handed: round2(x.closing!.handover) }))];
-  const pay = payOf(R.cur, sessions), prevPay = payOf(R.prev, sessions);
+  const pay = payOf(R.cur, sessions), prevPay = payOf(R.prev, prevSessions);
   const byDay = H.byDay(R.cur), prevDays = H.byDay(R.prev), fuelDay = new Map(fr.byDay.map((d) => [d.date, d])), prevFuelDay = new Map(pf.byDay.map((d) => [d.date, d]));
   const fuelOf = (m: typeof fuelDay, date: string) => m.get(date) || { date, n: 0, litres: 0, sum: 0 };
   const prevFuelDays = prevDays.map((d) => fuelOf(prevFuelDay, d.date));
@@ -281,14 +292,14 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   const lit = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
   const csv = [["Ден", "Оборот €", "Поръчки", "В брой €", "Карта при получаване €", "Ваучер €", "На маса €", "Гориво €", "Литри", "Сравнение: ден", "Сравнение: оборот €", "Сравнение: гориво €"],
     ...byDay.map((d, i) => {
-      const p = payOf(H.slice(h, d.date, d.date), sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
+      const p = payOf({ from: d.date, to: d.date, orders: R.cur.orders.filter((o) => H.dayOf(o) === d.date) }, sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
       return [d.date, csvNum(d.revenue), String(d.orders), csvNum(p.online.cash), csvNum(p.online.card), csvNum(p.online.voucher), csvNum(p.table.cash + p.table.card + p.table.unpaid), csvNum(f.sum), lit(f.litres),
         c ? c.date : "", c ? csvNum(c.revenue) : "", cf ? csvNum(cf.sum) : ""];
     })];
   const sample = R.cur.orders.some(H.isSample);
   if (sample) csv.push(["Примерни данни"]);
   return {
-    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample, history: hasHistory(h),
+    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample, history: await H.hasBefore(ctx, h.today),
     cmp: { kind: R.kind, from: R.c.from, to: R.c.to },
     revenue: { cur: H.totals(R.cur).revenue, prev: H.totals(R.prev).revenue },
     km: { cur: kmOf(shifts, R.from, R.to), prev: kmOf(shifts, R.c.from, R.c.to) },
@@ -296,7 +307,7 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
     fuel: { total: fr.total, byDay: fr.byDay, byDriver: fr.byDriver, byCar: fr.byCar }, prevFuel: pf.total, prevFuelDays,
     delivery: { delivered, fuelPer: delivered && fr.total.sum ? round2(fr.total.sum / delivered) : null, prevFuelPer: prevDelivered && pf.total.sum ? round2(pf.total.sum / prevDelivered) : null,
       fees: zones.map((z) => ({ zone: z.n, free: z.free, fee: z.free ? 0 : z.fee, missing: !z.free && z.fee == null ? OWNER_MISSING.fee : null })), driverCost: OWNER_MISSING.driverCost },
-    cash: { date: day, rows, toHand: round2(rows.reduce((a, x) => a + x.toHand, 0)), handed: round2(rows.reduce((a, x) => a + (x.handed || 0), 0)), handTo: DRIVER_MISSING.handTo },
+    cash: { date: day, rows, toHand: round2(rows.reduce((a, x) => a + x.toHand, 0)), handed: round2(rows.reduce((a, x) => a + (x.handed || 0), 0)), handTo: DRIVER_MISSING.handTo, ...(dv ? {} : { hidden: true }) },
     cost: OWNER_MISSING.cost, csv,
   };
 }
@@ -400,19 +411,19 @@ export interface OwnerDecisions {
   next: string | null;
   /** the no-shows that wait for a decision (the phone masked) */
   /** blocked: how many numbers are blocked now ("1 блокиран номер.") */
-  blocks: { rows: BlockRow[]; canDecide: boolean; limit: number; blocked: number };
+  blocks: { rows: BlockRow[]; canDecide: boolean; limit: number; blocked: number; /** the role lacks "Резервации" / "Клиенти" */ hidden?: boolean };
   mail: MailSettings;
   google: { missing: string[] };
   waits: OwnerWaits;
 }
 export async function ownerDecisions(ctx: Ctx, s: StaffCtx): Promise<OwnerDecisions> {
   needOwner(s);
-  const notes = await listNotes(ctx, { kind: "answer" }), a = answersById(notes), bl = await blockList(ctx, s);
+  const notes = await listNotes(ctx, { kind: "answer" }), a = answersById(notes), bl = await part(blockList(ctx, s));
   const qs = OWNER_QUESTIONS.map((q) => qView(q, a.get(q.id))), open = qs.filter((q) => !q.answer);
   return {
     canAnswer: s.user.role === "owner", questions: qs, groups: OWNER_GROUPS,
     counts: { total: qs.length, open: open.length, answered: qs.length - open.length }, next: open[0] ? open[0].id : null,
-    blocks: { rows: bl.rows.filter((r) => r.status === "pending"), canDecide: bl.canDecide, limit: bl.limit, blocked: bl.rows.filter((r) => r.status === "blocked").length },
+    blocks: bl ? { rows: bl.rows.filter((r) => r.status === "pending"), canDecide: bl.canDecide, limit: bl.limit, blocked: bl.rows.filter((r) => r.status === "blocked").length } : { rows: [], canDecide: false, limit: 2, blocked: 0, hidden: true },
     mail: await mailOf(ctx), google: { missing: [OWNER_MISSING.google, OWNER_MISSING.rating] }, waits: await waitsOf(ctx, s, notes),
   };
 }
@@ -434,7 +445,7 @@ export async function ownerAnswer(ctx: Ctx, s: StaffCtx, qid: string, input: Ans
   const text = "Отговор на въпрос от агенцията (" + where + "): „" + q.text + "“ " + (i.answer === "default" ? "Съгласен с варианта по подразбиране: „" + q.def + "“." : "Друго: „" + other + "“.");
   const nq: NoteQuestion = { id: q.id, n: q.n, sec: q.sec, group: q.group, text: q.text, def: q.def, answer: i.answer, other };
   const r = await saveAnswer(ctx, s, nq, text, QUESTION_URL(q.id));
-  emit(ctx, "owner.answer", { id: q.id, answer: i.answer, note: r.note.id });
+  emit(ctx, "owner.answer", { id: q.id, answer: i.answer, note: r.note.id }, { office_only: true });
   return { question: qView(q, r.note), replaced: r.replaced, applied: r.applied, msg: r.applied ? OWNER_MSG.applied : r.replaced ? OWNER_MSG.replaced : OWNER_MSG.saved, undoUntil: nowDate(ctx).getTime() + ANSWER_UNDO_MS };
 }
 /** "Отмени" after an answer (the owner, within ANSWER_UNDO_MS): the earlier answer comes back (or none) */
@@ -444,7 +455,7 @@ export async function ownerAnswerUndo(ctx: Ctx, s: StaffCtx, qid: string): Promi
   const q = OWNER_QUESTIONS.find((x) => x.id === String(qid || ""));
   if (!q) throw new CoreError("not_found", OWNER_MSG.question, 404);
   const n = await undoAnswer(ctx, s, q.id, ANSWER_UNDO_MS);
-  emit(ctx, "owner.answer", { id: q.id, undo: true });
+  emit(ctx, "owner.answer", { id: q.id, undo: true }, { office_only: true });
   return qView(q, n || undefined);
 }
 /** "Блокирай" / "Не блокирай" a no-show (no "Отмени", decision 16.11); the log is written by reservations-admin.ts */

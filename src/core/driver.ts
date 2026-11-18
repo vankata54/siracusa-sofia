@@ -23,6 +23,7 @@ import { need, needBoss, may, isBoss, invalid, money, round2, serial, RIGHTS_MSG
 import { setOrderStatus, orderDay } from "./orders.ts";
 import { liveZones } from "./zones.ts";
 import { sofiaEpoch, sofiaNow, sofiaYmd, addDaysYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import { hhmm, fmt } from "../lib/format.ts";
 
 /* ---------- words (the screens show the same ones) ---------- */
@@ -658,8 +659,8 @@ function listOf(sc: Scope, all: boolean): DriverList {
   const whose = (o: Order) => (all ? !!o.driver : o.driver === sc.me);
   const active = sc.orders.filter((o) => whose(o) && unfinishedState(o))
     .sort((a, b) => +openProblem(a) - +openProblem(b) || +(a.driver !== sc.me) - +(b.driver !== sc.me) || pos(a) - pos(b) || (a.driver || "").localeCompare(b.driver || "") || byDue(a, b));
-  const today = sofiaYmd(new Date(sc.now));
-  const doneOf = all ? sc.orders.filter((o) => !!o.driver && !!o.pickedAt && sofiaYmd(new Date(o.pickedAt)) === today) : sc.shift ? ofShift(sc.orders, sc.shift) : [];
+  const today = shiftDay(new Date(sc.now));
+  const doneOf = all ? sc.orders.filter((o) => !!o.driver && !!o.pickedAt && shiftDay(new Date(o.pickedAt)) === today) : sc.shift ? ofShift(sc.orders, sc.shift) : [];
   const done = doneOf.filter((o) => !unfinishedState(o) && stateOf(o) !== "wait").sort((a, b) => finishedAt(b) - finishedAt(a));
   const mineActive = active.filter((o) => o.driver === sc.me), inR = mineActive.filter(inRoute);
   const next = sc.plan.locked || sc.plan.order[0] || (mineActive[0] && mineActive[0].no) || null;
@@ -1196,7 +1197,7 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
 function fuelView(e: FuelEntry, cars: DriverCar[], names: Map<string, string>): FuelView {
   const at = msOf(e.at) || 0;
   return { id: e.id, car: e.car, carName: carName(cars, e.car), litres: e.litres, sum: e.sum, perLitre: round3(e.sum / e.litres), km: e.km, full: e.full, cash: e.cash, photo: e.photo, noPhoto: e.noPhoto,
-    at: e.at, atClock: clock(at), user: e.user, name: names.get(e.user) || e.name, day: sofiaYmd(new Date(at)),
+    at: e.at, atClock: clock(at), user: e.user, name: names.get(e.user) || e.name, day: shiftDay(new Date(at)),
     confirmed: e.confirmed ? { by: names.get(e.confirmed.by) || e.confirmed.by, at: e.confirmed.at, atClock: clock(msOf(e.confirmed.at) || 0) } : null, pending: e.cash && !e.confirmed };
 }
 const shiftFuel = async (ctx: Ctx, sh: DriverShift) => (await ctx.repo.list<FuelEntry>(COL.fuel, { user: sh.user } as Partial<FuelEntry>)).filter((e) => e.shift === sh.id).sort((a, b) => (a.at < b.at ? 1 : -1));
@@ -1307,7 +1308,7 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/;
 export async function fuelReport(ctx: Ctx, s: StaffCtx, f: { from?: string; to?: string } = {}): Promise<FuelReport> {
   if (!s || !s.user) throw new CoreError("auth", RIGHTS_MSG.auth, 401);
   if (!(s.user.role === "owner" || may(s, "finance"))) throw new CoreError("forbidden", RIGHTS_MSG.forbidden, 403);
-  const today = sofiaYmd(nowDate(ctx)), to = f && f.to && YMD.test(f.to) ? f.to : today, from = f && f.from && YMD.test(f.from) ? f.from : addDaysYmd(to, -29);
+  const today = shiftDay(nowDate(ctx)), to = f && f.to && YMD.test(f.to) ? f.to : today, from = f && f.from && YMD.test(f.from) ? f.from : addDaysYmd(to, -29);
   if (from > to || addDaysYmd(from, 92) < to) throw Object.assign(new CoreError("invalid", DRIVER_MSG.range, 422), { fields: { from: DRIVER_MSG.range } });
   const d = await getDoc(ctx), names = await staffNames(ctx);
   const every = (await ctx.repo.list<FuelEntry>(COL.fuel)).map((e) => fuelView(e, d.cars, names)).sort((a, b) => a.km - b.km || (a.at < b.at ? -1 : 1));
@@ -1378,7 +1379,7 @@ export async function end(ctx: Ctx, s: StaffCtx, input: { km: number | string; h
 export async function drivers(ctx: Ctx, s: StaffCtx): Promise<DriversView> {
   needBoss(s, ["driver", "staff"]);
   const sc = await scope(ctx, s), shifts = (await allShifts(ctx)).filter((x) => x.status === "open").sort((a, b) => (a.startedAt < b.startedAt ? -1 : 1));
-  const fuelAll = await ctx.repo.list<FuelEntry>(COL.fuel), today = sofiaYmd(new Date(sc.now));
+  const fuelAll = await ctx.repo.list<FuelEntry>(COL.fuel), today = shiftDay(new Date(sc.now));
   const rows: DriverRow[] = shifts.map((sh) => {
     const all = sc.orders.filter((o) => o.driver === sh.user), mine = ofShift(sc.orders, sh), act = all.filter(unfinishedState);
     const plan = makePlan(all.filter(inRoute), sh, sc.zones, sc.now);
@@ -1395,7 +1396,7 @@ export async function drivers(ctx: Ctx, s: StaffCtx): Promise<DriversView> {
     return {
       user: sh.user, name: sc.names.get(sh.user) || sh.name, since: sh.startedAt, sinceAt: clock(msOf(sh.startedAt) ?? sc.now), car: carLite(sc.cars, sh.car), status, statusLabel: DRIVER_STATUS_LABEL[status],
       course: { id, stops: stops.map(({ v }, k) => ({ no: v.no, n: k + 1, zone: v.zone, addr: v.addr, st: v.st, stLabel: v.stLabel, late: v.late, lateLabel: v.due == null ? null : v.late ? "+" + v.late + " мин" : "навреме", next: plan.locked === v.no, arrivedAt: v.arrivedAt })) },
-      deliveredToday: all.filter((o) => o.status === "delivered" && sofiaYmd(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashParts: { orders: t.cash.sum, float: t.float, fuel: t.fuelCash, fuelPending: t.fuelCashPending },
+      deliveredToday: all.filter((o) => o.status === "delivered" && shiftDay(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashParts: { orders: t.cash.sum, float: t.float, fuel: t.fuelCash, fuelPending: t.fuelCashPending },
       fuelPending: fuelAll.filter((e) => e.shift === sh.id && e.cash && !e.confirmed).sort((a, b) => (a.at < b.at ? 1 : -1)).map((e) => {
         const v = fuelView(e, sc.cars, sc.names); return { id: v.id, litres: v.litres, sum: v.sum, perLitre: v.perLitre, km: v.km, car: v.car, carName: v.carName, at: v.at, atClock: v.atClock, photo: v.photo, noPhoto: v.noPhoto };
       }), cashTo: DRIVER_MISSING.handTo, position: null,

@@ -101,10 +101,13 @@ function trendsScreen(boss: Boss): void {
     const money = d.money, v = (x: { revenue: number | null; orders: number }) => (money ? x.revenue || 0 : x.orders), f = money ? eur0 : undefined;
     const what = money ? "Оборот" : "Поръчки";
     if (W.one) {
-      const hrs = d.byHour, um = d.until ? +d.until.slice(0, 2) * 60 + +d.until.slice(3, 5) : null;
+      /* the shift clock: the day starts at 04:00, so 00:30 is 24:30 and the hours after midnight are 24-27 */
+      const sh = (m: number) => (m < 240 ? m + 1440 : m), shH = (h: number) => (h < 4 ? h + 24 : h);
+      const hrs = d.byHour, um = d.until ? sh(+d.until.slice(0, 2) * 60 + +d.until.slice(3, 5)) : null;
       /* today: the comparison only up to "сега" (the same minute a week ago), the mark "сега" as on "Днес" */
-      const after = (hr: number) => um != null && hr * 60 > um;
-      const nowX = um != null && um >= 600 && um < 1380 ? ((um - 600) / 60 / hrs.length) * 100 : null;
+      const after = (hr: number) => um != null && shH(hr) * 60 > um;
+      const ni = um != null ? hrs.findIndex((x) => shH(x.hour) === Math.floor(um / 60)) : -1;
+      const nowX = um != null && ni > -1 ? ((ni + (um % 60) / 60) / hrs.length) * 100 : null;
       return card({ page: "trends", id: "main", cls: "wall", title: what + " по час", sub: fd(d.from) + (d.until ? " до " + d.until : ""),
         inner: cols("main", hrs.map((x) => ({ l: x.hour + ":00", v: money ? Math.round(x.revenue || 0) : x.orders, t: x.hour + ":00 - " + x.hour + ":59", tv: (money ? fmt(x.revenue || 0) + " · " : "") + plural(x.orders, "поръчка", "поръчки") })),
           { fmt: f, xn: 5, nowX, prev: hrs.map((x) => (after(x.hour) ? null : v(x.cmp))), prevTip: (i) => (after(hrs[i].hour) ? "" : " · сравнение " + (money ? fmt(hrs[i].cmp.revenue || 0) : String(hrs[i].cmp.orders))) }) +

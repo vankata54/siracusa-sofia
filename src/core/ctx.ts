@@ -40,7 +40,9 @@ export interface Ctx {
     or only the subscribers of one order / one office order (subscription by key). */
 export interface Audience { public?: boolean; order?: string; office?: string;
   /** the guests of one sitting at a table (core/floor.ts: the id of the table session) */
-  table?: string }
+  table?: string;
+  /** only the office (the main admin, the owner, the manager and the roles with "Бележки"): the owner's answers */
+  office_only?: boolean }
 
 export const COL = {
   orders: "orders", reservations: "reservations", celebrations: "celebrations", office: "office_orders",

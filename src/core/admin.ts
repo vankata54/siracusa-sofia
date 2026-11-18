@@ -11,7 +11,9 @@ import { notesWaiting } from "./notes.ts";
 import { soldOutToday, outNow } from "./menu.ts";
 import { items, lunch } from "../lib/data.ts";
 import { MENU } from "../data/menu.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import { sofiaYmd } from "../lib/time.ts";
+import { ordersOfDays } from "./history.ts";
 import type { StaffCtx } from "./staff.ts";
 
 export interface Summary {
@@ -29,12 +31,14 @@ export interface Summary {
 }
 
 const may = (s: StaffCtx, sec: string) => s.user.role === "admin" || s.sections.includes(sec);
-const isToday = (o: Order, day: string) => sofiaYmd(new Date(o.ts || o.createdAt)) === day;
+/** the orders still in work (any day): by status, each an indexed read (never the whole list of orders) */
+const OPEN: Order["status"][] = ["accepted", "cooking", "ready", "on_way"];
 
 export async function summary(ctx: Ctx, s: StaffCtx): Promise<Summary> {
-  const day = sofiaYmd(nowDate(ctx));
+  /* "Днес" is the shift day (from 04:00) and an order is in the day it is for (core/order-day.ts), as in "Отчети" */
+  const day = shiftDay(nowDate(ctx));
   const seeOrders = may(s, "orders"), seeRes = may(s, "reservations");
-  const orders = seeOrders || s.user.role === "owner" ? await ctx.repo.list<Order>(COL.orders) : [];
+  const orders = seeOrders ? (await Promise.all(OPEN.map((st) => ctx.repo.list<Order>(COL.orders, { status: st } as Partial<Order>)))).flat() : [];
   const res = seeRes ? (await ctx.repo.list<Reservation>(COL.reservations)).filter((r) => r.date === day) : [];
   const decide = seeRes && ["admin", "owner", "manager"].includes(s.user.role);
   const blocks = decide ? (await ctx.repo.list<NoShowBlock>(COL.blocks)).filter((b) => b.status === "pending").length : null;
@@ -44,8 +48,9 @@ export async function summary(ctx: Ctx, s: StaffCtx): Promise<Summary> {
     const lunchOut = new Map(MENU.lunch.items.map((x) => [x.id, !!x.out]));
     soldOut = items.filter((x) => outNow(x, t)).length + lunch.filter((x) => (Object.prototype.hasOwnProperty.call(t, x.id) ? t[x.id] : lunchOut.get(x.id))).length;
   }
-  const todays = orders.filter((o) => isToday(o, day) && o.status !== "cancelled");
-  const sales = s.user.role === "admin" || s.user.role === "owner"
+  const money = s.user.role === "admin" || s.user.role === "owner";
+  const todays = money ? (await ordersOfDays(ctx, day, day)).filter((o) => o.status !== "cancelled") : [];
+  const sales = money
     ? { sum: Math.round(todays.reduce((a, o) => a + (o.total || 0), 0) * 100) / 100, n: todays.length, sample: todays.some((o) => (o as Order & { sample?: boolean }).sample) }
     : null;
   return {

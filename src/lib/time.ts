@@ -26,9 +26,11 @@ export function setPreview(b: boolean): void { preview = !!b; }
 export function isPreview(): boolean { return preview; }
 
 /** Real wall time in Europe/Sofia. */
+/* the formatters are made once: a new Intl.DateTimeFormat per call is slow (the reports ask for thousands of orders) */
+let fHM: Intl.DateTimeFormat | null = null, fYMD: Intl.DateTimeFormat | null = null;
 export function sofiaNow(d: Date = new Date()): Clock {
   try {
-    const f = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(d).split(":");
+    const f = (fHM ||= new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false })).format(d).split(":");
     return { h: +f[0] % 24, m: +f[1] };
   } catch {
     return { h: d.getHours(), m: d.getMinutes() };
@@ -50,7 +52,7 @@ export function minutes(o?: ClockInput): number {
 
 /** Date in Sofia as "YYYY-MM-DD". */
 export function sofiaYmd(d: Date = new Date()): string {
-  try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(d); }
+  try { return (fYMD ||= new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" })).format(d); }
   catch { return d.toISOString().slice(0, 10); }
 }
 /** "2026-11-12" + 1 -> "2026-11-13" (calendar days, no time zone involved). */

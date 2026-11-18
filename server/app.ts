@@ -77,7 +77,11 @@ export function staffMayHear(s: Pick<Sub, "role" | "sections">, type?: string): 
   if (!type || !type.startsWith("floor.")) return true;
   return s.role === "admin" || s.role === "owner" || s.role === "manager" || !!s.sections && s.sections.some((x) => x === "waiter" || x === "hall" || x === "orders");
 }
+/** the owner's answers to the agency's questions (owner.answer, their notes) reach the office only: the main admin, the
+    owner, the manager and the roles with "Бележки"; never the kitchen, the waiter or the driver (decision of the chief) */
+export const officeHears = (s: Pick<Sub, "role" | "sections">): boolean => s.role === "admin" || s.role === "owner" || s.role === "manager" || (!!s.sections && s.sections.includes("notes"));
 export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices" | "tables" | "role" | "sections">, to: Audience, type?: string): boolean {
+  if (to.office_only) return s.staff && staffMayHear(s, type) && officeHears(s);
   return (s.staff && staffMayHear(s, type)) || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office)) || (!!to.table && !!s.tables && s.tables.has(to.table));
 }
 

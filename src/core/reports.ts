@@ -54,11 +54,11 @@ export function withoutMoney(r: Report): ReportView {
 export async function reportFull(ctx: Ctx, q: { period?: Period; from?: string; to?: string; compare?: boolean } = {}): Promise<Report> {
   const h = await loadHistory(ctx), period = asPeriod(q.period);
   const { from, to } = periodRange(h.today, period, q.from, q.to);
-  const onlyToday = from === h.today && to === h.today, cur = slice(h, from, to);
+  const onlyToday = from === h.today && to === h.today, cur = await slice(h, from, to);
   let prev: Report["prev"] = null;
   if (q.compare !== false) {
     const c = compareRange(period, from, to, "prev");
-    prev = { ...totals(slice(h, c.from, c.to, onlyToday ? h.now : null)), from: c.from, to: c.to };
+    prev = { ...totals(await slice(h, c.from, c.to, onlyToday ? h.now : null)), from: c.from, to: c.to };
   }
   return {
     period, from, to, days: span(from, to), until: onlyToday ? hm(h.now) : null,

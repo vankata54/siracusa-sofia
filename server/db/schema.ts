@@ -29,7 +29,9 @@ export const offers = sqliteTable("offers", { ...doc, active: integer("active", 
 /* ---------- orders ---------- */
 export const orders = sqliteTable("orders", {
   ...doc, no: integer("no").notNull(), mode: text("mode").notNull(), status: text("status").notNull(), phone: text("phone"), total: real("total"), channel: text("channel"),
-}, (t) => [uniqueIndex("orders_no").on(t.no), index("orders_status").on(t.status), index("orders_phone").on(t.phone)]);
+  /* the day the order is for (core/order-day.ts histDay): the history reads a period by it, never the whole table */
+  day: text("day"),
+}, (t) => [uniqueIndex("orders_no").on(t.no), index("orders_status").on(t.status), index("orders_phone").on(t.phone), index("orders_day").on(t.day)]);
 export const orderLines = sqliteTable("order_lines", {
   id: integer("id").primaryKey({ autoIncrement: true }), orderId: text("order_id").notNull(), itemId: text("item_id").notNull(),
   name: text("name"), qty: integer("qty").notNull(), unit: real("unit"), mods: text("mods").notNull().default("[]"),

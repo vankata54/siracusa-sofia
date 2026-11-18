@@ -57,6 +57,13 @@
       "when": 1794914577282,
       "tag": "0007_modules",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795022801058,
+      "tag": "0008_order_day",
+      "breakpoints": true
     }
   ]
 }

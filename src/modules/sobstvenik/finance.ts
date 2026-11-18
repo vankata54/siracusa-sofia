@@ -131,8 +131,9 @@ function financeScreen(boss: Boss): void {
     return '<section class="ow-card" id="cash" aria-labelledby="h-ca" data-edit-id="own.finance.cash"><header><div><h2 id="h-ca">Пари в брой от шофьорите<small>Днес, ' + esc(fd(C.date)) + " до " + esc(hmNow()) + "</small></h2></div></header>" +
       (C.rows.length ? '<div class="fi-drv">' + C.rows.map((r) => '<div><div class="hd"><b>' + esc(r.name) + "</b>" + (r.open ? '<span class="ow-tag warn">' + ic("hourglass", 16) + "За предаване</span>" : '<span class="ow-tag ok">' + ic("check-circle", 16) + "Предадени</span>") + "</div>" +
         '<div class="fi-kv">' + (r.open ? '<div class="tot"><span>За предаване<small>На смяна, до края ѝ</small></span><b>' + fmt(r.toHand) + "</b></div>" : '<div class="tot"><span>Предадени<small>Смяната е приключила</small></span><b>' + fmt(r.handed || 0) + "</b></div>") + "</div></div>").join("") + "</div>"
-        : '<p class="ow-note">Днес още няма шофьор на смяна.</p>') +
+        : C.hidden ? "" : '<p class="ow-note">Днес още няма шофьор на смяна.</p>') +
       '<div class="fi-kv"><div><span>Предадени днес</span><b>' + fmt(C.handed) + '</b></div><div class="tot"><span>За предаване общо</span><b>' + fmt(C.toHand) + "</b></div></div>" +
+      (C.hidden ? '<p class="ow-note">Шофьорите на смяна не се виждат: ролята ти няма „Шофьор“ или „Персонал“. Помоли главния админ, ако ти трябват.</p>' : "") +
       '<p class="ow-note">Предават се в края на смяната на ' + miss(C.handTo) + ".</p></section>";
   }
 

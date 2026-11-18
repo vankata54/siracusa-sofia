@@ -19,7 +19,8 @@ export async function initToday(): Promise<void> {
 }
 
 const CH_IC: Record<string, string> = { delivery: "truck", pickup: "storefront", phone: "phone", table: "chair", office: "briefcase" };
-const toMin = (hm: string) => +hm.slice(0, 2) * 60 + +hm.slice(3, 5);
+/* the shift clock: after midnight is still the evening (00:30 = 24:30; the day starts at 04:00) */
+const toMin = (hm: string) => { const m = +hm.slice(0, 2) * 60 + +hm.slice(3, 5); return m < 240 ? m + 1440 : m; };
 
 function todayScreen(boss: Boss): void {
   boss.body.innerHTML = boss.skeleton(4, "Зареждаме деня…");

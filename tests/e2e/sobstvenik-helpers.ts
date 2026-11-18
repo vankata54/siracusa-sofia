@@ -18,7 +18,12 @@ export const rnd = () => Math.random().toString(36).slice(2, 8);
 export const phone = () => "0899 " + String(100000 + Math.floor(Math.random() * 899999)).replace(/(\d{2})(\d{2})(\d{2})/, "$1 $2 $3");
 /** a pickup order from the site (the shop clock 12:30, so the kitchen takes it at any real hour) */
 export async function webOrder(ctx: BrowserContext, lines: { id: string; q: number }[] = [{ id: "kebapcheta", q: 1 }]): Promise<{ no: string; total: number }> {
-  const r = await ctx.request.post("/api/orders", { headers: { "x-sc-clock": "12:30" }, data: { cart: { mode: "pickup", lines }, name: "Иван Петров", phone: phone() } });
+  /* another spec on the same server may have marked a dish "Изчерпано днес" (409): then another dish */
+  let r = await ctx.request.post("/api/orders", { headers: { "x-sc-clock": "12:30" }, data: { cart: { mode: "pickup", lines }, name: "Иван Петров", phone: phone() } });
+  for (const id of ["shopska-salata", "pitsa-margarita", "gratska-salata"]) {
+    if (r.status() !== 409) break;
+    r = await ctx.request.post("/api/orders", { headers: { "x-sc-clock": "12:30" }, data: { cart: { mode: "pickup", lines: [{ id, q: 1 }] }, name: "Иван Петров", phone: phone() } });
+  }
   expect(r.status(), "order").toBe(201);
   return (await r.json()) as { no: string; total: number };
 }
