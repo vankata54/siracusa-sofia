@@ -160,8 +160,8 @@
 #dish > header{flex-wrap:wrap}
 #dish > header > .tr-dish{flex:1 1 230px; min-width:0}
 #dish h2{overflow-wrap:anywhere}
-/* the e-mail reports: what a switch that is on does until the address comes */
-.tr-mail label small .wait{display:block; color:var(--muted)}
 /* an answer kept on the phone (no connection): waiting, not done */
 .dc-ans.kept{box-shadow:inset 0 0 0 1.5px var(--warn)}
 .dc-ans.kept .ic{color:var(--warn)}
+/* "По автомобил": "-" and under it what to check (14 px, never smaller) */
+.fi-kv b small.ck{display:block; font-size:14px; font-weight:600; color:var(--muted); white-space:normal}

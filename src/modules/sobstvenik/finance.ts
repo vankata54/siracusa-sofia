@@ -59,7 +59,7 @@ function financeScreen(boss: Boss): void {
     const kpi = (l: string, v: string, dd: string) => '<div class="ow-kpi"><span class="l">' + esc(l) + "</span><b>" + v + "</b>" + (dd || "") + "</div>";
     h += '<div class="ow-kpis fi-kpis" data-edit-id="own.finance.kpi">' + kpi("Приходи", fmt(d.revenue.cur), dl(d.revenue.cur, d.revenue.prev)) + kpi("Гориво", fmt(F.sum), dl(F.sum, PF.sum, true)) +
       kpi("Гориво на доставка", per == null ? "-" : fmt(per), per != null && pper != null ? dl(per, pper, true) : per != null ? NONE : "") +
-      kpi("Изминати", km.cur == null ? "-" : Math.round(km.cur).toLocaleString("bg-BG") + " <small>км</small>", km.cur == null ? '<span class="ow-note">' + miss("[ЛИПСВА: километри от смените на шофьорите]") + "</span>" : dl(km.cur, km.prev || 0, true)) + "</div>";
+      kpi("Изминати", km.cur == null ? "-" : String(Math.round(km.cur)) + " <small>км</small>", km.cur == null ? '<span class="ow-note">Още няма приключени курсове</span>' : dl(km.cur, km.prev || 0, true)) + "</div>";
     h += '<div class="ow-grid">' + fuelDays(d, W) + "</div>";
     h += '<div class="ow-mas">' + pay(d, W) + byDriver(d) + cashCard(d) + byCar(d) + delivery(d) + saved() +
       '<section class="ow-card fi-cost" id="cost" aria-labelledby="h-co" data-edit-id="own.finance.cost"><span class="ill">' + ic("scales", 28) + '</span><h2 id="h-co">Себестойност на храната</h2><p>Печалба по ястие се смята, щом в менюто има себестойност: ' + miss(d.cost) + ".</p></section></div>";
@@ -107,7 +107,7 @@ function financeScreen(boss: Boss): void {
     /* an impossible consumption (a slip of the odometer): "-" and what to check */
     const ok = (v: number | null) => v != null && v >= 3 && v <= 30, odd = l.some((c) => c.per100 != null && !ok(c.per100));
     return card({ page: "finance", id: "car", title: "По автомобил", sub: "Разход от зарежданията",
-      inner: (l.length ? '<div class="fi-kv">' + l.map((c) => "<div><span>" + esc(c.n) + "<small>" + plural(c.entries, "зареждане", "зареждания") + " · " + l1(c.litres) + " · " + fmt(c.sum) + "</small></span><b>" + (c.per100 == null ? "-" : ok(c.per100) ? f1(c.per100) + "\u00a0л/100\u00a0км" : '-<small>провери километража</small>') + "</b></div>").join("") + "</div>" : '<p class="ow-note">Няма зареждания за този период.</p>') +
+      inner: (l.length ? '<div class="fi-kv">' + l.map((c) => "<div><span>" + esc(c.n) + "<small>" + plural(c.entries, "зареждане", "зареждания") + " · " + l1(c.litres) + " · " + fmt(c.sum) + "</small></span><b>" + (c.per100 == null ? "-" : ok(c.per100) ? f1(c.per100) + "\u00a0л/100\u00a0км" : '-<small class="ck">провери километража</small>') + "</b></div>").join("") + "</div>" : '<p class="ow-note">Няма зареждания за този период.</p>') +
         (odd ? '<p class="ow-note">При едно от зарежданията километражът изглежда сбъркан: провери го в смяната на шофьора.</p>' : "") +
         '<p class="ow-note">Разходът се смята между две зареждания догоре. Марка и рег. №: ' + miss("[ЛИПСВА: марка и рег. №]") + ". Разход по паспорт: " + miss("[ЛИПСВА: разход л/100 км]") + ".</p>",
       table: { head: ["Автомобил", "Зареждания", "Литри", "Сума", "Км", "л/100 км"], rows: l.map((c) => [c.n, c.entries, f1(c.litres), fmt(c.sum), c.km == null ? "-" : Math.round(c.km), c.per100 == null ? "-" : ok(c.per100) ? f1(c.per100) : "- (провери километража)"]) } });

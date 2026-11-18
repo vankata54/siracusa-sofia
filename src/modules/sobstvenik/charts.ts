@@ -32,9 +32,9 @@ function xLabels(labels: string[], xn = 7, ticks: number[] | null = null, line =
     if (idx[idx.length - 1] !== n - 1) { if (n - 1 - idx[idx.length - 1] < step * 0.7 && idx.length > 1) idx[idx.length - 1] = n - 1; else idx.push(n - 1); }
   }
   return '<div class="xa" aria-hidden="true">' + idx.map((i) => {
-    /* the first and the last label stay inside the chart (many narrow columns: the label is wider than its column) */
-    const edge = !line && n > 7 && (i === 0 || i === n - 1);
-    const left = n === 1 ? 50 : line ? (i / (n - 1)) * 100 : edge ? (i === 0 ? 0 : 100) : ((i + 0.5) / n) * 100, tr = (line || edge) && i === 0 ? "0" : (line || edge) && i === n - 1 ? "-100%" : "-50%";
+    /* under its column (or point); fitAxis() moves an end label in only when it does not fit, and leaves out one that
+       would touch its neighbour */
+    const left = n === 1 ? 50 : line ? (i / (n - 1)) * 100 : ((i + 0.5) / n) * 100, tr = line && i === 0 ? "0" : line && i === n - 1 ? "-100%" : "-50%";
     return '<span style="left:' + left + "%;transform:translateX(" + tr + ')">' + esc(labels[i]) + "</span>";
   }).join("") + "</div>";
 }
@@ -131,16 +131,45 @@ export function placeLabels(root: ParentNode): void {
     for (const [cls, left] of tries) {
       lab.classList.remove("l", "bl", "dl", "r"); lab.classList.add(cls); lab.style.left = left + "%";
       const r = lab.getBoundingClientRect();
-      if (r.left >= P.left && r.right <= P.right && r.top >= P.top - 4 && !hits(r)) return;
+      /* inside the chart: never under the line of 0 (the row of the hours is under it), never out of the card */
+      if (r.left >= A.left - 8 && r.right <= P.right && r.top >= P.top - 4 && r.bottom <= A.bottom - 2 && !hits(r)) return;
+    }
+    /* no free place: the first place inside the chart, on the card's colour (the line goes under it) */
+    for (const [cls, left] of tries) {
+      lab.classList.remove("l", "bl", "dl", "r"); lab.classList.add(cls, "bg"); lab.style.left = left + "%";
+      const r = lab.getBoundingClientRect();
+      if (r.left >= A.left - 8 && r.right <= P.right && r.top >= P.top - 4 && r.bottom <= A.bottom - 2) return;
     }
     lab.classList.remove("l", "bl", "dl", "r"); lab.classList.add("l", "bg"); lab.style.left = x + "%";
+  });
+}
+/** the labels of the X axis: an end label that does not fit is aligned to the edge of the chart; a label closer than
+    6 px to the one before it is left out (the table has every value) */
+export function fitAxis(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>(".ow-plot:not([data-line]) .xa").forEach((xa) => {
+    const area = xa.parentElement!.querySelector<HTMLElement>(".area"), A = (area || xa).getBoundingClientRect();
+    const sp = Array.from(xa.querySelectorAll<HTMLElement>("span"));
+    sp.forEach((x) => { x.style.visibility = ""; x.style.transform = x.dataset.tr || (x.dataset.tr = x.style.transform, x.style.transform); });
+    sp.forEach((x, i) => {
+      const r = x.getBoundingClientRect();
+      if (i === 0 && r.left < A.left) x.style.transform = "translateX(" + (A.left - r.left) + "px) " + x.style.transform;
+      if (i === sp.length - 1 && r.right > A.right) x.style.transform = "translateX(" + (A.right - r.right) + "px) " + x.style.transform;
+    });
+    let last = -Infinity;
+    sp.forEach((x, i) => {
+      const r = x.getBoundingClientRect();
+      /* the last label wins over the one before it */
+      if (i === sp.length - 1 && i > 0 && r.left < last + 6) { const p = sp[i - 1]; p.style.visibility = "hidden"; return; }
+      if (r.left < last + 6) { x.style.visibility = "hidden"; return; }
+      last = r.right;
+    });
   });
 }
 let placing = false;
 /** the tooltips on pointer move (the table is the accessible way to the same numbers); the point labels placed */
 export function bindTips(root: ParentNode): void {
-  placeLabels(root);
-  if (!placing) { placing = true; window.addEventListener("resize", () => placeLabels(document)); }
+  placeLabels(root); fitAxis(root);
+  if (!placing) { placing = true; window.addEventListener("resize", () => { placeLabels(document); fitAxis(document); }); }
   root.querySelectorAll<HTMLElement>("[data-plot]").forEach((pl) => {
     const data = TIPS[pl.dataset.plot || ""], area = pl.querySelector<HTMLElement>(".area");
     if (!data || !area || pl.dataset.tip) return;

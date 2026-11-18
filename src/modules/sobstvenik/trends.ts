@@ -210,8 +210,8 @@ function trendsScreen(boss: Boss): void {
     const M = mail;
     if (!M) return "";
     return '<section class="ow-card" aria-labelledby="h-ml" data-edit-id="own.trends.mail"><header><div><h2 id="h-ml">Отчети по имейл<small>' + esc(M.format) + " до " + miss(M.email) + "</small></h2></div></header><div class=\"tr-mail\">" +
-      '<label><span class="t">Всеки понеделник в 6:00<small>За миналата седмица' + (M.weekly && /ЛИПСВА/.test(M.email) ? '<span class="wait">Ще тръгне, щом агенцията добави имейла</span>' : "") + '</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mw" data-mail="weekly"' + (M.weekly ? " checked" : "") + '><span class="tr"></span></span></label>' +
-      '<label><span class="t">На 1-во число<small>За миналия месец' + (M.monthly && /ЛИПСВА/.test(M.email) ? '<span class="wait">Ще тръгне, щом агенцията добави имейла</span>' : "") + '</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mm" data-mail="monthly"' + (M.monthly ? " checked" : "") + '><span class="tr"></span></span></label></div>' +
+      '<label><span class="t">Всеки понеделник в 6:00<small>За миналата седмица</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mw" data-mail="weekly"' + (M.weekly ? " checked" : "") + '><span class="tr"></span></span></label>' +
+      '<label><span class="t">На 1-во число<small>За миналия месец</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mm" data-mail="monthly"' + (M.monthly ? " checked" : "") + '><span class="tr"></span></span></label></div>' +
       '<p class="ow-note">Изпращането тръгва, щом агенцията добави имейла. ' + soon() + "</p></section>";
   }
 

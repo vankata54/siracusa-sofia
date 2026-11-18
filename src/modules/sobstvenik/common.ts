@@ -97,7 +97,7 @@ export function perFromHash(): PerState & { cut?: boolean } {
   return s;
 }
 /** "Най-много 92 дни: показваме …" (the prototype's notice) */
-export const cutNotice = (s: PerState) => "Най-много " + MAX_DAYS + " дни: показваме " + fd(s.a, true) + " - " + fd(s.b, true);
+export const cutNotice = (s: PerState) => "Най-много " + MAX_DAYS + " дни: показваме " + fd(s.a, true).replace(/ /g, NB) + " - " + fd(s.b, true).replace(/ /g, NB);
 export function perHash(s: PerState, extra: Record<string, string> = {}): void {
   setHash({ ...hashMap(), p: s.per === "7" ? "" : s.per, c: s.cmp === "year" ? "year" : "", a: s.per === "custom" ? s.a : "", b: s.per === "custom" ? s.b : "", ...extra });
 }
