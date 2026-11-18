@@ -688,7 +688,8 @@ export async function kitchenSummary(ctx: Ctx, s: StaffCtx): Promise<KSummary> {
   const act = open.map((o) => ({ o, t: timingOf(o, w.cfg) })).filter((x) => inQueue(w, x.o, K_ALL, x.t)).sort((a, b) => fifo({ key: a.t.key, no: a.o.no }, { key: b.t.key, no: b.o.no }));
   const sections = w.cfg.sections.map((d) => {
     const mine = act.filter((x) => inQueue(w, x.o, d.id, x.t)), tm = mine.map((x) => timerOf(x.t.due, w.now, w.cfg).timer);
-    let out = 0; for (const id of w.out) { const x = byId[id]; if (x && !isAddonCat(x.cat) && secOfCat(w.cfg, x.cat) === d.id) out++; }
+    /* counted as in the section's tab: its dishes + the shared add-ons (review 1, round 2) */
+    let out = 0; for (const id of w.out) { const x = byId[id]; if (x && (isAddonCat(x.cat) || secOfCat(w.cfg, x.cat) === d.id)) out++; }
     return { id: d.id, n: d.n, short: d.short, icon: d.icon, wait: mine.length, late: tm.filter((x) => x === "late").length, soon: tm.filter((x) => x === "soon").length,
       oldestMin: mine.length ? Math.max(0, Math.round((w.now - Math.min(...mine.map((x) => x.t.key))) / 60_000)) : null, out, tablet: tabs.find((t) => t.sec === d.id)! };
   });

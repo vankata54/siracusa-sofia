@@ -48,7 +48,7 @@ export async function initVhod(): Promise<void> {
 }
 
 /* ---------- the page: the choice of the section on the left, the card on the right ---------- */
-function page(s: Secs, chosen: string, top: string, card: string): HTMLElement {
+function page(s: Secs, chosen: string, top: string, card: string, left = ""): HTMLElement {
   const el = document.createElement("div"); el.className = "lg";
   el.innerHTML = '<main class="lg-in" id="main" tabindex="-1">' +
     '<div class="lg-top"><span class="word">Siracusa</span> <span class="muted">Кухня</span>' + top + "</div>" +
@@ -56,7 +56,7 @@ function page(s: Secs, chosen: string, top: string, card: string): HTMLElement {
     '<div class="secs" role="group" aria-label="Секции">' + s.sections.map((x) =>
       '<button class="sct" type="button" data-sec="' + esc(x.id) + '" aria-pressed="' + (x.id === chosen) + '"><span class="si">' + ic(secIcon(x.icon), 32) + "</span><b>" + esc(x.n) + "</b> " + (s.cond && DESC[x.id] ? '<span class="d">' + DESC[x.id] + "</span>" : "") + "</button>").join("") +
     '<button class="sct wide" type="button" data-sec="' + K_ALL + '" aria-pressed="' + (chosen === K_ALL) + '"><span class="si">' + ic(secIcon(s.all.icon), 32) + "</span><b>" + esc(s.all.n) + '</b> <span class="d">За главния готвач: всички секции, колко чакат, закъснения</span></button></div>' +
-    (s.cond ? '<p class="note">' + ic("info", 20) + '<span>Секциите и кое ястие къде се готви са условни: <span class="miss">' + esc(s.cond) + "</span></span></p>" : "") + "</section>" +
+    (s.cond ? '<p class="note">' + ic("info", 20) + '<span>Секциите и кое ястие къде се готви са условни: <span class="miss">' + esc(s.cond) + "</span></span></p>" : "") + left + "</section>" +
     card + "</main>";
   document.querySelector("[data-kboot]")?.remove();
   document.body.appendChild(el);
@@ -115,24 +115,28 @@ async function pinStep(): Promise<void> {
      on the tablet ("sk-who"), one person alone is chosen already */
   let who = load<string>("who", "");
   if (!people.some((x) => x.id === who)) who = people.length === 1 ? people[0].id : "";
-  const whoHTML = () => '<div class="who"><p class="lbl" id="l-who">Кой влиза?</p><div class="chips" role="group" aria-labelledby="l-who">' + people.map((x) =>
+  /* "Кой влиза?" sits under the sections (beside the keypad on a landscape tablet, above it in portrait): the whole
+     sign-in fits one screen at 1280 × 800, 1024 × 768 and 768 × 1024 (review 1, round 2) */
+  const whoHTML = () => '<div class="who"><h2 class="lbl" id="l-who">Кой влиза?</h2><div class="chips" role="group" aria-labelledby="l-who">' + people.map((x) =>
     '<button class="chip" type="button" data-who="' + esc(x.id) + '" aria-pressed="' + (x.id === who) + '">' + ic("user", 18) + esc(x.name) + "</button>").join("") + "</div></div>";
   const card = known && people.length
-    ? '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">Личен ПИН<small data-for></small></h2><div data-pin>' + whoHTML() + pad() + "</div>" +
+    ? '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">Личен ПИН<small data-for></small></h2><div data-pin>' + pad() + "</div>" +
       '<button class="kb red" type="button" data-go>' + ic("sign-in", 24) + "<span data-golbl></span></button>" +
       '<p class="pw"><a href="' + pw + '" data-pw>Вход с потребител и парола</a></p></section>'
     : '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">' + (known ? "Вход" : "Нов таблет") + '<small data-for></small></h2><div data-pin>' +
       (why ? '<p class="perr" role="status">' + esc(why) + "</p>" : '<p class="first">' + ic("info", 22) + "<span>" + (known ? "Още никой с роля „Кухня“ няма личен ПИН. Влез с потребител и парола; ПИН дава управителят в „Персонал“." : "Първият вход на нов таблет е с потребител и парола. После тук стига личният ПИН.") + "</span></p>") + "</div>" +
       (why ? '<button class="kb line" type="button" data-again>' + ic("arrow-clockwise", 22) + "Опитай пак</button>" : "") +
       '<a class="kb red" href="' + pw + '" data-pw>' + ic("sign-in", 24) + "Влез с парола</a></section>";
-  const el = page(s, chosen, "", card);
+  const el = page(s, chosen, "", card, known && people.length ? whoHTML() : "");
   const err = el.querySelector<HTMLElement>("[data-err]"), dots = el.querySelector<HTMLElement>("[data-dots]"), go = el.querySelector<HTMLButtonElement>("button[data-go]");
   let pin = "", busy = false, until = 0, timer: ReturnType<typeof setInterval> | undefined;
   const locked = () => until > Date.now();
 
   function upd(): void {
     pressSec(el, chosen);
-    el.querySelector("[data-for]")!.textContent = "за вход в " + name();
+    /* who signs in, before the button is pressed (review 1, round 2, small 6) */
+    const person = people.find((x) => x.id === who);
+    el.querySelector("[data-for]")!.textContent = person ? person.name + " · " + name() : "за вход в " + name();
     const gl = el.querySelector("[data-golbl]");
     if (gl && !busy && !locked()) gl.textContent = "Влез · " + name();
     if (dots) dots.querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i < pin.length));
@@ -153,6 +157,8 @@ async function pinStep(): Promise<void> {
     say("");
     if (k === "c") pin = ""; else if (k === "b") pin = pin.slice(0, -1); else if (/^\d$/.test(k) && pin.length < 4) pin += k;
     upd();
+    /* the 4th digit signs in by itself (the person is chosen); "Влез" stays for a retry */
+    if (/^\d$/.test(k) && pin.length === 4 && who) setTimeout(() => { if (pin.length === 4 && !busy) void submit(); }, 150);
   }
   async function submit(): Promise<void> {
     if (busy || locked() || !go) return;

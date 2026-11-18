@@ -31,7 +31,8 @@ function screen(k: KFrame): void {
 
   function tileHTML(x: { id: string; n: string; g: string; out: boolean }): string {
     return '<button class="tile' + (x.out ? " out" : "") + '" type="button" data-id="' + esc(x.id) + '" aria-pressed="' + x.out + '"><span><b>' + esc(x.n) + "</b>" + (x.g ? "<small>" + esc(x.g) + "</small>" : "") + "</span> " +
-      (x.out ? '<span class="st">' + ic("x", 18) + "Изчерпано днес</span> " : "") +
+      /* sold out in the menu's data: the tile says what the list says (it does not come back at midnight) */
+      (x.out ? '<span class="st">' + ic("x", 18) + (d && d.list.some((r) => r.id === x.id && r.menu) ? "Изчерпано в менюто от админа" : "Изчерпано днес") + "</span> " : "") +
       '<span class="act">' + (x.out ? ic("arrow-counter-clockwise", 18) + "Върни в менюто" : ic("x", 18) + "Отбележи изчерпано") + "</span></button>";
   }
   function rowHTML(r: KOutRow): string {

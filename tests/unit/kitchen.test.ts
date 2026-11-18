@@ -722,3 +722,14 @@ describe("проверка 2 на кухнята (decisions of the chief 18.11)"
     expect((await core.kitchen.tablets(s.manager)).find((t) => t.sec === "pesht")).toMatchObject({ online: false, text: "Няма таблет днес" });
   });
 });
+
+describe("проверка 1, кръг 2", () => {
+  it("a sold-out add-on is counted the same in a section's tab and in its card of „Общ изглед“", async () => {
+    const { core, k } = await mk("19:00");
+    await core.kitchen.setOut(k, "gabi", true, { sec: "pesht" });
+    await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+    const sum = await core.kitchen.summary(k);
+    for (const sec of ["topla", "skara", "pesht", "studeni"]) expect(sum.sections.find((x) => x.id === sec)!.out).toBe((await core.kitchen.queue(k, sec)).counts.out);
+    expect(sum.sections.find((x) => x.id === "pesht")!.out).toBe(2);
+  });
+});

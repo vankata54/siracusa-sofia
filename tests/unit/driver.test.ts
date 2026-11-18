@@ -178,10 +178,15 @@ describe("the delivery flow", () => {
     await core.driver.deliver(s.driver, a.no);
     await core.driver.deliver(s.driver, b.no, { sum: 1 }); /* a sum means nothing for a voucher */
     await expect(core.driver.deliver(s.driver, c.no, { sum: "abc" })).rejects.toMatchObject({ code: "invalid", fields: { sum: "Въведи сумата, която взе, например 24,50." } });
-    const d = await core.driver.deliver(s.driver, c.no, { sum: "25,00" });
-    expect(d.deliveries[0].collected).toMatchObject({ pay: "cash", sum: 25, feeMissing: true });
+    /* the fee is unknown: the sum is asked, at least the order's total and at most twice it (review 2, round 2) */
+    await expect(core.driver.deliver(s.driver, c.no, { sum: 0 })).rejects.toMatchObject({ code: "invalid" });
+    await expect(core.driver.deliver(s.driver, c.no, { sum: 1_000_000_000 })).rejects.toMatchObject({ code: "invalid" });
+    const took = Math.round((c.total + 2.5) * 100) / 100;
+    const d = await core.driver.deliver(s.driver, c.no, { sum: took });
+    expect(d.deliveries[0].collected).toMatchObject({ pay: "cash", sum: took });
+    expect(d.deliveries[0].collected?.feeMissing).toBeFalsy();
     const sum = await core.driver.shift(s.driver);
-    expect(sum).toMatchObject({ delivered: 3, cards: { n: 1, sum: a.total }, vouchers: { n: 1, sum: b.total }, cash: { sum: 25, feeMissing: true, rows: [{ no: c.no, sum: 25, feeMissing: true }] }, handover: 45 });
+    expect(sum).toMatchObject({ delivered: 3, cards: { n: 1, sum: a.total }, vouchers: { n: 1, sum: b.total }, cash: { sum: took, rows: [{ no: c.no, sum: took }] } });
   });
   it("two drivers cannot take the same order; several are taken at once; all or none", async () => {
     const { core } = mk(), s = await people(core);

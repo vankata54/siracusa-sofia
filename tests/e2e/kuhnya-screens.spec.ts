@@ -68,6 +68,9 @@ test("@desktop „Изчерпано днес“: one touch on a dish of an acce
   await expect(page.locator(".foot2")).toHaveText("В полунощ се връща в менюто всичко, отбелязано днес тук.");
   await expect(page.locator(".kcount")).toContainText("Изчерпани за Скара Bertha");
   await expect(page.locator(".kcount")).toContainText("Във всички секции");
+  /* sold out in the menu's data (the admin): the tile says what the list says */
+  await expect(page.locator('.tile[data-id="pleskavitsa"] .st')).toHaveText("Изчерпано в менюто от админа");
+  await expect(page.locator(".orow", { hasText: "Плескавица" }).locator("small")).toContainText("изчерпано в менюто от админа (не се връща само)");
   const tile = page.locator('.tile[data-id="' + DISH + '"]');
   await expect(tile).toHaveAttribute("aria-pressed", "false");
   await expect(tile.locator(".act")).toHaveText("Отбележи изчерпано");
@@ -465,5 +468,29 @@ test("@desktop the head chef on a section's queue: „Общ изглед“ in 
   await expect(page).toHaveURL(/\/kuhnya\/obsht-izgled\/$/);
   await expect(page.locator('.kstrip a.kpill[data-fk="busy"]')).toHaveClass(/\bremind\b/);
   expect(errs).toEqual([]);
+  await ctx.close();
+});
+
+test("@desktop 1024, the evening rush: „Нова“, „По-късно“, „Звук“ and „Натоварено · 60+ мин“ stay on one row (review 1, round 2)", async ({ browser, request }) => {
+  const { ctx, page, errs } = await tablet(browser, { w: 1024, h: 768 });
+  const o = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }]);
+  await page.route("**/api/kitchen/queue?*", async (r) => {
+    const res = await r.fetch(), j = await res.json();
+    j.busy = { ...j.busy, on: true, atHm: "18:00", extra: 20, remind: true };
+    j.later = [{ no: "9999", kind: "pickup", src: { kind: "pickup", k: "Вземане", t: "№ 9999", text: "Вземане № 9999", who: "клиента", zone: "", table: null, tableNo: null }, forAt: Date.now() + 3600e3, forHm: "21:00", enter: Date.now() + 2400e3, enterHm: "20:40", tomorrow: false, lines: [] }];
+    await r.fulfill({ response: res, json: j });
+  });
+  await page.goto("/kuhnya/");
+  await expect(card(page, o.no)).toBeVisible();
+  await page.locator("[data-clock]").click();
+  await expect(page.locator("[data-sound]")).toHaveText("Звук вкл.");
+  await expect(page.locator(".knew")).toBeVisible();
+  await expect(page.locator('.kstrip [data-fk="busy"]')).toHaveClass(/\bremind\b/);
+  /* offsetTop: the layout, not the entrance animation of "Нова" (a transform) */
+  const tops = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".kstrip > *:not(.kcount)")].map((e) => e.offsetTop + Math.round(e.offsetHeight / 2)));
+  expect(tops.length).toBe(4);
+  expect(new Set(tops).size).toBe(1);
+  expect(errs).toEqual([]);
+  await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara" });
   await ctx.close();
 });

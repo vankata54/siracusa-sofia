@@ -416,7 +416,7 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
     /** the key shows the state of the whole kitchen and leads to the screen "Натоварено" */
     busy: (): string => { const b = k.queue && k.queue.busy; if (!b) return "";
       /* on for 60 min or more: the reminder is on the key itself, where the cooks look (red frame, "· 60+ мин") */
-      return '<a class="kpill' + (b.on ? " on" : "") + (b.remind ? " remind" : "") + '" data-fk="busy" href="' + href("natovareno") + '">' + ic(b.remind ? "warning" : "hourglass", 22) + (b.on ? "Натоварено +" + b.extra + " мин" + (b.remind ? ' <span class="sub">· 60+ мин</span>' : b.atHm ? ' <span class="sub">от ' + esc(b.atHm) + "</span>" : "") : "Натоварено: изкл.") + "</a>"; },
+      return '<a class="kpill' + (b.on ? " on" : "") + (b.remind ? " remind" : "") + '" data-fk="busy" href="' + href("natovareno") + '">' + ic(b.remind ? "warning" : "hourglass", 22) + (b.on ? "Натоварено +" + b.extra + " мин" + (b.remind ? ' <span class="sub r60">· 60+ мин</span>' : b.atHm ? ' <span class="sub">от ' + esc(b.atHm) + "</span>" : "") : "Натоварено: изкл.") + "</a>"; },
     back: (p: KPage, text: string): string => '<a class="kpill" data-fk="back" href="' + href(p) + '">' + ic("arrow-left", 22) + esc(text) + "</a>",
   };
 

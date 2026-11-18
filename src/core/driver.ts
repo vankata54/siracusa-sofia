@@ -104,6 +104,7 @@ export const DRIVER_MSG = {
   problemKind: "Избери какво се случи: „Няма никой“, „Грешен адрес“ или „Отказ“.",
   problemState: (n: string) => "Проблем се отбелязва само за взета поръчка или поръчка на път (" + no(n) + ").",
   sum: "Въведи сумата, която взе, например 24,50.",
+  sumRange: (total: number) => "Сумата е поне " + String(total.toFixed(2)).replace(".", ",") + "\u00a0€ (поръчката, таксата се добавя). Провери я.",
   undoGone: "Вече не може да се отмени.",
   undoLate: "Времето за „Отмени“ изтече.",
   undoChanged: (n: string) => "Някой друг вече промени " + no(n) + ". Не може да се отмени.",
@@ -846,13 +847,19 @@ export async function deliver(ctx: Ctx, s: StaffCtx, n: string, input: { sum?: n
     if (st === "picked") fail("bad_state", DRIVER_MSG.notOnWay(o.no));
     if (!(st === "road" || anyway)) fail("bad_state", st === "cancelled" ? DRIVER_MSG.cancelled(o.no) : st === "prob" ? DRIVER_MSG.noProblem(o.no) : DRIVER_MSG.finished(o.no));
     if (o.status !== "on_way" && o.status !== "ready") fail("not_ready", DRIVER_MSG.notReady(o.no));
-    const given = money(input && typeof input === "object" ? input.sum : null);
-    if (given !== null && !(given >= 0)) bad({ sum: DRIVER_MSG.sum });
+    /* the collected sum is asked only when it is not clear (cash and the fee of a paid zone unknown): then it is at least the
+       order's total and at most twice it (a safety bound, not a price); a clear order always records its own total
+       (shofyor.review-2, round 2: one request could make "За предаване" smaller) */
+    const outzone = o.pay === "cash" && isOutzone(o, new Map((await liveZones(ctx)).map((z) => [z.n, z])));
+    const asked = o.pay === "cash" && (o.fee === null || outzone);
+    const raw = input && typeof input === "object" ? input.sum : null, given = asked ? money(raw) : null;
+    if (asked && raw != null && raw !== "" && (given === null || !Number.isFinite(given))) bad({ sum: DRIVER_MSG.sum });
+    if (given !== null && !(given >= o.total && given <= round2(o.total * 10))) bad({ sum: DRIVER_MSG.sumRange(o.total) });
     const cx = stepAt(ctx, sh, input && typeof input === "object" ? input.at : undefined, [o]);
     const sum = o.pay === "cash" && given !== null ? round2(given) : o.total, prev = snap(o), step = newStep(cx, sh, "deliver");
     if (o.status === "ready") await setOrderStatus(cx, o.no, "on_way", me, s); /* "Доставих все пак" of a taken order */
     const o2 = await setOrderStatus(cx, o.no, "delivered", me, s), now = o2.times?.delivered || iso(cx);
-    o2.collected = { pay: o2.pay, sum, at: now, by: me, ...(o2.pay === "cash" && o2.fee === null ? { feeMissing: true } : {}) };
+    o2.collected = { pay: o2.pay, sum, at: now, by: me, ...(asked && given === null ? { feeMissing: true } : {}) };
     if (o2.problem) o2.problem = { ...o2.problem, solved: "delivered", solvedAt: now };
     await ctx.repo.put(COL.orders, o2);
     step.orders.push({ no: o2.no, mark: mark(o2), prev });

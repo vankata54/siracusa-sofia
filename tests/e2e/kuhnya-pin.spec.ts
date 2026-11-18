@@ -77,7 +77,7 @@ test("@desktop a known device: the module asks for the PIN; the section + the pe
   const { ctx, page, errs } = await tablet(browser, { known: true });
   await page.goto("/kuhnya/izpalneni/");
   await expect(page).toHaveURL(/\/kuhnya\/vhod\/#next=%2Fkuhnya%2Fizpalneni%2F$/);
-  await expect(page.locator(".pin h2")).toHaveText(/^Личен ПИНза вход в /);
+  await expect(page.locator(".pin h2")).toHaveText(/^Личен ПИН/);
   await expect(page.locator(".pinpad button")).toHaveText(["1", "2", "3", "4", "5", "6", "7", "8", "9", "Изчисти", "0", ""]);
   await expect(page.locator('.pinpad [data-k="b"]')).toHaveAccessibleName("Изтрий една цифра");
   await expect(page.locator(".dots i")).toHaveCount(4);
@@ -86,7 +86,7 @@ test("@desktop a known device: the module asks for the PIN; the section + the pe
   /* no "Изход" and no theme before the sign-in */
   await expect(page.locator("[data-out]")).toHaveCount(0);
   await page.locator('[data-sec="skara"]').click();
-  await expect(page.locator(".pin h2 small")).toHaveText("за вход в Скара Bertha");
+  await expect(page.locator(".pin h2 small")).toHaveText(/(за вход в|·) Скара Bertha$/);
   await expect(page.locator("button[data-go]")).toHaveText("Влез · Скара Bertha");
   /* the person (decision of the chief 18.11): the people with the role "Кухня" and a PIN, never a user name */
   await expect(page.locator(".who .lbl")).toHaveText("Кой влиза?");
@@ -110,18 +110,16 @@ test("@desktop a known device: the module asks for the PIN; the section + the pe
   await expect(page.locator(".dots i.on")).toHaveCount(1);
   await page.locator('.pinpad [data-k="c"]').click();
   await expect(page.locator(".dots i.on")).toHaveCount(0);
-  /* a wrong PIN (an easy one: nobody may have it) */
+  /* the chosen person is shown before the sign-in (review 1, round 2) */
+  await expect(page.locator(".pin h2 small")).toHaveText(who.name + " · Скара Bertha");
+  /* a wrong PIN (an easy one: nobody may have it): the 4th digit signs in by itself, no "Влез" needed */
   await keys(page, "0000");
-  await page.locator("button[data-go]").click();
   await expect(page.locator("[data-err]")).toHaveText("Грешен ПИН. Опитай пак.");
   await expect(page.locator(".dots")).toHaveClass(/\berr\b/);
   await expect(page.locator(".dots i.on")).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("sk-sec"))).toBeNull();
   /* the right PIN from the keyboard of the tablet */
-  await page.keyboard.type(who.pin);
-  await expect(page.locator(".dots i.on")).toHaveCount(4);
-  await expect(page.locator("[data-err]")).toHaveText("");
-  await page.keyboard.press("Enter");
+  await page.keyboard.type(who.pin);   /* the 4th digit signs in by itself */
   await expect(page).toHaveURL(/\/kuhnya\/izpalneni\/$/);
   await expect(page.locator(".ksec b")).toHaveText("Скара Bertha");
   await expect(page.locator("h1")).toHaveText("Изпълнени днес");
@@ -139,7 +137,7 @@ test("@desktop a known device: the module asks for the PIN; the section + the pe
 });
 
 test("@desktop the lockout per person (own server): the last tries are counted, then the core's text and the countdown; a colleague still signs in on the same tablet", async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000); /* its own server starts while the other worker is busy */
   const S = await ownServer("kpin", 22);
   try {
     const a = await newKitchen(S.base), b = await newKitchen(S.base);
@@ -147,7 +145,8 @@ test("@desktop the lockout per person (own server): the last tries are counted, 
     await page.goto("/kuhnya/vhod/");
     await expect(page.locator(".pinpad")).toBeVisible();
     await page.locator("[data-who]", { hasText: a.name }).click();
-    const tryPin = async () => { await keys(page, "0000"); await page.locator("button[data-go]").click(); };
+    /* the 4th digit signs in by itself; wait for the answer (the dots are empty again) before the next try */
+    const tryPin = async () => { await keys(page, "0000"); await expect(page.locator("[data-err]")).not.toHaveText("", { timeout: 15_000 }); await expect(page.locator(".dots i.on")).toHaveCount(0); };
     await tryPin();
     await expect(page.locator("[data-err]")).toHaveText("Грешен ПИН. Опитай пак.");
     await tryPin();
@@ -168,7 +167,7 @@ test("@desktop the lockout per person (own server): the last tries are counted, 
     /* the colleague on the same tablet: never one lock for the whole kitchen (review 2, important 4) */
     await page.reload();
     await page.locator("[data-who]", { hasText: b.name }).click();
-    await keys(page, b.pin); await page.locator("button[data-go]").click();
+    await keys(page, b.pin);
     await expect(page).toHaveURL(/\/kuhnya\/$/);
     expect(((await (await ctx.request.get("/api/auth/me")).json()) as { user: { username: string } }).user.username).toBe(b.username);
     expect(errs).toEqual([]);
@@ -187,12 +186,15 @@ for (const [w, h] of [[1280, 800], [1024, 768], [768, 1024]] as [number, number]
     const g = await page.evaluate(() => {
       const small: string[] = [];
       document.querySelectorAll<HTMLElement>(".lg a[href], .lg button").forEach((el) => { const b = el.getBoundingClientRect(); if (b.height < 48 || b.width < 48) small.push(el.className + " " + Math.round(b.width) + "×" + Math.round(b.height)); });
-      const go = document.querySelector("button[data-go]")!.getBoundingClientRect();
-      return { small, goBottom: go.bottom, desc: [...document.querySelectorAll<HTMLElement>(".sct .d")].filter((x) => x.offsetParent !== null).length };
+      const go = document.querySelector("button[data-go]")!.getBoundingClientRect(), pw = document.querySelector(".pw a")!.getBoundingClientRect(), card = document.querySelector(".pin")!.getBoundingClientRect();
+      const lg = document.querySelector(".lg")!;
+      return { small, goBottom: go.bottom, pwBottom: pw.bottom, cardBottom: card.bottom, scroll: lg.scrollHeight - lg.clientHeight, whoBottom: document.querySelector(".who")!.getBoundingClientRect().bottom, desc: [...document.querySelectorAll<HTMLElement>(".sct .d")].filter((x) => x.offsetParent !== null).length };
     });
     expect(g.small).toEqual([]);
-    /* "Влез" is on the first screen; at 768 the compact sign-in (no descriptions on the tiles) */
-    expect(g.goBottom).toBeLessThanOrEqual(h);
+    /* the whole sign-in on one tablet screen, no scrolling: "Кой влиза?", "Влез", "Вход с потребител и парола", the card;
+       at 768 the compact sign-in (no descriptions on the tiles) */
+    for (const [what, y] of [["Влез", g.goBottom], ["парола", g.pwBottom], ["card", g.cardBottom], ["Кой влиза?", g.whoBottom]] as [string, number][]) expect(y, what).toBeLessThanOrEqual(h);
+    expect(g.scroll).toBeLessThanOrEqual(0);
     if (w < 900) expect(g.desc).toBe(0); else expect(g.desc).toBeGreaterThan(0);
     /* the error state (said on the tablet, no try is spent) */
     await page.locator("[data-who]").first().click();
