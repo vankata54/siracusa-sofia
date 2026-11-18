@@ -10,9 +10,10 @@
      address), the car ([ЛИПСВА: коли]), delivered today, the cash "За предаване в края на смяната" (after 21:00
      "За предаване сега"; to whom [ЛИПСВА]).
    MONEY: a driver's cash only (core/driver.ts: one person's cash is not turnover). */
-import "sc-icons:user,moped,storefront,arrow-counter-clockwise,chair,hourglass,caret-right,arrow-up-right,info,lock,warning,check,clock,moon,warning-circle,cooking-pot,fire,pizza,bowl-food";
+import "sc-icons:receipt,image,user,moped,storefront,arrow-counter-clockwise,chair,hourglass,caret-right,arrow-up-right,info,lock,warning,check,clock,moon,warning-circle,cooking-pot,fire,pizza,bowl-food";
 import { mountBoss, tag, cnt, type Boss } from "../boss/frame.ts";
 import { bossApi, type MgrTeam, type MgrHall, type MgrTile } from "../../client/api-boss.ts";
+import { driverApi } from "../../client/api-driver.ts";
 import { fmtNb as fmt } from "../../lib/format.ts";
 import { ic, esc, plural, NB, mmss, hmOf, statusLine, TST, ZONE, go, screen, act, nowBadge, hashMap, sectionsHTML, msgOf, type Screen } from "./common.ts";
 
@@ -97,8 +98,15 @@ function teamScreen(boss: Boss): void {
         '<div class="mg-kv up-gap8"><span>Кола</span><b>' + (car && !car.missing ? esc(car.n) + (car.plate ? " · " + esc(car.plate) : "") : '<span class="missing">[ЛИПСВА: коли]</span>') + '</b></div><div class="mg-kv"><span>Доставени днес</span><b>' + dr.deliveredToday + "</b></div>" +
         (() => { const p = dr.cashParts, owe = dr.cash < -0.004;
           /* what it is made of, as the driver's end of shift: the cash orders + the start float - the fuel paid in cash */
-          const parts = "В брой от поръчките " + price(p.orders) + (p.float != null ? " + начално ресто " + price(p.float) : "") + (p.fuel ? " - гориво в брой " + price(p.fuel) : "") + ".";
-          return '<div class="mg-cash' + (now ? " now" : "") + '"><span>' + (owe ? "Ресторантът му дължи" : now ? "За предаване сега" : "За предаване в края на смяната") + '</span><b class="price">' + fmt(Math.abs(dr.cash)) + "</b><small>" + parts + ' Предава се на <span class="missing">[ЛИПСВА: на кого]</span>.</small></div>'; })() + "</article>";
+          const parts = "В брой от поръчките " + price(p.orders) + (p.float != null ? " + начално ресто " + price(p.float) : "") + (p.fuel ? " - гориво в брой " + price(p.fuel) : "") + "." +
+            (p.fuelPending ? " Гориво в брой " + price(p.fuelPending) + " чака бележката: вади се след „Видях бележката“." : "");
+          return '<div class="mg-cash' + (now ? " now" : "") + '"><span>' + (owe ? "Ресторантът му дължи" : now ? "За предаване сега" : "За предаване в края на смяната") + '</span><b class="price">' + fmt(Math.abs(dr.cash)) + "</b><small>" + parts + ' Предава се на <span class="missing">[ЛИПСВА: на кого]</span>.</small></div>'; })() +
+        /* fuel paid from the cash: off "За предаване" only after the manager saw the paper receipt (decision 18.11.2026) */
+        (dr.fuelPending.length ? '<h3 class="up-course">Гориво в брой · чака потвърждение</h3><ul class="up-fuel">' + dr.fuelPending.map((f) =>
+          '<li data-fuel="' + esc(f.id) + '"><span><b>' + price(f.sum) + " · " + String(f.litres).replace(".", ",") + NB + "л</b><small>" + esc(f.atClock) + " · " + esc(f.carName) + " · " + String(f.perLitre.toFixed(2)).replace(".", ",") + NB + "€/л" +
+            (f.photo ? "" : f.noPhoto ? " · бележката е у него" : " · без снимка") + "</small></span>" +
+            (f.photo ? '<a class="pill pill-line" href="' + esc(f.photo) + '" target="_blank" rel="noopener">' + ic("image", 20) + "Снимката</a>" : "") +
+            '<button class="pill pill-ink" type="button" data-fuelok="' + esc(f.id) + '">' + ic("check", 20) + "Видях бележката</button></li>").join("") + "</ul>" : "") + "</article>";
     }).join("") +
       '<p class="mg-note">' + ic("lock", 16) + "<span>Мястото на шофьора се вижда само по време на доставка и само от собственика и управителя.</span></p></section>";
   }
@@ -149,6 +157,16 @@ function teamScreen(boss: Boss): void {
     };
   }
   boss.body.addEventListener("click", (e) => { const b = (e.target as Element).closest<HTMLElement>("[data-change]"); if (b) changeSheet(b.dataset.change!); });
+  /* "Видях бележката": the fuel comes off the driver's "За предаване" (his screen hears it); "Отмени" for the window */
+  boss.body.addEventListener("click", async (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>("[data-fuelok]"); if (!b || b.disabled) return;
+    b.disabled = true;
+    try {
+      const f = await driverApi.confirmFuel(b.dataset.fuelok!);
+      boss.toast("Видя бележката: " + fmt(f.sum) + " гориво се вади от „За предаване“ на " + f.name + ".", { undo: () => { driverApi.confirmFuelUndo(f.id).then(() => S.reload(), (er) => boss.toast(msgOf(er))); } });
+      S.focusAfter("#drivers h2"); await S.reload();
+    } catch (er) { b.disabled = false; boss.toast(msgOf(er)); await S.reload(); }
+  });
   function onHash() {
     const h = hashMap(); if (!h.go) return;
     const run = () => { const el = document.getElementById(h.go); if (el) el.scrollIntoView({ block: "start" }); };

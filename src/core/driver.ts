@@ -136,6 +136,9 @@ export const DRIVER_MSG = {
   kmCar: "Въведи километража на колата.",
   kmShift: (who: string, km: number) => "Смяната на " + who + " започна с " + kmText(km) + " км. Километражът не може да е по-малко, докато е отворена.",
   photoUsed: "Тази снимка вече е в друго зареждане. Снимай бележката на това.",
+  fuelGone: "Няма такова зареждане.",
+  fuelNotCash: "Това зареждане не е платено в брой.",
+  fuelConfirmed: "Бележката вече е видяна.",
 };
 
 /* ---------- stored documents ---------- */
@@ -177,6 +180,8 @@ export interface DriverAsk {
 export interface FuelEntry {
   id: string; user: string; name: string; shift: string; car: string; litres: number; sum: number; km: number; full: boolean; cash: boolean;
   photo: string | null; noPhoto: boolean; at: Iso; createdAt: Iso;
+  /** fuel paid from the cash: "Видях бележката" of the manager, the owner or the main admin (decision 18.11.2026, round 4) */
+  confirmed?: { by: string; at: Iso };
 }
 
 /* ---------- views ---------- */
@@ -258,6 +263,8 @@ export interface StepResult { deliveries: Delivery[]; undo: { id: string; until:
 export interface FuelView {
   id: string; car: string; carName: string; litres: number; sum: number; perLitre: number; km: number; full: boolean; cash: boolean;
   photo: string | null; noPhoto: boolean; at: Iso; atClock: string; user: string; name: string; day: string;
+  /** paid from the cash: confirmed by a boss ("Видях бележката") = taken off "За предаване"; pending until then */
+  confirmed: { by: string; at: Iso; atClock: string } | null; pending: boolean;
 }
 export interface FuelPage { car: ShiftView["car"]; lastKm: number; cashOnHand: number; entries: FuelView[]; lastPerLitre: number | null }
 export interface FuelInput { litres: number | string; sum: number | string; km: number | string; full?: boolean; cash?: boolean; photo?: string | null; noPhoto?: boolean; /** when it was entered on the phone (kept with no connection) */ at?: string | number }
@@ -296,7 +303,9 @@ export interface DriverRow {
   /** cash to hand over at the end of the shift (a sum per driver is not turnover: the manager may see it) */
   cash: number; cashTo: string;
   /** what the cash is made of (as the driver's end of shift): the cash orders + the start float - the fuel paid in cash */
-  cashParts: { orders: number; float: number | null; fuel: number };
+  cashParts: { orders: number; float: number | null; fuel: number; fuelPending: number };
+  /** fuel paid from the cash that waits for "Видях бележката" (the newest first) */
+  fuelPending: { id: string; litres: number; sum: number; perLitre: number; km: number; car: string; carName: string; at: Iso; atClock: string; photo: string | null; noPhoto: boolean }[];
   /** no GPS in v1 (decision 17.11.2026) */
   position: null;
 }
@@ -1185,7 +1194,8 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
 function fuelView(e: FuelEntry, cars: DriverCar[], names: Map<string, string>): FuelView {
   const at = msOf(e.at) || 0;
   return { id: e.id, car: e.car, carName: carName(cars, e.car), litres: e.litres, sum: e.sum, perLitre: round3(e.sum / e.litres), km: e.km, full: e.full, cash: e.cash, photo: e.photo, noPhoto: e.noPhoto,
-    at: e.at, atClock: clock(at), user: e.user, name: names.get(e.user) || e.name, day: sofiaYmd(new Date(at)) };
+    at: e.at, atClock: clock(at), user: e.user, name: names.get(e.user) || e.name, day: sofiaYmd(new Date(at)),
+    confirmed: e.confirmed ? { by: names.get(e.confirmed.by) || e.confirmed.by, at: e.confirmed.at, atClock: clock(msOf(e.confirmed.at) || 0) } : null, pending: e.cash && !e.confirmed };
 }
 const shiftFuel = async (ctx: Ctx, sh: DriverShift) => (await ctx.repo.list<FuelEntry>(COL.fuel, { user: sh.user } as Partial<FuelEntry>)).filter((e) => e.shift === sh.id).sort((a, b) => (a.at < b.at ? 1 : -1));
 /** what the delivered order brought in: the driver's record, else (moved by the admin) the order's own payment */
@@ -1194,10 +1204,10 @@ function totals(sh: DriverShift, orders: Order[], fuel: FuelEntry[], cars: Drive
   const mine = ofShift(orders, sh), del = mine.filter((o) => o.status === "delivered"), paid = del.map((o) => ({ o, p: paidOf(o) }));
   const of = (m: PayMethod) => paid.filter((x) => x.p.pay === m), sum = (l: { p: { sum: number } }[]) => round2(l.reduce((a, x) => a + x.p.sum, 0));
   const cash = of("cash"),
-    /* fuel paid from the cash comes off "За предаване" only with the photo of the receipt; without it the manager checks
-       the paper receipt first (shofyor.review-2, round 3: one entry could take the handover to 0) */
-    fuelCash = round2(fuel.filter((e) => e.cash && !!e.photo).reduce((a, e) => a + e.sum, 0)),
-    fuelCashPending = round2(fuel.filter((e) => e.cash && !e.photo).reduce((a, e) => a + e.sum, 0)), handover = round2(sum(cash) + (sh.float || 0) - fuelCash);
+    /* fuel paid from the cash comes off "За предаване" only after a boss saw the receipt ("Видях бележката" in "Екипът";
+       decision 18.11.2026, round 4: any picture could pass for a receipt); until then it waits */
+    fuelCash = round2(fuel.filter((e) => e.cash && !!e.confirmed).reduce((a, e) => a + e.sum, 0)),
+    fuelCashPending = round2(fuel.filter((e) => e.cash && !e.confirmed).reduce((a, e) => a + e.sum, 0)), handover = round2(sum(cash) + (sh.float || 0) - fuelCash);
   const legs = sh.legs.map((l) => ({ car: l.car, n: carName(cars, l.car), kmStart: l.kmStart, kmEnd: l.kmEnd as number | null, km: (l.kmEnd - l.kmStart) as number | null }));
   if (sh.status === "open") legs.push({ car: sh.car, n: carName(cars, sh.car), kmStart: sh.kmStart, kmEnd: null, km: null });
   return {
@@ -1212,7 +1222,7 @@ export async function fuel(ctx: Ctx, s: StaffCtx): Promise<FuelPage> {
   need(s, "driver");
   const sh = await mustShift(ctx, s), d = await getDoc(ctx), entries = await shiftFuel(ctx, sh), names = new Map([[sh.user, sh.name]]);
   const t = totals(sh, await deliveryOrders(ctx), entries, d.cars);
-  return { car: carLite(d.cars, sh.car), lastKm: lastKmOf(d, sh), cashOnHand: Math.max(0, t.handover), entries: entries.map((e) => fuelView(e, d.cars, names)), lastPerLitre: entries[0] ? round3(entries[0].sum / entries[0].litres) : null };
+  return { car: carLite(d.cars, sh.car), lastKm: lastKmOf(d, sh), cashOnHand: Math.max(0, round2(t.handover - t.fuelCashPending)), entries: entries.map((e) => fuelView(e, d.cars, names)), lastPerLitre: entries[0] ? round3(entries[0].sum / entries[0].litres) : null };
 }
 /** "Запиши зареждането" for the car of the shift: litres, the sum in €, the km (not below the car's last one),
     "Напълних резервоара догоре", "Платих в брой от събраните пари" (taken out of the cash to hand over; not more than
@@ -1226,7 +1236,7 @@ export async function fuelAdd(ctx: Ctx, s: StaffCtx, input: FuelInput): Promise<
     if (!(litres > 0)) f.litres = DRIVER_MSG.litres; else if (litres > LITRES_MAX) f.litres = DRIVER_MSG.litresMax;
     if (sum === null || !(sum > 0)) f.sum = DRIVER_MSG.fuelSum;
     else if (cash) {
-      const have = Math.max(0, totals(sh, await deliveryOrders(ctx), await shiftFuel(ctx, sh), d.cars).handover);
+      const t0 = totals(sh, await deliveryOrders(ctx), await shiftFuel(ctx, sh), d.cars), have = Math.max(0, round2(t0.handover - t0.fuelCashPending));
       if (sum > have + 0.004) f.sum = DRIVER_MSG.fuelCash(have);
     }
     if (!(km > 0) || km > KM_MAX) f.km = DRIVER_MSG.km; else if (km < last) f.km = DRIVER_MSG.kmLow(last); else if (km > last + KM_JUMP) f.km = DRIVER_MSG.kmHigh;
@@ -1253,6 +1263,40 @@ export async function fuelAdd(ctx: Ctx, s: StaffCtx, input: FuelInput): Promise<
   });
   const page = await fuel(ctx, s);
   return { ...page, entry: page.entries.find((e) => e.id === id)! };
+}
+/** "Видях бележката": a boss saw the paper receipt of fuel paid from the cash; only then it comes off "За предаване"
+    (decision 18.11.2026, round 4). The main admin, the owner, the manager. 404 / 409 not_cash, confirmed. Log: fuel.confirm.
+    The driver's screen and the manager's hear it (driver.course "fuel"). */
+export async function confirmFuel(ctx: Ctx, s: StaffCtx, id: string): Promise<FuelView & { undoUntil: number }> {
+  needBoss(s, ["driver", "staff"]);
+  return lock(ctx, async () => {
+    const e = await ctx.repo.get<FuelEntry>(COL.fuel, String(id || ""));
+    if (!e) throw new CoreError("not_found", DRIVER_MSG.fuelGone, 404);
+    if (!e.cash) throw new CoreError("not_cash", DRIVER_MSG.fuelNotCash, 409);
+    if (e.confirmed) throw new CoreError("confirmed", DRIVER_MSG.fuelConfirmed, 409);
+    e.confirmed = { by: s.user.username, at: iso(ctx) };
+    await ctx.repo.put(COL.fuel, e);
+    await audit(ctx, s.user.username, "fuel.confirm", e.id, { driver: e.user, sum: e.sum, litres: e.litres });
+    course(ctx, e.user, "fuel", [], { confirmed: e.id });
+    const d = await getDoc(ctx);
+    return { ...fuelView(e, d.cars, await staffNames(ctx)), undoUntil: nowMs(ctx) + DRIVER_UNDO_MS };
+  });
+}
+/** "Отмени" of "Видях бележката": inside the window (the boss's own confirmation). 409 undo_gone / undo_late. Log: fuel.confirm_undo. */
+export async function confirmFuelUndo(ctx: Ctx, s: StaffCtx, id: string): Promise<FuelView> {
+  needBoss(s, ["driver", "staff"]);
+  return lock(ctx, async () => {
+    const e = await ctx.repo.get<FuelEntry>(COL.fuel, String(id || ""));
+    if (!e) throw new CoreError("not_found", DRIVER_MSG.fuelGone, 404);
+    if (!e.confirmed || (e.confirmed.by !== s.user.username && s.user.role !== "admin")) throw new CoreError("undo_gone", DRIVER_MSG.undoGone, 409);
+    if (nowMs(ctx) > (msOf(e.confirmed.at) || 0) + DRIVER_UNDO_MS + UNDO_GRACE_MS) throw new CoreError("undo_late", DRIVER_MSG.undoLate, 409);
+    delete e.confirmed;
+    await ctx.repo.put(COL.fuel, e);
+    await audit(ctx, s.user.username, "fuel.confirm_undo", e.id, { driver: e.user, sum: e.sum });
+    course(ctx, e.user, "fuel", [], { confirmed: null });
+    const d = await getDoc(ctx);
+    return fuelView(e, d.cars, await staffNames(ctx));
+  });
 }
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 /** the owner's module: fuel per day, driver and car for a period (default the last 30 days, up to 92), and the real
@@ -1349,7 +1393,10 @@ export async function drivers(ctx: Ctx, s: StaffCtx): Promise<DriversView> {
     return {
       user: sh.user, name: sc.names.get(sh.user) || sh.name, since: sh.startedAt, sinceAt: clock(msOf(sh.startedAt) ?? sc.now), car: carLite(sc.cars, sh.car), status, statusLabel: DRIVER_STATUS_LABEL[status],
       course: { id, stops: stops.map(({ v }, k) => ({ no: v.no, n: k + 1, zone: v.zone, addr: v.addr, st: v.st, stLabel: v.stLabel, late: v.late, lateLabel: v.due == null ? null : v.late ? "+" + v.late + " мин" : "навреме", next: plan.locked === v.no, arrivedAt: v.arrivedAt })) },
-      deliveredToday: all.filter((o) => o.status === "delivered" && sofiaYmd(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashParts: { orders: t.cash.sum, float: t.float, fuel: t.fuelCash }, cashTo: DRIVER_MISSING.handTo, position: null,
+      deliveredToday: all.filter((o) => o.status === "delivered" && sofiaYmd(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashParts: { orders: t.cash.sum, float: t.float, fuel: t.fuelCash, fuelPending: t.fuelCashPending },
+      fuelPending: fuelAll.filter((e) => e.shift === sh.id && e.cash && !e.confirmed).sort((a, b) => (a.at < b.at ? 1 : -1)).map((e) => {
+        const v = fuelView(e, sc.cars, sc.names); return { id: v.id, litres: v.litres, sum: v.sum, perLitre: v.perLitre, km: v.km, car: v.car, carName: v.carName, at: v.at, atClock: v.atClock, photo: v.photo, noPhoto: v.noPhoto };
+      }), cashTo: DRIVER_MISSING.handTo, position: null,
     };
   });
   const probs = sc.orders.filter((o) => !!o.driver && !!o.problem && o.problem.solved !== "delivered" && o.status !== "cancelled" && o.status !== "delivered")

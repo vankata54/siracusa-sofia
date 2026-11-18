@@ -271,6 +271,35 @@ test("@phone every screen at 360 and 390, light and dark: no horizontal scroll, 
   await ctx.close();
 });
 
+test("fuel paid from the cash comes off „За предаване“ only after the manager's „Видях бележката“ in „Екипът“ (decision 18.11)", async ({ page, browser }) => {
+  const errs = errors(page);
+  await signed(page);
+  const st0 = (await (await api(page).get(S.base + "/api/driver/fuel")).json()) as { lastKm: number; cashOnHand: number };
+  const f = await api(page).post(S.base + "/api/driver/fuel", { data: { litres: "3", sum: "5,00", km: st0.lastKm + 5, cash: true, noPhoto: true } });
+  expect(f.status(), await f.text()).toBe(201);
+  const before = (await (await api(page).get(S.base + "/api/driver/shift")).json()) as { handover: number };
+  const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
+  await go(page, "/shofyor/smyana/");
+  await expect(page.locator("[data-fuelwait]")).toContainText("5,00 €");
+  await expect(page.locator(".cashbox .big")).toHaveText(fmt(before.handover));
+  /* the manager, on his phone: the line at the driver, "Видях бележката" */
+  const mc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await login(mc, S.base, "manager");
+  const mp = await mc.newPage(); const merrs = errors(mp);
+  await mp.goto(S.base + "/upravitel/ekipat/");
+  const line = mp.locator(".up-fuel li").filter({ hasText: "5,00" });
+  await expect(line).toContainText("бележката е у него");
+  await line.getByRole("button", { name: "Видях бележката" }).click();
+  await expect(mp.getByText(/Видя бележката: 5,00/).first()).toBeVisible();
+  await expect(mp.locator(".up-fuel li").filter({ hasText: "5,00" })).toHaveCount(0);
+  /* the driver's screen hears it: 5 € less to hand over, no line that waits */
+  await expect(page.locator(".cashbox .big")).toHaveText(fmt(Math.round((before.handover - 5) * 100) / 100));
+  await expect(page.locator("[data-fuelwait]")).toHaveCount(0);
+  expect(merrs).toEqual([]);
+  await mc.close();
+  expect(errs).toEqual([]);
+});
+
 test("„Край на смяната“: blocked by an undelivered order, the cash formula, the km and the tick, „Смяната приключи“ and the sign-out", async ({ page }) => {
   const errs = errors(page);
   await signed(page);

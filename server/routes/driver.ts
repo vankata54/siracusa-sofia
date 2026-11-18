@@ -20,6 +20,7 @@
      POST  /api/driver/receipt      (the body is the photo) {url: "/api/driver/receipts/<sha256>.<ext>"}; 30 an hour
      GET   /api/driver/receipts/:name  the photo (the driver who uploaded it, the bosses; never public)
      POST  /api/driver/cars/:id/km {km}  a wrong last km of a car (the bosses)
+     POST  /api/driver/fuel/:id/confirm[/undo]  "Видях бележката" of fuel paid in cash (the bosses)
      GET   /api/driver/shift  ·   POST /api/driver/end {km, handed}
      GET   /api/driver/search?q=
    The main admin, the owner, the manager:
@@ -49,6 +50,8 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string; recei
   app.post("/api/driver/start", async (c) => { const s = await staff(c); return c.json(await core.driver.start(s, (await body(c)) as ShiftStart), 201); });
   app.post("/api/driver/prefs", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.prefs(s, { nav: b.nav, parked: b.parked })); });
   app.post("/api/driver/car", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.changeCar(s, { car: b.car, kmEnd: b.kmEnd, kmStart: b.kmStart })); });
+  app.post("/api/driver/fuel/:id/confirm", async (c) => c.json(await core.driver.confirmFuel(await staff(c), c.req.param("id"))));
+  app.post("/api/driver/fuel/:id/confirm/undo", async (c) => c.json(await core.driver.confirmFuelUndo(await staff(c), c.req.param("id"))));
   app.post("/api/driver/cars/:id/km", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.setCarKm(s, c.req.param("id"), b.km as number | string)); });
   app.put("/api/driver/cars", async (c) => { const s = await staff(c); return c.json(await core.driver.saveCars(s, (await body(c)).cars)); });
 

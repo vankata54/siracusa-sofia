@@ -174,7 +174,7 @@ export function createCore(ctx: Ctx) {
       state: driverMod.state, start: driverMod.start, prefs: driverMod.prefs, changeCar: driverMod.changeCar, saveCars: driverMod.saveCars,
       list: driverMod.list, get: driverMod.get, take: driverMod.take, go: driverMod.go, arrive: driverMod.arrive, deliver: driverMod.deliver,
       problem: driverMod.problem, returned: driverMod.returned, undo: driverMod.undo, ask: driverMod.ask, asks: driverMod.asks, answer: driverMod.answer, answerUndo: driverMod.answerUndo,
-      route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck, receiptKeep: driverMod.receiptKeep, receiptAccess: driverMod.receiptAccess, setCarKm: driverMod.setCarKm,
+      route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck, receiptKeep: driverMod.receiptKeep, receiptAccess: driverMod.receiptAccess, setCarKm: driverMod.setCarKm, confirmFuel: driverMod.confirmFuel, confirmFuelUndo: driverMod.confirmFuelUndo,
       shift: driverMod.shift, end: driverMod.end, drivers: driverMod.drivers, search: driverMod.search,
     }),
     /* ---------- stage D: the hall live (core/floor*.ts). The guests' calls take the table code and the phone's token; the

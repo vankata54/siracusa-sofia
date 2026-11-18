@@ -50,6 +50,8 @@
    answer(id, "return" | "pickup" | "deliver")  -> AskView (+ undoUntil). 409 answered
    answerUndo(id)               the manager's "Отмени" of an answer -> AskView. 409 undo_late / undo_changed
    saveCars([{id?, n, plate?}]) the cars (a setting) -> CarView[]
+   confirmFuel(id) / confirmFuelUndo(id)  "Видях бележката" for fuel paid in cash (only then it comes off "За предаване");
+                                drivers()[].fuelPending lists what waits. 409 not_cash / confirmed / undo_late
    setCarKm(car, km)            a wrong last km of a car (a typo in fuel or at the end of a shift) -> CarView[]; log driver.car_km
    -- the owner, or the section "Финанси и гориво" (others 403) --
    fuelReport({from?, to?})     FuelReport {total, byDay[], byDriver[], byCar[] (per100: l/100 km), rows[]}
@@ -137,6 +139,9 @@ export const driverApi = {
   asks: pick(async (c, o: { all?: boolean } = {}) => c.driver.asks(await g(c), o), (o = {}) => http<AskView[]>("GET", "driver/asks" + (o.all ? "?all=1" : ""))),
   answer: pick(async (c, id: string, a: AskAnswer) => c.driver.answer(await g(c), id, a), (id, a) => http<AskView>("POST", "driver/asks/" + e(id) + "/answer", { answer: a })),
   answerUndo: pick(async (c, id: string) => c.driver.answerUndo(await g(c), id), (id) => http<AskView>("POST", "driver/asks/" + e(id) + "/undo")),
+  /** "Видях бележката": fuel paid from the cash comes off "За предаване" (the bosses) -> FuelView + undoUntil */
+  confirmFuel: pick(async (c, id: string) => c.driver.confirmFuel(await g(c), id), (id) => http<FuelView & { undoUntil: number }>("POST", "driver/fuel/" + e(id) + "/confirm")),
+  confirmFuelUndo: pick(async (c, id: string) => c.driver.confirmFuelUndo(await g(c), id), (id) => http<FuelView>("POST", "driver/fuel/" + e(id) + "/confirm/undo")),
   /** a wrong last km of a car (the bosses; a line in the log) */
   setCarKm: pick(async (c, car: string, km: number | string) => c.driver.setCarKm(await g(c), car, km), (car, km) => http<CarView[]>("POST", "driver/cars/" + e(car) + "/km", { km })),
   saveCars: pick(async (c, cars: { id?: string; n: string; plate?: string | null }[]) => c.driver.saveCars(await g(c), cars), (cars) => http<CarView[]>("PUT", "driver/cars", { cars })),

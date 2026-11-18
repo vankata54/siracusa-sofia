@@ -146,3 +146,39 @@ describe("the rules of review 2 (flows)", () => {
     expect(staffMayHear({ role: "manager", sections: [] }, "order.created")).toBe(true);
   });
 });
+
+describe("fuel paid from the cash waits for „Видях бележката“ (decision 18.11, round 4)", () => {
+  it("off „За предаване“ only after a boss saw the receipt; the rights; undo; the cash on hand counts what waits", async () => {
+    const { core, t } = mk(), s = await people(core);
+    await begin(core, s.driver, "a1", 48250, "50,00");
+    const f = await core.driver.fuelAdd(s.driver, { litres: 1, sum: "29,93", km: 48260, cash: true, noPhoto: true });
+    expect(f.entry).toMatchObject({ cash: true, pending: true, confirmed: null });
+    let sh = await core.driver.shift(s.driver);
+    expect([sh.fuelCash, sh.fuelCashPending, sh.handover]).toEqual([0, 29.93, 50]);
+    /* the cash on hand counts what waits: the same money never pays two entries */
+    expect(f.cashOnHand).toBe(20.07);
+    await expect(core.driver.fuelAdd(s.driver, { litres: 1, sum: "29,93", km: 48261, cash: true })).rejects.toMatchObject({ fields: { sum: expect.stringContaining("Имаш 20,07") } });
+    /* the manager sees it at the driver */
+    const row = (await core.driver.drivers(s.manager)).drivers.find((d) => d.user === "driver")!;
+    expect(row.cashParts).toEqual({ orders: 0, float: 50, fuel: 0, fuelPending: 29.93 });
+    expect(row.fuelPending).toEqual([expect.objectContaining({ id: f.entry.id, sum: 29.93, litres: 1, photo: null, noPhoto: true, atClock: "19:42" })]);
+    /* the rights: the main admin, the owner, the manager; never the driver, the waiter, the kitchen */
+    for (const who of ["driver", "driver2", "waiter", "kitchen", "marketing"]) await expect(core.driver.confirmFuel(s[who], f.entry.id)).rejects.toMatchObject({ status: 403 });
+    const ok = await core.driver.confirmFuel(s.manager, f.entry.id);
+    expect(ok).toMatchObject({ pending: false, confirmed: { by: "manager" } });
+    sh = await core.driver.shift(s.driver);
+    expect([sh.fuelCash, sh.fuelCashPending, sh.handover]).toEqual([29.93, 0, 20.07]);
+    await expect(core.driver.confirmFuel(s.owner, f.entry.id)).rejects.toEqual(code("confirmed", 409));
+    expect((await core.audit.list()).find((x) => x.action === "fuel.confirm")).toMatchObject({ actor: "manager", target: f.entry.id, data: { driver: "driver", sum: 29.93 } });
+    /* "Отмени" inside the window, by the one who confirmed */
+    await expect(core.driver.confirmFuelUndo(s.owner, f.entry.id)).rejects.toEqual(code("undo_gone", 409));
+    await core.driver.confirmFuelUndo(s.manager, f.entry.id);
+    expect((await core.driver.shift(s.driver)).fuelCashPending).toBe(29.93);
+    await core.driver.confirmFuel(s.owner, f.entry.id);
+    t.now += 20_000;
+    await expect(core.driver.confirmFuelUndo(s.owner, f.entry.id)).rejects.toEqual(code("undo_late", 409));
+    /* fuel paid by card is not the cash */
+    const card = await core.driver.fuelAdd(s.driver, { litres: 10, sum: 15, km: 48270 });
+    await expect(core.driver.confirmFuel(s.manager, card.entry.id)).rejects.toEqual(code("not_cash", 409));
+  });
+});

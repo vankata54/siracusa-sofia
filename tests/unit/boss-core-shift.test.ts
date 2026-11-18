@@ -308,7 +308,8 @@ describe("review 1: what waits for 'Приеми', one rule for a delay, the dri
     const { core } = mk(), { s } = await people(core);
     await core.driver.start(s.driver, { car: "a1", km: 1000, float: 20 });
     const tm = await core.shift.team(s.manager), d = tm.drivers[0];
-    expect(d.cashParts).toEqual({ orders: 0, float: 20, fuel: 0 });
+    expect(d.cashParts).toEqual({ orders: 0, float: 20, fuel: 0, fuelPending: 0 });
+    expect(d.fuelPending).toEqual([]);
     expect(d.cash).toBe(20);
   });
 });
