@@ -434,6 +434,9 @@ export function mountPencil(o: PencilOptions): Pencil {
   function toast(text: string, link: { label: string; href: string } | null) {
     const top = typeof o.toastWideTop === "function" ? o.toastWideTop() : o.toastWideTop ?? !!slot;
     if (top) host.setAttribute("data-toast-top", ""); else host.removeAttribute("data-toast-top");
+    /* the pencil is still on: the toast comes below its bar, never over "Разшири" / "Изключи" (kuhnya.review-1, round 2) */
+    if (top && on) { const pt = bar.offsetParent ? (bar.offsetParent as HTMLElement).getBoundingClientRect().top : 0; host.style.setProperty("--toast-t", Math.round(pt + bar.offsetTop + bar.offsetHeight + 8) + "px"); }
+    else if (o.toastTop != null) host.style.setProperty("--toast-t", o.toastTop + "px"); else host.style.removeProperty("--toast-t");
     toastEl.innerHTML = svg("check-circle", 22) + "<span>" + esc(text) + "</span>" + (link ? '<a href="' + esc(link.href) + '">' + esc(link.label) + "</a>" : "");
     /* the round button steps aside on the phone while its toast is up (the "Виж" link is never under it) */
     host.setAttribute("data-pen-toast", "");
