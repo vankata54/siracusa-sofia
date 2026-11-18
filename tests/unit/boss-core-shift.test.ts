@@ -302,7 +302,7 @@ describe("review 1: what waits for 'Приеми', one rule for a delay, the dri
       expect(stop.lateLabel).toBe("+" + lateText(p.lateMin!));
       expect(p.title).toContain("закъснява " + lateText(p.lateMin!));
     }
-    expect(lateText(47)).toBe("47\u00a0мин"); expect(lateText(407)).toBe("6\u00a0ч 47\u00a0мин"); expect(lateText(120)).toBe("2\u00a0ч");
+    expect(lateText(47)).toBe("47\u00a0мин"); expect(lateText(407)).toBe("6\u00a0ч\u00a047\u00a0мин"); expect(lateText(120)).toBe("2\u00a0ч");
   });
   it("the driver's cash says what it is: the cash orders + the start float - the fuel in cash", async () => {
     const { core } = mk(), { s } = await people(core);
