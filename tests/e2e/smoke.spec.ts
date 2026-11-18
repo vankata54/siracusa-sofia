@@ -57,10 +57,16 @@ test("status row: the HTML has an empty place of the same size (never the hour o
   const html = await (await request.get("/menu/")).text();
   expect(html).toMatch(/<div class="status" data-status data-pending>/);
   expect(html).not.toMatch(/Доставката приключи|Кухнята затвори|Затворено/);
+  /* the menu's own hour parts are drawn for a neutral hour and invisible until the browser sets them (whatever the hour
+     of the build: a build at night must not write the night into the page) */
+  expect(html).toMatch(/<p class="eta" data-eta data-pending>/);
+  expect(html).toMatch(/<small data-sub="lunch" data-pending>до 15:00<\/small>/);
+  expect(html).toMatch(/<div class="notices" data-notices><\/div>/);
   await page.addInitScript(() => { try { localStorage.setItem("sc-cookie", '"min"'); } catch { /* ignore */ } });
   await page.goto("/menu/");
   const st = page.locator("[data-status]");
   await expect(st).not.toHaveAttribute("data-pending", /.*/);
   await expect(st).toContainText(/Отворено|Затворено|Доставката|Кухнята/);
   await expect(st.locator("span").last()).toBeVisible();
+  await expect(page.locator("[data-menupg] [data-pending]")).toHaveCount(0);
 });

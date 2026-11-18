@@ -6,12 +6,16 @@
    the filters, allergens, search and scrollspy, kept in the address: #pitsi&f=veg.hot&a=gluten.milk&q=пица. */
 import Base from "../../layouts/Base.astro";
 import { ic, art, photo, catById, state, eta, url, lunchIsToday } from "../../lib/index.ts";
+import { NEUTRAL_HOUR } from "../../lib/status.ts";
 import {
   BF_ITEMS, HAS_BF, heroDish, menuDescription, menuLead, searchHint, results, sectionHTML, segSub, etaLine, filterChipsHTML, countHTML, noticesHTML, catChipsHTML, sideHTML, menuLd, LAZY_AFTER,
   type MenuState,
 } from "./_menu.ts";
 
-const S = state(), E = eta();
+/* the parts that depend on the hour (the sub-lines of "Обедно" and "Закуски", the delivery line, the notices) are drawn for
+   a neutral daytime hour and invisible ([data-pending]) until the browser sets them for the real hour: never the hour of
+   the build (decision 14.11.2026; a build at night, e.g. the weekly one, would write "Кухнята затвори за днес" into the page) */
+const S = state(NEUTRAL_HOUR), E = eta(NEUTRAL_HOUR);
 const st0: MenuState = { menu: "main", f: [], a: [], q: "", cat: null };
 const R = results(st0);
 const heroArt = heroDish();
@@ -29,13 +33,13 @@ const jsonld = menuLd(Astro.site);
     <div class="mtop"><div class="hero-art" aria-hidden="true"><div class={"pic" + (heroPhoto ? " ph" : "")} set:html={heroArt ? (heroPhoto ? photo(heroArt, { eager: true, alt: "" }) : art(heroArt)) : ""}></div></div>
       <h1 class="h1" id="mh1">Меню</h1>
       {lead && <p class="lead">{lead}</p>}
-      <Fragment set:html={etaLine(S, E)} />
+      <Fragment set:html={etaLine(S, E).replace("data-eta", "data-eta data-pending")} />
     </div>
     <div class="mctl">
       <div class="seg mseg" role="group" aria-label="Кое меню">
         <button type="button" data-menu="main" aria-pressed="true"><b>Основно</b><small data-sub="main" set:html={segSub("main", S)}></small></button>
-        <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" set:html={segSub("lunch", S, lunchIsToday())}></small></a>
-        {HAS_BF && <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" set:html={segSub("bf", S)}></small></button>}
+        <a href={url.lunch()}><b>Обедно</b><small data-sub="lunch" data-pending set:html={segSub("lunch", S, lunchIsToday())}></small></a>
+        {HAS_BF && <button type="button" data-menu="bf" aria-pressed="false"><b>Закуски</b><small data-sub="bf" data-pending set:html={segSub("bf", S)}></small></button>}
       </div>
       <div class="search" role="search"><label for="mq">Търсете ястие или съставка</label><div class="sbox"><Fragment set:html={ic("magnifying-glass", 22)} />
         <input id="mq" type="search" placeholder={searchHint()} autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
@@ -352,7 +356,7 @@ const jsonld = menuLd(Astro.site);
   }
   /* the hour-dependent frame: segment sub-lines, delivery line, notices */
   function timeParts() {
-    (["main", "lunch", "bf"] as const).forEach((k) => { const el = root.querySelector("[data-sub=" + k + "]"); const h = segSub(k, S, SC.lunchIsToday()); if (el && el.innerHTML !== h) el.innerHTML = h; });
+    (["main", "lunch", "bf"] as const).forEach((k) => { const el = root.querySelector("[data-sub=" + k + "]"); const h = segSub(k, S, SC.lunchIsToday()); if (el && el.innerHTML !== h) el.innerHTML = h; if (el) el.removeAttribute("data-pending"); /* the real hour is set */ });
     const eta = $("[data-eta]"), h = etaLine(S, SC.eta());
     if (eta.outerHTML !== h) eta.outerHTML = h;
     elNot.innerHTML = noticesHTML(S, st, view === "offline");

@@ -20,11 +20,11 @@ test("the stream of a table: no token in the address, an httpOnly cookie for /ap
   try {
     await page.goto("/masa/" + t.code + "/menu/" + PV);
     await expect(page.locator('[data-row="pitsa-margarita"]')).toBeVisible();
-    await expect.poll(() => streams.length).toBeGreaterThan(0);
+    /* the page may open the public stream first; the one of the table follows as soon as the sitting is known */
+    await expect.poll(() => streams.some((u) => u.includes("table=" + t.code))).toBe(true);
     const g = await tokenOf(page);
     expect(g).toMatch(/^[0-9a-f]{32}$/);
     for (const u of streams) {
-      expect(u).toContain("table=" + t.code);
       expect(u).not.toContain(g);
       expect(new URL(u).searchParams.has("g")).toBe(false);
     }
