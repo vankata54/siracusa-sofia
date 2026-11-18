@@ -416,14 +416,16 @@ export function mountPen(module: string, slot?: HTMLElement): boolean {
   /* inside the frame of "Модулите на живо" the pencil of the preview points here; no second one */
   try { if (window.frameElement && window.frameElement.closest(".pv-dev")) return false; } catch { /* another origin */ }
   const boss = BOSS_PEN[module];
+  /* the staff apps by their role ("kitchen") or their folder ("kuhnya", "servitor", "shofyor") */
+  const staffApp = APPS.includes(module) || ["servitor", "kuhnya", "shofyor"].includes(module);
   import("./pencil.ts").then((m) => {
     A.pen = m.mountPencil({
       module: boss || module, who: who(), sectionNotes: boss ? false : can("notes"), slot, notesHref: aurl.section("notes"),
       /* the modules (staff apps, the manager, the owner) speak on "ти" */
-      ti: APPS.includes(module) || !!boss,
+      ti: staffApp || !!boss,
       badge: A.summary && !isMainAdmin() ? A.summary.waiting.notes.changedN : 0,
       /* the ember bar under the top bar of the admin (BRIEF, decision 3 of the chief); the staff apps have no top bar of the admin */
-      barTop: APPS.includes(module) || boss ? undefined : [8, 88],
+      barTop: staffApp || boss ? undefined : [8, 88],
       onSave: async (n) => { await adminApi.createNote(n); refreshSoon(); },
     });
   }).catch(() => { /* without the pencil the page still works */ });
