@@ -148,7 +148,7 @@ function nowScreen(boss: Boss): void {
 
   function accept(no: string, without: boolean) {
     void act(boss, { op: "accept", args: [no, { without }], label: "№" + NB + no + ": „Приеми“.", run: () => bossApi.accept(no, { without }),
-      ok: (r) => { boss.orderSeen(); boss.toast("№" + NB + r.no + " е приета" + (r.without.length ? " без „" + r.without.join(", ") + "“" : "") + " · " + (r.status === "ready" ? "Готова" : "Готви се"), { undo: undoT(() => bossApi.acceptUndo(r.undo.id)) }); after(); },
+      ok: (r) => { boss.orderSeen(); boss.toast("№" + NB + r.no + " е приета" + (r.without.length ? " без „" + r.without.join(", ") + "“" : "") + " · " + (r.status === "ready" ? "Готова" : "Готви се"), r.status === "ready" ? {} : { undo: undoT(() => bossApi.acceptUndo(r.undo.id)) }); after(); },
       fail: (e) => { if (e instanceof ApiError && (e.code === "has_out" || e.code === "all_out")) { void S.reload().then(() => { const o = order(no); if (o) void outSheet(o); }); return true; } return false; } });
   }
   /** "Приеми" of an order with a sold-out dish: call first, or "Приеми без него" */

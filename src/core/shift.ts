@@ -113,7 +113,7 @@ async function setQrTo(ctx: Ctx, session: string, to: QrTo | null): Promise<QrTo
     return was;
   });
 }
-interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times"> & { /** "cooking": "Приеми без него" of a started order */ status?: "cooking" };
+interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times"> & { /** "cooking": "Приеми без него" of a started order */ status?: "cooking"; /** the lines this action left out (only these come back with "Отмени") */ lines?: number[] };
   /** "Смени масите": only the tables this action moved (table id, the shift user before and after; null: nobody) */ moves?: { t: string; from: string | null; to: string | null }[] }
 interface ShiftDoc { id: string; date: string; ack: Record<string, Ack>; qr: Record<string, Given>; calls: Record<string, Given>; undo: Record<string, UndoRec>; updatedAt?: Iso }
 const docId = (day: string) => "shift:" + day;
@@ -500,10 +500,10 @@ export async function managerAccept(ctx: Ctx, s: StaffCtx, no: string, opt: { wi
   if (cooking) {
     if (!(opt && opt.without === true)) throw Object.assign(new CoreError("has_out", MGR_MSG.hasOut(names.join(", ")), 409), { out: names });
     const before = { sub: o0.sub, disc: o0.disc, total: o0.total, codeDisc: o0.codeDisc, profileDisc: o0.profileDisc, staffNotes: o0.staffNotes, times: o0.times };
+    const idx: number[] = [];
     const o = await serial(ctx.repo, "order:" + o0.no, async () => {
       const o = await getOrder(ctx, o0.no);
       if (o.status !== "cooking" || !o.lines.some(undecided)) throw new CoreError("not_accepted", MGR_MSG.notAccepted, 409);
-      const idx: number[] = [];
       o.lines.forEach((l, i) => { if (undecided(l)) { l.dropped = true; idx.push(i); } });
       Object.assign(o, sumsWithout(o));
       o.staffNotes = [...(o.staffNotes || []), { at: iso(ctx), by: s.user.username, text: MGR_MSG.without(names.join(", ")) }];
@@ -516,7 +516,7 @@ export async function managerAccept(ctx: Ctx, s: StaffCtx, no: string, opt: { wi
     });
     await audit(ctx, s.user.username, "order.note", o0.no, { text: MGR_MSG.without(names.join(", ")), without: names, cooking: true });
     const id = rid(6), at = iso(ctx);
-    await withDoc(ctx, async (d) => { d.undo[id] = { id, kind: "accept", at, by: s.user.username, no: o.no, order: { ...before, status: "cooking" } }; d.ack["out:" + o.no] = { at, by: s.user.username, name: s.user.name, what: "called" }; });
+    await withDoc(ctx, async (d) => { d.undo[id] = { id, kind: "accept", at, by: s.user.username, no: o.no, order: { ...before, status: "cooking", lines: idx } }; d.ack["out:" + o.no] = { at, by: s.user.username, name: s.user.name, what: "called" }; });
     say(ctx, "order.accept", { no: o.no, without: names });
     return { no: o.no, status: o.status, without: names, undo: { id, until: Date.parse(at) + MGR_UNDO_MS } };
   }
@@ -554,7 +554,8 @@ export async function managerAcceptUndo(ctx: Ctx, s: StaffCtx, id: string): Prom
     if (!wasCooking) await setOrderStatus(ctx, o0.no, "accepted", s.user.username, s);
     const o = await getOrder(ctx, o0.no), b = rec.order!;
     o.sub = b.sub; o.disc = b.disc; o.total = b.total; o.times = wasCooking ? o.times : b.times;
-    for (const l of o.lines) delete l.dropped;
+    /* only the lines of this "Приеми без него" wait again; a line left out by an earlier one stays out */
+    o.lines.forEach((l, i) => { if (!wasCooking || !b.lines || b.lines.includes(i)) delete l.dropped; });
     if (b.codeDisc === undefined) delete o.codeDisc; else o.codeDisc = b.codeDisc;
     if (b.profileDisc === undefined) delete o.profileDisc; else o.profileDisc = b.profileDisc;
     if (b.staffNotes === undefined) delete o.staffNotes; else o.staffNotes = b.staffNotes;

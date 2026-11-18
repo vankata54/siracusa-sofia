@@ -394,6 +394,8 @@ describe("review 2 (decisions 18.11): 'Приеми без него', 'Възл�
     const ask = await core.driver.ask(s.driver, d.no);
     await core.shift.answer(full, ask.id, "pickup");
     await expect(core.shift.answerUndo(s.owner, ask.id)).rejects.toMatchObject({ status: 409, code: "undo_late" });
+    /* nor straight through the driver's API (upravitel.review-2, round 2, small 2) */
+    await expect(core.driver.answerUndo(s.owner, ask.id)).rejects.toMatchObject({ status: 409, code: "undo_gone" });
     await expect(core.shift.answerUndo(full, ask.id)).resolves.toBeTruthy();
   });
 });

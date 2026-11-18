@@ -1048,6 +1048,8 @@ export async function answerUndo(ctx: Ctx, s: StaffCtx, id: string): Promise<Ask
     const q = await ctx.repo.get<DriverAsk>(COL.asks, String(id || ""));
     if (!q) throw new CoreError("not_found", DRIVER_MSG.askGone, 404);
     if (q.status !== "answered" || !q.answeredAt) throw new CoreError("undo_gone", DRIVER_MSG.undoGone, 409);
+    /* only who answered takes it back (upravitel.review-2, round 2: the owner could undo the manager's answer) */
+    if (q.answeredBy && q.answeredBy !== s.user.username) throw new CoreError("undo_gone", DRIVER_MSG.undoGone, 409);
     if (nowMs(ctx) > (msOf(q.answeredAt) || 0) + DRIVER_UNDO_MS + UNDO_GRACE_MS) throw new CoreError("undo_late", DRIVER_MSG.undoLate, 409);
     return orderLock(ctx, [q.order], async () => {
     const o = await ctx.repo.get<Order>(COL.orders, q.order), me = s.user.username, was = q.answer;

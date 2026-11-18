@@ -71,8 +71,10 @@ export function ticketHTML(t: KTicket, tm: Tm, stateText: Record<KState, string>
     t.lines.map(lineHTML).join("");
   if (t.others.length) h += '<div class="tk-o"><h4>Други секции</h4>' + t.others.map((o) =>
     '<div><span class="num">' + o.q + "&thinsp;×</span> <span>" + esc(o.name) + (o.out ? ' <b class="oout">' + ic("x", 14) + "изчерпано</b>" : "") + '</span> <span class="os ' + ST_CLS[o.state] + '">' + ic(ST_IC[o.state], 15) + esc(o.short) + " · " + esc(stateText[o.state] || ST_TEXT[o.state]) + "</span></div>").join("") + "</div>";
-  h += '</div><footer class="tk-f' + (started || allDone ? " one" : "") + '">' +
-    (started || allDone ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame", 22) + "Започни</button> ") +
+  /* "Започни" only while a line of the section can be started (a sold-out line that waits for a decision cannot) */
+  const noStart = started || allDone || !t.lines.some((l) => l.ks !== "ready" && !outWait(l));
+  h += '</div><footer class="tk-f' + (noStart ? " one" : "") + '">' +
+    (noStart ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame", 22) + "Започни</button> ") +
     '<button class="kb ok hold" type="button" data-done><span class="lbl"><span>' + ic("check-circle", 24) + ' Готово</span> <small>задръж 1 сек.</small></span><span class="vh">: ' + esc(src.text) + "</span></button></footer></article>";
   return h;
 }

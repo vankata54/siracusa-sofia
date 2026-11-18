@@ -799,6 +799,34 @@ describe("кръг 3: a sold-out line waits for a decision (decision of the chie
     expect(await code(core.floor.outDrop(s.waiter, 7, ls[0].key))).toBe("not_out:409");
   });
 
+  it("кръг 4: „Махни“ on the only dish of a sent table order cancels the order („Изчерпано днес“, 0 €): the card leaves the kitchen", async () => {
+    const { core, k, s, order } = await mk("19:00");
+    const t = await core.floor.order(s.waiter, 8, { lines: [{ id: PIZZA, q: 1 }] });
+    const no = t.bills[0].orders[0].no;
+    await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+    const ls = (await core.floor.table(s.waiter, 8)).bills.flatMap((b) => b.orders.flatMap((x) => x.lines));
+    expect(ls[0].decide).toBe(true);
+    const after = await core.floor.outDrop(s.waiter, 8, ls[0].key);
+    expect(after.bills.flatMap((b) => b.orders)).toHaveLength(0);
+    expect(await order(no)).toMatchObject({ status: "cancelled", reason: "Изчерпано днес", total: 0 });
+    expect((await core.kitchen.queue(k, "pesht")).tickets.map((x) => x.no)).not.toContain(no);
+    expect((await core.audit.list({ limit: 50 })).find((e) => e.action === "floor.out_drop")!.data).toMatchObject({ cancelled: true });
+  });
+
+  it("кръг 4: „Отмени“ of a second „Приеми без него“ brings back only its own line; the first stays out", async () => {
+    const { core, k, s, line, delivery, order } = await mk("19:00");
+    const d = await delivery([line(KEBAP), line(VRAT), line(SALAD)]);
+    await core.kitchen.setOut(k, VRAT, true, { sec: "skara" });
+    await core.kitchen.start(k, d.no, "skara");
+    await core.shift.accept(s.manager, d.no, { without: true });
+    await core.kitchen.setOut(k, SALAD, true, { sec: "studeni" });
+    const b = await core.shift.accept(s.manager, d.no, { without: true });
+    expect(b.without).toEqual(["Шопска салата"]);
+    await core.shift.acceptUndo(s.manager, b.undo.id);
+    const o = await order(d.no);
+    expect(o.lines.map((l) => !!l.dropped)).toEqual([false, true, false]);
+  });
+
   it("an old action without `saw` (an outbox from before) never wins over a newer „Върни“", async () => {
     const { core, k, at, line, delivery, order } = await mk("19:00");
     const d = await delivery([line(KEBAP)]);

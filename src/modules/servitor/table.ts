@@ -240,8 +240,10 @@ export async function mountTable(): Promise<void> {
   });
   /* "Махни" a sent line the kitchen marked sold out before starting it: the kitchen stops waiting for it (core outDrop) */
   const outDrop = (b: HTMLElement, key: string) => act(b, async () => {
+    const no = key.split(":")[0];
     D = await floorApi.outDrop(N!, key); render();
-    st.toast("Махнато от поръчката. Кухнята не го чака.");
+    const kept = D.bills.some((x) => x.orders.some((o) => o.no === no));
+    st.toast(kept ? "Махнато от поръчката. Кухнята не го чака." : "Поръчка №\u00a0" + no + " е отказана: единственото ѝ ястие е изчерпано днес.");
     if (!focus($("[data-outdrop]", main))) focus($("[data-serve]", main));
   });
   function confirmQR(b: HTMLElement) {

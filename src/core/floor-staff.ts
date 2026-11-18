@@ -323,29 +323,34 @@ export async function qrDrop(ctx: Ctx, s: StaffCtx, ref: string | number, key: s
 /** "Махни" on a line of a SENT table order that the kitchen marked "Изчерпано днес" before it started it (decision of the
     chief 18.11, round 3 of the kitchen): the waiter (or the management) decides; the line stays in the order only for
     reference (`dropped`), the kitchen no longer waits for it, the guests' view and the bill follow (it was never charged);
-    when everything else is ready the order is "Готова". The last line of an order cannot go this way (409 "last_line").
-    Log: floor.out_drop. */
-export const OUT_DROP_MSG = { notOut: "Това ястие вече не чака решение. Опресни масата." };
+    when everything else is ready the order is "Готова". The last line of an order cancels the order with the reason
+    "Изчерпано днес" (decision of the chief 18.11, round 4 of the kitchen: the waiter's module has no other way out; the
+    card leaves the kitchen, the sum is 0 €). Everything under the order's lock, the status change too.
+    Log: floor.out_drop (+ the order's own log of the status). */
+export const OUT_DROP_MSG = { notOut: "Това ястие вече не чака решение. Опресни масата.", reason: "Изчерпано днес" };
 export async function outDrop(ctx: Ctx, s: StaffCtx, ref: string | number, key: string): Promise<TableDetail> {
   needFloor(s);
   return onTable(ctx, ref, false, async (sit, t) => {
     const b = billLines(await sessionOrders(ctx, sit)).find((x) => x.key === String(key || ""));
     if (!b) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
-    let err: CoreError | null = null;
-    const o = await patchOrder(ctx, b.no, (o) => {
+    const res = await serial(ctx.repo, "order:" + b.no, async () => {
+      const o = await ctx.repo.get<Order>(COL.orders, b.no);
+      if (!o) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
       const l = o.lines[b.idx];
-      if (!l || !l.out || l.dropped || (l.ks || "wait") !== "wait" || !["accepted", "cooking"].includes(o.status)) { err = new CoreError("not_out", OUT_DROP_MSG.notOut, 409); return false; }
-      if (o.lines.every((x, i) => i === b.idx || x.dropped)) { err = new CoreError("last_line", FLOOR_MSG.sLastLine, 409); return false; }
+      if (!l || !l.out || l.dropped || (l.ks || "wait") !== "wait" || !["accepted", "cooking"].includes(o.status)) throw new CoreError("not_out", OUT_DROP_MSG.notOut, 409);
+      const last = o.lines.every((x, i) => i === b.idx || x.dropped);
       l.dropped = true;
       o.sub = sumOf(o.lines.filter((x) => !x.out).map((x) => ({ sum: r2((x.unit ?? 0) * x.q) }))); o.total = o.sub;
+      o.updatedAt = iso(ctx);
+      await ctx.repo.put(COL.orders, o);
+      if (last) return { o: await setOrderStatus(ctx, o.no, "cancelled", s.user.username, undefined, OUT_DROP_MSG.reason), last };
+      /* everything the kitchen makes is ready already: the order is "Готова" (the waiter sees it in "Готови") */
+      const rest = o.lines.filter((x) => !x.dropped);
+      if (o.status === "cooking" && rest.length && rest.every((x) => x.ks === "ready")) return { o: await setOrderStatus(ctx, o.no, "ready", s.user.username), last };
+      return { o, last };
     });
-    if (err) throw err;
-    if (!o) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
-    await audit(ctx, s.user.username, "floor.out_drop", t.id, { n: t.n, no: b.no, idx: b.idx, id: b.l.id, q: b.l.q });
-    emit(ctx, "order.line", { no: b.no, kind: "drop", sec: "all", idx: b.idx, lines: [b.idx], table: sit.table, session: sit.id, status: o.status }, { table: sit.id, order: b.no });
-    /* everything the kitchen makes is ready already: the order is "Готова" (the waiter sees it in "Готови") */
-    const rest = o.lines.filter((x) => !x.dropped);
-    if (o.status === "cooking" && rest.length && rest.every((x) => x.ks === "ready")) await setOrderStatus(ctx, o.no, "ready", s.user.username);
+    await audit(ctx, s.user.username, "floor.out_drop", t.id, { n: t.n, no: b.no, idx: b.idx, id: b.l.id, q: b.l.q, cancelled: res.last });
+    emit(ctx, "order.line", { no: b.no, kind: "drop", sec: "all", idx: b.idx, lines: [b.idx], table: sit.table, session: sit.id, status: res.o.status }, { table: sit.id, order: b.no });
     return done(ctx, s, t, sit);
   });
 }
