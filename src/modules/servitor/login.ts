@@ -40,8 +40,10 @@ export async function mountLogin(): Promise<void> {
   const seg = () => '<div class="st-seg" role="group" aria-label="Начин на вход"><button type="button" data-v="pin" aria-pressed="' + (view === "pin") + '">Личен ПИН</button><button type="button" data-v="pass" aria-pressed="' + (view === "pass") + '">Парола</button></div>';
   function pinView(): string {
     const list = people ? people.people : [], known = !!people && people.known, locked = lockUntil > Date.now();
-    /* nobody is chosen until a tap (or the choice remembered on this phone): digits typed blindly never count against a colleague */
+    /* nobody is chosen until a tap (or the choice remembered on this phone): digits typed blindly never count against a
+       colleague; with ONE person with a PIN on this phone there is nobody else to count against: that person is chosen */
     if (who && !list.some((p) => p.id === who)) who = "";
+    if (!who && list.length === 1) who = list[0].id;
     let h = '<div><h1 class="h1">Вход за персонала</h1><p class="lead sub">Личен 4-цифрен ПИН, който дава управителят.</p></div>' + seg();
     if (!known) return h + '<div class="notice">' + ic("lock", 22) + "<span>Първият вход на нов телефон е с парола. После тук влизаш с личния ПИН.</span></div>" +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-v="pass">' + ic("sign-in", 22) + "Влез с парола</button>";
@@ -88,7 +90,7 @@ export async function mountLogin(): Promise<void> {
       '<button class="pill pill-red pill-lg pill-block" type="button" data-out>' + ic("sign-out", 22) + "Излез</button>" +
       '<a class="pill pill-line pill-lg pill-block" href="' + esc(murl.servitor("vhod", "shift")) + '">Започни смяната</a>';
     const open = hall ? hall.tables.filter((t) => t.mine && t.state !== "free") : [];
-    return '<div><h1 class="h1">Край на смяната</h1><p class="lead sub">На смяна от ' + S.clock(ms(m.shift.since)) + ". Отворените маси се предават, преди изход.</p></div>" +
+    return '<div><h1 class="h1">Край на смяната</h1><p class="lead sub">На смяна от ' + S.clock(ms(m.shift.since)) + ". Отворените маси се предават преди изход.</p></div>" +
       (open.length ? '<div class="stack">' + open.map((t) => '<div class="endrow"><div><b>Маса ' + t.n + "</b><span>" + ZONE[t.zone] + "</span></div>" + S.stt(t.state, t.state === "call" ? "Вика" : t.state === "ready" ? SHORT.ready : t.label, STATE_ICON[t.state]) + "</div>").join("") + "</div>" +
         '<div class="field"><label for="to">Предай масите на</label><select class="input" id="to">' + m.colleagues.map((c) => '<option value="' + esc(c.username) + '"' + (to === c.username ? " selected" : "") + ">" + esc(c.name) + "</option>").join("") + '<option value=""' + (to === "" && m.colleagues.length ? " selected" : "") + ">Управителя</option></select>" +
         (m.colleagues.length ? "" : '<span class="help">Няма друг сервитьор на смяна: управителят ги дава на колега.</span>') + "</div>"

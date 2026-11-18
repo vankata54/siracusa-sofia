@@ -214,6 +214,36 @@ describe("the dine-in flow: two phones, the first order waits, the kitchen, 'С�
   });
 });
 
+describe("the first QR order: a dish sold out meanwhile is marked and „Махни“ takes that one line out", () => {
+  it("marks the line, keeps it out of the sum, drops it (guests see the order without it, audit), refuses the last line", async () => {
+    const { core, events } = mk(), s = await people(core), code = await codeOf(core, s.admin, 5);
+    await core.floor.open(code, A);
+    await core.floor.cartAdd(code, A, { id: pizza.id, q: 2 });
+    await core.floor.cartAdd(code, A, { id: salad.id });
+    expect((await core.floor.send(code, A)).to).toBe("waiter");
+    await core.menu.setSoldOut(pizza.id, true, "kitchen");
+    const d = await core.floor.table(s.waiter, 5);
+    expect(d.pending!.lines.map((l) => [l.id, l.block])).toEqual([[pizza.id, "sold_out"], [salad.id, ""]]);
+    expect(d.pending!.sum).toBe(r2(salad.p));
+    expect(d.pending!.blocked).toBe(1);
+    expect((await core.floor.hall(s.waiter)).qr[0].sum).toBe(r2(salad.p));
+    await expect(core.floor.qrConfirm(s.waiter, 5)).rejects.toEqual(err("sold_out", 409));
+    await expect(core.floor.qrDrop(s.kitchen, 5, d.pending!.lines[0].key)).rejects.toEqual(err("forbidden", 403));
+    await expect(core.floor.qrDrop(s.waiter, 5, "nope")).rejects.toEqual(err("not_found", 404));
+    const x = await core.floor.qrDrop(s.waiter, 5, d.pending!.lines[0].key);
+    expect(x.pending!.lines.map((l) => l.id)).toEqual([salad.id]);
+    const v = await core.floor.view(code, A);
+    expect(v.pending!.lines.map((l) => l.id)).toEqual([salad.id]);
+    expect(v.cart.n).toBe(0);
+    expect(events.filter((e) => e.type === "floor.qr").map((e) => e.data.state)).toEqual(["pending", "pending"]);
+    expect((await core.audit.list({ limit: 50 })).find((e) => e.action === "floor.qr_drop")).toMatchObject({ actor: "waiter", data: { n: 5, id: pizza.id, q: 2, out: true } });
+    await expect(core.floor.qrDrop(s.waiter, 5, x.pending!.lines[0].key)).rejects.toEqual(err("last_line", 409));
+    const c = await core.floor.qrConfirm(s.waiter, 5);
+    expect(c.no).toMatch(/^\d+$/);
+    await core.menu.setSoldOut(pizza.id, false, "kitchen");
+  });
+});
+
 describe("the first QR order: 'Откажи' with a reason", () => {
   it("gives the dishes back, says why, and the next send waits for the waiter again; 'Отмени' within the window", async () => {
     const { core, repo, events, t } = mk(), s = await people(core), code = await codeOf(core, s.admin, 3);
@@ -847,5 +877,54 @@ describe("the QR table, round 2 (decision 18.11.2026): only phones the waiter co
     await core.floor.rate(code, A, { happy: false, text: "Второ." });
     const rows = (await core.customersAdmin.feedback(s.manager, "feedback")).rows.filter((r) => /Маса 5\b/.test(r.name));
     expect(rows.map((r) => r.message)).toEqual(["Второ."]);
+  });
+});
+
+describe("one shift day (04:00 Sofia) for the waiter's shift, the sittings and the order keys; „Отмени“ after „Сервирах“ only for who served", () => {
+  it("the shift day of a moment", async () => {
+    const { shiftDay } = await import("../../src/lib/shift-day.ts");
+    expect(shiftDay(new Date("2026-11-16T22:30:00Z"))).toBe("2026-11-16"); /* Tue 00:30 Sofia: still Monday's evening */
+    expect(shiftDay(new Date("2026-11-17T02:30:00Z"))).toBe("2026-11-17"); /* Tue 04:30 Sofia: a new day */
+    expect(shiftDay(new Date("2026-11-16T01:59:00Z"))).toBe("2026-11-15"); /* Mon 03:59 */
+  });
+  it("a shift and a paid sitting of 19:42 are still there at 00:30 and end at 04:30", async () => {
+    const { core, t } = mk(), s = await people(core);
+    await core.floor.shiftStart(s.waiter, [7]);
+    await core.floor.order(s.waiter, 7, { lines: [{ id: pizza.id, q: 1 }] });
+    await core.floor.pay(s.waiter, 7, { how: "cash" });
+    t.now = Date.parse("2026-11-16T22:30:00Z"); /* 00:30 Sofia */
+    expect((await core.floor.shiftMine(s.waiter)).shift).not.toBeNull();
+    expect((await core.floor.hall(s.waiter)).tables.find((x) => x.n === 7)!.state).not.toBe("free");
+    t.now = Date.parse("2026-11-17T02:30:00Z"); /* 04:30 Sofia */
+    expect((await core.floor.shiftMine(s.waiter)).shift).toBeNull();
+    /* the hall closes a paid sitting of an earlier shift day */
+    expect((await core.floor.hall(s.waiter)).tables.find((x) => x.n === 7)!.state).toBe("free");
+    expect((await core.floor.table(s.waiter, 7)).session).toBeNull();
+  });
+  it("the same order key after the table was paid and closed gives the first orders again, never a second order", async () => {
+    const { core, repo } = mk(), s = await people(core);
+    const rid = "rid-closed-table-1";
+    const a = await core.floor.order(s.waiter, 8, { rid, lines: [{ id: salad.id, q: 1 }] });
+    await core.floor.pay(s.waiter, 8, { how: "card" });
+    await core.floor.close(s.waiter, 8, true);
+    const b = await core.floor.order(s.waiter, 8, { rid, lines: [{ id: salad.id, q: 1 }] });
+    expect(b.orders).toEqual(a.orders);
+    expect(b.session).toBeNull();
+    expect(await repo.list("orders")).toHaveLength(1);
+    expect((await repo.list<TableSession>("table_sessions")).filter((x) => x.status === "open")).toHaveLength(0);
+    /* another key is a new order (a new sitting) */
+    const c = await core.floor.order(s.waiter, 8, { rid: "rid-closed-table-2", lines: [{ id: salad.id, q: 1 }] });
+    expect(c.orders).not.toEqual(a.orders);
+  });
+  it("canUnserve is true only for who served it (and the management)", async () => {
+    const { core, repo, t } = mk(), s = await people(core, [["waiter2", "waiter"]]);
+    const o = await core.floor.order(s.waiter, 9, { lines: [{ id: pizza.id, q: 1 }] });
+    await kitchen(repo, o.orders[0], "ready", t.now);
+    await core.floor.serve(s.waiter, 9);
+    const line = async (x: StaffCtx) => (await core.floor.table(x, 9)).bills[0].orders[0].lines[0].canUnserve;
+    expect(await line(s.waiter)).toBe(true);
+    expect(await line(s.waiter2)).toBe(false);
+    expect(await line(s.manager)).toBe(true);
+    await expect(core.floor.unserve(s.waiter2, 9, [o.orders[0] + ":0"])).rejects.toEqual(err("forbidden", 403));
   });
 });

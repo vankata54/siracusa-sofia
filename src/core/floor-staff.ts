@@ -18,12 +18,13 @@ import { may, isBoss, invalid, serial, maskPhone, RIGHTS_MSG } from "./rights.ts
 import { liveHall } from "./hall.ts";
 import type { HallTable } from "./site-data.ts";
 import { getSettings } from "./settings.ts";
-import { soldOutToday, outNow } from "./menu.ts";
-import { createTableOrder, checkTableLines, tableKitchenOpen, setOrderStatus, STATUS_LABEL, type TableLine } from "./orders.ts";
+import { soldOutToday, outNow, type SoldOutToday } from "./menu.ts";
+import { createTableOrder, checkTableLines, tableKitchenOpen, tableBlock, setOrderStatus, STATUS_LABEL, type TableLine } from "./orders.ts";
 import { byId, items } from "../lib/data.ts";
 import { parseMods } from "../lib/pricing.ts";
 import { searchDishes, latin } from "../lib/search.ts";
 import { sofiaYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import {
   FLOOR_MSG, CALL_STAFF, CALL_WARN_MIN, REJECT_REASONS, ZONE_NAME, BILL_ALL, FLOOR_UNDO_MS, LINE_LABEL, needFloor, lockKey, openSessionOf, openSessions, saveSession, newSession,
   sessionOrders, tableOf, billLines, sumOf, r2, phoneOf, phoneLabel, callLate, emitSession, emitCall, closeIfStale, patchOrder, lineTouch,
@@ -63,14 +64,18 @@ export interface StaffLine {
 }
 export interface StaffOrder { no: string; placedAt: string; ts: number; channel: "qr" | "waiter"; /** confirmed by a waiter */ via: boolean; source: string; by: string; note: string; status: OrderStatus; statusLabel: string; lines: StaffLine[]; sum: number }
 export interface StaffBill { name: string; sum: number; paid: number; rest: number; orders: StaffOrder[] }
-export interface PendingLine { key: string; id: string; name: string; q: number; mods: string[]; per100: boolean; /** the price for 100 g of a steak */ price100: number | null; unit: number | null; sum: number | null; phone: number;
-  /** added or changed by a phone the waiter has not confirmed yet ("нов телефон"; only after the table's first confirmed QR order) */ isNew: boolean }
+export interface PendingLine {
+  key: string; id: string; name: string; q: number; mods: string[]; per100: boolean; /** the price for 100 g of a steak */ price100: number | null; unit: number | null; sum: number | null; phone: number;
+  /** added or changed by a phone the waiter has not confirmed yet ("нов телефон"; only after the table's first confirmed QR order) */ isNew: boolean;
+  /** why it cannot go to the kitchen now (not in the sum): the waiter takes it out ("Махни", qrDrop) before "Потвърди и прати" */
+  block: "" | "sold_out" | "removed" | "lunch" | "breakfast";
+}
 export interface TableDetail {
   table: TRef & { zoneName: string; seats: number }; owner: { username: string; name: string } | null; mine: boolean;
   state: TableStateKey; label: string; since: Iso | null;
   session: { id: string; openedAt: Iso; by: "qr" | "waiter"; phones: number; cart: number } | null;
   calls: HallCall[];
-  pending: { at: Iso; phone: number; late: boolean; lines: PendingLine[]; n: number; sum: number; open: boolean } | null;
+  pending: { at: Iso; phone: number; late: boolean; lines: PendingLine[]; n: number; sum: number; open: boolean; /** lines that cannot go now */ blocked: number } | null;
   bills: StaffBill[]; total: number; paid: number; rest: number;
   payments: { id: string; at: Iso; by: string; how: "cash" | "card"; sum: number; keys: string[]; label: string }[];
   /** what the phones asked for (the waiter sees the sums) */
@@ -104,16 +109,18 @@ function callView(c: FloorCall, s: TableSession, t: TRef, me: StaffCtx, owner: T
   return { id: c.id, table: t, session: s.id, kind: c.kind, label: CALL_STAFF[c.kind], note: c.note, at: c.at, phone: phoneOf(c.by), joined: c.joined || 0, taken: tk,
     warn: !c.taken && nowMs - Date.parse(c.at) >= CALL_WARN_MIN * 60_000, late: callLate(c, nowMs, managerMin), mine: !!owner && owner.user === me.user.id, forMe: !tk || tk.mine };
 }
-function pendingView(s: TableSession): { lines: PendingLine[]; n: number; sum: number; open: boolean } {
+function pendingView(ctx: Ctx, s: TableSession, today: SoldOutToday): { lines: PendingLine[]; n: number; sum: number; open: boolean; blocked: number } {
   const seen = s.seen || [], confirmed = seen.length > 0;
   const lines: PendingLine[] = (s.pending ? s.pending.lines : []).map((l) => {
-    const x = byId[l.id], per100 = !!(x && x.per100);
+    const x = Object.prototype.hasOwnProperty.call(byId, l.id) ? byId[l.id] : undefined, per100 = !!(x && x.per100);
+    const block: PendingLine["block"] = !x ? "removed" : outNow(x, today) ? "sold_out" : tableBlock(ctx, x.id);
     let unit: number | null = null;
     if (x && !per100) { try { unit = checkOne(l.id, l.mods); } catch { unit = x.p; } }
     return { key: l.key, id: l.id, name: x ? x.n : l.id, q: l.q, mods: l.mods, per100, price100: per100 ? x.p : null, unit, sum: unit == null ? null : r2(unit * l.q), phone: phoneOf(l.who) || 0,
-      isNew: confirmed && lineTouch(l).some((w) => !seen.includes(w)) };
+      isNew: confirmed && lineTouch(l).some((w) => !seen.includes(w)), block };
   });
-  return { lines, n: lines.reduce((a, l) => a + l.q, 0), sum: r2(lines.reduce((a, l) => a + (l.sum || 0), 0)), open: lines.some((l) => l.sum == null) };
+  const live = lines.filter((l) => !l.block);
+  return { lines, n: lines.reduce((a, l) => a + l.q, 0), sum: r2(live.reduce((a, l) => a + (l.sum || 0), 0)), open: live.some((l) => l.sum == null), blocked: lines.length - live.length };
 }
 const checkOne = (id: string, mods: string[]): number => r2(byId[id].p + parseMods(byId[id], mods).extra);
 
@@ -133,6 +140,7 @@ export async function hallLive(ctx: Ctx, s: StaffCtx): Promise<HallLive> {
   needFloor(s);
   const hall = (await liveHall(ctx)).tables.filter((t) => !t.off).sort((a, b) => a.n - b.n), shifts = await openShifts(ctx), owners = await tableOwners(ctx, shifts), st = await getSettings(ctx);
   const live = await liveSessions(ctx), nowD = nowDate(ctx), nowMs = nowD.getTime(), myShift = shifts.find((x) => x.user === s.user.id) || null;
+  const today = await soldOutToday(ctx);
   const qrMin = st.qrManager || 3;
   const tiles: HallTile[] = [], calls: HallCall[] = [], qr: HallQr[] = [];
   let ready = 0, readyTables = 0;
@@ -142,7 +150,7 @@ export async function hallLive(ctx: Ctx, s: StaffCtx): Promise<HallLive> {
     tiles.push({ id: t.id, n: t.n, zone: t.zone, seats: t.seats, state: sv.state, label: sv.label, reason: sv.reason, since: sv.since, waits: sv.waits, owner: o ? { username: o.username, name: o.name } : null, mine, session: L ? L.s.id : null });
     if (!L) continue;
     for (const c of L.s.calls) if (!c.done) calls.push(callView(c, L.s, tref(t), s, o, nowMs, st.callManager));
-    if (L.s.pending) { const p = pendingView(L.s); qr.push({ table: tref(t), session: L.s.id, at: L.s.pending.at, n: p.n, sum: p.sum, open: p.open, late: nowMs - Date.parse(L.s.pending.at) >= qrMin * 60_000, mine, forMe: mine || !o || !myShift }); }
+    if (L.s.pending) { const p = pendingView(ctx, L.s, today); qr.push({ table: tref(t), session: L.s.id, at: L.s.pending.at, n: p.n, sum: p.sum, open: p.open, late: nowMs - Date.parse(L.s.pending.at) >= qrMin * 60_000, mine, forMe: mine || !o || !myShift }); }
     const r = L.lines.filter((x) => !x.out && x.st === "ready").length;
     ready += r; if (r) readyTables++;
   }
@@ -168,14 +176,15 @@ async function detailOf(ctx: Ctx, me: StaffCtx, t: HallTable, s: TableSession | 
     const ls: StaffLine[] = lines.filter((x) => x.no === ord.no).map((x) => ({
       key: x.key, no: x.no, idx: x.idx, id: x.l.id, name: x.l.name || x.l.id, q: x.l.q, mods: x.l.mods || [], note: x.l.note || "", grams: x.l.grams || null, unit: x.l.unit ?? 0, sum: x.sum,
       st: x.st, stLabel: LINE_LABEL[x.st], out: x.out, paid: x.paid, guest: guestOf(x.l.guest), readyAt: x.st === "ready" ? readyAtOf(x) : x.l.readyAt || null, servedAt: x.l.servedAt || null,
-      canUnserve: !!x.l.servedAt && nowMs - Date.parse(x.l.servedAt) <= FLOOR_UNDO_MS,
+      /* only who served it (or the management) may take "Сервирах" back: the core refuses the others, the screen does not offer it */
+      canUnserve: !!x.l.servedAt && nowMs - Date.parse(x.l.servedAt) <= FLOOR_UNDO_MS && (!x.l.servedBy || x.l.servedBy === me.user.username || isBoss(me)),
     }));
     b.orders.push({ no: ord.no, placedAt: ord.placedAt, ts: ord.ts, channel: ord.channel === "waiter" ? "waiter" : "qr", via: ord.via === "waiter", source: ord.channel === "waiter" ? "от сервитьор" : "от QR", by: ord.by || "", note: ord.note || "", status: ord.status, statusLabel: tableLabel(ord), lines: ls, sum: sumOf(ls) });
     b.sum = r2(b.sum + sumOf(ls)); b.paid = r2(b.paid + sumOf(ls.filter((l) => l.paid))); b.rest = r2(b.sum - b.paid);
   }
   /* "Обща сметка" first, then "Гост 1", "Гост 2" … */
   bills.sort((a, b) => (a.name === BILL_ALL ? -1 : b.name === BILL_ALL ? 1 : a.name.localeCompare(b.name, "bg", { numeric: true })));
-  const total = sumOf(lines), paid = sumOf(lines.filter((x) => x.paid)), rest = r2(total - paid), p = s && s.pending ? pendingView(s) : null;
+  const total = sumOf(lines), paid = sumOf(lines.filter((x) => x.paid)), rest = r2(total - paid), p = s && s.pending ? pendingView(ctx, s, await soldOutToday(ctx)) : null;
   return {
     table: { ...tref(t), zoneName: ZONE_NAME[t.zone], seats: t.seats }, owner: o ? { username: o.username, name: o.name } : null, mine: !!o && o.user === me.user.id,
     state: sv.state, label: sv.label, since: sv.since,
@@ -290,6 +299,23 @@ export async function qrConfirm(ctx: Ctx, s: StaffCtx, ref: string | number, gra
     return { ...(await done(ctx, s, t, sit)), no: o.no };
   });
 }
+/** "Махни" on one line of the waiting QR order (a dish sold out since the guests sent it, or one off the menu): the line
+    leaves the order (the guests see the order without it), the rest waits for "Потвърди и прати". The last line cannot go
+    this way (409 "last_line": "Откажи" the order). Log: floor.qr_drop. */
+export async function qrDrop(ctx: Ctx, s: StaffCtx, ref: string | number, key: string): Promise<TableDetail> {
+  needFloor(s);
+  return onTable(ctx, ref, false, async (sit, t) => {
+    if (!sit.pending) throw new CoreError("no_pending", FLOOR_MSG.sNoPending, 409);
+    const l = sit.pending.lines.find((x) => x.key === String(key || ""));
+    if (!l) throw new CoreError("not_found", FLOOR_MSG.sLine, 404);
+    if (sit.pending.lines.length < 2) throw new CoreError("last_line", FLOOR_MSG.sLastLine, 409);
+    sit.pending.lines = sit.pending.lines.filter((x) => x !== l);
+    const x = byId[l.id];
+    await audit(ctx, s.user.username, "floor.qr_drop", t.id, { n: t.n, id: l.id, q: l.q, out: !!(x && outNow(x, await soldOutToday(ctx))) });
+    emit(ctx, "floor.qr", { table: t.id, n: t.n, session: sit.id, state: "pending", at: sit.pending.at, dropped: l.id });
+    return done(ctx, s, t, sit);
+  });
+}
 /** "Откажи" with a reason from the list ("test" | "gaveup" | "manual"): the dishes go back to the guests' cart. */
 export async function qrReject(ctx: Ctx, s: StaffCtx, ref: string | number, reason: RejectReason): Promise<TableDetail> {
   needFloor(s);
@@ -341,8 +367,16 @@ export async function staffOrder(ctx: Ctx, s: StaffCtx, ref: string | number, in
   lines.forEach((l, i) => { if (l.guest && !GUEST.test(l.guest)) f["lines." + i + ".guest"] = FLOOR_MSG.sGuest; });
   if (Object.keys(f).length) invalid(f);
   const rid = typeof inp.rid === "string" && RID.test(inp.rid) ? inp.rid : "";
-  return onTable(ctx, ref, true, async (sit, t) => {
+  return onTable(ctx, ref, true, async (sit, t, fresh) => {
     if (rid && sit.rids && sit.rids[rid]) return { ...(await done(ctx, s, t, sit)), orders: sit.rids[rid] };
+    /* the table was paid and closed meanwhile (a lost answer, then the outbox): the rid of a sitting of this table that
+       closed in the same shift day gives its orders again, never a second order (the new sitting is not even saved) */
+    if (rid) {
+      const day = shiftDay(nowDate(ctx));
+      const past = (await ctx.repo.list<TableSession>(COL.tableSessions, { table: t.id } as Partial<TableSession>))
+        .find((x) => x.id !== sit.id && x.rids && x.rids[rid] && shiftDay(new Date(x.closedAt || x.openedAt)) === day);
+      if (past) return { ...(await detailOf(ctx, s, t, fresh ? null : sit)), orders: past.rids![rid] };
+    }
     tableKitchenOpen(ctx, "staff");
     checkTableLines(ctx, lines, await soldOutToday(ctx), "required", "staff");
     const groups = new Map<string, TableLine[]>();

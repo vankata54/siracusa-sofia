@@ -47,7 +47,7 @@ export function provider(hall: () => HallLive | null): SearchProvider {
   function oRow(o: StaffSearch["orders"][number]): string {
     const lines = o.lines.map((l) => l.q + "× " + esc(l.name)).join(", ");
     const k = o.lines.some((l) => l.st === "ready") ? "ready" : o.lines.some((l) => l.st === "cooking" || l.st === "accepted") ? "cooking" : "served", s = LINE_ST[k];
-    return '<a class="frow" href="' + esc(tableUrl(o.table.n)) + '"><span class="fi">' + ic("receipt", 22) + "</span><span><b>№ " + esc(o.no) + " · Маса " + o.table.n + (o.bill && o.bill !== "Обща сметка" ? " · " + esc(o.bill) : "") + "</b><small>" + lines + " · " + esc(o.placedAt) + '</small></span><span class="fr">' + stt(s[0], s[1], s[2]) + "</span></a>";
+    return '<a class="frow" href="' + esc(tableUrl(o.table.n)) + '"><span class="fi">' + ic("receipt", 22) + "</span><span><b>№\u00a0" + esc(o.no) + " · Маса " + o.table.n + (o.bill && o.bill !== "Обща сметка" ? " · " + esc(o.bill) : "") + "</b><small>" + lines + " · " + esc(o.placedAt) + '</small></span><span class="fr">' + stt(s[0], s[1], s[2]) + "</span></a>";
   }
   function rRow(r: NonNullable<StaffSearch["reservations"]>[number]): string {
     return '<button class="frow" type="button" data-res><span class="fi">' + ic("calendar-check", 22) + "</span><span><b>" + esc(r.time) + " · " + (r.tableN ? "Маса " + r.tableN : "Без маса") + " · " + plural(r.people, "човек", "души") + "</b><small>" + esc(r.name) + " · " + esc(r.phone) + " · Днес" + (r.note ? " · " + esc(r.note) : "") + '</small></span><span class="fr">' + ic("caret-right", 20) + "</span></button>";

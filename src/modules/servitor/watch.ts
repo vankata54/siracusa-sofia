@@ -14,13 +14,13 @@ import { floorApi, type HallLive, type HallCall, type ReadyGroup } from "../../c
 import { murl } from "../routes.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
-import { $, $$, why, isOffline, flushOutbox, CALL_ICON, CALL_WORD } from "./bits.ts";
+import { $, $$, shiftSheet, why, isOffline, flushOutbox, CALL_ICON, CALL_WORD } from "./bits.ts";
 
 type Item = { kind: "call"; id: string; c: HallCall } | { kind: "ready"; id: string; g: ReadyGroup };
 const VIB = { call: [400, 200, 400], ready: [120, 100, 120, 100, 120], late: [400, 150, 120, 150, 400] };
 
 export async function mountWatch(): Promise<void> {
-  const st0 = await mountStaff({ module: "waiter", screen: "watch", tab: null, title: "Часовник", sub: "Само известия", back: { href: murl.servitor(), label: "Маси" } });
+  const st0 = await mountStaff({ module: "waiter", screen: "watch", tab: null, title: "Часовник", sub: "Само известия", back: { href: murl.servitor(), label: "Маси" }, shift: () => shiftSheet(() => st0)() });
   if (!st0) return;
   const st: Staff = st0;
   const main = st.main;

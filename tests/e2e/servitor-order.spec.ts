@@ -106,7 +106,7 @@ test("„За коя маса?“ → search → „+“ → a note → „По�
   await rv.locator("[data-send]").click();
   await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята");
   await expect(page.locator(".sent .lead")).toContainText("Маса " + n + " · 3 артикула · 22,37 €");
-  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ \\(Гост 1\\), № \\d+ \\(Гост 2\\) · в сметката на Маса " + n));
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№\\s\\d+ \\(Гост 1\\), №\\s\\d+ \\(Гост 2\\) · в сметката на Маса " + n));
 
   /* the kitchen has them; the table has two bills with the notes */
   const kitchen = await playwright.request.newContext({ baseURL }); await signIn(kitchen, "kitchen");
@@ -155,7 +155,7 @@ test("the draft survives „Назад“; no connection: „Запази на �
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("st-outbox") || "[]").length)).toBe(1);
   await context.setOffline(false);
   await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята", { timeout: 15_000 });
-  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ · в сметката на Маса " + n));
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№\\s\\d+ · в сметката на Маса " + n));
   expect(await page.evaluate(() => localStorage.getItem("st-outbox"))).toBeNull();
   const d = (await api<any>(context.request, "GET", "floor/table/" + n)).body;
   expect(d.bills[0].orders[0].lines[0].id).toBe("salata-tsezar-s-pileshki-prachki");
@@ -243,7 +243,7 @@ test("a lost answer: „Не разбрахме дали стигна“, the or
   await expect(page.locator(".sent .lead")).toHaveText("Пробваме пак сами. Поръчката няма да влезе два пъти в кухнята.");
   /* no other screen is opened: this one sends it again (the same key) and shows the number */
   await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята", { timeout: 15_000 });
-  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ · в сметката на Маса " + n));
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№\\s\\d+ · в сметката на Маса " + n));
   expect(await page.evaluate(() => localStorage.getItem("st-outbox"))).toBeNull();
   const d = (await api<any>(context.request, "GET", "floor/table/" + n)).body;
   expect(d.bills.flatMap((b: any) => b.orders).length).toBe(1);
@@ -275,7 +275,9 @@ test("a saved order of another person is never sent; an old one of mine is a dra
   await page.locator('.st-top [data-act="menu"]').click();
   await page.locator('.st-sheetwrap.on [data-act="logout"]').click();
   const q = page.locator(".st-sheetwrap.on .st-sheet").last();
-  await expect(q.locator("h2")).toHaveText("Има 1 поръчка, която не е изпратена. Изтрий я?");
+  await expect(q.locator("h2")).toHaveText("1 поръчка не е изпратена. Да я изтрия ли?");
+  await expect(q.locator(".body")).toContainText("Маса " + n2 + " · чернова. Ако излезеш, тя се изтрива и следващият на този телефон няма да я види.");
+  await expect(q.locator(".sfoot button")).toHaveText(["Остани", "Изтрий и излез"]);
   await q.getByRole("button", { name: "Остани" }).click();
   await expect(page.locator(".st-top h1")).toHaveText("Нова поръчка");
   await page.locator('.st-sheetwrap.on [data-act="logout"]').click();

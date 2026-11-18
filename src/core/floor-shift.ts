@@ -18,7 +18,7 @@ import { isBoss, invalid, serial, RIGHTS_MSG } from "./rights.ts";
 import { liveHall } from "./hall.ts";
 import type { HallTable } from "./site-data.ts";
 import { getSettings } from "./settings.ts";
-import { sofiaYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import { needFloor, openSessions, callLate, type TableSession } from "./floor.ts";
 
 export interface WaiterShift {
@@ -42,9 +42,9 @@ const LOCK = "floor-shift";
 /** the open waiter shifts (the ones from an earlier day are closed first) */
 export async function openShifts(ctx: Ctx): Promise<WaiterShift[]> {
   const all = (await ctx.repo.list<WaiterShift>(COL.shifts, { role: "waiter", status: "open" } as Partial<WaiterShift>)).filter((x) => x.role === "waiter" && x.status === "open");
-  const today = sofiaYmd(nowDate(ctx)), out: WaiterShift[] = [];
+  const today = shiftDay(nowDate(ctx)), out: WaiterShift[] = [];
   for (const sh of all) {
-    if (sofiaYmd(new Date(sh.startedAt)) < today) { sh.status = "closed"; sh.endedAt = iso(ctx); sh.updatedAt = sh.endedAt; sh.handed = { to: null, tables: [] }; await ctx.repo.put(COL.shifts, sh); }
+    if (shiftDay(new Date(sh.startedAt)) < today) { sh.status = "closed"; sh.endedAt = iso(ctx); sh.updatedAt = sh.endedAt; sh.handed = { to: null, tables: [] }; await ctx.repo.put(COL.shifts, sh); }
     else out.push(sh);
   }
   return out.sort((a, b) => (a.startedAt < b.startedAt ? -1 : a.startedAt > b.startedAt ? 1 : a.username < b.username ? -1 : 1));
@@ -137,7 +137,7 @@ export async function shiftView(ctx: Ctx, s: StaffCtx): Promise<WaiterShiftView>
   needFloor(s);
   if (!isBoss(s)) throw new CoreError("forbidden", RIGHTS_MSG.boss, 403);
   const h = (await liveHall(ctx)).tables.filter((t) => !t.off).sort((a, b) => a.n - b.n), shifts = await openShifts(ctx), st = await getSettings(ctx);
-  const nowMs = nowDate(ctx).getTime(), today = sofiaYmd(nowDate(ctx));
+  const nowMs = nowDate(ctx).getTime(), today = shiftDay(nowDate(ctx));
   const all = await ctx.repo.list<TableSession>(COL.tableSessions);
   const taken = new Set(shifts.flatMap((x) => x.tables));
   return {
@@ -146,7 +146,7 @@ export async function shiftView(ctx: Ctx, s: StaffCtx): Promise<WaiterShiftView>
       /* answered today by this person: "Отивам", or "Обслужено" straight away */
       const times: number[] = [];
       for (const x of all) for (const c of x.calls) {
-        if (sofiaYmd(new Date(c.at)) !== today) continue;
+        if (shiftDay(new Date(c.at)) !== today) continue;
         const at = c.taken && c.taken.by === sh.username ? c.taken.at : !c.taken && c.done && c.done.how === "served" && !c.done.auto && c.done.by === sh.username ? c.done.at : null;
         if (at) times.push(Math.max(0, (Date.parse(at) - Date.parse(c.at)) / 1000));
       }

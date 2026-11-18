@@ -27,10 +27,11 @@
 .tgrid .tile .w{min-width:0}
 .tgrid .tile.other{opacity:1}
 .tgrid .tile .own{opacity:1}
-/* 360: the longest word ("Свободна", "Вода / прибори") stays inside the tile: less side room, the icon may go above it */
+/* 360: the longest word ("Свободна", "Вода / прибори") stays inside the tile: less side room, and the icon is ALWAYS
+   above the word (the same in every tile, so the words of a row are at one height) */
 @container app (max-width:370px){
   .tgrid .tile{padding:10px 8px 10px 10px}
-  .tgrid .tile .w{flex-wrap:wrap; gap:2px 4px}
+  .tgrid .tile .w{flex-direction:column; align-items:flex-start; gap:2px}
 }
 .resl{display:grid; gap:8px}
 .resr{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:center; padding:12px 16px 12px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}

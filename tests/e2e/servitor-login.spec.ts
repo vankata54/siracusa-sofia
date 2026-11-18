@@ -99,10 +99,15 @@ test("@phone the PIN on a known phone: the person + 4 digits, a wrong PIN said a
     await page.goto("/servitor/vhod/");
     await expect(page.locator("main h1")).toHaveText("Вход за персонала");
     await expect(page.locator('[data-v="pin"]')).toHaveAttribute("aria-pressed", "true");
-    /* nobody is chosen before a tap: digits typed blindly never count against a colleague */
-    await expect(page.locator('[data-who][aria-pressed="true"]')).toHaveCount(0);
-    await page.keyboard.type("1");
-    await expect(page.locator(".pinerr")).toHaveText("Първо избери кой влиза.");
+    /* nobody is chosen before a tap: digits typed blindly never count against a colleague; ONE person with a PIN on this
+       phone is chosen at once (nobody else to count against) */
+    const ppl = ((await (await page.request.get("/api/auth/pin/people?module=waiter")).json()) as { people: unknown[] }).people;
+    if (ppl.length === 1) await expect(page.locator('[data-who][aria-pressed="true"]')).toHaveCount(1);
+    else {
+      await expect(page.locator('[data-who][aria-pressed="true"]')).toHaveCount(0);
+      await page.keyboard.type("1");
+      await expect(page.locator(".pinerr")).toHaveText("Първо избери кой влиза.");
+    }
     const me = page.locator("[data-who]", { hasText: w.name });
     await me.click();
     await expect(me).toHaveAttribute("aria-pressed", "true");

@@ -17,7 +17,7 @@ import { floorApi, ApiError, type TableDetail, type StaffLine, type StaffBill, t
 import { murl } from "../routes.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural } from "../../lib/format.ts";
-import { $, $$, sheetOf, readHash, keepFocus, gramsSheet, why, isOffline, myQueue, userOf, flushOutbox, notice, items, STATE_ICON, STATE_SHORT, CALL_ICON, CALL_WORD, LINE_KIND, type StateKey } from "./bits.ts";
+import { $, $$, sheetOf, shiftSheet, readHash, keepFocus, gramsSheet, why, isOffline, myQueue, userOf, flushOutbox, notice, items, STATE_ICON, STATE_SHORT, CALL_ICON, CALL_WORD, LINE_KIND, type StateKey } from "./bits.ts";
 
 type Pay = "cash" | "card";
 type Mode = "one" | "guests" | "dishes";
@@ -26,7 +26,7 @@ const ALL = "Обща сметка";
 export async function mountTable(): Promise<void> {
   const N = readHash().n;
   window.addEventListener("hashchange", () => location.reload());
-  const st0 = await mountStaff({ module: "waiter", screen: "table", tab: null, title: N ? "Маса " + N : "Маса", sub: "", back: { href: murl.servitor(), label: "Маси" }, bar: true });
+  const st0 = await mountStaff({ module: "waiter", screen: "table", tab: null, title: N ? "Маса " + N : "Маса", sub: "", back: { href: murl.servitor(), label: "Маси" }, bar: true, shift: () => shiftSheet(() => st0)() });
   if (!st0) return;
   const st: Staff = st0;
   const main = st.main, bar = st.bar!;
@@ -60,6 +60,8 @@ export async function mountTable(): Promise<void> {
   }
   let liveT: ReturnType<typeof setTimeout> | undefined;
   const soon = () => { clearTimeout(liveT); liveT = setTimeout(load, 250); };
+  /* menu.soldout: a dish of the waiting QR order may be sold out now ("Изчерпано днес" on its line) */
+  st.onLive("menu.soldout", () => { if (D && D.pending) soon(); });
   st.onLive(["floor.session", "floor.qr", "floor.call", "order.new", "order.line", "order.status"], (d) => {
     const t = d && typeof d === "object" ? (d as { table?: unknown }).table : undefined;
     if (D && typeof t === "string" && t !== D.table.id) return;
@@ -98,11 +100,16 @@ export async function mountTable(): Promise<void> {
       (mine ? '<button class="pill" type="button" data-done="' + esc(c.id) + '"' + off() + ">" + ic("check", 20) + "Обслужено</button>"
         : other ? "" : '<button class="pill" type="button" data-take="' + esc(c.id) + '"' + off() + ">Отивам</button>") + "</div>";
   }
+  /* a line that cannot go to the kitchen now (sold out since the guests sent it): the word, no price in the sum, "Махни" */
+  const BLOCK: Record<string, string> = { sold_out: "Изчерпано днес", removed: "Вече не е в менюто", lunch: "Обедното меню не е за масата", breakfast: "Закуските са до 11:30" };
   function pendingLine(l: PendingLine): string {
     /* a phone the waiter has not confirmed yet (decision 18.11.2026): "нов телефон" at its line */
-    return '<div class="oline"><span class="q">' + l.q + "×</span><div><div class=\"nm\">" + esc(l.name) + (l.isNew ? ' <span class="newph">' + ic("warning-circle", 16) + "нов телефон</span>" : "") + "</div>" +
+    const nm = esc(l.q + "× " + l.name);
+    return '<div class="oline' + (l.block ? " blocked" : "") + '"><span class="q">' + l.q + "×</span><div><div class=\"nm\">" + esc(l.name) + (l.isNew ? ' <span class="newph">' + ic("warning-circle", 16) + "нов телефон</span>" : "") + "</div>" +
       (l.mods && l.mods.length ? '<div class="mods">' + esc(l.mods.join(", ")) + "</div>" : "") +
-      '<div class="sub"><span class="price">' + (l.per100 ? fmt(l.price100 || 0) + " за 100 гр.</span><span class=\"g\">грамаж при потвърждение" : fmt(l.sum || 0)) + "</span></div></div></div>";
+      '<div class="sub">' + (l.block ? st.stt("wait", BLOCK[l.block] || "Не може сега", "clock") + '<span class="price"><s>' + (l.per100 ? fmt(l.price100 || 0) + " за 100\u00a0гр." : fmt(l.sum || 0)) + "</s></span>" +
+        '<span class="serve"><button class="pill pill-line" type="button" data-drop="' + esc(l.key) + '" aria-label="Махни ' + nm + '"' + off() + ">" + ic("x", 20) + "Махни</button></span>"
+        : '<span class="price">' + (l.per100 ? fmt(l.price100 || 0) + " за 100\u00a0гр.</span><span class=\"g\">грамаж при потвърждение" : fmt(l.sum || 0)) + "</span>") + "</div></div></div>";
   }
   const queued = () => myQueue(userOf(st)).filter((q) => q.table === N);
 
@@ -134,7 +141,8 @@ export async function mountTable(): Promise<void> {
       const late = p.late || Date.now() - Date.parse(p.at) >= SET.qrManager * 60_000;
       h += '<section class="st-sec"><div class="qrcard' + (late ? " late" : "") + '"' + lvl(SET.qrManager) + '><div class="hd">' + ic("qr-code", 24) + "<span>Поръчка от QR · чака потвърждение</span>" + '<span class="tm">' + st.timer(Date.parse(p.at)) + '</span></div><div class="in">' +
         p.lines.map(pendingLine).join("") +
-        '<div class="ocard flat"><div class="ft"><span>Общо' + (p.open ? " без стека" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
+        '<div class="ocard flat"><div class="ft"><span>Общо' + (p.open && p.blocked ? " без стека и изчерпаното" : p.open ? " без стека" : p.blocked ? " без изчерпаното" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
+        (p.blocked ? '<p class="qnote qblock">' + ic("clock", 18) + "<span>Изчерпаното не влиза в поръчката. Махни го, после „Потвърди и прати“.</span></p>" : "") +
         '<p class="small muted qnote">Първата поръчка от QR се потвърждава, за да няма фалшиви поръчки. Следващите от тази маса отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
     }
 
@@ -147,11 +155,12 @@ export async function mountTable(): Promise<void> {
 
     /* the orders kept on this phone (no connection) */
     const qd = queued();
-    if (qd.length) h += '<section class="st-sec">' + qd.map((q) => '<div class="ocard queued"><div class="oh"><b>Запазена на телефона</b><span>още не е в кухнята</span></div>' +
+    if (qd.length) h += '<section class="st-sec">' + qd.map((q) => '<div class="ocard queued"><div class="oh"><b>Запазена на телефона</b></div><p class="st-cap ono">още не е в кухнята · ' + st.clock(q.at) + "</p>" +
       '<ul class="qlist">' + (q.labels || []).map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" + '<div class="ft"><span>' + items(q.n) + '</span><span class="price">' + fmt(q.sum) + "</span></div>" + "</div>").join("") + "</section>";
 
     const bills = d.bills;
-    if (!sess && !bills.length && !d.pending) {
+    /* a free table for which an order waits on this phone is not "free" on this screen */
+    if (!sess && !bills.length && !d.pending && !qd.length) {
       h += '<section class="st-sec"><div class="st-empty tight"><div class="ill">' + ic("chair", 48) + "</div><h2>Масата е свободна</h2><p>Като седнат гости: „Нова поръчка“ или поръчка от QR.</p>" +
         '<button class="pill pill-line pill-lg" type="button" data-seat' + off() + ">" + ic("users", 22) + "Гостите седнаха</button></div></section>";
     } else if (!bills.length && !d.pending && sess) {
@@ -165,15 +174,15 @@ export async function mountTable(): Promise<void> {
       const shared = [...notes.entries()].filter((e) => e[1].length > 1);
       const isShared = (o: { placedAt: string; note: string }) => shared.some((e) => e[0] === o.placedAt + "|" + o.note);
       h += '<section class="st-sec"><div class="st-h"><h2>Поръчки</h2><span class="muted">' + (bills.length > 1 ? "поотделно · " + bills.length + " сметки" : "една сметка") + "</span></div>" +
-        shared.map((e) => '<div class="onote shared">' + ic("note", 18) + "<span>" + esc(e[0].slice(e[0].indexOf("|") + 1)) + ' <span class="muted">(' + e[1].map((x) => "№ " + esc(x)).join(", ") + ")</span></span></div>").join("") +
+        shared.map((e) => '<div class="onote shared">' + ic("note", 18) + "<span>" + esc(e[0].slice(e[0].indexOf("|") + 1)) + ' <span class="muted">(' + e[1].map((x) => "№\u00a0" + esc(x)).join(", ") + ")</span></span></div>").join("") +
         bills.map((b) => '<div class="ocard"><div class="oh"><b>' + esc(b.name) + '</b><span class="price bsum">' + fmt(b.sum) + "</span></div>" +
-          b.orders.map((o) => '<p class="st-cap ono" tabindex="-1" data-no="' + esc(o.no) + '">№ ' + esc(o.no) + " · " + esc(o.placedAt) + " · " + esc(o.source) + "</p>" + (o.note && !isShared(o) ? '<div class="onote">' + ic("note", 18) + esc(o.note) + "</div>" : "") + o.lines.map(lineHTML).join("")).join("") + "</div>").join("") +
+          b.orders.map((o) => '<p class="st-cap ono" tabindex="-1" data-no="' + esc(o.no) + '">№\u00a0' + esc(o.no) + " · " + esc(o.placedAt) + " · " + esc(o.source) + "</p>" + (o.note && !isShared(o) ? '<div class="onote">' + ic("note", 18) + esc(o.note) + "</div>" : "") + o.lines.map(lineHTML).join("")).join("") + "</div>").join("") +
         '<div class="tot"><span>Общо за масата</span><span class="price">' + fmt(d.total) + "</span></div>" +
         (d.paid > 0.004 ? '<div class="paidrow all">' + ic("check-circle", 22) + "Платено " + fmt(d.paid) + (d.rest > 0.004 ? " · остават " + fmt(d.rest) : " · всичко е платено") + "</div>" : "") +
         "</section>";
     }
     if (sess) h += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-close-table' + (d.canClose ? off() : ' aria-disabled="true"') + ">" + ic("door-open", 22) + "Затвори масата</button>" +
-      (d.canClose ? "" : '<p class="small muted closehint">' + (d.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря след като сметката е платена.") + "</p>") + "</section>";
+      (d.canClose ? "" : '<p class="small muted closehint">' + (d.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря, след като сметката е платена.") + "</p>") + "</section>";
     return h;
   }
   function drawBar(d: TableDetail) {
@@ -220,12 +229,21 @@ export async function mountTable(): Promise<void> {
   const seat = (b: HTMLElement) => act(b, async () => { D = await floorApi.seat(N!); render(); st.toast("Маса " + N + ": гостите седнаха"); focus($("a.pill", bar)); });
 
   /* "Потвърди и прати": every steak "за 100 гр." asks its grams first */
+  /* "Махни" one line of the waiting QR order (the core drops it; the guests see the order without it) */
+  const dropLine = (b: HTMLElement, key: string) => act(b, async () => {
+    const l = D && D.pending ? D.pending.lines.find((x) => x.key === key) : null;
+    D = await floorApi.qrDrop(N!, key); render();
+    st.toast((l ? "„" + l.name + "“" : "Ястието") + " е махнато от поръчката.");
+    if (!focus($("[data-drop]", main))) focus($("[data-confirm]", bar));
+  });
   function confirmQR(b: HTMLElement) {
     if (!D || !D.pending) return;
+    const bad = D.pending.lines.filter((l) => l.block);
+    if (bad.length) { st.toast("Първо махни " + bad.map((l) => "„" + l.name + "“").join(", ") + ": " + (BLOCK[bad[0].block] || "не може сега").toLowerCase() + "."); focus($("[data-drop]", main)); return; }
     const steaks = D.pending.lines.filter((l) => l.per100), grams: Record<string, number> = {};
     const send = () => act(b, async () => {
       const r = await floorApi.qrConfirm(N!, grams); D = r; render();
-      st.toast("Потвърдено и изпратено в кухнята · № " + r.no);
+      st.toast("Потвърдено и изпратено в кухнята · №\u00a0" + r.no);
       if (!focus($('.ono[data-no="' + CSS.escape(r.no) + '"]', main))) main.focus({ preventScroll: true });
     });
     const ask = (i: number) => {
@@ -358,8 +376,9 @@ export async function mountTable(): Promise<void> {
     else if (b.dataset.done) void doneCall(b, b.dataset.done);
     else if (b.hasAttribute("data-confirm")) confirmQR(b);
     else if (b.hasAttribute("data-reject")) rejectQR();
+    else if (b.dataset.drop) void dropLine(b, b.dataset.drop);
     else if (b.hasAttribute("data-seat")) void seat(b);
-    else if (b.hasAttribute("data-close-table")) { if (b.getAttribute("aria-disabled") === "true") st.toast(D && D.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря след като сметката е платена."); else closeTable(); }
+    else if (b.hasAttribute("data-close-table")) { if (b.getAttribute("aria-disabled") === "true") st.toast(D && D.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря, след като сметката е платена."); else closeTable(); }
   });
 
   await load();

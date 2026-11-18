@@ -8,8 +8,10 @@
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, DAYS_SHORT, MONTHS } from "../../lib/format.ts";
 import { sofiaYmd } from "../../lib/time.ts";
+import { shiftDay as dayOf } from "../../lib/shift-day.ts";
 import { floorApi, ApiError, type StaffOrderInput } from "../../client/api-floor.ts";
-import type { Staff } from "../staff/frame.ts";
+import type { Staff, ShiftInfo } from "../staff/frame.ts";
+import { shiftInfo } from "./common.ts";
 
 export type StateKey = "call" | "bill" | "qr" | "ready" | "wait" | "busy" | "free";
 export const STATE_ICON: Record<StateKey, string> = { call: "bell-ringing", bill: "receipt", qr: "qr-code", ready: "chef-hat", wait: "hourglass", busy: "users", free: "chair" };
@@ -95,7 +97,8 @@ export function gramsSheet(st: Staff, o: { name: string; price100: number; q?: n
    itself: it becomes the table's draft for that person to check ("Запазена на телефона в 22:10 и не е изпратена").
    Another person's orders and drafts are never shown, never sent; "Изход" asks and removes the person's own. */
 export const STALE_MS = 2 * 3600_000;
-export const shiftDay = (t = Date.now()) => sofiaYmd(new Date(t - 4 * 3600_000));
+/** the one rule of the restaurant (src/lib/shift-day.ts): the day starts at 04:00 Sofia */
+export const shiftDay = (t = Date.now()) => dayOf(new Date(t));
 export const userOf = (st: Staff) => (st.me ? st.me.user.username : "");
 const fresh = (at: number) => shiftDay(at) === shiftDay() && Date.now() - at <= STALE_MS;
 
@@ -153,7 +156,6 @@ function backToDraft(q: Queued, kept?: number) {
   if (kept) d.kept = kept;
   saveDraft(q.table, d, q.user);
 }
-const pad2 = (n: number) => String(n).padStart(2, "0");
 /** "22:10" today, "вчера 22:10", "сб, 28 ноември 22:10" (Sofia) */
 export function whenSaved(at: number): string {
   const d = new Date(at), hm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
@@ -184,7 +186,7 @@ export function flushOutbox(st: Staff, onSent?: (q: Queued, nos: string[]) => vo
       try {
         const r = await floorApi.order(q.table, q.input);
         drop(q.id); sentSubs.forEach((f) => f(q, r.orders));
-        st.toast("Поръчката за Маса " + q.table + " е в кухнята · № " + r.orders.join(", № "));
+        st.toast("Поръчката за Маса " + q.table + " е в кухнята · №\u00a0" + r.orders.join(", №\u00a0"));
       } catch (e) {
         if (isOffline(e)) break;
         drop(q.id); backToDraft(q);
@@ -239,8 +241,10 @@ export function askDrop(st: Staff): Promise<boolean> {
   if (!n) { dropMine(user); return Promise.resolve(true); }
   return new Promise((resolve) => {
     let ok = false;
-    const s = sheetOf(st)({ title: n === 1 ? "Има 1 поръчка, която не е изпратена. Изтрий я?" : "Има " + n + " поръчки, които не са изпратени. Изтрий ли ги?",
-      html: '<p class="m0">' + esc([...p.queued.map((q) => "Маса " + q.table + " · " + items(q.n)), ...p.drafts.map((t) => "Маса " + t + " · чернова")].join(", ")) + ". Следващият, който влезе на този телефон, няма да ги види.</p>",
+    const one = n === 1;
+    const s = sheetOf(st)({ title: one ? "1 поръчка не е изпратена. Да я изтрия ли?" : n + " поръчки не са изпратени. Да ги изтрия ли?",
+      html: '<p class="m0">' + esc([...p.queued.map((q) => "Маса " + q.table + " · " + items(q.n)), ...p.drafts.map((t) => "Маса " + t + " · чернова")].join(", ")) + ". " +
+        (one ? "Ако излезеш, тя се изтрива и следващият на този телефон няма да я види." : "Ако излезеш, те се изтриват и следващият на този телефон няма да ги види.") + "</p>",
       foot: '<button class="pill pill-line pill-lg" type="button" data-stay>Остани</button><button class="pill pill-red pill-lg" type="button" data-drop>Изтрий и излез</button>',
       onClose: () => resolve(ok) });
     s.foot!.classList.add("two");
@@ -248,6 +252,13 @@ export function askDrop(st: Staff): Promise<boolean> {
     $<HTMLButtonElement>("[data-drop]", s.el)!.onclick = () => { ok = true; dropMine(user); s.close(); };
   });
 }
+
+/** the sheet "Смяна" of a screen without the live hall (the table, the new order, the watch): the same rows as the hall
+    ("На смяна от", "Моите маси", "Приключи смяната"), the hall read when the sheet opens */
+export const shiftSheet = (get: () => Staff | null) => (): Promise<ShiftInfo> => {
+  const st = get(); if (!st) return Promise.resolve({});
+  return shiftInfo(st, { get: () => null, load: () => floorApi.hall().catch(() => null), set() { /* none */ }, on() { /* none */ } })();
+};
 
 /** an icon + a word for a sheet's notice */
 export const notice = (icon: string, html: string, warn = false) => '<div class="notice' + (warn ? " warn" : "") + '">' + ic(icon, 22) + "<span>" + html + "</span></div>";

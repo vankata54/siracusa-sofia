@@ -37,7 +37,7 @@ import { RATING_DISCOUNT } from "./codes.ts";
 import { byId, removedById, RESTAURANT } from "../lib/data.ts";
 import { parseMods } from "../lib/pricing.ts";
 import { state } from "../lib/status.ts";
-import { sofiaYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 
 /* ---------- words (one place: the server and the demo say the same) ---------- */
 export type CallKind = "order" | "bill" | "water" | "other";
@@ -86,6 +86,7 @@ export const FLOOR_MSG = {
   /* the staff ("ти") */
   sFree: "Масата е свободна.",
   sNoPending: "Няма QR поръчка за потвърждение. Обнови екрана.",
+  sLastLine: "Това е единственото ястие в поръчката. Откажи я с причина.",
   sReason: "Избери причина за отказа.",
   sUndo: "Вече не може да се отмени.",
   sCall: "Това повикване вече го няма. Обнови екрана.",
@@ -95,7 +96,7 @@ export const FLOOR_MSG = {
   sPayNothing: "Избери какво се плаща.",
   sPaid: "Част от избраното вече е платено. Обнови екрана.",
   sPayHow: "Избери „В брой“ или „Карта“.",
-  sUnpaid: "Масата се затваря след като сметката е платена.",
+  sUnpaid: "Масата се затваря, след като сметката е платена.",
   sPendingOpen: "Има QR поръчка за потвърждение. Първо я потвърди или откажи.",
   sUnserved: "Има несервирани ястия. Избери „Затвори въпреки това“.",
   sGuest: "Сметките са „Гост 1“, „Гост 2“ …",
@@ -425,9 +426,10 @@ export function emitCall(ctx: Ctx, s: TableSession, c: FloorCall): void {
   emit(ctx, "floor.call", { table: s.table, n: s.n, session: s.id, id: c.id, kind: c.kind, at: c.at, taken: c.taken ? { by: c.taken.by, name: c.taken.name, at: c.taken.at } : null, done: c.done ? c.done.how : null });
 }
 
-/** a sitting from an earlier day (Sofia) with nothing unpaid and nothing waiting: closed quietly (true when it was) */
+/** a sitting from an earlier shift day (04:00 Sofia, src/lib/shift-day.ts) with nothing unpaid and nothing waiting:
+    closed quietly (true when it was) */
 export async function closeIfStale(ctx: Ctx, s: TableSession): Promise<boolean> {
-  if (s.status !== "open" || sofiaYmd(new Date(s.openedAt)) >= sofiaYmd(nowDate(ctx)) || s.pending) return false;
+  if (s.status !== "open" || shiftDay(new Date(s.openedAt)) >= shiftDay(nowDate(ctx)) || s.pending) return false;
   const lines = billLines(await sessionOrders(ctx, s));
   if (lines.some((b) => !b.out && !b.paid)) return false;
   const now = iso(ctx);

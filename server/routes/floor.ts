@@ -29,6 +29,7 @@
      POST /api/floor/table/:ref/order      {lines, note?}       "Нова поръчка" → "Към кухнята" (201)
      POST /api/floor/table/:ref/qr/confirm {grams?}             "Потвърди и прати"
      POST /api/floor/table/:ref/qr/reject  {reason}             "Откажи"
+     POST /api/floor/table/:ref/qr/drop   {key}                "Махни" one line of the waiting QR order (sold out)
      POST /api/floor/table/:ref/qr/undo                         "Отмени" after "Откажи"
      POST /api/floor/table/:ref/serve      {keys?}              "Сервирах" (no keys: every ready line)
      POST /api/floor/table/:ref/unserve    {keys}               "Отмени"
@@ -108,6 +109,7 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
   app.post("/api/floor/table/:ref/order", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.order(s, ref(c), { lines: b.lines, note: b.note, rid: b.rid } as StaffOrderInput), 201); });
   app.post("/api/floor/table/:ref/qr/confirm", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrConfirm(s, ref(c), b.grams && typeof b.grams === "object" ? b.grams : {})); });
   app.post("/api/floor/table/:ref/qr/reject", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrReject(s, ref(c), b.reason as RejectReason)); });
+  app.post("/api/floor/table/:ref/qr/drop", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrDrop(s, ref(c), String(b.key || ""))); });
   app.post("/api/floor/table/:ref/qr/undo", async (c) => c.json(await cf(c).floor.qrRejectUndo(await staff(c), ref(c))));
   app.post("/api/floor/table/:ref/serve", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.serve(s, ref(c), Array.isArray(b.keys) ? b.keys : undefined)); });
   app.post("/api/floor/table/:ref/unserve", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.unserve(s, ref(c), Array.isArray(b.keys) ? b.keys : [])); });

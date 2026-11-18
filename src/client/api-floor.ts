@@ -59,6 +59,8 @@
                                    (422 fields "grams.<key>"); 409 closed | sold_out | no_pending
      qrReject(ref, reason)         "Откажи": reason "test" | "gaveup" | "manual" (422 fields.reason); the dishes go back to the cart
      qrRejectUndo(ref)             "Отмени" after "Откажи" (15 s)
+     qrDrop(ref, key)              "Махни" one line of the waiting QR order (pending.lines[].block "sold_out" …: not in the sum, the
+                                   confirmation would be refused); the guests see the order without it. 409 last_line (use "Откажи")
      order(ref, {lines, note?})    "Нова поръчка" → "Към кухнята": lines[{id, q, mods?, note?, grams? (steak "за 100 гр."), guest? ("Гост 1":
                                    separate bills, one order per guest)}] -> TableDetail + orders (the numbers). A free table gets a sitting.
                                    409 closed | sold_out | breakfast_closed | lunch_table, 422 fields "lines.<i>.grams" | "lines.<i>.guest"
@@ -166,6 +168,7 @@ export const floorApi = {
   callUndo: pick(async (c, id: string) => c.floor.callUndo(await g(c), id), (id) => http<HallLive>("POST", "floor/call/" + e(id) + "/undo")),
   qrConfirm: pick(async (c, ref: Ref, grams: Record<string, number> = {}) => c.floor.qrConfirm(await g(c), ref, grams), (ref: Ref, grams: Record<string, number> = {}) => http<TableDetail & { no: string }>("POST", t(ref) + "/qr/confirm", { grams })),
   qrReject: pick(async (c, ref: Ref, reason: RejectReason) => c.floor.qrReject(await g(c), ref, reason), (ref, reason) => http<TableDetail>("POST", t(ref) + "/qr/reject", { reason })),
+  qrDrop: pick(async (c, ref: Ref, key: string) => c.floor.qrDrop(await g(c), ref, key), (ref, key) => http<TableDetail>("POST", t(ref) + "/qr/drop", { key })),
   qrRejectUndo: pick(async (c, ref: Ref) => c.floor.qrRejectUndo(await g(c), ref), (ref) => http<TableDetail>("POST", t(ref) + "/qr/undo")),
   order: pick(async (c, ref: Ref, o: StaffOrderInput) => c.floor.order(await g(c), ref, o), (ref, o) => http<TableDetail & { orders: string[] }>("POST", t(ref) + "/order", o)),
   serve: pick(async (c, ref: Ref, keys?: string[]) => c.floor.serve(await g(c), ref, keys), (ref: Ref, keys?: string[]) => http<TableDetail & { served: string[] }>("POST", t(ref) + "/serve", keys ? { keys } : {})),

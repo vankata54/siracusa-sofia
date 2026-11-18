@@ -24,7 +24,7 @@ import { minutes } from "../../lib/time.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural } from "../../lib/format.ts";
 import {
-  $, $$, sheetOf, readHash, gramsSheet, why, isOffline, items, lineKey, readDraft, saveDraft, enqueue, flushOutbox, myQueue, settleStale, retrySoon, userOf, whenSaved, notice,
+  $, $$, sheetOf, shiftSheet, readHash, gramsSheet, why, isOffline, items, lineKey, readDraft, saveDraft, enqueue, flushOutbox, myQueue, settleStale, retrySoon, userOf, whenSaved, notice,
   STATE_ICON, STATE_SHORT, CALL_WORD, type Draft, type DraftLine, type StateKey,
 } from "./bits.ts";
 
@@ -44,7 +44,7 @@ let pickHall: HallLive | null = null;
 async function pickTable(q: string) {
   /* "Търси": the waiter's search of the hall (src/modules/servitor/find.ts), loaded on the first press */
   const st0 = await mountStaff({ module: "waiter", screen: "order", tab: "order", title: "Нова поръчка", sub: "На маса: за коя маса?",
-    search: () => import("./find.ts").then((m) => m.provider(() => pickHall)) });
+    search: () => import("./find.ts").then((m) => m.provider(() => pickHall)), shift: () => shiftSheet(() => st0)() });
   if (!st0) return;
   const st: Staff = st0;
   let L: HallLive | null = null;
@@ -80,7 +80,7 @@ async function pickTable(q: string) {
 
 /* ---------- the order for one table ---------- */
 async function orderFor(N: number, q0: string) {
-  const st0 = await mountStaff({ module: "waiter", screen: "order", tab: null, title: "Нова поръчка", sub: "На маса: Маса " + N, back: { href: murl.servitor("masa", String(N)), label: "Маса" }, bar: "stack", tall: true, offline: "queue" });
+  const st0 = await mountStaff({ module: "waiter", screen: "order", tab: null, title: "Нова поръчка", sub: "На маса: Маса " + N, back: { href: murl.servitor("masa", String(N)), label: "Маса" }, bar: "stack", tall: true, offline: "queue", shift: () => shiftSheet(() => st0)() });
   if (!st0) return;
   const st: Staff = st0;
   const main = st.main, bar = st.bar!;
@@ -300,7 +300,7 @@ async function orderFor(N: number, q0: string) {
   function done(nos: string[] | null, n: number, total: number, bills: string[], queuedId?: string) {
     sent = true; bar.innerHTML = ""; st.app.classList.remove("withbar", "tall"); window.scrollTo(0, 0);
     /* the core makes one order per guest, in the order of the guests' first dishes: "№ 1047 (Гост 1), № 1048 (Гост 3)" */
-    const nums = (no: string[]) => no.map((x, i) => "№ " + esc(x) + (bills[i] && no.length > 1 ? " (" + esc(bills[i]) + ")" : "")).join(", ");
+    const nums = (no: string[]) => no.map((x, i) => "№\u00a0" + esc(x) + (bills[i] && no.length > 1 ? " (" + esc(bills[i]) + ")" : "")).join(", ");
     const paint = (no: string[] | null) => {
       /* no answer although the phone is online: the answer was lost (the order may be in the kitchen already) */
       const lost = !no && !st.offline && navigator.onLine !== false;

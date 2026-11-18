@@ -14,7 +14,7 @@ import { CODE_PREFIX, CODE_DIGITS, RATING_DISCOUNT } from "./codes.ts";
 import { tableFeedback } from "./feedback.ts";
 import { byId, removedById, ORDER_RULES, RESTAURANT } from "../lib/data.ts";
 import { parseMods } from "../lib/pricing.ts";
-import { sofiaYmd } from "../lib/time.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import {
   FLOOR_MSG, CALL_KINDS, MAX_PHONES, CALL_NOTE_MAX, RATING_TEXT_MAX, FLOOR_UNDO_MS, lockKey, openSessionOf, saveSession, newSession, sessionOrders,
   floorEnv, guestViewOf, emitSession, emitCall, closeIfStale, callState, billLines, billWant, sendToWaiter, canRate, orderedBy, phoneLabel, phoneOf, ZONE_NAME,
@@ -66,7 +66,7 @@ export async function guestOpen(ctx: Ctx, code: string, tok: string, fresh = fal
     if (!fresh && !(s && s.guests.some((g) => g.tok === tok))) {
       const last = await mineOf(ctx, t.id, tok);
       /* (a sitting from an earlier day that the core closed by itself is not "closed today") */
-      if (last && last.status === "closed" && last.closedBy !== "system" && sofiaYmd(new Date(last.closedAt || last.openedAt)) === sofiaYmd(nowDate(ctx))) return viewOf(ctx, last, last.guests.find((g) => g.tok === tok)!.id);
+      if (last && last.status === "closed" && last.closedBy !== "system" && shiftDay(new Date(last.closedAt || last.openedAt)) === shiftDay(nowDate(ctx))) return viewOf(ctx, last, last.guests.find((g) => g.tok === tok)!.id);
     }
     if (!s) s = newSession(ctx, t, "qr", rid(12));
     let g = s.guests.find((x) => x.tok === tok);

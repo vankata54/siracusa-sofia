@@ -122,7 +122,7 @@ test("a QR order live → grams → kitchen → „Сервирах“ → the b
   await expect(page.locator(".ocard")).toContainText("Рибай стек от Блек Ангъс · 500 гр.");
   await expect(page.locator(".ocard .stt.acc").first()).toContainText("Прието");
   const no = (await api<any>(w, "GET", "floor/table/" + n)).body.bills[0].orders[0].no as string;
-  await expect(page.locator(".ono").first()).toContainText("№ " + no + " · ");
+  await expect(page.locator(".ono").first()).toContainText("№\u00a0" + no + " · ");
   await expect(page.locator(".ono").first()).toContainText("от QR");
 
   /* the kitchen cooks and finishes: the lines are live "Готви се", then "Готово за сервиране" with "Сервирах" */
@@ -215,6 +215,50 @@ test("„Откажи“ asks the reason and has „Отмени“; guests with
   expect(v.rejected && v.rejected.reason).toBe("test");
   expect(errs).toEqual([]);
   await Promise.all([admin.dispose(), anon.dispose()]);
+});
+
+test("a QR order with a dish sold out meanwhile: „Изчерпано днес“ on the line, „Махни“ takes it out, the rest is confirmed", async ({ page, playwright, baseURL }) => {
+  const errs = errors(page), n = tables(page)[1];
+  await signIn(page.context(), "waiter");
+  const w = page.context().request;
+  const admin = await playwright.request.newContext({ baseURL }); await signIn(admin, "admin");
+  const kitchen = await playwright.request.newContext({ baseURL }); await signIn(kitchen, "kitchen");
+  const anon = await playwright.request.newContext({ baseURL });
+  await freeTable(w, n);
+  try {
+    await open(page, n);
+    const G = await guest(anon, admin, n);
+    await G.post("cart/add", { id: "pitsa-margarita", q: 2 });
+    await G.post("cart/add", { id: "shopska-salata" });
+    expect((await G.post("send")).body.to).toBe("waiter");
+    await expect(page.locator(".qrcard")).toContainText("Пица Маргарита");
+    /* the kitchen runs out of it while the order waits */
+    expect((await api(kitchen, "PUT", "kitchen/sold-out/pitsa-margarita", { out: true, sec: "all" })).status).toBe(200);
+    const bad = page.locator(".qrcard .oline.blocked");
+    await expect(bad).toContainText("Пица Маргарита");
+    await expect(bad.locator(".stt")).toHaveText("Изчерпано днес");
+    await expect(page.locator(".qrcard .qblock")).toContainText("Изчерпаното не влиза в поръчката. Махни го, после „Потвърди и прати“.");
+    await expect(page.locator(".qrcard .ft")).toContainText("Общо без изчерпаното4,75 €");
+    /* "Потвърди и прати" first says what to do, it is not a dead end */
+    await page.locator(".st-bar [data-confirm]").click();
+    await expect(toast(page)).toContainText("Първо махни „Пица Маргарита“: изчерпано днес.");
+    await expect(bad.locator("[data-drop]")).toBeFocused();
+    await bad.getByRole("button", { name: "Махни 2× Пица Маргарита" }).click();
+    await expect(toast(page)).toContainText("„Пица Маргарита“ е махнато от поръчката.");
+    await expect(page.locator(".qrcard .oline")).toHaveCount(1);
+    await expect(page.locator(".st-bar [data-confirm]")).toBeFocused();
+    /* the guests see the order without it */
+    const v = (await G.post("view")).body as { pending: { lines: { id: string }[] } | null };
+    expect(v.pending!.lines.map((l) => l.id)).toEqual(["shopska-salata"]);
+    await page.locator(".st-bar [data-confirm]").click();
+    await expect(toast(page)).toContainText("Потвърдено и изпратено в кухнята");
+    const d = (await api<any>(w, "GET", "floor/table/" + n)).body;
+    expect(d.bills[0].orders[0].lines.map((l: any) => l.id)).toEqual(["shopska-salata"]);
+    expect(errs).toEqual([]);
+  } finally {
+    await api(kitchen, "PUT", "kitchen/sold-out/pitsa-margarita", { out: false, sec: "all" });
+    await Promise.all([admin.dispose(), kitchen.dispose(), anon.dispose()]);
+  }
 });
 
 test("360 and 390, light and dark: no horizontal scroll, targets ≥ 48 px, axe without serious @phone", async ({ browser, baseURL }) => {

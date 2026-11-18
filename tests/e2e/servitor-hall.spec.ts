@@ -142,10 +142,10 @@ test("@phone the search: a table, „свободни“, an order by its number
     await expect(grp("Маси").locator("a.frow").first()).toContainText("Моя маса");
     await expect(grp("Маси").locator("a.frow").first()).toHaveAttribute("href", "/servitor/masa/#11");
     await inp.fill(no);
-    await expect(grp("Поръчки").locator("a.frow").first()).toContainText("№ " + no + " · Маса 11");
+    await expect(grp("Поръчки").locator("a.frow").first()).toContainText("№\u00a0" + no + " · Маса 11");
     await expect(grp("Поръчки").locator(".stt")).toContainText("Готви се");
     await inp.fill("маргарита");
-    await expect(grp("Поръчки")).toContainText("№ " + no);
+    await expect(grp("Поръчки")).toContainText("№\u00a0" + no);
     await expect(grp("Ястия").locator("a.frow").first()).toContainText("Маргарита");
     await expect(grp("Ястия").locator("a.frow").first()).toHaveAttribute("href", /\/servitor\/porachka\/#q=/);
     await inp.fill("свободни");

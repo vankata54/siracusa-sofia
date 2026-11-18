@@ -38,7 +38,8 @@ import { liveZones } from "./zones.ts";
 import { kitchenConfig, secOfCat, secOfLine, hasSec, isAddonCat, busyLog, K_ALL, K_MISSING, LUNCH_CAT, DEFAULT_KITCHEN, type KitchenConfig, type KSectionDef } from "./kitchen-base.ts";
 import { byId, cats, items, lunch, findDish, ORDER_RULES, type Dish } from "../lib/data.ts";
 import { eta } from "../lib/status.ts";
-import { sofiaYmd, sofiaNow, sofiaEpoch, addDaysYmd } from "../lib/time.ts";
+import { sofiaYmd, sofiaNow, sofiaEpoch } from "../lib/time.ts";
+import { SHIFT_DAY_FROM, shiftDay } from "../lib/shift-day.ts";
 import { searchDishes, latin } from "../lib/search.ts";
 
 export { K_ALL, K_MISSING, DEFAULT_KITCHEN, type KitchenConfig, type KSectionDef };
@@ -54,8 +55,9 @@ export const TABLET_ALIVE_SEC = 90, KITCHEN_BEAT_SEC = 30;
 export const KITCHEN_UNDO_SEC = 10, KITCHEN_TAP_GUARD_MS = 800;
 /** the reminder that "Натоварено" is still on (OPEN-QUESTIONS 15: with a reminder after 60 min) */
 export const BUSY_REMIND_MIN = 60;
-/** the shift day starts at 04:00 Sofia: an action made at 23:58 and sent at 00:02 still counts */
-export const SHIFT_DAY_FROM = 240;
+/** the shift day starts at 04:00 Sofia: an action made at 23:58 and sent at 00:02 still counts (one rule for the whole
+    restaurant: src/lib/shift-day.ts) */
+export { SHIFT_DAY_FROM };
 /** the tablet's clock may run this far ahead of the server */
 export const AT_SKEW_MS = 60_000;
 export const HEAD_CHEF = "Главен готвач", ALL_NAME = "Общ изглед";
@@ -105,8 +107,7 @@ export const hm = (ms: number): string => { const c = sofiaNow(new Date(ms)); re
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 /** the start of the shift day of `now` (epoch ms): the latest 04:00 Sofia */
 export function shiftStart(now: Date): number {
-  const ymd = sofiaYmd(now), c = sofiaNow(now);
-  return sofiaEpoch(c.h * 60 + c.m >= SHIFT_DAY_FROM ? ymd : addDaysYmd(ymd, -1), SHIFT_DAY_FROM);
+  return sofiaEpoch(shiftDay(now), SHIFT_DAY_FROM);
 }
 /** The moment an action was made on the tablet: now without `at`; an ISO time or epoch ms otherwise. 422 "bad_at" for a
     time in the future (more than a minute: the tablet's clock) or before the shift day. */
