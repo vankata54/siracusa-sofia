@@ -110,7 +110,10 @@ function teamScreen(boss: Boss): void {
   function changeSheet(who: string) {
     const d = S.data(); if (!d) return;
     const w = d.t.waiters.find((x) => x.username === who); if (!w) return;
-    const other = d.t.waiters.find((x) => x.username !== who) || null, was = w.tables.map((t) => t.n), sel = was.slice(), T = d.t.tables;
+    /* the dropped tables go to one colleague: the first one, or the one chosen when there are more (decision 15.11, `to`) */
+    const others = d.t.waiters.filter((x) => x.username !== who);
+    let other = others[0] || null;
+    const was = w.tables.map((t) => t.n), sel = was.slice(), T = d.t.tables;
     function grid(z: "salon" | "garden") {
       return "<h3>" + ZONE[z] + '</h3><div class="mg-tsel">' + T.filter((x) => x.zone === z).sort((a, b) => a.n - b.n).map((x) => {
         const on = sel.includes(x.n), had = was.includes(x.n), ow = x.owner && x.owner !== who ? x.ownerName : null;
@@ -120,12 +123,15 @@ function teamScreen(boss: Boss): void {
     function body() {
       const add = sel.filter((n) => !was.includes(n)).sort((a, b) => a - b), rem = was.filter((n) => !sel.includes(n));
       return "<p>Докосни маса, за да я дадеш на " + esc(w!.name) + " или да я махнеш. " + (other ? "Махнатите отиват при " + esc(other.name) + "." : "Махнатите остават без сервитьор.") + "</p>" + grid("salon") + grid("garden") +
+        (others.length > 1 && rem.length ? '<h3 id="up-to-h">Махнатите отиват при</h3><div class="mg-pick" role="group" aria-labelledby="up-to-h">' + others.map((o) => '<button type="button" data-to="' + esc(o.username) + '" aria-pressed="' + (!!other && other.username === o.username) + '">' + ic("user", 22) + esc(o.name) + "<small>" + plural(o.tables.length, "маса", "маси") + "</small></button>").join("") + "</div>" : "") +
         (sel.length ? "" : '<p class="mg-err" id="mg-tablerr" role="alert">' + ic("warning", 18) + "Записът е спрян: " + esc(w!.name) + " трябва да има поне една маса.</p>") +
         '<p class="mg-note" role="status">' + ic("info", 16) + "<span>" + (add.length || rem.length ? (add.length ? "Добавени: " + add.join(", ") + ". " : "") + (rem.length ? "Махнати: " + rem.join(", ") + ". " : "") : "Още нищо не е сменено. ") + "Сервитьорът получава известие на телефона.</span></p>";
     }
     const sh = boss.sheet({ title: "Масите на " + w.name, html: body(), foot: '<button class="pill pill-line pill-lg" type="button" data-no>Откажи</button><button class="pill pill-red pill-lg" type="button" data-save>' + ic("check", 22) + "Запази масите</button>" });
     const sv = sh.foot!.querySelector<HTMLButtonElement>("[data-save]")!;
     sh.body.addEventListener("click", (e) => {
+      const t2 = (e.target as Element).closest<HTMLElement>("[data-to]");
+      if (t2) { other = others.find((o) => o.username === t2.dataset.to) || other; const y = sh.body.scrollTop; sh.body.innerHTML = body(); sh.body.scrollTop = y; const nb = sh.body.querySelector<HTMLElement>('[data-to="' + t2.dataset.to + '"]'); if (nb) nb.focus({ preventScroll: true }); return; }
       const b = (e.target as Element).closest<HTMLElement>("[data-n]"); if (!b) return;
       const n = +b.dataset.n!, i = sel.indexOf(n); if (i > -1) sel.splice(i, 1); else sel.push(n);
       const y = sh.body.scrollTop; sh.body.innerHTML = body(); sh.body.scrollTop = y;
@@ -138,7 +144,7 @@ function teamScreen(boss: Boss): void {
       const list = sel.slice().sort((a, b) => a - b), moved = list.some((n) => !was.includes(n) && T.some((x) => x.n === n && x.owner && x.owner !== who)), dropped = was.some((n) => !list.includes(n));
       sh.close();
       const text = "Масите на " + w.name + " са сменени. " + w.name + (other && (moved || dropped) ? " и " + other.name + " получават известие." : " получава известие.");
-      void act(boss, { op: "setTables", args: [who, list, null], label: "Масите на " + w.name + ": " + list.join(", ") + ".", run: () => bossApi.setTables(who, list, null),
+      void act(boss, { op: "setTables", args: [who, list, other ? other.username : null], label: "Масите на " + w.name + ": " + list.join(", ") + ".", run: () => bossApi.setTables(who, list, other ? other.username : null),
         ok: (r) => { boss.toast(text, { undo: () => { bossApi.setTablesUndo(r.undo.id).then(() => S.reload(), (er) => boss.toast(msgOf(er))); } }); void S.reload(); } });
     };
   }

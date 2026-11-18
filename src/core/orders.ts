@@ -274,7 +274,8 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     id: o.id, no: o.no, mode: o.mode, channel: o.channel, status: o.status, lunchOnly: o.lunchOnly, zone: o.zone, pay: o.pay, payLabel: o.payLabel,
     sub: o.sub, disc: o.disc, fee: o.fee, total: o.total, eta: o.eta, at: o.at, sched: o.sched, slot: o.slot || (o.at && /^\d{2}:\d{2}$/.test(o.at) && o.mode === "pickup" ? o.at : "asap"), placedAt: o.placedAt, ts: o.ts,
     createdAt: o.createdAt, updatedAt: o.updatedAt, discKind: o.discKind || (o.disc ? "lunch" : ""), codeDisc: o.codeDisc || 0, profileDisc: o.profileDisc || 0,
-    lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course })),
+    /* a line accepted without ("Приеми без него"): shown "Изчерпано днес", not in the total */
+    lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course, ...(l.dropped ? { out: true } : {}) })),
     times: o.times || { accepted: o.createdAt }, changes: o.changes || 0,
   };
   const hold = !!o.problem && o.problem.solved !== "delivered" && !FINISHED.includes(o.status) && o.status !== "cancelled";

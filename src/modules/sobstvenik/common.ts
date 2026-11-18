@@ -16,6 +16,7 @@ import { fmt } from "../../lib/format.ts";
 import { murl } from "../routes.ts";
 import { aurl } from "../../admin/routes.ts";
 import { showTbl } from "./charts.ts";
+import { outbox } from "../boss/outbox.ts";
 
 export { ic, esc, plural, fmt };
 export const NB = " ";
@@ -194,13 +195,13 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
 
 /* ---------- the actions: without a connection they wait on the phone ---------- */
 const OFF = " Записано на телефона, тръгва само, щом има връзка.";
-const BOX = "own-outbox";
 type Op = "answer" | "block" | "setMail";
-interface Queued { op: Op; args: unknown[]; label: string; at: number }
-const readBox = (): Queued[] => { try { const v = JSON.parse(localStorage.getItem(BOX) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
-const writeBox = (l: Queued[]) => { try { if (l.length) localStorage.setItem(BOX, JSON.stringify(l)); else localStorage.removeItem(BOX); } catch { /* private mode */ } };
+/* the box of THIS person (src/modules/boss/outbox.ts: the same person, the same shift day from 04:00, up to 2 hours) */
+let me = "";
+const BX = outbox("own-outbox", () => me);
 export async function act<T>(boss: Boss, o: { op: Op; args: unknown[]; label: string; run: () => Promise<T>; ok: (r: T) => void; queued?: () => void; fail?: (e: unknown) => boolean }): Promise<T | null> {
-  const keep = () => { writeBox([...readBox(), { op: o.op, args: o.args, label: o.label, at: Date.now() }]); boss.toast(o.label + "." + OFF); if (o.queued) o.queued(); return null; };
+  me = boss.me.user.username;
+  const keep = () => { BX.keep(o.op, o.args, o.label); boss.toast(o.label + "." + OFF); if (o.queued) o.queued(); return null; };
   if (boss.offline()) return keep();
   try { const r = await o.run(); o.ok(r); return r; }
   catch (e) {
@@ -211,15 +212,17 @@ export async function act<T>(boss: Boss, o: { op: Op; args: unknown[]; label: st
   }
 }
 export async function flush(boss: Boss): Promise<void> {
-  const l = readBox(); if (!l.length) return;
-  writeBox([]);
+  me = boss.me.user.username;
+  const l = BX.take(), old = BX.stale();
   const api = ownerApi as unknown as Record<Op, (...a: unknown[]) => Promise<unknown>>;
   let sent = 0;
   for (const q of l) {
-    try { await api[q.op](...q.args); sent++; }
-    catch (e) { if (isOff(e)) { writeBox([...readBox(), q]); continue; } boss.toast(q.label + ": " + msgOf(e)); }
+    try { await api[q.op as Op](...q.args); sent++; }
+    catch (e) { if (isOff(e)) { BX.back(q); continue; } boss.toast(q.label + ": " + msgOf(e)); }
   }
   if (sent) boss.toast(sent === 1 ? "Записаното на телефона е изпратено." : "Изпратихме " + sent + " записани действия.");
+  else if (old.length) boss.toast(old.length + (old.length === 1 ? " записано действие не е изпратено" : " записани действия не са изпратени") + ": по-стари от 2 часа или от друг ден.",
+    { action: { label: "Изтрий", fn: () => { BX.drop(true); boss.toast("Изтрити."); } }, ms: 9000 });
 }
 
 /** the badge of "Решения" on the screens without "Чака те": the same number (no-shows + the next question) */

@@ -101,7 +101,7 @@ test("the bill by dishes from two phones, the rest, „Всичко вече е 
     const mp = await M.ctx.newPage();
     await mp.goto("/upravitel/");
     const blk = mp.locator("#rates");
-    await expect(blk.locator("h2")).toHaveText("Оценки от масите");
+    await expect(blk.locator("h2")).toHaveText("Оценки „Не“");
     await expect(blk).toContainText("„Чакахме дълго за сметката.“");
     await expect(blk).toContainText("Маса " + n);
     await M.ctx.close();

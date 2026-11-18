@@ -54,6 +54,7 @@ import {
 } from "../../admin/a.ts";
 import { aurl } from "../../admin/routes.ts";
 import { murl, type UpravitelScreen, type SobstvenikScreen } from "../routes.ts";
+import { keptCount, dropAll } from "./outbox.ts";
 import { homeHref, switchHome, bossAllowed, bossHref, bossModuleOf, type BossModule, type HomeChoice } from "./home.ts";
 
 export type { BossModule };
@@ -224,7 +225,7 @@ export async function mountBoss(o: BossOpts): Promise<Boss | null> {
   }
 
   /* ---------- sheet, confirm, toast ---------- */
-  let toastT: ReturnType<typeof setTimeout> | undefined;
+  let toastT: ReturnType<typeof setTimeout> | undefined, undoUntil = 0;
   function sheet(s: SheetOpts): BossSheet {
     const w = document.createElement("div"), id = "bss" + Math.random().toString(36).slice(2, 7); w.className = "bs-sheetwrap";
     w.innerHTML = '<button class="scrim" type="button" aria-label="Затвори" tabindex="-1"></button><div class="bs-sheet" role="dialog" aria-modal="true" aria-labelledby="' + id + '"><div class="handle" aria-hidden="true"></div><div class="sh"><h2 id="' + id + '" tabindex="-1">' + esc(s.title || "") + '</h2><button class="bs-x" type="button" data-close>' + ic("x", 20) + 'Затвори</button></div><div class="body">' + (s.html || "") + "</div>" + (s.foot ? '<div class="sfoot">' + s.foot + "</div>" : "") + "</div>";
@@ -276,7 +277,9 @@ export async function mountBoss(o: BossOpts): Promise<Boss | null> {
     const u = $<HTMLButtonElement>("[data-tu]", tt); if (u) u.onclick = () => { tt.classList.remove("on"); t.undo!(); toast("Отменено"); };
     const a = $<HTMLElement>("[data-ta]", tt); if (a) a.onclick = () => { tt.classList.remove("on"); if (t.action!.fn) t.action!.fn(); };
     requestAnimationFrame(() => tt.classList.add("on")); clearTimeout(toastT);
-    toastT = setTimeout(() => tt.classList.remove("on"), t.ms || (t.undo ? 6000 : 3400));
+    const ms = t.ms || (t.undo ? 6000 : 3400);
+    undoUntil = t.undo ? Date.now() + ms : 0;
+    toastT = setTimeout(() => { tt.classList.remove("on"); undoUntil = 0; }, ms);
   }
 
   /* ---------- the states of a screen ---------- */
@@ -372,7 +375,9 @@ export async function mountBoss(o: BossOpts): Promise<Boss | null> {
       onNew: (d) => {
         drawBadges(); refreshSoon();
         /* "Виж": the order is seen, the badge stops blinking */
-        toast("Нова онлайн поръчка №\u00a0" + d.no, { action: { label: "Виж", href: tabHref("upravitel", "now", "n=" + d.no), fn: () => { ordersSeen(); drawBadges(); } }, ms: 6500 });
+        /* never over a toast with "Отмени": it waits until that one is gone (the badge blinks at once) */
+        const show = () => toast("Нова онлайн поръчка №\u00a0" + d.no, { action: { label: "Виж", href: tabHref("upravitel", "now", "n=" + d.no), fn: () => { ordersSeen(); drawBadges(); } }, ms: 6500 });
+        if (Date.now() < undoUntil) setTimeout(show, undoUntil - Date.now() + 300); else show();
       },
       onChange: refreshSoon,
     });
@@ -531,7 +536,12 @@ export async function mountBoss(o: BossOpts): Promise<Boss | null> {
     const t = tg.closest<HTMLElement>("[data-bs]"); if (!t) return;
     const a = t.dataset.bs;
     if (a === "profile") openProfile();
-    else if (a === "logout") logout();
+    else if (a === "logout") {
+      /* the person's own actions kept on the phone: "Изход" asks and removes them (src/modules/boss/outbox.ts) */
+      const n = keptCount(uname);
+      if (!n) logout();
+      else confirm({ title: "Изход", text: "На телефона " + (n === 1 ? "има 1 неизпратено действие" : "има " + n + " неизпратени действия") + ". Ако излезеш, " + (n === 1 ? "то се изтрива" : "те се изтриват") + ".", ok: "Изтрий и излез", danger: true, icon: "sign-out" }, () => { dropAll(uname); logout(); });
+    }
     else if (a === "find") openFind();
     else if (a === "sound") toast(toggleSound() ? "Звукът за нови онлайн поръчки е включен" : "Звукът за нови онлайн поръчки е изключен");
     else if (a === "retry") retry(t as HTMLButtonElement);

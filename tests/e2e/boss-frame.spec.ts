@@ -335,7 +335,9 @@ for (const [mod, role, path, coreMod] of [["upravitel", "manager", "/upravitel/"
         }
         if (top >= max) break;
       }
-      /* the last thing to press scrolls clear of the bottom nav (the empty space under the content) */
+      /* the last thing to press scrolls clear of the bottom nav (the empty space under the content; at the real bottom:
+         a filled screen may grow while the steps run) */
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const lastOk = await page.evaluate(() => { const b = Array.from(document.querySelectorAll("[data-long] button")).pop()!.getBoundingClientRect(), n = document.querySelector(".bs-nav")!.getBoundingClientRect(); return n.height === 0 || b.bottom <= n.top; });
       expect(lastOk).toBe(true);
       expect(await noSideScroll(page)).toBe(true);

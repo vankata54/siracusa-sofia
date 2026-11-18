@@ -89,7 +89,7 @@ function hallScreen(boss: Boss): void {
       '<div class="mg-kv"><span>Следваща резервация</span><b>' + (x.next ? esc(x.next.time) + " · " + ppl(x.next.people) + " · " + esc(x.next.name) : "няма до края на вечерта") + "</b></div>" +
       (x.canWalkin ? '<h3>Гости без резервация</h3><label class="mg-busy up-walk"><b>' + ic("lock", 22) + 'Блокирай за гости без резервация</b><span class="mg-switch"><input type="checkbox" role="switch" data-walk aria-label="Блокирай маса ' + x.table.n + ' за гости без резервация"' + (x.walkin ? "" : " checked") + '><span class="tr"></span></span><span class="sub">Масата се дава само по резервация. Сменя се и в плана на админа.</span></label>' : "");
     const sh = boss.sheet({ title: "Маса " + x.table.n + " · " + x.table.zoneName, html,
-      foot: (boss.can("hall") ? '<a class="pill pill-line pill-lg" href="' + go.plan(x.table.zone) + '">' + ic("chair", 22) + "В плана на админа</a>" : "") + (call ? '<button class="pill pill-red pill-lg" type="button" data-go>' + ic("arrow-right", 22) + "Отивам</button>" : "") });
+      foot: (boss.can("hall") ? '<a class="pill pill-line pill-lg" href="' + go.plan(x.table.zone) + '">' + ic("chair", 22) + "В плана на админа</a>" : "") + (call && (boss.can("waiter") || boss.can("hall")) ? '<button class="pill pill-red pill-lg" type="button" data-go>' + ic("arrow-right", 22) + "Отивам</button>" : "") });
     sh.body.addEventListener("click", (e) => {
       const b = (e.target as Element).closest<HTMLElement>("[data-sw]"); if (!b || b.getAttribute("aria-pressed") === "true") return;
       const to = b.dataset.sw!, name = b.dataset.swn || "", was = x.waiter;

@@ -122,12 +122,12 @@ function nowScreen(boss: Boss): void {
   /* ---------- the kitchen ---------- */
   function kitchen(k: MgrKitchen): string {
     const b = k.busy, open = k.open;
-    const busy = '<label class="mg-busy' + (b.on ? " on" : "") + (open ? "" : " off") + '"><b>' + ic("hourglass", 24) + 'Натоварено</b><span class="mg-switch"><input type="checkbox" role="switch" data-busy data-keep="busy" aria-label="Натоварено"' + (b.on ? " checked" : "") + (open ? "" : " disabled") + '><span class="tr"></span></span>' +
+    const busy = '<label class="mg-busy' + (b.on ? " on" : "") + (open ? "" : " off") + '"><b>' + ic("hourglass", 24) + 'Натоварено</b><span class="mg-switch"><input type="checkbox" role="switch" data-busy data-keep="busy" aria-label="Натоварено"' + (b.on ? " checked" : "") + (open && k.canBusy ? "" : " disabled") + '><span class="tr"></span></span>' +
       '<span class="sub">' + (!open ? "Кухнята не приема поръчки сега (от 10:00 до 22:30)." : b.on ? "Включено" + (b.by ? " от " + esc(b.by) : "") + (b.atHm ? " в " + esc(b.atHm) : "") + ". Гостите виждат <q>Възможни са закъснения · около" + NB + b.etaBusyMin + NB + "мин</q>." : "Изключено. Гостите виждат <q>около" + NB + b.etaMin + NB + "мин</q> за доставка.") + "</span></label>";
     const so = '<div class="mg-h up-sub"><h2>Изчерпано днес</h2>' + cnt(k.soldOut.length) + "</div>" +
       (k.soldOut.length ? '<div class="mg-card mg-list">' + k.soldOut.map((x) => { const dsh = findDish(x.id), c = dsh ? catById[dsh.cat] : null;
         return '<div class="mg-orow">' + (dsh ? pic(dsh) : '<span class="pic" aria-hidden="true"></span>') + "<div><b>" + esc(x.n) + "</b><small>" + (c ? esc(c.n) : esc(x.secName)) + (x.by ? " · " + esc(/^Кухня · /.test(x.by) ? "кухнята" : x.by) + (x.atHm ? " в " + esc(x.atHm) : "") : " · отбелязано в менюто") + "</small></div>" +
-          '<button class="pill pill-line" type="button" data-a="back" data-id="' + esc(x.id) + '" data-n="' + esc(x.n) + '" aria-label="Върни в менюто: ' + esc(x.n) + '">' + ic("arrow-counter-clockwise", 20) + "Върни</button></div>"; }).join("") + "</div>"
+          (!k.canBack ? "" : '<button class="pill pill-line" type="button" data-a="back" data-id="' + esc(x.id) + '" data-n="' + esc(x.n) + '" aria-label="Върни в менюто: ' + esc(x.n) + '">' + ic("arrow-counter-clockwise", 20) + "Върни</button>") + "</div>"; }).join("") + "</div>"
         : '<div class="mg-allok">' + ic("check-circle", 28) + "<div><b>Всичко е в менюто</b><span>Кухнята отбелязва изчерпаното от своя екран.</span></div></div>");
     return '<section class="mg-blk" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухнята</h2><a class="mg-link more" href="' + go.kitchen() + '">Екранът ' + ic("arrow-up-right", 18) + "</a></div>" +
       busy + sectionsHTML(k) + so + "</section>";
@@ -153,15 +153,25 @@ function nowScreen(boss: Boss): void {
   }
   /** "Приеми" of an order with a sold-out dish: call first, or "Приеми без него" */
   async function outSheet(o: WaitOrder) {
-    let c: Awaited<ReturnType<typeof bossApi.callCustomer>> | null = null;
-    try { c = await bossApi.callCustomer(o.no); } catch (e) { if (!isOff(e)) { boss.toast(msgOf(e)); return; } }
-    const names = o.out.join(", "), tel = c ? String(c.phone || "").replace(/[^\d+]/g, "") : "";
+    /* the number is masked here; the whole number (and the line in the log) only with "Обади се на клиента" */
+    const names = o.out.join(", "), canCall = boss.can("orders");
     const s = boss.sheet({ title: "В поръчката има изчерпано", html: "<p><b>№" + NB + esc(o.no) + " · " + esc(o.channelName + (o.tableN ? " " + o.tableN : "")) + "</b><br>Изчерпано днес: <b>" + esc(names) + "</b>. Обади се на клиента и предложи друго ястие.</p>" +
-      '<div class="mg-kv"><span>Клиент</span><b>' + esc(o.name || "") + '</b></div><div class="mg-kv"><span>Телефон</span><b class="tnum">' + esc(c ? prettyPhone(c.phone) : o.phone) + "</b></div>" +
+      '<div class="mg-kv"><span>Клиент</span><b>' + esc(o.name || "") + '</b></div><div class="mg-kv"><span>Телефон</span><b class="tnum" data-tel-n>' + esc(o.phone) + "</b></div>" +
       (o.outAll ? '<p class="mg-note">' + ic("info", 16) + "<span>Всички ястия в поръчката са изчерпани: откажи я от „Поръчки“ в админа, ако клиентът не иска друго.</span></p>"
         : '<p class="mg-note">' + ic("info", 16) + "<span>„Приеми без него“ праща в кухнята останалите ястия и пише бележка в поръчката. Друго ястие се добавя от „Поръчки“ в админа.</span></p>"),
       foot: (o.outAll ? '<a class="pill pill-line pill-lg" href="' + go.order(o.no) + '">' + ic("receipt", 22) + "Към поръчката</a>" : '<button class="pill pill-line pill-lg" type="button" data-wo>' + ic("check", 22) + "Приеми без него</button>") +
-        (tel ? '<a class="pill pill-red pill-lg" href="tel:' + esc(tel) + '" data-tel>' + ic("phone", 22) + "Обади се на клиента</a>" : "") });
+        (canCall ? '<button class="pill pill-red pill-lg" type="button" data-call>' + ic("phone", 22) + "Обади се на клиента</button>" : "") });
+    const cb = s.foot && s.foot.querySelector<HTMLButtonElement>("[data-call]");
+    if (cb) cb.onclick = async () => {
+      cb.disabled = true;
+      try {
+        const c = await bossApi.callCustomer(o.no), tel = String(c.phone || "").replace(/[^\d+]/g, ""), n = s.body.querySelector("[data-tel-n]");
+        if (n) n.textContent = prettyPhone(c.phone);
+        /* now the real call: a link to the phone's dialler with the whole number */
+        const a = document.createElement("a"); a.className = "pill pill-red pill-lg"; a.href = "tel:" + tel; a.dataset.tel = ""; a.innerHTML = ic("phone", 22) + "Обади се " + esc(prettyPhone(c.phone));
+        cb.replaceWith(a); a.focus();
+      } catch (e) { cb.disabled = false; boss.toast(isOff(e) ? "Няма връзка: номерът се показва само с връзка." : msgOf(e)); }
+    };
     const wo = s.foot && s.foot.querySelector<HTMLButtonElement>("[data-wo]");
     if (wo) wo.onclick = () => { s.close(); accept(o.no, true); };
   }
@@ -204,7 +214,8 @@ function nowScreen(boss: Boss): void {
       const block = b.dataset.b === "block"; sh.close();
       /* no "Отмени" (decision 16.11): the confirmation is the sheet */
       void act(boss, { op: "block", args: [ref, block ? "block" : "clear"], label: who + ": " + (block ? "блокирай номера." : "без блокиране."), run: () => bossApi.block(ref, block ? "block" : "clear"),
-        ok: () => { boss.toast(block ? who + ": номерът е блокиран за резервации. Отблокира се от „Резервации“ в админа." : who + ": без блокиране"); after(); } });
+        /* the focus: the heading of "Чака те" (never the next button, which is another order's "Приеми") */
+        ok: () => { boss.toast(block ? who + ": номерът е блокиран за резервации. Отблокира се от „Резервации“ в админа." : who + ": без блокиране"); S.focusAfter("#h-w"); after(); } });
     });
   }
   function setBusy(on: boolean) {
@@ -217,7 +228,7 @@ function nowScreen(boss: Boss): void {
     const k = D()?.kitchen.busy; if (!k) return;
     boss.confirm({ title: "Включи „Натоварено“?", ok: "Включи", icon: "hourglass",
       html: "<p>Новите поръчки за доставка получават +" + (k.etaBusyMin - k.etaMin) + NB + "мин. Приетите пазят своя час.</p><div class=\"mg-cmp\"><div><span>Сега гостите виждат</span><b>около" + NB + k.etaMin + NB + 'мин</b></div><div class="now"><span>След включване</span><b>Възможни са закъснения · около' + NB + k.etaBusyMin + NB + "мин</b></div></div>" +
-        '<p class="mg-note">' + ic("info", 16) + "<span>Сайтът, кухнята и админът показват това веднага; кой и кога го е включил се пише в дневника.</span></p>" }, () => setBusy(true));
+        '<p class="mg-note">' + ic("info", 16) + "<span>Кухнята и админът го показват веднага, сайтът до минута; кой и кога го е включил се пише в дневника.</span></p>" }, () => setBusy(true));
   }
   function backIn(id: string, n: string) {
     void act(boss, { op: "backIn", args: [id, true], label: "„" + n + "“: обратно в менюто.", run: () => bossApi.backIn(id, true),

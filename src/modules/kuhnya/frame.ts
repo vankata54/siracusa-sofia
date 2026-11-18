@@ -194,7 +194,8 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   const g = await kitchenGuard();
   if (!g) return null;
   const { me, cfg, boss } = g, page = opts.page;
-  const tab = tabletSec(cfg);
+  /* the manager / the owner from their module: "Общ изглед" read as it is, never choosing (or remembering) a tablet */
+  const tab = tabletSec(cfg) || (boss && page === "obsht-izgled" ? K_ALL : "");
   if (!tab) { location.replace(murl.kuhnya("vhod")); return null; }
   /* the head chef looks at the queue of one section from "Общ изглед" (queue#s=skara, as the prototype); the heartbeat
      stays the tablet's own ("all") */

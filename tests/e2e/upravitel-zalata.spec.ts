@@ -157,3 +157,23 @@ test("the money rule: only one order, one table, a driver's cash; with „Фин
   } finally { await a.put("/api/admin/roles/manager", { data: { sections: mgr.sections } }); }
   expect(errs).toEqual([]);
 });
+
+test("the rights: without „Кухня“, „Меню“, „Настройки“, „Сервитьор“ and „Залата“ the actions are not offered (and the core refuses them)", async ({ page, context }) => {
+  const errs = errors(page);
+  const a = await as("admin");
+  const roles = await (await a.get("/api/admin/roles")).json() as { id: string; sections: string[] }[];
+  const mgr = roles.find((r) => r.id === "manager")!;
+  expect((await a.put("/api/admin/roles/manager", { data: { sections: ["dashboard", "notes", "orders"] } })).status()).toBe(200);
+  try {
+    await signIn(context, S.base, "manager");
+    await page.goto(S.base + "/upravitel/" + PV);
+    await expect(page.locator("[data-upscr]")).toBeVisible();
+    await expect(page.locator("[data-busy]")).toBeDisabled();
+    await expect(page.getByRole("button", { name: /^Върни в менюто/ })).toHaveCount(0);
+    const m = await as("manager");
+    expect((await m.post("/api/boss/kitchen/busy", { data: { on: true } })).status()).toBe(403);
+    expect((await m.post("/api/boss/kitchen/back", { data: { dish: "pleskavitsa", back: true } })).status()).toBe(403);
+    expect((await m.post("/api/boss/qr/3/confirm", { data: {} })).status()).toBe(403);
+  } finally { await a.put("/api/admin/roles/manager", { data: { sections: mgr.sections } }); }
+  expect(errs).toEqual([]);
+});

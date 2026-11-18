@@ -14,6 +14,7 @@ import { ic, esc, plural, type Boss } from "../boss/frame.ts";
 import { dateLong } from "../../admin/a.ts";
 import { aurl } from "../../admin/routes.ts";
 import { prettyPhone } from "../../lib/format.ts";
+import { outbox } from "../boss/outbox.ts";
 import { murl } from "../routes.ts";
 
 export { ic, esc, plural, prettyPhone };
@@ -93,20 +94,21 @@ export const timer = (iso: string) => '<b class="tnum" data-since="' + esc(iso) 
 export const isOff = (e: unknown) => e instanceof ApiError && e.code === "offline";
 export const msgOf = (e: unknown) => (e instanceof ApiError ? e.message : "Нещо се обърка. Опитай пак.");
 const OFF = " Записано на телефона, тръгва само, щом има връзка.";
-const BOX = "up-outbox";
 /** the actions that may wait on the phone (no "Отмени" for them: the server has not seen them yet) */
 type Op = "accept" | "resConfirm" | "busy" | "backIn" | "ack" | "callGo" | "answer" | "walkin" | "setWaiter" | "setTables" | "block" | "qrConfirm" | "callAssign" | "qrAssign";
-interface Queued { op: Op; args: unknown[]; label: string; at: number }
-const readBox0 = (): Queued[] => { try { const v = JSON.parse(localStorage.getItem(BOX) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
-const writeBox = (l: Queued[]) => { try { if (l.length) localStorage.setItem(BOX, JSON.stringify(l)); else localStorage.removeItem(BOX); } catch { /* private mode */ } };
+/* the box of THIS person (src/modules/boss/outbox.ts: the same person, the same shift day from 04:00, up to 2 hours) */
+let me = "";
+const BX = outbox("up-outbox", () => me);
+const meOf = (boss: Boss) => { me = boss.me.user.username; };
 /** is this action already kept on the phone (the row says "Записано на телефона", its button is off) */
-export const queued = (op: Op, key: string): boolean => readBox0().some((q) => q.op === op && String(q.args[0]) === key);
+export const queued = (op: Op, key: string): boolean => BX.has(op, key);
 /** an action of the manager. ok: what happens on success (the toast with "Отмени"). Without a connection it waits on the
     phone (when `op` is given) and the toast says so; another error: its text for people. Returns the result or null. */
 export async function act<T>(boss: Boss, o: { op?: Op; args?: unknown[]; label: string; run: () => Promise<T>; ok: (r: T) => void; fail?: (e: unknown) => boolean }): Promise<T | null> {
+  meOf(boss);
   const keep = () => {
     if (!o.op) { boss.toast("Няма връзка. Опитай пак, щом се върне."); return null; }
-    writeBox([...readBox0(), { op: o.op, args: o.args || [], label: o.label, at: Date.now() }]);
+    BX.keep(o.op, o.args || [], o.label);
     boss.toast(o.label + OFF);
     document.dispatchEvent(new CustomEvent("up:kept"));
     return null;
@@ -120,26 +122,30 @@ export async function act<T>(boss: Boss, o: { op?: Op; args?: unknown[]; label: 
     return null;
   }
 }
-/** the connection is back: what waited on the phone goes now, in order (a refusal is said, the rest goes on) */
+/** the connection is back: this person's actions of today (up to 2 hours) go now, in order; older ones never go by
+    themselves (the toast says so, with "Изтрий") */
 export async function flush(boss: Boss): Promise<void> {
-  const l = readBox0(); if (!l.length) return;
-  writeBox([]);
+  meOf(boss);
+  const l = BX.take(), old = BX.stale();
   const api = bossApi as unknown as Record<Op, (...a: unknown[]) => Promise<unknown>>;
   let sent = 0;
   for (const q of l) {
-    try { await api[q.op](...q.args); sent++; }
-    catch (e) { if (isOff(e)) { writeBox([...readBox0(), q]); continue; } boss.toast(q.label + ": " + msgOf(e)); }
+    try { await api[q.op as Op](...q.args); sent++; }
+    catch (e) { if (isOff(e)) { BX.back(q); continue; } boss.toast(q.label + ": " + msgOf(e)); }
   }
   if (sent) boss.toast(sent === 1 ? "Записаното на телефона е изпратено." : "Изпратихме " + sent + " записани действия.");
+  else if (old.length) boss.toast(plural(old.length, "записано действие не е изпратено", "записани действия не са изпратени") + ": по-стари от 2 часа или от друг ден (" + old.map((k) => k.label).join(" ").slice(0, 80) + ").",
+    { action: { label: "Изтрий", fn: () => { BX.drop(true); boss.toast("Изтрити."); } }, ms: 9000 });
 }
 
 /* ---------- one screen: load, draw, live, refresh ---------- */
 /** the events of the core a screen of the manager hears (docs/MODULES-BRIEF.md, section 4; src/core) */
 export const LIVE = ["order.created", "order.new", "order.status", "order.changed", "order.line", "reservation.created", "reservation.status", "note.created", "note.status",
   "settings", "menu.soldout", "kitchen.busy", "kitchen.config", "floor.session", "floor.call", "floor.qr", "driver.course", "driver.ask", "shift.update"];
-export interface Screen<T> { reload(quiet?: boolean): Promise<void>; data(): T | null; redraw(): void }
+export interface Screen<T> { reload(quiet?: boolean): Promise<void>; data(): T | null; redraw(): void; /** after the next redraw the focus goes here */ focusAfter(sel: string): void }
 export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) => string; after?: (d: T) => void; err: string; every?: number }): Screen<T> {
-  let d: T | null = null, seq = 0, t: ReturnType<typeof setTimeout> | undefined, lastBlock = "";
+  meOf(boss);
+  let d: T | null = null, seq = 0, t: ReturnType<typeof setTimeout> | undefined, lastBlock = "", focusSel = "";
   const body = boss.body;
   /* the block of the last touch: when its button is gone after the redraw, the focus goes to the block's first action */
   body.addEventListener("click", (e) => { const b = (e.target as Element).closest("button, a"); const blk = b && b.closest<HTMLElement>(".mg-blk[id]"); if (blk) lastBlock = blk.id; }, true);
@@ -151,7 +157,8 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
     body.innerHTML = o.draw(d); tick(body);
     if (o.after) o.after(d);
     window.scrollTo(0, y);
-    if (kk) { const nf = body.querySelector<HTMLElement>('[data-keep="' + kk + '"]'); if (nf) nf.focus({ preventScroll: true }); }
+    if (focusSel) { const f = body.querySelector<HTMLElement>(focusSel); focusSel = ""; if (f) { if (!f.matches("a, button, input")) f.setAttribute("tabindex", "-1"); f.focus({ preventScroll: true }); } }
+    else if (kk) { const nf = body.querySelector<HTMLElement>('[data-keep="' + kk + '"]'); if (nf) nf.focus({ preventScroll: true }); }
     else if ((inBody || document.activeElement === document.body) && lastBlock && !sheetOpen()) {
       const blk = document.getElementById(lastBlock);
       if (blk && !blk.contains(document.activeElement)) {
@@ -182,7 +189,7 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
   setInterval(() => { if (document.visibilityState === "visible" && !(document.activeElement && document.activeElement.id === "bs-q")) void reload(); }, o.every || 30_000);
   startTicks();
   void flush(boss).then(() => reload(false));
-  return { reload, data: () => d, redraw };
+  return { reload, data: () => d, redraw, focusAfter: (sel: string) => { focusSel = sel; } };
 }
 
 /** the badge of "Сега" on the other tabs: the same number as on "Сега" (each thing once: problems + "Чака те") */

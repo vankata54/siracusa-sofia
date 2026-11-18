@@ -257,10 +257,12 @@ async function world(ctx: Ctx): Promise<World> {
 const secDef = (cfg: KitchenConfig, id: string) => cfg.sections.find((s) => s.id === id)!;
 const missingOf = (cfg: KitchenConfig): string[] => [cfg.confirmed.sections ? "" : K_MISSING.sections, cfg.confirmed.norms ? "" : K_MISSING.norms].filter(Boolean);
 const ksOf = (l: OrderLine): KState => (l.ks === "cook" || l.ks === "ready" ? l.ks : "wait");
-const idxOf = (cfg: KitchenConfig, o: Order, view: string): number[] => o.lines.map((_, i) => i).filter((i) => view === K_ALL || secOfLine(cfg, o.lines[i]) === view);
+/** a line the kitchen makes: not one the manager accepted the order without ("Приеми без него": only for reference) */
+const cooked = (l: OrderLine) => !l.dropped;
+const idxOf = (cfg: KitchenConfig, o: Order, view: string): number[] => o.lines.map((_, i) => i).filter((i) => cooked(o.lines[i]) && (view === K_ALL || secOfLine(cfg, o.lines[i]) === view));
 /** one state of a section in an order, the same everywhere: чака / готви се / готово (null: no line of it) */
 export function secState(cfg: KitchenConfig, o: Order, sec: string): KState | null {
-  const ls = o.lines.filter((l) => secOfLine(cfg, l) === sec);
+  const ls = o.lines.filter((l) => cooked(l) && secOfLine(cfg, l) === sec);
   if (!ls.length) return null;
   if (ls.every((l) => ksOf(l) === "ready")) return "ready";
   return ls.some((l) => ksOf(l) !== "wait") ? "cook" : "wait";
@@ -305,7 +307,7 @@ function ticketOf(w: World, o: Order, view: string, t = timingOf(o, w.cfg)): KTi
   const mine = idxOf(w.cfg, o, view), kind = kindOf(o), tm = timerOf(t.due, w.now, w.cfg);
   const started = mine.map((i) => o.lines[i].cookAt).filter((x): x is string => !!x).map((x) => Date.parse(x)).sort((a, b) => a - b)[0] ?? null;
   const fresh = mine.every((i) => ksOf(o.lines[i]) === "wait") && !(w.seen[o.no] || []).includes(view);
-  const others: KOther[] = view === K_ALL ? [] : o.lines.map((l, i) => ({ l, i })).filter((x) => !mine.includes(x.i)).map(({ l, i }) => {
+  const others: KOther[] = view === K_ALL ? [] : o.lines.map((l, i) => ({ l, i })).filter((x) => cooked(x.l) && !mine.includes(x.i)).map(({ l, i }) => {
     const sec = secOfLine(w.cfg, l), st = ksOf(l) === "ready" ? "ready" : secState(w.cfg, o, sec) === "cook" ? "cook" : "wait";
     const v = lineView(w, o, i, t);
     return { i, q: l.q, name: v.name, sec, short: secDef(w.cfg, sec).short, state: st as KState, out: v.out };
@@ -428,8 +430,8 @@ const AS_KITCHEN = (_s: StaffCtx) => ({ user: { role: "kitchen" }, sections: ["k
 /** the status follows the lines: something started -> "Готви се"; every line ready -> "Готова" (times, push, tracking) */
 async function settle(cx: Ctx, s: StaffCtx, o: Order): Promise<Order> {
   let cur = o;
-  if (cur.status === "accepted" && cur.lines.some((l) => ksOf(l) !== "wait")) cur = await setOrderStatus(cx, cur.no, "cooking", s.user.username, AS_KITCHEN(s));
-  if (cur.status === "cooking" && cur.lines.length > 0 && cur.lines.every((l) => ksOf(l) === "ready")) cur = await setOrderStatus(cx, cur.no, "ready", s.user.username, AS_KITCHEN(s));
+  if (cur.status === "accepted" && cur.lines.some((l) => cooked(l) && ksOf(l) !== "wait")) cur = await setOrderStatus(cx, cur.no, "cooking", s.user.username, AS_KITCHEN(s));
+  if (cur.status === "cooking" && cur.lines.some(cooked) && cur.lines.filter(cooked).every((l) => ksOf(l) === "ready")) cur = await setOrderStatus(cx, cur.no, "ready", s.user.username, AS_KITCHEN(s));
   return cur;
 }
 const joinAnd = (a: string[]): string => (a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " и " + a[a.length - 1]);
@@ -452,7 +454,7 @@ async function actResult(ctx: Ctx, o: Order, view: string, sec: string, changed:
   const secs = sec === K_ALL ? w.cfg.sections.map((x) => x.id) : [sec];
   return {
     ok: true, same, no: o.no, sec, status: o.status, changed,
-    secReady: secs.every((id) => { const st = secState(w.cfg, o, id); return st == null || st === "ready"; }), orderReady: o.lines.length > 0 && o.lines.every((l) => ksOf(l) === "ready"),
+    secReady: secs.every((id) => { const st = secState(w.cfg, o, id); return st == null || st === "ready"; }), orderReady: o.lines.some(cooked) && o.lines.filter(cooked).every((l) => ksOf(l) === "ready"),
     notify: told.notify, waiting: told.waiting, msg: told.msg, ticket: inQueue(w, o, view, t) ? ticketOf(w, o, view, t) : null, src: srcOf(w, o, t),
   };
 }
@@ -461,7 +463,7 @@ async function afterReady(ctx: Ctx, cx: Ctx, s: StaffCtx, o: Order, cfg: Kitchen
   const o2 = await settle(cx, s, o);
   const doneSecs = secs.filter((id) => secState(cfg, o2, id) === "ready");
   if (!doneSecs.length) { emitLine(ctx, o2, "line", secs[0], at, { lines: changed, ks: "ready" }); return { o: o2, told: NONE }; }
-  const told = toldReady(cfg, o2), orderReady = o2.lines.every((l) => ksOf(l) === "ready");
+  const told = toldReady(cfg, o2), orderReady = o2.lines.filter(cooked).every((l) => ksOf(l) === "ready");
   for (const id of doneSecs) emitLine(ctx, o2, "sec_ready", id, at, { lines: changed.filter((i) => secOfLine(cfg, o2.lines[i]) === id), ks: "ready", secReady: true, orderReady, notify: told.notify, waiting: told.waiting });
   return { o: o2, told };
 }
@@ -755,7 +757,8 @@ export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: 
   const hits: Order[] = [];
   for (const o0 of pool) {
     if (!forToday(w, timingOf(o0, cfg))) continue;
-    const touches = (l: OrderLine) => has(l) && (out ? ksOf(l) === "wait" : !!l.out);
+    /* a line the order was accepted without stays so (decision 18.11.2026) */
+    const touches = (l: OrderLine) => has(l) && !l.dropped && (out ? ksOf(l) === "wait" : !!l.out);
     if (!o0.lines.some(touches)) continue;
     const o = await locked(ctx, o0.no, async (o) => {
       const idx: number[] = [];

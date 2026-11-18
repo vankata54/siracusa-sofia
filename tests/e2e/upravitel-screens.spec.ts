@@ -171,3 +171,26 @@ test("the four screens at 360, 390, 1024, 1440, light and dark: no horizontal sc
     await ctx.close();
   }
 });
+
+test("without a connection the kept action is this person's: „Изход“ asks and removes it", async ({ page, context }) => {
+  const r = await apiAs("manager", E.MANAGER_PASSWORD);
+  const x = await r.post("/api/orders", { data: { cart: { mode: "pickup", lines: [{ id: "kebapcheta", key: "kebapcheta", q: 1, extra: 0, mods: [] }] }, name: "Изход Тест", phone: "0888 " + String(100000 + Math.floor(Math.random() * 899999)), pay: "cash", note: "" } });
+  const no = ((await x.json()) as { no: string }).no;
+  await open(page, context, "/upravitel/");
+  const row = page.locator('.mg-wrow[data-wno="' + no + '"]');
+  await context.setOffline(true);
+  await expect(page.locator(".bs-net")).toBeVisible();
+  await row.locator("button").click();
+  await expect(row.locator(".mg-wout")).toContainText("Записано на телефона");
+  const box = await page.evaluate(() => JSON.parse(localStorage.getItem("up-outbox") || "[]") as { user: string; op: string; day: string }[]);
+  expect(box.map((k) => [k.user, k.op])).toEqual([["manager", "accept"]]);
+  await page.locator('[data-bs="profile"]').click();
+  await page.locator('.bs-sheet [data-bs="logout"]').click();
+  const sh = page.locator(".bs-sheetwrap:not(.closing) .bs-sheet").last();
+  await expect(sh.locator("h2")).toHaveText("Изход");
+  await expect(sh).toContainText("1 неизпратено действие");
+  await context.setOffline(false);
+  await sh.getByRole("button", { name: "Изтрий и излез" }).click();
+  await expect(page).toHaveURL(/\/admin\/vhod\//);
+  expect(await page.evaluate(() => localStorage.getItem("up-outbox"))).toBeNull();
+});

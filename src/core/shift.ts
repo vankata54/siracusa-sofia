@@ -51,6 +51,7 @@ export const MGR_MSG = {
   qr: "Няма QR поръчка за потвърждение. Обнови екрана.",
   key: "Няма такъв проблем. Обнови екрана.",
   what: "Избери „Видях“ или „Готово, обадих се“.",
+  tablesChanged: "Масите вече са сменени от друг. Отмени ги от „Смени масите“.",
 };
 /** "Отмени" of the manager's actions: the screen shows it 6 s, the core accepts it this long */
 export const MGR_UNDO_MS = 15_000;
@@ -59,6 +60,9 @@ export const RES_AHEAD_MIN = 120;
 /** after 21:00 the drivers' cash is "За предаване сега"; after 23:00 "Смяната приключи" */
 export const CASH_NOW_MIN = 1260, SHIFT_OVER_MIN = 1380;
 
+/** the section of each action's object (decision 18.11.2026): the calls and the QR orders the waiter's or the hall's,
+    "Натоварено" the kitchen's or the settings', "Върни" the kitchen's or the menu's, a driver's question the drivers' */
+export const MGR_NEED = { floor: ["waiter", "hall"], busy: ["kitchen", "settings"], back: ["kitchen", "menu"], orders: ["orders"], ask: ["driver", "staff"] };
 export function needManager(s: StaffCtx | null | undefined, sec?: string | string[]): StaffCtx {
   if (!s || !s.user) throw new CoreError("auth", RIGHTS_MSG.auth, 401);
   if (!MANAGER_ROLES.includes(s.user.role)) throw new CoreError("forbidden", MGR_MSG.forbidden, 403);
@@ -92,8 +96,25 @@ const toMin = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3);
 
 /* ---------- the shift's own document ---------- */
 interface Ack { at: Iso; by: string; name: string; what: "seen" | "called" }
-interface Given { to: string; name: string; at: Iso; by: string }
-interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times">; before?: Record<string, string[]> }
+interface Given { to: string; name: string; at: Iso; by: string; /** a QR order: to whom it was given before ("Отмени") */ was?: QrTo | null }
+type QrTo = { by: string; name: string; assigned: string };
+/** who confirms a waiting QR order (the manager's "Възложи на…"); null: the table's own rule again. Returns the one before. */
+async function setQrTo(ctx: Ctx, session: string, to: QrTo | null): Promise<QrTo | null> {
+  const s0 = (await openSessions(ctx)).find((x) => x.id === session);
+  if (!s0) throw new CoreError("no_pending", MGR_MSG.qr, 409);
+  return serial(ctx.repo, lockKey(s0.table), async () => {
+    const sit = (await openSessions(ctx)).find((x) => x.id === session);
+    if (!sit || !sit.pending) throw new CoreError("no_pending", MGR_MSG.qr, 409);
+    const was = sit.pending.to || null;
+    if (to) sit.pending.to = to; else delete sit.pending.to;
+    await saveSession(ctx, sit);
+    emit(ctx, "floor.qr", { table: sit.table, n: sit.n, session: sit.id, state: to ? "assigned" : "unassigned", to: to ? to.by : null });
+    await emitSession(ctx, sit);
+    return was;
+  });
+}
+interface UndoRec { id: string; kind: "accept" | "tables"; at: Iso; by: string; no?: string; order?: Pick<Order, "sub" | "disc" | "total" | "codeDisc" | "profileDisc" | "staffNotes" | "times">;
+  /** "Смени масите": only the tables this action moved (table id, the shift user before and after; null: nobody) */ moves?: { t: string; from: string | null; to: string | null }[] }
 interface ShiftDoc { id: string; date: string; ack: Record<string, Ack>; qr: Record<string, Given>; calls: Record<string, Given>; undo: Record<string, UndoRec>; updatedAt?: Iso }
 const docId = (day: string) => "shift:" + day;
 async function getDoc(ctx: Ctx): Promise<ShiftDoc> {
@@ -144,6 +165,8 @@ export interface MgrKitchen {
   busy: { on: boolean; at: Iso | null; atHm: string; by: string | null; extra: number; etaMin: number; etaBusyMin: number };
   sections: { id: string; n: string; short: string; icon: string; wait: number; late: number; soon: number; oldestMin: number | null; out: number; tablet: { online: boolean; text: string; lastHm: string; /** was it online today at all (else: "още не е влизал днес") */ today: boolean } }[];
   soldOut: { id: string; n: string; secName: string; atHm: string; by: string | null }[];
+  /** may this role switch "Натоварено" / "Върни" a dish (the screen hides what it cannot) */
+  canBusy: boolean; canBack: boolean;
 }
 export interface MgrNow {
   date: string; now: string; status: { open: boolean; kitchen: boolean; delivery: boolean }; money: boolean;
@@ -225,6 +248,10 @@ async function problemsOf(w: World): Promise<Problem[]> {
       meta: a ? meta + " · " + (a.what === "called" ? "обади се" : "видяно") + " " + hmIso(a.at) : meta,
       since: null, lateMin: m, done: a ? { at: a.at, by: a.name, what: a.what } : null, actions: a ? [] : tbl ? ["kitchen", "seen"] : ["call"], ref: { no: o.no, mode: tbl ? "table" : o.mode, ...(tbl && o.table ? { table: { id: o.table, n: +(tn || 0) } } : {}) } });
   }
+  /* only the actions the role may do (the core checks them too); a problem without one stays to be seen */
+  const ok = (a: string) => (["go", "assign", "confirm"].includes(a) ? may(w.s, MGR_NEED.floor) : ["call", "without", "seen"].includes(a) ? may(w.s, MGR_NEED.orders)
+    : ["return", "pickup", "deliver"].includes(a) ? may(w.s, MGR_NEED.ask) : a === "kitchen" ? may(w.s, "kitchen") : true);
+  for (const p of out) p.actions = p.actions.filter(ok);
   return out.sort((a, b) => b.sev - a.sev || (a.key < b.key ? -1 : 1));
 }
 
@@ -241,6 +268,7 @@ async function kitchenOf(ctx: Ctx, s: StaffCtx): Promise<MgrKitchen> {
     busy: { on: k.busy.on, at: k.busy.at, atHm: k.busy.atHm, by: k.busy.by, extra: k.busy.extra, etaMin: st.kitchen.etaMin, etaBusyMin: st.kitchen.etaBusyMin },
     sections: k.sections.map((x) => ({ id: x.id, n: x.n, short: x.short, icon: x.icon, wait: x.wait, late: x.late, soon: x.soon, oldestMin: x.oldestMin, out: x.out, tablet: { online: x.tablet.online, text: x.tablet.text, lastHm: x.tablet.lastHm, today: !!x.tablet.lastAt && sofiaYmd(new Date(x.tablet.lastAt)) === sofiaYmd(nowDate(ctx)) } })),
     soldOut: so.list.map((r) => ({ id: r.id, n: r.n, secName: r.secName, atHm: r.atHm, by: r.by })),
+    canBusy: may(s, MGR_NEED.busy), canBack: may(s, MGR_NEED.back),
   };
 }
 
@@ -403,23 +431,34 @@ export async function managerTeam(ctx: Ctx, s: StaffCtx): Promise<MgrTeam> {
     log shift.tables). Returns the team and the "Отмени" id. */
 export async function managerSetTables(ctx: Ctx, s: StaffCtx, who: string, tables: (string | number)[], to?: string | null): Promise<{ team: MgrTeam; undo: { id: string; until: number } }> {
   needManager(s, "staff");
-  const before = Object.fromEntries((await openShifts(ctx)).map((x) => [x.user, x.tables.slice()]));
+  const ownersOf = (l: WaiterShift[]) => { const m = new Map<string, string>(); for (const x of l) for (const t of x.tables) m.set(t, x.user); return m; };
+  const b0 = ownersOf(await openShifts(ctx));
   await shiftSetTables(ctx, s, who, tables, to);
+  const b1 = ownersOf(await openShifts(ctx)), moves: { t: string; from: string | null; to: string | null }[] = [];
+  for (const t of new Set([...b0.keys(), ...b1.keys()])) if ((b0.get(t) || null) !== (b1.get(t) || null)) moves.push({ t, from: b0.get(t) || null, to: b1.get(t) || null });
   const id = rid(6), at = iso(ctx);
-  await withDoc(ctx, async (d) => { d.undo[id] = { id, kind: "tables", at, by: s.user.username, before }; });
+  await withDoc(ctx, async (d) => { d.undo[id] = { id, kind: "tables", at, by: s.user.username, moves }; });
   return { team: await managerTeam(ctx, s), undo: { id, until: Date.parse(at) + MGR_UNDO_MS } };
 }
 /** "Отмени" after "Смени масите": every waiter's tables exactly as before. Log: shift.tables (undo). */
 export async function managerSetTablesUndo(ctx: Ctx, s: StaffCtx, id: string): Promise<MgrTeam> {
   needManager(s, "staff");
   const rec = await withDoc(ctx, async (d) => { const r = d.undo[String(id || "")]; if (!r || r.kind !== "tables" || r.by !== s.user.username || !fresh(ctx, r.at)) throw new CoreError("undo_late", MGR_MSG.undo, 409); delete d.undo[r.id]; return r; });
-  /* the same lock as core/floor-shift.ts: the shifts are written exactly as they were */
+  /* the same lock as core/floor-shift.ts: only the tables this action moved go back, and only while they are still where
+     it put them (someone changed them meanwhile: 409, nothing is touched) */
   await serial(ctx.repo, "floor-shift", async () => {
-    const now = iso(ctx);
-    for (const sh of await openShifts(ctx)) {
-      const was = rec.before![sh.user];
-      if (!was || JSON.stringify(was) === JSON.stringify(sh.tables)) continue;
-      const next: WaiterShift = { ...sh, tables: was, updatedAt: now };
+    const now = iso(ctx), list = await openShifts(ctx), owner = new Map<string, string>();
+    for (const x of list) for (const t of x.tables) owner.set(t, x.user);
+    const moves = rec.moves || [];
+    if (moves.some((m) => (owner.get(m.t) || null) !== m.to)) throw new CoreError("changed", MGR_MSG.tablesChanged, 409);
+    const changed = new Set<WaiterShift>();
+    for (const m of moves) {
+      const a = m.to ? list.find((x) => x.user === m.to) : null, b = m.from ? list.find((x) => x.user === m.from) : null;
+      if (a) { a.tables = a.tables.filter((t) => t !== m.t); changed.add(a); }
+      if (b && !b.tables.includes(m.t)) { b.tables = [...b.tables, m.t]; changed.add(b); }
+    }
+    for (const sh of changed) {
+      const next: WaiterShift = { ...sh, updatedAt: now };
       await ctx.repo.put(COL.shifts, next);
       emit(ctx, "shift.update", { user: next.user, username: next.username, name: next.name, status: next.status, tables: next.tables });
     }
@@ -458,6 +497,7 @@ export async function managerAccept(ctx: Ctx, s: StaffCtx, no: string, opt: { wi
       const o = await getOrder(ctx, o0.no);
       if (o.status !== "accepted") throw new CoreError("not_accepted", MGR_MSG.notAccepted, 409);
       Object.assign(o, sumsWithout(o));
+      for (const l of o.lines) if (l.out) l.dropped = true;
       o.staffNotes = [...(o.staffNotes || []), { at: iso(ctx), by: s.user.username, text: MGR_MSG.without(names.join(", ")) }];
       o.updatedAt = iso(ctx);
       await ctx.repo.put(COL.orders, o);
@@ -481,6 +521,7 @@ export async function managerAcceptUndo(ctx: Ctx, s: StaffCtx, id: string): Prom
   await serial(ctx.repo, "order:" + o0.no, async () => {
     const o = await getOrder(ctx, o0.no), b = rec.order!;
     o.sub = b.sub; o.disc = b.disc; o.total = b.total; o.times = b.times;
+    for (const l of o.lines) delete l.dropped;
     if (b.codeDisc === undefined) delete o.codeDisc; else o.codeDisc = b.codeDisc;
     if (b.profileDisc === undefined) delete o.profileDisc; else o.profileDisc = b.profileDisc;
     if (b.staffNotes === undefined) delete o.staffNotes; else o.staffNotes = b.staffNotes;
@@ -528,7 +569,7 @@ async function findCall(ctx: Ctx, id: string): Promise<{ sit: TableSession; idx:
 }
 /** "Отивам": the manager takes the call himself (core/floor-staff.ts; the waiter sees it is taken). Log: call.take. */
 export async function managerCallGo(ctx: Ctx, s: StaffCtx, id: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const { sit } = await findCall(ctx, id);
   await fCallTake(ctx, s, id);
   await audit(ctx, s.user.username, "call.take", sit.table, { n: sit.n, call: id, by: s.user.username });
@@ -537,7 +578,7 @@ export async function managerCallGo(ctx: Ctx, s: StaffCtx, id: string): Promise<
 }
 /** "Възложи на…": the call is given to a waiter on shift (he sees it as his, "taken"). Log: call.take. */
 export async function managerCallAssign(ctx: Ctx, s: StaffCtx, id: string, waiter: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const w = (await openShifts(ctx)).find((x) => x.username === String(waiter || "") || x.user === String(waiter || ""));
   if (!w) invalid({ waiter: MGR_MSG.waiter }, MGR_MSG.waiter);
   const { sit: s0 } = await findCall(ctx, id);
@@ -545,7 +586,8 @@ export async function managerCallAssign(ctx: Ctx, s: StaffCtx, id: string, waite
     const { sit, idx } = await findCall(ctx, id), c = sit.calls[idx];
     if (c.done) throw new CoreError("not_found", MGR_MSG.call, 404);
     if (c.taken && c.taken.by !== w!.username) throw new CoreError("taken", MGR_MSG.taken(c.taken.name), 409);
-    c.taken = { by: w!.username, name: w!.name, at: iso(ctx) };
+    /* his, from the manager: "За мен" with a notice and the vibration on his phone */
+    c.taken = { by: w!.username, name: w!.name, at: iso(ctx), assigned: s.user.username };
     await saveSession(ctx, sit); emitCall(ctx, sit, c); await emitSession(ctx, sit);
   });
   await withDoc(ctx, async (d) => { d.calls[id] = { to: w!.username, name: w!.name, at: iso(ctx), by: s.user.username }; });
@@ -555,7 +597,7 @@ export async function managerCallAssign(ctx: Ctx, s: StaffCtx, id: string, waite
 }
 /** "Отмени" after "Отивам" (the floor's own undo) or after "Възложи на…" (the call waits again) */
 export async function managerCallUndo(ctx: Ctx, s: StaffCtx, id: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const { sit: s0, idx: i0 } = await findCall(ctx, id), c0 = s0.calls[i0];
   if (c0.taken && c0.taken.by === s.user.username) await fCallUndo(ctx, s, id);
   else {
@@ -573,7 +615,7 @@ export async function managerCallUndo(ctx: Ctx, s: StaffCtx, id: string): Promis
 }
 /** "Потвърди и прати" a QR order that went to the manager (core/floor-staff.ts: the same checks; log floor.qr_confirm) */
 export async function managerQrConfirm(ctx: Ctx, s: StaffCtx, table: string | number, grams: Record<string, number> = {}): Promise<{ no: string; now: MgrNow }> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const r = await fQrConfirm(ctx, s, table, grams);
   await withDoc(ctx, async (d) => { delete d.qr[r.session ? r.session.id : ""]; });
   say(ctx, "qr.confirm", { table: r.table.id, n: r.table.n, no: r.no });
@@ -581,32 +623,38 @@ export async function managerQrConfirm(ctx: Ctx, s: StaffCtx, table: string | nu
 }
 /** "Възложи на…" a QR order: the waiter is told (shift.update {what: "qr.assign"}); the timer is not reset. Log: call.take. */
 export async function managerQrAssign(ctx: Ctx, s: StaffCtx, session: string, waiter: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const w = (await openShifts(ctx)).find((x) => x.username === String(waiter || "") || x.user === String(waiter || ""));
   if (!w) invalid({ waiter: MGR_MSG.waiter }, MGR_MSG.waiter);
   const sit = (await openSessions(ctx)).find((x) => x.id === String(session || "") && !!x.pending);
   if (!sit) throw new CoreError("no_pending", MGR_MSG.qr, 409);
-  await withDoc(ctx, async (d) => { d.qr[sit.id] = { to: w!.username, name: w!.name, at: iso(ctx), by: s.user.username }; });
+  /* on the sitting itself: "За мен" for the chosen waiter (core/floor-staff.ts hallLive), the timer goes on */
+  const was = await setQrTo(ctx, sit.id, { by: w!.username, name: w!.name, assigned: s.user.username });
+  await withDoc(ctx, async (d) => { d.qr[sit.id] = { to: w!.username, name: w!.name, at: iso(ctx), by: s.user.username, was }; });
   await audit(ctx, s.user.username, "call.take", sit.table, { n: sit.n, qr: sit.id, assigned: w!.username });
   say(ctx, "qr.assign", { session: sit.id, table: sit.table, n: sit.n, to: w!.username });
   return managerNow(ctx, s);
 }
 export async function managerQrAssignUndo(ctx: Ctx, s: StaffCtx, session: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.floor);
   const g = await withDoc(ctx, async (d) => { const x = d.qr[String(session || "")]; if (!x || x.by !== s.user.username || !fresh(ctx, x.at)) throw new CoreError("undo_late", MGR_MSG.undo, 409); delete d.qr[session]; return x; });
+  await setQrTo(ctx, String(session), g.was || null);
   await audit(ctx, s.user.username, "call.take", String(session), { qr: session, undo: true, was: g.to });
   say(ctx, "qr.assign", { session, undo: true });
   return managerNow(ctx, s);
 }
 /** the driver's question "адрес извън зоните": one of the three answers (core/driver.ts; log driver.answer) */
 export async function managerAnswer(ctx: Ctx, s: StaffCtx, ask: string, a: AskAnswer): Promise<{ answer: string; undoUntil: number; now: MgrNow }> {
-  needManager(s);
+  needManager(s, MGR_NEED.ask);
   const r = await dAnswer(ctx, s, ask, a);
   say(ctx, "ask.answer", { ask, answer: a, order: r.order });
   return { answer: ANSWER_LABEL[a], undoUntil: r.undoUntil || 0, now: await managerNow(ctx, s) };
 }
 export async function managerAnswerUndo(ctx: Ctx, s: StaffCtx, ask: string): Promise<MgrNow> {
-  needManager(s);
+  needManager(s, MGR_NEED.ask);
+  /* the one rule of every "Отмени" in the module: only the one who did it */
+  const q = await ctx.repo.get<{ id: string; answeredBy?: string }>(COL.asks, String(ask || ""));
+  if (q && q.answeredBy && q.answeredBy !== s.user.username) throw new CoreError("undo_late", MGR_MSG.undo, 409);
   await dAnswerUndo(ctx, s, ask);
   say(ctx, "ask.answer", { ask, undo: true });
   return managerNow(ctx, s);
@@ -627,14 +675,14 @@ export async function managerBlock(ctx: Ctx, s: StaffCtx, ref: string, action: "
 }
 /** "Натоварено" (the one setting, core/kitchen.ts; log kitchen.busy_on / _off) */
 export async function managerBusy(ctx: Ctx, s: StaffCtx, on: boolean): Promise<MgrKitchen> {
-  needManager(s);
+  needManager(s, MGR_NEED.busy);
   await kitchenSetBusy(ctx, s, on);
   say(ctx, "kitchen.busy", { on });
   return kitchenOf(ctx, s);
 }
 /** "Върни" a sold-out dish (back: false = "Изчерпано днес" again, the "Отмени"); core/kitchen.ts, log menu.back / menu.sold_out */
 export async function managerBackIn(ctx: Ctx, s: StaffCtx, dish: string, back = true): Promise<MgrKitchen> {
-  needManager(s);
+  needManager(s, MGR_NEED.back);
   await kitchenSetOut(ctx, s, dish, !back);
   say(ctx, "soldout", { id: dish, out: !back });
   return kitchenOf(ctx, s);

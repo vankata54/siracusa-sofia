@@ -3,7 +3,7 @@
    to the kitchen, the three answers to a driver's question, "Залата" and "Екипът". Direct calls of the core: the server
    (server/routes/boss.ts) and the demo (src/client/api-boss.ts) call the same functions. */
 import { describe, it, expect } from "vitest";
-import { createCore, MemoryRepo, type Audience, type Hasher, type Order, type RoleId, type StaffCtx } from "../../src/core/index.ts";
+import { createCore, MemoryRepo, publicOrder, DEFAULT_ROLES, type Audience, type Hasher, type Order, type RoleId, type StaffCtx } from "../../src/core/index.ts";
 import { lateMinOf, sumsWithout, lateText } from "../../src/core/shift.ts";
 import { items } from "../../src/lib/data.ts";
 
@@ -310,5 +310,89 @@ describe("review 1: what waits for 'Приеми', one rule for a delay, the dri
     const tm = await core.shift.team(s.manager), d = tm.drivers[0];
     expect(d.cashParts).toEqual({ orders: 0, float: 20, fuel: 0 });
     expect(d.cash).toBe(20);
+  });
+});
+
+const MANAGER_SECTIONS = DEFAULT_ROLES.find((r) => r.id === "manager")!.sections;
+describe("review 2 (decisions 18.11): 'Приеми без него', 'Възложи на…', the exact 'Отмени', the sections of every action", () => {
+  it("'Приеми без него': the line stays only for reference (no ticket, not waited for, not charged, shown to the customer); 'Върни' never puts it back", async () => {
+    const { core } = mk(), { s } = await people(core);
+    const b = await web(core, { mode: "pickup", lines: [{ id: pizza2.id, q: 1 }, { id: salad.id, q: 2 }] });
+    await core.kitchen.setOut(s.kitchen, pizza2.id, true);
+    await core.shift.accept(s.manager, b.no, { without: true });
+    const pizzaSec = (await core.kitchen.config(s.kitchen)).sections.find((x) => x.cats.includes(pizza2.cat))!.id;
+    const saladSec = (await core.kitchen.config(s.kitchen)).sections.find((x) => x.cats.includes(salad.cat))!.id;
+    expect((await core.kitchen.queue(s.kitchen, pizzaSec)).tickets.map((t) => t.no)).not.toContain(b.no);
+    expect((await core.kitchen.queue(s.kitchen, saladSec)).tickets.map((t) => t.no)).toContain(b.no);
+    const done = await core.kitchen.done(s.kitchen, b.no, saladSec);
+    expect((done as unknown as { orderReady: boolean }).orderReady).toBe(true);
+    expect((await core.orders.get(b.no))!.status).toBe("ready");
+    /* the customer: the line is there as "out", the lines make the total */
+    const p = publicOrder((await core.orders.get(b.no))!);
+    const line = p.lines.find((l) => l.id === pizza2.id)!;
+    expect(line.out).toBe(true);
+    expect(r2(p.lines.filter((l) => !l.out).reduce((a, l) => a + (l.unit || 0) * l.q, 0) + (p.fee || 0) - (p.disc || 0))).toBe(p.total);
+    /* the dish is back in the menu: this order keeps it out */
+    await core.shift.backIn(s.manager, pizza2.id, true);
+    const o = (await core.orders.get(b.no))!;
+    expect(o.lines.find((l) => l.id === pizza2.id)).toMatchObject({ out: true, dropped: true });
+  });
+  it("'Възложи на…': the QR order and the call are the chosen waiter's ('За мен'), never the other's; 'Отмени' gives them back", async () => {
+    const { core, t } = mk(), { s } = await people(core);
+    await core.floor.shiftStart(s.waiter, [3, 8]); await core.floor.shiftStart(s.waiter2, [5]);
+    const c8 = await codeOf(core, s.admin, 8), c3 = await codeOf(core, s.admin, 3), A = "a".repeat(32), B = "b".repeat(32);
+    await core.floor.open(c8, A); await core.floor.cartAdd(c8, A, { id: pizza.id }); await core.floor.send(c8, A);
+    await core.floor.open(c3, B); await core.floor.call(c3, B, "order");
+    t.now += 10 * MIN;
+    const n = await core.shift.now(s.manager), qr = n.problems.find((x) => x.kind === "qr")!, call = n.problems.find((x) => x.kind === "call")!;
+    await core.shift.qrAssign(s.manager, qr.ref.session!, "waiter2");
+    await core.shift.callAssign(s.manager, call.ref.call!, "waiter2");
+    const h2 = await core.floor.hall(s.waiter2), h1 = await core.floor.hall(s.waiter);
+    expect(h2.qr.find((q) => q.table.n === 8)).toMatchObject({ forMe: true, to: { username: "waiter2" } });
+    expect(h1.qr.find((q) => q.table.n === 8)!.forMe).toBe(false);
+    expect(h2.calls.find((c) => c.table.n === 3)!.taken).toMatchObject({ mine: true, assigned: true });
+    await core.shift.qrAssignUndo(s.manager, qr.ref.session!);
+    expect((await core.floor.hall(s.waiter)).qr.find((q) => q.table.n === 8)!.forMe).toBe(true);
+    expect((await core.floor.hall(s.waiter2)).qr.find((q) => q.table.n === 8)!.forMe).toBe(false);
+  });
+  it("'Отмени' after 'Смени масите' returns only its own tables, and refuses when someone changed them meanwhile", async () => {
+    const { core } = mk(), { s } = await people(core);
+    await core.floor.shiftStart(s.waiter, [1, 2]); await core.floor.shiftStart(s.waiter2, [3, 4]);
+    const nums = async () => (await core.shift.team(s.manager)).waiters.map((w) => [w.username, w.tables.map((x) => x.n)]);
+    const r = await core.shift.setTables(s.manager, "waiter", [1, 2, 3]);
+    /* the owner changes another table meanwhile: the manager's "Отмени" leaves it */
+    await core.shift.setTables(s.owner, "waiter2", [4, 6]);
+    await core.shift.setTablesUndo(s.manager, r.undo.id);
+    expect(await nums()).toEqual([["waiter", [1, 2]], ["waiter2", [3, 4, 6]]]);
+    /* someone moved the same table: 409, nothing touched */
+    const r2b = await core.shift.setTables(s.manager, "waiter", [1, 2, 3]);
+    await core.shift.setTables(s.owner, "waiter2", [3, 4, 6]);
+    await expect(core.shift.setTablesUndo(s.manager, r2b.undo.id)).rejects.toMatchObject({ status: 409, code: "changed" });
+    expect(await nums()).toEqual([["waiter", [1, 2]], ["waiter2", [3, 4, 6]]]);
+  });
+  it("every action of 'Сега' needs the section of its object; the problems carry only the actions the role may do; 'Отмени' only by the one who did it", async () => {
+    const { core, t } = mk(), { s, tok } = await people(core);
+    await core.floor.shiftStart(s.waiter, [3]);
+    const c3 = await codeOf(core, s.admin, 3), A = "a".repeat(32);
+    await core.floor.open(c3, A); await core.floor.call(c3, A, "order");
+    t.now += 10 * MIN;
+    await core.staff.setRole("manager", ["dashboard", "notes"], "admin");
+    const m = (await core.staff.bySession(tok.manager))!;
+    await expect(core.shift.busy(m, true)).rejects.toMatchObject({ status: 403 });
+    await expect(core.shift.backIn(m, pizza.id, true)).rejects.toMatchObject({ status: 403 });
+    const n = await core.shift.now(m), call = n.problems.find((x) => x.kind === "call")!;
+    expect(call.actions).toEqual([]);
+    expect(n.kitchen).toMatchObject({ canBusy: false, canBack: false });
+    await expect(core.shift.callGo(m, call.ref.call!)).rejects.toMatchObject({ status: 403 });
+    await expect(core.shift.callAssign(m, call.ref.call!, "waiter")).rejects.toMatchObject({ status: 403 });
+    await expect(core.shift.qrConfirm(m, 3)).rejects.toMatchObject({ status: 403 });
+    /* the driver's answer: the owner cannot take back the manager's */
+    const full = (await core.staff.setRole("manager", MANAGER_SECTIONS, "admin"), (await core.staff.bySession(tok.manager))!);
+    const d = await web(core); await core.orders.setStatus(d.no, "cooking", "kitchen", s.kitchen); await core.orders.setStatus(d.no, "ready", "kitchen", s.kitchen);
+    await core.driver.start(s.driver, { car: "a1", km: 1000 });
+    const ask = await core.driver.ask(s.driver, d.no);
+    await core.shift.answer(full, ask.id, "pickup");
+    await expect(core.shift.answerUndo(s.owner, ask.id)).rejects.toMatchObject({ status: 409, code: "undo_late" });
+    await expect(core.shift.answerUndo(full, ask.id)).resolves.toBeTruthy();
   });
 });

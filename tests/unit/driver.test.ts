@@ -567,7 +567,7 @@ describe("fuel and the cash", () => {
     expect(f2.entries.map((e) => [e.litres, e.cash, e.noPhoto])).toEqual([[10, true, true], [30.5, false, false]]);
     const sum = await core.driver.shift(s.driver);
     /* cash from the delivered orders + the start change - fuel paid in cash */
-    expect(sum).toMatchObject({ fuel: 2, cash: { sum: a.total, rows: [{ no: a.no, sum: a.total }] }, float: 20, fuelCash: 15, handover: Math.round((a.total + 20 - 15) * 100) / 100, owe: false, cards: { n: 1, sum: b.total }, vouchers: { n: 0, sum: 0 }, handTo: "[ЛИПСВА: на кого се предават парите]" });
+    expect(sum).toMatchObject({ fuel: 2, cash: { sum: a.total, rows: [{ no: a.no, sum: a.total }] }, float: 20, fuelCash: 0, fuelCashPending: 15, handover: Math.round((a.total + 20) * 100) / 100, owe: false, /* without a photo the 15 € wait for the manager (decision 18.11, round 3) */ cards: { n: 1, sum: b.total }, vouchers: { n: 0, sum: 0 }, handTo: "[ЛИПСВА: на кого се предават парите]" });
     expect((await core.driver.fuel(s.driver)).cashOnHand).toBe(sum.handover);
     expect((await core.driver.drivers(s.manager)).drivers[0]).toMatchObject({ cash: sum.handover, cashTo: "[ЛИПСВА: на кого се предават парите]" });
     expect((await core.audit.list()).filter((x) => x.action === "fuel.add")).toHaveLength(2);

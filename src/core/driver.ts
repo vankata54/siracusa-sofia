@@ -273,6 +273,8 @@ export interface ShiftTotals {
   delivered: number; problems: number; fuel: number;
   cash: { rows: { no: string; zone: string; sum: number; feeMissing: boolean }[]; sum: number; feeMissing: boolean };
   float: number | null; fuelCash: number;
+  /** fuel paid in cash without a photo of the receipt: not taken off yet, the manager checks the paper receipt */
+  fuelCashPending: number;
   /** cash from the delivered orders + the start change - fuel paid in cash; owe: the restaurant owes the driver */
   handover: number; owe: boolean;
   cards: { n: number; sum: number }; vouchers: { n: number; sum: number };
@@ -1191,13 +1193,17 @@ const paidOf = (o: Order) => o.collected || { pay: o.pay, sum: o.total, feeMissi
 function totals(sh: DriverShift, orders: Order[], fuel: FuelEntry[], cars: DriverCar[]): ShiftTotals {
   const mine = ofShift(orders, sh), del = mine.filter((o) => o.status === "delivered"), paid = del.map((o) => ({ o, p: paidOf(o) }));
   const of = (m: PayMethod) => paid.filter((x) => x.p.pay === m), sum = (l: { p: { sum: number } }[]) => round2(l.reduce((a, x) => a + x.p.sum, 0));
-  const cash = of("cash"), fuelCash = round2(fuel.filter((e) => e.cash).reduce((a, e) => a + e.sum, 0)), handover = round2(sum(cash) + (sh.float || 0) - fuelCash);
+  const cash = of("cash"),
+    /* fuel paid from the cash comes off "За предаване" only with the photo of the receipt; without it the manager checks
+       the paper receipt first (shofyor.review-2, round 3: one entry could take the handover to 0) */
+    fuelCash = round2(fuel.filter((e) => e.cash && !!e.photo).reduce((a, e) => a + e.sum, 0)),
+    fuelCashPending = round2(fuel.filter((e) => e.cash && !e.photo).reduce((a, e) => a + e.sum, 0)), handover = round2(sum(cash) + (sh.float || 0) - fuelCash);
   const legs = sh.legs.map((l) => ({ car: l.car, n: carName(cars, l.car), kmStart: l.kmStart, kmEnd: l.kmEnd as number | null, km: (l.kmEnd - l.kmStart) as number | null }));
   if (sh.status === "open") legs.push({ car: sh.car, n: carName(cars, sh.car), kmStart: sh.kmStart, kmEnd: null, km: null });
   return {
     delivered: del.length, problems: mine.filter((o) => !!o.problem && o.problem.solved !== "delivered").length, fuel: fuel.length,
     cash: { rows: cash.map((x) => ({ no: x.o.no, zone: x.o.zone, sum: x.p.sum, feeMissing: !!x.p.feeMissing })), sum: sum(cash), feeMissing: cash.some((x) => !!x.p.feeMissing) },
-    float: sh.float, fuelCash, handover, owe: handover < -0.004, cards: { n: of("card").length, sum: sum(of("card")) }, vouchers: { n: of("voucher").length, sum: sum(of("voucher")) },
+    float: sh.float, fuelCash, fuelCashPending, handover, owe: handover < -0.004, cards: { n: of("card").length, sum: sum(of("card")) }, vouchers: { n: of("voucher").length, sum: sum(of("voucher")) },
     km: { legs, total: sh.status === "open" ? null : legs.reduce((a, l) => a + (l.km || 0), 0) },
   };
 }

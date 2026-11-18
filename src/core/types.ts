@@ -19,6 +19,9 @@ export interface OrderLine { id: string; q: number; mods: string[]; extra: numbe
   servedAt?: Iso; servedBy?: string;
   /** marked "Изчерпано днес" after the order was accepted (the kitchen) */
   out?: boolean;
+  /** "Приеми без него" (the manager, decision 18.11.2026): the sold-out line stays only for reference with `out`: no
+      kitchen ticket, not waited for "Готова", not charged; "Върни" of the dish later never puts it back */
+  dropped?: boolean;
   /** a note for the kitchen on this line; the weight of a `per100` steak in grams; the guest of the table ("Гост 1") */
   note?: string; grams?: number; guest?: string;
   /** the payment (of the table's bill) that covered this line */

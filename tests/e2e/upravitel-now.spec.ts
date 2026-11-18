@@ -63,17 +63,18 @@ test("„Приеми“ goes straight to „Готви се“ (the kitchen's q
   const k = await kitchen();
   await row.getByRole("button", { name: "Приеми № " + o.no }).click();
   await expect(toast(page)).toContainText("№ " + o.no + " е приета · Готви се");
-  const q = JSON.stringify(await (await k.get("/api/kitchen/queue?sec=all")).json());
-  expect(q).toContain('"' + o.no + '"');
-  const a = await admin();
-  expect(await statusOf(a, o.no)).toBe("cooking");
-  await expect(row).toHaveCount(0);
+  /* "Отмени" lives 6 s: it is pressed first, the kitchen and the order are looked at after it */
   await toast(page).getByRole("button", { name: "Отмени" }).click();
+  const a = await admin();
   await expect(page.locator('.mg-wrow[data-wno="' + o.no + '"]')).toBeVisible();
   expect(await statusOf(a, o.no)).toBe("accepted");
-  /* clean: into the kitchen */
+  /* again, into the kitchen: its queue has it */
   await page.locator('.mg-wrow[data-wno="' + o.no + '"] button').click();
   await expect(toast(page)).toContainText("е приета");
+  expect(await statusOf(a, o.no)).toBe("cooking");
+  await expect(page.locator('.mg-wrow[data-wno="' + o.no + '"]')).toHaveCount(0);
+  const q = JSON.stringify(await (await k.get("/api/kitchen/queue?sec=all")).json());
+  expect(q).toContain('"' + o.no + '"');
   expect(errs).toEqual([]);
 });
 
@@ -92,9 +93,14 @@ test("an order with a sold-out dish: „Приеми“ asks first (the sheet), 
     await row.locator("button").click();
     const sh = page.locator(".bs-sheetwrap:not(.closing) .bs-sheet");
     await expect(sh.locator("h2")).toHaveText("В поръчката има изчерпано");
-    /* the whole number (the call is logged) */
-    await expect(sh).toContainText(o.phone);
-    await expect(sh.getByRole("link", { name: "Обади се на клиента" })).toHaveAttribute("href", "tel:" + o.phone.replace(/\s/g, ""));
+    /* the number is masked until "Обади се на клиента" (then the whole number, and the call is logged) */
+    await expect(sh.locator("[data-tel-n]")).toContainText("••");
+    const a0 = await admin();
+    const calls0 = JSON.stringify(await (await a0.get("/api/admin/audit?action=order.call&limit=100")).json()).split('"' + o.no + '"').length;
+    await sh.getByRole("button", { name: "Обади се на клиента" }).click();
+    await expect(sh.locator("[data-tel-n]")).toHaveText(o.phone);
+    await expect(sh.getByRole("link", { name: /^Обади се / })).toHaveAttribute("href", "tel:" + o.phone.replace(/\s/g, ""));
+    expect(JSON.stringify(await (await a0.get("/api/admin/audit?action=order.call&limit=100")).json()).split('"' + o.no + '"').length).toBeGreaterThan(calls0);
     await sh.getByRole("button", { name: "Приеми без него" }).click();
     await expect(toast(page)).toContainText("е приета без „Шопска салата“ · Готви се");
     await expect(card(page, "out:" + o.no)).toHaveCount(0);
@@ -107,6 +113,14 @@ test("an order with a sold-out dish: „Приеми“ asks first (the sheet), 
     await expect(back).toHaveCount(0);
     const so = JSON.stringify(await (await k.get("/api/kitchen/sold-out?sec=all")).json());
     expect(so).not.toMatch(/"id":"shopska-salata"[^}]*"out":true/);
+    /* the order keeps it out: no ticket for the salads, the customer reads "Изчерпано днес", the lines make the total */
+    expect(JSON.stringify(await (await k.get("/api/kitchen/queue?sec=studeni")).json())).not.toContain('"' + o.no + '"');
+    expect((await k.post("/api/kitchen/orders/" + o.no + "/done", { data: { sec: "skara" } })).status()).toBe(200);
+    expect(await statusOf(a, o.no)).toBe("ready");
+    const tp = await page.context().newPage();
+    await tp.goto("/porachka/" + o.no + "-" + o.key + "/");
+    await expect(tp.locator(".oline.out")).toContainText("Изчерпано днес · не е включено");
+    await tp.close();
   } finally { await k.put("/api/kitchen/sold-out/shopska-salata", { data: { out: false, sec: "studeni" } }); }
   expect(errs).toEqual([]);
 });
@@ -248,11 +262,12 @@ test("no connection: „Приеми“ is kept on the phone and goes by itself 
   await context.setOffline(true);
   await expect(page.locator(".bs-net")).toBeVisible();
   await row.locator("button").click();
-  await expect(toast(page)).toContainText("Записано на телефона, тръгва само, щом има връзка.");
+  /* (the toast says it; a new online order of another test may take the toast's place: the row is the proof) */
   /* the row says so and cannot be sent twice; the toast is under the bar, never over "Опитай пак" */
   await expect(row.locator(".mg-wout")).toContainText("Записано на телефона");
   await expect(row.locator("button")).toBeDisabled();
   await page.waitForTimeout(600);
+  if (await toast(page).count()) await expect(toast(page)).toBeVisible();
   const g = await page.evaluate(() => ({ t: document.querySelector(".bs-toast")!.getBoundingClientRect().top, n: document.querySelector(".bs-net")!.getBoundingClientRect().bottom }));
   expect(g.t).toBeGreaterThanOrEqual(g.n - 1);
   const a = await admin();
@@ -261,5 +276,37 @@ test("no connection: „Приеми“ is kept on the phone and goes by itself 
   await expect(page.locator(".bs-net")).toBeHidden({ timeout: 15_000 });
   await expect.poll(() => statusOf(a, o.no), { timeout: 10_000 }).toBe("cooking");
   await expect(page.locator('.mg-wrow[data-wno="' + o.no + '"]')).toHaveCount(0);
+  expect(errs).toEqual([]);
+});
+
+test("„Възложи на…“ a QR order: it is the chosen waiter's („За мен“) with a notice on his phone", async ({ page, context, browser }) => {
+  const errs = errors(page);
+  const a = await admin();
+  const w1 = await newWaiter(a, "Сервитьор " + rnd().toUpperCase()), w2 = await newWaiter(a, "Сервитьор " + rnd().toUpperCase());
+  await freeTable(a, 17);
+  await startShift(w1, [17]); await startShift(w2, [18]);
+  try {
+    const g = await guest(a, 17);
+    expect((await g.post("cart/add", { id: "kebapcheta", q: 1 })).status).toBe(200);
+    expect((await g.post("send")).status).toBe(200);
+    backdate(17, "$.pending.at");
+    /* the chosen waiter's phone: his queue */
+    const wctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await signInCtx(wctx, w2);
+    const wp = await wctx.newPage();
+    await wp.goto("/servitor/povikvania/" + PV);
+    await expect(wp.locator("main")).not.toContainText("Маса 17");
+    await open(page, context);
+    await showAll(page);
+    const qr = page.locator(".mg-prob", { hasText: "Маса 17 · QR поръчка" });
+    await qr.getByRole("button", { name: "Възложи на…" }).click();
+    await page.locator(".bs-sheetwrap:not(.closing) .bs-sheet").getByRole("button", { name: new RegExp(w2.name) }).click();
+    await expect(toast(page)).toContainText("QR поръчката на Маса 17 е възложена на " + w2.name);
+    await expect(wp.locator("body")).toContainText("Управителят ти възложи QR поръчката на Маса 17", { timeout: 10_000 });
+    await expect(wp.locator("main")).toContainText("Маса 17");
+    const h1 = await (await w1.api.get("/api/floor/hall")).json() as { qr: { table: { n: number }; forMe: boolean }[] };
+    expect(h1.qr.find((q) => q.table.n === 17)!.forMe).toBe(false);
+    await wctx.close();
+  } finally { await freeTable(a, 17); await endShift(w1); await endShift(w2); }
   expect(errs).toEqual([]);
 });

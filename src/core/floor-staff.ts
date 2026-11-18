@@ -39,13 +39,14 @@ type TRef = { id: string; n: number; zone: "salon" | "garden" };
 export interface HallCall {
   id: string; table: TRef; session: string; kind: CallKind; label: string; note: string; at: Iso; /** the phone that called, or null */ phone: number | null;
   /** more requests in the same call (a second phone asked for the bill) */ joined: number;
-  taken: { by: string; name: string; at: Iso; mine: boolean } | null;
+  taken: { by: string; name: string; at: Iso; mine: boolean; /** given by the manager ("Възложи на…") */ assigned?: boolean } | null;
   /** waits over 2 minutes / over the manager's minutes without "Отивам" (it is with the manager too) */
   warn: boolean; late: boolean;
   /** my table / in my queue (nobody took it, or I did) */
   mine: boolean; forMe: boolean;
 }
-export interface HallQr { table: TRef; session: string; at: Iso; /** portions, the sum of the priced lines, a steak without a price */ n: number; sum: number; open: boolean; /** over settings.qrManager minutes: with the manager */ late: boolean; mine: boolean; forMe: boolean }
+export interface HallQr { table: TRef; session: string; at: Iso; /** portions, the sum of the priced lines, a steak without a price */ n: number; sum: number; open: boolean; /** over settings.qrManager minutes: with the manager */ late: boolean; mine: boolean; forMe: boolean;
+  /** the manager gave it to a waiter ("Възложи на…"): his name; forMe only for him */ to?: { username: string; name: string } }
 export interface HallTile {
   id: string; n: number; zone: "salon" | "garden"; seats: number; state: TableStateKey; /** "Вика · Сметка" */ label: string; reason: CallKind | null;
   /** since when (the call, the QR order, the oldest ready dish, the sitting); waits: a timer "чака 2:15" belongs here */
@@ -105,7 +106,7 @@ function stateOf(s: TableSession | null, lines: BillLine[]): { state: TableState
   return { state: "busy", label: TABLE_STATE_LABEL.busy, reason: null, since: s.openedAt, waits: false };
 }
 function callView(c: FloorCall, s: TableSession, t: TRef, me: StaffCtx, owner: TableOwner | undefined, nowMs: number, managerMin: number): HallCall {
-  const tk = c.taken ? { by: c.taken.by, name: c.taken.name, at: c.taken.at, mine: c.taken.by === me.user.username } : null;
+  const tk = c.taken ? { by: c.taken.by, name: c.taken.name, at: c.taken.at, mine: c.taken.by === me.user.username, ...(c.taken.assigned ? { assigned: true } : {}) } : null;
   return { id: c.id, table: t, session: s.id, kind: c.kind, label: CALL_STAFF[c.kind], note: c.note, at: c.at, phone: phoneOf(c.by), joined: c.joined || 0, taken: tk,
     warn: !c.taken && nowMs - Date.parse(c.at) >= CALL_WARN_MIN * 60_000, late: callLate(c, nowMs, managerMin), mine: !!owner && owner.user === me.user.id, forMe: !tk || tk.mine };
 }
@@ -150,7 +151,8 @@ export async function hallLive(ctx: Ctx, s: StaffCtx): Promise<HallLive> {
     tiles.push({ id: t.id, n: t.n, zone: t.zone, seats: t.seats, state: sv.state, label: sv.label, reason: sv.reason, since: sv.since, waits: sv.waits, owner: o ? { username: o.username, name: o.name } : null, mine, session: L ? L.s.id : null });
     if (!L) continue;
     for (const c of L.s.calls) if (!c.done) calls.push(callView(c, L.s, tref(t), s, o, nowMs, st.callManager));
-    if (L.s.pending) { const p = pendingView(ctx, L.s, today); qr.push({ table: tref(t), session: L.s.id, at: L.s.pending.at, n: p.n, sum: p.sum, open: p.open, late: nowMs - Date.parse(L.s.pending.at) >= qrMin * 60_000, mine, forMe: mine || !o || !myShift }); }
+    if (L.s.pending) { const p = pendingView(ctx, L.s, today); qr.push({ table: tref(t), session: L.s.id, at: L.s.pending.at, n: p.n, sum: p.sum, open: p.open, late: nowMs - Date.parse(L.s.pending.at) >= qrMin * 60_000, mine,
+      forMe: L.s.pending.to ? L.s.pending.to.by === s.user.username : mine || !o || !myShift, ...(L.s.pending.to ? { to: { username: L.s.pending.to.by, name: L.s.pending.to.name } } : {}) }); }
     const r = L.lines.filter((x) => !x.out && x.st === "ready").length;
     ready += r; if (r) readyTables++;
   }

@@ -202,7 +202,8 @@ export function startTracking(main: HTMLElement) {
     return ls.find((x) => x.cat === "pitsi") || ls.find((x) => x.course === "main") || ls[0];
   };
   function cookSay() { const m = mainDish(); if (m && m.cat === "pitsi") return "Пицата е в пещта"; if (m && m.cat === "skara-bertha") return "Месото е във фурната Bertha"; return "Готвим поръчката ви"; }
-  const lineSum = (l: OrderLine) => { const x = dish(l.id); const unit = l.unit ?? (x ? x.p + (l.extra || 0) : 0); return Math.round(unit * l.q * 100) / 100; };
+  /* a line the restaurant accepted the order without ("Изчерпано днес"): shown, never in the sums */
+  const lineSum = (l: OrderLine) => { if (l.out) return 0; const x = dish(l.id); const unit = l.unit ?? (x ? x.p + (l.extra || 0) : 0); return Math.round(unit * l.q * 100) / 100; };
 
   /* ---------- ring around the plate: one arc per step, starting and ending at the badge ---------- */
   function ringSVG() {
@@ -337,6 +338,7 @@ export function startTracking(main: HTMLElement) {
     const x = o(), D = isD();
     const rows = x.lines.map((l) => {
       const d = dish(l.id);
+      if (l.out) return '<div class="oline out">' + pic(l.id) + '<span><span class="nm"><s>' + esc(d ? d.n : l.name || "") + '</s></span><span class="q">Изчерпано днес · не е включено</span></span><span class="price"><s>' + SC.fmt(Math.round((l.unit ?? (d ? d.p : 0)) * l.q * 100) / 100) + "</s></span></div>";
       return '<div class="oline">' + pic(l.id) + '<span><span class="nm">' + esc(d ? d.n : l.name || "") + '</span><span class="q">' + l.q + " бр." + grams(l.id) + "</span>" + modsHTML(l) + '</span><span class="price">' + SC.fmt(lineSum(l)) + "</span></div>";
     }).join("");
     /* the label from the discount that won (core: discKind); only one of them applies */
@@ -351,7 +353,7 @@ export function startTracking(main: HTMLElement) {
       '<div class="kv tot"><span>Общо</span><span class="price">' + SC.fmt(x.total) + "</span></div>";
     const sub = x.lines.reduce((a, l) => a + lineSum(l), 0);
     const again = finished() ? '<button class="pill pill-line pill-lg pill-block" type="button" data-again style="margin-top:12px">' + ic("plus", 20) + "Поръчай същото · " + SC.fmt(sub) + "</button>" : "";
-    return '<div class="shell"><div class="core cpad"><div class="sec-h" style="margin-bottom:4px"><h2 class="h3">Вашата поръчка</h2><span class="muted small">' + SC.plural(x.lines.reduce((a, l) => a + l.q, 0), "ястие", "ястия") + "</span></div>" + rows +
+    return '<div class="shell"><div class="core cpad"><div class="sec-h" style="margin-bottom:4px"><h2 class="h3">Вашата поръчка</h2><span class="muted small">' + SC.plural(x.lines.reduce((a, l) => a + (l.out ? 0 : l.q), 0), "ястие", "ястия") + "</span></div>" + rows +
       '<div class="okv" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">' + kv + "</div>" + again + "</div></div>";
   }
   function protoHTML() {

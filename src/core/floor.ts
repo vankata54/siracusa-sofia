@@ -110,7 +110,8 @@ export interface FloorCall {
   id: string; kind: CallKind; note: string; at: Iso; /** the phone ("p2"), or null: asked through the bill */ by: string | null;
   /** how many more requests joined this call (a second phone asking for the bill) */
   joined?: number;
-  taken?: { by: string; name: string; at: Iso } | null;
+  /** assigned: the manager gave it to this waiter ("Възложи на…"): his, with a notice and the vibration */
+  taken?: { by: string; name: string; at: Iso; assigned?: string } | null;
   /** auto: served by another action of the waiter (his order for the table, the payment), not by "Обслужено": such a
       call is not counted in the answer times */
   done?: { how: "served" | "cancel" | "closed"; at: Iso; by: string; auto?: boolean } | null;
@@ -124,7 +125,8 @@ export interface TableSession {
   openedAt: Iso; closedAt?: Iso; closedBy?: string;
   guests: FloorGuest[]; cart: FloorCartLine[];
   /** the QR order that waits for the waiter (not an Order yet) */
-  pending: { at: Iso; by: string; lines: FloorCartLine[] } | null;
+  /** to: the manager gave the confirmation to this waiter ("Възложи на…"): "За мен" for him, the timer goes on */
+  pending: { at: Iso; by: string; lines: FloorCartLine[]; to?: { by: string; name: string; assigned: string } } | null;
   /** the last rejection, until "Разбрах" or the next send; keys: the cart lines it gave back (for the waiter's "Отмени") */
   rejected: { at: Iso; reason: RejectReason; n: number; keys: string[]; by: string; pendingAt: Iso; pendingBy: string } | null;
   /** the numbers of the sitting's orders */

@@ -97,7 +97,11 @@ export function hallStore(st: Staff): HallStore {
     st.setBadge("calls", x.counters.queue); st.setBadge("ready", x.counters.ready);
     if (old) {
       const was = new Set(old.calls.filter((c) => c.forMe).map((c) => c.id));
-      if (x.calls.some((c) => c.forMe && !c.taken && !was.has(c.id))) st.haptic([400, 150, 400]);
+      /* the manager's "Възложи на…": a call or a QR order is now mine, with the call's vibration and a notice */
+      const gotC = x.calls.filter((c) => c.taken && c.taken.mine && c.taken.assigned && !old.calls.some((o) => o.id === c.id && o.taken && o.taken.mine)).map((c) => "Маса " + c.table.n);
+      const gotQ = x.qr.filter((q) => q.to && q.forMe && !old.qr.some((o) => o.session === q.session && o.to && o.forMe)).map((q) => "QR поръчката на Маса " + q.table.n);
+      if (gotC.length || gotQ.length) { st.haptic([400, 150, 400]); st.toast("Управителят ти възложи " + [...gotC, ...gotQ].join(" и ") + "."); }
+      else if (x.calls.some((c) => c.forMe && !c.taken && !was.has(c.id))) st.haptic([400, 150, 400]);
       else if (x.counters.ready > old.counters.ready) st.haptic([90, 70, 90, 70, 90]);
     }
     if (old && old.me.onShift && x.me.onShift) {
