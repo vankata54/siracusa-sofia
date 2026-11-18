@@ -465,7 +465,12 @@ export function mountPencil(o: PencilOptions): Pencil {
     /* the page under the bar may make room for it (the staff apps move their "Няма връзка" strip below it):
        html[data-pen-on] + --pen-bar-b, the bottom edge of the bar in px */
     const de = udoc.documentElement;
-    if (on) { de.setAttribute("data-pen-on", ""); requestAnimationFrame(() => { if (on) de.style.setProperty("--pen-bar-b", Math.round(bar.getBoundingClientRect().bottom) + "px"); }); }
+    if (on) { de.setAttribute("data-pen-on", ""); requestAnimationFrame(() => {
+      /* the final place of the bar, not where its slide-in is now: the parent's top + the bar's own top and height (no transform) */
+      if (!on) return;
+      const top = bar.offsetParent ? (bar.offsetParent as HTMLElement).getBoundingClientRect().top : 0;
+      de.style.setProperty("--pen-bar-b", Math.round(top + bar.offsetTop + bar.offsetHeight) + "px");
+    }); }
     else { de.removeAttribute("data-pen-on"); de.style.removeProperty("--pen-bar-b"); }
     if (on) { attach(getDoc().defaultView); barText(); }
     else { cand = null; stack = []; if (tw) layers.get(tw)?.clear(); }

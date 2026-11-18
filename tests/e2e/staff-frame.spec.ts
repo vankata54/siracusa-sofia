@@ -606,3 +606,25 @@ test("the session cannot be read: „Няма връзка с ресторант
   await page.locator('main [data-act="reload"]').click();
   await expect(page.locator("#again")).toHaveText("заредено");
 });
+
+test("@phone the pencil's bar never covers the „Няма връзка“ strip (360 and 390)", async ({ page, context }) => {
+  await signIn(context, "waiter");
+  await quiet(page);
+  for (const w of [360, 390]) {
+    await page.setViewportSize({ width: w, height: 800 });
+    await open(page, "/servitor/");
+    await expect(page.locator(".st-top .sa-pen-btn")).toHaveText("Молив"); /* the pencil's code is loaded before the network goes */
+    await expect(page.locator("[data-pen-wait]")).toHaveCount(0);
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    const net = page.locator(".st-net");
+    await expect(net).toBeVisible();
+    await page.locator(".st-top .sa-pen-btn").click();
+    await expect(page.locator("sa-pen-ui .bar")).toHaveClass(/on/);
+    await page.waitForTimeout(600); /* the slide-in is over */
+    const bar = (await page.locator("sa-pen-ui .bar").boundingBox())!, nb = (await net.boundingBox())!;
+    expect(nb.y, "the strip starts below the bar at " + w).toBeGreaterThanOrEqual(bar.y + bar.height);
+    await page.keyboard.press("Escape");
+    await context.setOffline(false);
+  }
+});
