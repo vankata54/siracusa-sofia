@@ -34,7 +34,7 @@ export function agoMin(t: string | number): string {
   return m < 1 ? "току-що" : m < 60 ? "преди " + m + NB + "мин" : "преди " + Math.floor(m / 60) + " ч." + (m % 60 ? " " + (m % 60) + NB + "мин" : "");
 }
 /** "47 мин" / "6 ч 47 мин" (the same words as core/shift.ts lateText) */
-export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? " " + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
+export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? "\u00a0" + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
 export const toMin = (hm: string) => +hm.slice(0, 2) * 60 + +hm.slice(3, 5);
 /** "ср, 18 ноември" from "2026-11-18" */
 export const dayOf = (ymd: string, short = false) => { const [y, m, d] = ymd.split("-").map(Number); return dateLong(new Date(y, m - 1, d, 12), short); };
@@ -245,7 +245,7 @@ export async function callSheet(boss: Boss, no: string, why: string, onDone: (()
 /** the sections of the kitchen and their tablets (also on "Екипът") */
 export function sectionsHTML(k: MgrKitchen): string {
   return '<div class="mg-card mg-list mg-secs">' + k.sections.map((s) => '<div class="mg-sec' + (s.tablet.online ? "" : " offl") + '"><span class="si">' + ic(s.icon, 22) + '</span><div class="sn"><b>' + esc(s.n) + "</b>" +
-    (s.tablet.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът работи</small>' : s.tablet.today ? "" : '<small><span class="mg-dot idle" aria-hidden="true"></span>Таблетът още не е влизал днес</small>') + "</div>" +
+    (s.tablet.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът работи</small>' : s.tablet.today ? "" : '<small><span class="mg-dot idle" aria-hidden="true"></span>Таблетът още не е влизал\u00a0днес</small>') + "</div>" +
     '<div class="sc"><span><b>' + s.wait + "</b>" + (s.wait === 1 ? "чака" : "чакат") + "</span>" + (s.late ? '<span class="late">' + ic("warning", 14) + "<b>" + s.late + "</b>" + (s.late === 1 ? "закъснява" : "закъсняват") + "</span>" : "") + "</div>" +
     /* a tablet that has not signed in today is calm; the ember tag only for one that was online and dropped */
     (s.tablet.online ? "" : s.tablet.today ? '<span class="mg-offtag">' + ic("warning-circle", 18) + "Таблетът е без връзка от " + esc(s.tablet.lastHm) + "</span>" : "") + "</div>").join("") + "</div>";

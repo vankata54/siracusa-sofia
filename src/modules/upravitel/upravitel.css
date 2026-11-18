@@ -53,3 +53,5 @@
 /* „За предаване“: от какво е сумата (на ред под нея, в размера на бележката) */
 .mg-cash small span, .mg-cash small .price{font-size:inherit}
 .mg-cash small .price{font-weight:800; color:var(--ink)}
+/* on the ember box ("За предаване сега", after 21:00) the sums and [ЛИПСВА] take the ember's text colour (contrast in the dark theme) */
+.mg-cash.now small .price, .mg-cash.now small .missing{color:var(--on-ember)}
