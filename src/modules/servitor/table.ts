@@ -143,7 +143,7 @@ export async function mountTable(): Promise<void> {
         p.lines.map(pendingLine).join("") +
         '<div class="ocard flat"><div class="ft"><span>Общо' + (p.open && p.blocked ? " без стека и изчерпаното" : p.open ? " без стека" : p.blocked ? " без изчерпаното" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
         (p.blocked ? '<p class="qnote qblock">' + ic("clock", 18) + "<span>Изчерпаното не влиза в поръчката. Махни го, после „Потвърди и прати“.</span></p>" : "") +
-        '<p class="small muted qnote">Поръчка от телефон, който още не си потвърдил, минава през теб, за да няма чужди поръчки. От потвърдените телефони отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
+        '<p class="muted qnote">Поръчка от телефон, който още не си потвърдил, минава през теб, за да няма чужди поръчки. От потвърдените телефони отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
     }
 
     /* the bill requests of the phones */
@@ -260,7 +260,7 @@ export async function mountTable(): Promise<void> {
     const s = sheetOf(st)({ title: "Да откажа ли поръчката?",
       html: '<p class="m12">Гостите ще видят на телефона, че поръчката е отказана. Причина:</p><div class="notechips" role="group" aria-label="Причина">' +
         D.reasons.map((r) => '<button class="chip" type="button" data-r="' + esc(r.key) + '" aria-pressed="false">' + esc(r.label) + "</button>").join("") + "</div>" +
-        '<p class="small muted qnote" data-rhint>Избери причина.</p>',
+        '<p class="muted qnote" data-rhint>Избери причина.</p>',
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-rj disabled>Откажи поръчката</button><button class="pill pill-line pill-lg pill-block" type="button" data-keep>Не, върни се</button>' });
     s.el.addEventListener("click", (e) => {
       const x = (e.target as Element).closest<HTMLButtonElement>("button"); if (!x) return;
