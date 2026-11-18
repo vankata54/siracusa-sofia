@@ -190,7 +190,9 @@ test("@phone 360: no horizontal scroll on the sign-in, the dashboard, a section 
   await dashboard(page); expect(await over()).toBeLessThanOrEqual(0);
   await page.goto("/admin/settings/"); await expect(page.locator(".sa-h1")).toBeVisible(); expect(await over()).toBeLessThanOrEqual(0);
   /* the driver's module: without a shift of this account it opens its sign-in (the car and the km) */
-  await page.goto("/shofyor/"); await expect(page.locator(".st-app:not([data-boot]) .st-top h1")).toHaveText(/^(Моите доставки|Вход)$/); expect(await over()).toBeLessThanOrEqual(0);
+  /* the redirect to the sign-in (location.replace) comes after the frame is drawn: wait for the address, then measure */
+  await page.goto("/shofyor/"); await expect(page).toHaveURL(/\/shofyor\/vhod\/$/);
+  await expect(page.locator(".st-app:not([data-boot]) .st-top h1")).toHaveText("Вход"); expect(await over()).toBeLessThanOrEqual(0);
   /* the sheet "Търсене и раздели" */
   await page.goto("/admin/"); await page.locator('.sa-bnav [data-sa="sections"]').click();
   await expect(page.locator(".sheetwrap.on h2")).toHaveText("Търсене и раздели");
