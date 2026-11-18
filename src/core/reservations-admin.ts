@@ -10,6 +10,7 @@
      "Не блокирай" / "Отблокирай" / "Добави номер ръчно" only for the main admin, the owner and the manager; the others
      with the section see the list (the phones masked). A blocked number does not book online (reservations.ts isBlocked).
    The blocks are addressed by `ref` (a hash of the phone), never by the phone. */
+import { docRange } from "./order-index.ts";
 import { audit } from "./audit.ts";
 import { COL, iso, nowDate, phoneHash, type Ctx } from "./ctx.ts";
 import { CoreError, type NoShowBlock, type Reservation, type ReservationStatus } from "./types.ts";
@@ -91,7 +92,7 @@ export async function resMonth(ctx: Ctx, s: StaffCtx, month: string): Promise<{ 
   need(s, "reservations");
   const mo = /^\d{4}-\d{2}$/.test(String(month)) ? month : sofiaYmd(nowDate(ctx)).slice(0, 7);
   const days: Record<string, { bookings: number; toConfirm: number }> = {};
-  for (const r of await ctx.repo.list<Reservation>(COL.reservations)) {
+  for (const r of await docRange<Reservation>(ctx, COL.reservations, "date", mo + "-01", mo + "-31", (x) => x.date)) {
     if (!r.date.startsWith(mo) || r.status === "cancelled" || r.status === "waitlist") continue;
     const d = (days[r.date] ||= { bookings: 0, toConfirm: 0 });
     d.bookings++; if (r.status === "new") d.toConfirm++;

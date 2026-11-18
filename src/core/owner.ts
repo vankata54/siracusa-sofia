@@ -128,11 +128,11 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
   let byHour: OwnerToday["byHour"] = null;
   if (money) {
     const labels: string[] = []; for (let x = 600; x <= 1380; x += 15) labels.push(H.hm(x));
-    const days = await Promise.all(u.days.map(async (d) => H.cumulative((await H.slice(h, d, d)).orders) as number[]));
-    byHour = { step: 15, labels, cur: H.cumulative(cur.orders, 15, cut), usual: labels.map((_, i) => round2(days.reduce((a, d) => a + d[i], 0) / days.length)), nowIndex: Math.max(-1, Math.min(labels.length - 1, Math.ceil((cut - 600) / 15))) };
+    const days = await Promise.all(u.days.map(async (d) => H.cumulative(await H.slice(h, d, d)) as number[]));
+    byHour = { step: 15, labels, cur: H.cumulative(cur, 15, cut), usual: labels.map((_, i) => round2(days.reduce((a, d) => a + d[i], 0) / days.length)), nowIndex: Math.max(-1, Math.min(labels.length - 1, Math.ceil((cut - 600) / 15))) };
   }
   /* live: "В работа" (the admin's tab), the tables, the reservations of the evening */
-  const work = cur.orders.filter((o) => !FINISHED.includes(o.status) && o.status !== "cancelled").length;
+  const work = H.workOf(cur);
   const hall = await part(hallLive(ctx, s));
   const rs = cur.res.filter((r) => r.status === "new" || r.status === "confirmed" || r.status === "seated");
   const ahead = rs.filter((r) => r.status !== "seated" && +r.time.slice(0, 2) * 60 + +r.time.slice(3) >= cut);
@@ -141,7 +141,7 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
   const plan = await getSection(ctx, "hall");
   const sumD = (l: H.DayRow[]) => ({ orders: l.reduce((a, d) => a + d.orders, 0), revenue: m(l.reduce((a, d) => a + d.revenue, 0)) });
   return {
-    date: day, now, weekday: wd, money, sample: cur.orders.some(H.isSample),
+    date: day, now, weekday: wd, money, sample: H.isSampleSlice(cur),
     sales: { sum: m(t.revenue), n: t.orders },
     usual: { sum: m(u.revenue), orders: u.orders, days: u.days, withData: u.withData, label },
     vsUsual: { pct: p, measure }, alert,
@@ -200,14 +200,14 @@ export async function ownerTrends(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Pr
   let dish: OwnerTrends["dish"] = null;
   if (q && q.dish) {
     const all = H.dishes(R.cur), x = all.find((d) => d.id === q.dish);
-    const byDay = cd.map((d) => ({ date: d.date, q: R.cur.orders.filter((o) => o.status !== "cancelled" && H.dayOf(o) === d.date).reduce((a, o) => a + o.lines.filter((l) => l.id === q.dish && !l.out).reduce((b, l) => b + l.q, 0), 0) }));
+    const byDay = H.dishByDay(R.cur, String(q.dish));
     dish = { id: String(q.dish), name: x ? x.name : String(q.dish), q: x ? x.q : 0, revenue: m(x ? x.revenue : 0), byDay };
   }
   const head = money ? ["Ден", "Поръчки", "Отказани", "Оборот €", "Среден бон €", "Резервации", "Неявили се", "Сравнение: ден", "Сравнение: поръчки", "Сравнение: оборот €"] : ["Ден", "Поръчки", "Отказани", "Резервации", "Неявили се", "Сравнение: ден", "Сравнение: поръчки"];
   const csv = [head, ...cd.map((d, i) => { const p = pd[i];
     return money ? [d.date, String(d.orders), String(d.cancelled), csvNum(d.revenue), csvNum(d.orders ? d.revenue / d.orders : 0), String(d.reservations), String(d.noShows), p ? p.date : "", p ? String(p.orders) : "", p ? csvNum(p.revenue) : ""]
       : [d.date, String(d.orders), String(d.cancelled), String(d.reservations), String(d.noShows), p ? p.date : "", p ? String(p.orders) : ""]; })];
-  const sample = R.cur.orders.some(H.isSample) || R.prev.orders.some(H.isSample);
+  const sample = H.isSampleSlice(R.cur) || H.isSampleSlice(R.prev);
   if (sample) csv.push(["Примерни данни"]);
   return {
     period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, money, sample, history: await H.hasBefore(ctx, h.today),
@@ -257,14 +257,9 @@ function kmOf(shifts: DriverShift[], from: string, to: string): number | null {
   }
   return any ? km : null;
 }
-function payOf(sl: Pick<H.Slice, "orders" | "from" | "to">, sessions: TableSession[]): PayBlock {
-  const r = (n: number) => round2(n), o = { cash: 0, card: 0, voucher: 0 }, t = { cash: 0, card: 0, unpaid: 0 };
-  let tableRev = 0;
-  for (const x of sl.orders) {
-    if (x.status === "cancelled") continue;
-    if (H.chKey(x.channel) === "table") { tableRev += x.total || 0; continue; }
-    o[x.pay === "card" ? "card" : x.pay === "voucher" ? "voucher" : "cash"] += x.total || 0;
-  }
+function payOf(sl: Pick<H.Slice, "days" | "from" | "to">, sessions: TableSession[]): PayBlock {
+  const r = (n: number) => round2(n), p = H.payOfDays(sl), o = { cash: p.cash, card: p.card, voucher: p.voucher }, t = { cash: 0, card: 0, unpaid: 0 };
+  const tableRev = p.table;
   for (const s of sessions) for (const p of s.payments || []) { const d = shiftDay(new Date(p.at)); if (d >= sl.from && d <= sl.to) t[p.how === "card" ? "card" : "cash"] += p.sum; }
   t.unpaid = Math.max(0, tableRev - t.cash - t.card);
   return { online: { cash: r(o.cash), card: r(o.card), voucher: r(o.voucher) }, table: { cash: r(t.cash), card: r(t.card), unpaid: r(t.unpaid) }, total: r(o.cash + o.card + o.voucher + tableRev) };
@@ -275,8 +270,7 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   const h = await H.loadHistory(ctx), R = await ranges(h, q);
   const [sessions, prevSessions] = (await Promise.all([H.sessionsOf(ctx, R.from, R.to), H.sessionsOf(ctx, R.c.from, R.c.to)])) as TableSession[][];
   const fr = await fuelReport(ctx, s, { from: R.from, to: R.to }), pf = await fuelReport(ctx, s, { from: R.c.from, to: R.c.to });
-  const isDel = (o: H.Slice["orders"][number]) => o.mode === "delivery" && o.status === "delivered";
-  const delivered = R.cur.orders.filter(isDel).length, prevDelivered = R.prev.orders.filter(isDel).length;
+  const delivered = H.deliveredOf(R.cur), prevDelivered = H.deliveredOf(R.prev);
   const zones = await liveZones(ctx);
   /* the cash of the drivers today */
   const day = h.today, dv = await part(driversView(ctx, s)), staff = new Map((await ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff)).map((u) => [u.username, u.name]));
@@ -292,11 +286,11 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   const lit = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
   const csv = [["Ден", "Оборот €", "Поръчки", "В брой €", "Карта при получаване €", "Ваучер €", "На маса €", "Гориво €", "Литри", "Сравнение: ден", "Сравнение: оборот €", "Сравнение: гориво €"],
     ...byDay.map((d, i) => {
-      const p = payOf({ from: d.date, to: d.date, orders: R.cur.orders.filter((o) => H.dayOf(o) === d.date) }, sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
+      const p = payOf({ from: d.date, to: d.date, days: R.cur.days.filter((x) => x.date === d.date) }, sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
       return [d.date, csvNum(d.revenue), String(d.orders), csvNum(p.online.cash), csvNum(p.online.card), csvNum(p.online.voucher), csvNum(p.table.cash + p.table.card + p.table.unpaid), csvNum(f.sum), lit(f.litres),
         c ? c.date : "", c ? csvNum(c.revenue) : "", cf ? csvNum(cf.sum) : ""];
     })];
-  const sample = R.cur.orders.some(H.isSample);
+  const sample = H.isSampleSlice(R.cur);
   if (sample) csv.push(["Примерни данни"]);
   return {
     period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample, history: await H.hasBefore(ctx, h.today),

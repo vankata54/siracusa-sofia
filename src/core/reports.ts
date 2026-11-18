@@ -13,7 +13,7 @@
 import type { Ctx } from "./ctx.ts";
 import type { StaffCtx } from "./staff.ts";
 import { need, may } from "./rights.ts";
-import { loadHistory, slice, totals, byChannel, byHour, byDay, top8, periodRange, compareRange, asPeriod, hm, isSample, HISTORY_MAX_DAYS, HISTORY_MSG, span, type Period, type Totals } from "./history.ts";
+import { loadHistory, slice, totals, byChannel, byHour, byDay, top8, periodRange, compareRange, asPeriod, hm, isSampleSlice, HISTORY_MAX_DAYS, HISTORY_MSG, span, type Period, type Totals } from "./history.ts";
 
 export type { Period, Totals };
 export { periodRange };
@@ -63,7 +63,7 @@ export async function reportFull(ctx: Ctx, q: { period?: Period; from?: string; 
   return {
     period, from, to, days: span(from, to), until: onlyToday ? hm(h.now) : null,
     ...totals(cur), byChannel: byChannel(cur), byHour: byHour(cur), byDay: byDay(cur).map(({ cancelled: _c, ...d }) => d), top: top8(cur), prev,
-    cost: null, sample: cur.orders.some(isSample), money: true,
+    cost: null, sample: isSampleSlice(cur), money: true,
   };
 }
 

@@ -10,6 +10,8 @@
      time today from the real times of the calls (null without data).
    A shift never continues on the next day (Sofia): an open one from an earlier day is closed at the next look.
    Log: shift.start, shift.end, shift.tables. Real time: shift.update (staff). */
+import { addDaysYmd } from "../lib/time.ts";
+import { docRange } from "./order-index.ts";
 import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Iso } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
@@ -138,7 +140,10 @@ export async function shiftView(ctx: Ctx, s: StaffCtx): Promise<WaiterShiftView>
   if (!isBoss(s)) throw new CoreError("forbidden", RIGHTS_MSG.boss, 403);
   const h = (await liveHall(ctx)).tables.filter((t) => !t.off).sort((a, b) => a.n - b.n), shifts = await openShifts(ctx), st = await getSettings(ctx);
   const nowMs = nowDate(ctx).getTime(), today = shiftDay(nowDate(ctx));
-  const all = await ctx.repo.list<TableSession>(COL.tableSessions);
+  /* the sittings opened since the day before yesterday and every open one (the calls of today), never every sitting ever */
+  const since = addDaysYmd(today, -2) + "T00:00:00.000Z", recent = await docRange<TableSession>(ctx, COL.tableSessions, "createdAt", since, "9999", (x) => (x as TableSession & { createdAt?: string }).createdAt || x.openedAt || "");
+  const openNow = await ctx.repo.list<TableSession>(COL.tableSessions, { status: "open" } as Partial<TableSession>), seenS = new Set(recent.map((x) => x.id));
+  const all = [...recent, ...openNow.filter((x) => !seenS.has(x.id))];
   const taken = new Set(shifts.flatMap((x) => x.tables));
   return {
     waiters: shifts.map((sh) => {

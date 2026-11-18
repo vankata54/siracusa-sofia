@@ -8,6 +8,7 @@
      pickup, the time ("Възможно най-скоро" or later today), the dishes; the price, the zone, the hours and the lunch rules
      come from the core (createOrder, channel "phone"); no marketing consent, no profile bonus, no code, no guest limits.
      Log: order.create with the staff member. The kitchen hears it like a web order (order.created). */
+import { liveOrders, ordersPage, OPEN_STATUSES } from "./order-index.ts";
 import { audit } from "./audit.ts";
 import { COL, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, PAY_LABEL, type Channel, type Order, type OrderStatus, type PayMethod } from "./types.ts";
@@ -15,7 +16,7 @@ import type { StaffCtx } from "./staff.ts";
 import { need, needBoss, may, invalid, maskPhone, maskEmail, serial } from "./rights.ts";
 import { createOrder, setOrderStatus, FINISHED, STATUS_LABEL, FLOW, nextStatus } from "./orders.ts";
 import { liveZones } from "./zones.ts";
-import { sofiaYmd, minutes } from "../lib/time.ts";
+import { sofiaYmd, minutes, addDaysYmd } from "../lib/time.ts";
 import type { Cart } from "../lib/cart.ts";
 
 export const CHANNEL_LABEL: Record<Channel, string> = { web: "Сайт", qr: "Маса", waiter: "Маса", phone: "Телефон", office: "Офис" };
@@ -63,15 +64,27 @@ export async function ordersList(ctx: Ctx, s: StaffCtx, q: OrdersQuery = {}): Pr
   need(s, "orders");
   const today = sofiaYmd(nowDate(ctx)), day = q.day === "all" ? "all" : q.day && /^\d{4}-\d{2}-\d{2}$/.test(q.day) ? q.day : today;
   const zoneMin = new Map((await liveZones(ctx)).map((z) => [z.n, z.etaMin]));
-  const all = (await ctx.repo.list<Order>(COL.orders)).filter((o) => day === "all" || dayOf(o) === day).sort((a, b) => +b.no - +a.no);
-  const counts: Record<string, number> = { work: 0, done: 0 };
-  for (const o of all) { counts[o.status] = (counts[o.status] || 0) + 1; if (FINISHED.includes(o.status)) counts.done++; else if (o.status !== "cancelled") counts.work++; }
+  /* never the whole table: a day reads the days around it by the index (a calendar day holds orders of the shift day
+     before it, 00:00-04:00, and the pre-orders "за утре" of the day after); "Всички дни" asks the repo for the counts by
+     status and the newest orders that pass the filters, by its columns (core/order-index.ts) */
   const text = String(q.q || "").trim().toLowerCase(), dg = text.replace(/\D/g, "");
-  const ch = (o: Order) => !q.channel || (q.channel === "table" ? o.channel === "qr" || o.channel === "waiter" : o.channel === q.channel);
-  const st = (o: Order) => !q.status || (q.status === "work" ? !FINISHED.includes(o.status) && o.status !== "cancelled" : q.status === "done" ? FINISHED.includes(o.status) : o.status === q.status);
-  const tx = (o: Order) => !text || o.no === dg || (dg.length >= 3 && o.phone.endsWith(dg)) || (text.length >= 3 && (o.addr || "").toLowerCase().includes(text)) || (text.length >= 2 && o.name.toLowerCase().includes(text));
-  const now = minutes(ctx.clock);
-  const shown = all.filter((o) => ch(o) && st(o) && tx(o)).slice(0, Math.min(500, Math.max(1, q.limit || 300)));
+  const now = minutes(ctx.clock), limit = Math.min(500, Math.max(1, q.limit || 300));
+  const counts: Record<string, number> = { work: 0, done: 0 };
+  let shown: Order[];
+  if (day === "all") {
+    const statuses = !q.status ? null : q.status === "work" ? OPEN_STATUSES : q.status === "done" ? FINISHED : [q.status];
+    const channels = !q.channel ? null : q.channel === "table" ? ["qr", "waiter"] : [q.channel];
+    const r = await ordersPage(ctx, { statuses, channels, text, digits: dg, limit });
+    for (const [k, v] of Object.entries(r.counts)) { counts[k] = v; if (FINISHED.includes(k as Order["status"])) counts.done += v; else if (k !== "cancelled") counts.work += v; }
+    shown = r.orders;
+  } else {
+    const all = (await liveOrders(ctx, addDaysYmd(day, -1), addDaysYmd(day, 1))).filter((o) => dayOf(o) === day).sort((a, b) => +b.no - +a.no);
+    for (const o of all) { counts[o.status] = (counts[o.status] || 0) + 1; if (FINISHED.includes(o.status)) counts.done++; else if (o.status !== "cancelled") counts.work++; }
+    const ch = (o: Order) => !q.channel || (q.channel === "table" ? o.channel === "qr" || o.channel === "waiter" : o.channel === q.channel);
+    const st = (o: Order) => !q.status || (q.status === "work" ? !FINISHED.includes(o.status) && o.status !== "cancelled" : q.status === "done" ? FINISHED.includes(o.status) : o.status === q.status);
+    const tx = (o: Order) => !text || o.no === dg || (dg.length >= 3 && o.phone.endsWith(dg)) || (text.length >= 3 && (o.addr || "").toLowerCase().includes(text)) || (text.length >= 2 && o.name.toLowerCase().includes(text));
+    shown = all.filter((o) => ch(o) && st(o) && tx(o)).slice(0, limit);
+  }
   return { day, rows: await Promise.all(shown.map(async (o) => rowOf(o, await lateOf(ctx, o, zoneMin), now))), counts };
 }
 

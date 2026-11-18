@@ -152,7 +152,10 @@ export async function exportCustomer(ctx: Ctx, c: Customer) {
     for the fiscal record as "Изтрит клиент" with only the zone. One function for "Изтрий профила" (the customer) and the
     admin's "Изтрий" (customers-admin.ts customersPurge). */
 export async function forgetCustomerData(ctx: Ctx, c: Pick<Customer, "id" | "phone">): Promise<void> {
-  for (const o of (await ctx.repo.list<Order>(COL.orders)).filter((x) => (c.phone && x.phone === c.phone) || x.userId === c.id)) {
+  /* the orders of the phone and of the account, by their indexes (never the whole table) */
+  const mine = new Map<string, Order>();
+  for (const o of [...(c.phone ? await ctx.repo.list<Order>(COL.orders, { phone: c.phone } as Partial<Order>) : []), ...await ctx.repo.list<Order>(COL.orders, { userId: c.id } as Partial<Order>)]) mine.set(o.id, o);
+  for (const o of mine.values()) {
     Object.assign(o, { name: "Изтрит клиент", phone: "", email: undefined, addr: o.addr ? o.zone || "" : "", note: undefined, userId: null, updatedAt: iso(ctx) });
     await ctx.repo.put(COL.orders, o);
   }

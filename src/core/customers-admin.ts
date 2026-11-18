@@ -12,6 +12,7 @@
      phone for the one-time bonus stays (decision 12.11.2026);
    - the feedback ("Пишете ни", the answers after a rating) and the inquiries (topic "voucher" / "birthday", decision
      12.11.2026): new / called / done, the contact masked, "Покажи" into the log. Inquiries: also the section "Оферти". */
+import { customerGroups, type CustomerGroup } from "./order-index.ts";
 import { audit } from "./audit.ts";
 import { COL, iso, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, type Customer, type Order, type Reservation, type Session } from "./types.ts";
@@ -29,7 +30,7 @@ export interface CustomerRow {
   id: string; name: string; phone: string; since: string; orders: number; last: string | null; sum: number;
   consent: { marketing: boolean; birthday: boolean }; block: "blocked" | "pending" | null; isNew: boolean; deleting: { until: number } | null;
 }
-const sum2 = (l: Order[]) => Math.round(l.filter((o) => o.status !== "cancelled").reduce((a, o) => a + (o.total || 0), 0) * 100) / 100;
+const sum2 = (l: Pick<Order, "status" | "total">[]) => Math.round(l.filter((o) => o.status !== "cancelled").reduce((a, o) => a + (o.total || 0), 0) * 100) / 100;
 
 /** deletes for good every profile whose window for "Отмени" has passed (the sweep) */
 export async function customersPurge(ctx: Ctx): Promise<number> {
@@ -49,12 +50,15 @@ export async function customersPurge(ctx: Ctx): Promise<number> {
 export async function customersList(ctx: Ctx, s: StaffCtx, q: { q?: string; filter?: "offers" | "birthday" | "blocked" | "new" | "" } = {}): Promise<{ rows: CustomerRow[]; total: number }> {
   need(s, "customers");
   await customersPurge(ctx);
-  const all = await ctx.repo.list<Customer>(COL.customers), orders = await ctx.repo.list<Order>(COL.orders);
-  const by = new Map<string, Order[]>();
-  for (const o of orders) { if (!o.phone) continue; const l = by.get(o.phone) || []; l.push(o); by.set(o.phone, l); }
-  /* + the orders made while signed in with another phone */
-  const byUser = new Map<string, Order[]>();
-  for (const o of orders) { if (!o.userId) continue; const l = byUser.get(o.userId) || []; l.push(o); byUser.set(o.userId, l); }
+  /* the numbers of the orders (how many, the sum, the last one) grouped by phone and account in the repo (each order in
+     one group; core/order-index.ts): no order is read */
+  const all = await ctx.repo.list<Customer>(COL.customers), groups = await customerGroups(ctx);
+  const by = new Map<string, CustomerGroup[]>(), byUser = new Map<string, CustomerGroup[]>();
+  for (const g of groups) {
+    if (g.phone) { const l = by.get(g.phone) || []; l.push(g); by.set(g.phone, l); }
+    /* + the orders made while signed in with another phone */
+    if (g.userId) { const l = byUser.get(g.userId) || []; l.push(g); byUser.set(g.userId, l); }
+  }
   const now = nowDate(ctx).getTime(), text = String(q.q || "").trim().toLowerCase(), dg = text.replace(/\D/g, "");
   const rows: CustomerRow[] = [];
   for (const c of all) {
@@ -65,8 +69,8 @@ export async function customersList(ctx: Ctx, s: StaffCtx, q: { q?: string; filt
     if (q.filter === "birthday" && !c.consent.birthday) continue;
     if (q.filter === "blocked" && !block) continue;
     if (q.filter === "new" && !isNew) continue;
-    const last = l.sort((a, b) => b.ts - a.ts)[0];
-    rows.push({ id: c.id, name: c.name || "Клиент", phone: maskPhone(c.phone), since: c.since, orders: l.length, last: last ? last.createdAt : null, sum: sum2(l),
+    const n = l.reduce((a, g) => a + g.n, 0), lastTs = Math.max(0, ...l.map((g) => g.lastTs || 0));
+    rows.push({ id: c.id, name: c.name || "Клиент", phone: maskPhone(c.phone), since: c.since, orders: n, last: n && lastTs ? new Date(lastTs).toISOString() : null, sum: Math.round(l.reduce((a, g) => a + (g.sum || 0), 0) * 100) / 100,
       consent: { marketing: !!c.consent.marketing, birthday: !!c.consent.birthday }, block, isNew, deleting: c.deleting ? { until: c.deleting.until } : null });
   }
   rows.sort((a, b) => ((b.last || "") < (a.last || "") ? -1 : (b.last || "") > (a.last || "") ? 1 : a.name < b.name ? -1 : 1));

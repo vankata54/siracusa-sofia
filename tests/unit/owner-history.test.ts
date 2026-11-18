@@ -47,6 +47,9 @@ describe("the day and the hour of an order", () => {
     expect(hourOf({ placedAt: "07:30", slot: "12:00" })).toBe(12);
     expect(hourOf({ placedAt: "00:30", slot: "asap" })).toBe(24);
     expect(placedMin({ placedAt: "00:30" })).toBe(1470);
+    /* placed at 01:00 Sofia on the 17th: "за днес 12:00" is the 17th (as the kitchen cooks it), "възможно най-скоро" the evening of the 16th */
+    expect(histDay({ ts: ts("2026-11-16T23:00:00Z"), createdAt: "2026-11-16T23:00:00Z", sched: "днес", slot: "12:00" })).toBe("2026-11-17");
+    expect(histDay({ ts: ts("2026-11-16T23:00:00Z"), createdAt: "2026-11-16T23:00:00Z", sched: "", slot: "asap" })).toBe("2026-11-16");
   });
   it("'Месец' compares with the month before, never past its last day", () => {
     expect(compareRange("month", "2026-12-01", "2026-12-31")).toEqual({ from: "2026-11-01", to: "2026-11-30" });

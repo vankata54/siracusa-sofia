@@ -13,6 +13,7 @@
      tracking page (order.status).
    No GPS and no routing service in v1 (decisions of 17.11.2026): no kilometres, minutes or fuel for a route (null with
    the note [ЛИПСВА: километри и минути на маршрута]); the estimated arrival is the zone's minutes + 2 min per previous address. */
+import { liveOrders } from "./order-index.ts";
 import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, PAY_LABEL, type Iso, type Order, type OrderStatus, type PayMethod, type StaffUser } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
@@ -415,7 +416,13 @@ async function mustShift(ctx: Ctx, s: StaffCtx): Promise<DriverShift> {
   return sh;
 }
 async function putShift(ctx: Ctx, sh: DriverShift): Promise<void> { sh.updatedAt = iso(ctx); await ctx.repo.put(COL.shifts, sh); }
-const deliveryOrders = (ctx: Ctx) => ctx.repo.list<Order>(COL.orders, { mode: "delivery" } as Partial<Order>);
+/** the delivery orders a driver's screens need: the days around today and every open one (core/order-index.ts), and back
+    to the start of the oldest open shift (its cash and its deliveries); never the whole table */
+async function deliveryOrders(ctx: Ctx): Promise<Order[]> {
+  let from = addDaysYmd(shiftDay(nowDate(ctx)), -2);
+  for (const x of await ctx.repo.list<DriverShift>(COL.shifts, { role: "driver", status: "open" } as Partial<DriverShift>)) { const d = addDaysYmd(shiftDay(new Date(x.startedAt)), -1); if (d < from) from = d; }
+  return (await liveOrders(ctx, from)).filter((o) => o.mode === "delivery");
+}
 const carName = (cars: DriverCar[], id: string) => (cars.find((c) => c.id === id) || { n: id }).n;
 const carLite = (cars: DriverCar[], id: string): ShiftView["car"] => { const c = cars.find((x) => x.id === id); return { id, n: c ? c.n : id, plate: c ? c.plate : null, missing: c && c.plate ? null : DRIVER_MISSING.cars }; };
 /** the orders of a shift: taken by this driver from its start (to its end) */

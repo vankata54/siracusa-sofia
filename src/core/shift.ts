@@ -10,6 +10,7 @@
    cash are allowed. `money` says which; `today` is null without it (tests/unit/boss-core-shift.test.ts).
    Every action writes a line in the log (call.take, order.call, order.note, shift.tables, hall.update and the other
    cores' own lines) and tells the screens `shift.update`. */
+import { liveOrders, ordersByIds } from "./order-index.ts";
 import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Iso, type Order, type OrderStatus, type Reservation } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
@@ -195,7 +196,8 @@ interface World {
   hall: HallLive; doc: ShiftDoc; set: { callManager: number; qrManager: number };
 }
 async function world(ctx: Ctx, s: StaffCtx): Promise<World> {
-  const [orders, zones, staff, hall, doc, st] = await Promise.all([ctx.repo.list<Order>(COL.orders), liveZones(ctx), ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff), hallLive(ctx, s), getDoc(ctx), getSettings(ctx)]);
+  /* the orders around today and the open ones (core/order-index.ts), never the whole table */
+  const [orders, zones, staff, hall, doc, st] = await Promise.all([liveOrders(ctx), liveZones(ctx), ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff), hallLive(ctx, s), getDoc(ctx), getSettings(ctx)]);
   return { ctx, s, day: sofiaYmd(nowDate(ctx)), now: minutes(ctx.clock), nowMs: nowDate(ctx).getTime(), orders, zoneMin: new Map(zones.map((z) => [z.n, z.etaMin])), names: new Map(staff.map((u) => [u.username, u.name])),
     hall, doc, set: { callManager: st.callManager, qrManager: st.qrManager || 3 } };
 }
@@ -412,7 +414,7 @@ export interface MgrTeam {
 }
 export async function managerTeam(ctx: Ctx, s: StaffCtx): Promise<MgrTeam> {
   needManager(s, "staff");
-  const [sv, hall, dv, orders, zones] = await Promise.all([shiftView(ctx, s), hallLive(ctx, s), driversView(ctx, s), ctx.repo.list<Order>(COL.orders), liveZones(ctx)]);
+  const [sv, hall, dv, orders, zones] = await Promise.all([shiftView(ctx, s), hallLive(ctx, s), driversView(ctx, s), liveOrders(ctx), liveZones(ctx)]);
   const now = minutes(ctx.clock), day = sofiaYmd(nowDate(ctx)), zoneMin = new Map(zones.map((z) => [z.n, z.etaMin])), byNo = new Map(orders.map((o) => [o.no, o]));
   /* the delay of a stop: the same rule and the same "now" as "Проблеми сега" (lateMinOf), never a second number */
   const stopLate = <T extends { no: string; late: number; lateLabel: string | null }>(x: T): T => {
@@ -745,8 +747,8 @@ export async function managerSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise
   const fl = await staffSearch(ctx, s, q);
   out.tables = fl.tables; out.reservations = fl.reservations; out.soldOut = fl.soldOut;
   if (out.orders) {
-    const a = await adminSearch(ctx, s, q), all = new Map((await ctx.repo.list<Order>(COL.orders)).map((o) => [o.no, o]));
-    out.orders = (a.orders || []).map((h) => { const o = all.get(h.id)!; return { no: o.no, status: o.status, statusLabel: STATUS_LABEL[o.status], channelName: chName(o), placedAt: o.placedAt, name: o.name, phone: h.phone, total: o.total, exact: h.exact }; });
+    const a = await adminSearch(ctx, s, q), all = new Map((await ordersByIds(ctx, (a.orders || []).map((h) => h.id))).map((o) => [o.no, o]));
+    out.orders = (a.orders || []).filter((h) => all.has(h.id)).map((h) => { const o = all.get(h.id)!; return { no: o.no, status: o.status, statusLabel: STATUS_LABEL[o.status], channelName: chName(o), placedAt: o.placedAt, name: o.name, phone: h.phone, total: o.total, exact: h.exact }; });
   }
   /* the people on shift: by a word of the name ("сервитьор 2" is the whole name, the number is part of it) */
   const words = lq.split(" ").filter((w) => w.length >= 3 || /^\d+$/.test(w));
@@ -757,7 +759,7 @@ export async function managerSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise
   const cfg = await kitchenConfig(ctx);
   for (const x of cfg.sections) if (hit(x.n) || hit(x.short)) out.people.push({ kind: "kitchen", id: x.id, name: x.n, tables: [] });
   if (managerMoney(s) && /оборот|oborot/.test(lq)) {
-    const day = sofiaYmd(nowDate(ctx)), l = (await ctx.repo.list<Order>(COL.orders)).filter((o) => sofiaYmd(new Date(o.ts || o.createdAt)) === day && o.status !== "cancelled");
+    const day = sofiaYmd(nowDate(ctx)), l = (await liveOrders(ctx)).filter((o) => sofiaYmd(new Date(o.ts || o.createdAt)) === day && o.status !== "cancelled");
     out.today = { sum: round2(l.reduce((a, o) => a + (o.total || 0), 0)), n: l.length };
   }
   return out;

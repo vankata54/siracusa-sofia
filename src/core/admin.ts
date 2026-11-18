@@ -4,6 +4,7 @@
    - "Днес": orders in work, reservations today, sold out today, and for the owner and the main admin
      "Днес: X € от N поръчки" (decision 15.11.2026, 5) from the real orders (without the cancelled ones).
    The badges in the admin bar read the same numbers (the badge "Бележки" = the number in "Чака те"). */
+import { docFields, searchOrdersLight } from "./order-index.ts";
 import { COL, nowDate, type Ctx } from "./ctx.ts";
 import type { NoShowBlock, Order, Reservation } from "./types.ts";
 import { FINISHED } from "./orders.ts";
@@ -39,7 +40,7 @@ export async function summary(ctx: Ctx, s: StaffCtx): Promise<Summary> {
   const day = shiftDay(nowDate(ctx));
   const seeOrders = may(s, "orders"), seeRes = may(s, "reservations");
   const orders = seeOrders ? (await Promise.all(OPEN.map((st) => ctx.repo.list<Order>(COL.orders, { status: st } as Partial<Order>)))).flat() : [];
-  const res = seeRes ? (await ctx.repo.list<Reservation>(COL.reservations)).filter((r) => r.date === day) : [];
+  const res = seeRes ? await ctx.repo.list<Reservation>(COL.reservations, { date: day } as Partial<Reservation>) : [];
   const decide = seeRes && ["admin", "owner", "manager"].includes(s.user.role);
   const blocks = decide ? (await ctx.repo.list<NoShowBlock>(COL.blocks)).filter((b) => b.status === "pending").length : null;
   let soldOut: number | null = null;
@@ -104,7 +105,9 @@ export async function search(ctx: Ctx, s: StaffCtx, raw: string): Promise<Search
     out.customers = l.map((c) => ({ c, m: match(c.name, c.phone) })).filter((x) => x.m).map(({ c, m }) => ({ kind: "customer" as const, id: c.id, title: c.name || "Клиент", phone: maskPhone(c.phone), exact: m === 2 }));
   }
   if (may(s, "orders")) {
-    const l = await ctx.repo.list<Order>(COL.orders);
+    /* the whole history by its columns (the name as compared here, the number, the phone; core/order-index.ts): only the
+       candidates come back, each checked again by the same rule */
+    const l = await searchOrdersLight(ctx, txt ? nq : "", dq);
     out.orders = l.map((o) => {
       const byNo = !!dq && (o.no === dq || (dq.length >= 3 && dq.length < 6 && o.no.startsWith(dq)));
       const m = byNo ? (o.no === dq ? 2 : 1) : match(o.name, o.phone);
@@ -113,7 +116,8 @@ export async function search(ctx: Ctx, s: StaffCtx, raw: string): Promise<Search
       .map(({ o, m }) => ({ kind: "order" as const, id: o.no, title: "№ " + o.no, status: o.status, phone: maskPhone(o.phone), exact: m === 2, date: sofiaYmd(new Date(o.ts || o.createdAt)), time: o.placedAt, people: undefined }));
   }
   if (may(s, "reservations")) {
-    const l = await ctx.repo.list<Reservation>(COL.reservations);
+    type LightR = Pick<Reservation, "id" | "name" | "phone" | "status" | "date" | "time" | "people">;
+    const l = await docFields<LightR>(ctx, COL.reservations, ["name", "phone", "status", "date", "time", "people"]);
     out.reservations = l.map((r) => ({ r, m: match(r.name, r.phone) })).filter((x) => x.m).sort((a, b) => (a.r.date < b.r.date ? 1 : -1))
       .map(({ r, m }) => ({ kind: "reservation" as const, id: r.id, title: r.name || "Резервация", status: r.status, date: r.date, time: r.time, people: r.people, phone: maskPhone(r.phone), exact: m === 2 }));
   }

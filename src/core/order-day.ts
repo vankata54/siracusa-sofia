@@ -1,6 +1,7 @@
 /* THE day and hour of an order in the history ("Днес", "Отчети", the owner's module, the dashboard), one rule
    (decision of the chief after the review of the owner's module):
-   - the day the order is FOR: a pre-order "за утре" is in tomorrow (orderDay, core/orders.ts), any other order in the
+   - the day the order is FOR: a pre-order "за утре" is in tomorrow, "за днес" in the calendar day it was placed (orderDay,
+     core/orders.ts), any other order in the
      shift day of the moment it was placed (the day starts at 04:00 Sofia, src/lib/shift-day.ts: 00:30 is still the
      evening before, as for the kitchen and the waiter);
    - the hour: the hour it is for (`slot` "12:00") when it has one, else the hour it was placed;
@@ -13,7 +14,10 @@ export interface DayFields { ts?: number; createdAt?: string; sched?: string; sl
 const at = (o: DayFields) => new Date(o.ts || o.createdAt || 0);
 /** "YYYY-MM-DD": the day the order is for */
 export function histDay(o: DayFields): string {
-  return o.sched === "утре" ? addDaysYmd(sofiaYmd(new Date(o.createdAt || o.ts || 0)), 1) : shiftDay(at(o));
+  /* a pre-order is for a calendar day ("днес" placed at 03:50 is for today, not the evening before) */
+  if (o.sched === "утре") return addDaysYmd(sofiaYmd(new Date(o.createdAt || o.ts || 0)), 1);
+  if (o.sched === "днес") return sofiaYmd(new Date(o.createdAt || o.ts || 0));
+  return shiftDay(at(o));
 }
 /** minutes on the shift clock: before 04:00 counts after midnight of the evening (00:30 -> 1470) */
 export const shiftMin = (m: number): number => (m < SHIFT_DAY_FROM ? m + 1440 : m);

@@ -31,7 +31,10 @@ export const orders = sqliteTable("orders", {
   ...doc, no: integer("no").notNull(), mode: text("mode").notNull(), status: text("status").notNull(), phone: text("phone"), total: real("total"), channel: text("channel"),
   /* the day the order is for (core/order-day.ts histDay): the history reads a period by it, never the whole table */
   day: text("day"),
-}, (t) => [uniqueIndex("orders_no").on(t.no), index("orders_status").on(t.status), index("orders_phone").on(t.phone), index("orders_day").on(t.day)]);
+  /* the screens' searches and the customers' numbers read these columns, never the documents (core/order-index.ts):
+     the moment, the account, the name as the search compares it (Latin key) and in lower case, the address in lower case */
+  ts: integer("ts"), userId: text("user_id"), nameKey: text("name_key"), nameLc: text("name_lc"), addrLc: text("addr_lc"),
+}, (t) => [uniqueIndex("orders_no").on(t.no), index("orders_status").on(t.status), index("orders_phone").on(t.phone), index("orders_day").on(t.day), index("orders_user").on(t.userId), index("orders_cust").on(t.phone, t.userId, t.status, t.total, t.ts)]);
 export const orderLines = sqliteTable("order_lines", {
   id: integer("id").primaryKey({ autoIncrement: true }), orderId: text("order_id").notNull(), itemId: text("item_id").notNull(),
   name: text("name"), qty: integer("qty").notNull(), unit: real("unit"), mods: text("mods").notNull().default("[]"),

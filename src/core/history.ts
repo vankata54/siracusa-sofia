@@ -94,7 +94,7 @@ export function compareRange(p: Period, from: string, to: string, cmp: Compare =
   return { from: addDaysYmd(from, -n), to: addDaysYmd(from, -1) };
 }
 
-/* ---------- the data: read by day, cached by day ---------- */
+/* ---------- the data: one aggregate per day (sums, never whole orders), the closed days cached ---------- */
 export interface History {
   /** today (the shift day, from 04:00) and the minute of the shop clock now (on the shift clock: 00:30 = 24:30) */
   today: string; now: number;
@@ -111,35 +111,110 @@ export interface RangeRepo extends Repo {
   firstOrderTs(phones: string[]): Promise<Record<string, number>>;
 }
 const fast = (r: Repo): r is RangeRepo => typeof (r as Partial<RangeRepo>).range === "function" && typeof (r as Partial<RangeRepo>).stamps === "function";
-/** how many days the cache keeps (about a year; trimmed orders: a few MB per thousand orders) */
-export const CACHE_DAYS = 400;
-interface DayEntry { stamp: string; orders: DayOrder[] }
-const CACHE = new WeakMap<Repo, Map<string, DayEntry>>();
-/** only what the numbers need (the cache stays small) */
-function trim(o: Order, d: string): DayOrder {
-  const t = o.times || {};
-  return { id: o.id, no: o.no, ts: o.ts, createdAt: o.createdAt, placedAt: o.placedAt, slot: o.slot, sched: o.sched, status: o.status, total: o.total, channel: o.channel, mode: o.mode,
-    phone: o.phone, pay: o.pay, disc: o.disc, discKind: o.discKind, code: o.code, table: o.table, sample: (o as Order & { sample?: boolean }).sample,
-    times: { cooking: t.cooking, ready: t.ready, on_way: t.on_way, delivered: t.delivered },
-    lines: (o.lines || []).map((l) => ({ id: l.id, name: l.name, unit: l.unit, q: l.q, out: l.out, cookAt: l.cookAt })), _d: d } as unknown as DayOrder;
+
+/** THE aggregate of one day (decision of the chief, 18.11: the cache keeps sums by day, not orders). Every number of the
+    screens comes from it; the few rows per order are numbers only (the minute and the hour, the channel, the total), for
+    "до същата минута" and the hours. */
+export interface DayAgg {
+  date: string;
+  /* one entry per order, the cancelled too: the minute placed and the hour it is for (shift clock), the channel (CH5
+     index), the total, 1 = not cancelled */
+  m: number[]; h: number[]; c: number[]; t: number[]; ok: number[];
+  /** the dishes of the not cancelled orders (lines not "Изчерпано"): id -> [name, portions, turnover] */
+  dishes: Record<string, [string, number, number]>;
+  /** pairs of different dishes in one order: "a|b" -> how many orders; multi: the orders with 2+ dishes */
+  pairs: Record<string, number>; multi: number;
+  /** the phones of the not cancelled orders: phone -> the first moment that day */
+  phones: Record<string, number>;
+  /** the sums and the counts of the cooking and the delivery minutes */
+  cook: [number, number]; del: [number, number];
+  /** the offers: [orders, discount, turnover] */
+  lunch: [number, number, number]; code: [number, number, number];
+  /** the payment of the not cancelled orders: online cash, card, voucher, and the turnover of the table orders */
+  pay: [number, number, number, number];
+  /** still in work (not finished, not cancelled), the delivered deliveries, any example order */
+  work: number; delivered: number; sample: boolean;
 }
+const CH5_IDX: Record<Ch5, number> = { delivery: 0, pickup: 1, phone: 2, table: 3, office: 4 };
+/** the aggregate of the orders of one day */
+export function aggOf(date: string, orders: Order[]): DayAgg {
+  const a: DayAgg = { date, m: [], h: [], c: [], t: [], ok: [], dishes: {}, pairs: {}, multi: 0, phones: {}, cook: [0, 0], del: [0, 0], lunch: [0, 0, 0], code: [0, 0, 0], pay: [0, 0, 0, 0], work: 0, delivered: 0, sample: false };
+  for (const o of orders) {
+    const good = ok(o), total = o.total || 0;
+    a.m.push(minOf(o)); a.h.push(hourOf(o)); a.c.push(CH5_IDX[ch5(o)] ?? 0); a.t.push(total); a.ok.push(good ? 1 : 0);
+    if (isSample(o)) a.sample = true;
+    if (!FINISHED_ST.includes(o.status) && good) a.work++;
+    if (o.mode === "delivery" && o.status === "delivered") a.delivered++;
+    if (!good) continue;
+    const lines = (o.lines || []).filter((l) => !l.out);
+    for (const l of lines) { const x = a.dishes[l.id] || (a.dishes[l.id] = [l.name || l.id, 0, 0]); x[1] += l.q; x[2] = round2(x[2] + (l.unit || 0) * l.q); }
+    const ids = [...new Set(lines.map((l) => l.id))].sort((x, y) => (x < y ? -1 : 1));
+    if (ids.length >= 2) { a.multi++; for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) { const k = ids[i] + "|" + ids[j]; a.pairs[k] = (a.pairs[k] || 0) + 1; } }
+    if (o.phone) a.phones[o.phone] = Math.min(a.phones[o.phone] ?? Infinity, o.ts);
+    const tt = o.times || {};
+    const start = [tt.cooking, ...(o.lines || []).map((l) => l.cookAt)].filter((x): x is string => !!x).map(Date.parse).sort((x, y) => x - y)[0];
+    if (tt.ready && start != null && !o.sched) { const v = (Date.parse(tt.ready) - start) / 60_000; if (v >= 0) { a.cook[0] += v; a.cook[1]++; } }
+    if (tt.on_way && tt.delivered) { const v = (Date.parse(tt.delivered) - Date.parse(tt.on_way)) / 60_000; if (v >= 0) { a.del[0] += v; a.del[1]++; } }
+    if (o.discKind === "lunch") { a.lunch[0]++; a.lunch[1] += o.disc || 0; a.lunch[2] += total; }
+    if (o.discKind === "code" || !!o.code) { a.code[0]++; a.code[1] += o.disc || 0; a.code[2] += total; }
+    if (chKey(o.channel) === "table") a.pay[3] += total; else a.pay[o.pay === "card" ? 1 : o.pay === "voucher" ? 2 : 0] += total;
+  }
+  return a;
+}
+const FINISHED_ST = ["delivered", "picked_up"];
 const daysOf = (from: string, to: string) => { const l: string[] = []; for (let d = from; d <= to; d = addDaysYmd(d, 1)) l.push(d); return l; };
-/** every order (the cancelled too) of the days [from, to] */
+/** how many closed days the cache keeps (sums only: a few KB a day) */
+export const CACHE_DAYS = 400;
+interface DayEntry { stamp: string; agg: DayAgg }
+const CACHE = new WeakMap<Repo, Map<string, DayEntry>>();
+/** every order (the cancelled too) of the days [from, to], read now (today's numbers, the dashboard; never cached) */
 export async function ordersOfDays(ctx: Ctx, from: string, to: string): Promise<Order[]> {
   const repo = ctx.repo;
-  if (!fast(repo)) return (await repo.list<Order>(COL.orders)).filter((o) => { const d = dayOf(o); return d >= from && d <= to; });
-  let m = CACHE.get(repo); if (!m) { m = new Map(); CACHE.set(repo, m); }
-  const st = await repo.stamps(COL.orders, "day", from, to), need = daysOf(from, to).filter((d) => st[d] && (!m!.get(d) || m!.get(d)!.stamp !== st[d]));
-  if (need.length) {
-    const by = new Map<string, DayOrder[]>(need.map((d) => [d, []]));
-    for (const o of await repo.range<Order>(COL.orders, "day", need[0], need[need.length - 1])) { const d = histDay(o), l = by.get(d); if (l) l.push(trim(o, d)); }
-    for (const d of need) { m.delete(d); m.set(d, { stamp: st[d], orders: by.get(d)! }); }
-    /* the oldest entries go first (a Map keeps the order of insertion) */
-    while (m.size > CACHE_DAYS) m.delete(m.keys().next().value as string);
+  if (fast(repo)) return (await repo.range<Order>(COL.orders, "day", from, to)).filter((o) => { const d = histDay(o); return d >= from && d <= to; });
+  return (await repo.list<Order>(COL.orders)).filter((o) => { const d = dayOf(o); return d >= from && d <= to; });
+}
+/** the aggregates of the days [from, to]: a closed day from the cache while its stamp holds, today always from its orders */
+export async function aggsOfDays(h: History, from: string, to: string): Promise<DayAgg[]> {
+  const repo = h.ctx.repo, days = daysOf(from, to);
+  if (!fast(repo)) {
+    const by = new Map<string, Order[]>(days.map((d) => [d, []]));
+    for (const o of await repo.list<Order>(COL.orders)) { const l = by.get(dayOf(o)); if (l) l.push(o); }
+    return days.map((d) => aggOf(d, by.get(d)!));
   }
-  const out: Order[] = [];
-  for (const d of daysOf(from, to)) { if (!st[d]) { m.delete(d); continue; } const e = m.get(d)!; m.delete(d); m.set(d, e); for (const o of e.orders) out.push(o); }
-  return out;
+  let m = CACHE.get(repo); if (!m) { m = new Map(); CACHE.set(repo, m); }
+  const cache = m, st = await repo.stamps(COL.orders, "day", from, to);
+  /* what this answer uses: taken from the cache now, so that no eviction below can take it away */
+  const got = new Map<string, DayAgg>();
+  const need: string[] = [];
+  for (const d of days) {
+    if (!st[d]) { got.set(d, aggOf(d, [])); cache.delete(d); continue; }
+    const e = d !== h.today ? cache.get(d) : undefined;
+    if (e && e.stamp === st[d]) { got.set(d, e.agg); cache.delete(d); cache.set(d, e); } else need.push(d);
+  }
+  if (need.length) {
+    const by = new Map<string, Order[]>(need.map((d) => [d, []]));
+    /* one read per run of consecutive days (a cached day in between is not read again) */
+    const runs: [string, string][] = [];
+    for (const d of need) { const r = runs[runs.length - 1]; if (r && addDaysYmd(r[1], 1) === d) r[1] = d; else runs.push([d, d]); }
+    const keep = (d: string, agg: DayAgg) => { got.set(d, agg); if (d !== h.today) { cache.delete(d); cache.set(d, { stamp: st[d], agg }); } };
+    const each = (repo as RangeRepo & { rangeEach?: (c: string, k: string, f: string, t: string, fn: (o: Order) => void) => Promise<void> }).rangeEach;
+    if (each) {
+      /* day by day in the order of the index: only one day's orders are held at a time */
+      for (const [a, b] of runs) {
+        let cur = "", buf: Order[] = [];
+        const flush = () => { if (cur && by.has(cur)) keep(cur, aggOf(cur, buf)); buf = []; };
+        await each.call(repo, COL.orders, "day", a, b, (o: Order) => { const d = histDay(o); if (d !== cur) { flush(); cur = d; } buf.push(o); });
+        flush();
+      }
+      for (const d of need) if (!got.has(d)) keep(d, aggOf(d, []));
+    } else {
+      for (const [a, b] of runs) for (const o of await repo.range<Order>(COL.orders, "day", a, b)) { const l = by.get(histDay(o)); if (l) l.push(o); }
+      for (const d of need) keep(d, aggOf(d, by.get(d)!));
+    }
+    /* the oldest days go first (a Map keeps the order of use) */
+    while (cache.size > CACHE_DAYS) cache.delete(cache.keys().next().value as string);
+  }
+  return days.map((d) => got.get(d)!);
 }
 /** the bookings of the days [from, to] */
 async function resOfDays(ctx: Ctx, from: string, to: string): Promise<Reservation[]> {
@@ -155,107 +230,112 @@ export async function hasBefore(ctx: Ctx, day: string): Promise<boolean> {
 }
 export interface Slice {
   from: string; to: string;
-  /** every order of the days (the cancelled too) and the bookings of the days */
-  orders: Order[]; res: Reservation[];
-  /** only up to this minute of the day (today's comparison), else null */
+  /** the aggregates of the days and the bookings of the days */
+  days: DayAgg[]; res: Reservation[];
+  /** only the orders placed up to this minute of the day (today's comparison), else null */
   cut: number | null;
 }
-/** the orders and bookings of [from, to]; cut: only the orders placed up to that minute (the reservations of the day stay whole) */
+/** the days and bookings of [from, to]; cut: only the orders placed up to that minute (the reservations stay whole) */
 export async function slice(h: History, from: string, to: string, cut: number | null = null): Promise<Slice> {
-  const [orders, res] = await Promise.all([ordersOfDays(h.ctx, from, to), resOfDays(h.ctx, from, to)]);
-  return { from, to, cut, orders: cut == null ? orders : orders.filter((o) => minOf(o) <= cut), res };
+  const [days, res] = await Promise.all([aggsOfDays(h, from, to), resOfDays(h.ctx, from, to)]);
+  return { from, to, cut, days, res };
 }
+/** the order rows of a slice (within the cut): [minute, hour, channel, total, the day] of the not cancelled, and the count of the cancelled */
+function rows(sl: Pick<Slice, "days" | "cut">, all = false): { m: number; h: number; c: number; t: number; d: DayAgg }[] {
+  const out: { m: number; h: number; c: number; t: number; d: DayAgg }[] = [];
+  for (const d of sl.days) for (let i = 0; i < d.m.length; i++) if ((all || d.ok[i]) && (sl.cut == null || d.m[i] <= sl.cut)) out.push({ m: d.m[i], h: d.h[i], c: d.c[i], t: d.t[i], d });
+  return out;
+}
+const cancelledOf = (sl: Pick<Slice, "days" | "cut">) => { let n = 0; for (const d of sl.days) for (let i = 0; i < d.m.length; i++) if (!d.ok[i] && (sl.cut == null || d.m[i] <= sl.cut)) n++; return n; };
+export const isSampleSlice = (sl: Pick<Slice, "days">): boolean => sl.days.some((d) => d.sample);
 
 /* ---------- the numbers ---------- */
 export interface Totals { orders: number; cancelled: number; revenue: number; avg: number; reservations: number; people: number; noShows: number; noShowPct: number }
-export function totals(sl: Pick<Slice, "orders" | "res">): Totals {
-  const good = sl.orders.filter(ok), revenue = round2(good.reduce((a, o) => a + (o.total || 0), 0));
+export function totals(sl: Pick<Slice, "days" | "res" | "cut">): Totals {
+  const good = rows(sl), revenue = round2(good.reduce((a, o) => a + o.t, 0));
   const l = sl.res.filter(live), noShows = l.filter((r) => r.status === "no_show").length;
   return {
-    orders: good.length, cancelled: sl.orders.length - good.length, revenue, avg: good.length ? round2(revenue / good.length) : 0,
+    orders: good.length, cancelled: cancelledOf(sl), revenue, avg: good.length ? round2(revenue / good.length) : 0,
     reservations: l.length, people: l.reduce((a, r) => a + r.people, 0), noShows, noShowPct: l.length ? Math.round((noShows / l.length) * 100) : 0,
   };
 }
-const sum = (l: Order[]) => round2(l.reduce((a, o) => a + (o.total || 0), 0));
+const sumT = (l: { t: number }[]) => round2(l.reduce((a, o) => a + o.t, 0));
 export interface ChannelRow { channel: ChKey; label: string; orders: number; revenue: number; share: number }
+const CH4_OF = [0, 0, 1, 2, 3]; /* CH5 index -> CH_KEYS index (web = delivery + pickup) */
 /** by channel; share = % of the turnover (the callers without money give the share of the orders) */
-export function byChannel(sl: Pick<Slice, "orders">): ChannelRow[] {
-  const good = sl.orders.filter(ok), all = sum(good);
-  return CH_KEYS.map((c) => { const l = good.filter((o) => chKey(o.channel) === c), revenue = sum(l); return { channel: c, label: CH_LABEL[c], orders: l.length, revenue, share: all ? Math.round((revenue / all) * 100) : 0 }; });
+export function byChannel(sl: Pick<Slice, "days" | "cut">): ChannelRow[] {
+  const good = rows(sl), all = sumT(good);
+  return CH_KEYS.map((c, i) => { const l = good.filter((o) => CH4_OF[o.c] === i), revenue = sumT(l); return { channel: c, label: CH_LABEL[c], orders: l.length, revenue, share: all ? Math.round((revenue / all) * 100) : 0 }; });
 }
 export interface Ch5Row { key: Ch5; label: string; orders: number; revenue: number }
-export function byChannel5(sl: Pick<Slice, "orders">): Ch5Row[] {
-  const good = sl.orders.filter(ok);
-  return CH5.map((k) => { const l = good.filter((o) => ch5(o) === k); return { key: k, label: CH5_LABEL[k], orders: l.length, revenue: sum(l) }; });
+export function byChannel5(sl: Pick<Slice, "days" | "cut">): Ch5Row[] {
+  const good = rows(sl);
+  return CH5.map((k) => { const l = good.filter((o) => o.c === CH5_IDX[k]); return { key: k, label: CH5_LABEL[k], orders: l.length, revenue: sumT(l) }; });
 }
 /** the hours to show: 10-22 and every other hour with orders (on the shift clock, 24 = 00:00 after midnight) */
-export function hoursOf(...sls: Pick<Slice, "orders">[]): number[] {
+export function hoursOf(...sls: Pick<Slice, "days" | "cut">[]): number[] {
   const s = new Set(HOURS);
-  for (const sl of sls) for (const o of sl.orders) if (ok(o)) s.add(hourOf(o));
+  for (const sl of sls) for (const o of rows(sl)) s.add(o.h);
   return [...s].sort((a, b) => a - b);
 }
 export interface HourRow { hour: number; orders: number; revenue: number }
 /** by hour (the hour the order is for); `hour` is 0-23; the columns sum to the turnover */
-export function byHour(sl: Pick<Slice, "orders">, hours = hoursOf(sl)): HourRow[] {
-  const good = sl.orders.filter(ok);
-  return hours.map((h) => { const l = good.filter((o) => hourOf(o) === h); return { hour: hour24(h), orders: l.length, revenue: sum(l) }; });
+export function byHour(sl: Pick<Slice, "days" | "cut">, hours = hoursOf(sl)): HourRow[] {
+  const good = rows(sl);
+  return hours.map((h) => { const l = good.filter((o) => o.h === h); return { hour: hour24(h), orders: l.length, revenue: sumT(l) }; });
 }
 export interface DayRow { date: string; orders: number; revenue: number; reservations: number; noShows: number; cancelled: number }
 export function byDay(sl: Slice): DayRow[] {
-  const out: DayRow[] = [], od = new Map<string, Order[]>(), rd = new Map<string, Reservation[]>();
-  for (const o of sl.orders) { const d = dayOf(o); (od.get(d) || od.set(d, []).get(d)!).push(o); }
+  const rd = new Map<string, Reservation[]>();
   for (const r of sl.res) (rd.get(r.date) || rd.set(r.date, []).get(r.date)!).push(r);
-  for (let d = sl.from; d <= sl.to; d = addDaysYmd(d, 1)) {
-    const all = od.get(d) || [], l = all.filter(ok), r = (rd.get(d) || []).filter(live);
-    out.push({ date: d, orders: l.length, revenue: sum(l), reservations: r.length, noShows: r.filter((x) => x.status === "no_show").length, cancelled: all.length - l.length });
-  }
-  return out;
+  return sl.days.map((d) => {
+    const one = { days: [d], cut: sl.cut }, l = rows(one), r = (rd.get(d.date) || []).filter(live);
+    return { date: d.date, orders: l.length, revenue: sumT(l), reservations: r.length, noShows: r.filter((x) => x.status === "no_show").length, cancelled: cancelledOf(one) };
+  });
 }
 export interface DishRow { id: string; name: string; q: number; revenue: number }
 /** every dish of the period (q = portions, revenue = unit × q of the lines); by "q" (then revenue) or "revenue" */
-export function dishes(sl: Pick<Slice, "orders">, by: "q" | "revenue" = "q"): DishRow[] {
+export function dishes(sl: Pick<Slice, "days">, by: "q" | "revenue" = "q"): DishRow[] {
   const m = new Map<string, DishRow>();
-  for (const o of sl.orders.filter(ok)) for (const l of o.lines) {
-    if (l.out) continue;
-    const x = m.get(l.id) || { id: l.id, name: l.name || l.id, q: 0, revenue: 0 };
-    x.q += l.q; x.revenue = round2(x.revenue + (l.unit || 0) * l.q); m.set(l.id, x);
+  for (const d of sl.days) for (const [id, [name, q, rev]] of Object.entries(d.dishes)) {
+    const x = m.get(id) || { id, name, q: 0, revenue: 0 };
+    x.q += q; x.revenue = round2(x.revenue + rev); m.set(id, x);
   }
   return [...m.values()].sort(by === "q" ? (a, b) => b.q - a.q || b.revenue - a.revenue || a.name.localeCompare(b.name, "bg") : (a, b) => b.revenue - a.revenue || b.q - a.q || a.name.localeCompare(b.name, "bg"));
 }
 /** the top 8 the way "Отчети" shows them (by portions) */
-export const top8 = (sl: Pick<Slice, "orders">): DishRow[] => dishes(sl, "q").slice(0, 8);
+export const top8 = (sl: Pick<Slice, "days">): DishRow[] => dishes(sl, "q").slice(0, 8);
+/** the portions of one dish on every day of the slice */
+export const dishByDay = (sl: Pick<Slice, "days">, id: string): { date: string; q: number }[] => sl.days.map((d) => ({ date: d.date, q: d.dishes[id] ? d.dishes[id][1] : 0 }));
 
 /** "Пикови часове": weekday (Monday first) × hour (10-22 and every hour with orders; `hours` 0-23), the orders */
 export interface Peak { days: string[]; hours: number[]; cells: number[][]; max: number }
-export function peak(sl: Pick<Slice, "orders">): Peak {
+export function peak(sl: Pick<Slice, "days" | "cut">): Peak {
   const order = [1, 2, 3, 4, 5, 6, 0], hs = hoursOf(sl), cells = order.map(() => hs.map(() => 0));
-  for (const o of sl.orders.filter(ok)) {
-    const r = order.indexOf(weekday(dayOf(o))), c = hs.indexOf(hourOf(o));
+  for (const o of rows(sl)) {
+    const r = order.indexOf(weekday(o.d.date)), c = hs.indexOf(o.h);
     if (r > -1 && c > -1) cells[r][c]++;
   }
   return { days: order.map((w) => DAYS_SHORT[w]), hours: hs.map(hour24), cells, max: Math.max(0, ...cells.flat()) };
 }
 /** "Често поръчвани заедно": pairs of different dishes in one order (the real orders), the most frequent first */
 export interface Pair { a: { id: string; name: string }; b: { id: string; name: string }; n: number; /** % of the orders with 2+ dishes */ share: number }
-export function together(sl: Pick<Slice, "orders">, limit = 6): Pair[] {
-  const m = new Map<string, Pair>(); let multi = 0;
-  for (const o of sl.orders.filter(ok)) {
-    const ids = [...new Map(o.lines.filter((l) => !l.out).map((l) => [l.id, l.name || l.id])).entries()].sort((x, y) => (x[0] < y[0] ? -1 : 1));
-    if (ids.length < 2) continue;
-    multi++;
-    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
-      const k = ids[i][0] + "|" + ids[j][0], p = m.get(k) || { a: { id: ids[i][0], name: ids[i][1] }, b: { id: ids[j][0], name: ids[j][1] }, n: 0, share: 0 };
-      p.n++; m.set(k, p);
-    }
+export function together(sl: Pick<Slice, "days">, limit = 6): Pair[] {
+  const m = new Map<string, number>(), names = new Map<string, string>(); let multi = 0;
+  for (const d of sl.days) {
+    multi += d.multi;
+    for (const [k, n] of Object.entries(d.pairs)) m.set(k, (m.get(k) || 0) + n);
+    for (const [id, x] of Object.entries(d.dishes)) if (!names.has(id)) names.set(id, x[0]);
   }
-  return [...m.values()].filter((p) => p.n >= 2).sort((x, y) => y.n - x.n || x.a.name.localeCompare(y.a.name, "bg")).slice(0, limit)
+  return [...m.entries()].filter(([, n]) => n >= 2).map(([k, n]) => { const [a, b] = k.split("|"); return { a: { id: a, name: names.get(a) || a }, b: { id: b, name: names.get(b) || b }, n, share: 0 }; })
+    .sort((x, y) => y.n - x.n || x.a.name.localeCompare(y.a.name, "bg")).slice(0, limit)
     .map((p) => ({ ...p, share: multi ? Math.round((p.n / multi) * 100) : 0 }));
 }
 /** new and returning customers: the distinct phones of the period (orders with a phone: site, phone, office); returning =
     the phone has an order before its first one in the period (one query: the first order of every phone) */
-export async function customers(h: History, sl: Pick<Slice, "orders" | "from">): Promise<{ new: number; returning: number; total: number }> {
+export async function customers(h: History, sl: Pick<Slice, "days" | "from">): Promise<{ new: number; returning: number; total: number }> {
   const first = new Map<string, number>();
-  for (const o of sl.orders.filter(ok)) if (o.phone) first.set(o.phone, Math.min(first.get(o.phone) ?? Infinity, o.ts));
+  for (const d of sl.days) for (const [p, t] of Object.entries(d.phones)) first.set(p, Math.min(first.get(p) ?? Infinity, t));
   let before: Record<string, number> = {};
   const repo = h.ctx.repo;
   if (first.size && fast(repo)) before = await repo.firstOrderTs([...first.keys()]);
@@ -267,14 +347,10 @@ export async function customers(h: History, sl: Pick<Slice, "orders" | "from">):
     cooking (the kitchen: from "Готви се" or the first line started, to "Готова"), delivery ("На път" -> "Доставена"),
     the answer to a call at a table (the call -> "Отивам", or -> "Обслужено" without it; not the automatic ones) */
 export interface Times { cookMin: number | null; deliveryMin: number | null; callSec: number | null; n: { cook: number; delivery: number; call: number } }
-export async function times(ctx: Ctx, sl: Pick<Slice, "orders" | "from" | "to">): Promise<Times> {
-  const cook: number[] = [], del: number[] = [], call: number[] = [];
-  for (const o of sl.orders.filter(ok)) {
-    const t = o.times || {};
-    const start = [t.cooking, ...o.lines.map((l) => l.cookAt)].filter((x): x is string => !!x).map(Date.parse).sort((a, b) => a - b)[0];
-    if (t.ready && start != null && !o.sched) { const v = (Date.parse(t.ready) - start) / 60_000; if (v >= 0) cook.push(v); }
-    if (t.on_way && t.delivered) { const v = (Date.parse(t.delivered) - Date.parse(t.on_way)) / 60_000; if (v >= 0) del.push(v); }
-  }
+export async function times(ctx: Ctx, sl: Pick<Slice, "days" | "from" | "to">): Promise<Times> {
+  let cs = 0, cn = 0, ds = 0, dn = 0;
+  for (const d of sl.days) { cs += d.cook[0]; cn += d.cook[1]; ds += d.del[0]; dn += d.del[1]; }
+  const call: number[] = [];
   type Call = { at: string; taken?: { at: string } | null; done?: { how: string; at: string; auto?: boolean } | null };
   for (const s of await sessionsOf(ctx, sl.from, sl.to)) for (const c of (s as { calls?: Call[] }).calls || []) {
     const d = shiftDay(new Date(c.at));
@@ -282,9 +358,8 @@ export async function times(ctx: Ctx, sl: Pick<Slice, "orders" | "from" | "to">)
     const at = c.taken ? c.taken.at : c.done && c.done.how === "served" && !c.done.auto ? c.done.at : null;
     if (at) call.push(Math.max(0, (Date.parse(at) - Date.parse(c.at)) / 1000));
   }
-  const avg = (l: number[]) => (l.length ? l.reduce((a, b) => a + b, 0) / l.length : null);
-  const c = avg(cook), d = avg(del), a = avg(call);
-  return { cookMin: c == null ? null : Math.round(c * 10) / 10, deliveryMin: d == null ? null : Math.round(d * 10) / 10, callSec: a == null ? null : Math.round(a), n: { cook: cook.length, delivery: del.length, call: call.length } };
+  const a = call.length ? call.reduce((x, y) => x + y, 0) / call.length : null;
+  return { cookMin: cn ? Math.round((cs / cn) * 10) / 10 : null, deliveryMin: dn ? Math.round((ds / dn) * 10) / 10 : null, callSec: a == null ? null : Math.round(a), n: { cook: cn, delivery: dn, call: call.length } };
 }
 /** the sittings at the tables that may have a call or a payment in [from, to] (opened from the day before to the day after) */
 export async function sessionsOf(ctx: Ctx, from: string, to: string): Promise<{ id: string; createdAt?: string }[]> {
@@ -294,10 +369,18 @@ export async function sessionsOf(ctx: Ctx, from: string, to: string): Promise<{ 
 }
 /** the offers' effect: the lunch -30% after 15:00 (pickup) and the -10% code from the internal rating */
 export interface Offers { lunch: { orders: number; disc: number; revenue: number }; code: { orders: number; disc: number; revenue: number } }
-export function offers(sl: Pick<Slice, "orders">): Offers {
-  const good = sl.orders.filter(ok), part = (l: Order[]) => ({ orders: l.length, disc: round2(l.reduce((a, o) => a + (o.disc || 0), 0)), revenue: sum(l) });
-  return { lunch: part(good.filter((o) => o.discKind === "lunch")), code: part(good.filter((o) => o.discKind === "code" || !!o.code)) };
+export function offers(sl: Pick<Slice, "days">): Offers {
+  const part = (k: "lunch" | "code") => { let n = 0, disc = 0, rev = 0; for (const d of sl.days) { n += d[k][0]; disc += d[k][1]; rev += d[k][2]; } return { orders: n, disc: round2(disc), revenue: round2(rev) }; };
+  return { lunch: part("lunch"), code: part("code") };
 }
+/** the payment of the days: online cash, card, voucher and the turnover of the table orders */
+export function payOfDays(sl: Pick<Slice, "days">): { cash: number; card: number; voucher: number; table: number } {
+  const p = [0, 0, 0, 0]; for (const d of sl.days) for (let i = 0; i < 4; i++) p[i] += d.pay[i];
+  return { cash: p[0], card: p[1], voucher: p[2], table: p[3] };
+}
+/** the orders still in work and the delivered deliveries of the days */
+export const workOf = (sl: Pick<Slice, "days">) => sl.days.reduce((a, d) => a + d.work, 0);
+export const deliveredOf = (sl: Pick<Slice, "days">) => sl.days.reduce((a, d) => a + d.delivered, 0);
 
 /* ---------- "обичайното" ---------- */
 /** the same weekday in the last `weeks` weeks (the oldest last) */
@@ -312,9 +395,9 @@ export async function usual(h: History, day: string, cut: number | null, weeks =
 }
 /** the turnover up to every step of `step` minutes from 10:00 to 23:00 (cumulative; the last point holds the whole day,
     the orders placed after 23:00 too); with `upTo` (now) the points after the first one at or after now are null */
-export function cumulative(orders: Order[], step = 15, upTo: number | null = null, from = 600, to = 1380): (number | null)[] {
-  const good = orders.filter(ok), out: (number | null)[] = [];
-  for (let t = from; t <= to; t += step) out.push(upTo != null && t - step >= upTo ? null : round2(good.filter((o) => t + step > to || minOf(o) <= t).reduce((a, o) => a + (o.total || 0), 0)));
+export function cumulative(sl: Pick<Slice, "days">, step = 15, upTo: number | null = null, from = 600, to = 1380): (number | null)[] {
+  const good = rows({ days: sl.days, cut: null }), out: (number | null)[] = [];
+  for (let t = from; t <= to; t += step) out.push(upTo != null && t - step >= upTo ? null : round2(good.filter((o) => t + step > to || o.m <= t).reduce((a, o) => a + o.t, 0)));
   return out;
 }
 /** % change, rounded (null when the base is 0) */

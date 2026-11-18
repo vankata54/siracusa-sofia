@@ -35,6 +35,15 @@ describe("the history with about 60 000 orders", () => {
     })();
     const n = (sqlite.prepare("SELECT count(*) AS n FROM orders").get() as { n: number }).n;
     const ms = async (fn: () => Promise<unknown>) => { const t = performance.now(); await fn(); return Math.round(performance.now() - t); };
+    /* the full cache: every period of the screens many times over 500 days of history (more days than the cache keeps):
+       never an error, the memory stays bounded (the cache keeps sums by day) */
+    const heap0 = process.memoryUsage().heapUsed, Q: Record<string, string>[] = [];
+    for (let k = 0; k < 6; k++) { const b = new Date(T0 - k * 92 * 864e5).toISOString().slice(0, 10), a = new Date(T0 - (k * 92 + 91) * 864e5).toISOString().slice(0, 10); Q.push({ period: "custom", from: a, to: b, compare: "year" }); }
+    for (const p of ["today", "yesterday", "7", "30", "month"]) Q.push({ period: p }, { period: p, compare: "year" });
+    for (let round = 0; round < 2; round++) for (const q of Q) { await core.owner.trends(s, q as never); await core.owner.finance(s, q as never); }
+    const heapFull = Math.round((process.memoryUsage().heapUsed - heap0) / 1048576);
+    console.log("full cache: " + Q.length * 4 + " answers, heap +" + heapFull + " MB");
+    expect(heapFull).toBeLessThan(150);
     const to = "2026-11-16", from = "2026-08-17";
     const r = {
       todayCold: await ms(() => core.owner.today(s)), todayWarm: await ms(() => core.owner.today(s)),

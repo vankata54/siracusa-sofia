@@ -25,6 +25,7 @@
      and who is told (the waiter for a table, the manager for delivery and pickup, OPEN-QUESTIONS 19).
    - "Натоварено" is the one setting (core/settings.ts: busy, busyAt, busyBy) + the day's log; any section may switch it.
    - Tablets: a heartbeat per section (module_state) for "Таблетът работи" / "без връзка от 19:37". */
+import { liveOrders } from "./order-index.ts";
 import { audit } from "./audit.ts";
 import { COL, emit, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, type Channel, type Iso, type Order, type OrderLine, type OrderStatus } from "./types.ts";
@@ -643,7 +644,8 @@ export async function kitchenSeen(ctx: Ctx, s: StaffCtx, no: string, sec: string
 /* ---------- "Изпълнени днес" ---------- */
 async function doneRows(ctx: Ctx, w: World, view: string): Promise<KDoneRow[]> {
   const from = shiftStart(new Date(w.now)), rows: KDoneRow[] = [];
-  for (const o of await ctx.repo.list<Order>(COL.orders)) {
+  /* the orders around today and the open ones (core/order-index.ts), never the whole table */
+  for (const o of await liveOrders(ctx)) {
     if (o.status === "cancelled") continue;
     const mine = idxOf(w.cfg, o, view);
     if (!mine.length || mine.some((i) => ksOf(o.lines[i]) !== "ready")) continue;
@@ -765,7 +767,7 @@ export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: 
   const adds = (l: OrderLine): string[] => (l.mods || []).filter((m) => m.startsWith("+")).map((m) => low(m.slice(1)));
   const has = (l: OrderLine) => l.id === id || (!!addonName && adds(l).includes(addonName));
   const from = shiftStart(nowDate(ctx));
-  const pool = out ? await openOrders(ctx) : (await ctx.repo.list<Order>(COL.orders)).filter((o) => o.status !== "cancelled" && Date.parse(o.createdAt) >= from && o.lines.some((l) => !!l.out));
+  const pool = out ? await openOrders(ctx) : (await liveOrders(ctx)).filter((o) => o.status !== "cancelled" && Date.parse(o.createdAt) >= from && o.lines.some((l) => !!l.out));
   const hits: Order[] = [];
   for (const o0 of pool) {
     if (!forToday(w, timingOf(o0, cfg))) continue;

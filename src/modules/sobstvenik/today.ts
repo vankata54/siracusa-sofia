@@ -105,7 +105,7 @@ function todayScreen(boss: Boss): void {
     const nowM = toMin(d.now), L = d.live, r = L.reservations;
     return '<section class="ow-card" aria-labelledby="td-l" data-edit-id="own.today.live"><header><div><h2 id="td-l">На живо</h2><small>' + (nowM >= 1350 || nowM < 600 ? "Кухнята не работи сега" : "Обновява се само") + "</small></div></header>" +
       '<div class="td-live"><a href="' + go.orders("s=work") + '"><b>' + L.inWork + "</b><span>в работа</span></a>" +
-      '<a href="' + go.hall() + '"><b>' + L.tables.busy + "<small> от " + L.tables.total + "</small></b><span>заети маси</span></a>" +
+      (L.tables.hidden ? "" : '<a href="' + go.hall() + '"><b>' + L.tables.busy + "<small> от " + L.tables.total + "</small></b><span>заети маси</span></a>") +
       '<a href="' + go.reservations() + '"><b>' + r.ahead + "</b><span>" + (nowM >= 1020 ? "резервации тази вечер" : "резервации до края на деня") + (r.aheadPeople ? " · " + plural(r.aheadPeople, "човек", "души") : "") + "</span></a></div>" +
       (L.tables.missing || d.sample ? '<p class="ow-note">' + (L.tables.missing ? "Масите са условни: " + miss(L.tables.missing) : "") + (d.sample ? " " + sample() : "") + "</p>" : "") +
       '<a class="pill pill-red pill-lg pill-block" href="' + go.shift() + '">' + ic("users-three", 22) + "Смяната сега</a></section>";
