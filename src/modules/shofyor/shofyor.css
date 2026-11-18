@@ -1,35 +1,82 @@
 /* Шофьор: the styles of the screens that the prototype keeps in each page (design/pages-shofyor/*.html <style>); the
-   shared components of the driver are in src/modules/staff/staff.css. Tokens only. */
-[data-staff="driver"] .donel .drow2{padding-top:12px; padding-bottom:12px}
+   shared components of the driver are in src/modules/staff/staff.css. Tokens only. The page loads this file before staff.css: every rule starts with "html" to win over it. */
+html[data-staff="driver"] .donel .drow2{padding-top:12px; padding-bottom:12px}
 /* the next card: the note of the customer under the address, the SMS line */
-[data-staff="driver"] .next .addr span{display:block}
+html[data-staff="driver"] .next .addr span{display:block}
 /* delivery */
-[data-staff="driver"] .acard{border-radius:28px; padding:16px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
-[data-staff="driver"] .acard .acts{grid-template-columns:1fr}
-[data-staff="driver"] .callbig{display:grid; justify-items:center; gap:6px; padding:8px 0 4px; text-align:center}
-[data-staff="driver"] .callbig b{font-size:34px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
-[data-staff="driver"] .callbig span{color:var(--muted); font-weight:700}
-[data-staff="driver"] .notice.bad{background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
-[data-staff="driver"] .notice.bad > .ic{color:var(--danger)}
-[data-staff="driver"] .notice .pill{margin-top:10px}
-[data-staff="driver"] .err{color:var(--danger); font-weight:600; font-size:16px}
+html[data-staff="driver"] .acard{border-radius:28px; padding:16px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+html[data-staff="driver"] .acard .acts{grid-template-columns:1fr}
+html[data-staff="driver"] .callbig{display:grid; justify-items:center; gap:6px; padding:8px 0 4px; text-align:center}
+html[data-staff="driver"] .callbig b{font-size:34px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+html[data-staff="driver"] .callbig span{color:var(--muted); font-weight:700}
+html[data-staff="driver"] .notice.bad{background:var(--surface); box-shadow:inset 0 0 0 2px var(--danger)}
+html[data-staff="driver"] .notice.bad > .ic{color:var(--danger)}
+html[data-staff="driver"] .notice .pill{margin-top:10px}
+html[data-staff="driver"] .err{color:var(--danger); font-weight:600; font-size:16px}
 /* route */
-[data-staff="driver"] .stops{border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:4px 16px}
-[data-staff="driver"] .stop.home .no{background:var(--red); color:var(--on-red)}
-[data-staff="driver"] .mv .pill[disabled]{opacity:.5}
+html[data-staff="driver"] .stops{border-radius:24px; background:var(--surface); box-shadow:var(--hi), var(--shadow); padding:4px 16px}
+html[data-staff="driver"] .stop.home .no{background:var(--red); color:var(--on-red)}
+html[data-staff="driver"] .mv .pill[disabled]{opacity:.5}
 /* fuel */
-[data-staff="driver"] .carline{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
-[data-staff="driver"] .carline .ii{width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; flex:none}
-[data-staff="driver"] .carline > span{flex:1; min-width:0}
-[data-staff="driver"] .carline b{display:block; font-size:18px}
-[data-staff="driver"] .carline small{font-size:14px; color:var(--muted); font-weight:600}
-[data-staff="driver"] .carline .pill{min-height:48px}
+html[data-staff="driver"] .carline{display:flex; align-items:center; gap:12px; padding:10px 8px 10px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+html[data-staff="driver"] .carline .ii{width:44px; height:44px; border-radius:50%; background:var(--surface-2); display:grid; place-items:center; flex:none}
+html[data-staff="driver"] .carline > span{flex:1; min-width:0}
+html[data-staff="driver"] .carline b{display:block; font-size:18px}
+html[data-staff="driver"] .carline small{font-size:14px; color:var(--muted); font-weight:600}
+html[data-staff="driver"] .carline .pill{min-height:48px}
 /* sign-in */
-[data-staff="driver"] .pw{position:relative}
-[data-staff="driver"] .pw .input{padding-right:120px}
-[data-staff="driver"] .pw .show{position:absolute; right:4px; top:2px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
-[data-staff="driver"] .lg .h1{font-size:32px}
-[data-staff="driver"] .car[disabled]{opacity:.55; cursor:not-allowed}
+html[data-staff="driver"] .pw{position:relative}
+html[data-staff="driver"] .pw .input{padding-right:120px}
+html[data-staff="driver"] .pw .show{position:absolute; right:4px; top:2px; min-height:48px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+html[data-staff="driver"] .lg .h1{font-size:32px}
+html[data-staff="driver"] .car[disabled]{opacity:.55; cursor:not-allowed}
 /* the bar with "Пристигнах" / "Върнах я" and the green "Доставена · 28,91 €": the words first */
-[data-staff="driver"] .st-bar.two .pill .ic{display:none}
-[data-staff="driver"] .st-bar.two .pill{padding:0 12px}
+html[data-staff="driver"] .st-bar.two .pill .ic{display:none}
+html[data-staff="driver"] .st-bar.two .pill{padding:0 12px}
+/* the rows never run out of the column: the text column shrinks, a long chip wraps (review 1, blocking 1) */
+html[data-staff="driver"] .drow2{grid-template-columns:40px minmax(0,1fr)}
+html[data-staff="driver"] .drow2 .stt{white-space:normal; max-width:100%; height:auto; min-height:32px; padding-top:4px; padding-bottom:4px; line-height:1.25}
+html[data-staff="driver"] .drow2 .a{overflow-wrap:anywhere}
+/* "уточни с ресторанта" (an address outside the zones) on its own line under "В брой" */
+html[data-staff="driver"] .osum{margin:8px 2px 0; font-size:16px; font-weight:700; color:var(--danger)}
+html[data-staff="driver"] .notice .pill{max-width:100%; white-space:normal; height:auto; text-align:center}
+/* the note of the customer under the address of "Следваща" */
+html[data-staff="driver"] .cnote{display:flex; gap:8px; align-items:flex-start; margin:8px 2px 0; font-size:16px; color:var(--muted); font-weight:600}
+html[data-staff="driver"] .cnote .ic{flex:none; margin-top:2px; color:var(--warn)}
+/* the address is a target of 48 px */
+html[data-staff="driver"] .next .in > a.addrlink{display:flex; align-items:center; min-height:48px; color:inherit; text-decoration:none}
+html[data-staff="driver"] .stop a.stopa{display:flex; flex-direction:column; justify-content:center; min-height:48px; color:inherit; text-decoration:none; min-width:0}
+html[data-staff="driver"] .stop .lt{display:flex; align-items:center; gap:4px; margin-top:2px; font-size:15px; color:var(--danger); font-weight:800}
+html[data-staff="driver"] .stop.late .eta b{color:var(--danger)}
+/* the green button: the word and, under it, the money (it never runs out of its frame) */
+html[data-staff="driver"] .st-bar .pill.tl{padding:0 12px}
+html[data-staff="driver"] .st-bar .pill .tl2{display:grid; justify-items:center; line-height:1.15; min-width:0; text-align:center}
+html[data-staff="driver"] .st-bar .pill .tl2 small{font-size:15px; font-weight:700; white-space:normal}
+/* the scheme: at 360 the SVG is scaled down to about 0,88, the words stay at least 14 px */
+html[data-staff="driver"] .scheme .sv-zl{font-size:16px}
+html[data-staff="driver"] .scheme .sv-stop-t{font-size:18px}
+/* the fields of a sheet and of a form start on one line, whatever is under one of them */
+html[data-staff="driver"] .fgrid{align-items:start}
+/* the sheet "Смяна": a row with a button is centred */
+html[data-staff="driver"] .st-sheet .kvs .kv{align-items:center}
+html[data-staff="driver"] .geoacts{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+html[data-staff="driver"] .geoacts .pill{min-height:48px}
+html[data-staff="driver"] [data-geobox] .link{min-height:48px; margin-left:8px}
+html[data-staff="driver"] .geo{display:grid; gap:10px; padding:12px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+html[data-staff="driver"] .geo p{margin:0; font-size:16px; line-height:1.4}
+html[data-staff="driver"] .geo .geoacts{justify-content:flex-start}
+/* fuel: a price far from a litre of fuel */
+html[data-staff="driver"] .pwarn{margin:6px 4px 0; font-size:16px; font-weight:700; color:var(--warn)}
+html[data-staff="driver"] .pwarn:empty{display:none}
+/* the sign-in: "Назад" keeps its word inside */
+html[data-staff="driver"] .st-bar [data-go]{min-width:96px}
+html[data-staff="driver"] .stop{grid-template-columns:40px minmax(0,1fr) auto}
+/* "Доставена 21:06" on the grey card of "Доставени днес": the green word on the light surface (contrast) */
+html[data-staff="driver"] .drow2.done .stt.done{background:var(--surface)}
+html[data-staff="driver"] .notice .link{color:var(--ink); text-decoration:underline; text-underline-offset:3px}
+html[data-staff="driver"] .money .w span{white-space:normal; overflow:visible; line-height:1.2}
+html[data-staff="driver"] :is(.next, .acard) .meta .stt{white-space:normal; max-width:100%; height:auto; min-height:36px; padding-top:4px; padding-bottom:4px; line-height:1.25}
+html[data-staff="driver"] .st-sheet .kv:has(.geoacts){flex-wrap:wrap; row-gap:8px}
+html[data-staff="driver"] .st-sheet .geoacts{margin-left:auto}
+html[data-staff="driver"] .st-sheet .geoacts .pill{padding:0 14px}
+html[data-staff="driver"] main h2[tabindex="-1"]:focus{outline:none}

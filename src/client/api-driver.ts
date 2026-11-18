@@ -14,7 +14,7 @@
                                 open problems), done[] (of the shift), next (№ | null), sum {active, cash, cashFeeMissing,
                                 done}, route {pick, locked}}; all: true = every driver's (the bosses, else 403)
    get(no)                      D. 404 for another driver's delivery
-   take(nos[])                  "Взех N поръчки" (all or none) -> {deliveries, undo {id, until}}. 409 taken (another
+   take(nos[], {at?})           "Взех N поръчки" (all or none) -> {deliveries, undo {id, until}}. 409 taken (another
                                 driver: fields {<№>: text}) / not_ready / ask_required; 404; 409 no_shift
    go(nos?)                     "Тръгвам": no nos = ALL taken ones, nos = only those -> {deliveries, undo, skipped[]}
    arrive(no)                   "Пристигнах" -> {deliveries, undo, notified {page, push, sms: null, smsMissing}}
@@ -22,6 +22,8 @@
                                 open problem = "Доставих все пак" -> {deliveries, undo}. 409 bad_state before "Тръгвам"
    problem(no, kind, note?)     "nobody" | "address" | "refused", only for a taken order or one on the way -> {deliveries, undo}
    returned(no)                 "Върнах я" (after a problem, or after the answer "return" / "pickup") -> {deliveries, undo}
+   at: take / go / arrive / deliver / problem / returned / fuelAdd take the moment the step was made on the phone ({at},
+                                ISO or epoch ms; 422 bad_at in the future or before the shift), the steps kept with no connection
    undo(id)                     "Отмени" of the last step (id from its result), about 10 s -> {deliveries}.
                                 409 undo_gone / undo_late / undo_changed (somebody else acted)
    ask(no, note?)               "Адрес извън зоните": the question to the manager -> AskView (D.ask shows the answer;
@@ -70,6 +72,8 @@ export type {
   DeliveryState, ProblemKind, AskAnswer, DriverStatus, NavApp, RoutePick, DriverCar, CarView, ShiftView, DriverState, ShiftStart, Delivery, DriverList, AskView,
   RouteView, RouteOption, StepResult, ArriveResult, FuelView, FuelPage, FuelInput, FuelReport, ShiftTotals, ShiftSummary, DriverRow, DriversView,
 };
+/** the moment a step was made on the phone (sent later after no connection): ISO or epoch ms; the core checks it (422 bad_at) */
+export interface At { at?: number | string }
 export interface Receipt { url: string; type: string; bytes: number }
 
 /** the demo: the staff session of this browser (401 without it); the rights are checked by the core function */
@@ -102,12 +106,12 @@ export const driverApi = {
   /* ---------- the deliveries ---------- */
   list: pick(async (c, o: { all?: boolean } = {}) => c.driver.list(await g(c), o), (o = {}) => http<DriverList>("GET", "driver/list" + (o.all ? "?all=1" : ""))),
   get: pick(async (c, no: string) => c.driver.get(await g(c), no), (no) => http<Delivery>("GET", "driver/deliveries/" + e(no))),
-  take: pick(async (c, nos: string[]) => c.driver.take(await g(c), nos), (nos) => http<StepResult>("POST", "driver/take", { nos })),
-  go: pick(async (c, nos?: string[]) => c.driver.go(await g(c), nos), (nos?: string[]) => http<StepResult & { skipped: { no: string; why: string }[] }>("POST", "driver/go", nos ? { nos } : {})),
-  arrive: pick(async (c, no: string) => c.driver.arrive(await g(c), no), (no) => http<ArriveResult>("POST", "driver/deliveries/" + e(no) + "/arrive")),
-  deliver: pick(async (c, no: string, i: { sum?: number | string | null } = {}) => c.driver.deliver(await g(c), no, i), (no: string, i: { sum?: number | string | null } = {}) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/deliver", { sum: i.sum ?? null })),
-  problem: pick(async (c, no: string, kind: ProblemKind, note?: string) => c.driver.problem(await g(c), no, kind, note), (no, kind, note) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/problem", { kind, note })),
-  returned: pick(async (c, no: string) => c.driver.returned(await g(c), no), (no) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/returned")),
+  take: pick(async (c, nos: string[], o: At = {}) => c.driver.take(await g(c), nos, o), (nos, o: At = {}) => http<StepResult>("POST", "driver/take", { nos, at: o.at })),
+  go: pick(async (c, nos?: string[], o: At = {}) => c.driver.go(await g(c), nos, o), (nos?: string[], o: At = {}) => http<StepResult & { skipped: { no: string; why: string }[] }>("POST", "driver/go", nos ? { nos, at: o.at } : { at: o.at })),
+  arrive: pick(async (c, no: string, o: At = {}) => c.driver.arrive(await g(c), no, o), (no, o: At = {}) => http<ArriveResult>("POST", "driver/deliveries/" + e(no) + "/arrive", { at: o.at })),
+  deliver: pick(async (c, no: string, i: { sum?: number | string | null; at?: number | string } = {}) => c.driver.deliver(await g(c), no, i), (no: string, i: { sum?: number | string | null; at?: number | string } = {}) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/deliver", { sum: i.sum ?? null, at: i.at })),
+  problem: pick(async (c, no: string, kind: ProblemKind, note?: string, o: At = {}) => c.driver.problem(await g(c), no, kind, note, o), (no, kind, note, o: At = {}) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/problem", { kind, note, at: o.at })),
+  returned: pick(async (c, no: string, o: At = {}) => c.driver.returned(await g(c), no, o), (no, o: At = {}) => http<StepResult>("POST", "driver/deliveries/" + e(no) + "/returned", { at: o.at })),
   undo: pick(async (c, id: string) => c.driver.undo(await g(c), id), (id) => http<{ deliveries: Delivery[] }>("POST", "driver/undo", { id })),
   ask: pick(async (c, no: string, note?: string) => c.driver.ask(await g(c), no, note), (no, note) => http<AskView>("POST", "driver/deliveries/" + e(no) + "/ask", { note })),
   /* ---------- the route ---------- */

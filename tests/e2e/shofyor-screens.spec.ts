@@ -1,6 +1,6 @@
 import { test, expect, type TestInfo, type Page, type APIRequestContext, type Browser } from "@playwright/test";
 import { ownServer, E, type Own } from "./own-server.ts";
-import { order, login, ready, shift, errors, serious, drawn, toast, bar, noHScroll, targets, type Made } from "./shofyor-helpers.ts";
+import { order, login, ready, shift, errors, serious, drawn, toast, bar, noHScroll, targets, inside, moveOut, type Made } from "./shofyor-helpers.ts";
 import { floorLock } from "./_floor-lock.ts";
 floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
@@ -28,6 +28,28 @@ async function readyOrders(page: Page, specs: { addr: string; pay?: "cash" | "ca
   return out;
 }
 async function signed(page: Page) { await login(page.context(), S.base, "driver"); await shift(api(page), S.base); }
+
+test("„Маршрут“ for a new course: Път А / Път Б for the ready orders before „Взех“, without „По-рано“ / „По-късно“", async ({ page }) => {
+  const errs = errors(page);
+  await signed(page);
+  const os = await readyOrders(page, [{ addr: "ж.к. Дружба 1, бл. 9" }, { addr: "Бусманци, ул. Витоша 3" }]);
+  await go(page, "/shofyor/marshrut/");
+  await expect(page.locator("main .notice").first()).toContainText("2 поръчки чакат в ресторанта");
+  await expect(page.locator(".rc").first()).toContainText("Път А · по срока");
+  await expect(page.locator(".stops .stop:not(.home)")).toHaveCount(2);
+  await expect(page.locator(".stops button")).toHaveCount(0);
+  /* the words of the scheme are at least 14 px on the screen */
+  const small = await page.evaluate(() => Array.from(document.querySelectorAll<SVGTextElement>(".scheme text")).map((t) => t.getBoundingClientRect().height).filter((h) => h > 0 && h < 14));
+  expect(small).toEqual([]);
+  await go(page, "/shofyor/");
+  await expect(page.locator(".st-h .link")).toContainText("Път А · смени");
+  /* they leave the route test alone */
+  const nos = os.map((o) => o.no);
+  expect((await api(page).post(S.base + "/api/driver/take", { data: { nos } })).status()).toBe(200);
+  expect((await api(page).post(S.base + "/api/driver/go", { data: {} })).status()).toBe(200);
+  for (const n of nos) expect((await api(page).post(S.base + "/api/driver/deliveries/" + n + "/deliver", { data: {} })).status()).toBe(200);
+  expect(errs).toEqual([]);
+});
 
 test("„Маршрут“: the locked first stop without its buttons, „По-късно“ makes „Моят ред“, no invented km", async ({ page }) => {
   const errs = errors(page);
@@ -120,6 +142,12 @@ test("@phone no connection: a status is kept on the phone („Записано �
   await go(page, "/shofyor/dostavka/#" + o.no);
   await context.setOffline(true);
   await expect(page.locator(".st-net")).toContainText("Няма връзка.");
+  /* the screen stays: the tabs and the links to other screens say why */
+  const tab = page.locator('.st-nav a[data-tab="route"]');
+  await expect(tab).toHaveAttribute("aria-disabled", "true");
+  await tab.click({ force: true });
+  await expect(toast(page)).toContainText("Няма връзка: остани на този екран, действията се пазят тук.");
+  await expect(page).toHaveURL(new RegExp("/shofyor/dostavka/#" + o.no + "$"));
   await bar(page).getByRole("button", { name: "Тръгвам · На път" }).click();
   await expect(toast(page)).toContainText("Записано на телефона: № " + o.no + " е на път");
   await expect(page.locator(".st-net")).toContainText("1 статус чака и тръгва сам.");
@@ -168,6 +196,7 @@ async function shots(browser: Browser, w: number, theme: "light" | "dark", paths
     await go(page, p);
     await page.waitForTimeout(250);
     await noHScroll(page);
+    await inside(page, p + " " + w);
     await targets(page);
     expect(await serious(page), p + " " + w + " " + theme).toEqual([]);
   }
@@ -178,8 +207,15 @@ async function shots(browser: Browser, w: number, theme: "light" | "dark", paths
 test("@phone every screen at 360 and 390, light and dark: no horizontal scroll, 48 px, axe", async ({ browser, page }) => {
   test.setTimeout(120_000);
   await signed(page);
-  const [o] = await readyOrders(page, [{ addr: "Горубляне, ул. Самоковско шосе 5", pay: "voucher" }]);
-  for (const w of [360, 390]) for (const t of ["light", "dark"] as const) await shots(browser, w, t, ["/shofyor/", "/shofyor/dostavka/#" + o.no, "/shofyor/marshrut/", "/shofyor/gorivo/", "/shofyor/smyana/"]);
+  const [o, far, longA] = await readyOrders(page, [{ addr: "Горубляне, ул. Самоковско шосе 5", pay: "voucher" }, { addr: "Горубляне, ул. Самоковско шосе 117", pay: "cash" }, { addr: "ж.к. Дружба 2, бл. 311, вх. Б, ет. 4, ап. 12", pay: "cash" }]);
+  /* outside the zones (the first card says "уточни с ресторанта") */
+  const out = await order(api(page), S.base, { lines: [{ id: "kebapcheta", q: 1 }] }); moveOut(S.db, out.no); await ready(kitchen, S.base, out.no);
+  expect((await api(page).post(S.base + "/api/driver/take", { data: { nos: [far.no, longA.no] } })).status()).toBe(200);
+  expect((await api(page).post(S.base + "/api/driver/go", { data: {} })).status()).toBe(200);
+  for (const w of [360, 390]) for (const t of ["light", "dark"] as const) await shots(browser, w, t, ["/shofyor/", "/shofyor/dostavka/#" + far.no, "/shofyor/dostavka/#" + out.no, "/shofyor/dostavka/#" + o.no, "/shofyor/marshrut/", "/shofyor/gorivo/", "/shofyor/smyana/"]);
+  /* the green button with the unknown fee: the word and the money in its frame */
+  await go(page, "/shofyor/dostavka/#" + far.no);
+  await expect(bar(page).locator('[data-st="done"]')).toContainText("+ такса");
   /* the sign-in without a session */
   const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
   const p = await ctx.newPage(); const errs = errors(p);
@@ -211,6 +247,8 @@ test("„Край на смяната“: blocked by an undelivered order, the c
   const sum = (await (await api(page).get(S.base + "/api/driver/shift")).json()) as { handover: number; cash: { sum: number }; float: number; fuelCash: number };
   expect(sum.handover).toBeCloseTo(sum.cash.sum + (sum.float || 0) - sum.fuelCash, 2);
   await page.reload(); await drawn(page);
+  /* the words follow the number: "1 зареждане" (the fuel test made one), "доставена" / "доставени" */
+  await expect(page.locator(".dsum")).toContainText(/1\s*зареждане(?!я)/);
   const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
   await expect(page.locator(".cashbox .big")).toHaveText(fmt(sum.handover));
   await expect(page.locator(".cashbox")).toContainText("+ Начално ресто");
@@ -229,8 +267,14 @@ test("„Край на смяната“: blocked by an undelivered order, the c
   await expect(page.locator("#ehd")).toHaveText("Отбележи, че си предал парите.");
   await page.locator("#hd").check();
   await end.click();
+  await expect(page).toHaveURL(/\/shofyor\/vhod\/#done/);
   await expect(page.locator("main h2")).toHaveText("Смяната приключи");
-  await expect(page.getByRole("link", { name: "Към входа" })).toBeVisible();
+  await expect(page.locator("main")).toContainText("Благодарим!");
+  await expect(bar(page).getByRole("button", { name: "Към входа" })).toBeVisible();
+  /* the session is gone: no pencil, no tabs, no "Търси" / "Смяна" */
+  await expect(page.locator(".st-nav, .st-tools, .sa-pen-btn")).toHaveCount(0);
+  await bar(page).getByRole("button", { name: "Към входа" }).click();
+  await expect(page.locator(".stepper .t b")).toHaveText("Стъпка 1 от 3");
   await expect.poll(async () => (await api(page).get(S.base + "/api/driver/state")).status()).toBe(401);
   expect(errs).toEqual([]);
 });

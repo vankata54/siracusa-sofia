@@ -35,7 +35,7 @@ export async function initShift(): Promise<void> {
       '<a class="pill pill-line" href="' + esc(murl.shofyor()) + '" style="margin-top:10px">Към доставките' + ic("caret-right", 20) + "</a></span></div></section>";
     probOpen.forEach((d) => { h += '<section class="st-sec"><div class="notice warn">' + ic("warning", 22) + "<span><b>№ " + esc(d.no) + " · Проблем: " + esc(d.problem ? d.problem.label : "") + ".</b> Върни я в ресторанта или я достави, преди да приключиш.<br>" +
       '<a class="pill pill-line" href="' + esc(murl.shofyor("dostavka", d.no)) + '" style="margin-top:10px">Отвори № ' + esc(d.no) + ic("caret-right", 20) + "</a></span></div></section>"; });
-    h += '<section class="st-sec"><div class="dsum"><div><b>' + s.delivered + "</b><span>доставени</span></div><div><b>" + s.problems + "</b><span>с проблем</span></div><div><b>" + s.fuel + "</b><span>зареждания</span></div></div></section>";
+    h += '<section class="st-sec"><div class="dsum"><div><b>' + s.delivered + "</b><span>" + (s.delivered === 1 ? "доставена" : "доставени") + "</span></div><div><b>" + s.problems + "</b><span>с проблем</span></div><div><b>" + s.fuel + "</b><span>" + (s.fuel === 1 ? "зареждане" : "зареждания") + "</span></div></div></section>";
     const owe = s.owe, hand = s.handover;
     h += '<section class="st-sec"><div class="cashbox"><div class="hd">' + ic("money", 22) + (owe ? "Сметка на парите в брой" : "Пари в брой за предаване") + '</div><div class="in">' +
       (owe ? '<div class="owe"><span>Ресторантът ти дължи</span><b>' + esc(fmt(-hand)) + "</b></div>" : '<div class="big">' + esc(fmt(hand)) + "</div>") +
@@ -56,7 +56,7 @@ export async function initShift(): Promise<void> {
       (errs.km ? '<span class="err full" id="eke" style="color:var(--danger);font-weight:600;font-size:16px">' + esc(errs.km) + "</span>" : "") + "</div>" +
       '<button class="pill pill-soft pill-block" type="button" data-car style="margin-top:12px">' + ic("car", 20) + "Смених колата</button>" +
       '<div class="calc" style="margin-top:12px"><span>Изминати за смяната</span><b id="diff">' + (diff !== null ? kmText(diff) + " км" : "-") + "</b></div></section>";
-    h += '<section class="st-sec"><label class="chk"><input type="checkbox" id="hd"' + (handed ? " checked" : "") + (errs.handed ? ' aria-invalid="true" aria-describedby="ehd"' : "") + "><span>" + (owe ? "Получих " + esc(fmt(-hand)) + " и предадох ваучерите на" : "Предадох " + esc(fmt(hand)) + " и ваучерите на") + " " + MISS(s.handTo) + "</span></label>" +
+    h += '<section class="st-sec"><label class="chk"><input type="checkbox" id="hd"' + (handed ? " checked" : "") + (errs.handed ? ' aria-invalid="true" aria-describedby="ehd"' : "") + "><span>" + (owe ? "Получих " + esc(fmt(-hand)) + (s.vouchers.n ? " и предадох ваучерите на" : " от") : "Предадох " + esc(fmt(hand)) + (s.vouchers.n ? " и ваучерите на" : " на")) + " " + MISS(s.handTo) + "</span></label>" +
       (errs.handed ? '<p class="err" id="ehd" style="margin:0 4px;color:var(--danger);font-weight:600;font-size:16px">' + esc(errs.handed) + "</p>" : "") + "</section>";
     main.innerHTML = h;
     bar.innerHTML = '<button class="pill pill-red" type="button" data-end' + (un.length ? ' disabled aria-describedby="end-why"' : "") + ">" + ic("sign-out", 22) + "Приключи смяната</button>" + (un.length ? '<span class="vh" id="end-why">Първо достави или върни недоставените поръчки.</span>' : "");
@@ -81,10 +81,12 @@ export async function initShift(): Promise<void> {
     busy = true; b.disabled = true; errs = {};
     try {
       ended = await driverApi.end({ km: kmEnd, handed });
-      render(); window.scrollTo({ top: 0 });
-      main.querySelector<HTMLElement>("h2")?.focus();
-      try { localStorage.removeItem("dr-outbox"); ["state", "list", "route", "fuel", "shift"].forEach((k) => localStorage.removeItem("dr-cache-" + k)); } catch { /* blocked */ }
-      signOut().catch(() => { /* the next sign-in replaces the session */ });
+      try { localStorage.removeItem("dr-outbox"); Object.keys(localStorage).filter((k) => k.startsWith("dr-cache-")).forEach((k) => localStorage.removeItem(k)); } catch { /* blocked */ }
+      /* the session goes with the shift: "Смяната приключи" is on the sign-in (no pencil, no bars, only "Към входа") */
+      await signOut().catch(() => { /* the next sign-in replaces the session */ });
+      const e = ended;
+      location.replace(murl.shofyor("vhod", "done&h=" + e.handover.toFixed(2) + (e.owe ? "&owe=1" : "") + (e.km.total != null ? "&km=" + e.km.total : "")));
+      return;
     } catch (er) {
       if (er instanceof ApiError && er.fields && (er.fields.km || er.fields.handed)) { errs = er.fields; render(); main.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); }
       else { drv.oops(er); await load(); }

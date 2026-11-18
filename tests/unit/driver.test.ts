@@ -471,7 +471,11 @@ describe("the route", () => {
     const b = await ready(core, s, { addr: ADDR.bus }); /* Бусманци: 40 min, promised T0 + 41 */
     t.now += 9 * MINUTE;
     const c = await ready(core, s, { addr: ADDR.d2 });  /* Дружба 2: 25 min, promised T0 + 35 */
-    expect((await core.driver.route(s.driver))).toMatchObject({ stops: [], locked: null });
+    /* a new course: the ready ones before "Взех", in the proposed order, without moves (review 1 of the driver) */
+    const pre = await core.driver.route(s.driver);
+    expect(pre).toMatchObject({ preview: true, locked: null, pick: "A" });
+    expect(pre.stops.map((d) => [d.no, d.n, d.eta])).toEqual([[a.no, 0, null], [c.no, 0, null], [b.no, 0, null]]);
+    await expect(core.driver.routeMove(s.driver, c.no, "up")).rejects.toEqual(code("not_found", 404));
     await core.driver.take(s.driver, [a.no, b.no, c.no]);
     let r = await core.driver.route(s.driver);
     expect(r.pick).toBe("A");

@@ -301,8 +301,8 @@ test("the driver's sheet has the navigation app; it is remembered on the device"
   await expect(sh.locator('[data-act="navapp"][data-v="waze"]')).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(`${st}.navApp()`)).toBe("waze");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("st-prefs")!).nav)).toBe("waze");
-  /* the rows of the shift come from the screen through a hook (the driver: the car, since, the start km) */
-  await expect(sh.locator(".kvs .kv")).toHaveCount(5);
+  /* the rows of the shift come from the screen through a hook (the driver: the car, since, the start km, the location) */
+  await expect(sh.locator(".kvs .kv")).toHaveCount(6);
   await expect(sh.locator(".kvs")).toContainText("Автомобил 1 · смени");
 });
 
@@ -477,6 +477,29 @@ test("no connection, the driver: the strip says what waits and „Виж“ open
   await context.setOffline(false);
   await expect(strip).toBeHidden({ timeout: 20_000 });
 });
+
+for (const app of [{ role: "waiter" as const, path: "/servitor/", tab: "calls" }, { role: "driver" as const, path: "/shofyor/", tab: "route" }]) {
+  test("no connection, " + app.role + ": the screen does not change; the tabs and the links to other screens say why (decision 18.11)", async ({ page, context }) => {
+    await signIn(context, app.role);
+    await open(page, app.path);
+    await context.setOffline(true);
+    await expect(page.locator(".st-net")).toBeVisible();
+    const tab = page.locator('.st-nav a[data-tab="' + app.tab + '"]');
+    await expect(tab).toHaveAttribute("aria-disabled", "true");
+    await tab.click({ force: true });
+    await expect(page.locator(".st-toast.on")).toContainText("Няма връзка: остани на този екран, действията се пазят тук.");
+    await expect(page).toHaveURL(new RegExp(app.path.replace(/\//g, "\\/") + "$"));
+    /* a link to another screen inside the page too; a link inside the page still works */
+    await page.evaluate(`document.querySelector("main").insertAdjacentHTML("beforeend", '<a id="t-other" href="${app.path}../admin/">x</a><a id="t-same" href="#t-same">y</a>')`);
+    await page.locator("#t-other").dispatchEvent("click");
+    await expect(page).toHaveURL(new RegExp(app.path.replace(/\//g, "\\/") + "$"));
+    await page.locator("#t-same").dispatchEvent("click");
+    await expect(page).toHaveURL(/#t-same$/);
+    await context.setOffline(false);
+    await expect(page.locator(".st-net")).toBeHidden({ timeout: 20_000 });
+    await expect(tab).not.toHaveAttribute("aria-disabled", "true");
+  });
+}
 
 test("the real-time stream drops: „Свързваме се отново …“, and the screen loads again when it is back", async ({ page, context }) => {
   await signIn(context, "waiter");

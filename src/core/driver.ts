@@ -126,6 +126,9 @@ export const DRIVER_MSG = {
   unfinished: (list: string[]) => "Имаш " + (list.length === 1 ? "недоставена поръчка" : "недоставени поръчки") + ": " + list.map(no).join(", ") + ". Достави ги или ги върни в ресторанта, преди да приключиш.",
   handed: "Отбележи, че си предал парите.",
   range: "Изберете период от-до, до 92 дни.",
+  atBad: "Часът на действието е невалиден.",
+  atFuture: "Часовникът на телефона е напред. Провери го и опитай пак.",
+  atOld: "Действието е отпреди началото на смяната и не се записва.",
 };
 
 /* ---------- stored documents ---------- */
@@ -239,14 +242,18 @@ export interface RouteOption {
   /** no routing service yet: never an invented distance, time or fuel */
   km: null; minutes: null; fuel: null; note: string;
 }
-export interface RouteView { pick: RoutePick; options: RouteOption[]; same: boolean; stops: Delivery[]; locked: string | null; note: string; etaNote: string }
+export interface RouteView {
+  pick: RoutePick; options: RouteOption[]; same: boolean; stops: Delivery[]; locked: string | null; note: string; etaNote: string;
+  /** a new course: the ready orders nobody took yet, in the proposed order (no "Моят ред" and no moves before "Взех") */
+  preview?: boolean;
+}
 export interface StepResult { deliveries: Delivery[]; undo: { id: string; until: number } }
 export interface FuelView {
   id: string; car: string; carName: string; litres: number; sum: number; perLitre: number; km: number; full: boolean; cash: boolean;
   photo: string | null; noPhoto: boolean; at: Iso; atClock: string; user: string; name: string; day: string;
 }
 export interface FuelPage { car: ShiftView["car"]; lastKm: number; cashOnHand: number; entries: FuelView[]; lastPerLitre: number | null }
-export interface FuelInput { litres: number | string; sum: number | string; km: number | string; full?: boolean; cash?: boolean; photo?: string | null; noPhoto?: boolean }
+export interface FuelInput { litres: number | string; sum: number | string; km: number | string; full?: boolean; cash?: boolean; photo?: string | null; noPhoto?: boolean; /** when it was entered on the phone (kept with no connection) */ at?: string | number }
 export interface FuelReport {
   from: string; to: string; total: { n: number; litres: number; sum: number };
   byDay: { date: string; n: number; litres: number; sum: number }[];
@@ -318,6 +325,22 @@ function dec(v: unknown): number {
 function bad(fields: Record<string, string>): never { return invalid(fields, DRIVER_MSG.check); }
 function fail(code: string, message: string, status = 409, fields?: Record<string, string>): never { throw Object.assign(new CoreError(code, message, status), fields ? { fields } : {}); }
 
+/** a step kept on the phone with no connection may be sent later with the moment it was made (`at`, ISO or epoch ms),
+    as the kitchen's actions. 422 bad_at in the future (more than a minute: the phone's clock) or before the shift; never
+    before the last change of the orders it touches (their times stay in order) and never after now. The window of
+    "Отмени" counts from that moment. */
+export const DRIVER_AT_SKEW_MS = 60_000;
+function stepAt(ctx: Ctx, sh: DriverShift, at: unknown, orders: Order[] = []): Ctx {
+  if (at == null || at === "") return ctx;
+  const now = nowMs(ctx), t = typeof at === "number" ? at : Date.parse(String(at));
+  const bad = (m: string) => Object.assign(new CoreError("bad_at", m, 422), { fields: { at: m } });
+  if (!Number.isFinite(t)) throw bad(DRIVER_MSG.atBad);
+  if (t > now + DRIVER_AT_SKEW_MS) throw bad(DRIVER_MSG.atFuture);
+  const from = msOf(sh.startedAt) ?? 0;
+  if (t < from) throw bad(DRIVER_MSG.atOld);
+  const ms = Math.min(Math.max(t, from, ...orders.map((o) => msOf(o.updatedAt) ?? 0)), now);
+  return { ...ctx, now: () => new Date(ms) };
+}
 /** the promised time of an order (epoch ms): its time + the promised minutes, or the chosen hour of a pre-order */
 export function dueOf(o: Pick<Order, "ts" | "eta" | "at" | "sched" | "createdAt">): number | null {
   if (o.eta != null && o.ts) return o.ts + o.eta * MIN;
@@ -633,7 +656,7 @@ const uniq = (l: unknown): string[] => [...new Set((Array.isArray(l) ? l : l == 
 
 /** "Взех N поръчки": the driver, the course and the time; all or none. 409 taken (another driver has it: fields
     {<№>: text}), not_ready, ask_required; 404 for a number that is not a delivery. Log: driver.take per order. */
-export async function take(ctx: Ctx, s: StaffCtx, nos: string[]): Promise<StepResult> {
+export async function take(ctx: Ctx, s: StaffCtx, nos: string[], opt: { at?: string | number } = {}): Promise<StepResult> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user, l = uniq(nos);
@@ -656,17 +679,18 @@ export async function take(ctx: Ctx, s: StaffCtx, nos: string[]): Promise<StepRe
     }
     const first = Object.keys(f)[0];
     if (first) fail(code, f[first], code === "not_found" ? 404 : 409, f);
+    const cx = stepAt(ctx, sh, opt.at, todo);
     const mine = (await deliveryOrders(ctx)).filter((o) => o.driver === me);
     /* one trip: joins the course he has not finished yet, else a new one */
-    const cur = mine.find(unfinishedState), courseId = (cur && cur.course) || rid(6), now = iso(ctx), step = newStep(ctx, sh, "take");
+    const cur = mine.find(unfinishedState), courseId = (cur && cur.course) || rid(6), now = iso(cx), step = newStep(cx, sh, "take");
     for (const o of todo) {
       const prev = snap(o);
       o.driver = me; o.course = courseId; o.pickedAt = now; delete o.arrivedAt; delete o.problem; delete o.collected; o.updatedAt = now;
       await ctx.repo.put(COL.orders, o);
       step.orders.push({ no: o.no, mark: mark(o), prev });
-      await audit(ctx, me, "driver.take", o.no, { course: courseId });
+      await audit(cx, me, "driver.take", o.no, { course: courseId });
     }
-    if (step.orders.length) { sh.last = step; await putShift(ctx, sh); course(ctx, me, "take", step.orders.map((x) => x.no), { course: courseId }); }
+    if (step.orders.length) { sh.last = step; await putShift(cx, sh); course(cx, me, "take", step.orders.map((x) => x.no), { course: courseId }); }
     return { step, nos: l };
     });
   });
@@ -674,7 +698,7 @@ export async function take(ctx: Ctx, s: StaffCtx, nos: string[]): Promise<StepRe
 }
 /** "Тръгвам": without numbers ALL taken ones go "На път" (the list), with numbers only those (one delivery). The ones
     waiting for the manager's answer about the address stay (skipped). 409 nothing / bad_state / ask_required. */
-export async function go(ctx: Ctx, s: StaffCtx, nos?: string[]): Promise<StepResult & { skipped: { no: string; why: string }[] }> {
+export async function go(ctx: Ctx, s: StaffCtx, nos?: string[], opt: { at?: string | number } = {}): Promise<StepResult & { skipped: { no: string; why: string }[] }> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user, l = uniq(nos);
@@ -708,16 +732,17 @@ export async function go(ctx: Ctx, s: StaffCtx, nos?: string[]): Promise<StepRes
     /* in the order of the route: the first one becomes the delivery he drives to */
     const pos = (o: Order) => { const i = sc.plan.order.indexOf(o.no); return i < 0 ? 1e6 : i; };
     targets = targets.sort((a, b) => pos(a) - pos(b));
-    const step = newStep(ctx, sh, "go");
+    const cx = stepAt(ctx, sh, opt.at, targets);
+    const step = newStep(cx, sh, "go");
     for (const o of targets) {
-      const prev = snap(o), o2 = await setOrderStatus(ctx, o.no, "on_way", me, s);
+      const prev = snap(o), o2 = await setOrderStatus(cx, o.no, "on_way", me, s);
       step.orders.push({ no: o.no, mark: mark(o2), prev });
       Object.assign(o, o2);
     }
     if (step.orders.length) {
       relock(sh, mine, sc.zones, sc.now);
-      sh.last = step; await putShift(ctx, sh);
-      course(ctx, me, "go", step.orders.map((x) => x.no), { driving: sh.driving });
+      sh.last = step; await putShift(cx, sh);
+      course(cx, me, "go", step.orders.map((x) => x.no), { driving: sh.driving });
     }
     return { step, nos: l.length ? l : targets.map((o) => o.no), skipped };
     });
@@ -742,7 +767,7 @@ export const ARRIVED_TEXT = "Шофьорът е пред входа";
 export interface ArriveResult extends StepResult { notified: { page: true; push: number; sms: null; smsMissing: string } }
 /** "Пристигнах": the time, and the customer is told "Шофьорът е пред входа" (the tracking page through the order's event,
     Web Push; SMS is [ЛИПСВА: доставчик за SMS]). The order becomes the one he drives to. Log: driver.arrive. */
-export async function arrive(ctx: Ctx, s: StaffCtx, n: string): Promise<ArriveResult> {
+export async function arrive(ctx: Ctx, s: StaffCtx, n: string, opt: { at?: string | number } = {}): Promise<ArriveResult> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user;
@@ -751,17 +776,18 @@ export async function arrive(ctx: Ctx, s: StaffCtx, n: string): Promise<ArriveRe
     if (!o || o.mode !== "delivery" || o.driver !== me) throw new CoreError("not_found", DRIVER_MSG.notFound, 404);
     const st = stateOf(o);
     if (st !== "road") fail("bad_state", st === "picked" ? DRIVER_MSG.notOnWay(o.no) : st === "prob" ? DRIVER_MSG.hasProblem(o.no) : st === "cancelled" ? DRIVER_MSG.cancelled(o.no) : DRIVER_MSG.finished(o.no));
-    const step = newStep(ctx, sh, "arrive");
+    const cx = stepAt(ctx, sh, opt.at, [o]);
+    const step = newStep(cx, sh, "arrive");
     let push = 0;
     if (!o.arrivedAt) {
-      const prev = snap(o), now = iso(ctx);
+      const prev = snap(o), now = iso(cx);
       o.arrivedAt = now; o.updatedAt = now;
       await ctx.repo.put(COL.orders, o);
       step.orders.push({ no: o.no, mark: mark(o), prev });
-      sh.driving = o.no; sh.last = step; await putShift(ctx, sh);
-      await audit(ctx, me, "driver.arrive", o.no);
-      emit(ctx, "order.status", { no: o.no, status: o.status, at: now, arrivedAt: now }, { order: o.no });
-      course(ctx, me, "arrive", [o.no]);
+      sh.driving = o.no; sh.last = step; await putShift(cx, sh);
+      await audit(cx, me, "driver.arrive", o.no);
+      emit(cx, "order.status", { no: o.no, status: o.status, at: now, arrivedAt: now }, { order: o.no });
+      course(cx, me, "arrive", [o.no]);
       push = await pushArrived(ctx, o);
     }
     return { step, push, no: o.no };
@@ -772,7 +798,7 @@ export async function arrive(ctx: Ctx, s: StaffCtx, n: string): Promise<ArriveRe
 /** "Доставена · взех X €": "Доставена" through the existing rules, and what was taken at the door: for a cash order the
     sum (default: the order's total), a card / voucher as such. With an open problem: "Доставих все пак".
     409 bad_state ("Тръгвам" first); 422 fields.sum. Log: order.status + driver.deliver. */
-export async function deliver(ctx: Ctx, s: StaffCtx, n: string, input: { sum?: number | string | null } = {}): Promise<StepResult> {
+export async function deliver(ctx: Ctx, s: StaffCtx, n: string, input: { sum?: number | string | null; at?: string | number } = {}): Promise<StepResult> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user;
@@ -785,18 +811,19 @@ export async function deliver(ctx: Ctx, s: StaffCtx, n: string, input: { sum?: n
     if (o.status !== "on_way" && o.status !== "ready") fail("not_ready", DRIVER_MSG.notReady(o.no));
     const given = money(input && typeof input === "object" ? input.sum : null);
     if (given !== null && !(given >= 0)) bad({ sum: DRIVER_MSG.sum });
-    const sum = o.pay === "cash" && given !== null ? round2(given) : o.total, prev = snap(o), step = newStep(ctx, sh, "deliver");
-    if (o.status === "ready") await setOrderStatus(ctx, o.no, "on_way", me, s); /* "Доставих все пак" of a taken order */
-    const o2 = await setOrderStatus(ctx, o.no, "delivered", me, s), now = o2.times?.delivered || iso(ctx);
+    const cx = stepAt(ctx, sh, input && typeof input === "object" ? input.at : undefined, [o]);
+    const sum = o.pay === "cash" && given !== null ? round2(given) : o.total, prev = snap(o), step = newStep(cx, sh, "deliver");
+    if (o.status === "ready") await setOrderStatus(cx, o.no, "on_way", me, s); /* "Доставих все пак" of a taken order */
+    const o2 = await setOrderStatus(cx, o.no, "delivered", me, s), now = o2.times?.delivered || iso(cx);
     o2.collected = { pay: o2.pay, sum, at: now, by: me, ...(o2.pay === "cash" && o2.fee === null ? { feeMissing: true } : {}) };
     if (o2.problem) o2.problem = { ...o2.problem, solved: "delivered", solvedAt: now };
     await ctx.repo.put(COL.orders, o2);
     step.orders.push({ no: o2.no, mark: mark(o2), prev });
     const mine = (await deliveryOrders(ctx)).filter((x) => x.driver === me), zones = new Map((await liveZones(ctx)).map((z) => [z.n, z]));
-    relock(sh, mine, zones, nowMs(ctx));
-    sh.last = step; await putShift(ctx, sh);
-    await audit(ctx, me, "driver.deliver", o2.no, { pay: o2.pay, sum, ...(anyway ? { afterProblem: o2.problem!.kind } : {}), ...(o2.collected.feeMissing ? { feeMissing: true } : {}) });
-    course(ctx, me, "deliver", [o2.no], { driving: sh.driving });
+    relock(sh, mine, zones, nowMs(cx));
+    sh.last = step; await putShift(cx, sh);
+    await audit(cx, me, "driver.deliver", o2.no, { pay: o2.pay, sum, ...(anyway ? { afterProblem: o2.problem!.kind } : {}), ...(o2.collected.feeMissing ? { feeMissing: true } : {}) });
+    course(cx, me, "deliver", [o2.no], { driving: sh.driving });
     return { step, no: o2.no };
     });
   });
@@ -807,7 +834,7 @@ export async function deliver(ctx: Ctx, s: StaffCtx, n: string, input: { sum?: n
 /** "Няма никой" | "Грешен адрес" | "Отказ" (+ a note), only for a taken order or one on the way. The restaurant hears
     it (driver.course kind "problem"), the manager sees it (drivers().problems); the customer's page gets a neutral state.
     How long to wait and what happens with the food: [ЛИПСВА] (OPEN-QUESTIONS 23). Log: driver.problem. */
-export async function problem(ctx: Ctx, s: StaffCtx, n: string, kind: ProblemKind, note?: string): Promise<StepResult> {
+export async function problem(ctx: Ctx, s: StaffCtx, n: string, kind: ProblemKind, note?: string, opt: { at?: string | number } = {}): Promise<StepResult> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user;
@@ -818,16 +845,17 @@ export async function problem(ctx: Ctx, s: StaffCtx, n: string, kind: ProblemKin
     const st = stateOf(o);
     if (st === "prob") fail("has_problem", o.problem!.solved ? DRIVER_MSG.noProblem(o.no) : DRIVER_MSG.hasProblem(o.no));
     if (st !== "picked" && st !== "road") fail("bad_state", DRIVER_MSG.problemState(o.no));
-    const prev = snap(o), now = iso(ctx), text = String(note || "").replace(/\s+/g, " ").trim().slice(0, 300), step = newStep(ctx, sh, "problem");
+    const cx = stepAt(ctx, sh, opt.at, [o]);
+    const prev = snap(o), now = iso(cx), text = String(note || "").replace(/\s+/g, " ").trim().slice(0, 300), step = newStep(cx, sh, "problem");
     o.problem = { kind, at: now, ...(text ? { note: text } : {}), solved: "" }; o.updatedAt = now;
     await ctx.repo.put(COL.orders, o);
     step.orders.push({ no: o.no, mark: mark(o), prev });
     const mine = (await deliveryOrders(ctx)).filter((x) => x.driver === me), zones = new Map((await liveZones(ctx)).map((z) => [z.n, z]));
-    relock(sh, mine, zones, nowMs(ctx));
-    sh.last = step; await putShift(ctx, sh);
-    await audit(ctx, me, "driver.problem", o.no, { kind, ...(text ? { note: text } : {}) });
-    emit(ctx, "order.status", { no: o.no, status: o.status, at: now, hold: true }, { order: o.no });
-    course(ctx, me, "problem", [o.no], { problem: kind, driving: sh.driving });
+    relock(sh, mine, zones, nowMs(cx));
+    sh.last = step; await putShift(cx, sh);
+    await audit(cx, me, "driver.problem", o.no, { kind, ...(text ? { note: text } : {}) });
+    emit(cx, "order.status", { no: o.no, status: o.status, at: now, hold: true }, { order: o.no });
+    course(cx, me, "problem", [o.no], { problem: kind, driving: sh.driving });
     return { step, no: o.no };
     });
   });
@@ -836,7 +864,7 @@ export async function problem(ctx: Ctx, s: StaffCtx, n: string, kind: ProblemKin
 /** "Върнах я": the order is back in the restaurant (after a problem, or after the manager's answer "Върни я в ресторанта"
     / "Предложи вземане от място"). The status stays: what happens with it is the restaurant's decision
     ([ЛИПСВА], OPEN-QUESTIONS 23; "Откажи" with a reason in the admin). Log: driver.problem_end. */
-export async function returned(ctx: Ctx, s: StaffCtx, n: string): Promise<StepResult> {
+export async function returned(ctx: Ctx, s: StaffCtx, n: string, opt: { at?: string | number } = {}): Promise<StepResult> {
   need(s, "driver");
   const done = await lock(ctx, async () => {
     const sh = await mustShift(ctx, s), me = sh.user;
@@ -846,17 +874,18 @@ export async function returned(ctx: Ctx, s: StaffCtx, n: string): Promise<StepRe
     const a = (await ctx.repo.list<DriverAsk>(COL.asks)).filter((x) => x.order === o.no).sort((x, y) => (x.at < y.at ? 1 : -1))[0];
     const told = !!a && a.status === "answered" && (a.answer === "return" || a.answer === "pickup") && inRoute(o);
     if (!openProblem(o) && !told) fail("no_problem", DRIVER_MSG.noProblem(o.no));
-    const prev = snap(o), now = iso(ctx), step = newStep(ctx, sh, "returned");
+    const cx = stepAt(ctx, sh, opt.at, [o]);
+    const prev = snap(o), now = iso(cx), step = newStep(cx, sh, "returned");
     o.problem = { ...(o.problem || { kind: "address" as const, at: a!.at, note: "Адрес извън зоните: " + ANSWER_LABEL[a!.answer!] }), solved: "returned", solvedAt: now };
     o.updatedAt = now;
     await ctx.repo.put(COL.orders, o);
     step.orders.push({ no: o.no, mark: mark(o), prev });
     const mine = (await deliveryOrders(ctx)).filter((x) => x.driver === me), zones = new Map((await liveZones(ctx)).map((z) => [z.n, z]));
-    relock(sh, mine, zones, nowMs(ctx));
-    sh.last = step; await putShift(ctx, sh);
-    await audit(ctx, me, "driver.problem_end", o.no, { kind: o.problem.kind, solved: "returned" });
-    emit(ctx, "order.status", { no: o.no, status: o.status, at: now, hold: true }, { order: o.no });
-    course(ctx, me, "returned", [o.no], { driving: sh.driving });
+    relock(sh, mine, zones, nowMs(cx));
+    sh.last = step; await putShift(cx, sh);
+    await audit(cx, me, "driver.problem_end", o.no, { kind: o.problem.kind, solved: "returned" });
+    emit(cx, "order.status", { no: o.no, status: o.status, at: now, hold: true }, { order: o.no });
+    course(cx, me, "returned", [o.no], { driving: sh.driving });
     return { step, no: o.no };
     });
   });
@@ -993,7 +1022,13 @@ function routeOf(sc: Scope): RouteView {
     No kilometres, minutes or fuel: [ЛИПСВА: маршрути от OSRM]. */
 export async function route(ctx: Ctx, s: StaffCtx): Promise<RouteView> {
   need(s, "driver");
-  return routeOf(await scope(ctx, s));
+  const sc = await scope(ctx, s);
+  if (sc.plan.order.length) return routeOf(sc);
+  /* a new course (the prototype's "Нов курс"): Път А and Път Б for the ready orders in the zones nobody took yet */
+  const wait = sc.orders.filter((o) => o.status === "ready" && !o.driver && !isOutzone(o, sc.zones));
+  if (!wait.length) return routeOf(sc);
+  const sh = sc.shift ? { ...sc.shift, route: { pick: (sc.shift.route.pick === "B" ? "B" : "A") as RoutePick, own: null }, driving: null } : null;
+  return { ...routeOf({ ...sc, plan: makePlan(wait, sh, sc.zones, sc.now) }), preview: true };
 }
 /** the driver chooses: "A" | "B" | "own" ("own" starts from the order on the screen). Log: driver.route. */
 export async function routePick(ctx: Ctx, s: StaffCtx, pick: RoutePick): Promise<RouteView> {
@@ -1099,12 +1134,13 @@ export async function fuelAdd(ctx: Ctx, s: StaffCtx, input: FuelInput): Promise<
       if (ok) photo = p; else f.photo = DRIVER_MSG.photo;
     }
     if (Object.keys(f).length) bad(f);
-    const now = iso(ctx);
+    const cx = stepAt(ctx, sh, i.at);
+    const now = iso(cx);
     const e: FuelEntry = { id: rid(8), user: sh.user, name: sh.name, shift: sh.id, car: sh.car, litres: round3(litres), sum: round2(sum!), km, full: i.full === true, cash, photo, noPhoto: !photo && i.noPhoto === true, at: now, createdAt: now };
     await ctx.repo.put(COL.fuel, e);
     setKm(d, sh.car, km); await putDoc(ctx, d);
-    await audit(ctx, sh.user, "fuel.add", e.id, { car: e.car, litres: e.litres, sum: e.sum, km, full: e.full, cash, photo: !!photo });
-    course(ctx, sh.user, "fuel");
+    await audit(cx, sh.user, "fuel.add", e.id, { car: e.car, litres: e.litres, sum: e.sum, km, full: e.full, cash, photo: !!photo });
+    course(cx, sh.user, "fuel");
     return e.id;
   });
   const page = await fuel(ctx, s);

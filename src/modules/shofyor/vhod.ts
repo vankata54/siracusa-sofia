@@ -4,12 +4,13 @@
    the change taken from the restaurant ([ЛИПСВА: колко ресто се дава]) and the reminder "само в паркирано положение".
    "Назад" on the left of the bottom bar. A signed-in driver with an open shift goes straight to "Доставки"; signed in
    without a shift starts at step 2. */
-import "sc-icons:car,caret-left,caret-right,eye,moped,sign-in,check";
+import "sc-icons:car,caret-left,caret-right,eye,moped,sign-in,check,check-circle,map-pin";
 import { mountStaff } from "../staff/frame.ts";
 import { driverApi, ApiError, type DriverState } from "../../client/api-driver.ts";
 import { http, pick, demoTok, setDemoTok } from "../../client/api.ts";
 import { ic } from "../../lib/icons.ts";
-import { esc } from "../../lib/format.ts";
+import { esc, fmt } from "../../lib/format.ts";
+import { GEO_NOTE, geoHTML, bindGeo, geoOn } from "./app.ts";
 import { murl } from "../routes.ts";
 import { aurl } from "../../admin/routes.ts";
 
@@ -59,10 +60,13 @@ export async function initVhod(): Promise<void> {
         (errs.km ? err("km", "kerr") : '<span class="help" id="khelp">' + (c.lastKm != null ? "Последно записан за тази кола: " + kmText(c.lastKm) + " км." : "За тази кола още няма записан километраж.") + "</span>") + "</div>" +
         '<div class="field bigf"><label for="fl">Ресто, което взимаш от ресторанта</label><div class="wrapi"><input class="input" id="fl" inputmode="decimal" autocomplete="off" placeholder="0,00" value="' + esc(flv) + '"' + (errs.float ? ' aria-invalid="true"' : "") + ' aria-describedby="' + (errs.float ? "ferr " : "") + 'flh"><span class="u">€</span></div>' + err("float", "ferr") +
         '<span class="help" id="flh">Брои се към парите за предаване в края на смяната. Колко ресто се дава: <span class="missing">' + esc(S!.missing.float) + "</span>.</span></div>" +
-        '<div class="park">' + ic("car", 22) + "<span>Ползвай приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>";
+        '<div class="park">' + ic("car", 22) + "<span>Ползвай приложението само когато колата е паркирана. Навигацията работи в Google Maps или Waze.</span></div>" +
+        (geoOn() || !("geolocation" in navigator) ? "" : '<div class="geo" data-geo-card><p><b>„Колата е в движение“</b> ' + esc(GEO_NOTE) + "</p>" + geoHTML() + "</div>");
       bar.innerHTML = back("car") + '<button class="pill pill-red grow" type="button" data-start>' + ic("moped", 22) + "Започни смяната</button>";
     }
     main.innerHTML = h + "</div>";
+    const g = main.querySelector<HTMLElement>("[data-geo-card]");
+    if (g) bindGeo(g, () => { const box = g.querySelector<HTMLElement>("[data-geobox]"); if (box) box.outerHTML = geoHTML(); if (geoOn()) g.remove(); else bindGeo(g, () => render()); });
     if (focus) main.querySelector<HTMLElement>(focus)?.focus();
   }
   /** where a signed-in person goes: an open shift -> "Доставки", else the car */
@@ -83,7 +87,18 @@ export async function initVhod(): Promise<void> {
     view = "car"; errs = {}; render(); window.scrollTo(0, 0);
     return true;
   }
-  try { if (!(await route())) render(); }
+  /* "Смяната приключи" (from "Край на смяната", the session is already gone): only "Към входа" */
+  const hp = new URLSearchParams(location.hash.slice(1));
+  if (hp.has("done")) {
+    const h = +(hp.get("h") || 0), km = hp.get("km");
+    main.innerHTML = '<div class="lg">' + st.empty({ icon: "check-circle", title: "Смяната приключи",
+      text: (hp.get("owe") ? "Ресторантът ти дължи " + fmt(Math.abs(h)) + "." : "Предаде " + fmt(h) + " в брой.") + (km ? " Изминати: " + km + "\u00a0км." : "") + " Благодарим!" }) + "</div>";
+    bar.innerHTML = '<button class="pill pill-red" type="button" data-go="login">' + ic("sign-in", 22) + "Към входа</button>";
+    main.querySelector<HTMLElement>("h2")?.setAttribute("tabindex", "-1"); main.querySelector<HTMLElement>("h2")?.focus();
+    document.title = "Смяната приключи | Siracusa · Шофьор";
+    st.synced();
+  }
+  else try { if (!(await route())) render(); }
   catch (e) { render(); st.toast(e instanceof ApiError && e.message ? e.message : "Не успяхме да проверим входа. Опитай пак."); }
   st.synced();
 
@@ -116,7 +131,7 @@ export async function initVhod(): Promise<void> {
       b.setAttribute("aria-pressed", String(shown)); b.querySelector("span")!.textContent = shown ? "Скрий" : "Покажи"; return;
     }
     if (b.dataset.car) { car = b.dataset.car; errs = {}; render('[data-car="' + car + '"]'); return; }
-    if (b.dataset.go) { view = b.dataset.go as typeof view; errs = {}; render(); window.scrollTo(0, 0); return; }
+    if (b.dataset.go) { if (location.hash) history.replaceState(history.state, "", location.pathname); view = b.dataset.go as typeof view; errs = {}; render(); window.scrollTo(0, 0); return; }
     if (b.hasAttribute("data-start")) {
       busy = true; b.disabled = true; errs = {};
       try {

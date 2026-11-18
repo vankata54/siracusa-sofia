@@ -38,11 +38,18 @@ export const at = (i: string | null | undefined) => { const t = msOf(i); return 
 export const stt = (k: string, word: string, icon: string) => '<span class="stt ' + esc(k) + '">' + ic(icon, 18) + "<span>" + esc(word) + "</span></span>";
 
 /* ---------- a delivery on the screen ---------- */
-/** the address in one line: "Дружба 2, бл. 311" (the zone is not repeated when the address already says it) */
-export function addrLine(d: Delivery): string {
-  const a = (d.addr || "").trim(), z = (d.zone || "").trim();
-  return !z || d.outzone ? a : a.toLowerCase().includes(z.toLowerCase()) ? a : z + ", " + a;
+/** the address as the prototype shows it: bold "Дружба 2, бл. 311, вх. Б" and under it "ет. 4, ап. 12" ("ж.к." does not
+    repeat the quarter; the zone is added when the address does not say it) */
+export function addrParts(d: Delivery): { main: string; sub: string } {
+  const a = (d.addr || "").trim().replace(/^(?:ж\.?\s?к\.?|кв\.|с\.)\s*/i, ""), z = (d.zone || "").trim();
+  const m = /,\s*(?=(?:ет\.|етаж|ап\.|апартамент))/i.exec(a);
+  let main = m ? a.slice(0, m.index) : a;
+  const sub = m ? a.slice(m.index).replace(/^,\s*/, "") : "";
+  if (z && !d.outzone && !main.toLowerCase().includes(z.toLowerCase())) main = z + ", " + main;
+  return { main, sub };
 }
+/** the address in one line (the search, the labels) */
+export function addrLine(d: Delivery): string { const p = addrParts(d); return p.main + (p.sub ? ", " + p.sub : ""); }
 export const zoneName = (d: Delivery) => (d.outzone || !d.zone ? "Извън зоните" : d.zone);
 /** what to take at the door: "24,47 €", "22,37 € + такса", "уточни с ресторанта" */
 export function money(d: Delivery): string {
@@ -75,7 +82,8 @@ export const isLate = (d: Delivery, now = Date.now()) => live(d) && d.due != nul
 export const etaStt = (d: Delivery) => (d.etaAt && live(d) ? stt("picked", "Пристигане около " + d.etaAt, "car") : "");
 /** the address in Google Maps or Waze (free links, no key) */
 export function navUrl(d: Delivery, app: string): string {
-  const a = addrLine(d), q = encodeURIComponent((d.outzone || !d.zone || /ж\.\s?к\./i.test(a) ? a : "ж.к. " + a) + ", София");
+  const a = (d.addr || "").trim(), z = (d.zone || "").trim();
+  const q = encodeURIComponent((d.outzone || !z || a.toLowerCase().includes(z.toLowerCase()) ? a : "ж.к. " + z + ", " + a) + ", София");
   return app === "waze" ? "https://waze.com/ul?q=" + q + "&navigate=yes" : "https://www.google.com/maps/dir/?api=1&destination=" + q + "&travelmode=driving";
 }
 /** what is left to know about an order outside the zones (the manager's answer) */
@@ -145,6 +153,7 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
   const box = makeOutbox({ get: () => LS.get("dr-outbox"), set: (v) => LS.set("dr-outbox", v) });
   let state: DriverState | null = null;
   let carSheetRef: ((onDone?: () => void) => Promise<void>) | null = null;
+  let startMoving: () => void = () => { /* set after the mount */ };
   const st0 = await mountStaff({
     module: "driver", screen: o.screen, tab: o.tab, title: o.title, back: o.back, bar: o.bar,
     homeFind: o.homeFind ? { text: "Търси № или адрес…", label: "Търси № или адрес в моите доставки" } : undefined,
@@ -155,7 +164,7 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
   if (!st0) return null;
   const st = st0;
   /* the frame's sheet (not SC.sheet of the site: tests/unit/runtime.test.ts looks for ".sheet(" calls) */
-  const openSheet = st.sheet;
+  const openSheet = (o: Parameters<Staff["sheet"]>[0]) => { st.ov.querySelector(".st-toast")?.classList.remove("on"); return st.sheet(o); };
   try { state = await cachedCall("state", () => driverApi.state()); }
   catch (e) { st.fail(e); return null; }
   if (!state.shift) { location.replace(murl.shofyor("vhod")); return null; }
@@ -170,10 +179,13 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
         { label: "Автомобил", html: '<button class="link" type="button" data-carsheet>' + esc(sh.car.n) + " · смени</button>" },
         { label: "На смяна от", value: sh.sinceAt, tnum: true },
         { label: "Начален километраж", value: kmText(sh.kmStart) + " км", tnum: true },
+        { label: "Местоположение", html: geoHTML(), note: "За „Колата е в движение“. " + GEO_NOTE },
       ],
-      extra: '<p class="st-cap" style="margin-top:18px">Местоположение</p><p class="small muted" style="margin:0">Не се изпраща никъде. Само този телефон разбира, че колата се движи, за да покаже „Колата е в движение“.</p>',
       foot: '<a class="pill pill-line pill-lg pill-block" href="' + esc(murl.shofyor("smyana")) + '">' + ic("sign-out", 22) + "Приключи смяната</a>",
-      bind: (sheet: Sheet) => { const b = sheet.el.querySelector<HTMLElement>("[data-carsheet]"); if (b) b.onclick = () => { sheet.close(); void carSheetRef!(() => location.reload()); }; },
+      bind: (sheet: Sheet) => {
+        const b = sheet.el.querySelector<HTMLElement>("[data-carsheet]"); if (b) b.onclick = () => { sheet.close(); void carSheetRef!(() => location.reload()); };
+        bindGeo(sheet.el, () => { const g = sheet.el.querySelector<HTMLElement>("[data-geobox]"); if (g) g.outerHTML = geoHTML(); bindGeo(sheet.el, () => {}); if (geoOn()) startMoving(); });
+      },
     };
   }
 
@@ -194,16 +206,17 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-act="retry">' + ic("arrow-clockwise", 22) + "Опитай пак сега</button>",
     });
   }
+  /** a step; a kept one goes with the moment it was made on the phone (the core checks it and keeps its times) */
   async function run(q: DQueued): Promise<unknown> {
-    const a = q.a;
+    const a = q.a, o = q.id ? { at: q.at } : {};
     switch (a.k) {
-      case "take": return driverApi.take(a.nos);
-      case "go": return driverApi.go(a.nos);
-      case "arrive": return driverApi.arrive(a.no);
-      case "deliver": return driverApi.deliver(a.no);
-      case "problem": return driverApi.problem(a.no, a.kind, a.note);
-      case "returned": return driverApi.returned(a.no);
-      case "fuel": return driverApi.fuelAdd(a.input);
+      case "take": return driverApi.take(a.nos, o);
+      case "go": return driverApi.go(a.nos, o);
+      case "arrive": return driverApi.arrive(a.no, o);
+      case "deliver": return driverApi.deliver(a.no, o);
+      case "problem": return driverApi.problem(a.no, a.kind, a.note, o);
+      case "returned": return driverApi.returned(a.no, o);
+      case "fuel": return driverApi.fuelAdd({ ...a.input, ...o });
     }
   }
   const subs = new Set<() => void>();
@@ -292,9 +305,9 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
   const drv: Drv = {
     st, get state() { return state!; },
     async act(a) {
-      if (st.offline) { const q = box.add(a); st.netRefresh(); return { queued: q }; }
+      if (st.offline) { const q = box.add(a); st.netRefresh(); changed(); return { queued: q }; }
       try { return { res: await run({ id: "", at: Date.now(), a }) }; }
-      catch (e) { if (!isOff(e)) throw e; const q = box.add(a); st.netRefresh(); return { queued: q }; }
+      catch (e) { if (!isOff(e)) throw e; const q = box.add(a); st.netRefresh(); changed(); return { queued: q }; }
     },
     unqueue(q) { box.remove(q.id); st.netRefresh(); },
     queued: () => box.list(),
@@ -313,13 +326,51 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
     navApp: () => st.navApp(),
     setExamples(nos) { examples = nos; },
   };
-  /* the badge of "Доставки" on the other screens ("Моите доставки" counts what it draws) */
+  /* the badge of "Доставки" and the examples of the search on the other screens ("Моите доставки" counts what it draws),
+     as the steps kept on the phone leave the deliveries */
   if (o.screen !== "list") {
-    const badge = () => { driverApi.list().then((l) => drv.badge(l.active.filter((d) => d.st === "picked" || d.st === "road").length + l.waiting.length)).catch(() => { /* stays as it is */ }); };
+    const badge = () => {
+      cachedCall("list", () => driverApi.list()).then((l) => {
+        const all = drv.local([...l.active, ...l.waiting].map((d) => ({ ...d }))).filter((d) => d.st === "wait" || d.st === "picked" || d.st === "road");
+        drv.badge(all.length); examples = all.map((d) => d.no);
+      }).catch(() => { /* stays as it is */ });
+    };
     badge(); subs.add(badge);
   }
-  watchMoving(drv);
+  startMoving = () => watchMoving(drv);
+  if (geoOn()) startMoving();
   return drv;
+}
+
+/* ---------- the permission for "Колата е в движение" ----------
+   The browser asks for the location only after "Разреши" under the explanation (the sign-in, step 3, and the sheet
+   "Смяна"); "Не сега" and a refusal of the browser are remembered on the phone ("dr-geo": "yes" | "no"). */
+export const GEO_NOTE = "Телефонът разбира по GPS, че колата се движи, и спира приложението, докато караш. Местоположението не се изпраща никъде.";
+const geoGet = (): string => { try { return localStorage.getItem("dr-geo") || ""; } catch { return ""; } };
+const geoSet = (v: string) => { try { localStorage.setItem("dr-geo", v); } catch { /* the choice lives for the page */ } };
+let geoPerm: string = "";
+if (typeof navigator !== "undefined" && navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({ name: "geolocation" as PermissionName }).then((r) => { geoPerm = r.state; r.onchange = () => { geoPerm = r.state; }; }).catch(() => { /* old browser */ });
+}
+/** may the phone watch the speed: the browser said yes (or this phone allowed it before, where the browser cannot tell) */
+export const geoOn = (): boolean => typeof navigator !== "undefined" && "geolocation" in navigator && (geoPerm === "granted" || (geoPerm === "" && geoGet() === "yes"));
+/** "Разреши" / "Не сега", or the state in words */
+export function geoHTML(): string {
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) return '<b data-geobox>Телефонът няма GPS</b>';
+  if (geoOn()) return '<b data-geobox>Разрешено</b>';
+  if (geoPerm === "denied" || geoGet() === "no") return '<span data-geobox><b>Изключено</b><button class="link" type="button" data-geo="yes">Разреши</button></span>';
+  return '<span class="geoacts" data-geobox><button class="pill pill-line" type="button" data-geo="yes">Разреши</button><button class="pill pill-soft" type="button" data-geo="no">Не сега</button></span>';
+}
+/** the buttons of geoHTML(); done() after the choice */
+export function bindGeo(root: HTMLElement, done: () => void): void {
+  root.querySelectorAll<HTMLButtonElement>("[data-geo]").forEach((b) => {
+    b.onclick = () => {
+      if (b.dataset.geo === "no") { geoSet("no"); done(); return; }
+      b.disabled = true;
+      navigator.geolocation.getCurrentPosition(() => { geoSet("yes"); geoPerm = geoPerm === "prompt" || geoPerm === "" ? "granted" : geoPerm; done(); },
+        (e) => { if (e.code === 1) { geoSet("no"); geoPerm = "denied"; } done(); }, { maximumAge: 60_000, timeout: 15_000 });
+    };
+  });
 }
 
 /* ---------- "Колата е в движение": the speed from the GPS of this browser, only while the app is open ----------

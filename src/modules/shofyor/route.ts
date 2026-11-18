@@ -3,17 +3,17 @@
    core gives them (km, minutes and fuel are never invented: [ЛИПСВА: маршрути от OSRM]), "Адресите по ред" with the
    arrival "около" (when the core has one) and the deadline, "По-рано" / "По-късно" on every address; the one he drives
    to is locked first ("Караш към нея сега: остава първа") without its buttons. */
-import { mountDriver, driverApi, ic, esc, plural, murl, addrLine, MISS, type Delivery } from "./app.ts";
+import { mountDriver, driverApi, ic, esc, plural, murl, addrParts, isLate, MISS, type Delivery } from "./app.ts";
 import type { RouteView, RouteOption } from "../../client/api-driver.ts";
 
 /* where each quarter lies from the restaurant on the scheme (viewBox 360 x 272): only the rough direction, NOT a map */
-const POS: Record<string, [number, number]> = { home: [126, 146], "Дружба 2": [170, 150], "Дружба 1": [150, 64], "Гара Искър": [56, 52], "НПЗ Искър": [290, 70], "Бусманци": [296, 192], "Горубляне": [118, 224], out: [30, 130] };
-const LBL: Record<string, [number, number]> = { "Дружба 1": [0, -38], "Дружба 2": [0, -34], "НПЗ Искър": [0, -38], "Бусманци": [0, 46], "Горубляне": [0, 46], "Гара Искър": [0, -38] };
+const POS: Record<string, [number, number]> = { home: [92, 146], "Дружба 2": [170, 150], "Дружба 1": [150, 64], "Гара Искър": [56, 52], "НПЗ Искър": [290, 70], "Бусманци": [296, 192], "Горубляне": [118, 224], out: [30, 130] };
+const LBL: Record<string, [number, number]> = { "Дружба 1": [0, -38], "Дружба 2": [0, -38], "НПЗ Искър": [0, -38], "Бусманци": [0, 50], "Горубляне": [0, -36], "Гара Искър": [0, -38] };
 /** a small, stable offset per order (two addresses of one quarter do not cover each other) */
 function jitter(no: string, i: number): [number, number] {
   let h = 0; for (const c of no) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const a = ((h % 360) * Math.PI) / 180, r = 10 + (i % 3) * 7;
-  return [Math.round(Math.cos(a) * r), Math.round(Math.sin(a) * r * 0.6)];
+  const a = (((h % 140) - 70) * Math.PI) / 180, r = 8 + (i % 3) * 8;
+  return [Math.round(Math.abs(Math.cos(a)) * r), Math.round(Math.sin(a) * r * 0.5)];
 }
 
 export async function initRoute(): Promise<void> {
@@ -53,15 +53,17 @@ export async function initRoute(): Promise<void> {
       return;
     }
     const A = R.options.find((o) => o.key === "A")!, B = R.options.find((o) => o.key === "B")!, own = R.options.find((o) => o.key === "own");
-    let h = '<section class="st-sec">' + scheme(stops) + "</section>";
+    let h = (R.preview ? '<section class="st-sec"><div class="notice">' + ic("storefront", 22) + "<span>" + plural(stops.length, "поръчка чака", "поръчки чакат") + " в ресторанта. Това е предложеният ред; „По-рано“ и „По-късно“ са след „Взех“.</span></div></section>" : "") +
+      '<section class="st-sec">' + scheme(stops) + "</section>";
     h += '<section class="st-sec"><div class="st-h"><h2>Предложение</h2><span class="muted">ти решаваш</span></div><div class="rchoice">' + card(A, R.pick) +
       (R.same ? '<p class="small muted" style="margin:0">Най-краткият път съвпада с Път А за този курс.</p>' : card(B, R.pick)) + (own ? card(own, R.pick) : "") + "</div>" +
-      '<p class="small muted" style="margin:10px 4px 0">Път А води първо до поръчките с по-ранен срок, Път Б първо до близките квартали. Километрите, минутите и литрите се показват, щом има маршрути ' + MISS(R.note) + ".</p></section>";
+      '<p class="small muted" style="margin:10px 4px 0">Път А води първо до поръчките с по-ранен срок, Път Б първо до близките квартали.</p></section>';
     h += '<section class="st-sec"><div class="st-h"><h2>Адресите по ред</h2><span class="muted">пристигане</span></div><div class="stops">' +
-      stops.map((d, i) => '<div class="stop" data-no="' + esc(d.no) + '"><span class="no">' + (i + 1) + '</span><a href="' + esc(murl.shofyor("dostavka", d.no)) + '" style="color:inherit;text-decoration:none"><span class="a" style="display:block">' + esc(addrLine(d)) + '</span><span class="s" style="display:block">№ ' + esc(d.no) + " · " + esc(d.stLabel) + "</span></a>" +
+      stops.map((d, i) => { const ap = addrParts(d), late = isLate(d) || d.etaLate > 0;
+        return '<div class="stop' + (late ? " late" : "") + '" data-no="' + esc(d.no) + '"><span class="no">' + (i + 1) + '</span><a class="stopa" href="' + esc(murl.shofyor("dostavka", d.no)) + '"><span class="a" style="display:block">' + esc(ap.main) + '</span><span class="s" style="display:block">№ ' + esc(d.no) + " · " + esc(d.stLabel) + "</span>" + (late ? '<span class="lt">' + ic("timer", 16) + (isLate(d) ? "закъснява" : "ще закъснее ~" + d.etaLate + " мин") + "</span>" : "") + "</a>" +
         '<span class="eta">' + (d.etaAt ? '<b aria-label="около ' + esc(d.etaAt) + '">~' + esc(d.etaAt) + "</b>" : "") + (d.dueAt ? "срок " + esc(d.dueAt) : "") + "</span>" +
-        (d.no === L ? '<span class="lockh">' + ic("lock", 16) + "Караш към нея сега: остава първа</span>"
-          : '<span class="mv"><button class="pill pill-soft" type="button" data-up="' + esc(d.no) + '"' + (i === 0 || (i === 1 && L) ? " disabled" : "") + ' aria-label="По-рано: № ' + esc(d.no) + '">' + ic("caret-up", 20) + 'По-рано</button><button class="pill pill-soft" type="button" data-down="' + esc(d.no) + '"' + (i === stops.length - 1 ? " disabled" : "") + ' aria-label="По-късно: № ' + esc(d.no) + '">' + ic("caret-down", 20) + "По-късно</button></span>") + "</div>").join("") +
+        (R!.preview ? "" : d.no === L ? '<span class="lockh">' + ic("lock", 16) + "Караш към нея сега: остава първа</span>"
+          : '<span class="mv"><button class="pill pill-soft" type="button" data-up="' + esc(d.no) + '"' + (i === 0 || (i === 1 && L) ? " disabled" : "") + ' aria-label="По-рано: № ' + esc(d.no) + '">' + ic("caret-up", 20) + 'По-рано</button><button class="pill pill-soft" type="button" data-down="' + esc(d.no) + '"' + (i === stops.length - 1 ? " disabled" : "") + ' aria-label="По-късно: № ' + esc(d.no) + '">' + ic("caret-down", 20) + "По-късно</button></span>") + "</div>"; }).join("") +
       '<div class="stop home"><span class="no">S</span><span><span class="a" style="display:block">Обратно в ресторанта</span></span><span class="eta"></span></div></div>' +
       '<p class="small muted" style="margin:10px 4px 0">' + esc(R.etaNote) + " Клиентът вижда приблизително време.</p></section>";
     main.innerHTML = h;

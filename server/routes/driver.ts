@@ -6,7 +6,7 @@
      POST  /api/driver/car          {car, kmEnd, kmStart} "Смених колата" (a new leg of the shift)
      GET   /api/driver/list[?all=1]                       the deliveries (all=1: every driver's, the bosses only)
      GET   /api/driver/deliveries/:no                     one delivery (404 for another driver's)
-     POST  /api/driver/take         {nos}                 "Взех N поръчки" (409 taken / not_ready / ask_required)
+     POST  /api/driver/take         {nos, at?}               "Взех N поръчки" (409 taken / not_ready / ask_required)
      POST  /api/driver/go           {nos?}                "Тръгвам" (without nos: all taken ones)
      POST  /api/driver/deliveries/:no/arrive              "Пристигнах" (the customer is told)
      POST  /api/driver/deliveries/:no/deliver  {sum?}     "Доставена · взех X €"
@@ -39,6 +39,8 @@ const MEDIA_TYPE: Record<string, string> = { webp: "image/webp", jpg: "image/jpe
 
 export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): void {
   const { core, staff, body } = d;
+  /** the moment a step was made on the phone (kept with no connection): ISO or epoch ms, the core checks it */
+  const atOf = (b: Record<string, unknown>): string | number | undefined => (typeof b.at === "string" || typeof b.at === "number" ? b.at : undefined);
   const list = (v: unknown): string[] | undefined => (Array.isArray(v) ? v.map(String) : undefined);
 
   app.get("/api/driver/state", async (c) => c.json(await core.driver.state(await staff(c))));
@@ -49,12 +51,12 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): vo
 
   app.get("/api/driver/list", async (c) => c.json(await core.driver.list(await staff(c), { all: qv(c, "all") === "1" })));
   app.get("/api/driver/deliveries/:no", async (c) => c.json(await core.driver.get(await staff(c), c.req.param("no"))));
-  app.post("/api/driver/take", async (c) => { const s = await staff(c); return c.json(await core.driver.take(s, list((await body(c)).nos) || [])); });
-  app.post("/api/driver/go", async (c) => { const s = await staff(c); return c.json(await core.driver.go(s, list((await body(c)).nos))); });
-  app.post("/api/driver/deliveries/:no/arrive", async (c) => c.json(await core.driver.arrive(await staff(c), c.req.param("no"))));
-  app.post("/api/driver/deliveries/:no/deliver", async (c) => { const s = await staff(c); return c.json(await core.driver.deliver(s, c.req.param("no"), { sum: (await body(c)).sum })); });
-  app.post("/api/driver/deliveries/:no/problem", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.problem(s, c.req.param("no"), b.kind as ProblemKind, typeof b.note === "string" ? b.note : undefined)); });
-  app.post("/api/driver/deliveries/:no/returned", async (c) => c.json(await core.driver.returned(await staff(c), c.req.param("no"))));
+  app.post("/api/driver/take", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.take(s, list(b.nos) || [], { at: atOf(b) })); });
+  app.post("/api/driver/go", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.go(s, list(b.nos), { at: atOf(b) })); });
+  app.post("/api/driver/deliveries/:no/arrive", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.arrive(s, c.req.param("no"), { at: atOf(b) })); });
+  app.post("/api/driver/deliveries/:no/deliver", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.deliver(s, c.req.param("no"), { sum: b.sum as number | string | null | undefined, at: atOf(b) })); });
+  app.post("/api/driver/deliveries/:no/problem", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.problem(s, c.req.param("no"), b.kind as ProblemKind, typeof b.note === "string" ? b.note : undefined, { at: atOf(b) })); });
+  app.post("/api/driver/deliveries/:no/returned", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.returned(s, c.req.param("no"), { at: atOf(b) })); });
   app.post("/api/driver/deliveries/:no/ask", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.ask(s, c.req.param("no"), typeof b.note === "string" ? b.note : undefined), 201); });
   app.post("/api/driver/undo", async (c) => { const s = await staff(c); return c.json(await core.driver.undo(s, String((await body(c)).id || ""))); });
 

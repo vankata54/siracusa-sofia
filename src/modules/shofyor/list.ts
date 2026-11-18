@@ -2,7 +2,7 @@
    "Следваща" (the one he drives to, else the first of the route, else the first ready one); "След това" in the route's
    order (then the ready ones nobody took); "Доставени днес". The main button in the thumb zone changes: "Взех N
    поръчки" -> "Тръгвам · N на път" -> "Пристигнах" -> "Отвори № 1042", with "Навигация" next to it. */
-import { mountDriver, driverApi, ic, esc, fmt, plural, murl, money, payWord, dStt, dueStt, etaStt, addrLine, isLate, openProb, pickable, askLine, navUrl, NAVAPP, RT_TEL, PAY, type Delivery, type Drv } from "./app.ts";
+import { mountDriver, driverApi, ic, esc, fmt, plural, murl, money, payWord, dStt, dueStt, etaStt, addrParts, isLate, openProb, pickable, askLine, navUrl, NAVAPP, RT_TEL, PAY, type Delivery, type Drv } from "./app.ts";
 import type { DriverList } from "../../client/api-driver.ts";
 
 export async function initList(): Promise<void> {
@@ -14,12 +14,15 @@ export async function initList(): Promise<void> {
 
   const href = (d: Delivery, call = false) => murl.shofyor("dostavka", d.no + (call ? "&call" : ""));
   function nextCard(d: Delivery): string {
-    const late = isLate(d);
+    const late = isLate(d), ap = addrParts(d);
     return '<div class="next' + (late ? " late" : "") + '"><div class="hd"><span class="n1">1</span><span>№ ' + esc(d.no) + "</span>" + dStt(d) + '</div><div class="in">' +
-      '<a href="' + esc(href(d)) + '" style="color:inherit;text-decoration:none;display:block"><div class="addr"><b>' + esc(addrLine(d)) + "</b>" + (d.note ? "<span>" + esc(d.note) + "</span>" : "") + "</div></a>" +
+      '<a class="addrlink" href="' + esc(href(d)) + '"><div class="addr"><b>' + esc(ap.main) + "</b>" + (ap.sub ? "<span>" + esc(ap.sub) + "</span>" : "") + "</div></a>" +
+      (d.note ? '<p class="cnote">' + ic("note", 18) + "<span>" + esc(d.note) + "</span></p>" : "") +
       '<div class="meta">' + (d.outzone ? st.stt("out", "Извън зоните", "warning") : "") + dueStt(d) + etaStt(d) + "</div>" +
       (d.outzone && d.st !== "done" ? '<div class="notice bad" style="margin-top:12px">' + ic("map-pin-line", 22) + "<span><b>Адрес извън зоните: уточни с ресторанта.</b> " + esc(askLine(d)) + '<br><a class="pill pill-line" href="' + RT_TEL + '">' + ic("phone", 20) + "Обади се в ресторанта</a></span></div>" : "") +
-      '<div class="money' + (d.pay === "cash" ? " cash" : "") + '"><span class="w">' + ic(PAY[d.pay][1], 22) + "<span>" + (d.pay === "cash" ? "Вземи в брой" : esc(PAY[d.pay][0])) + '</span></span><span class="price">' + esc(money(d)) + "</span></div>" +
+      (d.outzone
+        ? '<div class="money' + (d.pay === "cash" ? " cash" : "") + '"><span class="w">' + ic(PAY[d.pay][1], 22) + "<span>" + esc(PAY[d.pay][0]) + '</span></span></div><p class="osum">Сумата: уточни с ресторанта</p>'
+        : '<div class="money' + (d.pay === "cash" ? " cash" : "") + '"><span class="w">' + ic(PAY[d.pay][1], 22) + "<span>" + (d.pay === "cash" ? "Вземи в брой" : esc(PAY[d.pay][0])) + '</span></span><span class="price">' + esc(money(d)) + "</span></div>") +
       (pickable(d) ? '<p class="muted" style="margin:10px 2px 0">Провери бройките в торбите, преди да натиснеш „Взех“.</p>' : "") +
       (d.arrivedAt ? '<div class="arr">' + ic("check-circle", 20) + "Клиентът вижда „Шофьорът е пред входа“ от " + esc(at(d.arrivedAt)) + '</div><p class="small muted" style="margin:4px 2px 0">SMS: <span class="missing">' + esc(drv.state.missing.sms) + "</span></p>" : "") +
       '<div class="acts"><a class="pill pill-line" href="' + esc(href(d, true)) + '">' + ic("phone", 22) + 'Обади се</a><a class="pill pill-soft" href="' + esc(href(d)) + '">Отвори' + ic("caret-right", 20) + "</a></div></div></div>";
@@ -27,11 +30,12 @@ export async function initList(): Promise<void> {
   function row(d: Delivery, n: number): string {
     const fin = d.st === "done" || d.st === "cancelled" || (d.st === "prob" && !openProb(d));
     const cls = d.st === "done" ? "done" : d.st === "prob" || d.st === "cancelled" ? "prob" : isLate(d) ? "late" : "";
-    const no = d.st === "done" ? ic("check", 22) : d.st === "prob" || d.st === "cancelled" ? ic("warning", 22) : n ? String(n) : ic("storefront", 22);
+    const no = d.st === "done" ? ic("check", 22) : d.st === "prob" || d.st === "cancelled" ? ic("warning", 22) : n ? String(n) : ic("storefront", 22), ap = addrParts(d);
     return '<a class="drow2 ' + cls + '" href="' + esc(href(d)) + '">' +
-      '<span class="no">' + no + '</span><span><span class="a">' + esc(addrLine(d)) + '</span><span class="s">№ ' + esc(d.no) + (d.etaAt && !fin ? " · пристигане около " + esc(d.etaAt) : "") + "</span>" +
-      '<span class="ln"><span class="price">' + esc(fin && d.collected ? fmt(d.collected.sum) : money(d)) + "</span>" + payWord(d) + "</span>" +
-      '<span class="ln">' + (d.outzone && !fin ? st.stt("out", "Извън зоните", "warning") : "") + (d.st === "wait" || d.st === "road" || openProb(d) ? dStt(d) : "") + (openProb(d) ? "" : dueStt(d)) + "</span></span></a>";
+      '<span class="no">' + no + '</span><span><span class="a">' + esc(ap.main) + '</span><span class="s">№ ' + esc(d.no) + (ap.sub ? " · " + esc(ap.sub) : "") + (d.etaAt && !fin ? " · пристигане около " + esc(d.etaAt) : "") + "</span>" +
+      (d.outzone && !fin && d.ask ? '<span class="s">' + esc(askLine(d)) + "</span>" : "") +
+      '<span class="ln">' + (d.outzone && !fin ? "" : '<span class="price">' + esc(fin && d.collected ? fmt(d.collected.sum) : money(d)) + "</span>") + payWord(d) + "</span>" +
+      '<span class="ln">' + (d.outzone && !fin ? st.stt("out", "Извън зоните", "warning") : "") + (d.st === "wait" || d.st === "picked" || d.st === "road" || openProb(d) ? dStt(d) : "") + (openProb(d) ? "" : dueStt(d)) + "</span></span></a>";
   }
   const at = (i: string | null) => (i ? st.clock(Date.parse(i)) : "");
 
@@ -40,7 +44,7 @@ export async function initList(): Promise<void> {
     const L = data, mine = drv.local(L.active.slice()), waiting = drv.local(L.waiting.slice()), done = L.done.slice();
     /* a kept step moves a ready one into "mine" and a delivered one out of the route */
     const route = [...mine, ...waiting.filter((d) => d.st !== "wait")].filter((d) => d.st === "picked" || d.st === "road").sort((a, b) => (a.n || 1e6) - (b.n || 1e6));
-    const probs = mine.filter(openProb), waitL = waiting.filter((d) => d.st === "wait");
+    const probs = mine.filter(openProb), waitL = waiting.filter((d) => d.st === "wait").sort((a, b) => +a.outzone - +b.outzone);
     const finished = [...mine.filter((d) => d.st === "done" || (d.st === "prob" && !openProb(d))), ...done];
     const act = [...route, ...waitL];
     const cash = act.filter((d) => d.pay === "cash" && !d.outzone).reduce((s, d) => s + d.total, 0);
@@ -50,16 +54,18 @@ export async function initList(): Promise<void> {
     drv.setExamples(act.map((d) => d.no));
     const lockedNo = L.route.locked;
     const nx = route.find((d) => d.no === lockedNo) || route.find((d) => d.st === "road") || route[0] || waitL[0] || probs[0] || null;
-    let h = '<section class="st-sec" style="padding-top:12px"><div class="dsum one"><a href="#sled"><b>' + act.length + "</b><span>" + (act.length === 1 ? "адрес" : "адреса") + "</span></a><div><b>" + esc(fmt(cash)) + '</b><span>в брой</span></div><a href="#dneshni"><b>' + doneN + "</b><span>доставени</span></a></div>" +
+    const doneW = doneN === 1 ? "доставена" : "доставени";
+    let h = '<section class="st-sec" style="padding-top:12px"><div class="dsum one"><a href="#sled"><b>' + act.length + "</b><span>" + (act.length === 1 ? "адрес" : "адреса") + "</span></a><div><b>" + esc(fmt(cash)) + '</b><span>в брой</span></div><a href="#dneshni"><b>' + doneN + "</b><span>" + doneW + "</span></a></div>" +
       (noFee ? '<p class="small muted" style="margin:6px 18px 0">Сумата в брой е без таксите за платените зони.</p>' : "") + "</section>";
     if (!nx) {
       h += '<section class="st-sec">' + st.empty({ icon: "check-circle", title: "Няма доставки за теб", text: "Когато кухнята приготви поръчка, телефонът ще вибрира и тя ще се появи тук.",
         action: '<a class="pill pill-line pill-lg" href="' + esc(murl.shofyor("smyana")) + '" style="margin-top:8px">' + ic("wallet", 22) + "Виж смяната и парите</a>" }) + "</section>";
     } else {
       const pick = L.route.pick;
-      h += '<section class="st-sec"><div class="st-h"><h2>Следваща</h2>' + (route.length ? '<a class="link" href="' + esc(murl.shofyor("marshrut")) + '" style="font-size:15px">' + ic("path", 18) + (pick === "own" ? "Моят ред" : "Път " + (pick === "B" ? "Б" : "А")) + " · смени</a>" : "") + "</div>" + nextCard(nx) + "</section>";
+      h += '<section class="st-sec"><div class="st-h"><h2>Следваща</h2>' + (route.length || waitL.length ? '<a class="link" href="' + esc(murl.shofyor("marshrut")) + '" style="font-size:15px">' + ic("path", 18) + (pick === "own" ? "Моят ред" : "Път " + (pick === "B" ? "Б" : "А")) + " · смени</a>" : "") + "</div>" + nextCard(nx) + "</section>";
       const rest = [...route, ...probs, ...waitL].filter((d) => d !== nx);
-      if (rest.length) h += '<section class="st-sec" id="sled"><div class="st-h"><h2>След това</h2><span class="muted">по реда на маршрута</span></div><div class="dl">' + rest.map((d) => row(d, route.indexOf(d) + 1)).join("") + "</div></section>";
+      const order = [...route, ...waitL];
+      if (rest.length) h += '<section class="st-sec" id="sled"><div class="st-h"><h2>След това</h2><span class="muted">по реда на маршрута</span></div><div class="dl">' + rest.map((d) => row(d, order.indexOf(d) + 1)).join("") + "</div></section>";
     }
     if (finished.length) h += '<section class="st-sec donel" id="dneshni"><div class="st-h"><h2>Доставени днес</h2><span class="muted">' + plural(finished.length, "адрес", "адреса") + '</span></div><div class="dl">' + finished.map((d) => row(d, 0)).join("") + "</div></section>";
     main.innerHTML = h;

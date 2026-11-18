@@ -25,10 +25,10 @@ export async function initFuel(): Promise<void> {
   function render() {
     if (!P) return;
     const car = P.car, q = drv.queued().filter((x) => x.a.k === "fuel");
-    let h = '<section class="st-sec"><div class="carline"><span class="ii">' + ic("car", 24) + "</span><span><b>" + esc(car.n) + "</b><small>рег. № " + (car.plate ? esc(car.plate) : MISS("[ЛИПСВА]")) + '</small></span><button class="pill pill-soft" type="button" data-carsheet>Смени</button></div></section>';
+    let h = '<section class="st-sec"><div class="carline"><span class="ii">' + ic("car", 24) + "</span><span><b>" + esc(car.n) + "</b><small>Гориво " + MISS("[ЛИПСВА: вид]") + " · рег. № " + (car.plate ? esc(car.plate) : MISS("[ЛИПСВА]")) + '</small></span><button class="pill pill-soft" type="button" data-carsheet>Смени</button></div></section>';
     h += '<section class="st-sec"><div class="fgrid">' + field("litres", "Литри", "л", "decimal", "0,00") + field("sum", "Сума", "€", "decimal", "0,00") +
       field("km", "Километраж", "км", "numeric", "0", "Числото от таблото на колата. Последно записан: " + kmText(P.lastKm) + " км.") + "</div>" +
-      '<div class="calc" style="margin-top:12px" id="calc"><span>Цена на литър</span><b aria-live="polite">-</b></div>' +
+      '<div class="calc" style="margin-top:12px" id="calc"><span>Цена на литър</span><b aria-live="polite">-</b></div><p class="pwarn" id="pwarn" role="status"></p>' +
       (P.lastPerLitre != null ? '<p class="small muted" style="margin:6px 4px 0">При последното зареждане: ' + f2(P.lastPerLitre) + " €/л.</p>" : "") +
       '<label class="chk" style="margin-top:6px"><input type="checkbox" id="full"' + (full ? " checked" : "") + '><span>Напълних резервоара догоре <span class="small muted" style="display:block;font-weight:600">Така системата смята реалния разход (л/100 км).</span></span></label>' +
       '<label class="chk"><input type="checkbox" id="pc"' + (paidCash ? " checked" : "") + '><span>Платих в брой от събраните пари <span class="small muted" style="display:block;font-weight:600">Сумата се вади от парите за предаване в края на смяната. Сега имаш ' + esc(fmt(P.cashOnHand)) + " в брой.</span></span></label></section>";
@@ -48,6 +48,9 @@ export async function initFuel(): Promise<void> {
   function calc() {
     const l = num(v.litres), s = num(v.sum), c = main.querySelector("#calc b");
     if (c) c.textContent = l > 0 && s > 0 ? f2(s / l) + " €/л" : "-";
+    /* a soft sign only: a price far from a litre of fuel is usually a typo in the litres or the sum */
+    const w = main.querySelector("#pwarn"), odd = l > 0 && s > 0 && (s / l < 1 || s / l > 3);
+    if (w) w.textContent = odd ? "Провери литрите и сумата: " + f2(s / l) + " €/л е необичайна цена." : "";
   }
   async function load() {
     try { P = await drv.cached("fuel", () => driverApi.fuel()); st.synced(); render(); }

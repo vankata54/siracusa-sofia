@@ -66,6 +66,9 @@
 
    Reserved data-act values (the frame handles the click anywhere on the page): find, menu, retry, queue, cached, reload,
    theme, navapp, logout. Any element with data-off shows the reason in a toast instead of acting.
+   No connection (decision 18.11.2026): the screen does not change. The tabs and every link to another page of the site are
+   off (aria-disabled on the tabs) and a touch says "Няма връзка: остани на този екран, действията се пазят тук."; a link
+   inside the same page (#), a phone number and an app outside (target="_blank": the navigation) still work.
    ------------------------------------------------------------------------------------------------------------------ */
 import "sc-icons:magnifying-glass,user,caret-left,wifi-slash,arrow-clockwise,clock,sign-out,squares-four,bell-ringing,chef-hat,plus,moped,path,gas-pump,wallet,pencil-simple,warning,check-circle,x";
 import { ic } from "../../lib/icons.ts";
@@ -175,6 +178,15 @@ const MOD: Record<StaffModule, { n: string; suffix: string; nav: string; find: s
   },
 };
 const OFF_WHY = "Без връзка колегите няма да видят. Опитай, щом връзката се върне.";
+const OFF_NAV = "Няма връзка: остани на този екран, действията се пазят тук.";
+/** a link that would load another page (without a connection the browser shows an empty page) */
+function leavesPage(a: HTMLAnchorElement): boolean {
+  if (a.target === "_blank" || a.hasAttribute("download")) return false;
+  let u: URL; try { u = new URL(a.href, location.href); } catch { return false; }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  if (u.origin !== location.origin) return false;
+  return u.pathname !== location.pathname || u.search !== location.search;
+}
 const CONN_WORD = { on: "свързано", re: "свързваме се отново", off: "няма връзка" };
 
 /* ---------- small helpers ---------- */
@@ -412,7 +424,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     const meBtn = $(".st-me", topEl);
     if (meBtn) { meBtn.classList.toggle("off", conn !== "on"); meBtn.setAttribute("aria-label", "Смяна и настройки, " + CONN_WORD[conn]); }
     app.classList.toggle("is-off", off);
-    if (navEl) navEl.classList.toggle("stale", off && mode === "stale");
+    if (navEl) { navEl.classList.toggle("stale", off && mode === "stale"); $$("a", navEl).forEach((x) => { if (off) x.setAttribute("aria-disabled", "true"); else x.removeAttribute("aria-disabled"); }); }
     if (conn === "on") { netEl.hidden = true; netEl.innerHTML = ""; }
     else {
       const queue = off && mode === "queue" && !!o.queue;
@@ -482,6 +494,8 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     const el = e.target as Element | null; if (!el || !el.closest) return;
     /* while the pencil is on, a touch points at an element for a recommendation: the frame does not act on it */
     if ($('.st-top .sa-pen-btn[aria-pressed="true"]')) return;
+    const link = el.closest<HTMLAnchorElement>("a[href]");
+    if (link && conn === "off" && leavesPage(link)) { e.preventDefault(); e.stopPropagation(); toast(OFF_NAV); return; }
     const offBtn = el.closest<HTMLElement>("[data-off]");
     if (offBtn) { e.preventDefault(); e.stopPropagation(); toast(offBtn.dataset.off || OFF_WHY); return; }
     const t = el.closest<HTMLElement>("[data-act]"); if (!t) return;

@@ -61,6 +61,12 @@ test("sign-in in 3 steps: errors under each field, „Покажи“, the car, 
   await expect(page.locator(".park")).toContainText("Ползвай приложението само когато колата е паркирана.");
   await expect(page.locator("#flh")).toContainText("[ЛИПСВА: колко ресто се дава]");
   await expect(page.locator("#kmnow")).toHaveAttribute("inputmode", "numeric");
+  /* the location is explained first and asked only on "Разреши"; "Не сега" is remembered on the phone */
+  const geo = page.locator("[data-geo-card]");
+  await expect(geo).toContainText("Местоположението не се изпраща никъде.");
+  await geo.getByRole("button", { name: "Не сега" }).click();
+  await expect(geo).toContainText("Изключено");
+  expect(await page.evaluate(() => localStorage.getItem("dr-geo"))).toBe("no");
   await bar(page).getByRole("button", { name: "Започни смяната" }).click();
   await expect(page.locator("#kerr")).toHaveText("Въведи километража от таблото.");
   await expect(page.locator("#kmnow")).toBeFocused();
@@ -182,7 +188,7 @@ test("two drivers cannot take the same order; a problem and „Върнах я�
   await expect(page.locator(".notice.bad").first()).toContainText("Проблем: Няма никой.");
   await expect(page.getByRole("button", { name: "Проблем с доставката" })).toHaveCount(0);
   await expect(bar(page).getByRole("button", { name: /Доставих все пак/ })).toBeVisible();
-  await bar(page).getByRole("button", { name: "Върнах поръчката в ресторанта" }).click();
+  await bar(page).getByRole("button", { name: "Върнах я" }).click();
   await expect(toast(page)).toContainText("№ " + o.no + " е върната в ресторанта.");
   await expect(page.locator(".notice.bad").first()).toContainText("Върната в ресторанта в");
   expect((await get(page, o.no)).problem!.solved).toBe("returned");
@@ -207,7 +213,7 @@ test("an address outside the zones: „уточни с ресторанта“, 
   await go(page, "/shofyor/dostavka/#" + o.no);
   await expect(page.locator(".notice.bad").first()).toContainText("Адресът е извън зоните за доставка.");
   await expect(page.locator(".notice.bad a[href^='tel:']").first()).toHaveText("Обади се в ресторанта");
-  await expect(page.locator(".notice.warn")).toContainText("Таксата не е въведена: питай ресторанта");
+  await expect(page.locator(".notice.warn")).toContainText("Попитай ресторанта колко да вземеш");
   await expect(page.locator("main")).not.toContainText("Върни ");
   await bar(page).getByRole("button", { name: "Взех · след потвърждение" }).click();
   const sh = page.locator(".st-sheetwrap.on .st-sheet");

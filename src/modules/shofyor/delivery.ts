@@ -4,7 +4,7 @@
    and the change for cash; "Проблем с доставката" (only taken / on the way); the statuses with one tap in the bottom bar,
    each with "Отмени" (the core's window). An order outside the zones: "Взех · след потвърждение" asks the manager
    (driverApi.ask); the answer arrives live. */
-import { mountDriver, driverApi, ApiError, ic, esc, fmt, plural, murl, money, addrLine, zoneName, dStt, dueStt, etaStt, isLate, openProb, live, askLine, navUrl, NAVAPP, RT, RT_TEL, PAY, MISS, at, stt, type Delivery } from "./app.ts";
+import { mountDriver, driverApi, ApiError, ic, esc, fmt, plural, murl, money, addrParts, zoneName, dStt, dueStt, etaStt, isLate, openProb, live, askLine, navUrl, NAVAPP, RT, RT_TEL, PAY, MISS, at, stt, type Delivery } from "./app.ts";
 import type { DriverList, ProblemKind } from "../../client/api-driver.ts";
 
 function hashOf(): { no: string; call: boolean } {
@@ -34,10 +34,10 @@ export async function initDelivery(): Promise<void> {
   }
   const payable = (x: Delivery) => live(x) || openProb(x);
   function changeBox(x: Delivery): string {
-    if (!x.feeKnown || x.outzone) return '<div class="notice warn" style="margin-top:12px">' + ic("warning", 22) + "<span><b>Таксата не е въведена: питай ресторанта</b> " + (x.outzone ? "(адрес извън зоните)" : MISS("[ЛИПСВА: такса за " + x.zone + "]")) + ". Попитай колко да вземеш, преди да върнеш ресто.</span></div>";
+    if (!x.feeKnown || x.outzone) return '<div class="notice warn" style="margin-top:12px">' + ic("warning", 22) + "<span><b>Таксата не е въведена</b> " + (x.outzone ? "(адрес извън зоните)" : MISS("[ЛИПСВА: такса за " + x.zone + "]")) + ". Попитай ресторанта колко да вземеш, преди да върнеш ресто.</span></div>";
     const c = Math.round(x.total * 100) / 100, opts: number[] = [];
     [5, 10, 20, 50, 100].forEach((s) => { const v = Math.ceil(c / s) * s; if (v > c && !opts.includes(v)) opts.push(v); });
-    return '<div class="notice" style="margin-top:12px;display:block"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Ресто</b></div><p class="muted" style="margin:4px 0 10px">Клиентът дава:</p><div class="change">' +
+    return '<div class="notice" style="margin-top:12px;display:block"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Ресто</b><span class="prop">' + ic("sparkle", 14) + 'Предложение</span></div><p class="muted" style="margin:4px 0 10px">Клиентът дава:</p><div class="change">' +
       '<button class="chip" type="button" data-give="' + c + '" aria-pressed="' + (given === c) + '">Точна сума</button>' +
       opts.slice(0, 4).map((n) => '<button class="chip" type="button" data-give="' + n + '" aria-pressed="' + (given === n) + '">' + n + " €</button>").join("") +
       '<button class="chip" type="button" data-give="-1" aria-pressed="' + (given === -1) + '">Друга сума</button></div>' +
@@ -66,7 +66,8 @@ export async function initDelivery(): Promise<void> {
     if (isLate(x)) h += '<section class="st-sec"><div class="notice bad">' + ic("timer", 22) + "<span><b>Закъснява " + Math.max(1, Math.ceil((Date.now() - x.due!) / 60000)) + " мин.</b> Обади се на клиента и кажи кога пристигаш. Ресторантът също вижда закъснението.<br>" +
       '<button class="pill pill-line" type="button" data-call>' + ic("phone", 20) + "Обади се на клиента</button></span></div></section>";
     if (x.st === "road" && locked) h += '<section class="st-sec"><div class="notice">' + ic("info", 22) + '<span>Сега караш към <a class="link" href="' + esc(murl.shofyor("dostavka", locked)) + '" style="min-height:0;display:inline">№ ' + esc(locked) + "</a>. Тази е следваща по реда на маршрута.</span></div></section>";
-    h += '<section class="st-sec"><div class="acard"><div class="addr"><b>' + esc(addrLine(x)) + "</b></div>" +
+    const ap = addrParts(x);
+    h += '<section class="st-sec"><div class="acard"><div class="addr"><b>' + esc(ap.main) + "</b>" + (ap.sub ? "<span>" + esc(ap.sub) + "</span>" : "") + "</div>" +
       '<div class="meta">' + dueStt(x) + etaStt(x) + (!x.outzone && x.fee !== 0 && x.zone ? stt("picked", "Платена зона", "tag") : "") + "</div>" +
       (x.arrivedAt ? '<div class="arr">' + ic("check-circle", 20) + "Клиентът вижда „Шофьорът е пред входа“ от " + esc(at(x.arrivedAt)) + '</div><p class="small muted" style="margin:4px 2px 0">SMS: ' + MISS(M.sms) + "</p>" : "") +
       (live(x) ? '<div class="acts"><a class="pill pill-ink pill-lg" href="' + esc(navUrl(x, app)) + '" target="_blank" rel="noopener">' + ic("path", 22) + "Навигация · " + NAVAPP[app] + "</a></div>" : "") + "</div></section>";
@@ -77,31 +78,35 @@ export async function initDelivery(): Promise<void> {
       x.lines.map((l) => '<div class="il"><span class="q">' + l.q + '×</span><span class="nm">' + esc(l.name) + (l.mods.length ? '<small class="muted" style="display:block;font-size:14px">' + esc(l.mods.join(", ")) + "</small>" : "") + '</span><span class="price">' + (l.sum != null ? esc(fmt(l.sum)) : "") + "</span></div>").join("") +
       (x.disc > 0 ? '<div class="kv" style="border-top:1px solid var(--line)"><span class="muted">Отстъпка</span><b class="price">-' + esc(fmt(x.disc)) + "</b></div>" : "") +
       '<div class="kv"' + (x.disc > 0 ? "" : ' style="border-top:1px solid var(--line)"') + '><span class="muted">Доставка</span><b>' + (x.outzone ? "уточни с ресторанта" : x.fee === 0 ? "Безплатна" : x.fee === null ? MISS("[ЛИПСВА: такса за " + x.zone + "]") : esc(fmt(x.fee))) + "</b></div>" +
-      '<div class="kv tot"><span>Общо</span><span class="price">' + (x.outzone ? esc(fmt(x.total)) + " + ?" : esc(money(x))) + "</span></div></div></section>";
+      '<div class="kv tot"><span>Общо</span><span class="price">' + (x.outzone ? esc(fmt(x.total)) + " + доставка" : esc(money(x))) + "</span></div>" +
+      (x.outzone ? '<p class="osum" style="text-align:right">уточни с ресторанта</p>' : "") + "</div></section>";
     h += '<section class="st-sec"><div class="st-h"><h2>Плащане</h2></div><div class="paygrid">' + (["cash", "card", "voucher"] as const).map((k) => '<div class="' + (x.pay === k ? "on" : "") + '"' + (x.pay === k ? ' aria-current="true"' : "") + ">" + ic(PAY[k][1], 24) + PAY[k][0] + "</div>").join("") + "</div>";
     if (x.pay === "cash" && payable(x)) h += changeBox(x);
     if (x.pay === "card" && live(x)) h += '<div class="notice" style="margin-top:12px">' + ic("credit-card", 22) + "<span>Вземи терминала за карти. " + MISS(M.terminal) + "</span></div>";
     if (x.pay === "voucher" && live(x)) h += '<div class="notice" style="margin-top:12px">' + ic("ticket", 22) + "<span>Вземи ваучерите за " + esc(money(x)) + ". Предават се в края на смяната.</span></div>";
-    if (x.collected && x.st === "done") h += '<div class="notice" style="margin-top:12px">' + ic("check-circle", 22) + "<span>Взе " + esc(fmt(x.collected.sum)) + " · " + esc(x.collected.payLabel) + " в " + esc(at(x.collected.at)) + ".</span></div>";
+    if (x.collected && x.st === "done") {
+      const c = x.collected, sum = esc(fmt(c.sum)), t = esc(at(c.at));
+      h += '<div class="notice" style="margin-top:12px">' + ic("check-circle", 22) + "<span>" + (c.pay === "card" ? "Платено с карта при получаване: " + sum + " в " + t + "." : c.pay === "voucher" ? "Взе ваучер за " + sum + " в " + t + "." : "Взе " + sum + " в брой в " + t + ".") + "</span></div>";
+    }
     h += "</section>";
     if (x.st === "picked" || x.st === "road") h += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-problem>' + ic("warning", 22) + "Проблем с доставката</button></section>";
     main.innerHTML = h;
     renderBar();
     if (h0.call && !callOpened) { callOpened = true; callSheet(); }
   }
-  const moneyWord = (x: Delivery, arrived: boolean) => (x.pay === "cash" ? (arrived ? "взех " : "") + money(x) : x.pay === "card" ? (arrived ? "платено с карта" : "карта") : arrived ? "взех ваучера" : "ваучер");
+  const moneyWord = (x: Delivery, arrived: boolean) => (x.pay === "cash" ? (arrived ? "взех " : "") + money(x) : x.pay === "card" ? "платено с карта" : arrived ? "взех ваучера" : "ваучер");
   function renderBar() {
     const x = d!, ord = L ? [...L.active, ...L.waiting].filter((y) => y.no !== x.no && (y.st === "picked" || y.st === "road" || y.st === "wait")) : [];
     const nx = ord.sort((a, b) => (a.n || 1e6) - (b.n || 1e6))[0];
     const nextLink = nx ? '<a class="pill pill-red" href="' + esc(murl.shofyor("dostavka", nx.no)) + '">Следваща · № ' + esc(nx.no) + ic("caret-right", 22) + "</a>" : '<a class="pill pill-red" href="' + esc(murl.shofyor()) + '">' + ic("check-circle", 22) + "Към доставките</a>";
-    const green = (word: string) => '<button class="pill grow" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">' + ic("check-circle", 22) + esc(word) + "</button>";
+    const green = (word: string, sum: string) => '<button class="pill grow tl" type="button" data-st="done" style="background:var(--ok);color:var(--on-ok)">' + ic("check-circle", 22) + '<span class="tl2"><span>' + esc(word) + "</span><span class=\"vh\"> · </span><small>" + esc(sum) + "</small></span></button>";
     const a = x.ask;
-    if (x.st === "wait" && x.outzone && !(a && a.answer === "deliver")) bar.innerHTML = a && a.answer ? nextLink : '<button class="pill pill-red" type="button" data-confirm>' + ic("shopping-bag", 22) + "Взех · след потвърждение</button>";
+    if (x.st === "wait" && x.outzone && !(a && a.answer === "deliver")) bar.innerHTML = a && a.answer ? nextLink : a && a.status === "open" ? '<button class="pill pill-red" type="button" disabled>' + ic("clock", 22) + "Чакаш отговор от " + esc(a.atClock) + "</button>" : '<button class="pill pill-red" type="button" data-confirm>' + ic("shopping-bag", 22) + "Взех · след потвърждение</button>";
     else if (x.st === "wait") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="picked">' + ic("shopping-bag", 22) + "Взех от ресторанта</button>";
     else if ((x.st === "picked" || x.st === "road") && a && (a.answer === "return" || a.answer === "pickup")) bar.innerHTML = '<button class="pill pill-red" type="button" data-ret>' + ic("storefront", 22) + "Върнах я в ресторанта</button>";
     else if (x.st === "picked") bar.innerHTML = '<button class="pill pill-red" type="button" data-st="road">' + ic("car", 22) + "Тръгвам · На път</button>";
-    else if (x.st === "road") bar.innerHTML = (x.arrivedAt ? "" : '<button class="pill pill-line" type="button" data-arr>' + ic("map-pin", 22) + "Пристигнах</button>") + green("Доставена · " + moneyWord(x, !!x.arrivedAt));
-    else if (openProb(x)) bar.innerHTML = '<button class="pill pill-line" type="button" data-ret aria-label="Върнах поръчката в ресторанта">' + ic("storefront", 22) + "Върнах я</button>" + green("Доставих все пак · " + moneyWord(x, false));
+    else if (x.st === "road") bar.innerHTML = (x.arrivedAt ? "" : '<button class="pill pill-line" type="button" data-arr>' + ic("map-pin", 22) + "Пристигнах</button>") + green("Доставена", moneyWord(x, !!x.arrivedAt));
+    else if (openProb(x)) bar.innerHTML = '<button class="pill pill-line" type="button" data-ret>' + ic("storefront", 22) + "Върнах я</button>" + green("Доставих все пак", moneyWord(x, false));
     else bar.innerHTML = nextLink;
     /* two buttons with a sum: the words need the room more than the icons (390 px would cut "28,91 €") */
     bar.classList.toggle("two", !!bar.querySelector('[data-st="done"]') && bar.children.length > 1);
@@ -170,7 +175,7 @@ export async function initDelivery(): Promise<void> {
       const [one, all] = await Promise.all([drv.cached("d-" + no, () => driverApi.get(no)), drv.cached("list", () => driverApi.list())]);
       d = drv.local([one])[0]; L = all; st.synced(); render();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) { main.innerHTML = '<section class="st-sec">' + st.empty({ icon: "magnifying-glass", title: "Няма такава доставка", text: "№ " + no + " не е твоя или вече я няма.", action: '<a class="pill pill-line pill-lg" href="' + esc(murl.shofyor()) + '">Към доставките</a>' }) + "</section>"; bar.innerHTML = ""; return; }
+      if (e instanceof ApiError && e.status === 404) { st.setTop({ title: "Доставка", sub: "" }); main.innerHTML = '<section class="st-sec">' + st.empty({ icon: "magnifying-glass", title: "Няма такава доставка", text: "№ " + no + " не е твоя или вече я няма.", action: '<a class="pill pill-line pill-lg" href="' + esc(murl.shofyor()) + '">Към доставките</a>' }) + "</section>"; bar.innerHTML = ""; return; }
       st.fail(e);
     }
   }

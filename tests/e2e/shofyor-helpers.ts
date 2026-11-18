@@ -78,3 +78,30 @@ export async function targets(page: Page) {
     .filter((x) => x.h > 0 && x.h < 47.5));
   expect(small).toEqual([]);
 }
+/** every card stays inside its column (the frame clips what runs out, so the scroll test cannot see it), every chip inside
+    its card, every button of the bar holds its words, and on "Следваща" the word and the sum never overlap */
+export async function inside(page: Page, where = "") {
+  const bad = await page.evaluate(() => {
+    const out: string[] = [];
+    const right = (el: Element) => { const r = el.getBoundingClientRect(), cs = getComputedStyle(el); return r.right - parseFloat(cs.paddingRight || "0"); };
+    document.querySelectorAll<HTMLElement>("main .st-sec").forEach((sec) => {
+      const edge = right(sec) + 0.5;
+      sec.querySelectorAll<HTMLElement>(".drow2, .next, .acard, .stops, .rc, .icard, .cashbox, .notice, .money, .client, .carline, .dsum").forEach((el) => {
+        if (el.offsetParent && el.getBoundingClientRect().right > edge) out.push(el.className + " " + Math.round(el.getBoundingClientRect().right) + " > " + Math.round(edge));
+      });
+    });
+    document.querySelectorAll<HTMLElement>(".drow2 .stt, .next .stt, .notice .pill").forEach((el) => {
+      const box = el.closest(".drow2, .next, .notice")!;
+      if (el.getBoundingClientRect().right > box.getBoundingClientRect().right + 0.5) out.push("chip " + (el.textContent || "").trim().slice(0, 30));
+    });
+    document.querySelectorAll<HTMLElement>(".st-bar .pill").forEach((el) => { if (el.scrollWidth > el.clientWidth + 1) out.push("bar " + (el.textContent || "").trim()); });
+    document.querySelectorAll<HTMLElement>(".next .money").forEach((m) => {
+      const w = m.querySelector(".w"), p = m.querySelector(".price");
+      if (w && p && w.getBoundingClientRect().right > p.getBoundingClientRect().left + 0.5) out.push("money overlaps");
+      const word = m.querySelector(".w span:last-child") as HTMLElement | null;
+      if (word && word.scrollWidth > word.clientWidth + 1) out.push("money word cut: " + word.textContent);
+    });
+    return out;
+  });
+  expect(bad, where).toEqual([]);
+}

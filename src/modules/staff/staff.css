@@ -79,6 +79,7 @@ html[data-pen-on] .st-net{margin-top:max(0px, calc(var(--pen-bar-b, 68px) - 68px
 .st-nav{position:absolute; z-index:40; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 16px), 414px); height:72px; display:grid; grid-template-columns:repeat(4,1fr); padding:0 4px; border-radius:999px; background:var(--glass); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:inset 0 0 0 1px var(--glass-line), var(--shadow)}
 .st-nav a{position:relative; display:grid; justify-items:center; align-content:center; gap:2px; text-decoration:none; font-size:14px; font-weight:700; color:var(--muted); min-height:56px; border-radius:999px; text-align:center; line-height:1.1}
 .st-nav a .lb{white-space:nowrap; line-height:1.1}
+.st-nav a[aria-disabled="true"]{opacity:.5}
 .st-nav a .ic{width:24px; height:24px}
 /* the driver's tabs as in its prototype: 26 px icons and the word on a full line (the icon sits 3 px higher) */
 [data-staff="driver"] .st-nav a .ic{width:26px; height:26px}
