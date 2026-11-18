@@ -85,7 +85,8 @@ say "switching to the new version"
 ln -sfn "$REL" "$BASE/current.new"
 mv -T "$BASE/current.new" "$BASE/current"
 DONE=1
-$RESTART_CMD || true
+# (the lock of the deploy is not passed on to what the restart starts)
+$RESTART_CMD 9>&- || true
 
 healthy() {
   local i
@@ -104,7 +105,7 @@ else
     say "the new version does not answer: back to $(basename "$PREV")"
     ln -sfn "$PREV" "$BASE/current.new"
     mv -T "$BASE/current.new" "$BASE/current"
-    $RESTART_CMD || true
+    $RESTART_CMD 9>&- || true
     healthy && die "the new version did not start; the previous one is running again. Look at: journalctl -u $SERVICE -n 100. If the new version changed the database before it stopped, restore the backup made a minute ago (deploy/restore.sh)."
     die "the new version did not start and the previous one does not answer either. Look at: journalctl -u $SERVICE -n 100"
   fi
