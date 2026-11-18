@@ -89,6 +89,23 @@ describe("backup: the copy", () => {
     expect(r2.pruned).toEqual(["siracusa-20261118-0230.db.gz"]);
     expect(fs.readdirSync(path.join(dir, "db"))).toHaveLength(3);
   });
+  it("data/ as a link (the server's layout): the script run from the version's folder saves next to the REAL data folder", async () => {
+    const base = path.join(tmp, "srv"), shared = path.join(base, "shared"), rel = path.join(base, "releases", "v1");
+    fs.mkdirSync(path.join(shared, "data", "media"), { recursive: true });
+    fs.mkdirSync(rel, { recursive: true });
+    const d = new Database(path.join(shared, "data", "siracusa.db"));
+    d.exec("create table t (x)"); d.close();
+    fs.writeFileSync(path.join(shared, "data", "media", "d".repeat(64) + ".webp"), "photo");
+    fs.symlinkSync(path.join(shared, "data"), path.join(rel, "data"));
+    fs.copyFileSync("scripts/backup.mjs", path.join(rel, "backup.mjs"));
+    fs.symlinkSync(path.resolve("node_modules"), path.join(rel, "node_modules"));
+    const r = spawnSync(process.execPath, ["backup.mjs", "--no-remote"], { cwd: rel, encoding: "utf8", env: { ...process.env, DB_FILE: "data/siracusa.db", BACKUP_DIR: "", BACKUP_RSYNC: "", BACKUP_RCLONE: "", BACKUP_PASSFILE: "" } });
+    expect(r.status, r.stderr).toBe(0);
+    expect(fs.readdirSync(path.join(shared, "backups", "db"))).toHaveLength(1);
+    expect(fs.readdirSync(path.join(shared, "backups", "media"))).toHaveLength(1);
+    expect(fs.existsSync(path.join(rel, "backups"))).toBe(false);
+    expect(fs.existsSync(path.join(base, "releases", "backups"))).toBe(false);
+  });
   it("no database: an error, nothing written and nothing pruned", async () => {
     const before = fs.readdirSync(path.join(dir, "db"));
     await expect(backup({ dbFile: path.join(tmp, "nope.db"), dir })).rejects.toThrow(/no database/);

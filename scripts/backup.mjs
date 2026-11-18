@@ -104,7 +104,7 @@ export async function backup(o) {
     fs.rmSync(file, { force: true });
     file += ".gpg";
   }
-  const dataDir = path.dirname(path.resolve(o.dbFile));
+  const dataDir = path.dirname(fs.realpathSync(o.dbFile));
   const media = copyNew(path.join(dataDir, "media"), path.join(o.dir, "media")), receipts = copyNew(path.join(dataDir, "receipts"), path.join(o.dir, "receipts"));
   const pruned = prunePlan(fs.readdirSync(dbDir), now, o.keep);
   for (const n of pruned) fs.rmSync(path.join(dbDir, n), { force: true });
@@ -138,7 +138,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (fs.existsSync(".env")) process.loadEnvFile(".env");
   const arg = (n) => { const i = process.argv.indexOf("--" + n); return i > -1 ? process.argv[i + 1] : undefined; };
   const quiet = process.argv.includes("--quiet"), log = (m) => { if (!quiet) console.log("backup: " + m); };
-  const dbFile = path.resolve(arg("db") || process.env.DB_FILE || "data/siracusa.db");
+  /* the real place of the database: on the server data/ is a link into shared/ (deploy/deploy.sh), and the backups go
+     next to that shared data folder, never into the folder of one version (old versions are deleted) */
+  const real = (f) => { try { return fs.realpathSync(f); } catch { return path.resolve(f); } };
+  const dbFile = real(arg("db") || process.env.DB_FILE || "data/siracusa.db");
   const dir = path.resolve(arg("dir") || process.env.BACKUP_DIR || path.join(path.dirname(dbFile), "..", "backups"));
   const num = (k, d) => (/^\d+$/.test(process.env[k] || "") ? +process.env[k] : d);
   try {

@@ -103,7 +103,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (!fs.existsSync(envFile)) lines.push({ level: "FAIL", text: "no .env at " + envFile + " (node scripts/make-env.mjs)" });
   else lines.push(...checkEnv(env, fs.statSync(envFile).mode & 0o777));
   /* the database: opens, is whole, its folder can be written */
-  const dbFile = path.resolve(arg("db") || env.DB_FILE || "data/siracusa.db");
+  /* the real place: on the server data/ is a link into shared/ and the backups are next to it (scripts/backup.mjs) */
+  const real = (f) => { try { return fs.realpathSync(f); } catch { return path.resolve(f); } };
+  const dbFile = real(arg("db") || env.DB_FILE || "data/siracusa.db");
   try {
     const { default: Database } = await import("better-sqlite3");
     fs.accessSync(path.dirname(dbFile), fs.constants.W_OK);
