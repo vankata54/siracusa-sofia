@@ -70,7 +70,7 @@ export const adminApi = {
   settings: pick(async (c) => { await g(c); return c.settings.view(); }, () => http<Settings & { hours: HoursInfo }>("GET", "admin/settings")),
   setSettings: pick(async (c, p: SettingsPatch) => { const s = await g(c); settingsAllowed(s, p); return c.settings.update(p, s.user.username); }, (p) => http<Settings>("PATCH", "admin/settings", p)),
   /** "Изчерпано днес" for one dish (kitchen, menu, lunch menu); only for today */
-  setSoldOut: pick(async (c, id: string, out: boolean) => { const s = await g(c, ["menu", "kitchen", "lunch"]); return c.menu.setSoldOut(id, out, s.user.username); },
+  setSoldOut: pick(async (c, id: string, out: boolean) => c.kitchen.adminSetOut(await g(c, ["menu", "kitchen", "lunch"]), id, out),
     (id, out) => http<{ id: string; out: boolean }>("PUT", "admin/menu/" + encodeURIComponent(id) + "/sold-out", { out })),
   staff: pick(async (c) => { await g(c, "staff"); return c.staff.list(); }, () => http<PublicStaff[]>("GET", "admin/staff")),
   /** the contact masked (the whole one: customersAdminApi.messageContact, into the log) */

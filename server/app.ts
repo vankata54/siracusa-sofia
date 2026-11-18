@@ -310,7 +310,8 @@ export function createApp(opts: AppOpts) {
   /* "Изчерпано днес" (kitchen, menu, lunch menu): {out: true|false}; one source in the core, read by /api/menu and the order check */
   app.put("/api/admin/menu/:id/sold-out", async (c) => {
     const s = await staff(c, ["menu", "kitchen", "lunch"]);
-    return c.json(await core.menu.setSoldOut(c.req.param("id"), (await body(c)).out as boolean, s.user.username));
+    /* the menu's dishes go the kitchen's way (the lines of the accepted orders are marked too), the lunch dishes only switch */
+    return c.json(await core.kitchen.adminSetOut(s, c.req.param("id"), (await body(c)).out as boolean));
   });
   app.patch("/api/admin/settings", async (c) => {
     const b = await body(c);

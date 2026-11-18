@@ -827,6 +827,20 @@ describe("кръг 3: a sold-out line waits for a decision (decision of the chie
     expect(o.lines.map((l) => !!l.dropped)).toEqual([false, true, false]);
   });
 
+  it("„Изчерпано днес“ from the admin („Меню“) marks the lines of the accepted orders as the kitchen does; a lunch dish only switches", async () => {
+    const { core, s, line, delivery, order } = await mk("19:00");
+    const d = await delivery([line(KEBAP), line(VRAT)]);
+    await core.staff.upsert({ username: "menu1", name: "Меню", role: "marketing", password: "a-long-password-1" });
+    await core.staff.setRole("marketing", ["menu"], "admin");
+    const m = (await core.staff.bySession((await core.staff.login("menu1", "a-long-password-1", "1.1.1.9")).token))!;
+    expect(await core.kitchen.adminSetOut(m, VRAT, true)).toEqual({ id: VRAT, out: true });
+    expect((await order(d.no)).lines.map((l) => !!l.out)).toEqual([false, true]);
+    expect((await core.shift.now(s.manager)).problems.some((x) => x.key === "out:" + d.no)).toBe(true);
+    await core.kitchen.adminSetOut(m, VRAT, false);
+    expect((await order(d.no)).lines.map((l) => !!l.out)).toEqual([false, false]);
+    expect(await code(core.kitchen.adminSetOut(s.driver, VRAT, true))).toBe("forbidden:403");
+  });
+
   it("an old action without `saw` (an outbox from before) never wins over a newer „Върни“", async () => {
     const { core, k, at, line, delivery, order } = await mk("19:00");
     const d = await delivery([line(KEBAP)]);

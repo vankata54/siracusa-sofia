@@ -753,6 +753,21 @@ export async function kitchenSoldOut(ctx: Ctx, s: StaffCtx, sec: string): Promis
     says in how many orders it is and who is told: the waiter (a table), the manager (delivery and pickup). */
 export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: boolean, opt: KOpt = {}): Promise<KOutResult> {
   kNeed(s);
+  return setOutAll(ctx, s, dishId, out, opt);
+}
+/** "Изчерпано днес" from the admin ("Меню", "Кухня", "Обедно меню"): a dish of the menu goes the kitchen's way (the lines of
+    the accepted orders are marked, the waiter / the manager told), a lunch dish only switches (it has no kitchen lines).
+    One rule for every place that switches a dish (decision of the chief 18.11). */
+export async function adminSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: boolean): Promise<{ id: string; out: boolean }> {
+  if (!s || !s.user) throw new CoreError("auth", RIGHTS_MSG.auth, 401);
+  if (!(isBoss(s) || may(s, "menu") || may(s, "kitchen") || may(s, "lunch"))) throw new CoreError("forbidden", RIGHTS_MSG.forbidden, 403);
+  const id = String(dishId || "");
+  if (!Object.prototype.hasOwnProperty.call(byId, id)) return setSoldOut(ctx, id, out, s.user.username);
+  if (typeof out !== "boolean") invalid({ out: "Изберете „Изчерпано днес“ или „Има“." });
+  await setOutAll(ctx, s, id, out, {});
+  return { id, out };
+}
+async function setOutAll(ctx: Ctx, s: StaffCtx, dishId: string, out: boolean, opt: KOpt): Promise<KOutResult> {
   const id = String(dishId || "");
   if (!Object.prototype.hasOwnProperty.call(byId, id)) throw new CoreError("not_found", K_MSG.dish, 404);
   if (typeof out !== "boolean") invalid({ out: "Избери „Изчерпано днес“ или „Има“." });

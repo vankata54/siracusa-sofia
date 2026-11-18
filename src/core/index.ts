@@ -165,7 +165,7 @@ export function createCore(ctx: Ctx) {
     kitchen: bind(ctx, {
       config: kitchenMod.kitchenConfigView, setConfig: kitchenMod.kitchenSetConfig, queue: kitchenMod.kitchenQueue, start: kitchenMod.kitchenStart, line: kitchenMod.kitchenLine,
       done: kitchenMod.kitchenDone, back: kitchenMod.kitchenBack, seen: kitchenMod.kitchenSeen, doneToday: kitchenMod.kitchenDoneToday, summary: kitchenMod.kitchenSummary,
-      soldOut: kitchenMod.kitchenSoldOut, setOut: kitchenMod.kitchenSetOut, busy: kitchenMod.kitchenBusy, setBusy: kitchenMod.kitchenSetBusy, beat: kitchenMod.kitchenBeat,
+      soldOut: kitchenMod.kitchenSoldOut, setOut: kitchenMod.kitchenSetOut, adminSetOut: kitchenMod.adminSetOut, busy: kitchenMod.kitchenBusy, setBusy: kitchenMod.kitchenSetBusy, beat: kitchenMod.kitchenBeat,
       tablets: kitchenMod.kitchenTablets, search: kitchenMod.kitchenSearch,
     }),
     /* the driver: the shift, the deliveries, a problem, the question to the manager, the route, fuel, the end of the shift,

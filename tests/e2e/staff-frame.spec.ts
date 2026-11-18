@@ -609,6 +609,9 @@ test("the session cannot be read: „Няма връзка с ресторант
   await signIn(context, "waiter");
   let mode: "abort" | "fail" | "ok" = "abort";
   await page.route("**/api/auth/me", (r) => (mode === "abort" ? r.abort() : mode === "fail" ? r.fulfill({ status: 500, contentType: "application/json", body: '{"error":"server"}' }) : r.continue()));
+  /* the hall is shared with the other tests: a live change of theirs would redraw the hall over the error checked below
+     (in real use that is right: the data came). This page hears nothing live. */
+  await page.route("**/api/stream**", (r) => r.abort());
   await page.goto("/servitor/");
   await expect(page.locator("main h1")).toHaveText("Няма връзка с ресторанта");
   await expect(page.locator(".st-top .st-word")).toHaveText("Siracusa");
