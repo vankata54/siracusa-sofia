@@ -799,18 +799,44 @@ describe("кръг 3: a sold-out line waits for a decision (decision of the chie
     expect(await code(core.floor.outDrop(s.waiter, 7, ls[0].key))).toBe("not_out:409");
   });
 
-  it("кръг 4: „Махни“ on the only dish of a sent table order cancels the order („Изчерпано днес“, 0 €): the card leaves the kitchen", async () => {
+  it("„Махни“ on the only dish of a sent table order asks the reason (decision of Poli 18.11); the order is cancelled with it, only „Изчерпано днес“ keeps the dish as sold out", async () => {
     const { core, k, s, order } = await mk("19:00");
-    const t = await core.floor.order(s.waiter, 8, { lines: [{ id: PIZZA, q: 1 }] });
+    const cases: [number, "gaveup" | "wrong" | "out", string, boolean][] = [[8, "gaveup", "Гостът се отказа", false], [9, "wrong", "Грешна поръчка", false], [10, "out", "Изчерпано днес", true]];
+    await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+    for (const [n, why, text, out] of cases) {
+      /* the dish is sold out already: the waiter's order still goes in (the kitchen marks the line), as after a late "Изчерпано" */
+      await core.kitchen.setOut(k, PIZZA, false, { sec: "pesht" });
+      const t = await core.floor.order(s.waiter, n, { lines: [{ id: PIZZA, q: 1 }] });
+      const no = t.bills[0].orders[0].no;
+      await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+      const ls = (await core.floor.table(s.waiter, n)).bills.flatMap((b) => b.orders.flatMap((x) => x.lines));
+      expect(ls[0]).toMatchObject({ decide: true, last: true });
+      /* without a reason (or a wrong one): 422, nothing changes */
+      expect(await code(core.floor.outDrop(s.waiter, n, ls[0].key))).toBe("invalid:422");
+      expect(await code(core.floor.outDrop(s.waiter, n, ls[0].key, "nope"))).toBe("invalid:422");
+      expect((await order(no)).status).toBe("accepted");
+      const after = await core.floor.outDrop(s.waiter, n, ls[0].key, why);
+      expect(after.bills.flatMap((b) => b.orders)).toHaveLength(0);
+      const o = await order(no);
+      expect(o).toMatchObject({ status: "cancelled", reason: text, total: 0 });
+      expect(!!o.lines[0].out).toBe(out);
+      expect((await core.kitchen.queue(k, "pesht")).tickets.map((x) => x.no)).not.toContain(no);
+      const e = (await core.audit.list({ limit: 80 })).find((x) => x.action === "floor.out_drop" && (x.data as { no: string }).no === no)!;
+      expect(e.data).toMatchObject({ cancelled: true, reason: why });
+    }
+    /* the menu's switch is the kitchen's: still sold out after every reason */
+    expect((await core.kitchen.soldOut(k, "pesht")).list.some((x) => x.n === "Пица Маргарита")).toBe(true);
+  });
+
+  it("„Махни“ of a line that is not the only one needs no reason and never cancels the order", async () => {
+    const { core, k, s, order } = await mk("19:00");
+    const t = await core.floor.order(s.waiter, 11, { lines: [{ id: PIZZA, q: 1 }, { id: "pitsa-kaprichoza", q: 1 }] });
     const no = t.bills[0].orders[0].no;
     await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
-    const ls = (await core.floor.table(s.waiter, 8)).bills.flatMap((b) => b.orders.flatMap((x) => x.lines));
-    expect(ls[0].decide).toBe(true);
-    const after = await core.floor.outDrop(s.waiter, 8, ls[0].key);
-    expect(after.bills.flatMap((b) => b.orders)).toHaveLength(0);
-    expect(await order(no)).toMatchObject({ status: "cancelled", reason: "Изчерпано днес", total: 0 });
-    expect((await core.kitchen.queue(k, "pesht")).tickets.map((x) => x.no)).not.toContain(no);
-    expect((await core.audit.list({ limit: 50 })).find((e) => e.action === "floor.out_drop")!.data).toMatchObject({ cancelled: true });
+    const ls = (await core.floor.table(s.waiter, 11)).bills.flatMap((b) => b.orders.flatMap((x) => x.lines));
+    expect(ls.map((l) => [l.decide, l.last])).toEqual([[true, false], [false, false]]);
+    await core.floor.outDrop(s.waiter, 11, ls[0].key);
+    expect((await order(no)).status).toBe("accepted");
   });
 
   it("кръг 4: „Отмени“ of a second „Приеми без него“ brings back only its own line; the first stays out", async () => {

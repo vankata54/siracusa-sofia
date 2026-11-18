@@ -261,6 +261,45 @@ test("a QR order with a dish sold out meanwhile: „Изчерпано днес�
   }
 });
 
+test("the only dish of a sent order sold out: „Махни“ asks the reason („Гостът се отказа“, „Грешна поръчка“, „Изчерпано днес“) and cancels the order", async ({ page, playwright, baseURL }) => {
+  const errs = errors(page), n = tables(page)[1], DISH = "kapreze-s-burata-i-avokado";
+  await signIn(page.context(), "waiter");
+  const w = page.context().request;
+  const kitchen = await playwright.request.newContext({ baseURL }); await signIn(kitchen, "kitchen");
+  await freeTable(w, n);
+  try {
+    const made = await api<any>(w, "POST", "floor/table/" + n + "/order", { lines: [{ id: DISH, q: 1 }] });
+    expect(made.status).toBe(201);
+    const no = made.body.orders[0] as string;
+    expect((await api(kitchen, "PUT", "kitchen/sold-out/" + DISH, { out: true, sec: "all" })).status).toBe(200);
+    await open(page, n);
+    const drop = page.locator("[data-outdrop]");
+    await expect(drop).toBeVisible();
+    await drop.click();
+    const sh = page.locator(".st-sheetwrap.on .st-sheet");
+    await expect(sh.locator("h2")).toHaveText("Да откажа ли поръчка №\u00a0" + no + "?");
+    await expect(sh).toContainText("е единственото ястие в поръчката");
+    await expect(sh.locator("[data-r]")).toHaveText(["Гостът се отказа", "Грешна поръчка", "Изчерпано днес"]);
+    await expect(sh.locator("[data-rj]")).toBeDisabled();
+    /* "Не, върни се": nothing changes, the focus is back on "Махни" */
+    await sh.locator("[data-keep]").click();
+    await expect(drop).toBeFocused();
+    await drop.click();
+    await sh.locator('[data-r="gaveup"]').click();
+    await expect(sh.locator('[data-r="gaveup"]')).toHaveAttribute("aria-pressed", "true");
+    await sh.locator("[data-rj]").click();
+    await expect(toast(page)).toContainText("Поръчка №\u00a0" + no + " е отказана: гостът се отказа.");
+    await expect(page.locator("[data-outdrop]")).toHaveCount(0);
+    const d = (await api<any>(w, "GET", "floor/table/" + n)).body;
+    expect(d.bills.flatMap((b: any) => b.orders).map((o: any) => o.no)).not.toContain(no);
+    expect(errs).toEqual([]);
+  } finally {
+    await api(kitchen, "PUT", "kitchen/sold-out/" + DISH, { out: false, sec: "all" });
+    await freeTable(w, n).catch(() => {});
+    await kitchen.dispose();
+  }
+});
+
 test("360 and 390, light and dark: no horizontal scroll, targets ≥ 48 px, axe without serious @phone", async ({ browser, baseURL }) => {
   for (const [width, theme] of [[360, "light"], [360, "dark"], [390, "light"], [390, "dark"]] as const) {
     const ctx = await browser.newContext({ viewport: { width, height: 800 }, baseURL });

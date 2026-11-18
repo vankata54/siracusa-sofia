@@ -239,13 +239,39 @@ export async function mountTable(): Promise<void> {
     if (!focus($("[data-drop]", main))) focus($("[data-confirm]", bar));
   });
   /* "Махни" a sent line the kitchen marked sold out before starting it: the kitchen stops waiting for it (core outDrop) */
-  const outDrop = (b: HTMLElement, key: string) => act(b, async () => {
-    const no = key.split(":")[0];
-    D = await floorApi.outDrop(N!, key); render();
-    const kept = D.bills.some((x) => x.orders.some((o) => o.no === no));
-    st.toast(kept ? "Махнато от поръчката. Кухнята не го чака." : "Поръчка №\u00a0" + no + " е отказана: единственото ѝ ястие е изчерпано днес.");
-    if (!focus($("[data-outdrop]", main))) focus($("[data-serve]", main));
-  });
+  const outDrop = (b: HTMLElement, key: string) => {
+    const l = D ? D.bills.flatMap((x) => x.orders.flatMap((o) => o.lines)).find((x) => x.key === key) : null;
+    if (l && l.last) { lastDrop(b, l); return; }
+    void act(b, async () => {
+      D = await floorApi.outDrop(N!, key); render();
+      st.toast("Махнато от поръчката. Кухнята не го чака.");
+      if (!focus($("[data-outdrop]", main))) focus($("[data-serve]", main));
+    });
+  };
+  /* the only dish of a sent order: "Махни" cancels the order, the waiter picks why (decision of Poli 18.11);
+     only "Изчерпано днес" keeps the dish counted as sold out */
+  const DROP_REASONS: [string, string][] = [["gaveup", "Гостът се отказа"], ["wrong", "Грешна поръчка"], ["out", "Изчерпано днес"]];
+  function lastDrop(b: HTMLElement, l: StaffLine) {
+    let reason = "";
+    const sh = sheetOf(st)({ title: "Да откажа ли поръчка №\u00a0" + l.no + "?",
+      html: '<p class="m12">' + esc(l.q + "× " + lineName(l)) + " е единственото ястие в поръчката. Гостите ще видят, че е отказана. Причина:</p>" +
+        '<div class="notechips" role="group" aria-label="Причина">' + DROP_REASONS.map(([k, t]) => '<button class="chip" type="button" data-r="' + k + '" aria-pressed="false">' + esc(t) + "</button>").join("") + "</div>" +
+        '<p class="muted qnote" data-rhint>Избери причина.</p>',
+      foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-rj disabled>Откажи поръчката</button><button class="pill pill-line pill-lg pill-block" type="button" data-keep>Не, върни се</button>' });
+    sh.el.addEventListener("click", (e) => {
+      const x = (e.target as Element).closest<HTMLButtonElement>("button"); if (!x) return;
+      if (x.dataset.r) { reason = x.dataset.r; $$("[data-r]", sh.el).forEach((c) => c.setAttribute("aria-pressed", String(c === x))); $<HTMLButtonElement>("[data-rj]", sh.el)!.disabled = false; $("[data-rhint]", sh.el)!.hidden = true; }
+      if (x.hasAttribute("data-keep")) { sh.close(); focus(b); }
+      if (x.hasAttribute("data-rj") && reason) {
+        sh.close();
+        void act(null, async () => {
+          D = await floorApi.outDrop(N!, l.key, reason as "gaveup" | "wrong" | "out"); render();
+          st.toast("Поръчка №\u00a0" + l.no + " е отказана: " + DROP_REASONS.find(([k]) => k === reason)![1].toLowerCase() + ".");
+          if (!focus($("[data-outdrop]", main))) if (!focus($("[data-serve]", main))) focus($(".st-top h1"));
+        });
+      }
+    });
+  }
   function confirmQR(b: HTMLElement) {
     if (!D || !D.pending) return;
     const bad = D.pending.lines.filter((l) => l.block);

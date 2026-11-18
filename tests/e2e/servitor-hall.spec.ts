@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { admin, newWaiter, signInCtx, startShift, endShift, guest, freeTable, errors, serious, ready, layout, rnd } from "./servitor-helpers.ts";
 import { floorLock } from "./_floor-lock.ts";
+import { dbPut } from "./own-server.ts";
 floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
 /* "Залата" of the waiter (/servitor/; design/pages-servitor/tables.html) on the real server: the counters, "Чакат сега"
@@ -264,10 +265,19 @@ test("@phone the search never finds a reservation by the phone (not even the who
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
   const name = "Гост " + rnd(), phone = "0889" + String(100000 + Math.floor(Math.random() * 899999));
   const hm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).split(":").map(Number);
-  /* a booking for today at the last hour (the test clock of the API is 19:00) */
+  /* a booking for today at the last hour. The admin's check of a past hour follows the real clock: after 21:30 the
+     booking goes straight into the test database (the search reads it the same way) */
   const r = await a.post("/api/admin/reservations/new", { data: { date: today, time: "21:30", people: 2, name, phone } });
-  expect(r.status(), "booking at " + hm.join(":")).toBeLessThan(300);
-  const id = (await r.json()).id as string;
+  let id: string;
+  if (r.status() === 422 && ((await r.json()) as { fields?: { time?: string } }).fields?.time) {
+    id = "e2e" + rnd();
+    const now = new Date().toISOString();
+    dbPut("data/e2e-" + (process.env.E2E_PORT || 8788) + ".db", "reservations", { id, date: today, time: "21:30", people: 2, table: null, zone: null, name, phone, marketing: false, status: "confirmed", createdAt: now, updatedAt: now, dur: 120, key: "k" + rnd() },
+      { date: today, time: "21:30", table_id: null, phone, status: "confirmed" });
+  } else {
+    expect(r.status(), "booking at " + hm.join(":")).toBeLessThan(300);
+    id = (await r.json()).id as string;
+  }
   try {
     /* through the API: a part of the hidden middle never matches, the whole number does and comes back masked */
     const find = async (q: string) => ((await (await w.api.get("/api/staff/search?q=" + encodeURIComponent(q))).json()) as { reservations: { name: string; phone: string }[] }).reservations.filter((x) => x.name === name);

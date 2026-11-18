@@ -111,7 +111,7 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
   app.post("/api/floor/table/:ref/qr/reject", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrReject(s, ref(c), b.reason as RejectReason)); });
   app.post("/api/floor/table/:ref/qr/drop", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.qrDrop(s, ref(c), String(b.key || ""))); });
   /* "Махни" on a sent line the kitchen marked "Изчерпано днес" before it started it (core floor-staff.ts outDrop) */
-  app.post("/api/floor/table/:ref/out/drop", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.outDrop(s, ref(c), String(b.key || ""))); });
+  app.post("/api/floor/table/:ref/out/drop", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.outDrop(s, ref(c), String(b.key || ""), typeof b.reason === "string" ? b.reason : undefined)); });
   app.post("/api/floor/table/:ref/qr/undo", async (c) => c.json(await cf(c).floor.qrRejectUndo(await staff(c), ref(c))));
   app.post("/api/floor/table/:ref/serve", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.serve(s, ref(c), Array.isArray(b.keys) ? b.keys : undefined)); });
   app.post("/api/floor/table/:ref/unserve", async (c) => { const s = await staff(c), b = await body(c); return c.json(await cf(c).floor.unserve(s, ref(c), Array.isArray(b.keys) ? b.keys : [])); });
