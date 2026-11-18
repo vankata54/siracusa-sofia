@@ -16,6 +16,7 @@ Group=siracusa
 WorkingDirectory=/srv/siracusa/current
 Environment=NODE_ENV=production
 Environment=TZ=Europe/Sofia
+Environment=ASTRO_TELEMETRY_DISABLED=1
 ExecStart=/usr/bin/node --experimental-strip-types --no-warnings server/index.ts
 Restart=always
 RestartSec=2

@@ -7,6 +7,7 @@
 # The steps: the copy is unpacked and checked FIRST; the service is stopped; the present database is kept next to the
 # live one as siracusa.db.before-restore-<time>; the copy takes its place; the service is started; the health check.
 set -euo pipefail
+umask 077
 
 BASE="${SIRACUSA_BASE:-/srv/siracusa}"
 SERVICE="${SIRACUSA_SERVICE:-siracusa}"

@@ -15,6 +15,9 @@
 # previous version and the service is restarted again. The last 3 versions are kept.
 # Nothing here prints or stores a secret.
 set -euo pipefail
+# everything the deploy writes (the versions, the copy of the database, the backups) is private to the user siracusa
+umask 077
+export ASTRO_TELEMETRY_DISABLED=1
 
 BASE="${SIRACUSA_BASE:-/srv/siracusa}"
 REPO="${SIRACUSA_REPO:-$BASE/repo}"
