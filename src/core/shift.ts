@@ -11,6 +11,9 @@
    Every action writes a line in the log (call.take, order.call, order.note, shift.tables, hall.update and the other
    cores' own lines) and tells the screens `shift.update`. */
 import { liveOrders, ordersByIds } from "./order-index.ts";
+import { ordersOfDays } from "./history.ts";
+import { histDay } from "./order-day.ts";
+import { shiftDay } from "../lib/shift-day.ts";
 import { COL, emit, iso, nowDate, rid, type Ctx } from "./ctx.ts";
 import { CoreError, type Iso, type Order, type OrderStatus, type Reservation } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
@@ -281,7 +284,8 @@ export async function managerNow(ctx: Ctx, s: StaffCtx): Promise<MgrNow> {
   needManager(s);
   const w = await world(ctx, s), st = state(ctx.clock), money = managerMoney(s);
   const tiles = w.hall.tables, problems = await problemsOf(w);
-  const today = w.orders.filter((o) => sofiaYmd(new Date(o.ts || o.createdAt)) === w.day);
+  /* "Днес" is the shift day (from 04:00) and an order is in the day it is for, as on the admin's dashboard and for the owner */
+  const sd = shiftDay(nowDate(ctx)), today = w.orders.filter((o) => histDay(o) === sd);
   const late = lateOrders(w), seen = late.filter((x) => !!w.doc.ack["late:" + x.o.no]).length;
   const end = Math.min(w.now + RES_AHEAD_MIN, SHIFT_OVER_MIN);
   const resToday = may(s, "reservations") || may(s, "hall") ? (await ctx.repo.list<Reservation>(COL.reservations, { date: w.day } as Partial<Reservation>)) : [];
@@ -298,7 +302,7 @@ export async function managerNow(ctx: Ctx, s: StaffCtx): Promise<MgrNow> {
   const notes = await notesWaiting(ctx, s);
   const wn = (orders ? orders.length : 0) + (reservations ? reservations.length : 0) + (blocks ? blocks.length : 0) + notes.n;
   const open = problems.filter((p) => !p.done), dup = open.filter((p) => p.kind === "out" && !!orders && orders.some((o) => o.no === p.ref.no)).length;
-  const sales = today.filter((o) => o.status !== "cancelled");
+  const sales = money ? (await ordersOfDays(ctx, sd, sd)).filter((o) => o.status !== "cancelled") : [];
   return {
     date: w.day, now: hmOf(w.now), status: { open: st.open, kitchen: st.kitchen, delivery: st.delivery }, money,
     pulse: {
@@ -759,7 +763,7 @@ export async function managerSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise
   const cfg = await kitchenConfig(ctx);
   for (const x of cfg.sections) if (hit(x.n) || hit(x.short)) out.people.push({ kind: "kitchen", id: x.id, name: x.n, tables: [] });
   if (managerMoney(s) && /оборот|oborot/.test(lq)) {
-    const day = sofiaYmd(nowDate(ctx)), l = (await liveOrders(ctx)).filter((o) => sofiaYmd(new Date(o.ts || o.createdAt)) === day && o.status !== "cancelled");
+    const day = shiftDay(nowDate(ctx)), l = (await ordersOfDays(ctx, day, day)).filter((o) => o.status !== "cancelled");
     out.today = { sum: round2(l.reduce((a, o) => a + (o.total || 0), 0)), n: l.length };
   }
   return out;

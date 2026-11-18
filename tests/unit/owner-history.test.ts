@@ -149,3 +149,32 @@ describe("the answers", () => {
     expect(mayReceive({ ...sub("waiter"), staff: false }, to, "owner.answer")).toBe(false);
   });
 });
+
+describe("'Днес' against the same minute a week ago: every number of the comparison is cut", () => {
+  for (const sql of [false, true]) it("the money by payment, the deliveries, the fuel and the km of last week only up to now (" + (sql ? "SQLite" : "memory") + ")", async () => {
+    const m = mk(sql), s = await people(m.core);
+    /* last Monday (2026-11-09): one cash pickup at 12:00 and one delivered delivery paid by card at 21:00 (after 19:42) */
+    const raw = (id: string, at: string, placedAt: string, extra: Record<string, unknown>) => {
+      const ts = Date.parse(at);
+      return m.repo.put("orders", { id, no: id, key: "k" + id, mode: "pickup", channel: "web", lines: [{ id: pizza.id, name: pizza.n, unit: 10, q: 1, mods: [], extra: 0 }], sub: 10, disc: 0, fee: 0, total: 10, pay: "cash",
+        status: "picked_up", placedAt, ts, sched: "", slot: "asap", phone: "0888123400", name: "К", times: {}, createdAt: new Date(ts).toISOString(), updatedAt: new Date(ts).toISOString(), ...extra });
+    };
+    await raw("9001", "2026-11-09T10:00:00Z", "12:00", {});
+    await raw("9002", "2026-11-09T19:00:00Z", "21:00", { mode: "delivery", status: "delivered", pay: "card", total: 20, sub: 20 });
+    /* fuel last Monday at 12:00 and at 21:00 */
+    for (const [id, at] of [["f1", "2026-11-09T10:00:00Z"], ["f2", "2026-11-09T19:00:00Z"]]) await m.repo.put("fuel_logs", { id, user: "driver", name: "Шофьор", shift: "x", car: "c1", litres: 10, sum: 15, km: 1000, full: false, cash: false, photo: null, noPhoto: true, at, createdAt: at, updatedAt: at });
+    await order(m.core);
+    const f = await m.core.owner.finance(s.owner, { period: "today" });
+    expect(f.revenue.prev).toBe(10);
+    expect(f.prevPay.total).toBe(f.revenue.prev);
+    expect(f.prevPay.online).toEqual({ cash: 10, card: 0, voucher: 0 });
+    expect(f.prevFuel).toMatchObject({ n: 1, sum: 15 });
+    const t = await m.core.owner.trends(s.owner, { period: "today" });
+    expect(t.prev.revenue).toBe(10);
+    expect(r2(t.byChannel.reduce((a, c) => a + (c.cmp.revenue || 0), 0))).toBe(10);
+    expect(r2(t.byHour.reduce((a, c) => a + (c.cmp.revenue || 0), 0))).toBe(10);
+    /* the whole day when it is not "Днес": both orders */
+    const y = await m.core.owner.finance(s.owner, { period: "custom", from: "2026-11-09", to: "2026-11-09" });
+    expect(y.revenue.cur).toBe(30); expect(y.pay.online).toEqual({ cash: 10, card: 20, voucher: 0 }); expect(y.delivery.delivered).toBe(1);
+  });
+});

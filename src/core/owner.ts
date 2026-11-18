@@ -30,8 +30,9 @@ import { liveZones } from "./zones.ts";
 import { getSection } from "./site-data.ts";
 import { HALL_MISSING } from "./hall.ts";
 import type { TableSession } from "./floor.ts";
-import { addDaysYmd } from "../lib/time.ts";
+import { addDaysYmd, sofiaNow } from "../lib/time.ts";
 import { shiftDay } from "../lib/shift-day.ts";
+import { shiftMin } from "./order-day.ts";
 import { fmt } from "../lib/format.ts";
 
 /* ---------- rights, words ---------- */
@@ -248,19 +249,22 @@ export interface OwnerFinance {
   cost: string; csv: string[][];
 }
 /** the km of the drivers' shifts started in [from, to]: the finished legs and the last leg of a closed shift */
-function kmOf(shifts: DriverShift[], from: string, to: string): number | null {
+/** the minute of a moment on the shift clock (00:30 = 24:30): "до същата минута" for the money, the fuel and the km */
+const minAt = (iso: string): number => { const c = sofiaNow(new Date(iso)); return shiftMin(c.h * 60 + c.m); };
+/** the km of the finished legs of the drivers' shifts started in [from, to] (closing a shift adds its last leg), up to
+    `cut` (the leg ended by then) for "Днес" against the same minute a week ago */
+function kmOf(shifts: DriverShift[], from: string, to: string, cut: number | null = null): number | null {
   let km = 0, any = false;
   for (const x of shifts) {
     const d = shiftDay(new Date(x.startedAt)); if (d < from || d > to) continue;
-    for (const l of x.legs || []) { km += Math.max(0, l.kmEnd - l.kmStart); any = true; }
-    if (x.status === "closed" && typeof x.kmEnd === "number") { km += Math.max(0, x.kmEnd - x.kmStart); any = true; }
+    for (const l of x.legs || []) { if (cut != null && minAt(l.to) > cut) continue; km += Math.max(0, l.kmEnd - l.kmStart); any = true; }
   }
   return any ? km : null;
 }
-function payOf(sl: Pick<H.Slice, "days" | "from" | "to">, sessions: TableSession[]): PayBlock {
+function payOf(sl: Pick<H.Slice, "days" | "from" | "to" | "cut">, sessions: TableSession[]): PayBlock {
   const r = (n: number) => round2(n), p = H.payOfDays(sl), o = { cash: p.cash, card: p.card, voucher: p.voucher }, t = { cash: 0, card: 0, unpaid: 0 };
   const tableRev = p.table;
-  for (const s of sessions) for (const p of s.payments || []) { const d = shiftDay(new Date(p.at)); if (d >= sl.from && d <= sl.to) t[p.how === "card" ? "card" : "cash"] += p.sum; }
+  for (const s of sessions) for (const p of s.payments || []) { const d = shiftDay(new Date(p.at)); if (d >= sl.from && d <= sl.to && (sl.cut == null || minAt(p.at) <= sl.cut)) t[p.how === "card" ? "card" : "cash"] += p.sum; }
   t.unpaid = Math.max(0, tableRev - t.cash - t.card);
   return { online: { cash: r(o.cash), card: r(o.card), voucher: r(o.voucher) }, table: { cash: r(t.cash), card: r(t.card), unpaid: r(t.unpaid) }, total: r(o.cash + o.card + o.voucher + tableRev) };
 }
@@ -269,7 +273,11 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   if (!ownerMoney(s)) throw new CoreError("forbidden", OWNER_MSG.finance, 403);
   const h = await H.loadHistory(ctx), R = await ranges(h, q);
   const [sessions, prevSessions] = (await Promise.all([H.sessionsOf(ctx, R.from, R.to), H.sessionsOf(ctx, R.c.from, R.c.to)])) as TableSession[][];
-  const fr = await fuelReport(ctx, s, { from: R.from, to: R.to }), pf = await fuelReport(ctx, s, { from: R.c.from, to: R.c.to });
+  const fr = await fuelReport(ctx, s, { from: R.from, to: R.to }), pf0 = await fuelReport(ctx, s, { from: R.c.from, to: R.c.to });
+  /* "Днес": the fuel of the same weekday last week only up to this minute, as the money */
+  const cut = R.onlyToday ? h.now : null, pfRows = cut == null ? pf0.rows : pf0.rows.filter((e) => minAt(e.at) <= cut);
+  const sumF = (l: typeof pfRows) => ({ n: l.length, litres: Math.round(l.reduce((a, e) => a + e.litres, 0) * 10) / 10, sum: round2(l.reduce((a, e) => a + e.sum, 0)) });
+  const pf = cut == null ? pf0 : { ...pf0, total: sumF(pfRows), byDay: pf0.byDay.map((d) => ({ date: d.date, ...sumF(pfRows.filter((e) => e.day === d.date)) })) };
   const delivered = H.deliveredOf(R.cur), prevDelivered = H.deliveredOf(R.prev);
   const zones = await liveZones(ctx);
   /* the cash of the drivers today */
@@ -286,7 +294,7 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   const lit = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
   const csv = [["Ден", "Оборот €", "Поръчки", "В брой €", "Карта при получаване €", "Ваучер €", "На маса €", "Гориво €", "Литри", "Сравнение: ден", "Сравнение: оборот €", "Сравнение: гориво €"],
     ...byDay.map((d, i) => {
-      const p = payOf({ from: d.date, to: d.date, days: R.cur.days.filter((x) => x.date === d.date) }, sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
+      const p = payOf({ from: d.date, to: d.date, cut: null, days: R.cur.days.filter((x) => x.date === d.date) }, sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
       return [d.date, csvNum(d.revenue), String(d.orders), csvNum(p.online.cash), csvNum(p.online.card), csvNum(p.online.voucher), csvNum(p.table.cash + p.table.card + p.table.unpaid), csvNum(f.sum), lit(f.litres),
         c ? c.date : "", c ? csvNum(c.revenue) : "", cf ? csvNum(cf.sum) : ""];
     })];
@@ -296,7 +304,7 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
     period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample, history: await H.hasBefore(ctx, h.today),
     cmp: { kind: R.kind, from: R.c.from, to: R.c.to },
     revenue: { cur: H.totals(R.cur).revenue, prev: H.totals(R.prev).revenue },
-    km: { cur: kmOf(shifts, R.from, R.to), prev: kmOf(shifts, R.c.from, R.c.to) },
+    km: { cur: kmOf(shifts, R.from, R.to), prev: kmOf(shifts, R.c.from, R.c.to, cut) },
     pay, prevPay,
     fuel: { total: fr.total, byDay: fr.byDay, byDriver: fr.byDriver, byCar: fr.byCar }, prevFuel: pf.total, prevFuelDays,
     delivery: { delivered, fuelPer: delivered && fr.total.sum ? round2(fr.total.sum / delivered) : null, prevFuelPer: prevDelivered && pf.total.sum ? round2(pf.total.sum / prevDelivered) : null,

@@ -76,6 +76,12 @@ describe("money: never a sum over several orders without 'Финанси и го
     expect((await core.shift.now(fin)).today).toEqual({ sum: both, n: 2 });
     expect((await core.shift.search(fin, "оборот")).today).toEqual({ sum: both, n: 2 });
     expect((await core.shift.hall(fin)).tablesSum).toBe(0);
+    /* the same day and the same sum as the admin's dashboard (the shift day from 04:00, the day an order is for) */
+    expect((await core.admin.summary(s.owner)).today.sales).toMatchObject({ sum: both, n: 2 });
+    await web(core, { lines: [{ id: pizza.id, q: 2 }], phone: "0888123458" });
+    const later = await core.admin.summary(s.owner);
+    expect((await core.shift.now(fin)).today).toEqual({ sum: later.today.sales!.sum, n: later.today.sales!.n });
+    expect((await core.shift.search(fin, "оборот")).today).toEqual({ sum: later.today.sales!.sum, n: later.today.sales!.n });
   });
 });
 

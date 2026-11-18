@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur, seedPast } from "./sobstvenik-helpers.ts";
+import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur, seedPast, phone } from "./sobstvenik-helpers.ts";
+import { ownServer, signIn as ownSignIn } from "./own-server.ts";
 
 test.beforeAll(() => seedPast());
 
@@ -9,33 +10,42 @@ test.beforeAll(() => seedPast());
    restaurant without history, the bar without connection, the manager goes to his home, the layout at 360 / 390 / 1024 /
    1440 in light and dark (with every "Таблица" open too), axe, no console errors. */
 
-test("„Днес“ = the dashboard's „Днес: X € от N поръчки“ and it follows a new order live", async ({ page, context }) => {
-  const errs = errors(page);
-  await signIn(context, "owner");
-  await webOrder(context, [{ id: "kebapcheta", q: 2 }]);
-  await webOrder(context, [{ id: "shopska-salata", q: 1 }]);
-  await page.goto("/sobstvenik/");
-  await ready(page, "Днес");
-  const sum = async () => ((await (await context.request.get("/api/admin/summary")).json()) as { today: { sales: { sum: number; n: number } } }).today.sales;
-  let s = await sum();
-  await expect(page.locator(".td-hero .sum")).toHaveText(eur(s.sum));
-  await expect(page.locator(".td-hero .of")).toHaveText("от " + s.n + " " + (s.n === 1 ? "поръчка" : "поръчки"));
-  /* a new order: the number changes by itself */
-  await webOrder(context, [{ id: "kebapcheta", q: 1 }]);
-  s = await sum();
-  await expect(page.locator(".td-hero .sum")).toHaveText(eur(s.sum), { timeout: 10_000 });
-  /* "Миналия … по това време" is a sum with cents, without a percent */
-  await expect(page.locator(".td-hero .lw").filter({ hasText: "по това време" })).toHaveText(/^(Миналия|Миналата) [а-я]+ по това време: \d+,\d\d €$/);
-  /* "На живо": the tables of the conditional plan say so */
-  await expect(page.locator(".bs-main")).toContainText("Масите са условни: [ЛИПСВА: истински маси и план]");
-  await expect(page.locator(".td-hero")).toContainText("Пълният отчет в админа");
-  await expect(page.locator('.td-hero a.link')).toHaveAttribute("href", "/admin/reports/#p=today");
-  /* "На живо": "Смяната сега" leads to the manager's module */
-  await expect(page.locator('a.pill-red[href="/upravitel/"]')).toHaveText(/Смяната сега/);
-  /* the five channels */
-  await expect(page.locator("#channels .ow-hb .r")).toHaveCount(5);
-  await expect(page.locator("#channels")).toContainText("Вземане от сайта");
-  expect(errs).toEqual([]);
+test("„Днес“ = the dashboard's „Днес: X € от N поръчки“ and it follows a new order live", async ({ page, context }, info) => {
+  /* an own server and database: no order of another worker can come between the dashboard's number and the screen's */
+  const S = await ownServer("own-today-" + info.project.name, info.project.name === "phone" ? 24 : 25);
+  try {
+    const errs = errors(page);
+    await ownSignIn(context, S.base, "owner");
+    const order = async (lines: { id: string; q: number }[]) => { const r = await context.request.post(S.base + "/api/orders", { headers: { "x-sc-clock": "12:30" }, data: { cart: { mode: "pickup", lines }, name: "Иван Петров", phone: phone() } }); expect(r.status(), "order").toBe(201); };
+    seedPast(S.db);
+    await order([{ id: "kebapcheta", q: 2 }]);
+    await order([{ id: "shopska-salata", q: 1 }]);
+    await page.goto(S.base + "/sobstvenik/");
+    await ready(page, "Днес");
+    const sum = async () => ((await (await context.request.get(S.base + "/api/admin/summary")).json()) as { today: { sales: { sum: number; n: number } } }).today.sales;
+    let s = await sum();
+    expect(s.n).toBe(2);
+    await expect(page.locator(".td-hero .sum")).toHaveText(eur(s.sum));
+    await expect(page.locator(".td-hero .of")).toHaveText("от " + s.n + " поръчки");
+    /* a new order: the number changes by itself */
+    await order([{ id: "kebapcheta", q: 1 }]);
+    s = await sum();
+    expect(s.n).toBe(3);
+    await expect(page.locator(".td-hero .sum")).toHaveText(eur(s.sum), { timeout: 10_000 });
+    await expect(page.locator(".td-hero .of")).toHaveText("от 3 поръчки");
+    /* "Миналия … по това време" is a sum with cents, without a percent */
+    await expect(page.locator(".td-hero .lw").filter({ hasText: "по това време" })).toHaveText(/^(Миналия|Миналата) [а-я]+ по това време: \d+,\d\d €$/);
+    /* "На живо": the tables of the conditional plan say so */
+    await expect(page.locator(".bs-main")).toContainText("Масите са условни: [ЛИПСВА: истински маси и план]");
+    await expect(page.locator(".td-hero")).toContainText("Пълният отчет в админа");
+    await expect(page.locator(".td-hero a.link")).toHaveAttribute("href", "/admin/reports/#p=today");
+    /* "На живо": "Смяната сега" leads to the manager's module */
+    await expect(page.locator('a.pill-red[href="/upravitel/"]')).toHaveText(/Смяната сега/);
+    /* the five channels */
+    await expect(page.locator("#channels .ow-hb .r")).toHaveCount(5);
+    await expect(page.locator("#channels")).toContainText("Вземане от сайта");
+    expect(errs).toEqual([]);
+  } finally { await S.stop(); }
 });
 
 test("„Таблица“ / „Графика“: the names start with the visible word, the table has its caption; the focus stays", async ({ page, context }) => {

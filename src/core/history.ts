@@ -120,6 +120,9 @@ export interface DayAgg {
   /* one entry per order, the cancelled too: the minute placed and the hour it is for (shift clock), the channel (CH5
      index), the total, 1 = not cancelled */
   m: number[]; h: number[]; c: number[]; t: number[]; ok: number[];
+  /* and per order: how it is paid (0 cash, 1 card, 2 voucher online; 3 a table order), 1 = a delivered delivery: every
+     comparison "до същата минута" cuts these too (the payment and the deliveries of "Финанси › Днес") */
+  p: number[]; dv: number[];
   /** the dishes of the not cancelled orders (lines not "Изчерпано"): id -> [name, portions, turnover] */
   dishes: Record<string, [string, number, number]>;
   /** pairs of different dishes in one order: "a|b" -> how many orders; multi: the orders with 2+ dishes */
@@ -130,21 +133,19 @@ export interface DayAgg {
   cook: [number, number]; del: [number, number];
   /** the offers: [orders, discount, turnover] */
   lunch: [number, number, number]; code: [number, number, number];
-  /** the payment of the not cancelled orders: online cash, card, voucher, and the turnover of the table orders */
-  pay: [number, number, number, number];
-  /** still in work (not finished, not cancelled), the delivered deliveries, any example order */
-  work: number; delivered: number; sample: boolean;
+  /** still in work (not finished, not cancelled), any example order */
+  work: number; sample: boolean;
 }
 const CH5_IDX: Record<Ch5, number> = { delivery: 0, pickup: 1, phone: 2, table: 3, office: 4 };
 /** the aggregate of the orders of one day */
 export function aggOf(date: string, orders: Order[]): DayAgg {
-  const a: DayAgg = { date, m: [], h: [], c: [], t: [], ok: [], dishes: {}, pairs: {}, multi: 0, phones: {}, cook: [0, 0], del: [0, 0], lunch: [0, 0, 0], code: [0, 0, 0], pay: [0, 0, 0, 0], work: 0, delivered: 0, sample: false };
+  const a: DayAgg = { date, m: [], h: [], c: [], t: [], ok: [], dishes: {}, pairs: {}, multi: 0, phones: {}, cook: [0, 0], del: [0, 0], lunch: [0, 0, 0], code: [0, 0, 0], p: [], dv: [], work: 0, sample: false };
   for (const o of orders) {
     const good = ok(o), total = o.total || 0;
     a.m.push(minOf(o)); a.h.push(hourOf(o)); a.c.push(CH5_IDX[ch5(o)] ?? 0); a.t.push(total); a.ok.push(good ? 1 : 0);
+    a.p.push(chKey(o.channel) === "table" ? 3 : o.pay === "card" ? 1 : o.pay === "voucher" ? 2 : 0); a.dv.push(o.mode === "delivery" && o.status === "delivered" ? 1 : 0);
     if (isSample(o)) a.sample = true;
     if (!FINISHED_ST.includes(o.status) && good) a.work++;
-    if (o.mode === "delivery" && o.status === "delivered") a.delivered++;
     if (!good) continue;
     const lines = (o.lines || []).filter((l) => !l.out);
     for (const l of lines) { const x = a.dishes[l.id] || (a.dishes[l.id] = [l.name || l.id, 0, 0]); x[1] += l.q; x[2] = round2(x[2] + (l.unit || 0) * l.q); }
@@ -157,7 +158,6 @@ export function aggOf(date: string, orders: Order[]): DayAgg {
     if (tt.on_way && tt.delivered) { const v = (Date.parse(tt.delivered) - Date.parse(tt.on_way)) / 60_000; if (v >= 0) { a.del[0] += v; a.del[1]++; } }
     if (o.discKind === "lunch") { a.lunch[0]++; a.lunch[1] += o.disc || 0; a.lunch[2] += total; }
     if (o.discKind === "code" || !!o.code) { a.code[0]++; a.code[1] += o.disc || 0; a.code[2] += total; }
-    if (chKey(o.channel) === "table") a.pay[3] += total; else a.pay[o.pay === "card" ? 1 : o.pay === "voucher" ? 2 : 0] += total;
   }
   return a;
 }
@@ -241,9 +241,10 @@ export async function slice(h: History, from: string, to: string, cut: number | 
   return { from, to, cut, days, res };
 }
 /** the order rows of a slice (within the cut): [minute, hour, channel, total, the day] of the not cancelled, and the count of the cancelled */
-function rows(sl: Pick<Slice, "days" | "cut">, all = false): { m: number; h: number; c: number; t: number; d: DayAgg }[] {
-  const out: { m: number; h: number; c: number; t: number; d: DayAgg }[] = [];
-  for (const d of sl.days) for (let i = 0; i < d.m.length; i++) if ((all || d.ok[i]) && (sl.cut == null || d.m[i] <= sl.cut)) out.push({ m: d.m[i], h: d.h[i], c: d.c[i], t: d.t[i], d });
+type Row = { m: number; h: number; c: number; t: number; p: number; dv: number; d: DayAgg };
+function rows(sl: Pick<Slice, "days" | "cut">, all = false): Row[] {
+  const out: Row[] = [];
+  for (const d of sl.days) for (let i = 0; i < d.m.length; i++) if ((all || d.ok[i]) && (sl.cut == null || d.m[i] <= sl.cut)) out.push({ m: d.m[i], h: d.h[i], c: d.c[i], t: d.t[i], p: d.p[i], dv: d.dv[i], d });
   return out;
 }
 const cancelledOf = (sl: Pick<Slice, "days" | "cut">) => { let n = 0; for (const d of sl.days) for (let i = 0; i < d.m.length; i++) if (!d.ok[i] && (sl.cut == null || d.m[i] <= sl.cut)) n++; return n; };
@@ -373,14 +374,15 @@ export function offers(sl: Pick<Slice, "days">): Offers {
   const part = (k: "lunch" | "code") => { let n = 0, disc = 0, rev = 0; for (const d of sl.days) { n += d[k][0]; disc += d[k][1]; rev += d[k][2]; } return { orders: n, disc: round2(disc), revenue: round2(rev) }; };
   return { lunch: part("lunch"), code: part("code") };
 }
-/** the payment of the days: online cash, card, voucher and the turnover of the table orders */
-export function payOfDays(sl: Pick<Slice, "days">): { cash: number; card: number; voucher: number; table: number } {
-  const p = [0, 0, 0, 0]; for (const d of sl.days) for (let i = 0; i < 4; i++) p[i] += d.pay[i];
+/** the payment of the not cancelled orders of the days (within the cut): online cash, card, voucher and the turnover of
+    the table orders */
+export function payOfDays(sl: Pick<Slice, "days" | "cut">): { cash: number; card: number; voucher: number; table: number } {
+  const p = [0, 0, 0, 0]; for (const o of rows(sl)) p[o.p] += o.t;
   return { cash: p[0], card: p[1], voucher: p[2], table: p[3] };
 }
-/** the orders still in work and the delivered deliveries of the days */
+/** the orders still in work (today) and the delivered deliveries of the days (within the cut) */
 export const workOf = (sl: Pick<Slice, "days">) => sl.days.reduce((a, d) => a + d.work, 0);
-export const deliveredOf = (sl: Pick<Slice, "days">) => sl.days.reduce((a, d) => a + d.delivered, 0);
+export const deliveredOf = (sl: Pick<Slice, "days" | "cut">) => rows(sl).reduce((a, o) => a + o.dv, 0);
 
 /* ---------- "обичайното" ---------- */
 /** the same weekday in the last `weeks` weeks (the oldest last) */

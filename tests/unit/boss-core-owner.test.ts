@@ -246,9 +246,10 @@ describe("after the review of the owner's screens", () => {
   it("'Изминати км': the finished legs and the closed shifts started in the period", async () => {
     const m = mk(), { core } = m, { s } = await people(core);
     const sh = (id: string, startedAt: string, extra: Record<string, unknown>) => m.repo.put("shifts", { id, role: "driver", user: "u", name: "Шофьор 1", car: "c2", float: null, nav: "google", parked: "", route: { pick: "fast", own: null }, driving: null, last: null, createdAt: startedAt, updatedAt: startedAt, legFrom: startedAt, startedAt, ...extra });
-    await sh("a", "2026-11-15T08:00:00Z", { status: "closed", kmStart: 1100, kmEnd: 1180, legs: [{ car: "c1", kmStart: 500, kmEnd: 540, from: "2026-11-15T08:00:00Z", to: "2026-11-15T12:00:00Z" }] });
+    /* closing a shift adds its last leg (driver.ts end()): the legs hold every km */
+    await sh("a", "2026-11-15T08:00:00Z", { status: "closed", kmStart: 1100, kmEnd: 1180, legs: [{ car: "c1", kmStart: 500, kmEnd: 540, from: "2026-11-15T08:00:00Z", to: "2026-11-15T12:00:00Z" }, { car: "c2", kmStart: 1100, kmEnd: 1180, from: "2026-11-15T12:00:00Z", to: "2026-11-15T18:00:00Z" }] });
     await sh("b", "2026-11-16T08:00:00Z", { status: "open", kmStart: 2000, legs: [] });
-    await sh("c", "2026-11-05T08:00:00Z", { status: "closed", kmStart: 100, kmEnd: 130, legs: [] });
+    await sh("c", "2026-11-05T08:00:00Z", { status: "closed", kmStart: 100, kmEnd: 130, legs: [{ car: "c2", kmStart: 100, kmEnd: 130, from: "2026-11-05T08:00:00Z", to: "2026-11-05T16:00:00Z" }] });
     const f = await core.owner.finance(s.owner, { period: "7" });
     expect(f.km).toEqual({ cur: 120, prev: 30 });
   });
