@@ -251,7 +251,9 @@ function viewCode(demoCode?: string, resendIn = 30, isKnown?: boolean) {
   ins.forEach((x, i) => {
     x.addEventListener("input", () => { clearErr(); const v = x.value.replace(/\D/g, ""); x.value = ""; if (v.length) fill(i, v); else sync(); });
     x.addEventListener("keydown", (e) => {
-      if (e.key === "Backspace" && !x.value && i > 0) { e.preventDefault(); ins[i - 1].value = ""; ins[i - 1].focus(); sync(); }
+      /* a digit typed into a full box (fast typing: the focus was still here) goes on to the next box, never lost */
+      if (/^\d$/.test(e.key) && x.value && x.selectionStart === x.selectionEnd && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); clearErr(); fill(i < 5 ? i + 1 : 5, e.key); }
+      else if (e.key === "Backspace" && !x.value && i > 0) { e.preventDefault(); ins[i - 1].value = ""; ins[i - 1].focus(); sync(); }
       else if (e.key === "ArrowLeft" && i > 0) { e.preventDefault(); ins[i - 1].focus(); }
       else if (e.key === "ArrowRight" && i < 5) { e.preventDefault(); ins[i + 1].focus(); }
     });
