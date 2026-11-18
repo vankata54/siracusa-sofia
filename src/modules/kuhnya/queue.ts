@@ -9,6 +9,7 @@
 import { mountKitchen, ic, esc, reduceMotion, type KFrame } from "./frame.ts";
 import { kitchenApi, ApiError, type KAct, type KTicket, type KQueue } from "../../client/api-kitchen.ts";
 import { murl } from "../routes.ts";
+import type { KSaw } from "./outbox.ts";
 import { ticketHTML, ticketSig, timerAt, timerHTML, countsHTML, countsAt, laterRowHTML, lineText, tick, begin, finish, active, fifo } from "./view.ts";
 
 const $ = <T extends Element = HTMLElement>(sel: string, root: ParentNode) => root.querySelector<T>(sel);
@@ -42,7 +43,9 @@ function queueScreen(k: KFrame): void {
       (nw ? '<button class="knew" type="button" data-newgo data-fk="new">' + ic("bell-ringing", 22) + (nw.sched ? "Влезе" : "Нова") + " · " + esc(nw.src.text) + ' <span class="go2">Виж' + ic("arrow-right", 16) + "</span></button>" : "") +
       (lt.length ? '<div class="klater"><button class="kpill" type="button" data-later data-fk="later" aria-expanded="' + laterOpen + '">' + ic("calendar-check", 22) + 'По-късно <span class="n">' + lt.length + "</span></button>" +
         (laterOpen ? '<div class="kpanel" role="dialog" aria-label="Поръчки за по-късно" tabindex="-1" data-fk="panel"><h3>По-късно</h3><p>Влизат в опашката ' + cfg.enterBefore + " мин преди часа си.</p>" + lt.map(laterRowHTML).join("") + "</div>" : "") + "</div>" : "") +
-      k.pills.sound() + k.pills.busy() };
+      k.pills.sound() + k.pills.busy() +
+      /* the head chef looking at one section's queue (#s=…): the way back, and the row says who is looking */
+      (k.tablet !== k.sec ? k.pills.back("obsht-izgled", "Общ изглед") : "") };
   });
   const closeLater = (focus: boolean) => { if (!laterOpen) return; laterOpen = false; k.strip(); if (focus) k.afterTouch(() => $("[data-later]", k.stripEl)?.focus({ preventScroll: true })); };
   k.stripEl.addEventListener("click", (e) => {
@@ -138,14 +141,14 @@ function queueScreen(k: KFrame): void {
     const stop = () => { if (t) clearTimeout(t); t = null; btn.classList.remove("holding"); };
     const moved = () => {
       if (!t) return; stop();
-      hint.textContent = "Задръжте, без да местите пръста"; btn.classList.add("hint");
+      hint.textContent = "Задръж, без да местиш пръста"; btn.classList.add("hint");
       clearTimeout(th); th = setTimeout(() => { hint.textContent = orig; btn.classList.remove("hint"); }, 2200);
     };
     btn.addEventListener("pointerdown", (e) => { if (e.button) return; x0 = e.clientX; y0 = e.clientY; btn.classList.add("holding"); t = setTimeout(() => { t = null; stop(); done(no); }, 1000); });
     btn.addEventListener("pointermove", (e) => { if (t && Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 12) moved(); });
     btn.addEventListener("pointerup", stop);
     btn.addEventListener("pointerleave", moved); btn.addEventListener("pointercancel", moved);
-    btn.addEventListener("click", (e) => { if (e.detail === 0) done(no); });
+    btn.addEventListener("click", (e) => { if (e.detail === 0) done(no, true); });
     btn.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
@@ -161,16 +164,21 @@ function queueScreen(k: KFrame): void {
       return r;
     } catch (e) { flying.set(no, Math.max(0, (flying.get(no) || 1) - 1)); throw e; }
   }
-  function onLine(no: string, i: number): void {
+  /** what this tablet shows for the lines it acts on (the core writes the action only while they are still so) */
+  const sawOf = (t: KTicket, only?: number[]): KSaw => { const o: KSaw = {}; for (const l of t.lines) if (!only || only.includes(l.i)) o[l.i] = l.ks; return o; };
+  /** after the notice of a card that left: the focus goes to the next card in the queue (never to <body>) */
+  const nextFocus = (): HTMLElement | null => $<HTMLElement>(".tk [data-start], .tk [data-done], .tk .ln", main) || main;
+  function onLine(no: string, i: number, kbd = false): void {
     const t = find(no), l = t && t.lines.find((x) => x.i === i); if (!t || !l) return;
     const key = no + ":" + i, at = Date.now(), was = l.ks === "ready";
     if (at - (tapAt.get(key) || 0) < guard) return; /* a wet hand: the second touch within 0,8 s does not undo */
     tapAt.set(key, at); seenLocal.add(no);
     const next = tick(t, i, !was), name = esc(lineText(l)), where = esc(t.src.text);
-    if (!was && !active(next)) { handOver(t, { k: "line", no, i, ready: true }); return; } /* the last line: the card leaves the queue, with "Върни" */
+    if (!was && !active(next)) { handOver(t, { k: "line", no, i, ready: true, saw: sawOf(t, [i]) }, kbd); return; } /* the last line: the card leaves the queue, with "Върни" */
     put(next); render();
-    const undo = () => { tapAt.delete(key); const c = find(no); if (c) { put(tick(c, i, was)); render(); } act(no, { k: "line", no, i, ready: was }).catch(failed); };
-    act(no, { k: "line", no, i, ready: !was }).then(() => {
+    const shown = next.lines.find((x) => x.i === i)!.ks;
+    const undo = () => { tapAt.delete(key); const c = find(no); if (c) { put(tick(c, i, was)); render(); } act(no, { k: "line", no, i, ready: was, saw: { [i]: shown } }).catch(failed); };
+    act(no, { k: "line", no, i, ready: !was, saw: { [i]: l.ks } }).then(() => {
       if (!was) k.toast("<b>" + name + " · готово</b><small>" + where + "</small>", { undo });
       else k.toast("<b>Върнато: " + name + "</b><small>" + where + " · пак е за готвене</small>", { undo });
     }).catch(failed);
@@ -179,11 +187,12 @@ function queueScreen(k: KFrame): void {
     const t = find(no); if (!t) return;
     seenLocal.add(no);
     put(begin(t, k.now(), k.hm(k.now()))); render();
-    act(no, { k: "start", no }).catch(failed);
+    act(no, { k: "start", no, saw: sawOf(t) }).catch(failed);
   }
-  const done = (no: string) => { const t = find(no); if (t && !leaving.has(no)) handOver(t, { k: "done", no }); };
-  /** the section is ready with the order ("Готово", or its last line): the card leaves, the notice says who was told */
-  function handOver(t: KTicket, a: { k: "done"; no: string } | { k: "line"; no: string; i: number; ready: true }): void {
+  const done = (no: string, kbd = false) => { const t = find(no); if (t && !leaving.has(no)) handOver(t, { k: "done", no, saw: sawOf(t) }, kbd); };
+  /** the section is ready with the order ("Готово", or its last line): the card leaves, the notice says who was told.
+      kbd: pressed with the keyboard: the focus goes to "Върни" in the notice, then to the next card */
+  function handOver(t: KTicket, a: { k: "done"; no: string; saw: KSaw } | { k: "line"; no: string; i: number; ready: true; saw: KSaw }, kbd = false): void {
     const no = t.no, prev = t, local = a.k === "line" ? [a.i] : finish(t).changed;
     leaving.add(no); seenLocal.add(no);
     const card = cardOf(no);
@@ -195,10 +204,10 @@ function queueScreen(k: KFrame): void {
       const lines = r ? r.changed : local;
       const undo = () => {
         put({ ...prev, isNew: false }); render();
-        act(no, { k: "back", no, lines }).catch(failed);
+        act(no, { k: "back", no, lines, saw: Object.fromEntries(lines.map((i) => [i, "ready"])) as KSaw }).catch(failed);
       };
       if (r && r.ticket) { put(r.ticket); render(); } /* the server kept it in the queue (another tablet returned a line) */
-      k.toast(title + "<small>" + (r ? esc(r.msg) : "Ще се изпрати, щом връзката се върне.") + "</small>", { undo });
+      k.toast(title + "<small>" + (r ? esc(r.msg) : "Ще се изпрати, щом връзката се върне.") + "</small>", { undo, focus: kbd || document.activeElement === document.body, after: nextFocus });
     }).catch(async (e) => { await gone; leaving.delete(no); failed(e); });
   }
   /** "Виж": the banner leads to the card; the order is no longer "Нова" */
@@ -211,7 +220,7 @@ function queueScreen(k: KFrame): void {
   main.addEventListener("click", (e) => {
     const t = e.target as Element, card = t.closest<HTMLElement>(".tk"), no = card ? card.dataset.no || "" : "";
     const ln = t.closest<HTMLElement>("[data-ln]");
-    if (ln && no) { onLine(no, +ln.dataset.ln!); return; }
+    if (ln && no) { onLine(no, +ln.dataset.ln!, (e as MouseEvent).detail === 0); return; }
     if (t.closest("[data-start]") && no) { start(no); return; }
     const q = qEl(); if (!q) return;
     if (t.closest("[data-kmore]")) q.scrollBy({ left: q.clientWidth * 0.8, behavior: smooth() });

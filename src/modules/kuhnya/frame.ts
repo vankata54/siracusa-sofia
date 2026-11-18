@@ -49,7 +49,7 @@
    (a button with data-more opens the site's sheet "Още" and makes the whole screen inert).
 
    On the tablet (localStorage, try/catch): sk-sec, sk-theme, sk-sound, sk-device, sk-outbox, sk-secs (vhod.ts: the names of
-   the sections for the PIN step before the sign-in). Nothing else is kept. */
+   the sections for the PIN step before the sign-in), sk-who (vhod.ts: who signed in with the PIN last). Nothing else is kept. */
 import "sc-icons:list-checks,x,check-circle,squares-four,hourglass,caret-down,magnifying-glass,bell,bell-ringing,warning,speaker-high,speaker-slash,wifi-slash,warning-circle,arrow-clockwise,arrow-counter-clockwise,arrow-left,arrow-right,calendar-check,flame,fire,cooking-pot,pizza,bowl-food,chef-hat,fork-knife,moped,storefront,minus,plus,note,check,sign-in,sign-out,sun,moon,info";
 import { ic } from "../../lib/icons.ts";
 import { esc } from "../../lib/format.ts";
@@ -155,10 +155,12 @@ export function tabletSec(cfg: KConfigView): string {
 }
 
 /* ---------- the frame ---------- */
-export interface KToast { close(): void }
+export interface KToast { close(): void; /** "Върни" (null: a plain notice) */ button: HTMLButtonElement | null }
 export interface KStrip { counts: string; pills?: string }
 export interface KFrame {
   me: Me; cfg: KConfigView; boss: boolean; sec: string; all: boolean; secName: string; page: KPage;
+  /** the tablet's own section (differs from sec when the head chef looks at a section's queue: queue#s=…) */
+  tablet: string;
   root: HTMLElement; main: HTMLElement; stripEl: HTMLElement;
   href(page: KPage | "vhod", hash?: string): string;
   now(): number; hm(ms: number): string; sync(serverNow: number): void;
@@ -171,7 +173,7 @@ export interface KFrame {
   onNew(fn: (t: KTicket) => void): () => void;
   strip(render?: () => KStrip): void;
   pills: { sound(): string; busy(): string; back(page: KPage, text: string): string };
-  toast(html: string, o?: { undo?: () => void; secs?: number }): KToast;
+  toast(html: string, o?: { undo?: () => void; secs?: number; focus?: boolean; after?: () => HTMLElement | null }): KToast;
   setTab(tab: "queue" | "izcherpano", n: number): void;
   loading(label?: string): void; fail(e: unknown, retry: () => void): void; empty(o: { icon?: string; title: string; text?: string }): void;
   modal(el: HTMLElement, onEsc: () => void): () => void;
@@ -253,12 +255,12 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   const netSubs = new Set<(online: boolean) => void>();
   const box = makeOutbox({ get: () => { try { return localStorage.getItem("sk-outbox"); } catch { return null; } }, set: (v) => { try { if (v == null) localStorage.removeItem("sk-outbox"); else localStorage.setItem("sk-outbox", v); } catch { /* blocked */ } } });
   const run = (q: { sec: string; at: number; a: KAction }): Promise<unknown> => {
-    const a = q.a, o = { at: q.at };
+    const a = q.a, o = { at: q.at, saw: "saw" in a ? a.saw : undefined };
     switch (a.k) {
       case "start": return kitchenApi.start(a.no, q.sec, o);
-      case "line": return kitchenApi.line(a.no, a.i, a.ready, { sec: q.sec, at: q.at });
+      case "line": return kitchenApi.line(a.no, a.i, a.ready, { sec: q.sec, ...o });
       case "done": return kitchenApi.done(a.no, q.sec, o);
-      case "back": return kitchenApi.back(a.no, q.sec, { lines: a.lines, at: q.at });
+      case "back": return kitchenApi.back(a.no, q.sec, { lines: a.lines, ...o });
       case "out": return kitchenApi.setOut(a.id, a.out, { sec: q.sec, at: q.at });
       case "busy": return kitchenApi.setBusy(a.on, { sec: q.sec, at: q.at });
     }
@@ -275,10 +277,12 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   }
   let flushing: Promise<void> | null = null;
   const tries = new Map<string, number>();
-  /** the connection is back: first the kept actions (in order, with their time), then the screens load again */
+  /** the connection is back: first the kept actions (in order, with their time), then the screens load again. `flushing`
+      is cleared in .finally (never inside the body: with nothing kept the body ends before the promise is stored, and a
+      stored, finished promise would keep the tablet "Няма връзка" for good; review 2, blocking 1) */
   function back(): Promise<void> {
     if (flushing) return flushing;
-    flushing = (async () => {
+    const p = (async () => {
       const had = box.size();
       let auth = false, cur = "";
       /* nothing is thrown away because of the connection, an expired session or a server that is starting (three tries);
@@ -290,21 +294,31 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
         if (e.status >= 500 || e.status === 429) { const n = (tries.get(cur) || 0) + 1; tries.set(cur, n); return n < 3; }
         return false;
       };
-      const r = had ? await flushOutbox(box, (q: Queued) => { cur = q.id; return run(q); }, wait) : { sent: 0, dropped: [] as string[], stopped: false };
+      const r = { sent: 0, dropped: [] as string[], stopped: false };
+      /* a touch made while the kept actions are on their way joins the box: another round, until it is empty */
+      for (let round = 0; box.size() && round < 6 && !auth; round++) {
+        const x = await flushOutbox(box, (q: Queued) => { cur = q.id; return run(q); }, wait);
+        r.sent += x.sent; r.dropped.push(...x.dropped);
+        if (x.stopped) { r.stopped = true; break; }
+      }
       if (auth) { void toSignIn(); return; }
-      if (r.stopped) { flushing = null; lost(); return; }
+      if (r.stopped) { lost(); return; }
       const was = off; off = false; lastOk = now(); paintNet(); drawStrip();
-      flushing = null;
       if (r.dropped.length) toast("<b>" + (r.dropped.length === 1 ? "Едно действие не се записа" : r.dropped.length + " действия не се записаха") + "</b><small>" + esc(r.dropped[0]) + "</small>", { secs: 8 });
       else if (r.sent) toast("<b>Връзката се върна</b><small>" + (r.sent === 1 ? "Изпратихме запазеното действие." : "Изпратихме запазените действия: " + r.sent + ".") + "</small>", { secs: 6 });
       await refresh();
       if (was || had) netSubs.forEach((f) => f(true));
-    })().catch(() => { flushing = null; });
-    return flushing;
+    })().catch(() => { /* the next probe tries again */ }).finally(() => { flushing = null; });
+    flushing = p;
+    return p;
   }
+  /** the heartbeat, at most 8 s: a half-open connection (a change of Wi-Fi) must not keep "Опитай пак" busy for good */
   const beatOnce = async (): Promise<boolean> => {
-    try { const r = await kitchenApi.beat(tab, { device }); sync(r.now); return true; }
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<never>((_, rej) => { t = setTimeout(() => rej(new ApiError("offline", "Няма връзка.", 0)), 8000); });
+    try { const r = await Promise.race([kitchenApi.beat(tab, { device }), late]); sync(r.now); return true; }
     catch (e) { if (e instanceof ApiError && e.status === 401) { void toSignIn(); return false; } if (isOffline(e)) lost(); return false; }
+    finally { clearTimeout(t); }
   };
   /** is the server there again */
   async function probe(): Promise<boolean> {
@@ -401,7 +415,8 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
       : '<button class="kpill ask" type="button" data-sound data-fk="sound" data-unlock title="Браузърът пуска звук едва след докосване на екрана">' + ic("speaker-slash", 22) + "Звук: докоснете</button>",
     /** the key shows the state of the whole kitchen and leads to the screen "Натоварено" */
     busy: (): string => { const b = k.queue && k.queue.busy; if (!b) return "";
-      return '<a class="kpill' + (b.on ? " on" : "") + '" data-fk="busy" href="' + href("natovareno") + '">' + ic("hourglass", 22) + (b.on ? "Натоварено +" + b.extra + " мин" + (b.atHm ? ' <span class="sub">от ' + esc(b.atHm) + "</span>" : "") : "Натоварено: изкл.") + "</a>"; },
+      /* on for 60 min or more: the reminder is on the key itself, where the cooks look (red frame, "· 60+ мин") */
+      return '<a class="kpill' + (b.on ? " on" : "") + (b.remind ? " remind" : "") + '" data-fk="busy" href="' + href("natovareno") + '">' + ic(b.remind ? "warning" : "hourglass", 22) + (b.on ? "Натоварено +" + b.extra + " мин" + (b.remind ? ' <span class="sub">· 60+ мин</span>' : b.atHm ? ' <span class="sub">от ' + esc(b.atHm) + "</span>" : "") : "Натоварено: изкл.") + "</a>"; },
     back: (p: KPage, text: string): string => '<a class="kpill" data-fk="back" href="' + href(p) + '">' + ic("arrow-left", 22) + esc(text) + "</a>",
   };
 
@@ -410,7 +425,7 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   function offlineHTML(): string {
     return '<div class="koff" role="alert">' + ic("wifi-slash", 32) + "<div><b>Няма връзка." + (page === "obsht-izgled" ? "" : " Новите поръчки не идват.") + "</b>" +
       "<p>" + OFF_TEXT(page, lastOk ? hm(lastOk) : "") + "</p>" +
-      '<ol><li>Проверете Wi-Fi на таблета.</li><li>Ако до 2 мин няма връзка, кажете на управителя. <span class="miss">[ЛИПСВА: резервен интернет и ред при срив]</span></li></ol>' +
+      '<ol><li>Провери Wi-Fi на таблета.</li><li>Ако до 2 мин няма връзка, кажи на управителя. <span class="miss">[ЛИПСВА: резервен интернет и ред при срив]</span></li></ol>' +
       (retryAt ? '<p class="still" role="status">Още няма връзка (проверено в ' + hm(retryAt) + ").</p>" : "") + "</div>" +
       '<button class="kb line" type="button" data-retry data-fk="retry"' + (probing ? " disabled" : "") + ">" + ic("arrow-clockwise", 22) + "Опитай пак</button></div>";
   }
@@ -454,20 +469,29 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
 
   /* ---------- the notice with "Върни" (one at a time: the new one takes the place of the old) ---------- */
   let cur: KToast | null = null;
-  function toast(html: string, o: { undo?: () => void; secs?: number } = {}): KToast {
+  /** o.focus: the keyboard pressed the action: the focus goes to "Върни" (one key away, review 2 important 5); when the
+      notice goes with the focus in it, the focus goes to o.after() (or the screen) instead of falling on <body> */
+  function toast(html: string, o: { undo?: () => void; secs?: number; focus?: boolean; after?: () => HTMLElement | null } = {}): KToast {
     const secs = o.secs || cfg.undoSec || 10, until = Date.now() + secs * 1000;
-    const el = document.createElement("div"); el.className = "kt" + (o.undo ? "" : " plain"); el.setAttribute("role", "status");
+    /* one live region (.ktoasts, polite); the seconds are not read aloud ("10 … 9 …"): the button's name is "Върни" */
+    const el = document.createElement("div"); el.className = "kt" + (o.undo ? "" : " plain");
     /* read aloud as two sentences (the title and the detail sit side by side with no space between them) */
-    el.innerHTML = ic("check-circle", 28) + "<span>" + html.replace("</b><small>", '</b><span class="vh">. </span><small>') + "</span>" + (o.undo ? '<button type="button">' + ic("arrow-counter-clockwise", 20) + 'Върни · <b class="num">' + secs + "</b></button>" : "") + '<i style="animation-duration:' + secs + 's"></i>';
+    el.innerHTML = ic("check-circle", 28) + "<span>" + html.replace("</b><small>", '</b><span class="vh">. </span><small>') + "</span>" + (o.undo ? '<button type="button">' + ic("arrow-counter-clockwise", 20) + 'Върни<span aria-hidden="true"> · <b class="num">' + secs + "</b></span></button>" : "") + '<i style="animation-duration:' + secs + 's"></i>';
     if (cur) cur.close();
     toasts.appendChild(el); place();
-    const b = $("button b", el);
+    const b = $("button b", el), btn = $<HTMLButtonElement>("button", el);
     const offTick = onTick(() => { if (b) b.textContent = String(Math.max(0, Math.ceil((until - Date.now()) / 1000))); });
     const t = setTimeout(close, secs * 1000);
-    function close() { clearTimeout(t); offTick(); el.remove(); if (cur === me2) cur = null; }
-    if (o.undo) $<HTMLButtonElement>("button", el)!.addEventListener("click", () => { close(); o.undo!(); });
-    const me2: KToast = { close };
+    function close() {
+      clearTimeout(t); offTick();
+      const had = el.contains(document.activeElement);
+      el.remove(); if (cur === me2) cur = null;
+      if (had) ((o.after && o.after()) || main).focus({ preventScroll: true });
+    }
+    if (o.undo) btn!.addEventListener("click", () => { close(); o.undo!(); });
+    const me2: KToast = { close, button: btn };
     cur = me2;
+    if (o.focus && btn) btn.focus({ preventScroll: true });
     return me2;
   }
 
@@ -526,7 +550,7 @@ export async function mountKitchen(opts: KMountOpts): Promise<KFrame | null> {
   mountPen("kuhnya", $<HTMLElement>("[data-penslot]", root)!);
 
   Object.assign(k, {
-    me, cfg, boss, sec, all, secName, page, root, main, stripEl, href, now, hm, sync, onTick, on, call, send,
+    me, cfg, boss, sec, all, secName, page, tablet: tab, root, main, stripEl, href, now, hm, sync, onTick, on, call, send,
     online: () => !off, onNet: (fn: (online: boolean) => void) => { netSubs.add(fn); return () => { netSubs.delete(fn); }; },
     queue: null, queueErr: null, onQueue: (fn: (q: KQueue | null) => void) => { qSubs.add(fn); return () => { qSubs.delete(fn); }; }, refresh,
     onNew: (fn: (t: KTicket) => void) => { newSubs.add(fn); return () => { newSubs.delete(fn); }; },

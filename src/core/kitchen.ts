@@ -74,6 +74,7 @@ export const K_MSG = {
   taken: "Шофьорът вече взе поръчката и тя не може да се върне в опашката.",
   dish: "Няма такова ястие в менюто.",
   conflict: "Някой друг промени настройките на кухнята. Зареди ги пак.",
+  changed: "Друг таблет промени поръчката. Виж я отново на екрана.",
   boss: RIGHTS_MSG.boss,
 };
 const CLOSED_WORD: Partial<Record<OrderStatus, string>> = { ready: "готова", on_way: "на път", delivered: "доставена", picked_up: "взета", cancelled: "отказана" };
@@ -178,7 +179,8 @@ export interface KTicket {
   note: string; lines: KLineView[]; others: KOther[]; secs: KSecState[];
 }
 export interface KLater { no: string; kind: KKind; src: KSrc; forAt: number; forHm: string; enter: number; enterHm: string; tomorrow: boolean; lines: KLineView[] }
-export interface KBusy { on: boolean; at: Iso | null; atHm: string; by: string | null; /** the minutes "Натоварено" adds */ extra: number }
+export interface KBusy { on: boolean; at: Iso | null; atHm: string; by: string | null; /** the minutes "Натоварено" adds */ extra: number;
+  /** on for BUSY_REMIND_MIN or more: the queue and "Общ изглед" remind too (OPEN-QUESTIONS 34) */ remind: boolean }
 export interface KConfigView {
   sections: KSectionDef[]; all: { id: string; n: string; who: string; icon: string }; lunch: string; other: string;
   norm: KitchenConfig["norm"]; soon: number; enterBefore: number; busyMin: number; delivery: { etaMin: number; etaBusyMin: number };
@@ -205,7 +207,7 @@ export interface KDoneRow { no: string; kind: KKind; src: KSrc; doneAt: number; 
   /** "Върни в опашката" is still possible (nobody took or served it); why not */
   canBack: boolean; why: string }
 export interface KDone { sec: string; now: number; rows: KDoneRow[]; counts: { n: number; onTime: number } }
-export interface KTablet { sec: string; n: string; online: boolean; lastAt: Iso | null; lastHm: string; /** "Таблетът работи" / "без връзка от 19:37" / "без връзка" */ text: string }
+export interface KTablet { sec: string; n: string; online: boolean; lastAt: Iso | null; lastHm: string; /** "Таблетът работи" / "без връзка от 19:37" / "Няма таблет днес" */ text: string }
 export interface KSummary {
   now: number; busy: KBusy;
   sections: { id: string; n: string; short: string; icon: string; wait: number; late: number; soon: number; /** minutes the oldest waits; null: nothing waits */ oldestMin: number | null; out: number; tablet: KTablet }[];
@@ -215,14 +217,15 @@ export interface KSummary {
 }
 export interface KOutItem { id: string; n: string; g: string; out: boolean }
 export interface KOutRow { id: string; n: string; /** the dish's section, or "shared" for an add-on */ sec: string; secName: string; at: Iso | null; atHm: string;
-  /** who marked it ("Кухня · Скара", "Управител"); null: sold out in the menu data */ by: string | null; mine: boolean }
+  /** who marked it ("Кухня · Скара", "Управител"); null: sold out in the menu data */ by: string | null; mine: boolean;
+  /** sold out in the menu's data (the admin), not by today's switch: it does NOT come back by itself at midnight */ menu: boolean }
 export interface KSoldOut { sec: string; groups: { cat: string; n: string; note: string; shared: boolean; sec: string; items: KOutItem[] }[]; list: KOutRow[];
   counts: { mine: number; all: number }; /** one source: today only, back by itself at midnight (Sofia) */ resets: string; missing: string[] }
 export interface KOutResult { ok: true; same: boolean; id: string; n: string; out: boolean;
   /** accepted, unfinished orders with the dish: how many, which, who is told */
   orders: number; nos: string[]; waiter: boolean; manager: boolean; who: string; msg: string }
 export interface KBusyView extends KBusy {
-  norm: KitchenConfig["norm"]; /** on for BUSY_REMIND_MIN or more */ remind: boolean; remindAfterMin: number;
+  norm: KitchenConfig["norm"]; remindAfterMin: number;
   /** what the customer sees for delivery: "около 35 мин" / "Възможни са закъснения · около 55 мин" */
   customer: { normal: string; busy: string; etaMin: number; etaBusyMin: number };
   /** the restaurant's own quarter as the example "по квартал": Дружба 2: 25 -> 45 */
@@ -231,7 +234,10 @@ export interface KBusyView extends KBusy {
 }
 export interface KFound { no: string; kind: KKind; src: KSrc; lines: { q: number; name: string; hit: boolean }[]; later: boolean; timer: KTimer | ""; left: number; due: number; dueHm: string; enterHm: string; tomorrow: boolean }
 export interface KSearch { q: string; sec: string; now: number; act: KFound[]; later: KFound[]; dish: string[] }
-export interface KOpt { /** the section (or "all") of the tablet */ sec?: string; /** when it was done on the tablet (ISO or epoch ms) */ at?: string | number }
+export interface KOpt { /** the section (or "all") of the tablet */ sec?: string; /** when it was done on the tablet (ISO or epoch ms) */ at?: string | number;
+  /** what the tablet saw when the action was made: the state of each line it acts on (index -> state). With it the action is
+      written only while those lines are still so (or already where the action leads): 409 "conflict" otherwise */
+  saw?: Record<string, KState> }
 
 /* ---------- the world of one call ---------- */
 interface World { ctx: Ctx; cfg: KitchenConfig; now: number; today: string; tables: Map<string, { n: number; zone: string }>; out: Set<string>; addon: Map<string, string>; seen: Record<string, string[]> }
@@ -283,14 +289,17 @@ function srcOf(w: World, o: Order, t: KTiming): KSrc {
 const forToday = (w: World, t: KTiming): boolean => t.forAt == null || sofiaYmd(new Date(t.forAt)) <= w.today;
 function lineView(w: World, o: Order, i: number, t: KTiming): KLineView {
   const l = o.lines[i], x = findDish(l.id), ks = ksOf(l), live = ks !== "ready" && forToday(w, t);
+  /* "Изчерпано днес" on a line: a waiting line follows the switch; a line already being cooked keeps what it had when it
+     was started (a pizza in the oven is made and served, decision of the chief 18.11) */
+  const outNowFor = (id: string | undefined): boolean => live && !!id && (ks === "wait" ? w.out.has(id) : !!l.out);
   const no: string[] = [], add: KLineView["add"] = [], extra: string[] = [];
   for (const m of l.mods || []) {
-    if (m.startsWith("+")) { const n = m.slice(1).trim(), id = w.addon.get(low(n)); add.push({ n, out: live && !!id && w.out.has(id) }); }
+    if (m.startsWith("+")) { const n = m.slice(1).trim(), id = w.addon.get(low(n)); add.push({ n, out: outNowFor(id) }); }
     else if (/^без\s/i.test(m)) no.push(m.replace(/^без\s+/i, "").trim());
     else if (m.trim()) extra.push(m.trim()); /* any other wish on the line reads as a note */
   }
   const grams = typeof l.grams === "number" && l.grams > 0 ? l.grams : null;
-  return { i, id: l.id, q: l.q, name: l.name || (x ? x.n : l.id), sec: secOfLine(w.cfg, l), ks, readyAt: l.readyAt || null, no, add, note: [l.note || "", ...extra].filter(Boolean).join(" · "), grams, weight: grams ? grams + " гр." : "", out: live && w.out.has(l.id) };
+  return { i, id: l.id, q: l.q, name: l.name || (x ? x.n : l.id), sec: secOfLine(w.cfg, l), ks, readyAt: l.readyAt || null, no, add, note: [l.note || "", ...extra].filter(Boolean).join(" · "), grams, weight: grams ? grams + " гр." : "", out: outNowFor(l.id) };
 }
 function ticketOf(w: World, o: Order, view: string, t = timingOf(o, w.cfg)): KTicket {
   const mine = idxOf(w.cfg, o, view), kind = kindOf(o), tm = timerOf(t.due, w.now, w.cfg);
@@ -315,8 +324,8 @@ async function openOrders(ctx: Ctx): Promise<Order[]> {
   const [a, c] = await Promise.all([ctx.repo.list<Order>(COL.orders, { status: "accepted" } as Partial<Order>), ctx.repo.list<Order>(COL.orders, { status: "cooking" } as Partial<Order>)]);
   return [...a, ...c];
 }
-function busyOf(k: { busy: boolean; busyAt?: string | null; busyBy?: string | null; etaMin: number; etaBusyMin: number }): KBusy {
-  return { on: !!k.busy, at: k.busy ? k.busyAt || null : null, atHm: k.busy && k.busyAt ? hm(Date.parse(k.busyAt)) : "", by: k.busy ? k.busyBy || null : null, extra: Math.max(0, k.etaBusyMin - k.etaMin) };
+function busyOf(k: { busy: boolean; busyAt?: string | null; busyBy?: string | null; etaMin: number; etaBusyMin: number }, now: number): KBusy {
+  return { remind: !!k.busy && !!k.busyAt && now - Date.parse(k.busyAt) >= BUSY_REMIND_MIN * 60_000, on: !!k.busy, at: k.busy ? k.busyAt || null : null, atHm: k.busy && k.busyAt ? hm(Date.parse(k.busyAt)) : "", by: k.busy ? k.busyBy || null : null, extra: Math.max(0, k.etaBusyMin - k.etaMin) };
 }
 /** the sold-out dishes now: of a section (its dishes + the shared add-ons) and of the whole kitchen */
 function outCounts(w: World, view: string): { mine: number; all: number } {
@@ -404,7 +413,7 @@ export async function kitchenQueue(ctx: Ctx, s: StaffCtx, sec: string): Promise<
   /* "Последна изпълнена: Маса 11 в 19:40" is shown only in the empty queue */
   const last = tickets.length ? undefined : (await doneRows(ctx, w, view))[0];
   return {
-    sec: view, now: w.now, tickets, later, busy: busyOf(st.kitchen),
+    sec: view, now: w.now, tickets, later, busy: busyOf(st.kitchen, w.now),
     counts: { wait: tickets.length, late: tickets.filter((t) => t.timer === "late").length, soon: tickets.filter((t) => t.timer === "soon").length, later: later.length, out: oc.mine, outAll: oc.all },
     lastDone: last ? { text: last.src.text, hm: last.doneHm } : null, missing: missingOf(w.cfg),
   };
@@ -472,7 +481,7 @@ async function revert(ctx: Ctx, cx: Ctx, s: StaffCtx, o: Order, cfg: KitchenConf
   if (err) throw err;
   const kind = kindOf(o), wasReady = o.status === "ready";
   const secsBefore = [...new Set(idx.map((i) => secOfLine(cfg, o.lines[i])))].filter((id) => secState(cfg, o, id) === "ready");
-  for (const i of idx) { const l = o.lines[i]; l.ks = l.cookAt ? "cook" : "wait"; delete l.readyAt; }
+  for (const i of idx) { const l = o.lines[i]; setKs(l, l.cookAt ? "cook" : "wait", at); delete l.readyAt; }
   o.updatedAt = at.toISOString();
   await cx.repo.put(COL.orders, o);
   let cur = o;
@@ -484,16 +493,37 @@ async function revert(ctx: Ctx, cx: Ctx, s: StaffCtx, o: Order, cfg: KitchenConf
   return { o: cur, told };
 }
 
+/* ---------- what the tablet saw (decision of the chief 18.11, "проверка 2 на кухнята") ----------
+   Every line keeps the moment its state last changed (`ksAt`, written by the kitchen and by "Поръчки" in the admin). An
+   action carries `saw` (the state of each line it acts on, as the tablet showed it) and `at`. It is written only if each
+   of those lines is still in that state and was not changed after the action was made, or is already where the action
+   leads (a repeat, or two tablets doing the same: nothing to say). Otherwise 409 "conflict": "Друг таблет промени
+   поръчката." and the tablet loads the new state. Without `saw` (older clients, the API) nothing is checked. */
+type KLine = OrderLine & { ksAt?: Iso };
+/** the state of the line changes now (the moment is kept for the check above) */
+export function setKs(l: OrderLine, ks: KState, at: Date): void { l.ks = ks; (l as KLine).ksAt = at.toISOString(); }
+function sawCheck(o: Order, saw: KOpt["saw"], at: Date, reached: (cur: KState) => boolean): void {
+  if (!saw || typeof saw !== "object") return;
+  for (const k of Object.keys(saw)) {
+    const i = +k, l = Number.isInteger(i) ? o.lines[i] : undefined, was = saw[k];
+    if (!l || !["wait", "cook", "ready"].includes(was)) continue;
+    const cur = ksOf(l), when = Date.parse((l as KLine).ksAt || "") || 0;
+    if (reached(cur)) continue;
+    if (cur !== was || when > at.getTime()) throw Object.assign(new CoreError("conflict", K_MSG.changed, 409), { fields: { saw: K_MSG.changed } });
+  }
+}
+
 /** "Започни": the section's waiting lines are being cooked ("готви се от"); "Приета" -> "Готви се". Log: kitchen.start. */
 export async function kitchenStart(ctx: Ctx, s: StaffCtx, no: string, sec: string, opt: KOpt = {}): Promise<KAct> {
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const { o, changed } = await locked(ctx, no, async (o) => {
+    sawCheck(o, opt.saw, at0, (cur) => cur !== "wait");
     const idx = idxOf(cfg, o, view).filter((i) => ksOf(o.lines[i]) === "wait");
     if (!idx.length) return { o, changed: idx };
     if (tooLate(o)) throw closedErr(o);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
-    for (const i of idx) { o.lines[i].ks = "cook"; o.lines[i].cookAt = at.toISOString(); }
+    for (const i of idx) { setKs(o.lines[i], "cook", at); o.lines[i].cookAt = at.toISOString(); }
     o.updatedAt = at.toISOString();
     await ctx.repo.put(COL.orders, o);
     const o2 = await settle(cx, s, o);
@@ -504,18 +534,20 @@ export async function kitchenStart(ctx: Ctx, s: StaffCtx, no: string, sec: strin
   return actResult(ctx, o, view, view, changed, NONE, !changed.length);
 }
 
-/** A line is ready (ready: true) or not after all (false). `i` is the index in the order's lines. The last line of its
+/** A line is ready (ready: true) or not after all (false). `i` is the index in the order's lines; `sec` is required (as
+    for start / done / back): a tablet acts only on the lines of its section ("all": every section). The last line of its
     section: the section is done exactly as with "Готово". Log: kitchen.line. */
 export async function kitchenLine(ctx: Ctx, s: StaffCtx, no: string, i: number, ready: boolean, opt: KOpt = {}): Promise<KAct> {
   kNeed(s);
-  const cfg = await kitchenConfig(ctx), view = opt.sec == null || opt.sec === "" ? "" : viewOf(cfg, opt.sec), at0 = actionAt(ctx, opt.at);
+  const cfg = await kitchenConfig(ctx), view = viewOf(cfg, opt.sec), at0 = actionAt(ctx, opt.at);
   const k = typeof i === "string" && /^\d+$/.test(i) ? +i : i;
   if (typeof ready !== "boolean") invalid({ ready: "Избери „готово“ или „не е готово“." });
   const r = await locked(ctx, no, async (o) => {
     const l = Number.isInteger(k) ? o.lines[k] : undefined;
     if (!l) throw Object.assign(new CoreError("bad_line", K_MSG.line, 422), { fields: { i: K_MSG.line } });
     const sec = secOfLine(cfg, l);
-    if (view && view !== K_ALL && view !== sec) throw Object.assign(new CoreError("bad_line", K_MSG.lineSec, 422), { fields: { i: K_MSG.lineSec } });
+    if (view !== K_ALL && view !== sec) throw Object.assign(new CoreError("bad_line", K_MSG.lineSec, 422), { fields: { i: K_MSG.lineSec } });
+    sawCheck(o, opt.saw, at0, (cur) => (cur === "ready") === ready);
     if ((ksOf(l) === "ready") === ready) return { o, sec, changed: [] as number[], told: NONE };
     if (tooLate(o)) throw closedErr(o, !ready);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
@@ -524,14 +556,14 @@ export async function kitchenLine(ctx: Ctx, s: StaffCtx, no: string, i: number, 
       await audit(ctx, s.user.username, "kitchen.line", o.no, { i: k, id: l.id, ready: false, sec, at: at.toISOString() });
       return { o: x.o, sec, changed: [k], told: x.told };
     }
-    l.ks = "ready"; l.readyAt = at.toISOString();
+    setKs(l, "ready", at); l.readyAt = at.toISOString();
     o.updatedAt = at.toISOString();
     await ctx.repo.put(COL.orders, o);
     const x = await afterReady(ctx, cx, s, o, cfg, [sec], [k], at);
     await audit(ctx, s.user.username, "kitchen.line", o.no, { i: k, id: l.id, ready: true, sec, at: at.toISOString() });
     return { o: x.o, sec, changed: [k], told: x.told };
   });
-  return actResult(ctx, r.o, view || r.sec, r.sec, r.changed, r.told, !r.changed.length);
+  return actResult(ctx, r.o, view, r.sec, r.changed, r.told, !r.changed.length);
 }
 
 /** "Готово" for the section (or for every section from "Общ изглед"): all its lines are ready. Log: kitchen.done. */
@@ -539,11 +571,12 @@ export async function kitchenDone(ctx: Ctx, s: StaffCtx, no: string, sec: string
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const r = await locked(ctx, no, async (o) => {
+    sawCheck(o, opt.saw, at0, (cur) => cur === "ready");
     const mine = idxOf(cfg, o, view), idx = mine.filter((i) => ksOf(o.lines[i]) !== "ready");
     if (!idx.length) return { o, changed: idx, told: NONE };
     if (tooLate(o)) throw closedErr(o);
     const at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
-    for (const i of idx) { o.lines[i].ks = "ready"; o.lines[i].readyAt = at.toISOString(); }
+    for (const i of idx) { setKs(o.lines[i], "ready", at); o.lines[i].readyAt = at.toISOString(); }
     o.updatedAt = at.toISOString();
     await ctx.repo.put(COL.orders, o);
     const x = await afterReady(ctx, cx, s, o, cfg, [...new Set(idx.map((i) => secOfLine(cfg, o.lines[i])))], idx, at);
@@ -560,6 +593,7 @@ export async function kitchenBack(ctx: Ctx, s: StaffCtx, no: string, sec: string
   kNeed(s);
   const cfg = await kitchenConfig(ctx), view = viewOf(cfg, sec), at0 = actionAt(ctx, opt.at);
   const r = await locked(ctx, no, async (o) => {
+    sawCheck(o, opt.saw, at0, (cur) => cur !== "ready");
     const mine = idxOf(cfg, o, view), at = whenFor(at0, o), cx: Ctx = { ...ctx, now: () => at };
     let idx = mine;
     if (Array.isArray(opt.lines)) {
@@ -601,10 +635,10 @@ async function doneRows(ctx: Ctx, w: World, view: string): Promise<KDoneRow[]> {
     if (!mine.length || mine.some((i) => ksOf(o.lines[i]) !== "ready")) continue;
     const doneAt = Math.max(0, ...mine.map((i) => (o.lines[i].readyAt ? Date.parse(o.lines[i].readyAt!) : 0)));
     if (!doneAt || doneAt < from) continue;
-    const t = timingOf(o, w.cfg), tookMin = Math.max(0, Math.round((doneAt - t.key) / 60_000)), lateMin = Math.max(0, Math.round((doneAt - t.due) / 60_000));
+    const t = timingOf(o, w.cfg), took = Math.max(0, doneAt - t.key), tookMin = took < 60_000 ? 0 : Math.max(1, Math.round(took / 60_000)), lateMin = Math.max(0, Math.round((doneAt - t.due) / 60_000));
     const err = revertError(o, mine);
     rows.push({ no: o.no, kind: kindOf(o), src: srcOf(w, o, t), doneAt, doneHm: hm(doneAt), lines: mine.map((i) => lineView(w, o, i, t)), tookMin, lateMin, onTime: lateMin === 0,
-      text: "за " + tookMin + " мин", lateText: lateMin > 0 ? "с " + lateMin + " мин закъснение" : "навреме", canBack: !err, why: err ? err.message : "" });
+      text: tookMin ? "за " + tookMin + " мин" : "под 1 мин", lateText: lateMin > 0 ? "с " + lateMin + " мин закъснение" : "навреме", canBack: !err, why: err ? err.message : "" });
   }
   return rows.sort((a, b) => b.doneAt - a.doneAt || +b.no - +a.no);
 }
@@ -618,9 +652,10 @@ export async function kitchenDoneToday(ctx: Ctx, s: StaffCtx, sec: string): Prom
 /* ---------- tablets ---------- */
 interface TabDoc { id: string; sec: string; at: Iso; user: string; device?: string }
 const tabId = (sec: string) => "kitchen:tab:" + sec;
+/** "Таблетът работи" / "без връзка от 19:37" (seen earlier in this shift day) / "Няма таблет днес" (never, or only on an earlier day) */
 function tabletOf(d: TabDoc | null, sec: string, n: string, now: number): KTablet {
-  const last = d ? Date.parse(d.at) : 0, online = !!d && now - last <= TABLET_ALIVE_SEC * 1000;
-  return { sec, n, online, lastAt: d ? d.at : null, lastHm: d ? hm(last) : "", text: online ? "Таблетът работи" : d ? "без връзка от " + hm(last) : "без връзка" };
+  const last = d ? Date.parse(d.at) : 0, online = !!d && now - last <= TABLET_ALIVE_SEC * 1000, today = !!d && last >= shiftStart(new Date(now));
+  return { sec, n, online, lastAt: d ? d.at : null, lastHm: d ? hm(last) : "", text: online ? "Таблетът работи" : today ? "без връзка от " + hm(last) : "Няма таблет днес" };
 }
 /** The heartbeat of the section's tablet (every KITCHEN_BEAT_SEC). Only an account with the role "Кухня" counts as the
     tablet (a manager looking at the screen does not). Returns the server's time so the tablet can correct its timers. */
@@ -659,14 +694,15 @@ export async function kitchenSummary(ctx: Ctx, s: StaffCtx): Promise<KSummary> {
   });
   const rows = act.map(({ o, t }) => { const tm = timerOf(t.due, w.now, w.cfg); return { no: o.no, kind: kindOf(o), src: srcOf(w, o, t), arrived: t.arrived, arrivedHm: hm(t.arrived), due: t.due, dueHm: hm(t.due), sched: t.sched, forHm: t.forAt != null ? hm(t.forAt) : "", timer: tm.timer, left: tm.left, secs: secStates(w.cfg, o) }; });
   return {
-    now: w.now, busy: busyOf(st.kitchen), sections, rows, missing: missingOf(w.cfg),
+    now: w.now, busy: busyOf(st.kitchen, w.now), sections, rows, missing: missingOf(w.cfg),
     totals: { orders: rows.length, late: rows.filter((r) => r.timer === "late").length, soon: rows.filter((r) => r.timer === "soon").length, out: outCounts(w, K_ALL).all,
       later: open.filter((o) => inLater(w, o, K_ALL, timingOf(o, w.cfg))).length, tabletsOnline: tabs.filter((t) => t.sec !== K_ALL && t.online).length },
   };
 }
 
 /* ---------- "Изчерпано днес" ---------- */
-export const SOLD_OUT_RESETS = "В полунощ всичко се връща в менюто само.";
+/** what really happens at midnight: only today's marks go; a dish sold out in the menu's data stays so (the admin) */
+export const SOLD_OUT_RESETS = "В полунощ се връща в менюто всичко, отбелязано днес тук.";
 /** The tiles of the section (its categories, the lunch menu in its section, "Добавки · за всички секции") and the list
     of every sold-out dish with who and when. */
 export async function kitchenSoldOut(ctx: Ctx, s: StaffCtx, sec: string): Promise<KSoldOut> {
@@ -691,7 +727,7 @@ export async function kitchenSoldOut(ctx: Ctx, s: StaffCtx, sec: string): Promis
   };
   const list: KOutRow[] = [...w.out].map((id) => {
     const x = byId[id], sh = isAddonCat(x.cat), sc = sh ? "shared" : secOfCat(w.cfg, x.cat), m = meta[id];
-    return { id, n: x.n, sec: sc, secName: sh ? "Добавка, всички секции" : secDef(w.cfg, sc).n, at: m ? m.at : null, atHm: m ? hm(Date.parse(m.at)) : "", by: who(m), mine: view === K_ALL || sh || sc === view };
+    return { id, n: x.n, sec: sc, secName: sh ? "Добавка, всички секции" : secDef(w.cfg, sc).n, at: m ? m.at : null, atHm: m ? hm(Date.parse(m.at)) : "", by: who(m), mine: view === K_ALL || sh || sc === view, menu: !m };
   }).sort((a, b) => Number(b.mine) - Number(a.mine) || (b.at || "").localeCompare(a.at || "") || a.n.localeCompare(b.n, "bg"));
   return { sec: view, groups: groups.filter((g) => g.items.length), list, counts: { mine: list.filter((r) => r.mine).length, all: list.length }, resets: SOLD_OUT_RESETS, missing: missingOf(w.cfg).filter((m) => m === K_MISSING.sections) };
 }
@@ -707,13 +743,18 @@ export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: 
   const view = opt.sec == null || opt.sec === "" ? "" : viewOf(cfg, opt.sec), x = byId[id];
   const same = outNow(x, await soldOutToday(ctx)) === out;
   if (!same) await setSoldOut(cx, id, out, s.user.username, kitchenWho(s, cfg, view));
-  /* the orders the kitchen already has: today's, "Приета" / "Готви се", a line with the dish (or the add-on) not ready yet */
+  /* sold out: the lines the kitchen has NOT started yet (today's "Приета" / "Готви се" orders; a line being cooked or
+     ready keeps its dish: it is made, the guest gets it and pays for it, decision of the chief 18.11). Back in the menu:
+     the mark goes from every line of today that has it, whatever its state now. */
   const w = await world(ctx), addonName = isAddonCat(x.cat) ? low(x.n) : "";
   const adds = (l: OrderLine): string[] => (l.mods || []).filter((m) => m.startsWith("+")).map((m) => low(m.slice(1)));
+  const has = (l: OrderLine) => l.id === id || (!!addonName && adds(l).includes(addonName));
+  const from = shiftStart(nowDate(ctx));
+  const pool = out ? await openOrders(ctx) : (await ctx.repo.list<Order>(COL.orders)).filter((o) => o.status !== "cancelled" && Date.parse(o.createdAt) >= from && o.lines.some((l) => !!l.out));
   const hits: Order[] = [];
-  for (const o0 of await openOrders(ctx)) {
+  for (const o0 of pool) {
     if (!forToday(w, timingOf(o0, cfg))) continue;
-    const touches = (l: OrderLine) => ksOf(l) !== "ready" && (l.id === id || (!!addonName && adds(l).includes(addonName)));
+    const touches = (l: OrderLine) => has(l) && (out ? ksOf(l) === "wait" : !!l.out);
     if (!o0.lines.some(touches)) continue;
     const o = await locked(ctx, o0.no, async (o) => {
       const idx: number[] = [];
@@ -736,7 +777,9 @@ export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: 
   const waiter = hits.some((o) => kindOf(o) === "table"), manager = hits.some((o) => kindOf(o) !== "table");
   const who = [waiter ? "сервитьора" : "", manager ? "управителя (доставка и вземане)" : ""].filter(Boolean).join(" и ");
   const n = hits.length;
-  const msg = !out ? "Бутонът „+“ се върна навсякъде." : n ? "Има го в " + n + (n === 1 ? " приета поръчка" : " приети поръчки") + ": отбелязано на реда, известихме " + who + "." : "Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.";
+  /* short enough for the notice's one line (review 1, small 9): in how many, whom we told */
+  const told = [waiter ? "сервитьора" : "", manager ? "управителя" : ""].filter(Boolean).join(" и ");
+  const msg = !out ? "Бутонът „+“ се върна навсякъде." : n ? "В " + n + (n === 1 ? " приета поръчка" : " приети поръчки") + " · известихме " + told + "." : "Сайт, QR и сервитьор: без „+“. Wolt и Foodpanda: скрито.";
   if (n && !same) await audit(ctx, s.user.username, "kitchen.out", id, { out, orders: hits.map((o) => o.no), tell: [waiter ? "waiter" : "", manager ? "manager" : ""].filter(Boolean) });
   return { ok: true, same, id, n: x.n, out, orders: n, nos: hits.map((o) => o.no), waiter: out && waiter, manager: out && manager, who: out ? who : "", msg };
 }
@@ -745,10 +788,10 @@ export async function kitchenSetOut(ctx: Ctx, s: StaffCtx, dishId: string, out: 
 export async function kitchenBusy(ctx: Ctx, s: StaffCtx): Promise<KBusyView> {
   kNeed(s);
   const [cfg, st, log, zones] = await Promise.all([kitchenConfig(ctx), getSettings(ctx), busyLog(ctx), liveZones(ctx)]);
-  const now = nowDate(ctx), from = shiftStart(now), b = busyOf(st.kitchen);
+  const now = nowDate(ctx), from = shiftStart(now), b = busyOf(st.kitchen, now.getTime());
   const z = zones.find((r) => r.n === "Дружба 2") || zones[0];
   return {
-    ...b, norm: cfg.norm, remindAfterMin: BUSY_REMIND_MIN, remind: b.on && !!b.at && now.getTime() - Date.parse(b.at) >= BUSY_REMIND_MIN * 60_000,
+    ...b, norm: cfg.norm, remindAfterMin: BUSY_REMIND_MIN,
     customer: { normal: eta(undefined, false).text, busy: eta(undefined, true).text, etaMin: st.kitchen.etaMin, etaBusyMin: st.kitchen.etaBusyMin },
     zone: z ? { n: z.n, etaMin: z.etaMin, busyMin: z.etaMin + b.extra } : null,
     log: log.filter((x) => !x.off || Date.parse(x.off) >= from || Date.parse(x.on) >= from).map((x) => ({ on: x.on, onHm: hm(Date.parse(x.on)), off: x.off, offHm: x.off ? hm(Date.parse(x.off)) : "", by: x.by, offBy: x.offBy || "" })),

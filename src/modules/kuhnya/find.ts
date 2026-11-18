@@ -65,7 +65,7 @@ export function openFind(k: KFrame): void {
     const now = k.now(); let h = "";
     if (r.act.length) h += '<h3>Чакат<span class="muted">' + r.act.length + "</span></h3>" + r.act.map((f) => row(f, now)).join("");
     if (r.later.length) h += '<h3>По-късно<span class="muted">' + r.later.length + "</span></h3>" + r.later.map((f) => row(f, now)).join("");
-    return h || '<div class="kfempty"><b>Няма „' + esc(raw) + "“ в чакащите</b><p>Търсите само в поръчките на " + where + ": номер, маса, доставка, вземане или ястие.</p></div>";
+    return h || '<div class="kfempty"><b>Няма „' + esc(raw) + "“ в чакащите</b><p>Търсиш само в поръчките на " + where + ": номер, маса, доставка, вземане или ястие.</p></div>";
   }
   /** before anything is typed: what can be asked, with examples from the queue itself */
   function start(): string {
@@ -73,7 +73,7 @@ export function openFind(k: KFrame): void {
     const ex: [string, string][] = os.map((o): [string, string] => [o.kind === "table" && o.src.tableNo != null ? "маса " + o.src.tableNo : o.no, o.src.text]);
     ex.push(["доставка", "Доставки"], ["закъснява", "Закъсняват"]);
     if (first) ex.push([first.name.split(" ")[0].toLowerCase(), first.name]);
-    return '<p class="fscope">Търсите само в чакащите поръчки на ' + where + ': номер, маса, ястие (и на латиница).</p><div class="fchips">' + ex.map((e) => '<button type="button" data-ex="' + esc(e[0]) + '">' + esc(e[1]) + "</button>").join("") + "</div>";
+    return '<p class="fscope">Търсиш само в чакащите поръчки на ' + where + ': номер, маса, ястие (и на латиница).</p><div class="fchips">' + ex.map((e) => '<button type="button" data-ex="' + esc(e[0]) + '">' + esc(e[1]) + "</button>").join("") + "</div>";
   }
   function draw(now = false): void {
     const v = inp.value.trim(); clr.hidden = !v;

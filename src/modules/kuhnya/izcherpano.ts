@@ -35,8 +35,9 @@ function screen(k: KFrame): void {
       '<span class="act">' + (x.out ? ic("arrow-counter-clockwise", 18) + "Върни в менюто" : ic("x", 18) + "Отбележи изчерпано") + "</span></button>";
   }
   function rowHTML(r: KOutRow): string {
-    /* "Скара Bertha · от 18:05 · Скара Bertha" is said once; sold out in the menu's data: no time, no person */
-    const by = r.by ? whoText(r.by, cfg) : "", meta = [r.secName, r.atHm ? "от " + r.atHm : "изчерпано в менюто", by && by !== r.secName ? by : ""].filter(Boolean).join(" · ");
+    /* "Скара Bertha · от 18:05 · Скара Bertha" is said once; sold out in the menu's data (the admin): it does not come
+       back at midnight, the line says so (review 1, important 2) */
+    const by = r.by ? whoText(r.by, cfg) : "", meta = [r.secName, r.menu ? "изчерпано в менюто от админа (не се връща само)" : r.atHm ? "от " + r.atHm : "", by && by !== r.secName ? by : ""].filter(Boolean).join(" · ");
     return '<div class="orow"><div><b>' + esc(r.n) + "</b><small>" + esc(meta) + "</small></div>" +
       '<button class="kb line" type="button" data-back="' + esc(r.id) + '">' + ic("arrow-counter-clockwise", 22) + "Върни в менюто" + '<span class="vh">: ' + esc(r.n) + "</span></button></div>";
   }
@@ -46,7 +47,7 @@ function screen(k: KFrame): void {
     const top = main.scrollTop;
     const list = d.list;
     main.innerHTML = '<div class="kpage"><div class="io"><section aria-labelledby="h1">' +
-      '<div class="io-h"><div><h1 class="kh1" id="h1">Изчерпано днес</h1><p class="klead">Докоснете ястие, което свърши. Действа веднага.</p></div></div>' +
+      '<div class="io-h"><div><h1 class="kh1" id="h1">Изчерпано днес</h1><p class="klead">Докосни ястие, което свърши. Действа веднага.</p></div></div>' +
       '<ul class="eff"><li>' + ic("check", 18) + "Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“</li><li>" + ic("check", 18) + "Wolt и Foodpanda: скрито</li></ul>" +
       d.groups.map((g) => '<h2 class="cath">' + esc(g.n) + (g.note ? " <span>· " + esc(g.note) + "</span>" : "") + '</h2><div class="tiles">' + g.items.map(tileHTML).join("") + "</div>").join("") +
       '</section><aside class="side kcard" aria-labelledby="h-side"><h2 id="h-side">Списък изчерпани <span class="n num">' + list.length + "</span></h2>" +
@@ -68,7 +69,7 @@ function screen(k: KFrame): void {
     for (const g of d.groups) for (const x of g.items) if (x.id === id) x.out = out;
     const f = itemOf(id), sec = f ? f.g.sec : d.list.find((r) => r.id === id)?.sec || "";
     d.list = d.list.filter((r) => r.id !== id);
-    if (out) d.list.unshift({ id, n: name, sec, secName: secName(sec), at: new Date(k.now()).toISOString(), atHm: k.hm(k.now()), by: k.all ? cfg.all.who : k.me.user.role === "kitchen" ? "Кухня · " + (cfg.sections.find((s) => s.id === k.sec)?.short || "") : null, mine: true });
+    if (out) d.list.unshift({ id, n: name, sec, secName: secName(sec), at: new Date(k.now()).toISOString(), atHm: k.hm(k.now()), by: k.all ? cfg.all.who : k.me.user.role === "kitchen" ? "Кухня · " + (cfg.sections.find((s) => s.id === k.sec)?.short || "") : null, mine: true, menu: false });
     render();
   }
   const failed = (e: unknown) => { k.toast("<b>Не се записа</b><small>" + esc(e instanceof ApiError && e.message ? e.message : "Опитай пак.") + "</small>", { secs: 6 }); void data.now(); };

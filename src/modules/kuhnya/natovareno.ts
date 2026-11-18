@@ -56,7 +56,7 @@ function screen(k: KFrame): void {
         row("Доставка", "шофьорът тръгва след това", b.norm.delivery) +
         "</tbody></table>" +
         '<div class="cust"><span class="lbl">Клиентът вижда при доставка, преди да поръча</span>' +
-        '<div class="status"><span class="dot' + (on ? " warn" : "") + '"></span><span><b>' + esc(on ? b.customer.busy : b.customer.normal) + "</b></span></div>" +
+        '<div class="status"><span class="dot ' + (on ? "warn" : "ok") + '"></span><span><b>' + esc(on ? b.customer.busy : b.customer.normal) + "</b></span></div>" +
         (b.zone ? '<span class="lbl thin">В поръчката времето е по квартал, също +' + x + " мин при „Натоварено“ (" + esc(b.zone.n) + ": около " + b.zone.etaMin + " → " + (b.zone.etaMin + x) + " мин).</span>" : "") +
         '<span class="lbl thin">' + (on ? "Беше: „" + esc(b.customer.normal) + "“" : "При „Натоварено“: „" + esc(b.customer.busy) + "“") + "</span>" +
         (b.missing.includes(NORMS) ? '<span class="lbl thin">Срокът в кухнята е условен: <span class="miss">' + NORMS + "</span></span>" : "") + "</div></section>" +

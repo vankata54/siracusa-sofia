@@ -41,7 +41,7 @@ function screen(k: KFrame): void {
   function render(): void {
     if (!d) return;
     const l = rows(), act = document.activeElement as HTMLElement | null, fno = act && main.contains(act) ? act.dataset.back || "" : "", top = main.scrollTop;
-    main.innerHTML = '<div class="kpage"><h1 class="kh1">Изпълнени днес</h1><p class="klead">Последните поръчки на ' + esc(k.secName) + ", най-новата горе. Ако нещо е отбелязано по грешка, върнете го в опашката.</p>" +
+    main.innerHTML = '<div class="kpage"><h1 class="kh1">Изпълнени днес</h1><p class="klead">Последните поръчки на ' + esc(k.secName) + ", най-новата горе. Ако нещо е отбелязано по грешка, върни го в опашката.</p>" +
       (l.length ? '<div class="dl kcard">' + l.map(rowHTML).join("") + "</div>"
         : '<div class="kempty"><div><div class="ill">' + ic("clock", 56) + "</div><h2>Още няма изпълнени поръчки днес</h2><p>Тук ще виждате последните поръчки, отбелязани с „Готово“.</p></div></div>") + "</div>";
     main.scrollTop = top;
@@ -50,7 +50,7 @@ function screen(k: KFrame): void {
   }
 
   const failed = (e: unknown, title = "Не се записа") => { k.toast("<b>" + title + "</b><small>" + esc(e instanceof ApiError && e.message ? e.message : "Опитай пак.") + "</small>", { secs: 8 }); };
-  function send(a: { k: "back"; no: string } | { k: "done"; no: string }): Promise<KAct | null> {
+  function send(a: { k: "back"; no: string; saw?: Record<string, "ready"> } | { k: "done"; no: string }): Promise<KAct | null> {
     data.hold();
     return k.send<KAct>(a).finally(() => data.release());
   }
@@ -58,7 +58,8 @@ function screen(k: KFrame): void {
     if (!r.canBack) { k.toast("<b>" + esc(r.src.text) + " не може да се върне</b><small>" + esc(r.why) + "</small>", { secs: 8 }); return; }
     away.add(r.no); render();
     const undo = () => { away.delete(r.no); render(); send({ k: "done", no: r.no }).then(() => data.reload()).catch((e) => { failed(e); data.reload(); }); };
-    send({ k: "back", no: r.no }).then((x) => {
+    /* what this tablet showed: every line of the section ready (another tablet may have returned it meanwhile) */
+    send({ k: "back", no: r.no, saw: Object.fromEntries(r.lines.map((l) => [l.i, "ready" as const])) }).then((x) => {
       const small = !x ? "Ще се изпрати, щом връзката се върне." : x.msg || "Пак е за готвене.";
       k.toast("<b>" + esc(r.src.text) + " е отново в опашката</b><small>" + esc(small) + "</small>", { undo });
       data.reload();

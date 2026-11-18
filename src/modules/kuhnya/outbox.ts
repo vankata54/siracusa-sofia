@@ -3,11 +3,14 @@
    the core writes them with their real time (KOpt.at). No DOM here: the storage is passed in (unit tests). */
 
 /** an action of the kitchen that changes something (every one of them is idempotent in the core) */
+/** saw: the state of each line it acts on as the tablet showed it (index -> state); the core writes the action only while
+    the lines are still so, or 409 "Друг таблет промени поръчката" (decision of the chief 18.11) */
+export type KSaw = Record<string, "wait" | "cook" | "ready">;
 export type KAction =
-  | { k: "start"; no: string }
-  | { k: "line"; no: string; i: number; ready: boolean }
-  | { k: "done"; no: string }
-  | { k: "back"; no: string; lines?: number[] }
+  | { k: "start"; no: string; saw?: KSaw }
+  | { k: "line"; no: string; i: number; ready: boolean; saw?: KSaw }
+  | { k: "done"; no: string; saw?: KSaw }
+  | { k: "back"; no: string; lines?: number[]; saw?: KSaw }
   | { k: "out"; id: string; out: boolean }
   | { k: "busy"; on: boolean };
 export interface Queued { id: string; sec: string; at: number; a: KAction }

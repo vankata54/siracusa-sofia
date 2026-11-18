@@ -3,14 +3,15 @@
    Three ways in:
    - signed in already (the password at /admin/vhod/ brought the person here): the section and "Влез · …", no PIN;
    - no session on a KNOWN device (somebody signed in here with a password before; decision of the chief 17.11): the
-     section + the personal PIN of 4 digits, "Влез · Скара Bertha" (core/staff-pin.ts: in the kitchen the PIN alone among
-     the kitchen's staff). A wrong PIN says so (role="status") with the tries left; too many: the core's text and the
-     button counts down; "Вход с потребител и парола" is always there;
+     section + "Кой влиза?" (the people with the role "Кухня" and a PIN; decision 18.11: the lockouts are per person and
+     per device, never the whole kitchen) + the personal PIN of 4 digits, "Влез · Скара Bertha" (core/staff-pin.ts). A
+     wrong PIN says so (role="status") with the tries left; too many: the core's text and the button counts down;
+     "Вход с потребител и парола" is always there;
    - no session on an unknown device: one line, the first sign-in on a new tablet is with the user name and the password.
    Before the sign-in the core does not give the kitchen's settings: the names of the sections come from the last time
    they were read on this tablet ("sk-secs"), else from the defaults of the build (the page, #k-secs).
    Also here, because the top bar of the module has no room for them: the theme of the tablet and "Изход". */
-import "sc-icons:lock";
+import "sc-icons:lock,user";
 import { kitchenGuard, tabletSec, store, load, theme, setTheme, secIcon, ic, esc, K_ALL, type KGuard } from "./frame.ts";
 import { session, logout, nameRole } from "../../admin/a.ts";
 import { aurl } from "../../admin/routes.ts";
@@ -102,20 +103,26 @@ function chooser(g: KGuard): void {
 async function pinStep(): Promise<void> {
   const s = savedSecs(), was = load<string>("sec", "");
   let chosen = was === K_ALL || s.sections.some((x) => x.id === was) ? was : s.sections[0] ? s.sections[0].id : K_ALL;
-  let known = false, why = "";
-  try { known = (await pinApi.people("kitchen")).known; }
+  let known = false, why = "", people: { id: string; name: string }[] = [];
+  try { const pp = await pinApi.people("kitchen"); known = pp.known; people = pp.people; }
   catch (e) { why = e instanceof ApiError && e.code === "offline" ? "Няма връзка. Провери Wi-Fi на таблета и опитай пак." : e instanceof ApiError && e.message ? e.message : "Опитай пак след малко."; }
   const pw = aurl.login(nextLogical());
   const name = () => (chosen === K_ALL ? s.all.n : s.sections.find((x) => x.id === chosen)?.n || "");
   const pad = () => '<div class="dots" data-dots aria-hidden="true"><i></i><i></i><i></i><i></i></div><p class="perr" data-err role="status"></p>' +
     '<div class="pinpad" role="group" aria-label="Цифри на ПИН" data-pad>' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => '<button type="button" data-k="' + n + '">' + n + "</button>").join("") +
     '<button type="button" class="fn" data-k="c">Изчисти</button><button type="button" data-k="0">0</button><button type="button" class="fn" data-k="b" aria-label="Изтрий една цифра">' + ic("arrow-left", 28) + "</button></div>";
-  const card = known
-    ? '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">Личен ПИН<small data-for></small></h2><div data-pin>' + pad() + "</div>" +
+  /* the person + the PIN (decision of the chief 18.11): the people with the role "Кухня" and a PIN; the last one is kept
+     on the tablet ("sk-who"), one person alone is chosen already */
+  let who = load<string>("who", "");
+  if (!people.some((x) => x.id === who)) who = people.length === 1 ? people[0].id : "";
+  const whoHTML = () => '<div class="who"><p class="lbl" id="l-who">Кой влиза?</p><div class="chips" role="group" aria-labelledby="l-who">' + people.map((x) =>
+    '<button class="chip" type="button" data-who="' + esc(x.id) + '" aria-pressed="' + (x.id === who) + '">' + ic("user", 18) + esc(x.name) + "</button>").join("") + "</div></div>";
+  const card = known && people.length
+    ? '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">Личен ПИН<small data-for></small></h2><div data-pin>' + whoHTML() + pad() + "</div>" +
       '<button class="kb red" type="button" data-go>' + ic("sign-in", 24) + "<span data-golbl></span></button>" +
       '<p class="pw"><a href="' + pw + '" data-pw>Вход с потребител и парола</a></p></section>'
-    : '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">Нов таблет<small data-for></small></h2><div data-pin>' +
-      (why ? '<p class="perr" role="status">' + esc(why) + "</p>" : '<p class="first">' + ic("info", 22) + "<span>Първият вход на нов таблет е с потребител и парола. После тук стига личният ПИН.</span></p>") + "</div>" +
+    : '<section class="pin kcard" aria-labelledby="h-in"><h2 id="h-in">' + (known ? "Вход" : "Нов таблет") + '<small data-for></small></h2><div data-pin>' +
+      (why ? '<p class="perr" role="status">' + esc(why) + "</p>" : '<p class="first">' + ic("info", 22) + "<span>" + (known ? "Още никой с роля „Кухня“ няма личен ПИН. Влез с потребител и парола; ПИН дава управителят в „Персонал“." : "Първият вход на нов таблет е с потребител и парола. После тук стига личният ПИН.") + "</span></p>") + "</div>" +
       (why ? '<button class="kb line" type="button" data-again>' + ic("arrow-clockwise", 22) + "Опитай пак</button>" : "") +
       '<a class="kb red" href="' + pw + '" data-pw>' + ic("sign-in", 24) + "Влез с парола</a></section>";
   const el = page(s, chosen, "", card);
@@ -129,6 +136,7 @@ async function pinStep(): Promise<void> {
     const gl = el.querySelector("[data-golbl]");
     if (gl && !busy && !locked()) gl.textContent = "Влез · " + name();
     if (dots) dots.querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i < pin.length));
+    el.querySelectorAll<HTMLElement>("[data-who]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.who === who)));
     el.querySelector("[data-pad]")?.setAttribute("aria-label", "Цифри на ПИН, въведени " + pin.length + " от 4");
     paintTheme(el);
   }
@@ -148,10 +156,12 @@ async function pinStep(): Promise<void> {
   }
   async function submit(): Promise<void> {
     if (busy || locked() || !go) return;
+    if (!who) { say("Първо избери кой влиза."); el.querySelector<HTMLElement>("[data-who]")?.focus(); return; }
     if (pin.length < 4) { say("Въведи 4 цифри."); return; }
     busy = true; go.disabled = true; go.innerHTML = ic("sign-in", 24) + "<span>Проверяваме …</span>";
     try {
-      await pinApi.login("kitchen", pin);
+      await pinApi.login("kitchen", pin, who);
+      store("who", who);
     } catch (e) {
       busy = false; pin = ""; go.disabled = false; label(); upd();
       if (e instanceof ApiError && e.status === 429) { say(e.message); until = Date.now() + Math.max(1, e.retryIn || 900) * 1000; lockTick(); clearInterval(timer); timer = setInterval(lockTick, 1000); return; }
@@ -177,6 +187,8 @@ async function pinStep(): Promise<void> {
     if (sb) { chosen = sb.dataset.sec!; upd(); return; }
     const th = t.closest<HTMLElement>("[data-theme-set]");
     if (th) { setTheme(th.dataset.themeSet === "light" ? "light" : "dark"); upd(); return; }
+    const wb = t.closest<HTMLElement>("[data-who]");
+    if (wb) { who = wb.dataset.who!; say(""); upd(); return; }
     const k = t.closest<HTMLElement>("[data-k]");
     if (k) { key(k.dataset.k!); return; }
     if (t.closest("button[data-go]")) { void submit(); return; }
@@ -185,7 +197,7 @@ async function pinStep(): Promise<void> {
     if (t.closest("[data-pw]")) store("sec", chosen);
   });
   /* a keyboard works too: digits, Backspace, Escape (clear), Enter */
-  if (known) document.addEventListener("keydown", (e) => {
+  if (known && people.length) document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const tg = e.target as HTMLElement | null;
     if (/^\d$/.test(e.key)) { e.preventDefault(); key(e.key); }

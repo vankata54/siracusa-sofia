@@ -34,18 +34,18 @@ describe("the card of an order", () => {
     const t = q.tickets[0], h = ticketHTML(t, timerAt(t.due, q.now, 5));
     expect(t.src).toMatchObject({ kind: "table", k: "Салон", t: "Маса 1", who: "сервитьора" });
     expect(h).toContain('<article class="tk ok isnew" data-no="' + o.no + '" aria-label="Маса 1">');
-    expect(text(h)).toMatch(/^Салон остават 12:00 Маса 1 Нова пристигна 19:42 срок 20:02 Алергия към ядки 2 × Кебапчета без лук , натиснете за готово 1 × Свински врат , натиснете за готово Други секции 1 × Пица Маргарита Пещ · чака 1 × Шопска салата Салати · чака Започни Готово задръжте 1 сек\. : Маса 1$/);
+    expect(text(h)).toMatch(/^Салон остават 12:00 Маса 1 Нова пристигна 19:42 срок 20:02 Алергия към ядки 2 × Кебапчета без лук , натисни за готово 1 × Свински врат , натисни за готово Други секции 1 × Пица Маргарита Пещ · чака 1 × Шопска салата Салати · чака Започни Готово задръж 1 сек\. : Маса 1$/);
     expect(h).not.toContain("от сайта");
     expect(h).not.toContain("шофьор");
     expect(h).toContain('<span class="md no">'); expect(h).toContain('<div class="tk-note">');
-    expect(h).toContain('<span class="vh">, натиснете за готово</span></button>'); expect(h).not.toContain("aria-label=\"2");
+    expect(h).toContain('<span class="vh">, натисни за готово</span></button>'); expect(h).not.toContain("aria-label=\"2");
     expect(h).toContain('<span class="vh">: Маса 1</span></button>');
     /* the icon of the source is the fork and knife, never a question mark */
     expect(h.split('<div class="tk-k">')[1].startsWith('<svg class="ic"')).toBe(true);
     /* the oven: the add-on in ember under the pizza; after "Започни" there: „Пещ · готви се“ on the grill's card and one button on the oven's */
     const p = (await core.kitchen.queue(k, "pesht")).tickets[0];
     expect(ticketHTML(p, timerAt(p.due, q.now, 5))).toContain('<span class="md add">');
-    expect(text(lineHTML(p.lines[0]))).toBe("1 × Пица Маргарита + Гъби , натиснете за готово");
+    expect(text(lineHTML(p.lines[0]))).toBe("1 × Пица Маргарита + Гъби , натисни за готово");
     expect(text(lineHTML({ ...p.lines[0], ks: "ready" }))).toBe("1 × Пица Маргарита + Гъби , готово");
     await core.kitchen.start(k, o.no, "pesht");
     const t2 = (await core.kitchen.queue(k, "skara")).tickets[0];
@@ -60,7 +60,7 @@ describe("the card of an order", () => {
     const { core, k, at, line, base } = await mk();
     const o = await core.orders.create({ ...base, cart: { mode: "delivery", lines: [line("kebapcheta")] }, addr: "ж.к. Дружба 2, бл. 311", channel: "web" } as never);
     const q = await core.kitchen.queue(k, "skara"), t = q.tickets[0];
-    expect(text(ticketHTML(t, timerAt(t.due, q.now, 5)))).toMatch(new RegExp("^Доставка остават 20:00 № " + o.no + " Нова · от сайта пристигна 19:42 срок 20:02 шофьор 20:02 1 × Кебапчета , натиснете за готово Започни Готово"));
+    expect(text(ticketHTML(t, timerAt(t.due, q.now, 5)))).toMatch(new RegExp("^Доставка остават 20:00 № " + o.no + " Нова · от сайта пристигна 19:42 срок 20:02 1 × Кебапчета , натисни за готово Започни Готово"));
     at("19:58");
     expect(timerAt(t.due, Date.parse(DAY + "T19:58:00+02:00"), 5)).toEqual({ timer: "soon", left: 240 });
     const late = timerAt(t.due, Date.parse(DAY + "T20:06:01+02:00"), 5);

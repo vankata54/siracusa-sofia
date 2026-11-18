@@ -58,6 +58,8 @@ html[data-page^="k-"] body{background:var(--bg)}
 .kpill:active{transform:scale(.97)}
 .kpill.ask{box-shadow:inset 0 0 0 2px var(--ember)} /* „Звук: докоснете“: кани към докосване */
 .kpill.on{background:var(--ember); color:var(--on-ember)}
+/* „Натоварено“ е включено от 60+ мин: напомнянето е на самия ключ (червена рамка, икона и „· 60+ мин“) */
+.kpill.remind{box-shadow:inset 0 0 0 3px var(--danger)}
 .kpill .sub{font-weight:600; opacity:.8}
 .knew{display:inline-flex; align-items:center; gap:10px; min-height:52px; padding:0 8px 0 18px; border:0; border-radius:999px; background:var(--ember); color:var(--on-ember); font-weight:800; font-size:18px; cursor:pointer; animation:knew 520ms var(--ease) both}
 .knew .go2{display:inline-flex; align-items:center; gap:4px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--on-ember); color:var(--ember); font-size:15px}
@@ -66,8 +68,9 @@ html[data-page^="k-"] body{background:var(--bg)}
    При „намалено движение“ не мига: остават цветът (жар) и думата „Нова“. */
 .knew{animation:knew 520ms var(--ease) both, kglow 1.2s ease-in-out 520ms infinite alternate}
 @keyframes kglow{from{box-shadow:0 0 0 0 var(--ember-soft)}to{box-shadow:0 0 0 8px var(--ember-soft)}}
+/* „Нова“ мига с ореол, не с прозрачност: текстът 15 px остава с пълен контраст (проверка 2, дребно 3) */
 .tk.isnew .tag.new{animation:ktag 1.2s ease-in-out infinite alternate}
-@keyframes ktag{from{opacity:1}to{opacity:.6}}
+@keyframes ktag{from{box-shadow:0 0 0 0 var(--ember-soft)}to{box-shadow:0 0 0 6px var(--ember-soft)}}
 @media (prefers-reduced-motion: reduce){ .knew,.tk.isnew,.tk.arr,.tk.isnew .tag.new{animation:none} }
 
 /* offline banner replaces the strip content */
@@ -93,12 +96,16 @@ html[data-page^="k-"] body{background:var(--bg)}
 @container app (min-width:1400px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 48px) / 4)} }
 @container app (max-width:1099px){ .tk{flex-basis:calc((100cqw - 32px - 76px - 24px) / 2)} }
 @container app (max-width:899px){ .tk{flex-basis:calc((100cqw - 32px - 40px - 24px) / 2)} .tk-h{padding-left:16px; padding-right:16px} }
-.tk.soon{box-shadow:inset 0 0 0 4px var(--warn)}
+/* „наближава“: пунктирна рамка (в тъмната тема жарът и оранжевото са почти един цвят, затова „Нова“ е лента горе,
+   а „наближава“ е с друга форма, не само с цвят; решение на шефа 18.11) */
+.tk.soon{box-shadow:inset 0 0 0 2px var(--line-strong); outline:4px dashed var(--warn); outline-offset:-4px}
 .tk.late{box-shadow:inset 0 0 0 4px var(--danger)}
 .tk.late::after{content:""; position:absolute; inset:0; border-radius:inherit; box-shadow:inset 0 0 0 9px var(--danger); pointer-events:none; animation:kpulse 2.4s ease-in-out infinite alternate}
 @keyframes kpulse{from{opacity:.0}to{opacity:.55}}
 /* „Нова“ не скрива закъснението: рамката в жар е само докато поръчката е в срок; етикетът „Нова“ остава */
-.tk.ok.isnew{box-shadow:inset 0 0 0 4px var(--ember)}
+/* „Нова“: дебела лента в жар горе (заедно с думата „Нова“ на картата); рамката остава на срока */
+.tk.isnew::before{content:""; position:absolute; left:0; right:0; top:0; height:10px; background:var(--ember); z-index:1; pointer-events:none}
+.tk.isnew .tk-h{padding-top:20px}
 .tk.arr{animation:kin 600ms var(--ease) both}
 @keyframes kin{from{transform:translateX(40px); opacity:0}to{transform:none; opacity:1}}
 .tk.gone{transform:translateY(-24px) scale(.96); opacity:0}
@@ -136,6 +143,7 @@ html[data-page^="k-"] body{background:var(--bg)}
 .md.no{color:var(--red); box-shadow:inset 0 0 0 2.5px var(--red)}
 .md.add{background:var(--ember-soft); color:var(--ink); box-shadow:inset 0 0 0 2px var(--ember)}
 .md.out{background:var(--red); color:var(--on-red); padding-left:10px}
+.md.addout{color:var(--red); box-shadow:inset 0 0 0 2.5px var(--red); border-radius:18px; padding:4px 12px 4px 8px}
 .md.nt{background:var(--surface-2); color:var(--ink); font-weight:700; padding-left:10px}
 .tk-note{margin:12px 14px 4px; padding:10px 14px; border-radius:16px; display:flex; gap:10px; align-items:flex-start; font-size:19px; font-weight:800; line-height:1.25; box-shadow:inset 0 0 0 2.5px var(--warn)}
 .tk-note .ic{color:var(--warn); margin-top:1px}
@@ -143,7 +151,7 @@ html[data-page^="k-"] body{background:var(--bg)}
 .tk-o h4{margin:0 0 4px; font-size:14px; font-weight:800; letter-spacing:.02em}
 .tk-o div{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:8px; align-items:baseline; font-size:17px; font-weight:600; line-height:1.3; padding:3px 0}
 .tk-o .num{white-space:nowrap}
-.tk-o .oout{color:var(--red); font-size:14px; font-weight:800; white-space:nowrap}
+.tk-o .oout{display:inline-flex; align-items:center; gap:3px; color:var(--red); font-size:14px; font-weight:800; white-space:nowrap}
 .tk-o .os{display:inline-flex; align-items:center; gap:4px; color:var(--ink); font-size:15px !important;  font-size:14px; font-weight:800; white-space:nowrap}
 .tk-o .os.done .ic{color:var(--ok)}
 .tk-o .os.cook .ic{color:var(--red)}

@@ -9,7 +9,7 @@
    - the zone comes from the address (zones.ts), the zone sent by the client is only used to answer "Дружба 1 или 2?";
    - a discount code from the internal rating: once, -10% on the dishes, never together with the lunch -30%. */
 import { COL, emit, iso, nowDate, randomKey, type Ctx } from "./ctx.ts";
-import { CoreError, PAY_LABEL, type Channel, type Customer, type Order, type OrderStatus, type PayMethod } from "./types.ts";
+import { CoreError, PAY_LABEL, type Channel, type Customer, type Order, type OrderLine, type OrderStatus, type PayMethod } from "./types.ts";
 
 /** the coupon a new profile gets (customers.ts): -10% once, from the first order after sign-up */
 export const PROFILE_COUPON = "PROFIL10";
@@ -337,6 +337,21 @@ export function stepAllowed(o: Pick<Order, "mode" | "status" | "prevStatus">, to
 /** who hears a status: the subscribers of the order, and for a table order the guests of its sitting (core/floor.ts) */
 const statusAudience = (o: Pick<Order, "no" | "session">) => ({ order: o.no, ...(o.session ? { table: o.session } : {}) });
 
+/** The kitchen's lines follow a status set from outside the kitchen ("Поръчки" in the admin, PATCH; decision of the chief
+    18.11, "проверка 2 на кухнята"), so an order never leaves the queues without its lines: "Готова" and later = every
+    line ready; back to "Готви се" from "Готова" (every line ready) = they are cooked again; back to "Приета" = they wait.
+    The kitchen's own steps (core/kitchen.ts) move the lines first, so for them nothing changes here. Returns the moved
+    indexes. */
+export function alignKitchen(o: Order, from: OrderStatus, status: OrderStatus, now: string): number[] {
+  const moved: number[] = [], ks = (l: OrderLine) => (l.ks === "cook" || l.ks === "ready" ? l.ks : "wait");
+  const set = (l: OrderLine, i: number, to: "wait" | "cook" | "ready") => { l.ks = to; (l as OrderLine & { ksAt?: string }).ksAt = now; moved.push(i); };
+  const lines = o.lines || [];
+  if (["ready", "on_way", "delivered", "picked_up"].includes(status)) lines.forEach((l, i) => { if (ks(l) !== "ready") { set(l, i, "ready"); l.readyAt = now; } });
+  else if (status === "cooking" && from !== "accepted" && from !== "cancelled" && lines.length && lines.every((l) => ks(l) === "ready")) lines.forEach((l, i) => { set(l, i, "cook"); delete l.readyAt; if (!l.cookAt) l.cookAt = now; });
+  else if (status === "accepted" && from !== "cancelled") lines.forEach((l, i) => { if (ks(l) !== "wait" && !l.servedAt) { set(l, i, "wait"); delete l.readyAt; delete l.cookAt; } });
+  return moved;
+}
+
 export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, actor = "system", by?: { user: { role: string }; sections: string[] }, reason?: string): Promise<Order> {
   const o = await getOrder(ctx, no);
   if (!o) throw new CoreError("not_found", "Няма такава поръчка.", 404);
@@ -349,9 +364,13 @@ export async function setOrderStatus(ctx: Ctx, no: string, status: OrderStatus, 
   else if (status !== "cancelled") { delete o.prevStatus; delete o.reason; }
   /* "Откажи" with a reason (orders-admin.ts requires it; the customer sees it on the tracking page) */
   if (status === "cancelled" && reason) o.reason = String(reason).replace(/\s+/g, " ").trim().slice(0, 200);
+  const from = o.status;
   o.status = status; o.updatedAt = now; o.times = { ...(o.times || { accepted: o.createdAt }), [status]: now };
+  const moved = from === "cancelled" ? [] : alignKitchen(o, from, status, now);
   await ctx.repo.put(COL.orders, o);
-  await audit(ctx, actor, "order.status", o.no, { status, ...(o.reason && status === "cancelled" ? { reason: o.reason } : {}) });
+  await audit(ctx, actor, "order.status", o.no, { status, ...(o.reason && status === "cancelled" ? { reason: o.reason } : {}), ...(moved.length ? { lines: moved } : {}) });
+  /* the kitchen's screens hear that its lines moved (a step from "Поръчки" in the admin) */
+  if (moved.length) emit(ctx, "order.line", { no: o.no, kind: "status", sec: "all", status, table: o.table || null, session: o.session || null, lines: moved, at: now }, o.session ? { table: o.session } : {});
   emit(ctx, "order.status", { no: o.no, status, at: now }, statusAudience(o));
   /* Web Push to the browsers that asked for it: in the background, a slow push service never delays the kitchen */
   pushStatus(ctx, o).catch(() => { /* logged by the sender */ });

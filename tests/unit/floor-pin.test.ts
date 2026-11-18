@@ -1,5 +1,6 @@
 /* The personal PIN of the staff apps (core/staff-pin.ts, core/device.ts): only on a device where somebody has already
-   signed in with a password; person + PIN (the kitchen: the PIN alone); the lockouts; the result is a normal staff session. */
+   signed in with a password; person + PIN in every module (the kitchen too: decision of the chief 18.11); the lockouts per
+   person and device, never one lock for a whole module; the result is a normal staff session. */
 import { describe, it, expect } from "vitest";
 import { createCore, MemoryRepo, PIN_LOGIN_DEVICE, PIN_LOGIN_PERSON, type Hasher, type RoleId, type StaffCtx } from "../../src/core/index.ts";
 
@@ -39,13 +40,13 @@ describe("PIN sign-in on a known device", () => {
     expect(p).toEqual({ known: true, module: "waiter", pinOnly: false, people: [{ id: id("w1"), name: "Сервитьор 1" }, { id: id("w2"), name: "Сервитьор 2" }] });
     expect(JSON.stringify(p)).not.toMatch(/"w1"|username|hash|salt/);
     expect(await core.pin.people(DEV, "driver")).toMatchObject({ people: [{ name: "Шофьор 1" }] });
-    expect(await core.pin.people(DEV, "kitchen")).toEqual({ known: true, module: "kitchen", pinOnly: true, people: [] });
+    expect(await core.pin.people(DEV, "kitchen")).toEqual({ known: true, module: "kitchen", pinOnly: false, people: [{ id: id("k1"), name: "Кухня 1" }, { id: id("k2"), name: "Кухня 2" }] });
     await expect(core.pin.people(DEV, "admin" as never)).rejects.toMatchObject({ code: "invalid", status: 422 });
     /* another device stays unknown; the store keeps only a hash of the token */
     expect((await core.pin.people(DEV2, "waiter")).known).toBe(false);
     expect(JSON.stringify(await core.ctx.repo.list("devices"))).not.toContain(DEV);
   });
-  it("person + PIN gives the normal staff session with the person's rights; the kitchen signs in with the PIN alone", async () => {
+  it("person + PIN gives the normal staff session with the person's rights; the kitchen chooses the person too", async () => {
     const { core } = mk(), { id } = await staff(core);
     await core.staff.login("manager", PW, "2.2.2.2", DEV);
     const r = await core.pin.login(DEV, { module: "waiter", user: id("w1"), pin: "4821" });
@@ -59,10 +60,12 @@ describe("PIN sign-in on a known device", () => {
     await expect(core.pin.login(DEV, { module: "waiter", user: id("k1"), pin: "6094" })).rejects.toMatchObject({ code: "bad_pin" });
     await expect(core.pin.login(DEV, { module: "waiter", user: id("w3"), pin: "0000" })).rejects.toMatchObject({ code: "bad_pin" });
     await expect(core.pin.login(DEV, { module: "waiter", pin: "4821" })).rejects.toMatchObject({ code: "invalid", fields: { user: "Избери кой влиза." } });
-    /* the kitchen: the PIN alone finds the person among the kitchen staff */
-    const k = await core.pin.login(DEV, { module: "kitchen", pin: "3187" });
+    /* the kitchen: the person + the PIN; only a person with the role "Кухня" and only in the kitchen module */
+    const k = await core.pin.login(DEV, { module: "kitchen", user: id("k2"), pin: "3187" });
     expect(k.user).toMatchObject({ username: "k2", role: "kitchen" });
-    await expect(core.pin.login(DEV, { module: "kitchen", pin: "4821" })).rejects.toMatchObject({ code: "bad_pin" }); /* a waiter's PIN */
+    await expect(core.pin.login(DEV, { module: "kitchen", pin: "3187" })).rejects.toMatchObject({ code: "invalid", status: 422 }); /* no person */
+    await expect(core.pin.login(DEV, { module: "kitchen", user: id("w1"), pin: "4821" })).rejects.toMatchObject({ code: "bad_pin" }); /* a waiter in the kitchen */
+    await expect(core.pin.login(DEV, { module: "waiter", user: id("k2"), pin: "3187" })).rejects.toMatchObject({ code: "bad_pin" }); /* a cook in the waiter's module */
     const d = await core.pin.login(DEV, { module: "driver", user: id("d1"), pin: "5526" });
     expect(d.home).toBe("app:driver");
     /* a deactivated person cannot sign in with the PIN and leaves the list */
@@ -104,12 +107,18 @@ describe("PIN sign-in on a known device", () => {
     expect(res.filter((r) => r.status === "rejected" && (r.reason as { code: string }).code === "bad_pin")).toHaveLength(PIN_LOGIN_DEVICE - 1);
     expect(res.filter((r) => r.status === "rejected" && (r.reason as { code: string }).code === "throttled")).toHaveLength(12 - PIN_LOGIN_DEVICE + 1);
   });
-  it("the kitchen's PIN alone: 5 wrong per device; the demo store is one device, known after a password sign-in there", async () => {
-    const { core } = mk(), {} = await staff(core);
-    await core.staff.login("manager", PW, "2.2.2.2", DEV);
-    for (let i = 0; i < PIN_LOGIN_DEVICE - 1; i++) await expect(core.pin.login(DEV, { module: "kitchen", pin: "000" + i })).rejects.toMatchObject({ code: "bad_pin" });
-    await expect(core.pin.login(DEV, { module: "kitchen", pin: "0009" })).rejects.toMatchObject({ code: "throttled" });
-    await expect(core.pin.login(DEV, { module: "kitchen", pin: "6094" })).rejects.toMatchObject({ code: "throttled" });
+  it("the kitchen: wrong PINs lock the person on that device, never the whole kitchen (review 2, important 4); the demo store is one device", async () => {
+    const { core } = mk(), { id } = await staff(core);
+    for (const d of [DEV, DEV2, DEV3]) await core.staff.login("manager", PW, "2.2.2.2", d);
+    const kin = (dev: string, user: string, pin: string) => core.pin.login(dev, { module: "kitchen", user: id(user), pin });
+    /* two tablets, 5 wrong each for k1: k1 is locked there; k2 still signs in on a third tablet (before: one lock for all) */
+    for (const dev of [DEV, DEV2]) {
+      for (let i = 0; i < PIN_LOGIN_DEVICE - 1; i++) await expect(kin(dev, "k1", "000" + i)).rejects.toMatchObject({ code: "bad_pin" });
+      await expect(kin(dev, "k1", "0009")).rejects.toMatchObject({ code: "throttled" });
+    }
+    await expect(kin(DEV, "k1", "6094")).rejects.toMatchObject({ code: "throttled" });
+    expect((await kin(DEV3, "k2", "3187")).user.username).toBe("k2");
+    expect((await kin(DEV, "k2", "3187")).user.username).toBe("k2"); /* the same tablet, the colleague */
     /* the demo: no cookie, the browser's own store is the device */
     const demo = mk(true), x = await staff(demo.core);
     expect((await demo.core.pin.people(null, "waiter")).known).toBe(true); /* staff() signed the admin in with a password */

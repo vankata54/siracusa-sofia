@@ -33,7 +33,7 @@ import { createCore, CoreError, homeOf, officeDueAt, publicOrder, PUSH_MSG, rid,
 import { state, status, eta } from "../src/lib/status.ts";
 import { parseTime, sofiaEpoch } from "../src/lib/time.ts";
 import { publicSettings, settingsAllowed } from "../src/core/settings.ts";
-import { maskFeedback, maskList } from "../src/core/rights.ts";
+import { maskFeedback, maskList, serial } from "../src/core/rights.ts";
 import { normPhone } from "../src/lib/format.ts";
 import { zoneOfAddress } from "../src/lib/zones.ts";
 
@@ -290,7 +290,9 @@ export function createApp(opts: AppOpts) {
   app.patch("/api/admin/orders/:no", async (c) => {
     const s = await staff(c, ["orders", "kitchen", "driver"]), b = await body(c);
     if (b.status === "cancelled" && !(typeof b.reason === "string" && b.reason.trim())) throw Object.assign(new CoreError("invalid", "Напишете причината за отказа.", 422), { fields: { reason: "Напишете причината за отказа." } });
-    return c.json(await core.orders.setStatus(c.req.param("no"), b.status as OrderStatus, s.user.username, s, typeof b.reason === "string" ? b.reason : undefined));
+    /* under the order's lock, like the kitchen, the hall and the driver (core/rights.ts serial "order:<№>") */
+    const no = c.req.param("no");
+    return c.json(await serial(core.ctx.repo, "order:" + no, () => core.orders.setStatus(no, b.status as OrderStatus, s.user.username, s, typeof b.reason === "string" ? b.reason : undefined)));
   });
 
   /* ---------- settings: kitchen "Натоварено" + minutes, reservation length ---------- */

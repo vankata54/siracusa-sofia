@@ -280,7 +280,7 @@ describe("lines, sections, the status", () => {
   it("delivery and pickup: the driver and the customer are told only when every section is ready; a ticked line without „Започни“ starts the order", async () => {
     const { core, k, line, delivery, pickup, order, events } = await mk("19:00");
     const d = await delivery([line(KEBAP), line(PIZZA)]);
-    const a = await core.kitchen.line(k, d.no, 0, true);
+    const a = await core.kitchen.line(k, d.no, 0, true, { sec: "skara" });
     expect(a).toMatchObject({ sec: "skara", secReady: true, orderReady: false, status: "cooking", notify: [], waiting: ["Пещ"], msg: "Чака още Пещ. Шофьорът ще бъде известен, когато всичко е готово." });
     expect((await order(d.no)).lines.map((l) => l.ks)).toEqual(["ready", "wait"]);
     const b = await core.kitchen.done(k, d.no, "all");
@@ -293,7 +293,7 @@ describe("lines, sections, the status", () => {
     /* a line of another section, an unknown line, an unknown order */
     const x = await pickup([line(KEBAP), line(SALAD)]);
     expect(await code(core.kitchen.line(k, x.no, 1, true, { sec: "skara" }))).toBe("bad_line:422");
-    expect(await code(core.kitchen.line(k, x.no, 7, true))).toBe("bad_line:422");
+    expect(await code(core.kitchen.line(k, x.no, 7, true, { sec: "skara" }))).toBe("bad_line:422");
     expect(await code(core.kitchen.done(k, "999", "skara"))).toBe("not_found:404");
   });
 });
@@ -313,7 +313,7 @@ describe("„Върни“", () => {
     expect(back.ticket!.lines.map((l) => [l.ks, l.readyAt != null])).toEqual([["ready", true], ["cook", false]]);
     expect((await core.kitchen.back(k, o.no, "skara", { lines: [1] })).same).toBe(true);
     /* a single line back and forth (the second tap within 0,8 s is the screen's job; the core only sets a state) */
-    expect((await core.kitchen.line(k, o.no, 0, false)).ticket!.lines.map((l) => l.ks)).toEqual(["cook", "cook"]);
+    expect((await core.kitchen.line(k, o.no, 0, false, { sec: "skara" })).ticket!.lines.map((l) => l.ks)).toEqual(["cook", "cook"]);
     await core.kitchen.done(k, o.no, "skara");
     await core.kitchen.done(k, o.no, "pesht");
     expect((await order(o.no)).status).toBe("ready");
@@ -335,7 +335,7 @@ describe("„Върни“", () => {
     served.lines[0].servedAt = new Date(ctx.now!()).toISOString();
     await ctx.repo.put("orders", served);
     expect(await code(core.kitchen.back(k, t.no, "skara"))).toBe("served:409");
-    expect(await code(core.kitchen.line(k, t.no, 0, false))).toBe("served:409");
+    expect(await code(core.kitchen.line(k, t.no, 0, false, { sec: "skara" }))).toBe("served:409");
     expect((await core.kitchen.back(k, t.no, "pesht")).status).toBe("cooking"); /* the pizza is still on the pass */
     /* „Взех“ of the driver, then on the way */
     const d = await delivery([line(KEBAP)]);
@@ -395,7 +395,7 @@ describe("„Изчерпано днес“", () => {
     at("19:05");
     const r = await core.kitchen.setOut(k, KEBAP, true, { sec: "skara" });
     expect(r).toMatchObject({ same: false, id: KEBAP, n: "Кебапчета", out: true, orders: 2, nos: [t.no, d.no], waiter: true, manager: true, who: "сервитьора и управителя (доставка и вземане)",
-      msg: "Има го в 2 приети поръчки: отбелязано на реда, известихме сервитьора и управителя (доставка и вземане)." });
+      msg: "В 2 приети поръчки · известихме сервитьора и управителя." });
     expect((await order(t.no)).lines.map((l) => !!l.out)).toEqual([true, false]);
     expect((await order(d.no)).lines.map((l) => !!l.out)).toEqual([true, false]);
     for (const no of [done.no, other.no, tomorrow.no]) expect((await order(no)).lines.some((l) => l.out)).toBe(false);
@@ -416,7 +416,8 @@ describe("„Изчерпано днес“", () => {
     expect(v.list.find((x) => x.id === KEBAP)).toMatchObject({ n: "Кебапчета", sec: "skara", secName: "Скара Bertha", atHm: "19:05", by: "Кухня · Скара", mine: true });
     expect(v.groups.map((g) => [g.n, g.shared])).toEqual([["Скара Bertha", false], ["Добавки", true]]);
     expect(v.groups[0].items.find((x) => x.id === KEBAP)!.out).toBe(true);
-    expect(v.resets).toBe("В полунощ всичко се връща в менюто само.");
+    expect(v.resets).toBe("В полунощ се връща в менюто всичко, отбелязано днес тук.");
+    expect(v.list.find((x) => x.id === KEBAP)!.menu).toBe(false);
     expect((await core.kitchen.soldOut(k, "topla")).groups.map((g) => g.n)).toEqual(["Супи", "Топли предястия", "Основни ястия", "Паста и ризото", "Гарнитури", "Бургери", "Закуски", "Добавки"]);
     expect((await core.kitchen.soldOut(k, "topla")).list.find((x) => x.id === KEBAP)!.mine).toBe(false);
     expect((await core.kitchen.queue(k, "skara")).counts).toMatchObject({ out: v.counts.mine, outAll: v.counts.all });
@@ -432,7 +433,7 @@ describe("„Изчерпано днес“", () => {
     const { core, k, line, table, delivery, order } = await mk("19:00");
     const t = await table("S1", [line(PIZZA, 1, ["+ Гъби"]), line(PIZZA)]);
     const r = await core.kitchen.setOut(k, "gabi", true, { sec: "pesht" });
-    expect(r).toMatchObject({ orders: 1, waiter: true, manager: false, who: "сервитьора", msg: "Има го в 1 приета поръчка: отбелязано на реда, известихме сервитьора." });
+    expect(r).toMatchObject({ orders: 1, waiter: true, manager: false, who: "сервитьора", msg: "В 1 приета поръчка · известихме сервитьора." });
     expect((await order(t.no)).lines.map((l) => !!l.out)).toEqual([true, false]);
     const tk = (await core.kitchen.queue(k, "pesht")).tickets[0];
     expect(tk.lines.map((l) => [l.out, l.add])).toEqual([[false, [{ n: "Гъби", out: true }]], [false, []]]);
@@ -464,7 +465,7 @@ describe("rights", () => {
     const o = await table("S1", [line(KEBAP)]);
     const calls: [string, (x: StaffCtx) => Promise<unknown>][] = [
       ["config", (x) => core.kitchen.config(x)], ["queue", (x) => core.kitchen.queue(x, "skara")], ["start", (x) => core.kitchen.start(x, o.no, "skara")],
-      ["line", (x) => core.kitchen.line(x, o.no, 0, true)], ["done", (x) => core.kitchen.done(x, o.no, "skara")], ["back", (x) => core.kitchen.back(x, o.no, "skara")],
+      ["line", (x) => core.kitchen.line(x, o.no, 0, true, { sec: "skara" })], ["done", (x) => core.kitchen.done(x, o.no, "skara")], ["back", (x) => core.kitchen.back(x, o.no, "skara")],
       ["seen", (x) => core.kitchen.seen(x, o.no, "skara")], ["doneToday", (x) => core.kitchen.doneToday(x, "skara")], ["summary", (x) => core.kitchen.summary(x)],
       ["soldOut", (x) => core.kitchen.soldOut(x, "skara")], ["setOut", (x) => core.kitchen.setOut(x, SALAD, true)], ["busy", (x) => core.kitchen.busy(x)],
       ["setBusy", (x) => core.kitchen.setBusy(x, false)], ["beat", (x) => core.kitchen.beat(x, "skara")], ["tablets", (x) => core.kitchen.tablets(x)], ["search", (x) => core.kitchen.search(x, "skara", "маса")],
@@ -492,7 +493,7 @@ describe("rights", () => {
     expect((await order(d.no)).status).toBe("ready");
     /* the driver does; then the kitchen's actions on it are refused clearly */
     await core.orders.setStatus(d.no, "on_way", "driver", s.driver);
-    const e = await core.kitchen.line(k, d.no, 0, false).catch((x) => x as CoreError);
+    const e = await core.kitchen.line(k, d.no, 0, false, { sec: "skara" }).catch((x) => x as CoreError);
     expect(e).toMatchObject({ code: "closed", status: 409 });
   });
 });
@@ -518,8 +519,8 @@ describe("idempotence and the time of an action", () => {
     const o = await table("S1", [line(KEBAP), line(VRAT)]);
     at("19:30"); /* the connection is back at 19:30; the lines were ticked at 19:12 and 19:14 */
     const t1 = Date.parse(DAY + "T19:12:00+02:00"), t2 = new Date(Date.parse(DAY + "T19:14:00+02:00")).toISOString();
-    await core.kitchen.line(k, o.no, 0, true, { at: t1 });
-    await core.kitchen.line(k, o.no, 1, true, { at: t2 });
+    await core.kitchen.line(k, o.no, 0, true, { sec: "skara", at: t1 });
+    await core.kitchen.line(k, o.no, 1, true, { sec: "skara", at: t2 });
     const r = await order(o.no);
     expect(r.lines.map((l) => l.readyAt)).toEqual([new Date(t1).toISOString(), t2]);
     expect(r.times).toMatchObject({ cooking: new Date(t1).toISOString(), ready: t2 });
@@ -533,7 +534,7 @@ describe("idempotence and the time of an action", () => {
     expect(actionAt(ctx, now + 30_000).getTime()).toBe(now);
     const o2 = await table("S2", [line(KEBAP)]);
     for (const bad of [now + 61_000, "not a time", Date.parse(DAY + "T03:59:00+02:00"), "2026-11-15T19:00:00+02:00"]) {
-      const e = await core.kitchen.line(k, o2.no, 0, true, { at: bad as never }).catch((x) => x as CoreError & { fields?: Record<string, string> });
+      const e = await core.kitchen.line(k, o2.no, 0, true, { sec: "skara", at: bad as never }).catch((x) => x as CoreError & { fields?: Record<string, string> });
       expect(e, String(bad)).toMatchObject({ code: "bad_at", status: 422 });
       expect((e as { fields?: Record<string, string> }).fields!.at).toBeTruthy();
     }
@@ -545,7 +546,7 @@ describe("idempotence and the time of an action", () => {
     /* the shift day starts at 04:00: an action made at 23:58 and sent at 00:02 counts */
     expect(new Date(shiftStart(new Date(Date.parse("2026-11-17T00:02:00+02:00")))).toISOString()).toBe(new Date(Date.parse(DAY + "T04:00:00+02:00")).toISOString());
     at("00:02", 0, "2026-11-17");
-    expect((await core.kitchen.line(k, o2.no, 0, true, { at: Date.parse(DAY + "T23:58:00+02:00") })).same).toBe(false);
+    expect((await core.kitchen.line(k, o2.no, 0, true, { sec: "skara", at: Date.parse(DAY + "T23:58:00+02:00") })).same).toBe(false);
     expect((await core.kitchen.setBusy(k, true, { sec: "skara", at: Date.parse(DAY + "T23:50:00+02:00") })).atHm).toBe("23:50");
   });
 });
@@ -553,13 +554,13 @@ describe("idempotence and the time of an action", () => {
 describe("tablets and „Общ изглед“", () => {
   it("the heartbeat: „Таблетът работи“, then „без връзка от 19:37“; only the kitchen's own account counts", async () => {
     const { core, k, s, at, events } = await mk("19:37");
-    expect((await core.kitchen.tablets(s.manager)).map((t) => [t.sec, t.online, t.text])).toEqual([["topla", false, "без връзка"], ["skara", false, "без връзка"], ["pesht", false, "без връзка"], ["studeni", false, "без връзка"], ["all", false, "без връзка"]]);
+    expect((await core.kitchen.tablets(s.manager)).map((t) => [t.sec, t.online, t.text])).toEqual([["topla", false, "Няма таблет днес"], ["skara", false, "Няма таблет днес"], ["pesht", false, "Няма таблет днес"], ["studeni", false, "Няма таблет днес"], ["all", false, "Няма таблет днес"]]);
     expect(await core.kitchen.beat(k, "skara", { device: "tab-1" })).toMatchObject({ ok: true, counted: true });
     expect(await core.kitchen.beat(s.manager, "pesht")).toMatchObject({ counted: false });
     at("19:38", 30);
     const t1 = await core.kitchen.tablets(s.manager);
     expect(t1.find((t) => t.sec === "skara")).toMatchObject({ n: "Скара Bertha", online: true, lastHm: "19:37", text: "Таблетът работи" });
-    expect(t1.find((t) => t.sec === "pesht")).toMatchObject({ online: false, text: "без връзка" });
+    expect(t1.find((t) => t.sec === "pesht")).toMatchObject({ online: false, text: "Няма таблет днес" });
     at("19:38", 31);
     expect((await core.kitchen.tablets(s.manager)).find((t) => t.sec === "skara")).toMatchObject({ online: false, lastHm: "19:37", text: "без връзка от 19:37" });
     expect((await core.kitchen.summary(k)).totals.tabletsOnline).toBe(0);
@@ -626,5 +627,98 @@ describe("„Търси“", () => {
     expect(r.act[0]).toMatchObject({ src: { text: "Маса 12" }, lines: [{ q: 2, name: "Кебапчета", hit: true }], timer: "late", left: -240, later: false });
     expect(r.later[0]).toMatchObject({ later: true, enterHm: "19:55", timer: "", lines: [{ q: 1, name: "Кебапчета", hit: true }] });
     expect(r.dish).toContain(KEBAP);
+  });
+});
+
+describe("проверка 2 на кухнята (decisions of the chief 18.11)", () => {
+  it("„Изчерпано“ after „Започни“: only the waiting lines are marked; a line being cooked or ready is made and paid; back in the menu clears every mark of today", async () => {
+    const { core, k, at, line, table, order } = await mk("19:00");
+    const cooking = await table("S1", [line(KEBAP, 2), line(PIZZA)]);
+    await core.kitchen.start(k, cooking.no, "pesht"); /* the last dough goes into this pizza */
+    const waiting = await table("S2", [line(PIZZA)]);
+    at("19:05");
+    const r = await core.kitchen.setOut(k, PIZZA, true, { sec: "pesht" });
+    expect(r).toMatchObject({ orders: 1, nos: [waiting.no] });
+    expect((await order(cooking.no)).lines.map((l) => [l.ks, !!l.out])).toEqual([["wait", false], ["cook", false]]);
+    expect((await order(waiting.no)).lines.map((l) => !!l.out)).toEqual([true]);
+    /* the tablet shows "Изчерпано днес" only on the waiting line */
+    const pq = (await core.kitchen.queue(k, "pesht")).tickets;
+    expect(pq.find((x) => x.no === cooking.no)!.lines[0].out).toBe(false);
+    expect(pq.find((x) => x.no === waiting.no)!.lines[0].out).toBe(true);
+    /* the cooking pizza goes on to "Готово" normally */
+    await core.kitchen.done(k, cooking.no, "pesht");
+    expect((await order(cooking.no)).lines[1]).toMatchObject({ ks: "ready" });
+    expect((await order(cooking.no)).lines[1].out).toBeUndefined();
+    /* a mark set while the line waited stays after it is started and ready; back in the menu clears it in any state */
+    await core.kitchen.done(k, waiting.no, "pesht");
+    expect((await order(waiting.no)).lines[0].out).toBe(true);
+    at("19:10");
+    expect(await core.kitchen.setOut(k, PIZZA, false, { sec: "pesht" })).toMatchObject({ out: false, orders: 1, nos: [waiting.no] });
+    expect((await order(waiting.no)).lines[0].out).toBeUndefined();
+  });
+
+  it("what the tablet saw: an old offline action loses to a newer change of another tablet (409 „Друг таблет промени поръчката“); a repeat or the same result is fine", async () => {
+    const { core, k, at, line, delivery, order } = await mk("19:00");
+    const d = await delivery([line(KEBAP)]);
+    await core.kitchen.start(k, d.no, "skara");
+    const t0 = at("19:05").getTime();               /* tablet A, offline, presses "Готово" (it saw the line cooking) */
+    at("19:05", 30); await core.kitchen.done(k, d.no, "skara", { saw: { 0: "cook" } });   /* tablet B */
+    at("19:05", 50); await core.kitchen.back(k, d.no, "skara", { saw: { 0: "ready" } });  /* B: not right after all */
+    at("19:06");
+    const e = await core.kitchen.done(k, d.no, "skara", { at: t0, saw: { 0: "cook" } }).catch((x) => x as CoreError & { fields?: Record<string, string> });
+    expect(e).toMatchObject({ code: "conflict", status: 409, message: "Друг таблет промени поръчката. Виж я отново на екрана." });
+    expect((await order(d.no)).status).toBe("cooking");
+    /* the state the tablet saw changed by another tablet: refused too */
+    expect(await code(core.kitchen.line(k, d.no, 0, true, { sec: "skara", saw: { 0: "wait" } }))).toBe("conflict:409");
+    /* the same result already there (two tablets pressed "Готово"): no conflict, nothing to write */
+    await core.kitchen.done(k, d.no, "skara", { saw: { 0: "cook" } });
+    expect((await core.kitchen.done(k, d.no, "skara", { at: t0, saw: { 0: "cook" } })).same).toBe(true);
+    /* one tablet's own queue, sent in order: each action sees the result of the one before */
+    const p = await delivery([line(VRAT)]);
+    const a1 = at("19:10").getTime(), a2 = at("19:11").getTime();
+    at("19:12");
+    await core.kitchen.line(k, p.no, 0, true, { sec: "skara", at: a1, saw: { 0: "wait" } });
+    expect((await core.kitchen.line(k, p.no, 0, false, { sec: "skara", at: a2, saw: { 0: "ready" } })).same).toBe(false);
+    /* the section is required for a line (a screen of one section acts only on its lines) */
+    expect(await code(core.kitchen.line(k, p.no, 0, true))).toBe("bad_sec:422");
+  });
+
+  it("a status from „Поръчки“ moves the kitchen's lines: „Готова“ = every line ready, back to „Готви се“ = cooked again; „Изпълнени“, never lost from the queues", async () => {
+    const { core, k, s, line, delivery, order, events } = await mk("19:00");
+    const d = await delivery([line(KEBAP), line(SALAD)]);
+    await core.ordersAdmin.step(s.manager, d.no, "cooking");
+    expect((await core.kitchen.queue(k, "skara")).tickets.map((t) => t.no)).toContain(d.no);
+    await core.ordersAdmin.step(s.manager, d.no, "ready");
+    expect((await order(d.no)).lines.map((l) => l.ks)).toEqual(["ready", "ready"]);
+    expect((await core.kitchen.queue(k, "skara")).tickets.map((t) => t.no)).not.toContain(d.no);
+    expect((await core.kitchen.doneToday(k, "skara")).rows.map((r) => r.no)).toContain(d.no);
+    expect(events.some((e) => e.type === "order.line" && e.data.kind === "status" && e.data.no === d.no)).toBe(true);
+    await core.ordersAdmin.step(s.manager, d.no, "cooking");
+    expect((await order(d.no)).lines.map((l) => l.ks)).toEqual(["cook", "cook"]);
+    expect((await core.kitchen.queue(k, "studeni")).tickets.map((t) => t.no)).toContain(d.no);
+    await core.ordersAdmin.step(s.manager, d.no, "accepted");
+    expect((await order(d.no)).lines.map((l) => [l.ks, l.cookAt])).toEqual([["wait", undefined], ["wait", undefined]]);
+    /* the kitchen's own partial "Върни" keeps the other section ready */
+    await core.kitchen.done(k, d.no, "all");
+    await core.kitchen.back(k, d.no, "skara");
+    expect((await order(d.no)).lines.map((l) => l.ks)).toEqual(["wait", "ready"]); /* never started after "Приета": waits */
+  });
+
+  it("„Натоварено“ for 60 min: the queue and „Общ изглед“ remind too; „под 1 мин“ in „Изпълнени“; a tablet never seen today", async () => {
+    const { core, k, s, at, line, delivery } = await mk("19:00");
+    await core.kitchen.setBusy(k, true, { sec: "skara" });
+    at("19:59");
+    expect((await core.kitchen.queue(k, "skara")).busy.remind).toBe(false);
+    at("20:00");
+    expect((await core.kitchen.queue(k, "skara")).busy.remind).toBe(true);
+    expect((await core.kitchen.summary(k)).busy.remind).toBe(true);
+    expect((await core.kitchen.busy(k)).remind).toBe(true);
+    const d = await delivery([line(KEBAP)]);
+    at("20:00", 40);
+    await core.kitchen.done(k, d.no, "skara");
+    expect((await core.kitchen.doneToday(k, "skara")).rows.find((r) => r.no === d.no)).toMatchObject({ text: "под 1 мин", onTime: true });
+    await core.kitchen.beat(k, "pesht");
+    at("23:00", 0, "2026-11-17"); /* the next shift day: yesterday's tablet is not "без връзка от …" */
+    expect((await core.kitchen.tablets(s.manager)).find((t) => t.sec === "pesht")).toMatchObject({ online: false, text: "Няма таблет днес" });
   });
 });

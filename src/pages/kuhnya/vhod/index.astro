@@ -25,6 +25,14 @@ initVhod();
 .pinpad button{min-height:72px; border:0; border-radius:22px; background:var(--surface-2); color:var(--ink); font:inherit; font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; cursor:pointer; display:grid; place-items:center}
 .pinpad button:active{transform:scale(.96); background:var(--surface-3)}
 .pinpad .fn{font-size:17px}
+/* "Кой влиза?": the people with the role "Кухня" and a PIN (decision of the chief 18.11) */
+.pin .who{display:grid; gap:8px}
+.pin .who .lbl{margin:0; font-size:15px; font-weight:700; color:var(--muted)}
+.pin .chips{display:flex; flex-wrap:wrap; gap:8px; max-height:116px; overflow-y:auto}
+.pin .chip{display:inline-flex; align-items:center; gap:8px; min-height:52px; padding:0 18px 0 14px; border:0; border-radius:999px; background:var(--surface-2); color:var(--ink); font:inherit; font-size:17px; font-weight:800; cursor:pointer}
+.pin .chip .ic{color:var(--muted)}
+.pin .chip[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.pin .chip[aria-pressed="true"] .ic{color:var(--bg)}
 .perr{min-height:24px; margin:0; text-align:center; font-size:16px; font-weight:700; color:var(--danger)}
 .pin .first{display:flex; gap:10px; align-items:flex-start; margin:0; font-size:17px; line-height:1.4; color:var(--ink)}
 .pin .first .ic{flex:none; margin-top:1px; color:var(--muted)}
@@ -33,5 +41,7 @@ initVhod();
 .pin .pw{margin:-4px 0 0; text-align:center; font-size:16px}
 .pin .pw a{display:inline-flex; align-items:center; min-height:48px; padding:0 12px; color:var(--ink); font-weight:700; text-underline-offset:4px}
 @container app (max-width:1100px){ .pinpad button{min-height:64px} }
-@container app (max-width:899px){ .pin [data-pin]{gap:10px} .pinpad button{min-height:56px} }
+@container app (max-width:899px){ .pin [data-pin]{gap:8px} .pinpad{gap:8px} .pinpad button{min-height:52px} .pin .chip{min-height:48px} .dots{padding:2px 0} }
+/* a short screen (1280 × 800 with "Кой влиза?"): "Влез" stays on the first screen */
+@media (max-height:820px){ .pin{gap:12px} .pin [data-pin]{gap:10px} .pinpad button{min-height:60px} }
 </style>

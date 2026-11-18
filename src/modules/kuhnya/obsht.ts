@@ -38,7 +38,8 @@ function screen(k: KFrame): void {
       counts: "<span>Поръчки в кухнята <b>" + t.orders + '</b></span><span class="sep"></span>' +
         (t.late ? '<span class="late">' + ic("warning", 20) + " Закъсняват <b>" + t.late + "</b></span>" : "<span>Закъсняват <b>0</b></span>") +
         '<span class="sep"></span><span>Изчерпани <b>' + t.out + '</b></span><span class="sep"></span><span>По-късно <b>' + t.later + "</b></span>",
-      pills: k.pills.busy(),
+      /* no connection: the keys wait (as on the queue) */
+      pills: k.online() ? k.pills.busy() : "",
     };
   });
 
@@ -49,7 +50,10 @@ function screen(k: KFrame): void {
       const mine = d!.rows.filter((r) => open(r, s.id)), tms = mine.map((r) => tmOf(r, now).timer);
       const wait = mine.length, late = tms.filter((x) => x === "late").length, soonN = tms.filter((x) => x === "soon").length;
       const oldest = wait && s.oldestMin != null ? s.oldestMin + Math.max(0, mins) + " мин" : "-";
-      const tab = off ? '<span class="tab"><i class="off"></i>Няма данни след ' + esc(k.hm(got)) + "</span>" : '<span class="tab"><i' + (s.tablet.online ? "" : ' class="off"') + "></i>" + esc(s.tablet.text) + "</span>";
+      /* a tablet that went silent today is a problem (red dot + a warning); one never seen today is grey */
+      const lost = !s.tablet.online && !!s.tablet.lastAt && s.tablet.text.indexOf("без връзка") === 0;
+      const tab = off ? '<span class="tab"><i class="off"></i>Няма данни след ' + esc(k.hm(got)) + "</span>"
+        : '<span class="tab' + (lost ? " lost" : "") + '">' + (lost ? ic("warning", 16) : "<i" + (s.tablet.online ? "" : ' class="off"') + "></i>") + esc(s.tablet.text) + "</span>";
       const link = k.all || s.id === k.sec;
       const inner = '<span class="hd"><span class="si">' + ic(s.icon || "cooking-pot", 24) + "</span>" + esc(s.n) + "</span>" +
         '<span class="big"><b>' + wait + "</b><span>" + pl(wait, "поръчка чака", "поръчки чакат") + "</span></span>" +
@@ -75,7 +79,7 @@ function screen(k: KFrame): void {
         d.rows.map((r) => rowHTML(r, now)).join("") + "</tbody></table></div>"
         : '<div class="kempty"><div><div class="ill">' + ic("check-circle", 56) + "</div><h2>Няма поръчки в работа</h2><p>Всички секции са свободни.</p></div></div>") +
       '<p class="legend">' + st({ short: "", state: "ready" }).replace(" · ", "") + st({ short: "", state: "cook" }).replace(" · ", "") + st({ short: "", state: "wait" }).replace(" · ", "") +
-      (k.all ? "<span>Докоснете секция, за да видите опашката ѝ.</span>" : "") + "</p></div>";
+      (k.all ? "<span>Докосни секция, за да видиш опашката ѝ.</span>" : "") + "</p></div>";
     main.scrollTop = top;
     if (fsec) main.querySelector<HTMLElement>('[data-sec="' + CSS.escape(fsec) + '"]')?.focus({ preventScroll: true });
     lastCards = main.querySelector("[data-cards]")!.innerHTML;

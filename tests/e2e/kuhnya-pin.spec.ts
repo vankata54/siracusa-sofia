@@ -24,6 +24,9 @@ async function newKitchen(base = ""): Promise<{ username: string; name: string; 
   expect(j.pin_once).toMatch(/^\d{4}$/);
   return { username, name, pin: j.pin_once! };
 }
+/** one cook with a PIN for the tests of this file (a module-level promise: made once per worker) */
+let one: Promise<{ username: string; name: string; pin: string }> | null = null;
+const someone = () => (one ||= newKitchen());
 type Opt = { w?: number; h?: number; theme?: "dark" | "light"; known?: boolean; base?: string };
 /** a tablet with no session; known: somebody signed in here with a password before (then signed out) */
 async function tablet(browser: Browser, o: Opt = {}): Promise<{ ctx: BrowserContext; page: Page; errs: string[] }> {
@@ -69,7 +72,7 @@ test("@desktop an unknown device: the module asks for the password; /kuhnya/vhod
   await ctx.close();
 });
 
-test("@desktop a known device: the module asks for the PIN; the section + 4 digits, a wrong PIN, the right one opens the screen it came from", async ({ browser }) => {
+test("@desktop a known device: the module asks for the PIN; the section + the person + 4 digits, a wrong PIN, the right one opens the screen it came from", async ({ browser }) => {
   const who = await newKitchen();
   const { ctx, page, errs } = await tablet(browser, { known: true });
   await page.goto("/kuhnya/izpalneni/");
@@ -85,6 +88,18 @@ test("@desktop a known device: the module asks for the PIN; the section + 4 digi
   await page.locator('[data-sec="skara"]').click();
   await expect(page.locator(".pin h2 small")).toHaveText("за вход в Скара Bertha");
   await expect(page.locator("button[data-go]")).toHaveText("Влез · Скара Bertha");
+  /* the person (decision of the chief 18.11): the people with the role "Кухня" and a PIN, never a user name */
+  await expect(page.locator(".who .lbl")).toHaveText("Кой влиза?");
+  const chip = page.locator("[data-who]", { hasText: who.name });
+  await expect(chip).toHaveCount(1);
+  await expect(page.locator(".who")).not.toContainText(who.username);
+  if ((await page.locator("[data-who]").count()) > 1) {
+    await keys(page, "1234"); await page.locator("button[data-go]").click();
+    await expect(page.locator("[data-err]")).toHaveText("Първо избери кой влиза.");
+    await page.locator('.pinpad [data-k="c"]').click();
+  }
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
   /* fewer than 4 digits */
   await keys(page, "12");
   await expect(page.locator(".dots i.on")).toHaveCount(2);
@@ -113,6 +128,7 @@ test("@desktop a known device: the module asks for the PIN; the section + 4 digi
   expect(await page.evaluate(() => localStorage.getItem("sk-sec"))).toBe('"skara"');
   const me = (await (await ctx.request.get("/api/auth/me")).json()) as { user: { username: string } };
   expect(me.user.username).toBe(who.username);
+  expect(await page.evaluate(() => localStorage.getItem("sk-who"))).not.toBeNull();
   /* signed in: "Смени секцията" is the choice without a PIN, with "Изход" */
   await page.locator(".ksec").click();
   await expect(page).toHaveURL(/\/kuhnya\/vhod\/$/);
@@ -122,13 +138,15 @@ test("@desktop a known device: the module asks for the PIN; the section + 4 digi
   await ctx.close();
 });
 
-test("@desktop the lockout (own server): the last tries are counted, then the core's text and the countdown", async ({ browser }) => {
+test("@desktop the lockout per person (own server): the last tries are counted, then the core's text and the countdown; a colleague still signs in on the same tablet", async ({ browser }) => {
   test.setTimeout(90_000);
   const S = await ownServer("kpin", 22);
   try {
+    const a = await newKitchen(S.base), b = await newKitchen(S.base);
     const { ctx, page, errs } = await tablet(browser, { known: true, base: S.base });
     await page.goto("/kuhnya/vhod/");
     await expect(page.locator(".pinpad")).toBeVisible();
+    await page.locator("[data-who]", { hasText: a.name }).click();
     const tryPin = async () => { await keys(page, "0000"); await page.locator("button[data-go]").click(); };
     await tryPin();
     await expect(page.locator("[data-err]")).toHaveText("Грешен ПИН. Опитай пак.");
@@ -147,6 +165,12 @@ test("@desktop the lockout (own server): the last tries are counted, then the co
     await page.locator('.pinpad [data-k="1"]').click();
     await expect(page.locator(".dots i.on")).toHaveCount(0);
     await expect(page.locator(".pw a")).toBeVisible();
+    /* the colleague on the same tablet: never one lock for the whole kitchen (review 2, important 4) */
+    await page.reload();
+    await page.locator("[data-who]", { hasText: b.name }).click();
+    await keys(page, b.pin); await page.locator("button[data-go]").click();
+    await expect(page).toHaveURL(/\/kuhnya\/$/);
+    expect(((await (await ctx.request.get("/api/auth/me")).json()) as { user: { username: string } }).user.username).toBe(b.username);
     expect(errs).toEqual([]);
     await ctx.close();
   } finally { await S.stop(); }
@@ -154,6 +178,7 @@ test("@desktop the lockout (own server): the last tries are counted, then the co
 
 for (const [w, h] of [[1280, 800], [1024, 768], [768, 1024]] as [number, number][]) for (const theme of ["dark", "light"] as const) {
   test(`@desktop ${w} × ${h} ${theme}: the PIN step fits, no horizontal scroll, targets of 48 px, axe`, async ({ browser }) => {
+    await someone();
     const { ctx, page, errs } = await tablet(browser, { w, h, theme, known: true });
     await page.goto("/kuhnya/vhod/");
     await expect(page.locator(".pinpad")).toBeVisible();
@@ -170,6 +195,7 @@ for (const [w, h] of [[1280, 800], [1024, 768], [768, 1024]] as [number, number]
     expect(g.goBottom).toBeLessThanOrEqual(h);
     if (w < 900) expect(g.desc).toBe(0); else expect(g.desc).toBeGreaterThan(0);
     /* the error state (said on the tablet, no try is spent) */
+    await page.locator("[data-who]").first().click();
     await keys(page, "00"); await page.locator("button[data-go]").click();
     await expect(page.locator("[data-err]")).toHaveText("Въведи 4 цифри.");
     expect(await serious(page)).toEqual([]);

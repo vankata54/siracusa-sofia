@@ -55,16 +55,17 @@ const toast = (page: Page) => page.locator(".kt");
 test("@desktop „Изчерпано днес“: one touch on a dish of an accepted delivery, the notice says 1 order and the manager; the site, the order's line; „Върни“ and „Върни в менюто“", async ({ browser, request }) => {
   const DISH = "teleshki-sudzhuk";
   const { ctx, page, errs } = await tablet(browser);
+  await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "skara" } }); /* a run that stopped half-way */
   const o = await order(request, "delivery", [{ id: DISH, q: 1 }, { id: "kebapcheta", q: 1 }]);
   await page.goto("/kuhnya/izcherpano/");
   await expect(page.locator("h1")).toHaveText("Изчерпано днес");
-  await expect(page.locator(".klead")).toHaveText("Докоснете ястие, което свърши. Действа веднага.");
+  await expect(page.locator(".klead")).toHaveText("Докосни ястие, което свърши. Действа веднага.");
   await expect(page.locator(".eff li")).toHaveText(["Сайт, QR меню и сервитьор: видимо с „Изчерпано днес“, без „+“", "Wolt и Foodpanda: скрито"]);
   /* the section's dishes and the add-ons shared by every section */
   await expect(page.locator(".cath").first()).toHaveText("Скара Bertha");
   await expect(page.locator(".cath").last()).toHaveText(/^Добавки · за всички секции: готвят се с основното ястие$/);
   await expect(page.locator(".side h2")).toHaveText(/^Списък изчерпани \d+$/);
-  await expect(page.locator(".foot2")).toHaveText("В полунощ всичко се връща в менюто само.");
+  await expect(page.locator(".foot2")).toHaveText("В полунощ се връща в менюто всичко, отбелязано днес тук.");
   await expect(page.locator(".kcount")).toContainText("Изчерпани за Скара Bertha");
   await expect(page.locator(".kcount")).toContainText("Във всички секции");
   const tile = page.locator('.tile[data-id="' + DISH + '"]');
@@ -82,7 +83,7 @@ test("@desktop „Изчерпано днес“: one touch on a dish of an acce
   await expect(page.locator(".orow").first().locator("small")).toHaveText(/^Скара Bertha · от \d\d:\d\d$/);
   /* the notice: in how many accepted orders, who was told (a delivery: the manager), "Върни · 10" */
   await expect(toast(page)).toContainText("Телешки суджук · изчерпано днес");
-  await expect(toast(page)).toContainText("Има го в 1 приета поръчка: отбелязано на реда, известихме управителя (доставка и вземане).");
+  await expect(toast(page)).toContainText("В 1 приета поръчка · известихме управителя.");
   await expect(toast(page).locator("button")).toHaveText(/^Върни · (10|9)$/);
   /* one source: the site's menu and the order's line in the kitchen */
   await expect.poll(() => menuOut(request, DISH)).toBe(true);
@@ -110,6 +111,7 @@ test("@desktop „Изчерпано днес“: one touch on a dish of an acce
   await expect(page.locator(".orow", { hasText: "Телешки суджук" }).locator("small")).toHaveText(/^Скара Bertha · от \d\d:\d\d · Главен готвач \(Общ изглед\)$/);
   expect((await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "all" } })).status()).toBe(200);
   await expect(tile).toHaveAttribute("aria-pressed", "false");
+  expect((await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara" })).status).toBe(200); /* out of the queue for the next tests */
   expect(errs).toEqual([]);
   await ctx.close();
 });
@@ -195,7 +197,7 @@ test("@desktop „Изпълнени днес“: a finished order, newest first
   expect((await kpost(ctx, "orders/" + b.no + "/done", { sec: "skara" })).status).toBe(200);
   await page.goto("/kuhnya/izpalneni/");
   await expect(page.locator("h1")).toHaveText("Изпълнени днес");
-  await expect(page.locator(".klead")).toHaveText("Последните поръчки на Скара Bertha, най-новата горе. Ако нещо е отбелязано по грешка, върнете го в опашката.");
+  await expect(page.locator(".klead")).toHaveText("Последните поръчки на Скара Bertha, най-новата горе. Ако нещо е отбелязано по грешка, върни го в опашката.");
   await expect(page.locator('.kstrip a.kpill[data-fk="back"]')).toHaveText("Към опашката");
   const rb = page.locator('.dr[data-no="' + b.no + '"]'), ra = page.locator('.dr[data-no="' + a.no + '"]');
   await expect(rb).toBeVisible(); await expect(ra).toBeVisible();
@@ -207,7 +209,7 @@ test("@desktop „Изпълнени днес“: a finished order, newest first
   await expect(rb.locator(".s small")).toHaveText("Доставка");
   await expect(ra.locator(".s small")).toHaveText("Вземане");
   await expect(rb.locator(".it")).toHaveText("1 × Ущипци без лук, 1 × Пилешко филе");
-  await expect(rb.locator(".du")).toHaveText(/^за \d+ миннавреме$/);
+  await expect(rb.locator(".du")).toHaveText(/^(за \d+ мин|под 1 мин)навреме$/);
   await expect(rb.locator("[data-back]")).toHaveText("Върни в опашката");
   await expect(rb.locator("[data-back]")).toHaveAccessibleName("Върни в опашката: Доставка № " + b.no);
   const n0 = await page.locator(".kcount").textContent();
@@ -271,7 +273,7 @@ test("@desktop „Общ изглед“ of the head chef: orders in two section
   await expect(row.locator(".tm small")).toHaveText("остават");
   const t0 = await row.locator(".tm").textContent();
   await expect(row.locator(".tm")).not.toHaveText(t0!, { timeout: 3000 }); /* the deadline ticks */
-  await expect(page.locator(".legend")).toContainText("Докоснете секция, за да видите опашката ѝ.");
+  await expect(page.locator(".legend")).toContainText("Докосни секция, за да видиш опашката ѝ.");
   /* live: the salads finish their part */
   expect((await kpost(ctx, "orders/" + o.no + "/done", { sec: "studeni" })).status).toBe(200);
   await expect(row.locator(".sst")).toHaveText(["Скара · готви се", "Салати · готово"]);
@@ -322,3 +324,146 @@ for (const [w, h] of SIZES) for (const theme of ["dark", "light"] as const) {
     await ctx.close();
   });
 }
+
+/* ---------- проверка 2 на кухнята: the behaviours fixed after the reviews (decisions of the chief 18.11) ---------- */
+type Lines = { tickets: { no: string; lines: { i: number; ks: string; out: boolean }[] }[] };
+const queueOf = async (ctx: BrowserContext, sec = "skara") => (await (await ctx.request.get("/api/kitchen/queue?sec=" + sec)).json()) as Lines;
+async function hold(page: Page, sel: string) {
+  await page.locator(sel).scrollIntoViewIfNeeded();
+  const b = (await page.locator(sel).boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1150); await page.mouse.up();
+}
+const card = (page: Page, no: string) => page.locator('.tk[data-no="' + no + '"]');
+
+test("@desktop two outages in a row with nothing pressed: the bar goes away each time and new orders still come (review 2, blocking 1)", async ({ browser, request }) => {
+  test.setTimeout(60_000);
+  const { ctx, page, errs } = await tablet(browser);
+  await page.goto("/kuhnya/");
+  await expect(page.locator(".kcount")).toContainText("Чакат");
+  for (let n = 0; n < 3; n++) {
+    await ctx.setOffline(true);
+    await expect(page.locator(".koff")).toBeVisible();
+    await page.waitForTimeout(1500);
+    await ctx.setOffline(false);
+    await expect(page.locator(".koff"), "outage " + (n + 1)).toHaveCount(0, { timeout: 12_000 });
+    await expect(page.locator(".net")).toHaveText("Онлайн");
+  }
+  const o = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }]);
+  await expect(card(page, o.no)).toBeVisible({ timeout: 10_000 });
+  expect(errs).toEqual([]);
+  await ctx.close();
+});
+
+test("@desktop an action kept offline that another tablet overtook is refused and said; the tablet shows the new state (review 2, important 1)", async ({ browser, request }) => {
+  test.setTimeout(60_000);
+  const { ctx, page, errs } = await tablet(browser);
+  const o = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }]);
+  await page.goto("/kuhnya/");
+  await expect(card(page, o.no)).toBeVisible();
+  await ctx.setOffline(true);
+  await expect(page.locator(".koff")).toBeVisible();
+  await hold(page, '.tk[data-no="' + o.no + '"] [data-done]');           /* tablet A: "Готово", kept on the tablet */
+  await expect(card(page, o.no)).toHaveCount(0);
+  await page.waitForTimeout(300);
+  /* tablet B (online): "Готово", then "Върни" (it was not right after all) */
+  expect((await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara", saw: { 0: "wait" } })).status).toBe(200);
+  expect((await kpost(ctx, "orders/" + o.no + "/back", { sec: "skara", saw: { 0: "ready" } })).status).toBe(200);
+  await ctx.setOffline(false);
+  await expect(page.locator(".koff")).toHaveCount(0, { timeout: 12_000 });
+  await expect(toast(page)).toContainText("Едно действие не се записа");
+  await expect(toast(page)).toContainText("Друг таблет промени поръчката.");
+  await expect(card(page, o.no)).toBeVisible(); /* the new state: back in the queue */
+  expect((await queueOf(ctx)).tickets.find((t) => t.no === o.no)!.lines[0].ks).not.toBe("ready");
+  expect(await page.evaluate(() => localStorage.getItem("sk-outbox"))).toBeNull();
+  expect(errs).toEqual([]);
+  expect((await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara" })).status).toBe(200);
+  await ctx.close();
+});
+
+test("@desktop a touch made while the kept actions are on their way is sent too, nothing stays on the tablet (review 2, important 2)", async ({ browser, request }) => {
+  test.setTimeout(60_000);
+  const { ctx, page, errs } = await tablet(browser);
+  const a = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }, { id: "svinski-vrat", q: 1 }]);
+  const b = await order(request, "delivery", [{ id: "kebapcheta", q: 1 }, { id: "svinski-vrat", q: 1 }]);
+  await page.goto("/kuhnya/");
+  await expect(card(page, b.no)).toBeVisible();
+  await ctx.setOffline(true);
+  await expect(page.locator(".koff")).toBeVisible();
+  await card(page, a.no).locator(".ln").first().click();
+  /* the connection comes back slowly: every action of the kitchen takes 1,5 s */
+  await page.route("**/api/kitchen/orders/**", async (r) => { await new Promise((x) => setTimeout(x, 1500)); await r.continue(); });
+  await ctx.setOffline(false);
+  await page.waitForTimeout(400);
+  await card(page, b.no).locator(".ln").first().click();               /* while the bar still says "Няма връзка" */
+  await expect(page.locator(".koff")).toHaveCount(0, { timeout: 15_000 });
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("sk-outbox")), { timeout: 10_000 }).toBeNull();
+  await expect.poll(async () => (await queueOf(ctx)).tickets.find((t) => t.no === b.no)!.lines[0].ks, { timeout: 10_000 }).toBe("ready");
+  expect((await queueOf(ctx)).tickets.find((t) => t.no === a.no)!.lines[0].ks).toBe("ready");
+  await page.unroute("**/api/kitchen/orders/**");
+  for (const no of [a.no, b.no]) await kpost(ctx, "orders/" + no + "/done", { sec: "skara" });
+  expect(errs).toEqual([]);
+  await ctx.close();
+});
+
+test("@desktop „Изчерпано“ after „Започни“: the line being cooked is made and stays in the bill; only the waiting lines are marked (review 2, blocking 2)", async ({ browser, request }) => {
+  const DISH = "teleshki-sudzhuk";
+  const { ctx, page, errs } = await tablet(browser);
+  await ctx.request.put("/api/kitchen/sold-out/" + DISH, { data: { out: false, sec: "skara" } });
+  const cooking = await order(request, "delivery", [{ id: DISH, q: 1 }]);
+  expect((await kpost(ctx, "orders/" + cooking.no + "/start", { sec: "skara" })).status).toBe(200);
+  const waiting = await order(request, "pickup", [{ id: DISH, q: 1 }]);
+  await page.goto("/kuhnya/izcherpano/");
+  await page.locator('.tile[data-id="' + DISH + '"]').click();
+  await expect(toast(page)).toContainText(/В \d+ приет(а|и) поръчк(а|и) · известихме управителя\./);
+  const q = await queueOf(ctx);
+  expect(q.tickets.find((t) => t.no === cooking.no)!.lines[0]).toMatchObject({ ks: "cook", out: false });
+  expect(q.tickets.find((t) => t.no === waiting.no)!.lines[0]).toMatchObject({ ks: "wait", out: true });
+  /* back in the menu: the mark goes */
+  await page.locator(".orow", { hasText: "Телешки суджук" }).locator("[data-back]").click();
+  await expect.poll(async () => (await queueOf(ctx)).tickets.find((t) => t.no === waiting.no)!.lines[0].out).toBe(false);
+  for (const no of [cooking.no, waiting.no]) await kpost(ctx, "orders/" + no + "/done", { sec: "skara" });
+  expect(errs).toEqual([]);
+  await ctx.close();
+});
+
+test("@desktop „Готово“ with the keyboard: the focus goes to „Върни“ in the notice (one key), then to the next card (review 2, important 5)", async ({ browser, request }) => {
+  const { ctx, page, errs } = await tablet(browser);
+  const o = await order(request, "pickup", [{ id: "kebapcheta", q: 1 }]);
+  await page.goto("/kuhnya/");
+  await expect(card(page, o.no)).toBeVisible();
+  await card(page, o.no).locator("[data-done]").focus();
+  await page.keyboard.press("Enter");
+  await expect(card(page, o.no)).toHaveCount(0);
+  await expect(toast(page).locator("button")).toBeFocused();
+  await expect(toast(page).locator("button")).toHaveAccessibleName("Върни");
+  /* one live region; the seconds are not read aloud */
+  expect(await page.locator(".kt[role=status]").count()).toBe(0);
+  await page.keyboard.press("Enter");
+  await expect(card(page, o.no)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.tagName)).not.toBe("BODY");
+  await kpost(ctx, "orders/" + o.no + "/done", { sec: "skara" });
+  expect(errs).toEqual([]);
+  await ctx.close();
+});
+
+test("@desktop the head chef on a section's queue: „Общ изглед“ in the row; „Натоварено“ for 60+ min reminds on the key of the queue and of „Общ изглед“ (review 1)", async ({ browser }) => {
+  const { ctx, page, errs } = await tablet(browser, { sec: "all" });
+  /* the core's flag (unit-tested with the clock): here the answer says it has been on for 60+ min */
+  await page.route("**/api/kitchen/queue?*", async (r) => {
+    const res = await r.fetch(), j = await res.json();
+    j.busy = { ...j.busy, on: true, at: new Date(Date.now() - 61 * 60_000).toISOString(), atHm: "18:00", by: "Кухня · Скара", extra: 20, remind: true };
+    await r.fulfill({ response: res, json: j });
+  });
+  await page.goto("/kuhnya/#s=pesht");
+  await expect(page.locator(".ksec b")).toHaveText("Пещ за пици");
+  const busy = page.locator('.kstrip a.kpill[data-fk="busy"]');
+  await expect(busy).toHaveText("Натоварено +20 мин · 60+ мин");
+  await expect(busy).toHaveClass(/\bremind\b/);
+  const back = page.locator('.kstrip a.kpill[data-fk="back"]');
+  await expect(back).toHaveText("Общ изглед");
+  await back.click();
+  await expect(page).toHaveURL(/\/kuhnya\/obsht-izgled\/$/);
+  await expect(page.locator('.kstrip a.kpill[data-fk="busy"]')).toHaveClass(/\bremind\b/);
+  expect(errs).toEqual([]);
+  await ctx.close();
+});

@@ -245,6 +245,8 @@ export function mountPencil(o: PencilOptions): Pencil {
   udoc.body.appendChild(host);
   const $ = <E extends Element>(s: string) => root.querySelector(s) as E;
   const fab = roundFab ? $<HTMLButtonElement>("[data-fab]") : null, bar = $<HTMLElement>(".bar"), sw = $<HTMLElement>(".sw"), toastEl = $<HTMLElement>(".toast");
+  /* the bar is only see-through while the pencil is off: its buttons must not be reached with Tab then (kuhnya.review-2) */
+  bar.inert = true; toastEl.inert = true;
 
   /* the module's button in its slot: icon and word ("Молив" / "Изключи") */
   let btn: HTMLButtonElement | null = null;
@@ -435,9 +437,10 @@ export function mountPencil(o: PencilOptions): Pencil {
     toastEl.innerHTML = svg("check-circle", 22) + "<span>" + esc(text) + "</span>" + (link ? '<a href="' + esc(link.href) + '">' + esc(link.label) + "</a>" : "");
     /* the round button steps aside on the phone while its toast is up (the "Виж" link is never under it) */
     host.setAttribute("data-pen-toast", "");
+    toastEl.inert = false;
     requestAnimationFrame(() => toastEl.classList.add("on"));
     clearTimeout(tt);
-    tt = setTimeout(() => { toastEl.classList.remove("on"); host.removeAttribute("data-pen-toast"); }, 5200);
+    tt = setTimeout(() => { toastEl.classList.remove("on"); toastEl.inert = true; host.removeAttribute("data-pen-toast"); }, 5200);
   }
 
   /* --- the buttons --- */
@@ -462,6 +465,7 @@ export function mountPencil(o: PencilOptions): Pencil {
     if (on && lastType === "mouse" && ui.matchMedia && ui.matchMedia("(hover: none)").matches) lastType = "touch";
     paint();
     bar.classList.toggle("on", on);
+    bar.inert = !on;
     /* the page under the bar may make room for it (the staff apps move their "Няма връзка" strip below it):
        html[data-pen-on] + --pen-bar-b, the bottom edge of the bar in px */
     const de = udoc.documentElement;

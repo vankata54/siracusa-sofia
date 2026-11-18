@@ -12,7 +12,7 @@ import { audit } from "./audit.ts";
 import { COL, nowDate, type Ctx } from "./ctx.ts";
 import { CoreError, PAY_LABEL, type Channel, type Order, type OrderStatus, type PayMethod } from "./types.ts";
 import type { StaffCtx } from "./staff.ts";
-import { need, needBoss, may, invalid, maskPhone, maskEmail } from "./rights.ts";
+import { need, needBoss, may, invalid, maskPhone, maskEmail, serial } from "./rights.ts";
 import { createOrder, setOrderStatus, FINISHED, STATUS_LABEL, FLOW, nextStatus } from "./orders.ts";
 import { liveZones } from "./zones.ts";
 import { sofiaYmd, minutes } from "../lib/time.ts";
@@ -113,7 +113,8 @@ export async function orderCancel(ctx: Ctx, s: StaffCtx, no: string, reason: str
 export async function orderStep(ctx: Ctx, s: StaffCtx, no: string, status: OrderStatus): Promise<OrderDetail | { no: string; status: OrderStatus }> {
   need(s, ["orders", "kitchen", "driver"]);
   if (status === "cancelled" && (s.user.role === "admin" || s.sections.includes("orders"))) throw new CoreError("reason_required", ORDERS_MSG.reason, 422);
-  const o = await setOrderStatus(ctx, no, status, s.user.username, s);
+  /* one change of an order at a time, together with the kitchen's tablets (core/kitchen.ts: the same lock) */
+  const o = await serial(ctx.repo, "order:" + String(no || ""), () => setOrderStatus(ctx, no, status, s.user.username, s));
   return may(s, "orders") ? orderDetail(ctx, s, no) : { no: o.no, status: o.status };
 }
 

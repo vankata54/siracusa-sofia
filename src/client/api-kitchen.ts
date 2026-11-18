@@ -7,7 +7,8 @@
    to them (`dueHm` …); the screen ticks: left = Math.floor((due - (Date.now() + offset)) / 1000), offset = now - Date.now()
    at the moment of the answer. Every action is idempotent (`same: true` = nothing changed) and takes `at`: when it was
    made on the tablet (ISO or epoch ms; actions kept offline are sent later with their real time; 422 "bad_at" for a time
-   in the future or before the shift day).
+   in the future or before the shift day) and `saw`: the state of each line it acts on as the tablet showed it; while
+   another tablet changed those lines meanwhile, 409 "conflict" ("Друг таблет промени поръчката.").
 
    config()                      the sections (id, n, short, icon, cats), the norms (norm, soon, enterBefore, busyMin),
                                  stateText (чака / готви се / готово), undoSec 10, tapGuardMs 800, beatSec 30, missing[]
@@ -66,10 +67,10 @@ export const kitchenApi = {
   config: pick(async (c) => c.kitchen.config(await g(c)), () => http<KConfigView>("GET", "kitchen/config")),
   setConfig: pick(async (c, p: KConfigPatch, version?: number) => c.kitchen.setConfig(await g(c), p, version), (p: KConfigPatch, version?: number) => http<KConfigView>("PUT", "kitchen/config", { ...p, version })),
   queue: pick(async (c, sec: string) => c.kitchen.queue(await g(c), sec), (sec) => http<KQueue>("GET", "kitchen/queue" + q({ sec }))),
-  start: pick(async (c, no: string, sec: string, o: KOpt = {}) => c.kitchen.start(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/start", { sec, at: o.at })),
-  line: pick(async (c, no: string, i: number, ready: boolean, o: KOpt = {}) => c.kitchen.line(await g(c), no, i, ready, o), (no, i, ready, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/line", { i, ready, sec: o.sec, at: o.at })),
-  done: pick(async (c, no: string, sec: string, o: KOpt = {}) => c.kitchen.done(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/done", { sec, at: o.at })),
-  back: pick(async (c, no: string, sec: string, o: KOpt & { lines?: number[] } = {}) => c.kitchen.back(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/back", { sec, lines: o.lines, at: o.at })),
+  start: pick(async (c, no: string, sec: string, o: KOpt = {}) => c.kitchen.start(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/start", { sec, at: o.at, saw: o.saw })),
+  line: pick(async (c, no: string, i: number, ready: boolean, o: KOpt = {}) => c.kitchen.line(await g(c), no, i, ready, o), (no, i, ready, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/line", { i, ready, sec: o.sec, at: o.at, saw: o.saw })),
+  done: pick(async (c, no: string, sec: string, o: KOpt = {}) => c.kitchen.done(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/done", { sec, at: o.at, saw: o.saw })),
+  back: pick(async (c, no: string, sec: string, o: KOpt & { lines?: number[] } = {}) => c.kitchen.back(await g(c), no, sec, o), (no, sec, o = {}) => http<KAct>("POST", "kitchen/orders/" + e(no) + "/back", { sec, lines: o.lines, at: o.at, saw: o.saw })),
   seen: pick(async (c, no: string, sec: string) => c.kitchen.seen(await g(c), no, sec), (no, sec) => http<{ ok: true; same: boolean }>("POST", "kitchen/orders/" + e(no) + "/seen", { sec })),
   doneToday: pick(async (c, sec: string) => c.kitchen.doneToday(await g(c), sec), (sec) => http<KDone>("GET", "kitchen/done" + q({ sec }))),
   summary: pick(async (c) => c.kitchen.summary(await g(c)), () => http<KSummary>("GET", "kitchen/summary")),

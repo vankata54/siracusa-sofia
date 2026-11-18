@@ -79,7 +79,7 @@ test("@desktop a new order from the site arrives live: the banner „Нова ·
   await expect(c.locator(".tag.new")).toHaveText("Нова · от сайта");
   await expect(c.locator(".tmr small")).toHaveText("остават");
   await expect(c.locator(".tmr b")).toHaveText(/^(19:[45]\d|20:00)$/);
-  await expect(c.locator(".tk-m")).toHaveText(/пристигна \d\d:\d\d\s*срок \d\d:\d\d\s*шофьор \d\d:\d\d$/);
+  await expect(c.locator(".tk-m")).toHaveText(/пристигна \d\d:\d\d\s*срок \d\d:\d\d$/);
   await expect(c.locator(".tk-note")).toHaveText("Без прибори");
   /* only the lines of the section; the salad is in "Други секции" with its state in words */
   await expect(c.locator(".ln .nm")).toHaveText(["Кебапчета", "Свински врат"]);
@@ -88,7 +88,7 @@ test("@desktop a new order from the site arrives live: the banner „Нова ·
   await expect(c.locator(".tk-o h4")).toHaveText("Други секции");
   await expect(c.locator(".tk-o .os")).toHaveText("Салати · чака");
   await expect(c.locator("[data-start]")).toHaveText("Започни");
-  await expect(c.locator("[data-done] .lbl")).toHaveText(/^\s*Готово\s+задръжте 1 сек\.$/);
+  await expect(c.locator("[data-done] .lbl")).toHaveText(/^\s*Готово\s+задръж 1 сек\.$/);
   /* the timer runs every second */
   const t0 = await c.locator(".tmr b").textContent();
   await expect(c.locator(".tmr b")).not.toHaveText(t0!, { timeout: 3000 });
@@ -161,7 +161,7 @@ test("@desktop a finger: a tap ticks a line, a 1 s hold hands the order over, a 
   /* the finger slides on the button: no "Готово", the hint in the prototype's words */
   await touch("touchStart", x, y); await page.waitForTimeout(150);
   await touch("touchMove", x + 20, y + 4); await touch("touchMove", x + 40, y + 6);
-  await expect(btn.locator(".lbl small")).toHaveText("Задръжте, без да местите пръста");
+  await expect(btn.locator(".lbl small")).toHaveText("Задръж, без да местиш пръста");
   await page.waitForTimeout(1100); await touch("touchEnd");
   await expect(c).toBeVisible();
   expect((await ticket(ctx, o.no))!.lines[1].ks).toBe("wait");
@@ -207,7 +207,7 @@ test("@desktop „Започни“ -> „Готви се“ for the customer; a
   await expect.poll(async () => (await ticket(ctx, o.no))!.status).toBe("cooking");
   /* a line: one touch = ready */
   const ln = c.locator(".ln").first();
-  await expect(ln).toHaveAccessibleName(/^2\s×\s*Кебапчета\s*, натиснете за готово$/);
+  await expect(ln).toHaveAccessibleName(/^2\s×\s*Кебапчета\s*, натисни за готово$/);
   /* a second touch within 0,8 s is ignored (a wet hand): the line stays ready */
   await ln.click(); await ln.click();
   await expect(ln).toHaveClass(/\bdone\b/); await expect(ln).toHaveAttribute("aria-pressed", "true");
@@ -245,7 +245,7 @@ test("@desktop „Готово“ with a 1 s hold: a short press and a slide do 
   const cust = await tracking(browser, o);
   await open(page);
   const c = card(page, o.no), btn = c.locator("[data-done]");
-  await expect(btn).toHaveAccessibleName(new RegExp("^Готово\\s*задръжте 1 сек\\.\\s*: Доставка № " + o.no + "$"));
+  await expect(btn).toHaveAccessibleName(new RegExp("^Готово\\s*задръж 1 сек\\.\\s*: Доставка № " + o.no + "$"));
   expect(await btn.evaluate((el) => getComputedStyle(el).touchAction)).toBe("none");
   expect((await btn.boundingBox())!.height).toBe(64);
   /* a short press: the fill starts and stops, nothing happens */
@@ -255,15 +255,15 @@ test("@desktop „Готово“ with a 1 s hold: a short press and a slide do 
   await expect(btn).toHaveClass(/holding/);
   await page.waitForTimeout(350); await page.mouse.up();
   await expect(btn).not.toHaveClass(/holding/);
-  /* the finger slides: "Задръжте, без да местите пръста", in ember, for 2 s */
+  /* the finger slides: "Задръж, без да местиш пръста", in ember, for 2 s */
   await page.mouse.down(); await page.waitForTimeout(200);
   await page.mouse.move(b.x + b.width / 2 + 30, b.y + b.height / 2 + 6, { steps: 4 });
-  await expect(btn.locator(".lbl small")).toHaveText("Задръжте, без да местите пръста");
+  await expect(btn.locator(".lbl small")).toHaveText("Задръж, без да местиш пръста");
   await expect(btn).toHaveClass(/hint/);
   await page.waitForTimeout(1100); await page.mouse.up();
   await expect(c).toBeVisible();
   expect((await ticket(ctx, o.no))!.status).toBe("accepted");
-  await expect(btn.locator(".lbl small")).toHaveText("задръжте 1 сек.", { timeout: 4000 });
+  await expect(btn.locator(".lbl small")).toHaveText("задръж 1 сек.", { timeout: 4000 });
   /* the real hold */
   const n = +(await page.locator("[data-qn]").textContent())!;
   await hold(page, btn, 1150);
@@ -381,7 +381,7 @@ test("@desktop no connection: the bar with the instructions, the last data stay,
   await expect(off).toHaveAttribute("role", "alert");
   await expect(off.locator("b").first()).toHaveText("Няма връзка. Новите поръчки не идват.");
   await expect(off.locator("p").first()).toHaveText(/^Данните са от \d\d:\d\d\. Таймерите вървят по часовника на таблета\. „Готово“ се запазва и се изпраща, щом връзката се върне\.$/);
-  await expect(off.locator("li")).toHaveText(["Проверете Wi-Fi на таблета.", /^Ако до 2 мин няма връзка, кажете на управителя\./]);
+  await expect(off.locator("li")).toHaveText(["Провери Wi-Fi на таблета.", /^Ако до 2 мин няма връзка, кажи на управителя\./]);
   await expect(page.locator(".net")).toHaveText("Няма връзка"); await expect(page.locator(".net")).toHaveClass(/off/);
   /* the last data stay; the counters are under the bar; "Търси" and "Молив" stay; the keys of the row wait for the connection */
   await expect(ca.locator(".ln").first()).toHaveClass(/\bdone\b/);
@@ -444,7 +444,7 @@ test("@desktop „Търси“: number, dish in Latin letters, „×“, Enter 
   const dlg = page.locator(".kfind.on"), inp = dlg.locator("#kq");
   await expect(dlg).toHaveAttribute("role", "dialog"); await expect(dlg).toHaveAttribute("aria-modal", "true");
   await expect(inp).toBeFocused();
-  await expect(dlg.locator(".fscope")).toHaveText("Търсите само в чакащите поръчки на Скара Bertha: номер, маса, ястие (и на латиница).");
+  await expect(dlg.locator(".fscope")).toHaveText("Търсиш само в чакащите поръчки на Скара Bertha: номер, маса, ястие (и на латиница).");
   await expect(dlg.locator(".fchips button").filter({ hasText: "Доставки" })).toHaveCount(1);
   expect(await page.evaluate(() => (document.querySelector(".kd") as HTMLElement).inert)).toBe(true);
   /* the focus stays inside */
@@ -482,7 +482,7 @@ test("@desktop „Търси“: number, dish in Latin letters, „×“, Enter 
   await find.click();
   await inp.fill("зззз");
   await expect(dlg.locator(".kfempty b")).toHaveText("Няма „зззз“ в чакащите");
-  await expect(dlg.locator(".kfempty p")).toHaveText("Търсите само в поръчките на Скара Bertha: номер, маса, доставка, вземане или ястие.");
+  await expect(dlg.locator(".kfempty p")).toHaveText("Търсиш само в поръчките на Скара Bertha: номер, маса, доставка, вземане или ястие.");
   /* Esc closes, the focus is back on "Търси" */
   await page.keyboard.press("Escape");
   await expect(page.locator(".kfind")).toHaveCount(0);

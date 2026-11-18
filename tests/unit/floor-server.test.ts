@@ -217,8 +217,8 @@ describe("the PIN on a known device and the limits", async () => {
     expect(session).toMatch(/HttpOnly/i);
     expect(await (await app.request("/api/auth/me", { headers: { cookie: session.split(";")[0] } })).json()).toMatchObject({ user: { username: "waiter" }, home: "app:waiter" });
     expect((await app.request("/api/floor/hall", { headers: { cookie: session.split(";")[0] } })).status).toBe(200);
-    /* the kitchen: the PIN alone */
-    const k = await app.request("/api/auth/pin", { method: "POST", headers: { ...J, cookie: known }, body: JSON.stringify({ module: "kitchen", pin: "6094" }) });
+    /* the kitchen: the person + the PIN */
+    const k = await app.request("/api/auth/pin", { method: "POST", headers: { ...J, cookie: known }, body: JSON.stringify({ module: "kitchen", user: kid, pin: "6094" }) });
     expect((await k.json()).user.username).toBe("kitchen");
     /* a wrong password leaves no device cookie */
     const bad = await app.request("/api/auth/login", { method: "POST", headers: J, body: JSON.stringify({ username: "waiter", password: "wrong-password-1" }) });

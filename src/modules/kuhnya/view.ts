@@ -35,7 +35,9 @@ export const lineText = (l: { q: number; name: string }): string => l.q + " × "
 function modsHTML(l: KLineView): string {
   let h = "";
   for (const t of l.no) h += '<span class="md no">' + ic("minus", 18) + "без " + esc(t) + "</span> ";
-  for (const a of l.add) h += '<span class="md add">' + ic("plus", 18) + '<span class="vh">+ </span>' + esc(a.n) + (a.out ? " · изчерпано днес" : "") + "</span> ";
+  /* a sold-out add-on is red with ✕, like the sold-out dish (review 1, small 5) */
+  for (const a of l.add) h += a.out ? '<span class="md addout">' + ic("x", 18) + '<span class="vh">+ </span>' + esc(a.n) + " · изчерпано днес</span> "
+    : '<span class="md add">' + ic("plus", 18) + '<span class="vh">+ </span>' + esc(a.n) + "</span> ";
   if (l.note) h += '<span class="md nt">' + ic("note", 18) + esc(l.note) + "</span> ";
   if (l.out) h += '<span class="md out">' + ic("x", 18) + "Изчерпано днес</span>";
   return h ? '<span class="mds">' + h + "</span>" : "";
@@ -46,7 +48,7 @@ export function lineHTML(l: KLineView): string {
   const done = l.ks === "ready";
   return '<button class="ln' + (done ? " done" : "") + '" type="button" data-ln="' + l.i + '" aria-pressed="' + done + '">' +
     '<span class="q">' + l.q + '&thinsp;×</span> <span class="nm">' + esc(l.name) + (l.weight ? " <small>" + esc(l.weight) + "</small>" : "") + '</span> <span class="ck">' + ic("check", 24) + "</span>" + modsHTML(l) +
-    '<span class="vh">' + (done ? ", готово" : ", натиснете за готово") + "</span></button>";
+    '<span class="vh">' + (done ? ", готово" : ", натисни за готово") + "</span></button>";
 }
 
 /** the card of an order in the queue (K.ticket). `tm`: the timer at this moment (timerAt). */
@@ -55,7 +57,8 @@ export function ticketHTML(t: KTicket, tm: Tm, stateText: Record<KState, string>
   let meta = t.sched
     ? '<span class="tag sched">' + ic("calendar-check", 16) + (t.tomorrow ? "утре " : "за ") + esc(t.forHm) + "</span> <span>приета <b>" + esc(t.arrivedHm) + "</b></span>"
     : "<span>пристигна <b>" + esc(t.arrivedHm) + "</b></span> <span>срок <b>" + esc(t.dueHm) + "</b></span>";
-  if (t.driverHm) meta += " <span>шофьор <b>" + esc(t.driverHm) + "</b></span>";
+  /* "шофьор 19:50" only when it says something more than the deadline (review 1, small 2) */
+  if (t.driverHm && t.driverHm !== t.dueHm) meta += " <span>шофьор <b>" + esc(t.driverHm) + "</b></span>";
   if (t.isNew) meta = '<span class="tag new">' + ic("bell-ringing", 16) + "Нова" + (t.web ? " · от сайта" : "") + "</span> " + meta;
   if (started) meta += ' <span class="tag cook">' + ic("flame", 16) + "готви се от " + esc(t.startedHm) + "</span>";
   if (t.busyMin > 0) meta += ' <span class="tag busy">+' + t.busyMin + " мин</span>";
@@ -68,7 +71,7 @@ export function ticketHTML(t: KTicket, tm: Tm, stateText: Record<KState, string>
     '<div><span class="num">' + o.q + "&thinsp;×</span> <span>" + esc(o.name) + (o.out ? ' <b class="oout">' + ic("x", 14) + "изчерпано</b>" : "") + '</span> <span class="os ' + ST_CLS[o.state] + '">' + ic(ST_IC[o.state], 15) + esc(o.short) + " · " + esc(stateText[o.state] || ST_TEXT[o.state]) + "</span></div>").join("") + "</div>";
   h += '</div><footer class="tk-f' + (started || allDone ? " one" : "") + '">' +
     (started || allDone ? "" : '<button class="kb ink" type="button" data-start>' + ic("flame", 22) + "Започни</button> ") +
-    '<button class="kb ok hold" type="button" data-done><span class="lbl"><span>' + ic("check-circle", 24) + ' Готово</span> <small>задръжте 1 сек.</small></span><span class="vh">: ' + esc(src.text) + "</span></button></footer></article>";
+    '<button class="kb ok hold" type="button" data-done><span class="lbl"><span>' + ic("check-circle", 24) + ' Готово</span> <small>задръж 1 сек.</small></span><span class="vh">: ' + esc(src.text) + "</span></button></footer></article>";
   return h;
 }
 /** the same card without the running timer: when this text is the same, the card on the screen is not touched */
