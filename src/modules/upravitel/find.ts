@@ -14,7 +14,7 @@ import { pic } from "../../lib/render.ts";
 import { searchDishes, chips as qChips, toggle, latin } from "../../lib/search.ts";
 import { fmtNb as fmt } from "../../lib/format.ts";
 import { tag } from "../boss/frame.ts";
-import { ic, esc, plural, hmOf, TST, tagCls, ZONE, CH_IC, go } from "./common.ts";
+import { ic, esc, plural, NB, ppl, hmOf, TST, tagCls, ZONE, CH_IC, go } from "./common.ts";
 
 let live: Promise<void> | null = null;
 /** the live menu (sold out today, new and removed dishes) once; the build's menu until it comes */
@@ -58,12 +58,12 @@ export function provider(boss: Boss): BossSearch {
   }
   function oRow(o: NonNullable<MgrSearch["orders"]>[number]): string {
     const href = o.status === "accepted" ? go.now("n=" + o.no) : go.order(o.no);
-    return a(href, '<span class="fi">' + ic(CH_IC[o.channelName] || "receipt", 22) + "</span><span><b>№ " + esc(o.no) + " · " + esc(o.channelName) + "</b><small>" + esc(o.statusLabel) + " · " + esc(o.placedAt) +
+    return a(href, '<span class="fi">' + ic(CH_IC[o.channelName] || "receipt", 22) + "</span><span><b>№" + NB + esc(o.no) + " · " + esc(o.channelName) + "</b><small>" + esc(o.statusLabel) + " · " + esc(o.placedAt) +
       (o.name && o.channelName !== "Маса" ? " · " + esc(o.name) : "") + (o.phone ? " · " + esc(o.phone) : "") + '</small></span><span class="fr price">' + fmt(o.total) + "</span>");
   }
   const RST: Record<string, string> = { new: "Нова", confirmed: "Потвърдена", seated: "Дошли", no_show: "Неявили се", waitlist: "Чака маса" };
   function rRow(r: NonNullable<MgrSearch["reservations"]>[number]): string {
-    return a(go.hall("go=res"), '<span class="fi">' + ic("calendar-check", 22) + "</span><span><b>" + esc(r.time) + " · " + esc(r.name) + " · " + plural(r.people, "човек", "души") + "</b><small>Днес" + (r.tableN ? " · Маса " + r.tableN : " · без маса") + (r.note ? " · " + esc(r.note) : "") + "</small></span>" +
+    return a(go.hall("go=res"), '<span class="fi">' + ic("calendar-check", 22) + "</span><span><b>" + esc(r.time) + " · " + esc(r.name) + " · " + ppl(r.people) + "</b><small>Днес" + (r.tableN ? " · Маса" + NB + r.tableN : " · без маса") + (r.note ? " · " + esc(r.note) : "") + "</small></span>" +
       '<span class="fr">' + tag(r.status === "new" ? "warn" : "", r.status === "new" ? "hourglass" : "check", RST[r.status] || r.status) + "</span>");
   }
   function pRow(p: MgrSearch["people"][number]): string {

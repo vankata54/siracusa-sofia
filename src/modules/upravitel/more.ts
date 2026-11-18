@@ -40,7 +40,7 @@ function moreScreen(boss: Boss): void {
     boss.body.innerHTML = '<div class="mg-grid" data-upscr="more">' +
       '<section class="mg-blk" aria-labelledby="h-a"><div class="mg-h"><h2 id="h-a">Бързо</h2></div>' +
         (boss.can("orders") ? '<a class="mg-hero" href="' + go.phoneOrder() + '"><span class="hi">' + ic("phone", 28) + "</span><span><b>Нова поръчка по телефон</b><small>Телефон на клиента, доставка или вземане, час. Формата е в админа.</small></span>" + ic("caret-right", 24) + "</a>" : "") +
-        '<div class="mg-card mg-list" style="margin-top:12px">' +
+        '<div class="mg-card mg-list up-gap">' +
           (boss.can("reservations") ? row(go.newRes(), "calendar-check", "Нова резервация", "Формата е в „Резервации“ на админа") : "") +
           row(go.notes(boss.role), "pencil-simple", "Моите препоръки", "Какво предложи с молива и докъде е стигнало") +
           (owner ? row(bossHref("sobstvenik"), "chart-bar", "Към Собственик", "Твоят модул: оборот, тенденции, решения") : "") +
@@ -49,10 +49,10 @@ function moreScreen(boss: Boss): void {
         (list.length ? '<div class="mg-card mg-list">' + list.map((s) => row(aurl.section(s[0], s[2] || undefined), (SEC[s[0]] || { ic: "squares-four" }).ic, s[1], s[3], "", "arrow-up-right")).join("") + "</div>"
           : boss.empty({ icon: "lock", lock: true, title: "Няма раздели за тази роля", text: "Помоли главния админ за права." })) + "</section>" +
       '<section class="mg-blk all" aria-labelledby="h-v"><div class="mg-h"><h2 id="h-v">Изглед и звук</h2></div><div class="mg-card pad">' +
-        '<p class="label" id="mg-thl" style="margin:0 0 8px">Тема</p><div class="mg-themes" role="group" aria-labelledby="mg-thl">' + THEMES.map((t) => '<button type="button" data-sa="settheme" data-v="' + t[0] + '" aria-pressed="' + (th === t[0]) + '">' + ic(t[2], 20) + t[1] + "</button>").join("") + "</div>" +
-        (sound ? '<label class="mg-setrow" style="padding:16px 0 4px"><span class="si">' + ic("bell-ringing", 22) + "</span><span><b>Звук за нова онлайн поръчка</b><small>Двоен тон и известие. Помни се на това устройство.</small></span>" +
+        '<p class="label up-lab" id="mg-thl">Тема</p><div class="mg-themes" role="group" aria-labelledby="mg-thl">' + THEMES.map((t) => '<button type="button" data-sa="settheme" data-v="' + t[0] + '" aria-pressed="' + (th === t[0]) + '">' + ic(t[2], 20) + t[1] + "</button>").join("") + "</div>" +
+        (sound ? '<label class="mg-setrow up-snd"><span class="si">' + ic("bell-ringing", 22) + "</span><span><b>Звук за нова онлайн поръчка</b><small>Двоен тон и известие. Помни се на това устройство.</small></span>" +
           '<span class="mg-switch"><input type="checkbox" role="switch" data-snd data-keep="snd" aria-label="Звук за нова онлайн поръчка"' + (soundOn() ? " checked" : "") + '><span class="tr"></span></span></label>' : "") +
-      '</div><button class="pill pill-line pill-lg pill-block" type="button" data-bs="logout" style="margin-top:14px">' + ic("sign-out", 22) + "Изход</button></section></div>";
+      '</div><button class="pill pill-line pill-lg pill-block up-out" type="button" data-bs="logout">' + ic("sign-out", 22) + "Изход</button></section></div>";
   }
   draw();
   boss.loaded();

@@ -4,7 +4,7 @@
    (server/routes/boss.ts) and the demo (src/client/api-boss.ts) call the same functions. */
 import { describe, it, expect } from "vitest";
 import { createCore, MemoryRepo, type Audience, type Hasher, type Order, type RoleId, type StaffCtx } from "../../src/core/index.ts";
-import { lateMinOf, sumsWithout } from "../../src/core/shift.ts";
+import { lateMinOf, sumsWithout, lateText } from "../../src/core/shift.ts";
 import { items } from "../../src/lib/data.ts";
 
 const hasher: Hasher = { async hash(p) { return { salt: "s" + p.length, hash: "h:" + p, algo: "scrypt" }; }, async verify(p, _s, h) { return h === "h:" + p; } };
@@ -128,7 +128,7 @@ describe("'Проблеми сега': by urgency, every action and its 'Отм�
     const late = P.filter((x) => x.kind === "late");
     const ld = late.find((x) => x.ref.no === d.no)!, lp = late.find((x) => x.ref.no === p.no)!;
     expect(ld.sev).toBe(70 + 2 * ld.lateMin!); expect(lp.sev).toBe(60 + lp.lateMin!);
-    expect(ld.title).toBe("Доставка № " + d.no + " · закъснява " + ld.lateMin + " мин"); expect(ld.actions).toEqual(["call"]);
+    expect(ld.title).toBe("Доставка № " + d.no + " · закъснява " + lateText(ld.lateMin!)); expect(ld.actions).toEqual(["call"]);
     expect(P[0].key).toBe("late:" + d.no); /* 23 min late: "Първо това" */
     const kinds = new Set(P.map((x) => x.kind));
     expect([...kinds].sort()).toEqual(["ask", "call", "late", "out", "qr"]);
@@ -267,5 +267,48 @@ describe("'Залата' and 'Екипът'", () => {
     expect(k.soldOut.map((x) => x.id)).not.toContain(pizza.id);
     expect(await actions(core)).toEqual(expect.arrayContaining(["kitchen.busy_on", "menu.back"]));
     expect(events.filter((e) => e.type === "shift.update").map((e) => e.data.what)).toEqual(expect.arrayContaining(["kitchen.busy", "soldout"]));
+  });
+});
+
+describe("review 1: what waits for 'Приеми', one rule for a delay, the driver's cash", () => {
+  it("'Чака те' has only the orders that wait for 'Приеми' (web, phone), never a table order the waiter sent or a confirmed QR order", async () => {
+    const { core } = mk(), { s } = await people(core);
+    await core.floor.shiftStart(s.waiter, [3, 4]);
+    const w = await web(core, { mode: "pickup" });
+    const c3 = await codeOf(core, s.admin, 3), A = "a".repeat(32);
+    await core.floor.open(c3, A); await core.floor.cartAdd(c3, A, { id: pizza.id }); await core.floor.send(c3, A);
+    const q = await core.floor.qrConfirm(s.waiter, 3);
+    const t = await core.floor.order(s.waiter, 4, { lines: [{ id: salad.id, q: 1 }] });
+    const now = await core.shift.now(s.manager), nos = now.waits.orders!.map((o) => o.no);
+    expect(nos).toEqual([w.no]);
+    expect(nos).not.toContain(q.no);
+    for (const no of t.orders) expect(nos).not.toContain(no);
+    /* the badge counts the same */
+    expect(now.waits.n).toBe(1);
+  });
+  it("a delivery on the road has ONE delay: the same number in 'Проблеми сега' and in the driver's course ('Екипът'); over an hour in hours", async () => {
+    const { core, at, t } = mk(), { s } = await people(core);
+    const d = await web(core);
+    await core.orders.setStatus(d.no, "cooking", "kitchen", s.kitchen); await core.orders.setStatus(d.no, "ready", "kitchen", s.kitchen);
+    await core.driver.start(s.driver, { car: "a1", km: 1000 });
+    await core.driver.take(s.driver, [d.no]); await core.driver.go(s.driver, [d.no]);
+    for (const [mins, clock] of [[48, "20:30"], [110, "21:32"]] as [number, string][]) {
+      t.now = T0 + mins * MIN;
+      const c = at(clock), n = await c.shift.now(s.manager), tm = await c.shift.team(s.manager);
+      const p = n.problems.find((x) => x.key === "late:" + d.no)!;
+      const stop = tm.drivers.flatMap((x) => x.course.stops).find((x) => x.no === d.no)!;
+      expect(p.lateMin).toBeGreaterThan(0);
+      expect(stop.late).toBe(p.lateMin);
+      expect(stop.lateLabel).toBe("+" + lateText(p.lateMin!));
+      expect(p.title).toContain("закъснява " + lateText(p.lateMin!));
+    }
+    expect(lateText(47)).toBe("47\u00a0мин"); expect(lateText(407)).toBe("6\u00a0ч 47\u00a0мин"); expect(lateText(120)).toBe("2\u00a0ч");
+  });
+  it("the driver's cash says what it is: the cash orders + the start float - the fuel in cash", async () => {
+    const { core } = mk(), { s } = await people(core);
+    await core.driver.start(s.driver, { car: "a1", km: 1000, float: 20 });
+    const tm = await core.shift.team(s.manager), d = tm.drivers[0];
+    expect(d.cashParts).toEqual({ orders: 0, float: 20, fuel: 0 });
+    expect(d.cash).toBe(20);
   });
 });

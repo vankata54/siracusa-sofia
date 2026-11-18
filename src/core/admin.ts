@@ -50,7 +50,8 @@ export async function summary(ctx: Ctx, s: StaffCtx): Promise<Summary> {
     : null;
   return {
     waiting: {
-      orders: seeOrders ? orders.filter((o) => o.status === "accepted").length : null,
+      /* to accept: web, phone and office orders; a table order is already in the kitchen (the waiter or the QR confirmation) */
+      orders: seeOrders ? orders.filter((o) => o.status === "accepted" && !(o.channel === "qr" || o.channel === "waiter" || !!o.table)).length : null,
       reservations: seeRes ? res.filter((r) => r.status === "new").length : null,
       noShows: blocks,
       notes: await notesWaiting(ctx, s),

@@ -33,6 +33,8 @@ export function agoMin(t: string | number): string {
   const m = Math.max(0, Math.round(secSince(t) / 60));
   return m < 1 ? "току-що" : m < 60 ? "преди " + m + NB + "мин" : "преди " + Math.floor(m / 60) + " ч." + (m % 60 ? " " + (m % 60) + NB + "мин" : "");
 }
+/** "47 мин" / "6 ч 47 мин" (the same words as core/shift.ts lateText) */
+export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? " " + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
 export const toMin = (hm: string) => +hm.slice(0, 2) * 60 + +hm.slice(3, 5);
 /** "ср, 18 ноември" from "2026-11-18" */
 export const dayOf = (ymd: string, short = false) => { const [y, m, d] = ymd.split("-").map(Number); return dateLong(new Date(y, m - 1, d, 12), short); };
@@ -54,10 +56,12 @@ export function statusOf(min: number): [string, string] {
   if (min < 1350) return ["warn", "Доставката приключи за днес · Вземане до 22:30"];
   return ["warn", "Кухнята затвори · Отворено до 23:00"];
 }
+/** an hour never alone on a line: "до 21:00", "в 10:00" */
+export const nbsp = (t: string) => t.replace(/(до|в|от) (\d)/g, "$1" + NB + "$2");
 /** "ср, 18 ноември · 19:42  ● Отворено до 23:00 · Доставка до 21:00" */
 export function statusLine(date: string, now: string): string {
   const s = statusOf(toMin(now));
-  return '<p class="mg-day"><b>' + esc(dayOf(date)) + " · " + esc(now) + '</b><span class="st"><span class="mg-dot' + (s[0] ? " " + s[0] : "") + '" aria-hidden="true"></span><span>' + esc(s[1]) + "</span></span></p>";
+  return '<p class="mg-day"><b>' + esc(dayOf(date)) + " · " + esc(now) + '</b><span class="st"><span class="mg-dot' + (s[0] ? " " + s[0] : "") + '" aria-hidden="true"></span><span>' + nbsp(esc(s[1])) + "</span></span></p>";
 }
 
 /* ---------- the addresses (never written by hand) ---------- */
@@ -93,15 +97,18 @@ const BOX = "up-outbox";
 /** the actions that may wait on the phone (no "Отмени" for them: the server has not seen them yet) */
 type Op = "accept" | "resConfirm" | "busy" | "backIn" | "ack" | "callGo" | "answer" | "walkin" | "setWaiter" | "setTables" | "block" | "qrConfirm" | "callAssign" | "qrAssign";
 interface Queued { op: Op; args: unknown[]; label: string; at: number }
-const readBox = (): Queued[] => { try { const v = JSON.parse(localStorage.getItem(BOX) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+const readBox0 = (): Queued[] => { try { const v = JSON.parse(localStorage.getItem(BOX) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 const writeBox = (l: Queued[]) => { try { if (l.length) localStorage.setItem(BOX, JSON.stringify(l)); else localStorage.removeItem(BOX); } catch { /* private mode */ } };
+/** is this action already kept on the phone (the row says "Записано на телефона", its button is off) */
+export const queued = (op: Op, key: string): boolean => readBox0().some((q) => q.op === op && String(q.args[0]) === key);
 /** an action of the manager. ok: what happens on success (the toast with "Отмени"). Without a connection it waits on the
     phone (when `op` is given) and the toast says so; another error: its text for people. Returns the result or null. */
 export async function act<T>(boss: Boss, o: { op?: Op; args?: unknown[]; label: string; run: () => Promise<T>; ok: (r: T) => void; fail?: (e: unknown) => boolean }): Promise<T | null> {
   const keep = () => {
     if (!o.op) { boss.toast("Няма връзка. Опитай пак, щом се върне."); return null; }
-    writeBox([...readBox(), { op: o.op, args: o.args || [], label: o.label, at: Date.now() }]);
+    writeBox([...readBox0(), { op: o.op, args: o.args || [], label: o.label, at: Date.now() }]);
     boss.toast(o.label + OFF);
+    document.dispatchEvent(new CustomEvent("up:kept"));
     return null;
   };
   if (boss.offline()) return keep();
@@ -115,13 +122,13 @@ export async function act<T>(boss: Boss, o: { op?: Op; args?: unknown[]; label: 
 }
 /** the connection is back: what waited on the phone goes now, in order (a refusal is said, the rest goes on) */
 export async function flush(boss: Boss): Promise<void> {
-  const l = readBox(); if (!l.length) return;
+  const l = readBox0(); if (!l.length) return;
   writeBox([]);
   const api = bossApi as unknown as Record<Op, (...a: unknown[]) => Promise<unknown>>;
   let sent = 0;
   for (const q of l) {
     try { await api[q.op](...q.args); sent++; }
-    catch (e) { if (isOff(e)) { writeBox([...readBox(), q]); continue; } boss.toast(q.label + ": " + msgOf(e)); }
+    catch (e) { if (isOff(e)) { writeBox([...readBox0(), q]); continue; } boss.toast(q.label + ": " + msgOf(e)); }
   }
   if (sent) boss.toast(sent === 1 ? "Записаното на телефона е изпратено." : "Изпратихме " + sent + " записани действия.");
 }
@@ -169,6 +176,8 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
   const soon = () => { clearTimeout(t); t = setTimeout(() => { void reload(); }, 250); };
   boss.onLive(soon, LIVE);
   boss.onRetry(() => { void flush(boss).then(() => reload(false)); });
+  /* an action kept on the phone: its row says so at once */
+  document.addEventListener("up:kept", () => redraw());
   /* the minutes of a late order and the tablets change with the time: a quiet look every 30 s (not while the search is typed in) */
   setInterval(() => { if (document.visibilityState === "visible" && !(document.activeElement && document.activeElement.id === "bs-q")) void reload(); }, o.every || 30_000);
   startTicks();
@@ -178,6 +187,8 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
 
 /** the badge of "Сега" on the other tabs: the same number as on "Сега" (each thing once: problems + "Чака те") */
 export function nowBadge(boss: Boss): void {
+  /* no badge until the module's own number is known (never the dashboard's number first) */
+  boss.badge("now", 0);
   let t: ReturnType<typeof setTimeout> | undefined;
   const load = () => { bossApi.now().then((n: MgrNow) => boss.badge("now", n.counts.now), () => { /* the frame's own number stays */ }); };
   boss.onLive(() => { clearTimeout(t); t = setTimeout(load, 400); }, LIVE);
@@ -234,7 +245,8 @@ export async function callSheet(boss: Boss, no: string, why: string, onDone: (()
 /** the sections of the kitchen and their tablets (also on "Екипът") */
 export function sectionsHTML(k: MgrKitchen): string {
   return '<div class="mg-card mg-list mg-secs">' + k.sections.map((s) => '<div class="mg-sec' + (s.tablet.online ? "" : " offl") + '"><span class="si">' + ic(s.icon, 22) + '</span><div class="sn"><b>' + esc(s.n) + "</b>" +
-    (s.tablet.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът работи</small>' : "") + "</div>" +
+    (s.tablet.online ? '<small><span class="mg-dot" aria-hidden="true"></span>Таблетът работи</small>' : s.tablet.today ? "" : '<small><span class="mg-dot idle" aria-hidden="true"></span>Таблетът още не е влизал днес</small>') + "</div>" +
     '<div class="sc"><span><b>' + s.wait + "</b>" + (s.wait === 1 ? "чака" : "чакат") + "</span>" + (s.late ? '<span class="late">' + ic("warning", 14) + "<b>" + s.late + "</b>" + (s.late === 1 ? "закъснява" : "закъсняват") + "</span>" : "") + "</div>" +
-    (s.tablet.online ? "" : '<span class="mg-offtag">' + ic("warning-circle", 18) + "Таблетът е без връзка" + (s.tablet.lastHm ? " от " + esc(s.tablet.lastHm) : "") + "</span>") + "</div>").join("") + "</div>";
+    /* a tablet that has not signed in today is calm; the ember tag only for one that was online and dropped */
+    (s.tablet.online ? "" : s.tablet.today ? '<span class="mg-offtag">' + ic("warning-circle", 18) + "Таблетът е без връзка от " + esc(s.tablet.lastHm) + "</span>" : "") + "</div>").join("") + "</div>";
 }

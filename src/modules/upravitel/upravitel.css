@@ -15,3 +15,41 @@
   .hl-grid{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
   .hl-grid > .mg-blk{margin-top:20px}
 }
+
+/* ---------- „Сега“: „Оценки „Не““ е в колоната на кухнята (на телефон след нея; от 900 px вдясно, под „Кухнята“) ---------- */
+.now-grid > .now-kit{margin-top:28px; min-width:0}
+.now-grid > .now-kit > .mg-blk:first-child{margin-top:0}
+.mg-probs.up-gap{margin-top:12px}
+/* подзаглавие в блок („Изчерпано днес“, „Чакат маса“) */
+.mg-h.up-sub{margin:22px 0 10px}
+.mg-h.up-sub h2{font-size:19px}
+/* таблет, който днес още не е влизал: спокойно, без жар */
+.mg-sec .mg-dot.idle{background:var(--line-strong)}
+/* без връзка: известието е под лентата „Няма връзка“, никога върху „Опитай пак“ */
+.bs-ov.stale > .bs-toast{top:calc(var(--bs-top) + 88px)}
+
+/* ---------- „Залата“ ---------- */
+.up-late{display:inline-flex; margin-top:6px}
+.mg-acts.up-acts2{margin-top:8px}
+.hl-zone-p{margin-top:14px}
+.up-tags{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px}
+.mg-kv.up-sum b{font-size:20px}
+.mg-busy.up-walk{box-shadow:inset 0 0 0 1.5px var(--line-strong); padding:12px 12px 12px 16px}
+.mg-busy.up-walk b{font-size:17px}
+
+/* ---------- „Екипът“ ---------- */
+.up-gap8{margin-top:8px}
+.mg-setrow.up-busy{margin-bottom:12px}
+.mg-setrow.up-busy.on{background:var(--ember); color:var(--on-ember)}
+.mg-setrow.up-busy.on small{color:inherit}
+.up-course{margin:16px 0 0; font-size:16px; font-weight:800}
+.mg-note.up-n15{font-size:15px}
+
+/* ---------- „Още“ ---------- */
+.mg-list.up-gap{margin-top:12px}
+.label.up-lab{margin:0 0 8px}
+.mg-setrow.up-snd{padding:16px 0 4px}
+.pill.up-out{margin-top:14px}
+/* „За предаване“: от какво е сумата (на ред под нея, в размера на бележката) */
+.mg-cash small span, .mg-cash small .price{font-size:inherit}
+.mg-cash small .price{font-weight:800; color:var(--ink)}

@@ -123,7 +123,9 @@ test("the money rule: only one order, one table, a driver's cash; with „Фин
   await signIn(context, S.base, "manager");
   async function check(label: string) {
     const now = await (await m.get("/api/boss/now")).json() as { waits: { orders: { no: string; total: number }[] }; money: boolean };
-    const team = await (await m.get("/api/boss/team")).json() as { drivers: { user: string; cash: number }[] };
+    const team = await (await m.get("/api/boss/team")).json() as { drivers: { user: string; cash: number; cashParts: { orders: number; float: number | null; fuel: number } }[] };
+    /* a driver's cash and what it is made of (the cash orders, the start float, the fuel in cash) */
+    const cashes = team.drivers.flatMap((x) => [Math.abs(x.cash), x.cashParts.orders, x.cashParts.float || 0, x.cashParts.fuel]).map((v) => norm(euro(v)));
     const seen: string[] = [];
     for (const [path, what] of [["/upravitel/", "Сега"], ["/upravitel/zalata/", "Залата"], ["/upravitel/ekipat/", "Екипът"]]) {
       await page.goto(S.base + path + PV);
@@ -132,7 +134,7 @@ test("the money rule: only one order, one table, a driver's cash; with „Фин
       for (const e of list) {
         expect(e.where, label + " " + what + ": " + e.text).not.toMatch(/^OTHER/);
         if (e.where === "order") { const o = now.waits.orders.find((x) => x.no === e.key); expect(o, "order " + e.key).toBeTruthy(); expect(norm(e.text)).toBe(norm(euro(o!.total))); }
-        if (e.where === "cash") { expect(team.drivers.some((x) => norm(euro(x.cash)) === norm(e.text)), "cash " + e.text).toBe(true); }
+        if (e.where === "cash") expect(cashes, "cash " + e.text).toContain(norm(e.text));
         seen.push(what + ":" + e.where + ":" + norm(e.text));
       }
       /* never the words of a sum over orders */

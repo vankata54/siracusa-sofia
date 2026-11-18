@@ -249,6 +249,12 @@ test("no connection: „Приеми“ is kept on the phone and goes by itself 
   await expect(page.locator(".bs-net")).toBeVisible();
   await row.locator("button").click();
   await expect(toast(page)).toContainText("Записано на телефона, тръгва само, щом има връзка.");
+  /* the row says so and cannot be sent twice; the toast is under the bar, never over "Опитай пак" */
+  await expect(row.locator(".mg-wout")).toContainText("Записано на телефона");
+  await expect(row.locator("button")).toBeDisabled();
+  await page.waitForTimeout(600);
+  const g = await page.evaluate(() => ({ t: document.querySelector(".bs-toast")!.getBoundingClientRect().top, n: document.querySelector(".bs-net")!.getBoundingClientRect().bottom }));
+  expect(g.t).toBeGreaterThanOrEqual(g.n - 1);
   const a = await admin();
   expect(await statusOf(a, o.no)).toBe("accepted");
   await context.setOffline(false);

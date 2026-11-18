@@ -78,6 +78,11 @@ export function lateMinOf(o: Order, today: string, now: number, zoneMin: Map<str
   const due = /^\d{2}:\d{2}$/.test(o.at) ? +o.at.slice(0, 2) * 60 + +o.at.slice(3) : placed + (o.mode === "delivery" ? zoneMin.get(o.zone) || 35 : LATE_PICKUP_MIN);
   return now > due ? now - due : 0;
 }
+/** "47 мин" / "6 ч 47 мин": the delay in words (the problems, the call sheet and the course of a driver: one text) */
+export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? " " + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
+/** the orders that wait for "Приеми": from the site, by phone, the offices (a table order is already in the kitchen:
+    the waiter sent it, or the QR order was confirmed) */
+export const waitsAccept = (o: Pick<Order, "status" | "channel" | "table">): boolean => o.status === "accepted" && !isTable(o);
 const isTable = (o: Pick<Order, "channel" | "table">) => o.channel === "qr" || o.channel === "waiter" || !!o.table;
 /** "Доставка" / "Вземане" / "Маса" / "Офис" */
 export const chName = (o: Pick<Order, "channel" | "mode" | "table">): string => (isTable(o) ? "Маса" : o.channel === "office" ? "Офис" : o.mode === "delivery" ? "Доставка" : "Вземане");
@@ -131,12 +136,13 @@ export interface WaitOrder {
   /** a table order: the number of the table (from the order's name "Маса 12") */ tableN?: number;
   /** the sum of THIS order (allowed) */ total: number;
   /** the sold-out dishes in it: "Приеми" asks first ("Обади се на клиента" / "Приеми без него") */ out: string[]; outAll: boolean; fresh: boolean;
+  /** late by (minutes, the rule of lateMinOf); 0 = on time */ lateMin: number;
 }
 export interface WaitRes { id: string; date: string; time: string; name: string; people: number; tableN: number | null; occasion: string; phone: string }
 export interface MgrKitchen {
   open: boolean;
   busy: { on: boolean; at: Iso | null; atHm: string; by: string | null; extra: number; etaMin: number; etaBusyMin: number };
-  sections: { id: string; n: string; short: string; icon: string; wait: number; late: number; soon: number; oldestMin: number | null; out: number; tablet: { online: boolean; text: string; lastHm: string } }[];
+  sections: { id: string; n: string; short: string; icon: string; wait: number; late: number; soon: number; oldestMin: number | null; out: number; tablet: { online: boolean; text: string; lastHm: string; /** was it online today at all (else: "още не е влизал днес") */ today: boolean } }[];
   soldOut: { id: string; n: string; secName: string; atHm: string; by: string | null }[];
 }
 export interface MgrNow {
@@ -202,35 +208,38 @@ async function problemsOf(w: World): Promise<Problem[]> {
     const names = [...new Set(o.lines.filter((l) => l.out).map((l) => l.name || l.id))];
     if (!names.length || ack["out:" + o.no]) continue;
     out.push({ key: "out:" + o.no, kind: "out", sev: 95, tone: "ember", icon: "warning", title: "№ " + o.no + " · Изчерпано: " + names.join(", "),
-      meta: chName(o) + " · " + (o.name || "") + " · " + (o.status === "accepted" ? "чака „Приеми“" : "в кухнята") + " · обади се и предложи друго",
+      meta: chName(o) + " · " + (o.name || "") + " · " + (o.status === "accepted" ? "чака „Приеми“" : "в кухнята") + (lateMinOf(o, w.day, w.now, w.zoneMin) ? " · закъснява " + lateText(lateMinOf(o, w.day, w.now, w.zoneMin)) : "") + " · обади се и предложи друго",
       since: null, lateMin: null, done: null, actions: o.status === "accepted" ? ["call", "without"] : ["call"], ref: { no: o.no, mode: o.mode } });
   }
   /* late orders: a delivery grows twice as fast; the solved ones stay at the bottom ("решено") */
   for (const { o, m } of lateOrders(w)) {
+    /* an order waiting for "Приеми" with a sold-out dish already has the card "Изчерпано" (its delay is in that card's
+       meta) and the row in "Чака те": never a third card */
+    if (out.some((p) => p.key === "out:" + o.no)) continue;
     const tbl = isTable(o), road = o.status === "on_way", a = ack["late:" + o.no] || null;
     const tn = tbl && o.table ? (tileOf(o.table)?.n ?? o.table) : null;
     const secs = [...new Set(o.lines.map((l) => secOfLine(cfg, l)))].map((id) => cfg.sections.find((x) => x.id === id)?.n || id);
     const meta = (road ? "На път · " + (o.driver ? w.names.get(o.driver) || o.driver : "шофьор") + (o.zone ? " · " + o.zone : "") : STATUS_LABEL[o.status] + (secs.length ? " · " + secs.join(", ") : "")) + " · приета " + o.placedAt;
     out.push({ key: "late:" + o.no, kind: "late", sev: a ? -1 : o.mode === "delivery" ? 70 + 2 * m : 60 + m, tone: a ? "solved" : "warn", icon: road ? "moped" : tbl ? "chair" : "chef-hat",
-      title: (tbl ? "Маса " + tn + " · № " + o.no : chName(o) + " № " + o.no) + " · закъснява " + m + " мин",
+      title: (tbl ? "Маса " + tn + " · № " + o.no : chName(o) + " № " + o.no) + " · закъснява " + lateText(m),
       meta: a ? meta + " · " + (a.what === "called" ? "обади се" : "видяно") + " " + hmIso(a.at) : meta,
       since: null, lateMin: m, done: a ? { at: a.at, by: a.name, what: a.what } : null, actions: a ? [] : tbl ? ["kitchen", "seen"] : ["call"], ref: { no: o.no, mode: tbl ? "table" : o.mode, ...(tbl && o.table ? { table: { id: o.table, n: +(tn || 0) } } : {}) } });
   }
   return out.sort((a, b) => b.sev - a.sev || (a.key < b.key ? -1 : 1));
 }
 
-function waitOrder(o: Order, freshNos: Set<string>): WaitOrder {
+function waitOrder(o: Order, freshNos: Set<string>, lateMin = 0): WaitOrder {
   const outN = [...new Set(o.lines.filter((l) => l.out).map((l) => l.name || l.id))];
   const tm = /^Маса (\d+)$/.exec(o.name || "");
   return { ...(tm && isTable(o) ? { tableN: +tm[1] } : {}), no: o.no, placedAt: o.placedAt, ts: o.ts, channel: o.channel, channelName: chName(o), mode: o.mode, at: o.at, sched: o.sched, name: o.name, phone: maskPhone(o.phone), zone: o.zone,
-    lines: o.lines.map((l) => ({ name: l.name || l.id, q: l.q, out: !!l.out })), total: o.total, out: outN, outAll: o.lines.length > 0 && o.lines.every((l) => l.out), fresh: freshNos.has(o.no) };
+    lines: o.lines.map((l) => ({ name: l.name || l.id, q: l.q, out: !!l.out })), total: o.total, out: outN, outAll: o.lines.length > 0 && o.lines.every((l) => l.out), fresh: freshNos.has(o.no), lateMin };
 }
 async function kitchenOf(ctx: Ctx, s: StaffCtx): Promise<MgrKitchen> {
   const [k, so, st] = await Promise.all([kitchenSummary(ctx, s), kitchenSoldOut(ctx, s, K_ALL), getSettings(ctx)]);
   return {
     open: state(ctx.clock).kitchen,
     busy: { on: k.busy.on, at: k.busy.at, atHm: k.busy.atHm, by: k.busy.by, extra: k.busy.extra, etaMin: st.kitchen.etaMin, etaBusyMin: st.kitchen.etaBusyMin },
-    sections: k.sections.map((x) => ({ id: x.id, n: x.n, short: x.short, icon: x.icon, wait: x.wait, late: x.late, soon: x.soon, oldestMin: x.oldestMin, out: x.out, tablet: { online: x.tablet.online, text: x.tablet.text, lastHm: x.tablet.lastHm } })),
+    sections: k.sections.map((x) => ({ id: x.id, n: x.n, short: x.short, icon: x.icon, wait: x.wait, late: x.late, soon: x.soon, oldestMin: x.oldestMin, out: x.out, tablet: { online: x.tablet.online, text: x.tablet.text, lastHm: x.tablet.lastHm, today: !!x.tablet.lastAt && sofiaYmd(new Date(x.tablet.lastAt)) === sofiaYmd(nowDate(ctx)) } })),
     soldOut: so.list.map((r) => ({ id: r.id, n: r.n, secName: r.secName, atHm: r.atHm, by: r.by })),
   };
 }
@@ -248,7 +257,8 @@ export async function managerNow(ctx: Ctx, s: StaffCtx): Promise<MgrNow> {
   const freshNos = w.orders.filter((o) => o.status === "accepted" && o.channel === "web").sort((a, b) => a.ts - b.ts).map((o) => o.no);
   const fs = new Set(freshNos);
   /* "Чака те": the rule of the admin's dashboard (core/admin.ts summary), only what the role sees */
-  const orders = may(s, "orders") ? w.orders.filter((o) => o.status === "accepted").sort((a, b) => a.ts - b.ts).map((o) => waitOrder(o, fs)) : null;
+  /* only the orders that wait for "Приеми" (web, phone, office): a table order is already in the kitchen */
+  const orders = may(s, "orders") ? w.orders.filter(waitsAccept).sort((a, b) => a.ts - b.ts).map((o) => waitOrder(o, fs, lateMinOf(o, w.day, w.now, w.zoneMin))) : null;
   const tn = new Map(tiles.map((t) => [t.id, t.n]));
   const reservations = may(s, "reservations") ? resToday.filter((r) => r.status === "new").sort((a, b) => (a.time < b.time ? -1 : 1))
     .map((r) => ({ id: r.id, date: r.date, time: r.time, name: r.name, people: r.people, tableN: r.table ? tn.get(r.table) ?? null : null, occasion: r.occasion || "", phone: maskPhone(r.phone) })) : null;
@@ -372,15 +382,21 @@ export interface MgrTeam {
 }
 export async function managerTeam(ctx: Ctx, s: StaffCtx): Promise<MgrTeam> {
   needManager(s, "staff");
-  const [sv, hall, dv] = await Promise.all([shiftView(ctx, s), hallLive(ctx, s), driversView(ctx, s)]);
-  const now = minutes(ctx.clock);
+  const [sv, hall, dv, orders, zones] = await Promise.all([shiftView(ctx, s), hallLive(ctx, s), driversView(ctx, s), ctx.repo.list<Order>(COL.orders), liveZones(ctx)]);
+  const now = minutes(ctx.clock), day = sofiaYmd(nowDate(ctx)), zoneMin = new Map(zones.map((z) => [z.n, z.etaMin])), byNo = new Map(orders.map((o) => [o.no, o]));
+  /* the delay of a stop: the same rule and the same "now" as "Проблеми сега" (lateMinOf), never a second number */
+  const stopLate = <T extends { no: string; late: number; lateLabel: string | null }>(x: T): T => {
+    const o = byNo.get(x.no); if (!o || FINISHED.includes(o.status) || o.status === "cancelled") return x;
+    const m = lateMinOf(o, day, now, zoneMin);
+    return { ...x, late: m, lateLabel: o.sched ? x.lateLabel : m ? "+" + lateText(m) : "навреме" };
+  };
   return {
     now: hmOf(now), shiftOver: now >= SHIFT_OVER_MIN,
     waiters: sv.waiters.map((w) => ({ username: w.username, name: w.name, since: w.since, tables: w.tables, calls: w.waiting, qr: hall.qr.filter((q) => w.tables.some((t) => t.id === q.table.id)).length, late: w.late, avgSec: w.avgSec, answered: w.answered })),
     unassigned: sv.unassigned,
     tables: hall.tables.map((t) => ({ id: t.id, n: t.n, zone: t.zone, owner: t.owner ? t.owner.username : null, ownerName: t.owner ? t.owner.name : null })),
     kitchen: await kitchenOf(ctx, s),
-    drivers: dv.drivers.map((d) => ({ ...d, cashWhen: now >= CASH_NOW_MIN ? "now" : "end" })), driversWaiting: dv.waiting, asks: dv.asks, problems: dv.problems,
+    drivers: dv.drivers.map((d) => ({ ...d, course: { ...d.course, stops: d.course.stops.map(stopLate) }, cashWhen: now >= CASH_NOW_MIN ? "now" : "end" })), driversWaiting: dv.waiting, asks: dv.asks, problems: dv.problems,
   };
 }
 /** "Смени масите": the waiter's new tables (at least one); taken from a colleague, dropped to the colleague (floor-shift.ts,

@@ -12,7 +12,7 @@ import { mountBoss, tag, cnt, type Boss } from "../boss/frame.ts";
 import { bossApi, ApiError, type MgrNow, type Problem, type WaitOrder, type MgrKitchen } from "../../client/api-boss.ts";
 import { pic } from "../../lib/render.ts";
 import { findDish, catById } from "../../lib/data.ts";
-import { ic, esc, plural, NB, ppl, timer, agoMin, statusLine, go, screen, act, callSheet, pickWaiter, hashMap, CH_IC, dayOf, sectionsHTML, prettyPhone, isOff, msgOf, type Screen } from "./common.ts";
+import { ic, esc, plural, NB, ppl, timer, agoMin, statusLine, go, screen, act, callSheet, pickWaiter, hashMap, CH_IC, dayOf, sectionsHTML, lateText, queued, prettyPhone, isOff, msgOf, type Screen } from "./common.ts";
 import { fmtNb as fmt } from "../../lib/format.ts";
 import { floorApi, type TableRating } from "../../client/api-floor.ts";
 import { aurl } from "../../admin/routes.ts";
@@ -26,6 +26,8 @@ export async function initNow(): Promise<void> {
 function nowScreen(boss: Boss): void {
   let showAll = false;
   boss.body.innerHTML = boss.skeleton(4, "Зареждаме смяната…");
+  /* no badge until the module's own number is known (never the dashboard's number first) */
+  boss.badge("now", 0);
   const S: Screen<MgrNow> = screen(boss, {
     load: () => bossApi.now(),
     err: "Поръчките и повикванията не се заредиха. Админът и кухнята работят; опитай пак след малко.",
@@ -45,10 +47,11 @@ function nowScreen(boss: Boss): void {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
     const no = rates.filter((r) => !r.happy && r.text && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date(r.at)) === today).slice(0, 5);
     const hm = (iso: string) => new Intl.DateTimeFormat("bg-BG", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
-    return '<section class="mg-blk now-rates" id="rates" aria-labelledby="h-rt"><div class="mg-h"><h2 id="h-rt">Оценки от масите</h2>' + (no.length ? cnt(no.length) : "") +
-      '<a class="mg-link more" href="' + aurl.section("customers", "tab=feedback") + '">Обратна връзка ' + ic("arrow-up-right", 18) + "</a></div>" +
-      (no.length ? '<div class="mg-card mg-list">' + no.map((r) => '<div class="mg-wrow"><span class="wi">' + ic("warning-circle", 22) + '</span><div class="wt"><b>„' + esc(r.text) + '“</b><small>' + (r.tableN ? "Маса" + NB + r.tableN + " · " : "") + esc(hm(r.at)) + "</small></div></div>").join("") + "</div>"
-        : '<div class="mg-allok">' + ic("check-circle", 32) + "<div><b>Днес няма недоволни гости с бележка.</b><span>Отговорът „Не“ от QR масата идва тук и в „Обратна връзка“.</span></div></div>") + "</section>";
+    /* nothing to read today: no block (the screen stays calm; "Обратна връзка" in the admin has the history) */
+    if (!no.length) return "";
+    return '<section class="mg-blk now-rates" id="rates" aria-labelledby="h-rt"><div class="mg-h"><h2 id="h-rt">Оценки „Не“</h2>' + cnt(no.length) +
+      '<a class="mg-link more" href="' + aurl.section("customers", "tab=feedback") + '">Всички ' + ic("arrow-up-right", 18) + "</a></div>" +
+      '<div class="mg-card mg-list">' + no.map((r) => '<div class="mg-wrow"><span class="wi">' + ic("warning-circle", 22) + '</span><div class="wt"><b>„' + esc(r.text) + '“</b><small>' + (r.tableN ? "Маса" + NB + r.tableN + " · " : "") + esc(hm(r.at)) + "</small></div></div>").join("") + "</div></section>";
   }
 
   /* ---------- the pulse: 5 numbers, each leads to its place ---------- */
@@ -87,17 +90,18 @@ function nowScreen(boss: Boss): void {
     const shown = showAll ? list : open.slice(0, 5), more = list.length - shown.length;
     return '<section class="mg-blk now-probs" id="problems" aria-labelledby="h-p"><div class="mg-h"><h2 id="h-p">Проблеми сега</h2>' + (open.length ? cnt(open.length, true) : "") + "</div>" +
       (open.length ? "" : '<div class="mg-allok">' + ic("check-circle", 32) + "<div><b>Няма проблеми сега</b><span>Повикванията над " + d.settings.callManager + NB + "мин, закъсненията и въпросите на шофьорите идват тук сами.</span></div></div>") +
-      (shown.length ? '<div class="mg-probs"' + (open.length ? "" : ' style="margin-top:12px"') + ">" + shown.map(probCard).join("") + "</div>" : "") +
+      (shown.length ? '<div class="mg-probs' + (open.length ? "" : " up-gap") + '">'  + shown.map(probCard).join("") + "</div>" : "") +
       (more > 0 ? '<button class="pill pill-line pill-lg mg-more" type="button" data-a="allp">' + ic("caret-down", 20) + (more === done.length && open.length <= 5 ? "Решени днес · " + more : "Покажи още " + more) + "</button>" : "") + "</section>";
   }
 
   /* ---------- "Чака те" (the rule of the admin's dashboard) ---------- */
   function orderRow(o: WaitOrder): string {
-    const nw = boss.freshOrder() === o.no, n = o.lines.reduce((a, l) => a + l.q, 0), bad = o.out.join(", "), table = o.channelName === "Маса";
+    const nw = boss.freshOrder() === o.no, n = o.lines.reduce((a, l) => a + l.q, 0), bad = o.out.join(", "), table = o.channelName === "Маса", kept = queued("accept", o.no);
     return '<div class="mg-wrow" data-wno="' + esc(o.no) + '"><span class="wi">' + ic(CH_IC[o.channelName] || "receipt", 22) + '</span><div class="wt"><b>№' + NB + esc(o.no) + " · " + esc(o.channelName + (o.tableN ? " " + o.tableN : "")) + (nw ? " " + tag("ember", "bell-ringing", "Нова") : "") + "</b><small>" +
       (!table && o.name ? esc(o.name) + " · " : "") + plural(n, "ястие", "ястия").replace(" ", NB) + ' · <span class="price">' + fmt(o.total) + "</span> · " + agoMin(o.ts) + "</small>" +
-      (bad ? '<span class="mg-wout">' + tag("ember", "warning", "Изчерпано: " + bad) + "</span>" : "") + "</div>" +
-      '<div class="wa"><button class="pill pill-ink" type="button" data-a="accept" data-no="' + esc(o.no) + '" aria-label="Приеми №' + NB + esc(o.no) + (bad ? ", в нея има изчерпано" : "") + '">' + ic("check", 20) + "Приеми</button></div></div>";
+      (bad ? '<span class="mg-wout">' + tag("ember", "warning", "Изчерпано: " + bad) + "</span>" : "") +
+      (kept ? '<span class="mg-wout">' + tag("line", "clock", "Записано на телефона") + "</span>" : "") + "</div>" +
+      '<div class="wa"><button class="pill pill-ink" type="button" data-a="accept" data-no="' + esc(o.no) + '"' + (kept ? " disabled" : "") + ' aria-label="Приеми №' + NB + esc(o.no) + (bad ? ", в нея има изчерпано" : "") + '">' + ic("check", 20) + "Приеми</button></div></div>";
   }
   function waits(d: MgrNow): string {
     const W = d.waits, orders = W.orders || [], res = W.reservations || [], blocks = W.blocks || [];
@@ -107,7 +111,7 @@ function nowScreen(boss: Boss): void {
       '<div class="mg-wrow"><span class="wi tnum">' + esc(r.time) + '</span><div class="wt"><b>' + esc(r.name) + "</b><small>" + ppl(r.people) + "</small><small>Днес в " + esc(r.time) + (r.tableN ? " ·" + NB + "Маса" + NB + r.tableN : " · без маса") + (r.occasion ? " ·" + NB + esc(r.occasion) : "") + "</small></div>" +
       '<div class="wa"><button class="pill pill-ink" type="button" data-a="confirm" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" data-time="' + esc(r.time) + '" aria-label="Потвърди резервацията на ' + esc(r.name) + " в " + esc(r.time) + '">' + ic("check", 20) + "Потвърди</button></div></div>").join("");
     if (blocks.length) rows += '<div class="mg-wgrp">' + ic("warning-circle", 18) + "Неявили се за решение · " + blocks.length + "</div>" + blocks.map((x) =>
-      '<div class="mg-wrow"><span class="wi">' + ic("user", 22) + '</span><div class="wt"><b>' + esc(x.name || "Клиент") + "</b><small>" + plural(x.count || 2, "неявяване", "неявявания").replace(" ", NB) + '</small><small><span class="nw">' + esc(x.phone).replace(/ /g, NB) + "</span>" + (x.at ? " · последно " + esc(dayOf(x.at.slice(0, 10), true)) : "") + "</small></div>" +
+      '<div class="mg-wrow"><span class="wi">' + ic("user", 22) + '</span><div class="wt"><b>' + esc(x.name || "Клиент") + "</b><small>" + plural(x.count || 2, "неявяване", "неявявания").replace(" ", NB) + '</small><small><span class="nw">' + esc(x.phone).replace(/ /g, NB) + "</span>" + (x.at ? " · последно " + esc(dayOf(x.at.slice(0, 10), true)).replace(/ /g, NB) : "") + "</small></div>" +
       '<div class="wa"><button class="pill pill-ink" type="button" data-a="block" data-ref="' + esc(x.ref) + '">' + ic("scales", 20) + "Реши</button></div></div>").join("");
     if (W.notes && W.notes.n) rows += '<div class="mg-wgrp">' + ic("pencil-simple", 18) + "Твоите препоръки · " + W.notes.n + '</div><div class="mg-wrow"><span class="wi">' + ic("pencil-simple", 22) + '</span><div class="wt"><b>' +
       esc((W.notes.title || "С нов статус").replace(/ваша/g, "твоя").replace(/ваши/g, "твои")) + '</b><small>От молива, в „Бележки“ на админа</small></div><div class="wa"><a class="pill pill-line" href="' + go.notes(boss.role) + '">Виж</a></div></div>';
@@ -120,18 +124,18 @@ function nowScreen(boss: Boss): void {
     const b = k.busy, open = k.open;
     const busy = '<label class="mg-busy' + (b.on ? " on" : "") + (open ? "" : " off") + '"><b>' + ic("hourglass", 24) + 'Натоварено</b><span class="mg-switch"><input type="checkbox" role="switch" data-busy data-keep="busy" aria-label="Натоварено"' + (b.on ? " checked" : "") + (open ? "" : " disabled") + '><span class="tr"></span></span>' +
       '<span class="sub">' + (!open ? "Кухнята не приема поръчки сега (от 10:00 до 22:30)." : b.on ? "Включено" + (b.by ? " от " + esc(b.by) : "") + (b.atHm ? " в " + esc(b.atHm) : "") + ". Гостите виждат <q>Възможни са закъснения · около" + NB + b.etaBusyMin + NB + "мин</q>." : "Изключено. Гостите виждат <q>около" + NB + b.etaMin + NB + "мин</q> за доставка.") + "</span></label>";
-    const so = '<div class="mg-h" style="margin:22px 0 10px"><h2 style="font-size:19px">Изчерпано днес</h2>' + cnt(k.soldOut.length) + "</div>" +
+    const so = '<div class="mg-h up-sub"><h2>Изчерпано днес</h2>' + cnt(k.soldOut.length) + "</div>" +
       (k.soldOut.length ? '<div class="mg-card mg-list">' + k.soldOut.map((x) => { const dsh = findDish(x.id), c = dsh ? catById[dsh.cat] : null;
-        return '<div class="mg-orow">' + (dsh ? pic(dsh) : '<span class="pic" aria-hidden="true"></span>') + "<div><b>" + esc(x.n) + "</b><small>" + (c ? esc(c.n) : esc(x.secName)) + " · скрито с „Изчерпано днес“</small></div>" +
+        return '<div class="mg-orow">' + (dsh ? pic(dsh) : '<span class="pic" aria-hidden="true"></span>') + "<div><b>" + esc(x.n) + "</b><small>" + (c ? esc(c.n) : esc(x.secName)) + (x.by ? " · " + esc(x.by) + (x.atHm ? " в " + esc(x.atHm) : "") : " · отбелязано в менюто") + "</small></div>" +
           '<button class="pill pill-line" type="button" data-a="back" data-id="' + esc(x.id) + '" data-n="' + esc(x.n) + '" aria-label="Върни в менюто: ' + esc(x.n) + '">' + ic("arrow-counter-clockwise", 20) + "Върни</button></div>"; }).join("") + "</div>"
         : '<div class="mg-allok">' + ic("check-circle", 28) + "<div><b>Всичко е в менюто</b><span>Кухнята отбелязва изчерпаното от своя екран.</span></div></div>");
-    return '<section class="mg-blk now-kit" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухнята</h2><a class="mg-link more" href="' + go.kitchen() + '">Екранът ' + ic("arrow-up-right", 18) + "</a></div>" +
+    return '<section class="mg-blk" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухнята</h2><a class="mg-link more" href="' + go.kitchen() + '">Екранът ' + ic("arrow-up-right", 18) + "</a></div>" +
       busy + sectionsHTML(k) + so + "</section>";
   }
 
   function draw(d: MgrNow): string {
     const has = d.problems.some((x) => !x.done);
-    return '<div class="now-grid' + (has ? " has-probs" : "") + '" data-upscr="now"><div class="now-day">' + statusLine(d.date, d.now) + '</div><div class="now-pulse">' + pulse(d) + "</div>" + problems(d) + waits(d) + kitchen(d.kitchen) + ratingsHTML() + "</div>";
+    return '<div class="now-grid' + (has ? " has-probs" : "") + '" data-upscr="now"><div class="now-day">' + statusLine(d.date, d.now) + '</div><div class="now-pulse">' + pulse(d) + "</div>" + problems(d) + waits(d) + '<div class="now-kit">' + kitchen(d.kitchen) + ratingsHTML() + "</div></div>";
   }
 
   /* ---------- the actions ---------- */
@@ -226,7 +230,7 @@ function nowScreen(boss: Boss): void {
   function callWhy(p: Problem): string {
     if (p.kind === "out") return "Изчерпано днес: " + p.title.replace(/^.*Изчерпано: /, "") + ". Предложи друго ястие или откажи само него.";
     const road = p.icon === "moped", who = p.meta.split(" · ")[1] || "шофьор";
-    return "Закъснява " + (p.lateMin || 0) + NB + "мин" + (road ? ", на път с " + who : ", още в кухнята") + ". Кажи на клиента новото време.";
+    return "Закъснява " + lateText(p.lateMin || 0).replace(/ (мин|ч)/g, NB + "$1") + (road ? ", на път с " + who : ", още в кухнята") + ". Кажи на клиента новото време.";
   }
 
   boss.body.addEventListener("click", (e) => {

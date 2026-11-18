@@ -46,6 +46,9 @@ function scheme(name: string, road: Stop[]): string {
     '<div class="cap">' + ic("info", 16) + "<span>Схема, не е карта. S е ресторантът, жълтото кръгче е колата по пътя към следващия адрес (без GPS), червеното е следващият адрес.</span></div></div>";
 }
 
+const price = (n: number) => '<span class="price">' + fmt(n) + "</span>";
+/** the restaurant is open (10:00-23:00 by the hour of the screen) */
+const open = (d: { t: MgrTeam }) => { const m = +d.t.now.slice(0, 2) * 60 + +d.t.now.slice(3, 5); return m >= 600 && m < 1380; };
 function teamScreen(boss: Boss): void {
   boss.body.innerHTML = boss.skeleton(4, "Зареждаме смяната…");
   nowBadge(boss);
@@ -58,24 +61,24 @@ function teamScreen(boss: Boss): void {
 
   function waiters(d: Data): string {
     const W = d.t.waiters;
-    if (!W.length) return '<section class="mg-blk" id="waiters"><div class="mg-h"><h2>Сервитьори</h2></div>' + boss.empty({ icon: "moon", title: "Смяната още не е започнала", text: "Сервитьорите избират масите си при вход. Тук ги виждаш, щом влязат." }) + "</section>";
+    if (!W.length) return '<section class="mg-blk" id="waiters"><div class="mg-h"><h2>Сервитьори</h2></div>' + boss.empty({ icon: "moon", title: open(d) ? "Още няма сервитьор на смяна" : "Смяната още не е започнала", text: "Сервитьорите избират масите си при вход. Тук ги виждаш, щом влязат." }) + "</section>";
     return '<section class="mg-blk" id="waiters" aria-labelledby="h-w"><div class="mg-h"><h2 id="h-w">Сервитьори</h2>' + cnt(W.length) + "</div>" + W.map((w) => {
       const calls = w.calls + w.qr, tiles = w.tables.map((t) => ({ t, x: tileOf(d, t.id) })), busy = tiles.filter((y) => y.x && y.x.state !== "free" && y.x.state !== "res").length;
       return '<article class="mg-card mg-person" id="w-' + esc(w.username) + '" data-wid="' + esc(w.username) + '"><div class="mg-ph"><span class="av">' + ic("user", 24) + "</span><div><b>" + esc(w.name) + "</b><small>" +
         (d.t.shiftOver ? '<span class="mg-dot off" aria-hidden="true"></span>Смяната приключи · беше от ' + hmOf(w.since) : '<span class="mg-dot" aria-hidden="true"></span>На смяна от ' + hmOf(w.since)) + "</small></div></div>" +
         '<div class="mg-stats"><div class="mg-stat"><span>Маси</span><b>' + w.tables.length + '</b></div><div class="mg-stat' + (calls ? " hot" : "") + '"><span>Чакат го</span><b>' + calls + '</b></div><div class="mg-stat"><span>Отговор</span><b>' + (w.avgSec == null ? "-" : mmss(w.avgSec)) + "</b></div></div>" +
-        '<p class="mg-note">' + ic("info", 16) + "<span>„Отговор“: средно от повикване до „Отивам“, днес" + (w.avgSec == null ? ": още няма повиквания." : " (" + plural(w.answered, "повикване", "повиквания") + ").") + "</span></p>" +
+        '<p class="mg-note">' + ic("info", 16) + "<span>„Отговор“: средно от повикване до „Отивам“, днес" + (w.avgSec == null ? ": още няма отговорено повикване." : " (" + plural(w.answered, "повикване", "повиквания") + ").") + "</span></p>" +
         '<div class="mg-chips" aria-label="Масите на ' + esc(w.name) + ": " + w.tables.map((t) => t.n).join(", ") + '">' + tiles.map(({ t, x }) => {
           const st = x ? x.state : "free", cls = st === "call" || st === "bill" || st === "qr" ? "call" : st !== "free" && st !== "res" ? "busy" : "";
           return '<span class="mg-tno ' + cls + '" title="Маса ' + t.n + ": " + (TST[st] || TST.free)[0] + '">' + t.n + "</span>"; }).join("") + "</div>" +
-        (d.h ? '<p class="mg-note" style="margin-top:8px">' + busy + " заети · плътно: заета, червено: вика или QR</p>" : "") +
+        (d.h ? '<p class="mg-note up-gap8">' + busy + " заети · плътно: заета, червено: вика или QR</p>" : "") +
         '<button class="pill pill-line pill-lg change" type="button" data-change="' + esc(w.username) + '">' + ic("chair", 22) + "Смени масите</button></article>";
     }).join("") + "</section>";
   }
   function kitchen(d: Data): string {
     const k = d.t.kitchen, b = k.busy;
     return '<section class="mg-blk" id="kitchen" aria-labelledby="h-k"><div class="mg-h"><h2 id="h-k">Кухня</h2><a class="mg-link more" href="' + go.kitchen() + '">Екранът ' + ic("arrow-up-right", 18) + "</a></div>" +
-      '<a class="mg-card mg-setrow" href="' + go.now("go=kitchen") + '" style="margin-bottom:12px' + (b.on ? ";background:var(--ember);color:var(--on-ember)" : "") + '"><span class="si">' + ic("hourglass", 22) + "</span><span><b>Натоварено: " + (b.on ? "включено" : "изключено") + "</b><small" + (b.on ? ' style="color:inherit"' : "") + ">" +
+      '<a class="mg-card mg-setrow up-busy' + (b.on ? " on" : "") + '" href="' + go.now("go=kitchen") + '"><span class="si">' + ic("hourglass", 22) + "</span><span><b>Натоварено: " + (b.on ? "включено" : "изключено") + "</b><small>" +
         (b.on ? "От " + esc(b.by || "кухнята") + (b.atHm ? " в " + esc(b.atHm) : "") + " · около " + b.etaBusyMin + NB + "мин" : "Гостите виждат „около " + b.etaMin + NB + "мин“") + "</small></span>" + ic("caret-right", 20) + "</a>" +
       sectionsHTML(k) +
       '<p class="mg-note">' + ic("info", 16) + '<span>Секциите и кое ястие къде се готви са условни <span class="missing">[ЛИПСВА: секции на кухнята]</span>.</span></p></section>';
@@ -89,10 +92,13 @@ function teamScreen(boss: Boss): void {
         (o.lateLabel ? (o.late ? tag("warn", "clock", o.lateLabel) : tag("", "clock", o.lateLabel)) : "") + "</li>").join("");
       const now = dr.cashWhen === "now", car = dr.car;
       return '<article class="mg-card mg-person" id="d-' + esc(dr.user) + '"><div class="mg-ph"><span class="av">' + ic("moped", 24) + "</span><div><b>" + esc(dr.name) + "</b><small>" + (d.t.shiftOver ? "Смяната приключи · беше от" + NB + hmOf(dr.since) : "На смяна от" + NB + hmOf(dr.since)) + "</small></div>" + tag(dr.status === "road" ? "ember" : "", st[1], st[0]) + "</div>" +
-        (road.length ? '<h3 style="margin:16px 0 0;font-size:16px;font-weight:800">Курсът · ' + plural(road.length, "адрес", "адреса") + '</h3><ol class="mg-stops">' + stops + "</ol>" + scheme(dr.name, road)
-          : '<p class="mg-note" style="font-size:15px">' + (dr.status === "back" ? "Връща се към ресторанта след последната доставка." : "В ресторанта, без поръчки за доставяне.") + "</p>") +
-        '<div class="mg-kv" style="margin-top:8px"><span>Кола</span><b>' + (car && !car.missing ? esc(car.n) + (car.plate ? " · " + esc(car.plate) : "") : '<span class="missing">[ЛИПСВА: коли]</span>') + '</b></div><div class="mg-kv"><span>Доставени днес</span><b>' + dr.deliveredToday + "</b></div>" +
-        '<div class="mg-cash' + (now ? " now" : "") + '"><span>' + (now ? "За предаване сега" : "За предаване в края на смяната") + '</span><b class="price">' + fmt(dr.cash) + '</b><small>В брой от доставените поръчки. Предава се на <span class="missing">[ЛИПСВА: на кого]</span>.</small></div></article>';
+        (road.length ? '<h3 class="up-course">Курсът · ' + plural(road.length, "адрес", "адреса") + '</h3><ol class="mg-stops">' + stops + "</ol>" + scheme(dr.name, road)
+          : '<p class="mg-note up-n15">' + (dr.status === "back" ? "Връща се към ресторанта след последната доставка." : "В ресторанта, без поръчки за доставяне.") + "</p>") +
+        '<div class="mg-kv up-gap8"><span>Кола</span><b>' + (car && !car.missing ? esc(car.n) + (car.plate ? " · " + esc(car.plate) : "") : '<span class="missing">[ЛИПСВА: коли]</span>') + '</b></div><div class="mg-kv"><span>Доставени днес</span><b>' + dr.deliveredToday + "</b></div>" +
+        (() => { const p = dr.cashParts, owe = dr.cash < -0.004;
+          /* what it is made of, as the driver's end of shift: the cash orders + the start float - the fuel paid in cash */
+          const parts = "В брой от поръчките " + price(p.orders) + (p.float != null ? " + начално ресто " + price(p.float) : "") + (p.fuel ? " - гориво в брой " + price(p.fuel) : "") + ".";
+          return '<div class="mg-cash' + (now ? " now" : "") + '"><span>' + (owe ? "Ресторантът му дължи" : now ? "За предаване сега" : "За предаване в края на смяната") + '</span><b class="price">' + fmt(Math.abs(dr.cash)) + "</b><small>" + parts + ' Предава се на <span class="missing">[ЛИПСВА: на кого]</span>.</small></div>'; })() + "</article>";
     }).join("") +
       '<p class="mg-note">' + ic("lock", 16) + "<span>Мястото на шофьора се вижда само по време на доставка и само от собственика и управителя.</span></p></section>";
   }

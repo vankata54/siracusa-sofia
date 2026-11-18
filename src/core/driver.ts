@@ -286,6 +286,8 @@ export interface DriverRow {
   deliveredToday: number; problems: number;
   /** cash to hand over at the end of the shift (a sum per driver is not turnover: the manager may see it) */
   cash: number; cashTo: string;
+  /** what the cash is made of (as the driver's end of shift): the cash orders + the start float - the fuel paid in cash */
+  cashParts: { orders: number; float: number | null; fuel: number };
   /** no GPS in v1 (decision 17.11.2026) */
   position: null;
 }
@@ -1241,7 +1243,7 @@ export async function drivers(ctx: Ctx, s: StaffCtx): Promise<DriversView> {
     return {
       user: sh.user, name: sc.names.get(sh.user) || sh.name, since: sh.startedAt, sinceAt: clock(msOf(sh.startedAt) ?? sc.now), car: carLite(sc.cars, sh.car), status, statusLabel: DRIVER_STATUS_LABEL[status],
       course: { id, stops: stops.map(({ v }, k) => ({ no: v.no, n: k + 1, zone: v.zone, addr: v.addr, st: v.st, stLabel: v.stLabel, late: v.late, lateLabel: v.due == null ? null : v.late ? "+" + v.late + " мин" : "навреме", next: plan.locked === v.no, arrivedAt: v.arrivedAt })) },
-      deliveredToday: all.filter((o) => o.status === "delivered" && sofiaYmd(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashTo: DRIVER_MISSING.handTo, position: null,
+      deliveredToday: all.filter((o) => o.status === "delivered" && sofiaYmd(new Date(finishedAt(o))) === today).length, problems: t.problems, cash: t.handover, cashParts: { orders: t.cash.sum, float: t.float, fuel: t.fuelCash }, cashTo: DRIVER_MISSING.handTo, position: null,
     };
   });
   const probs = sc.orders.filter((o) => !!o.driver && !!o.problem && o.problem.solved !== "delivered" && o.status !== "cancelled" && o.status !== "delivered")
