@@ -18,9 +18,9 @@ function waitHTML(): string {
   /* whose order waits: this phone's, or another phone's (a late phone's first order while the table is confirmed) */
   const whose = p.phone === M.me() ? L("Вашата поръчка чака сервитьора.", "Your order is waiting for the waiter.") : L("Поръчката на Телефон " + p.phone + " чака сервитьора.", "Phone " + p.phone + "’s order is waiting for the waiter.");
   return '<div class="shell" role="status" aria-live="polite"><div class="core wait"><span class="ring">' + M.ic("hourglass", 44) + "</span>" +
-    "<h2>" + L("Чака потвърждение от сервитьора", "Waiting for the waiter to confirm") + "</h2>" +
-    '<p class="whose" data-whose>' + whose + "</p>" +
-    "<p>" + L("Сервитьорът ще потвърди поръчката до минута. Така пазим масата от чужди поръчки. Следващите отиват направо в кухнята.", "The waiter will confirm the order within a minute. This keeps your table safe from orders that are not yours. Next orders go straight to the kitchen.") + "</p>" +
+    /* one line says whose order waits (round 3: the title and a second line said the same) */
+    '<h2 class="whose" data-whose>' + whose.replace(/\.$/, "") + "</h2>" +
+    "<p>" + L("Сервитьорът ще я потвърди до минута. Така пазим масата от чужди поръчки.", "The waiter will confirm it within a minute. This keeps your table safe from orders that are not yours.") + "</p>" +
     '<p class="meta">' + M.dishes(p.n) + " · " + M.fmt(p.sum) + " · " + L("изпратено в ", "sent at ") + M.clock(p.at) + "</p></div></div>";
 }
 

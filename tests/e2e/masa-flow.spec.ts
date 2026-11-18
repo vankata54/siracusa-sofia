@@ -62,10 +62,8 @@ test("two phones: the shared cart, the waiter confirms, the kitchen cooks, „С
     const send = page.locator("[data-send]").filter({ visible: true });
     await expect(send).toHaveText("Изпрати към сервитьора · 22,37 €");
     await send.click();
-    await expect(page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
-    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора.");
-    await expect(p2.page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
-    await expect(p2.page.locator("[data-whose]")).toHaveText(/^Поръчката на Телефон \d чака сервитьора\.$/);
+    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора");
+    await expect(p2.page.locator("[data-whose]")).toHaveText(/^Поръчката на Телефон \d чака сервитьора$/);
     await expect(p2.page.locator(".rnd-h")).toContainText("чака сервитьора");
 
     /* the waiter confirms: Прието, live on both phones */
@@ -193,14 +191,13 @@ test("a phone that comes after the first confirmed order sends its first order t
     const send = page.locator("[data-send]").filter({ visible: true });
     await expect(send).toHaveText("Изпрати към сервитьора · 7,61 €");
     await send.click();
-    await expect(page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
-    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора.");
+    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора");
     /* the first phone: whose order waits, and its new dishes go with it */
     const late = (await G.post("view")).pending.phone as number;
     const pa = await phone(browser, page, baseURL!, A);
     await G.add("tarator");
     await pa.page.goto("/masa/" + t.code + "/kolichka/" + PV);
-    await expect(pa.page.locator("[data-whose]")).toHaveText("Поръчката на Телефон " + late + " чака сервитьора.");
+    await expect(pa.page.locator("[data-whose]")).toHaveText("Поръчката на Телефон " + late + " чака сервитьора");
     await expect(pa.page.locator(".sum .how")).toHaveText("Новото отива при сервитьора заедно с чакащата поръчка на Телефон " + late + ".");
     await expect(pa.page.locator(".sum .how")).not.toContainText("Първата поръчка");
     await pa.ctx.close();

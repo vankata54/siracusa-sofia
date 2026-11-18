@@ -52,7 +52,7 @@ import Skeleton from "../../../modules/masa/Skeleton.astro";
 .sl > span:not(.stp){min-width:0}
 /* a wide status ("Изчерпано днес") goes under the name on a narrow screen, never over "Телефон 2" */
 @container app (max-width:440px){ .sl:has(> .stp.out){grid-template-columns:48px minmax(0,1fr)} .sl > .stp.out{grid-column:2; justify-self:start} }
-.wait .whose{font-weight:700; color:var(--ink)}
+.wait h2.whose{color:var(--ink)}
 @container app (max-width:370px){ .cl .rm .lbl{display:none} .cl .rm{width:48px; padding:0; justify-content:center} }
 /* summary */
 .sum{padding:20px}

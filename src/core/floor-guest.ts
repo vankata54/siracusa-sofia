@@ -187,7 +187,9 @@ export async function guestCartRestore(ctx: Ctx, code: string, tok: string, line
     const l = s.gone![i].line, d = await dishFor(ctx, l.id, l.mods);
     if (s.cart.length >= ORDER_RULES.maxLines) throw new CoreError("too_many", TABLE_MSG.guest.lines, 422);
     s.gone!.splice(i, 1);
-    s.cart.push({ key: l.key, id: d.id, q: l.q, mods: d.mods, who: s.guests.some((x) => x.id === l.who) ? l.who : g.id, at: iso(ctx) });
+    /* who touched the line stays with it (and the phone that brings it back): a removal + "Отмени" never clears a new phone's "+1" */
+    const who = s.guests.some((x) => x.id === l.who) ? l.who : g.id, by = [...new Set([...(l.by || []), ...(g.id !== who ? [g.id] : [])])];
+    s.cart.push({ key: l.key, id: d.id, q: l.q, mods: d.mods, who, ...(by.length ? { by } : {}), at: iso(ctx) });
     return changed(ctx, s, g.id);
   });
 }

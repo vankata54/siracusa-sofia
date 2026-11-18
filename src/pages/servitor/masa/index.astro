@@ -10,6 +10,9 @@ void mountTable();
 </script>
 </Staff>
 <style is:global>
+/* "нов телефон" at a line of a waiting QR order (the page does not load servitor.css) */
+.oline .newph{display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:2px 10px 2px 8px; border-radius:999px; background:var(--ember-soft); color:var(--ink); font-size:14px; font-weight:800; white-space:nowrap; vertical-align:2px}
+.oline .newph .ic{color:var(--warn); flex:none}
 [data-page="table"] .thead{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap}
 [data-page="table"] .thead .meta{display:grid; gap:4px}
 [data-page="table"] .thead .meta span{font-weight:700; color:var(--muted)}

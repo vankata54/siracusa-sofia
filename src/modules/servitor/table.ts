@@ -143,7 +143,7 @@ export async function mountTable(): Promise<void> {
         p.lines.map(pendingLine).join("") +
         '<div class="ocard flat"><div class="ft"><span>Общо' + (p.open && p.blocked ? " без стека и изчерпаното" : p.open ? " без стека" : p.blocked ? " без изчерпаното" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
         (p.blocked ? '<p class="qnote qblock">' + ic("clock", 18) + "<span>Изчерпаното не влиза в поръчката. Махни го, после „Потвърди и прати“.</span></p>" : "") +
-        '<p class="small muted qnote">Първата поръчка от QR се потвърждава, за да няма фалшиви поръчки. Следващите от тази маса отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
+        '<p class="small muted qnote">Поръчка от телефон, който още не си потвърдил, минава през теб, за да няма чужди поръчки. От потвърдените телефони отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
     }
 
     /* the bill requests of the phones */

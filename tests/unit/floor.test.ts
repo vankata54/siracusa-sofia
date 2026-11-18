@@ -851,6 +851,16 @@ describe("the QR table, round 2 (decision 18.11.2026): only phones the waiter co
     expect((await core.floor.send(code, A)).to).toBe("waiter");
     expect((await core.floor.table(s.waiter, 6)).pending!.lines[0]).toMatchObject({ phone: 2, isNew: true });
     await core.floor.qrConfirm(s.waiter, 6);
+    /* round 3: a new phone's "+1", then the seen phone removes the line and brings it back with "Отмени": still through the waiter */
+    const Z = "e".repeat(32);
+    await core.floor.open(code, Z, true);
+    const k2 = (await core.floor.cartAdd(code, A, { id: dessert.id })).cart.lines[0].key;
+    await core.floor.cartQty(code, Z, k2, "+1");
+    const rm = await core.floor.cartRemove(code, A, k2);
+    await core.floor.cartRestore(code, A, rm.gone!);
+    expect((await core.floor.view(code, A)).cart.toWaiter).toBe(true);
+    expect((await core.floor.send(code, A)).to).toBe("waiter");
+    await core.floor.qrConfirm(s.waiter, 6);
     /* confirmed now: X is seen, its next order goes to the kitchen */
     await core.floor.cartAdd(code, X, { id: dessert.id });
     expect((await core.floor.send(code, X)).to).toBe("kitchen");
