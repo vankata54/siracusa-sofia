@@ -17,7 +17,7 @@ import { floorApi, ApiError, type TableDetail, type StaffLine, type StaffBill, t
 import { murl } from "../routes.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural } from "../../lib/format.ts";
-import { $, $$, sheetOf, readHash, keepFocus, gramsSheet, why, isOffline, outbox, flushOutbox, notice, items, STATE_ICON, STATE_SHORT, CALL_ICON, CALL_WORD, LINE_KIND, type StateKey } from "./bits.ts";
+import { $, $$, sheetOf, readHash, keepFocus, gramsSheet, why, isOffline, myQueue, userOf, flushOutbox, notice, items, STATE_ICON, STATE_SHORT, CALL_ICON, CALL_WORD, LINE_KIND, type StateKey } from "./bits.ts";
 
 type Pay = "cash" | "card";
 type Mode = "one" | "guests" | "dishes";
@@ -37,10 +37,17 @@ export async function mountTable(): Promise<void> {
   let D: TableDetail | null = null, closedNow = false, billRedraw: (() => void) | null = null;
 
   /* ---------- load ---------- */
+  /* the minutes of the colours come from the settings (the same as the hall): warn after warnMin, "при управителя"
+     after callManager (a call) / qrManager (a QR order) */
+  const SET = { warnMin: 2, callManager: 5, qrManager: 3 };
+  let setAt = 0;
+  const readSettings = () => { if (Date.now() - setAt < 60_000) return; setAt = Date.now(); floorApi.hall().then((h) => { Object.assign(SET, h.settings); render(); }).catch(() => { setAt = 0; }); };
+  const lvl = (lateMin: number) => ' data-lvl="' + SET.warnMin * 60 + "," + lateMin * 60 + '"';
   let loading = false, again = false;
   async function load() {
     if (loading) { again = true; return; }
     loading = true;
+    readSettings();
     try {
       const d = await floorApi.table(N!);
       if (d.session) closedNow = false;
@@ -58,13 +65,15 @@ export async function mountTable(): Promise<void> {
     if (D && typeof t === "string" && t !== D.table.id) return;
     soon();
   });
-  st.onReload(() => { void load(); void flushOutbox(st, () => soon()); });
+  st.onReload(() => { setAt = 0; void load(); void flushOutbox(st, () => soon()); });
+  /* "Изпратено и на управителя" goes with the red colour of the late QR card (the frame sets .late from the timer) */
+  setInterval(() => { $$<HTMLElement>("[data-esc]", main).forEach((el) => { const c = el.closest(".qrcard"); el.hidden = !(c && c.classList.contains("late")); }); }, 1000);
   st.onNet(() => render());
   window.addEventListener("st:outbox", () => render());
 
   /* ---------- pieces ---------- */
   const off = () => st.offAttr();
-  const lineName = (l: { name: string; grams?: number | null }) => l.name + (l.grams ? " · " + l.grams + " гр." : "");
+  const lineName = (l: { name: string; grams?: number | null }) => l.name + (l.grams ? " · " + l.grams + "\u00a0гр." : "");
   function lineStt(l: StaffLine): string {
     if (l.out) return st.stt("wait", "Изчерпано днес", "clock");
     const k = LINE_KIND[l.st] || LINE_KIND.accepted;
@@ -75,14 +84,15 @@ export async function mountTable(): Promise<void> {
     return '<div class="oline' + (l.st === "served" || l.out ? " served" : "") + '"><span class="q">' + l.q + "×</span><div><div class=\"nm\">" + esc(lineName(l)) + "</div>" + mods +
       (l.note ? '<div class="note">' + ic("note", 18) + esc(l.note) + "</div>" : "") +
       '<div class="sub">' + lineStt(l) + '<span class="price">' + (l.out ? "<s>" + fmt(l.sum) + "</s>" : fmt(l.sum)) + "</span>" +
-      (l.paid ? '<span class="paidrow" style="font-size:14px">' + ic("check-circle", 18) + "Платено</span>" : "") +
+      (l.paid ? '<span class="paidrow sm">' + ic("check-circle", 18) + "Платено</span>" : "") +
       (l.st === "ready" && !l.out ? '<span class="serve"><button class="pill pill-red" type="button" data-serve="' + esc(l.key) + '" aria-label="Сервирах: ' + esc(l.q + "× " + lineName(l)) + '"' + off() + ">" + ic("check", 20) + "Сервирах</button></span>" : "") +
       "</div></div></div>";
   }
   function callHTML(c: HallCall): string {
     const mine = !!c.taken && c.taken.mine, other = !!c.taken && !c.taken.mine;
     const small = mine ? "отивам" : other ? "поема " + esc(c.taken!.name) : '<span class="escl">при управителя</span>';
-    return '<div class="cstrip' + (mine || other ? " taken" : "") + (c.late && !c.taken ? " late" : "") + '" style="margin-top:14px"' + (c.taken ? "" : ' data-lvl="120,300"') + '><div class="tx">' + ic(CALL_ICON[c.kind] || "bell-ringing", 24) +
+    const late = !c.taken && (c.late || Date.now() - Date.parse(c.at) >= SET.callManager * 60_000);
+    return '<div class="cstrip' + (mine || other ? " taken" : "") + (late ? " late" : "") + '"' + (c.taken ? "" : lvl(SET.callManager)) + '><div class="tx">' + ic(CALL_ICON[c.kind] || "bell-ringing", 24) +
       '<span class="w"><span>Вика · ' + esc(CALL_WORD[c.kind] || c.label) + "</span><small>" + small + "</small></span></div>" +
       '<span class="tm">' + st.timer(Date.parse(c.at)) + "</span>" +
       (mine ? '<button class="pill" type="button" data-done="' + esc(c.id) + '"' + off() + ">" + ic("check", 20) + "Обслужено</button>"
@@ -93,7 +103,7 @@ export async function mountTable(): Promise<void> {
       (l.mods && l.mods.length ? '<div class="mods">' + esc(l.mods.join(", ")) + "</div>" : "") +
       '<div class="sub"><span class="price">' + (l.per100 ? fmt(l.price100 || 0) + " за 100 гр.</span><span class=\"g\">грамаж при потвърждение" : fmt(l.sum || 0)) + "</span></div></div></div>";
   }
-  const queued = () => outbox().filter((q) => q.table === N);
+  const queued = () => myQueue(userOf(st)).filter((q) => q.table === N);
 
   /* ---------- the screen ---------- */
   function render() {
@@ -105,7 +115,7 @@ export async function mountTable(): Promise<void> {
     if (billRedraw) billRedraw();
   }
   function closedHTML(): string {
-    return '<section class="st-sec"><div class="st-empty" style="padding-top:28px"><div class="ill">' + ic("door-open", 48) + "</div><h2>Масата е затворена</h2>" +
+    return '<section class="st-sec"><div class="st-empty tight"><div class="ill">' + ic("door-open", 48) + "</div><h2>Масата е затворена</h2>" +
       "<p>Следващите гости ще отворят нова сесия, като сканират кода на масата отново.</p>" +
       '<a class="pill pill-line pill-lg" href="' + esc(murl.servitor()) + '">' + ic("caret-left", 22) + "Към масите</a></div></section>";
   }
@@ -120,10 +130,11 @@ export async function mountTable(): Promise<void> {
     /* the QR order that waits */
     if (d.pending) {
       const p = d.pending;
-      h += '<section class="st-sec"><div class="qrcard' + (p.late ? " late" : "") + '"' + (p.late ? "" : ' data-lvl="120,180"') + '><div class="hd">' + ic("qr-code", 24) + "<span>Поръчка от QR · чака потвърждение</span>" + '<span class="tm">' + st.timer(Date.parse(p.at)) + '</span></div><div class="in">' +
+      const late = p.late || Date.now() - Date.parse(p.at) >= SET.qrManager * 60_000;
+      h += '<section class="st-sec"><div class="qrcard' + (late ? " late" : "") + '"' + lvl(SET.qrManager) + '><div class="hd">' + ic("qr-code", 24) + "<span>Поръчка от QR · чака потвърждение</span>" + '<span class="tm">' + st.timer(Date.parse(p.at)) + '</span></div><div class="in">' +
         p.lines.map(pendingLine).join("") +
-        '<div class="ocard" style="box-shadow:none;padding:0;margin-top:4px"><div class="ft"><span>Общо' + (p.open ? " без стека" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
-        '<p class="small muted" style="margin:10px 0 0">Първата поръчка от QR се потвърждава, за да няма фалшиви поръчки. Следващите от тази маса отиват направо в кухнята' + (p.open ? ", освен стек за 100 гр.: неговият грамаж въвеждаш тук" : "") + ".</p></div></div></section>";
+        '<div class="ocard flat"><div class="ft"><span>Общо' + (p.open ? " без стека" : "") + '</span><span class="price">' + fmt(p.sum) + "</span></div></div>" +
+        '<p class="small muted qnote">Първата поръчка от QR се потвърждава, за да няма фалшиви поръчки. Следващите от тази маса отиват направо в кухнята' + (p.open ? ", освен стек за 100\u00a0гр.: неговият грамаж въвеждаш тук" : "") + '.</p><p class="esc qesc" data-esc' + (late ? "" : " hidden") + ">" + ic("warning", 18) + "Изпратено и на управителя</p></div></div></section>";
     }
 
     /* the bill requests of the phones */
@@ -135,27 +146,33 @@ export async function mountTable(): Promise<void> {
 
     /* the orders kept on this phone (no connection) */
     const qd = queued();
-    if (qd.length) h += '<section class="st-sec">' + qd.map((q) => '<div class="ocard queued"><div class="oh"><b>Запазена на телефона</b><span>чака връзка</span></div>' +
+    if (qd.length) h += '<section class="st-sec">' + qd.map((q) => '<div class="ocard queued"><div class="oh"><b>Запазена на телефона</b><span>още не е в кухнята</span></div>' +
       '<ul class="qlist">' + (q.labels || []).map((t) => "<li>" + esc(t) + "</li>").join("") + "</ul>" + '<div class="ft"><span>' + items(q.n) + '</span><span class="price">' + fmt(q.sum) + "</span></div>" + "</div>").join("") + "</section>";
 
     const bills = d.bills;
     if (!sess && !bills.length && !d.pending) {
-      h += '<section class="st-sec"><div class="st-empty" style="padding-top:24px"><div class="ill">' + ic("chair", 48) + "</div><h2>Масата е свободна</h2><p>Като седнат гости: „Нова поръчка“ или поръчка от QR.</p>" +
+      h += '<section class="st-sec"><div class="st-empty tight"><div class="ill">' + ic("chair", 48) + "</div><h2>Масата е свободна</h2><p>Като седнат гости: „Нова поръчка“ или поръчка от QR.</p>" +
         '<button class="pill pill-line pill-lg" type="button" data-seat' + off() + ">" + ic("users", 22) + "Гостите седнаха</button></div></section>";
     } else if (!bills.length && !d.pending && sess) {
       const min = Math.max(1, Math.round((Date.now() - Date.parse(sess.openedAt)) / 60000));
       h += '<section class="st-sec">' + notice("hourglass", "Гостите са седнали преди " + min + " мин и още нямат поръчка." + (sess.cart ? " В общата количка на телефоните: " + items(sess.cart) + "." : ""), true) + "</section>";
     }
     if (bills.length) {
+      /* a note of one order that was split by guest (the same moment, the same words) is shown once, above the bills */
+      const notes = new Map<string, string[]>();
+      bills.forEach((b) => b.orders.forEach((o) => { if (o.note) { const k = o.placedAt + "|" + o.note; notes.set(k, [...(notes.get(k) || []), o.no]); } }));
+      const shared = [...notes.entries()].filter((e) => e[1].length > 1);
+      const isShared = (o: { placedAt: string; note: string }) => shared.some((e) => e[0] === o.placedAt + "|" + o.note);
       h += '<section class="st-sec"><div class="st-h"><h2>Поръчки</h2><span class="muted">' + (bills.length > 1 ? "поотделно · " + bills.length + " сметки" : "една сметка") + "</span></div>" +
-        bills.map((b) => '<div class="ocard"><div class="oh"><b>' + esc(b.name) + '</b><span class="price" style="color:var(--ink);font-size:17px">' + fmt(b.sum) + "</span></div>" +
-          b.orders.map((o) => '<p class="st-cap ono">№ ' + esc(o.no) + " · " + esc(o.placedAt) + " · " + esc(o.source) + "</p>" + (o.note ? '<div class="onote">' + ic("note", 18) + esc(o.note) + "</div>" : "") + o.lines.map(lineHTML).join("")).join("") + "</div>").join("") +
+        shared.map((e) => '<div class="onote shared">' + ic("note", 18) + "<span>" + esc(e[0].slice(e[0].indexOf("|") + 1)) + ' <span class="muted">(' + e[1].map((x) => "№ " + esc(x)).join(", ") + ")</span></span></div>").join("") +
+        bills.map((b) => '<div class="ocard"><div class="oh"><b>' + esc(b.name) + '</b><span class="price bsum">' + fmt(b.sum) + "</span></div>" +
+          b.orders.map((o) => '<p class="st-cap ono" tabindex="-1" data-no="' + esc(o.no) + '">№ ' + esc(o.no) + " · " + esc(o.placedAt) + " · " + esc(o.source) + "</p>" + (o.note && !isShared(o) ? '<div class="onote">' + ic("note", 18) + esc(o.note) + "</div>" : "") + o.lines.map(lineHTML).join("")).join("") + "</div>").join("") +
         '<div class="tot"><span>Общо за масата</span><span class="price">' + fmt(d.total) + "</span></div>" +
-        (d.paid > 0.004 ? '<div class="paidrow" style="padding:6px 4px 0">' + ic("check-circle", 22) + "Платено " + fmt(d.paid) + (d.rest > 0.004 ? " · остават " + fmt(d.rest) : " · всичко е платено") + "</div>" : "") +
+        (d.paid > 0.004 ? '<div class="paidrow all">' + ic("check-circle", 22) + "Платено " + fmt(d.paid) + (d.rest > 0.004 ? " · остават " + fmt(d.rest) : " · всичко е платено") + "</div>" : "") +
         "</section>";
     }
     if (sess) h += '<section class="st-sec"><button class="pill pill-line pill-lg pill-block" type="button" data-close-table' + (d.canClose ? off() : ' aria-disabled="true"') + ">" + ic("door-open", 22) + "Затвори масата</button>" +
-      (d.canClose ? "" : '<p class="small muted" style="margin:8px 4px 0;text-align:center">' + (d.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря след като сметката е платена.") + "</p>") + "</section>";
+      (d.canClose ? "" : '<p class="small muted closehint">' + (d.pending ? "Първо потвърди или откажи поръчката от QR." : "Масата се затваря след като сметката е платена.") + "</p>") + "</section>";
     return h;
   }
   function drawBar(d: TableDetail) {
@@ -179,16 +196,27 @@ export async function mountTable(): Promise<void> {
       void load(); return null;
     } finally { if (btn) btn.removeAttribute("aria-busy"); }
   }
-  const take = (b: HTMLElement, id: string) => act(b, async () => { await floorApi.callTake(id); st.haptic(); st.toast("Маса " + N + ": отивам. Колегите виждат, че масата е поета."); await load(); });
+  /* the focus never falls to the page after an action: the next control of the same work, or "Отмени" of the toast */
+  const focus = (el: Element | null | undefined) => { if (el) { (el as HTMLElement).focus(); return true; } return false; };
+  const focusUndo = () => { if (!focus($(".st-toast button", st.ov))) main.focus({ preventScroll: true }); };
+  const take = (b: HTMLElement, id: string) => act(b, async () => {
+    await floorApi.callTake(id); st.haptic(); await load();
+    st.toast("Маса " + N + ": отивам. Колегите виждат, че масата е поета.");
+    if (!focus($('[data-done="' + CSS.escape(id) + '"]', main))) main.focus({ preventScroll: true });
+  });
   const doneCall = (b: HTMLElement, id: string) => act(b, async () => {
     await floorApi.callDone(id); await load();
-    st.toast("Обслужено", { undo: () => { void act(null, async () => { await floorApi.callUndo(id); await load(); }); } });
+    st.toast("Маса " + N + ": обслужено", { undo: () => { void act(null, async () => { await floorApi.callUndo(id); await load(); focus($('[data-done="' + CSS.escape(id) + '"]', main)); }); } });
+    focusUndo();
   });
   const serve = (b: HTMLElement, key: string) => act(b, async () => {
+    const i = $$("[data-serve]", main).indexOf(b);
     D = await floorApi.serve(N!, [key]); render();
-    st.toast("Сервирано", { undo: () => { void act(null, async () => { D = await floorApi.unserve(N!, [key]); render(); }); } });
+    st.toast("Маса " + N + ": сервирано", { undo: () => { void act(null, async () => { D = await floorApi.unserve(N!, [key]); render(); focus($('[data-serve="' + CSS.escape(key) + '"]', main)); }); } });
+    const rest = $$("[data-serve]", main);
+    if (!focus(rest[Math.min(Math.max(0, i), rest.length - 1)])) focusUndo();
   });
-  const seat = (b: HTMLElement) => act(b, async () => { D = await floorApi.seat(N!); render(); st.toast("Маса " + N + ": гостите седнаха"); });
+  const seat = (b: HTMLElement) => act(b, async () => { D = await floorApi.seat(N!); render(); st.toast("Маса " + N + ": гостите седнаха"); focus($("a.pill", bar)); });
 
   /* "Потвърди и прати": every steak "за 100 гр." asks its grams first */
   function confirmQR(b: HTMLElement) {
@@ -197,6 +225,7 @@ export async function mountTable(): Promise<void> {
     const send = () => act(b, async () => {
       const r = await floorApi.qrConfirm(N!, grams); D = r; render();
       st.toast("Потвърдено и изпратено в кухнята · № " + r.no);
+      if (!focus($('.ono[data-no="' + CSS.escape(r.no) + '"]', main))) main.focus({ preventScroll: true });
     });
     const ask = (i: number) => {
       if (i >= steaks.length) { void send(); return; }
@@ -210,9 +239,9 @@ export async function mountTable(): Promise<void> {
     if (!D || !D.pending) return;
     let reason = "";
     const s = sheetOf(st)({ title: "Да откажа ли поръчката?",
-      html: '<p style="margin:0 0 12px">Гостите ще видят на телефона, че поръчката е отказана. Причина:</p><div class="notechips" role="group" aria-label="Причина">' +
+      html: '<p class="m12">Гостите ще видят на телефона, че поръчката е отказана. Причина:</p><div class="notechips" role="group" aria-label="Причина">' +
         D.reasons.map((r) => '<button class="chip" type="button" data-r="' + esc(r.key) + '" aria-pressed="false">' + esc(r.label) + "</button>").join("") + "</div>" +
-        '<p class="small muted" data-rhint style="margin:10px 0 0">Избери причина.</p>',
+        '<p class="small muted qnote" data-rhint>Избери причина.</p>',
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-rj disabled>Откажи поръчката</button><button class="pill pill-line pill-lg pill-block" type="button" data-keep>Не, върни се</button>' });
     s.el.addEventListener("click", (e) => {
       const x = (e.target as Element).closest<HTMLButtonElement>("button"); if (!x) return;
@@ -222,7 +251,8 @@ export async function mountTable(): Promise<void> {
         s.close();
         void act(null, async () => {
           D = await floorApi.qrReject(N!, reason as "test" | "gaveup" | "manual"); render();
-          st.toast("Поръчката е отказана", { undo: () => { void act(null, async () => { D = await floorApi.qrRejectUndo(N!); render(); }); } });
+          st.toast("Поръчката е отказана", { undo: () => { void act(null, async () => { D = await floorApi.qrRejectUndo(N!); render(); focus($("[data-confirm]", bar)); }); } });
+          focusUndo();
         });
       }
     });
@@ -244,8 +274,8 @@ export async function mountTable(): Promise<void> {
     const nm = (r: Row) => r.l.q + "× " + esc(lineName(r.l));
     const seg = () => '<div class="st-seg" role="group" aria-label="Как се плаща">' + ([["one", "Една сметка"], ["guests", "По гости"], ["dishes", "По ястия"]] as [Mode, string][]).map((m) =>
       '<button type="button" data-m="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '"' + (m[0] === "guests" && !multi() ? " disabled" : "") + ">" + m[1] + "</button>").join("") + "</div>";
-    const paySeg = () => '<p class="st-cap" style="margin:16px 0 8px">Плащане</p><div class="st-seg" role="group" aria-label="Плащане"><button type="button" data-p="cash" aria-pressed="' + (pay === "cash") + '">' + ic("money", 22) + 'В брой</button><button type="button" data-p="card" aria-pressed="' + (pay === "card") + '">' + ic("credit-card", 22) + "Карта</button></div>";
-    const row = (r: Row) => '<div class="kv"' + (r.paid ? ' style="color:var(--muted)"' : "") + "><span>" + (r.paid ? "<s>" + nm(r) + "</s> · платено" : nm(r)) + '</span><span class="price">' + fmt(r.l.sum) + "</span></div>";
+    const paySeg = () => '<p class="st-cap paycap">Плащане</p><div class="st-seg" role="group" aria-label="Плащане"><button type="button" data-p="cash" aria-pressed="' + (pay === "cash") + '">' + ic("money", 22) + 'В брой</button><button type="button" data-p="card" aria-pressed="' + (pay === "card") + '">' + ic("credit-card", 22) + "Карта</button></div>";
+    const row = (r: Row) => '<div class="kv' + (r.paid ? " paid" : "") + '"><span>' + (r.paid ? "<s>" + nm(r) + "</s> · платено" : nm(r)) + '</span><span class="price">' + fmt(r.l.sum) + "</span></div>";
     function draw() {
       if (!D) return;
       const all = rows(), open = all.filter((r) => !r.paid);
@@ -253,24 +283,24 @@ export async function mountTable(): Promise<void> {
       if (mode === "guests" && !multi()) mode = "one";
       let body = seg(), foot = "";
       if (mode === "one") {
-        body += '<div class="kvs" style="margin-top:12px">' + all.map(row).join("") + '<div class="kv tot"><span>За плащане</span><span class="price">' + fmt(sum(open)) + "</span></div></div>" + paySeg();
+        body += '<div class="kvs mt12">' + all.map(row).join("") + '<div class="kv tot"><span>За плащане</span><span class="price">' + fmt(sum(open)) + "</span></div></div>" + paySeg();
         foot = open.length ? '<button class="pill pill-red pill-lg pill-block" type="button" data-pay="one"' + off() + ">" + ic("check", 22) + 'Маркирай платено · <span class="price">' + fmt(sum(open)) + "</span></button>" : "";
       } else if (mode === "guests") {
-        body += '<div style="margin-top:12px">' + D.bills.map((b) => {
+        body += '<div class="mt12">' + D.bills.map((b) => {
           const mine = all.filter((r) => r.who === b.name), op = mine.filter((r) => !r.paid);
           return '<div class="splitcard"><div class="hd"><span>' + esc(b.name) + '</span><span class="price">' + fmt(sum(mine)) + "</span></div>" +
-            mine.map((r) => '<div class="ln"' + (r.paid ? ' style="color:var(--muted)"' : "") + "><span>" + (r.paid ? "<s>" + nm(r) + "</s>" : nm(r)) + '</span><span class="price" style="font-weight:700">' + fmt(r.l.sum) + "</span></div>").join("") +
-            (!op.length ? '<div class="paidrow" style="margin-top:8px">' + ic("check-circle", 22) + "Платено</div>"
+            mine.map((r) => '<div class="ln' + (r.paid ? " paid" : "") + '"><span>' + (r.paid ? "<s>" + nm(r) + "</s>" : nm(r)) + '</span><span class="price">' + fmt(r.l.sum) + "</span></div>").join("") +
+            (!op.length ? '<div class="paidrow mt8">' + ic("check-circle", 22) + "Платено</div>"
               : '<div class="acts"><button class="pill pill-line" type="button" data-pay="bill" data-bill="' + esc(b.name) + '" data-how="cash" aria-label="' + esc(b.name) + ": в брой, " + fmt(sum(op)) + '"' + off() + ">" + ic("money", 20) + "В брой</button>" +
                 '<button class="pill pill-line" type="button" data-pay="bill" data-bill="' + esc(b.name) + '" data-how="card" aria-label="' + esc(b.name) + ": карта, " + fmt(sum(op)) + '"' + off() + ">" + ic("credit-card", 20) + "Карта</button></div>") + "</div>";
         }).join("") + "</div>";
       } else {
         const sel = open.filter((r) => picked.has(r.k)), v = sum(sel);
-        body += '<p class="small muted" style="margin:12px 0 4px">Отбележи какво плаща този гост.</p>' + all.map((r) =>
-          '<label class="chk"' + (r.paid ? ' style="color:var(--muted)"' : "") + '><input type="checkbox" data-k="' + esc(r.k) + '"' + (r.paid ? " disabled checked" : picked.has(r.k) ? " checked" : "") + "><span>" + nm(r) + (r.paid ? " · платено" : "") + (multi() ? ' <small class="muted">' + esc(r.who) + "</small>" : "") + '</span><span class="price">' + fmt(r.l.sum) + "</span></label>").join("") + paySeg();
+        body += '<p class="small muted pickhint">Отбележи какво плаща този гост.</p>' + all.map((r) =>
+          '<label class="chk' + (r.paid ? " paid" : "") + '"><input type="checkbox" data-k="' + esc(r.k) + '"' + (r.paid ? " disabled checked" : picked.has(r.k) ? " checked" : "") + "><span>" + nm(r) + (r.paid ? " · платено" : "") + (multi() ? '<small class="who">' + esc(r.who) + "</small>" : "") + '</span><span class="price">' + fmt(r.l.sum) + "</span></label>").join("") + paySeg();
         foot = '<button class="pill pill-red pill-lg pill-block" type="button" data-pay="dishes"' + (v ? off() : " disabled") + ">" + ic("check", 22) + (v ? 'Маркирай платено · <span class="price">' + fmt(v) + "</span>" : "Избери ястия") + "</button>";
       }
-      body += '<p class="small muted" style="margin:14px 0 0">Касовият бон се издава от касата за всяко плащане <span class="missing">[ЛИПСВА: връзка с касовия апарат]</span>.</p>';
+      body += '<p class="small muted receipt">Касовият бон се издава от касата за всяко плащане <span class="missing">[ЛИПСВА: връзка с касовия апарат]</span>.</p>';
       keepFocus(s.el, () => { bb.innerHTML = body; bf.innerHTML = foot; });
     }
     billRedraw = draw;
@@ -287,7 +317,7 @@ export async function mountTable(): Promise<void> {
           const r = await floorApi.pay(N!, p);
           picked.clear(); D = r; render();
           st.toast("Платено " + fmt(r.payment.sum) + (how === "card" ? " с карта" : " в брой"));
-          if (r.rest < 0.005) s.close();
+          if (r.rest < 0.005) { s.close(); focus($("[data-close-table]", main)); }
         });
       }
     });
@@ -298,8 +328,8 @@ export async function mountTable(): Promise<void> {
     if (!D) return;
     const un = D.unserved;
     const s = sheetOf(st)({ title: "Затваряне на Маса " + N,
-      html: (un.length ? '<div class="notice warn" style="margin-bottom:12px">' + ic("warning", 22) + "<span><b>" + (un.length === 1 ? "1 ястие още не е сервирано" : un.length + " ястия още не са сервирани") + ":</b> " + un.map((l) => l.q + "× " + esc(l.name)).join(", ") + ". Те изчезват и от екрана на кухнята.</span></div>" : "") +
-        '<p style="margin:0">Масата става свободна, а QR сесията се затваря. Следващите гости сканират кода на масата отново и започват нова сесия.</p>',
+      html: (un.length ? '<div class="notice warn mb12">' + ic("warning", 22) + "<span><b>" + (un.length === 1 ? "1 ястие още не е сервирано" : un.length + " ястия още не са сервирани") + ":</b> " + un.map((l) => l.q + "× " + esc(l.name)).join(", ") + ". Те изчезват и от екрана на кухнята.</span></div>" : "") +
+        '<p class="m0">Масата става свободна, а QR сесията се затваря. Следващите гости сканират кода на масата отново и започват нова сесия.</p>',
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-yes>' + ic("door-open", 22) + (un.length ? "Затвори въпреки това" : "Затвори масата") + '</button><button class="pill pill-line pill-lg pill-block" type="button" data-no>Остави отворена</button>' });
     s.el.addEventListener("click", (e) => {
       const x = (e.target as Element).closest<HTMLButtonElement>("button"); if (!x) return;
@@ -332,5 +362,5 @@ export async function mountTable(): Promise<void> {
   });
 
   await load();
-  if (outbox().length && !st.offline) void flushOutbox(st, () => soon());
+  void flushOutbox(st, () => soon());
 }

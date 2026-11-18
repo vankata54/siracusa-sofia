@@ -24,7 +24,7 @@ import { minutes } from "../../lib/time.ts";
 import { ic } from "../../lib/icons.ts";
 import { esc, fmt, plural } from "../../lib/format.ts";
 import {
-  $, $$, sheetOf, readHash, gramsSheet, why, isOffline, items, lineKey, readDraft, saveDraft, enqueue, flushOutbox, outbox, notice,
+  $, $$, sheetOf, readHash, gramsSheet, why, isOffline, items, lineKey, readDraft, saveDraft, enqueue, flushOutbox, myQueue, settleStale, retrySoon, userOf, whenSaved, notice,
   STATE_ICON, STATE_SHORT, CALL_WORD, type Draft, type DraftLine, type StateKey,
 } from "./bits.ts";
 
@@ -75,7 +75,7 @@ async function pickTable(q: string) {
   st.onLive(["floor.session", "floor.qr", "floor.call", "order.new", "order.line", "order.status", "shift.update"], () => { clearTimeout(t); t = setTimeout(load, 300); });
   st.onReload(() => { void load(); void flushOutbox(st); });
   await load();
-  if (outbox().length && !st.offline) void flushOutbox(st);
+  if (myQueue(userOf(st)).length && !st.offline) void flushOutbox(st); else settleStale(st);
 }
 
 /* ---------- the order for one table ---------- */
@@ -85,8 +85,12 @@ async function orderFor(N: number, q0: string) {
   const st: Staff = st0;
   const main = st.main, bar = st.bar!;
   let T: TableDetail | null = null;
-  const saved = readDraft(N);
+  const user = userOf(st);
+  /* an order of this person kept on the phone too long ago is never sent by itself: it is this table's draft to check */
+  settleStale(st);
+  const saved = readDraft(N, user);
   const d: Draft = saved || { split: false, guests: ["Гост 1", "Гост 2"], cart: {}, note: "" };
+  let lastSave = saved && saved.at ? saved.at : 0;
   let cur = d.guests[0], q = q0, cat: string | null = null, serverClosed = "", sent = false;
   const freq = new Map<string, number>();
   let recentOn = false;
@@ -114,8 +118,8 @@ async function orderFor(N: number, q0: string) {
   const lineSum = (l: DraftLine) => r2(unit(l) * l.q);
   const sum = () => r2(lines().reduce((a, l) => a + lineSum(l), 0));
   const qty = (id: string) => lines().filter((l) => l.bill === bill() && l.id === id).reduce((a, l) => a + l.q, 0);
-  const lineName = (l: DraftLine) => { const x = byId[l.id]; return (x ? x.n : l.id) + (x && x.per100 && l.g ? " · " + l.g + " гр." : ""); };
-  const persist = () => saveDraft(N, d);
+  const lineName = (l: DraftLine) => { const x = byId[l.id]; return (x ? x.n : l.id) + (x && x.per100 && l.g ? " · " + l.g + "\u00a0гр." : ""); };
+  const persist = () => { lastSave = Date.now(); saveDraft(N, d, user); };
   const blocked = (x: Dish) => isOut(x) || (isBf(x) && !state().breakfast);
   const kitchenOpen = () => !serverClosed && state().kitchen;
   const closedText = () => serverClosed || (minutes() < 600 ? "Кухнята отваря в 10:00, затова изпращането е спряно." : "Кухнята приема поръчки до 22:30, затова изпращането е спряно. За нещо по изключение: управителят.");
@@ -150,7 +154,7 @@ async function orderFor(N: number, q0: string) {
   /* ---------- drawing ---------- */
   function row(x: Dish): string {
     const n = qty(x.id), out = isOut(x), bf = !out && isBf(x) && !state().breakfast;
-    return '<div class="qrow' + (out || bf ? " out" : "") + '">' + pic(x) + '<div><div class="nm">' + esc(x.n) + '</div><div class="mt"><span class="price">' + fmt(x.p) + '</span><span class="g">' + (x.per100 ? "за 100 гр." : esc(x.g || "")) + "</span>" +
+    return '<div class="qrow' + (out || bf ? " out" : "") + '">' + pic(x) + '<div><div class="nm">' + esc(x.n) + '</div><div class="mt"><span class="price">' + fmt(x.p) + '</span><span class="g">' + (x.per100 ? "за 100\u00a0гр." : esc(x.g || "")) + "</span>" +
       (out ? '<span class="out-b">' + ic("clock", 16) + "Изчерпано днес</span>" : bf ? '<span class="out-b">' + ic("clock", 16) + "Закуските са до 11:30</span>" : "") + "</div></div>" +
       (out || bf ? "" : n ? '<div class="qcount"><button type="button" data-dec="' + x.id + '" aria-label="Едно по-малко ' + esc(x.n) + '">' + ic("minus", 22) + '</button><output aria-live="polite">' + n + '</output><button type="button" data-inc="' + x.id + '" aria-label="Още едно ' + esc(x.n) + '">' + ic("plus", 22) + "</button></div>"
         : '<button class="bigplus" type="button" data-inc="' + x.id + '" aria-label="Добави ' + esc(x.n) + '">' + ic("plus", 26) + "</button>") + "</div>";
@@ -160,7 +164,10 @@ async function orderFor(N: number, q0: string) {
     if (!ids.length) return "";
     return '<section class="st-sec"><div class="st-h"><h2>Последно поръчвани</h2></div><div class="recent">' + ids.map((id) => {
       const x = byId[id], n = qty(id), off = blocked(x);
-      return '<button class="rbtn" type="button" data-inc="' + id + '"' + (off ? ' aria-disabled="true"' : "") + ' aria-label="Добави ' + esc(x.n) + (off ? ", " + (isOut(x) ? "изчерпано днес" : "закуските са до 11:30") : "") + '">' + (n ? '<span class="qn">' + n + "</span>" : "") + '<span class="nm">' + esc(x.n) + '</span><span class="price">' + (off && isOut(x) ? "Изчерпано днес" : fmt(x.p)) + '</span><span class="pl">' + ic("plus", 20) + "</span></button>";
+      /* the name is the visible text (the dish, its price, the count) + "добави": what is seen starts the name */
+      const price = fmt(x.p) + (x.per100 ? " за 100\u00a0гр." : "");
+      if (off) return '<button class="rbtn off" type="button" data-inc="' + id + '" aria-disabled="true"><span class="nm">' + esc(x.n) + '</span><span class="outw">' + ic("clock", 16) + (isOut(x) ? "Изчерпано днес" : "Закуските са до 11:30") + "</span></button>";
+      return '<button class="rbtn" type="button" data-inc="' + id + '"><span class="nm">' + esc(x.n) + '</span><span class="price">' + price + "</span>" + (n ? '<span class="qn"><span class="vh">, в поръчката: </span>' + n + "</span>" : "") + '<span class="vh">, добави</span><span class="pl" aria-hidden="true">' + ic("plus", 20) + "</span></button>";
     }).join("") + "</div></section>";
   }
   function draw() {
@@ -171,18 +178,20 @@ async function orderFor(N: number, q0: string) {
       (d.guests.length < 20 ? '<button class="chip" type="button" data-addguest>' + ic("plus", 18) + "Гост</button>" : "") : "";
     gEl.hidden = !d.split;
     let h = "";
+    if (d.kept && count()) h += '<section class="st-sec">' + notice("clock", "Запазена на телефона в " + esc(whenSaved(d.kept)) + " и не е изпратена сама. Провери я и прати с „Към кухнята“ или я махни.", true) +
+      '<button class="pill pill-line kdrop" type="button" data-dropdraft>' + ic("x", 20) + "Махни я</button></section>";
     if (!kitchenOpen()) h += '<section class="st-sec">' + notice("clock", esc(closedText()), true) + "</section>";
     if (q) {
       const R = find(q), any = R.name.length + R.comp.length + R.rest.length + R.unknown.length, ch = qChips(q);
-      h += '<section class="st-sec" style="padding-top:8px">' + (ch.length ? '<div class="schips" role="group" aria-label="Съставки и алергени">' + ch.map((c) => '<button class="chip' + (c.without ? " without" : "") + '" type="button" data-tog="' + esc(c.word) + '" aria-pressed="' + c.without + '">' + (c.without ? ic("minus", 18) + "без " + esc(c.label) : esc(c.label) + " " + ic("x", 16)) + "</button>").join("") + "</div>" : "") +
+      h += '<section class="st-sec pt8">' + (ch.length ? '<div class="schips" role="group" aria-label="Съставки и алергени">' + ch.map((c) => '<button class="chip' + (c.without ? " without" : "") + '" type="button" data-tog="' + esc(c.word) + '" aria-pressed="' + c.without + '">' + (c.without ? ic("minus", 18) + "без " + esc(c.label) : esc(c.label) + " " + ic("x", 16)) + "</button>").join("") + "</div>" : "") +
         (any ? '<p class="res-h" role="status">' + plural(any, "резултат", "резултата") + "</p>" : "") +
         (R.query.inc.length ? R.name : R.rest).map(row).join("") +
         (R.comp.length ? '<div class="fband">' + ic("bowl-food", 20) + "<span>" + esc(R.band) + "</span></div>" + R.comp.map(row).join("") : "") +
         (R.unknown.length ? '<div class="fband unk">' + ic("warning", 20) + "<span>Нямаме пълен състав, попитайте ни<small>Питай кухнята, преди да кажеш на госта.</small></span></div>" + R.unknown.map(row).join("") : "") +
-        (any ? "" : '<div class="st-empty" style="padding-top:24px"><div class="ill" style="color:var(--muted)">' + ic("magnifying-glass", 44) + "</div><h2 role=\"status\">Няма „" + esc(q) + "“</h2><p>Може на кирилица или латиница, например „kebap“ или „цезар“, и „без лук“. Или по категория.</p><button class=\"pill pill-line\" type=\"button\" data-clr>Покажи категориите</button></div>") + "</section>";
+        (any ? "" : '<div class="st-empty tight"><div class="ill mute">' + ic("magnifying-glass", 44) + "</div><h2 role=\"status\">Няма „" + esc(q) + "“</h2><p>Може на кирилица или латиница, например „kebap“ или „цезар“, и „без лук“. Или по категория.</p><button class=\"pill pill-line\" type=\"button\" data-clr>Покажи категориите</button></div>") + "</section>";
     } else if (cat && catById[cat]) {
       const list = inCat(cat);
-      h += '<section class="st-sec" style="padding-top:12px"><button class="backchip" type="button" data-cat="">' + ic("caret-left", 20) + 'Всички категории</button><div class="st-h" style="margin-top:12px"><h2>' + esc(catById[cat].n) + '</h2><span class="muted">' + list.length + "</span></div>" + list.map(row).join("") + "</section>";
+      h += '<section class="st-sec pt12"><button class="backchip" type="button" data-cat="">' + ic("caret-left", 20) + 'Всички категории</button><div class="st-h mt12"><h2>' + esc(catById[cat].n) + '</h2><span class="muted">' + list.length + "</span></div>" + list.map(row).join("") + "</section>";
     } else {
       h += (recentOn ? recentHTML() : "") + '<section class="st-sec"><div class="st-h"><h2>Категории</h2></div><div class="cattiles">' + cats.map((c) => {
         const list = inCat(c.id); if (!list.length) return "";
@@ -213,8 +222,8 @@ async function orderFor(N: number, q0: string) {
   function noteSheet(k: string, after?: () => void) {
     const l = d.cart[k]; if (!l) return;
     const s = sheetOf(st)({ title: "Бележка към кухнята",
-      html: '<p style="margin:0 0 12px;font-weight:700">' + l.q + "× " + esc(lineName(l)) + '</p><div class="notechips">' + QUICK.map((t) => '<button class="chip" type="button" data-nt="' + t + '">' + t + "</button>").join("") + "</div>" +
-        '<div class="field" style="margin-top:14px"><label for="nt">Друго</label><textarea class="input" id="nt" maxlength="140" rows="2" placeholder="Например: алергия към ядки">' + esc(l.note) + '</textarea><span class="help">Вижда се на екрана на кухнята под ястието.</span></div>',
+      html: '<p class="shead">' + l.q + "× " + esc(lineName(l)) + '</p><div class="notechips">' + QUICK.map((t) => '<button class="chip" type="button" data-nt="' + t + '">' + t + "</button>").join("") + "</div>" +
+        '<div class="field mt14"><label for="nt">Друго</label><textarea class="input" id="nt" maxlength="140" rows="2" placeholder="Например: алергия към ядки">' + esc(l.note) + '</textarea><span class="help">Вижда се на екрана на кухнята под ястието.</span></div>',
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-save>Запази бележката</button>' });
     const ta = $<HTMLTextAreaElement>("#nt", s.el)!;
     s.el.addEventListener("click", (e) => {
@@ -234,13 +243,13 @@ async function orderFor(N: number, q0: string) {
       const by: Record<string, (DraftLine & { k: string })[]> = {};
       lines().forEach((l) => { (by[l.bill] = by[l.bill] || []).push(l); });
       const order = Object.keys(by).sort((a, b) => (a === "all" ? -1 : b === "all" ? 1 : +a.slice(5) - +b.slice(5)));
-      rv.innerHTML = order.map((b) => (d.split ? '<p class="st-cap" style="margin:12px 0 0">' + esc(b === "all" ? "Обща сметка" : b) + "</p>" : "") + by[b].map((l) => {
+      rv.innerHTML = order.map((b) => (d.split ? '<p class="st-cap gcap">' + esc(b === "all" ? "Обща сметка" : b) + "</p>" : "") + by[b].map((l) => {
         const nm = esc(lineName(l));
         return '<div class="sum-line"><div class="counter"><button type="button" data-rdec="' + esc(l.k) + '" aria-label="Едно по-малко ' + nm + '">' + ic("minus", 20) + "</button><output>" + l.q + '</output><button type="button" data-rinc="' + esc(l.k) + '" aria-label="Още едно ' + nm + '">' + ic("plus", 20) + "</button></div>" +
           '<div><div class="nm">' + nm + "</div>" + (l.note ? '<div class="nb">' + ic("note", 16) + esc(l.note) + "</div>" : "") +
-          '<button class="notebtn" type="button" data-note="' + esc(l.k) + '" aria-label="Бележка към ' + nm + '">' + ic("pencil-simple", 18) + (l.note ? "Промени бележката" : "Бележка") + '</button></div><span class="price">' + fmt(lineSum(l)) + "</span></div>";
+          '<button class="notebtn" type="button" data-note="' + esc(l.k) + '">' + ic("pencil-simple", 18) + (l.note ? "Промени бележката" : "Бележка") + '<span class="vh"> към ' + nm + '</span></button></div><span class="price">' + fmt(lineSum(l)) + "</span></div>";
       }).join("")).join("") +
-        '<div class="field" style="margin-top:14px"><label for="gn">Бележка за цялата поръчка</label><input class="input" id="gn" maxlength="300" value="' + esc(d.note) + '" placeholder="Например: двете пици заедно"></div>';
+        '<div class="field mt14"><label for="gn">Бележка за цялата поръчка</label><input class="input" id="gn" maxlength="300" value="' + esc(d.note) + '" placeholder="Например: двете пици заедно"></div>';
       const ok = kitchenOpen();
       rf.innerHTML = '<button class="pill pill-red pill-lg pill-block" type="button" data-send' + (ok ? "" : " disabled") + ">" + ic("paper-plane-right", 22) + sendWord() + ' · <span class="price">' + fmt(sum()) + "</span></button>" +
         '<p class="small muted rfl">Добавя се към сметката на Маса ' + N + ". Плащането е от „Сметка“ на масата.</p>" +
@@ -273,12 +282,13 @@ async function orderFor(N: number, q0: string) {
     const rid = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
     const input = { rid, lines: ls.map((l) => ({ id: l.id, q: l.q, ...(l.note ? { note: l.note } : {}), ...(l.g ? { grams: l.g } : {}), ...(d.split ? { guest: l.bill } : {}) })), ...(d.note.trim() ? { note: d.note.trim() } : {}) };
     const labels = ls.map((l) => l.q + "× " + lineName(l) + (d.split ? " · " + l.bill : ""));
-    const keep = () => { const qd = enqueue({ table: N, n, sum: total, input, guests, labels }); clear(); done(null, n, total, qd.id); };
+    const bills = d.split ? [...new Set(ls.map((l) => l.bill))] : [];
+    const keep = () => { const qd = enqueue({ table: N, n, sum: total, input, guests, labels, user }); clear(); done(null, n, total, bills, qd.id); retrySoon(); };
     if (st.offline) { keep(); return; }
     sending = true; $$<HTMLButtonElement>("[data-send]").forEach((b) => b.setAttribute("aria-busy", "true"));
     try {
       const r = await floorApi.order(N, input);
-      clear(); done(r.orders, n, total);
+      clear(); done(r.orders, n, total, bills);
     } catch (e) {
       if (isOffline(e)) { keep(); return; }
       if (e instanceof ApiError && e.code === "closed") { serverClosed = e.message; draw(); }
@@ -286,20 +296,25 @@ async function orderFor(N: number, q0: string) {
       st.toast(why(e), { ms: 6000 });
     } finally { sending = false; $$<HTMLButtonElement>("[data-send]").forEach((b) => b.removeAttribute("aria-busy")); drawBar(); }
   }
-  function clear() { d.cart = {}; d.note = ""; persist(); }
-  function done(nos: string[] | null, n: number, total: number, queuedId?: string) {
+  function clear() { d.cart = {}; d.note = ""; delete d.kept; persist(); }
+  function done(nos: string[] | null, n: number, total: number, bills: string[], queuedId?: string) {
     sent = true; bar.innerHTML = ""; st.app.classList.remove("withbar", "tall"); window.scrollTo(0, 0);
+    /* the core makes one order per guest, in the order of the guests' first dishes: "№ 1047 (Гост 1), № 1048 (Гост 3)" */
+    const nums = (no: string[]) => no.map((x, i) => "№ " + esc(x) + (bills[i] && no.length > 1 ? " (" + esc(bills[i]) + ")" : "")).join(", ");
     const paint = (no: string[] | null) => {
-      main.innerHTML = '<div class="sent' + (no ? "" : " kept") + '"><div class="ill">' + ic(no ? "check" : "clock", 56) + '</div><h1 class="h2" tabindex="-1">' + (no ? "Поръчката е в кухнята" : "Запазено на телефона") + "</h1>" +
-        '<p class="lead">' + (no ? "Маса " + N + " · " + items(n) + ' · <span class="price" style="color:var(--ink)">' + fmt(total) + "</span>" : "Няма връзка. Поръчката тръгва сама към кухнята, щом връзката се върне.") + "</p>" +
-        '<p class="muted" style="margin:0">' + (no ? no.map((x) => "№ " + esc(x)).join(", ") + (no.length > 1 ? " · отделни сметки" : "") + " · в сметката на масата" : "Номерът на поръчката идва, щом има връзка.") + "</p>" +
+      /* no answer although the phone is online: the answer was lost (the order may be in the kitchen already) */
+      const lost = !no && !st.offline && navigator.onLine !== false;
+      main.innerHTML = '<div class="sent' + (no ? "" : " kept") + '"><div class="ill">' + ic(no ? "check" : "clock", 56) + '</div><h1 class="h2" tabindex="-1">' + (no ? "Поръчката е в кухнята" : lost ? "Не разбрахме дали стигна" : "Запазено на телефона") + "</h1>" +
+        '<p class="lead">' + (no ? "Маса " + N + " · " + items(n) + ' · <span class="price ink">' + fmt(total) + "</span>" : lost ? "Пробваме пак сами. Поръчката няма да влезе два пъти в кухнята." : "Няма връзка. Поръчката тръгва сама към кухнята, щом връзката се върне.") + "</p>" +
+        '<p class="muted m0">' + (no ? nums(no) + " · в сметката на Маса " + N : "Номерът на поръчката идва, щом кухнята я получи.") + "</p>" +
         '<div class="btns"><a class="pill pill-red pill-lg pill-block" href="' + esc(murl.servitor("masa", String(N))) + '">Към Маса ' + N + '</a><a class="pill pill-line pill-lg pill-block" href="' + esc(murl.servitor("porachka")) + '">' + ic("plus", 22) + "Нова поръчка за друга маса</a></div></div>";
       const h = $<HTMLElement>("h1", main); if (h) h.focus({ preventScroll: true });
     };
     paint(nos);
     waiting = queuedId ? { id: queuedId, paint } : null;
   }
-  /* the order kept on the phone reached the kitchen while this screen shows "Запазено на телефона" */
+  /* the order kept on the phone reached the kitchen while this screen shows "Запазено на телефона" (this screen keeps
+     trying by itself: bits.ts startOutbox, 2 and 6 s after it was kept, then every 15 s, at "online" and at reconnect) */
   let waiting: { id: string; paint: (no: string[]) => void } | null = null;
   const onSent = (qd: { id: string }, no: string[]) => { if (waiting && qd.id === waiting.id && main.querySelector(".sent.kept")) waiting.paint(no); };
 
@@ -328,6 +343,7 @@ async function orderFor(N: number, q0: string) {
       d.split = sp; persist(); draw(); drawBar(); return;
     }
     if (b.dataset.guest) { cur = b.dataset.guest; draw(); return; }
+    if (b.hasAttribute("data-dropdraft")) { d.cart = {}; d.note = ""; delete d.kept; persist(); draw(); drawBar(); st.toast("Поръчката е махната"); inp.focus(); return; }
     if (b.hasAttribute("data-addguest")) { const g = "Гост " + (Math.max(0, ...d.guests.map((x) => +x.slice(5) || 0)) + 1); d.guests.push(g); cur = g; persist(); draw(); const f = $<HTMLElement>('[data-guest="' + g + '"]', main); if (f) { f.focus({ preventScroll: true }); f.scrollIntoView({ inline: "nearest", block: "nearest" }); } return; }
   });
   bar.addEventListener("click", (e) => {
@@ -338,16 +354,21 @@ async function orderFor(N: number, q0: string) {
   inp.addEventListener("input", () => { q = inp.value.trim(); clr.hidden = !q; draw(); });
   st.onNet(() => { drawBar(); if (!sent) draw(); });
   st.onReload(() => { void flushOutbox(st, onSent); });
+  /* a refused saved order went back into this table's draft while the screen is open: show it (never overwrite it) */
+  window.addEventListener("st:outbox", () => {
+    const x = readDraft(N, user); if (sent || !x || !x.at || x.at <= lastSave) return;
+    lastSave = x.at; Object.assign(d, x); draw(); drawBar();
+  });
   /* the hour: 22:30 stops the sending (and 10:00 starts it) without a reload */
   let was = kitchenOpen();
   setInterval(() => { const now = kitchenOpen(); if (now !== was) { was = now; draw(); drawBar(); } }, 15_000);
 
   if (q) setQ(q);
   draw(); drawBar(); st.synced();
-  if (saved && count()) setTimeout(() => st.toast("Недоизпратената поръчка е запазена: " + items(count())), 300);
+  if (saved && count() && !d.kept) setTimeout(() => st.toast("Недоизпратената поръчка е запазена: " + items(count())), 300);
   await Promise.all([tableP, loadMenu()]);
   if (!sent) { draw(); drawBar(); }
-  if (outbox().length && !st.offline) void flushOutbox(st, onSent);
+  void flushOutbox(st, onSent);
   void recent();
 
   /* "Последно поръчвани": the dishes of today's orders at the tables (the core; kept for 2 minutes in this tab) */

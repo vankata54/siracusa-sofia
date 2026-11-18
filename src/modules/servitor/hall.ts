@@ -4,7 +4,7 @@
    API: the waiter's role has the section "Резервации"), "Цялата зала" Салон / Градина with the tiles and the legend.
    Live: the hall reloads after every event of the floor; the timers tick from the timestamps; no connection: the frame's
    whole screen, then "Виж последните данни" (frozen timers, actions say why they wait). */
-import { flushOutbox } from "./bits.ts";
+import { flushOutbox, startOutbox } from "./bits.ts";
 import "sc-icons:plus,minus,calendar-blank,calendar-check,caret-down,magnifying-glass";
 import { mountStaff, type Staff } from "../staff/frame.ts";
 import { reservationsAdminApi, ApiError, type ResRow } from "../../client/api-admin-3.ts";
@@ -19,7 +19,7 @@ export async function mountHall(): Promise<void> {
   let zone: "salon" | "garden" = /(^#|&)zone=garden/.test(location.hash) ? "garden" : "salon", allRes = false;
   const st = await mountStaff({
     module: "waiter", screen: "tables", tab: "tables", title: "Залата", offlineFull: true,
-    homeFind: { text: "Търси маса, №, резервация, ястие…", label: "Търси маса, №, резервация, ястие…" },
+    homeFind: { text: "Търси маса, №, ястие…", label: "Търси маса, №, ястие…" },
     search: () => searchOf(store!)(),
     shift: () => shiftInfo(st!, store!)(),
   });
@@ -38,7 +38,7 @@ export async function mountHall(): Promise<void> {
   /* ---------- pieces ---------- */
   function tile(h: HallLive, t: HallTile): string {
     const k = t.state, since = ms(t.since), word = k === "call" && t.reason ? REASON[t.reason][0] : SHORT[k];
-    const tm = t.waits ? '<span class="tm">чака ' + S.timer(since) + "</span>" : k === "busy" ? '<span class="tm" style="font-weight:700;opacity:.8">от ' + Math.max(1, Math.round(S.secs(since) / 60)) + " мин</span>" : '<span class="tm" aria-hidden="true"></span>';
+    const tm = t.waits ? '<span class="tm">чака ' + S.timer(since) + "</span>" : k === "busy" ? '<span class="tm since">от ' + Math.max(1, Math.round(S.secs(since) / 60)) + " мин</span>" : '<span class="tm" aria-hidden="true"></span>';
     /* the name is the visible text with the hidden words around it ("Маса 3 Салон Моя QR поръчка чака 1:00"): the label
        always contains what is seen (axe "label-content-name-mismatch") */
     const state = k === "call" ? "Вика: " : k === "bill" ? "Чака " : "";
@@ -70,7 +70,7 @@ export async function mountHall(): Promise<void> {
     const h = store!.get(); if (!h) return;
     S.setTop({ sub: subOf(S, h) });
     const q = sortNow(S, h, queue(h)), n = h.counters;
-    let html = '<section class="st-sec" style="padding-top:12px"><div class="sum">' +
+    let html = '<section class="st-sec first"><div class="sum">' +
       '<a href="' + esc(murl.servitor("povikvania")) + '"' + (n.queue ? ' class="hot"' : "") + "><b>" + n.queue + "</b><span>повиквания и QR</span></a>" +
       '<a href="' + esc(murl.servitor("gotovi")) + '"' + (n.readyTables ? ' class="emb"' : "") + "><b>" + n.readyTables + "</b><span>маси с готово</span></a>" +
       '<a href="#zala"><b>' + n.free + "</b><span>свободни маси</span></a></div></section>";
@@ -84,12 +84,12 @@ export async function mountHall(): Promise<void> {
         (mine.length ? '<div class="tgrid">' + mine.map((t) => tile(h, t)).join("") + "</div>" : '<div class="notice">' + ic("users", 22) + "<span>Нямаш маси сега. Управителят може да ти даде.</span></div>") + "</section>";
     } else if (!S.boss) {
       html += '<section class="st-sec"><div class="st-h"><h2>Моите маси</h2></div><div class="notice">' + ic("users", 22) + '<span><b>Не си на смяна.</b> Избери своите маси, за да идват повикванията от тях при теб.</span></div>' +
-        '<a class="pill pill-red pill-lg pill-block" style="margin-top:12px" href="' + esc(murl.servitor("vhod", "shift")) + '">Започни смяната</a></section>';
+        '<a class="pill pill-red pill-lg pill-block after" href="' + esc(murl.servitor("vhod", "shift")) + '">Започни смяната</a></section>';
     }
     const today = sofiaDay();
     html += '<section class="st-sec" id="res"><div class="st-h"><h2>Резервации</h2>' +
-      (resNo ? '<a class="link" href="' + esc(aurl.section("reservations")) + '" style="font-size:16px">' + ic("plus", 20) + "Нова резервация</a>"
-        : '<button class="link" type="button" data-newres data-fk="newres" style="font-size:16px"' + S.offAttr() + ">" + ic("plus", 20) + "Нова резервация</button>") + "</div>" +
+      (resNo ? '<a class="link" href="' + esc(aurl.section("reservations")) + '">' + ic("plus", 20) + "Нова резервация</a>"
+        : '<button class="link" type="button" data-newres data-fk="newres"' + S.offAttr() + ">" + ic("plus", 20) + "Нова резервация</button>") + "</div>" +
       (resNo ? '<div class="notice">' + ic("calendar-blank", 22) + "<span>Резервациите са в админ панела.</span></div>"
         : res && res.length ? '<div class="resl">' + res.slice(0, allRes ? 999 : 3).map((r) => resRow(r, today)).join("") + "</div>" +
           (res.length > 3 && !allRes ? '<div class="more"><button class="link" type="button" data-allres data-fk="allres">Още ' + (res.length - 3) + ic("caret-down", 18) + "</button></div>" : "")
@@ -97,9 +97,9 @@ export async function mountHall(): Promise<void> {
     const zones = (["salon", "garden"] as const).filter((z) => h.tables.some((t) => t.zone === z));
     if (!zones.includes(zone) && zones.length) zone = zones[0];
     html += '<section class="st-sec" id="zala"><div class="st-h"><h2>Цялата зала</h2></div>' +
-      (zones.length > 1 ? '<div class="st-seg" role="group" aria-label="Зона" style="margin-bottom:12px">' + zones.map((z) => '<button type="button" data-zone="' + z + '" data-fk="z' + z + '" aria-pressed="' + (zone === z) + '">' + ZONE[z] + ' <span class="n">' + h.tables.filter((t) => t.zone === z).length + "</span></button>").join("") + "</div>" : "") +
+      (zones.length > 1 ? '<div class="st-seg" role="group" aria-label="Зона" class="zseg">' + zones.map((z) => '<button type="button" data-zone="' + z + '" data-fk="z' + z + '" aria-pressed="' + (zone === z) + '">' + ZONE[z] + ' <span class="n">' + h.tables.filter((t) => t.zone === z).length + "</span></button>").join("") + "</div>" : "") +
       (h.tables.length ? '<div class="tgrid">' + h.tables.filter((t) => t.zone === zone).map((t) => tile(h, t)).join("") + "</div>" : '<div class="notice">' + ic("chair", 22) + "<span>Още няма маси. Управителят ги добавя в „Залата“ в админ панела.</span></div>") +
-      '<p class="st-cap" style="margin-top:18px">Какво значат цветовете</p><div class="legend">' + LEGEND.map(([k, w]) => S.stt(k, w, STATE_ICON[k])).join("") + "</div></section>";
+      '<p class="st-cap gap">Какво значат цветовете</p><div class="legend">' + LEGEND.map(([k, w]) => S.stt(k, w, STATE_ICON[k])).join("") + "</div></section>";
     paint(S, html);
   }
 
@@ -109,7 +109,7 @@ export async function mountHall(): Promise<void> {
     const d0 = sofiaDay(), d1 = sofiaDay(1), dMax = sofiaDay(92);
     const SLOTS: number[] = []; for (let m = 660; m <= 1290; m += 30) SLOTS.push(m);
     const f = { day: d0, at: null as number | null, n: 2, t: null as string | null, name: "", phone: "", note: "" };
-    let err: Record<string, string> = {}, free: { id: string; n: number; zone: "salon" | "garden"; seats: number }[] | null = null, ask = 0, saving = false;
+    let scrollErr = false, err: Record<string, string> = {}, free: { id: string; n: number; zone: "salon" | "garden"; seats: number }[] | null = null, ask = 0, saving = false;
     const slots = () => { const m = f.day === d0 ? sofiaMin() : -1; return SLOTS.filter((x) => x > m + 15); };
     f.at = slots()[0] ?? null;
     /* the frame's own sheet (frame.ts), not the site's SC.sheet: no sc-sheet.ts here */
@@ -130,21 +130,25 @@ export async function mountHall(): Promise<void> {
       const sl = slots(), ts = fit();
       if (f.t && free && !ts.some((t) => t.id === f.t)) f.t = null;
       box.innerHTML =
-        '<div class="field" style="margin-top:0"><span class="label" id="l-day">Дата</span><div class="days" role="group" aria-labelledby="l-day">' +
+        '<div class="field"><span class="label" id="l-day">Дата</span><div class="days" role="group" aria-labelledby="l-day">' +
           [[d0, "Днес"], [d1, "Утре"]].map((x) => '<button class="chip" type="button" data-day="' + x[0] + '" aria-pressed="' + (f.day === x[0]) + '">' + x[1] + " · " + dayText(x[0]) + "</button>").join("") +
-          '</div><label class="help" for="rday" style="margin-top:4px">Или друга дата</label><input class="input" id="rday" type="date" min="' + d0 + '" max="' + dMax + '" value="' + f.day + '"' + inv("day") + ">" + e("day") + "</div>" +
-        '<div class="grid2"><div class="field"><label for="rat">Час</label>' + (sl.length ? '<select class="input" id="rat"' + inv("at") + ">" + sl.map((x) => '<option value="' + x + '"' + (x === f.at ? " selected" : "") + ">" + hm(x) + "</option>").join("") + "</select>" : '<p class="muted" style="margin:0">За днес часовете свършиха.</p>') + e("at") + "</div>" +
+          '</div><label class="help" for="rday">Или друга дата</label><input class="input" id="rday" type="date" min="' + d0 + '" max="' + dMax + '" value="' + f.day + '"' + inv("day") + ">" + e("day") + "</div>" +
+        '<div class="grid2"><div class="field"><label for="rat">Час</label>' + (sl.length ? '<select class="input" id="rat"' + inv("at") + ">" + sl.map((x) => '<option value="' + x + '"' + (x === f.at ? " selected" : "") + ">" + hm(x) + "</option>").join("") + "</select>" : '<p class="muted">За днес часовете свършиха.</p>') + e("at") + "</div>" +
           '<div class="field"><span class="label" id="l-n">Брой хора</span><div class="stepper" role="group" aria-labelledby="l-n"><button type="button" data-n="-1" aria-label="По-малко хора"' + (f.n <= 1 ? " disabled" : "") + ">" + ic("minus", 20) + '</button><output aria-live="polite">' + f.n + '</output><button type="button" data-n="1" aria-label="Повече хора"' + (f.n >= 12 ? " disabled" : "") + ">" + ic("plus", 20) + "</button></div></div></div>" +
-        (f.n >= 12 ? '<p class="small muted" style="margin:8px 0 0">Повече от 12 души: празник, през управителя.</p>' : "") +
+        (f.n >= 12 ? '<p class="small muted note">Повече от 12 души: празник, през управителя.</p>' : "") +
         '<div class="field"><span class="label" id="l-t">Маса · свободните за ' + (f.at != null ? hm(f.at) : "часа") + "</span>" +
-          (f.at == null ? '<p class="muted" style="margin:0">Избери друга дата.</p>'
-            : !free ? '<p class="muted" style="margin:0" role="status">Търсим свободните маси …</p>'
+          (f.at == null ? '<p class="muted">Избери друга дата.</p>'
+            : !free ? '<p class="muted" role="status">Търсим свободните маси …</p>'
             : ts.length ? '<div class="tchips" role="group" aria-labelledby="l-t">' + ts.map((t) => '<button class="chip" type="button" data-rt="' + esc(t.id) + '" aria-pressed="' + (f.t === t.id) + '"><span class="vh">Маса </span>' + t.n + " <small>" + ZONE[t.zone] + " · " + t.seats + " места</small></button>").join("") + "</div>"
-            : f.n > 6 ? '<p class="muted" style="margin:0">Над 6 души: управителят събира маси.</p>' : '<p class="muted" style="margin:0">Няма свободна маса за ' + f.n + " в този час. Опитай друг час.</p>") + e("t") + "</div>" +
+            : f.n > 6 ? '<p class="muted">Над 6 души: управителят събира маси.</p>' : '<p class="muted">Няма свободна маса за ' + f.n + " в този час. Опитай друг час.</p>") + e("t") + "</div>" +
         '<div class="field"><label for="rname">Име на госта</label><input class="input" id="rname" autocomplete="off" value="' + esc(f.name) + '"' + inv("name") + ">" + e("name") + "</div>" +
         '<div class="field"><label for="rph">Телефон на госта</label><input class="input" id="rph" type="tel" inputmode="tel" autocomplete="off" placeholder="0888 12 34 56" value="' + esc(f.phone) + '"' + inv("phone") + ">" + e("phone") + "</div>" +
         '<div class="field"><label for="rnote">Бележка (по желание)</label><input class="input" id="rnote" autocomplete="off" maxlength="300" placeholder="Например: детско столче" value="' + esc(f.note) + '"></div>';
       if (focus) { const el = box.querySelector<HTMLElement>(focus); if (el) el.focus(); }
+      /* the first error is seen, even under the table chips at the bottom of the sheet */
+      const er = box.querySelector<HTMLElement>(".err");
+      if (er && scrollErr) er.scrollIntoView({ block: "center" });
+      scrollErr = false;
     }
     async function fetchFree() {
       const id = ++ask; free = null; draw(focusKey());
@@ -172,7 +176,7 @@ export async function mountHall(): Promise<void> {
       const ph = f.phone.replace(/[\s\-()]/g, "");
       if (!/^(\+359|0)\d{8,9}$/.test(ph)) err.phone = f.phone.trim() ? "Провери номера: например 0888 12 34 56." : "Напиши телефона на госта.";
       const first = ["at", "t", "name", "phone"].find((k) => err[k]);
-      if (first) { draw(({ at: "#rat", t: "[data-rt]", name: "#rname", phone: "#rph" } as Record<string, string>)[first]); return; }
+      if (first) { scrollErr = true; draw(({ at: "#rat", t: "[data-rt]", name: "#rname", phone: "#rph" } as Record<string, string>)[first]); return; }
       saving = true; b.setAttribute("aria-busy", "true");
       try {
         const r = await reservationsAdminApi.create({ date: f.day, time: hm(f.at!), people: f.n, table: f.t, name: f.name.trim(), phone: f.phone.trim(), note: f.note.trim() || undefined });
@@ -190,7 +194,7 @@ export async function mountHall(): Promise<void> {
           const map: Record<string, string> = { date: "day", time: "at", table: "t", people: "t", name: "name", phone: "phone" };
           for (const k of Object.keys(x.fields)) err[map[k] || "t"] = x.fields[k];
         } else S.toast(why(x));
-        draw(err.phone ? "#rph" : err.name ? "#rname" : err.at ? "#rat" : err.day ? "#rday" : null);
+        scrollErr = true; draw(err.phone ? "#rph" : err.name ? "#rname" : err.at ? "#rat" : err.day ? "#rday" : null);
       } finally { saving = false; b.removeAttribute("aria-busy"); }
     });
   }
@@ -210,6 +214,7 @@ export async function mountHall(): Promise<void> {
      wired here at the merge) */
   S.onReload(() => { loadRes().then(render); void flushOutbox(S); });
   void flushOutbox(S); /* what waited on this phone from before (the order screen keeps it) */
+  startOutbox(S); /* the retries and the question at "Изход" */
   S.onLive(["reservation.created", "reservation.status"], () => { loadRes().then(render); });
   /* the late ones move up and "от 55 мин" grows without a load */
   setInterval(() => { if (!document.hidden && !S.stale) render(); }, 15_000);

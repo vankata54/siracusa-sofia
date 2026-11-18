@@ -88,9 +88,10 @@ test("a QR order live → grams → kitchen → „Сервирах“ → the b
   await expect(page.locator(".cstrip")).toContainText("Вика · Вода / прибори");
   await page.locator(".cstrip [data-take]").click();
   await expect(toast(page)).toContainText("Маса " + n + ": отивам");
+  await expect(page.locator(".cstrip [data-done]")).toBeFocused();
   await expect(page.locator(".cstrip.taken")).toContainText("отивам");
   await page.locator(".cstrip [data-done]").click();
-  await expect(toast(page)).toContainText("Обслужено");
+  await expect(toast(page)).toContainText("Маса " + n + ": обслужено");
   await toast(page).getByRole("button", { name: "Отмени" }).click();
   await expect(page.locator(".cstrip [data-done]")).toBeVisible();
   await page.locator(".cstrip [data-done]").click();
@@ -116,6 +117,7 @@ test("a QR order live → grams → kitchen → „Сервирах“ → the b
   await expect(sh.locator("[data-gok]")).toHaveText("Потвърди и прати · 46,00 €");
   await sh.locator("[data-gok]").click();
   await expect(toast(page)).toContainText("Потвърдено и изпратено в кухнята · №");
+  await expect(page.locator(".ono").first()).toBeFocused();
   await expect(page.locator(".qrcard")).toHaveCount(0);
   await expect(page.locator(".ocard")).toContainText("Рибай стек от Блек Ангъс · 500 гр.");
   await expect(page.locator(".ocard .stt.acc").first()).toContainText("Прието");
@@ -129,11 +131,14 @@ test("a QR order live → grams → kitchen → „Сервирах“ → the b
   expect((await api(kitchen, "POST", "kitchen/orders/" + no + "/done", { sec: "all" })).status).toBe(200);
   await expect(page.locator("[data-serve]")).toHaveCount(2);
   await page.locator("[data-serve]").first().click();
-  await expect(toast(page)).toContainText("Сервирано");
+  await expect(toast(page)).toContainText("Маса " + n + ": сервирано");
+  /* the focus goes on to the next "Сервирах", never to the page */
+  await expect(page.locator("[data-serve]").first()).toBeFocused();
   await toast(page).getByRole("button", { name: "Отмени" }).click();
   await expect(page.locator("[data-serve]")).toHaveCount(2);
   await page.locator('[data-serve$=":0"]').click();
   await expect(page.locator("[data-serve]")).toHaveCount(1);
+  expect(await page.evaluate(() => document.activeElement && document.activeElement.tagName)).not.toBe("BODY");
   await expect(page.locator(".oline.served")).toContainText("Пица Маргарита");
 
   /* "Сметка" by dishes: two payments, each keeps its lines, the paid one is struck and off */

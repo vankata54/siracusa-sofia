@@ -97,9 +97,13 @@ export async function layout(page: Page, at: string) {
       const b = el.getBoundingClientRect(); if (!b.width || (el as HTMLElement).closest(".pw")) return;
       if (b.height < 48) tiny.push(el.tagName + "." + (el as HTMLElement).className + " " + (el.textContent || "").trim().slice(0, 20) + " " + Math.round(b.height));
     });
-    return { over: document.documentElement.scrollWidth - innerWidth, small, tiny };
+    /* the words of a tile stay inside it ("Свободна" at 360) */
+    const spill: string[] = [];
+    document.querySelectorAll(".tile").forEach((t) => { const tb = t.getBoundingClientRect(); const tw = document.createTreeWalker(t, NodeFilter.SHOW_TEXT); for (let n = tw.nextNode(); n; n = tw.nextNode()) { if (!n.textContent!.trim() || (n.parentElement && n.parentElement.closest(".vh"))) continue; const rg = document.createRange(); rg.selectNodeContents(n); const r = rg.getBoundingClientRect(); if (r.width && r.right > tb.right - 2) spill.push(t.getAttribute("href") + " " + n.textContent!.trim() + " " + Math.round(r.right - tb.right)); } });
+    return { over: document.documentElement.scrollWidth - innerWidth, small, tiny, spill };
   });
   expect(g.over, at + " horizontal scroll").toBeLessThanOrEqual(0);
   expect(g.small, at + " text under 14 px").toEqual([]);
   expect(g.tiny, at + " targets under 48 px").toEqual([]);
+  expect(g.spill, at + " words out of their tile").toEqual([]);
 }

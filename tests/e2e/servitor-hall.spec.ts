@@ -45,17 +45,21 @@ test("@phone a guest calls: the strip comes live, „Отивам“ → „Об
     const one = await page.evaluate(() => [document.querySelector(".sum a b")!.textContent, document.querySelector('.st-nav [data-cnt="calls"] [data-n]')!.textContent]);
     expect(one[0]).toBe(one[1]);
     expect(+one[0]!).toBeGreaterThanOrEqual(2);
-    /* "Отивам": the colleagues see who took it */
-    await s1.locator("button", { hasText: "Отивам" }).click();
+    /* "Отивам" from the keyboard: the colleagues see who took it, the focus moves to "Обслужено" of the same strip */
+    await s1.locator("button", { hasText: "Отивам" }).focus();
+    await page.keyboard.press("Enter");
     await expect(page.locator(".st-toast")).toHaveText("Маса 1: отивам. Колегите виждат, че масата е поета.");
+    await expect(s1.locator("button", { hasText: "Обслужено" })).toBeFocused();
     await expect(s1).toHaveClass(/taken/);
     await expect(s1.locator("small")).toContainText("Сметка · отивам");
     const hall = await (await a.get("/api/floor/hall")).json();
     expect(hall.calls.find((c: { table: { n: number }; kind: string }) => c.table.n === 1 && c.kind === "bill").taken.name).toBe(w.name);
     /* "Обслужено" with "Отмени" (the call waits again), then "Обслужено" for good */
-    await s1.locator("button", { hasText: "Обслужено" }).click();
-    await expect(page.locator(".st-toast span")).toHaveText("Маса 1 е обслужена");
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".st-toast span")).toHaveText("Маса 1: обслужено");
     await expect(s1).toHaveCount(0);
+    /* the strip went away: the focus is on the next call's button (Маса 2), never on the page */
+    await expect(page.locator(".cstrip", { has: page.locator('a.tx[href="/servitor/masa/#2"]') }).locator("button")).toBeFocused();
     await page.locator(".st-toast button", { hasText: "Отмени" }).click();
     await expect(s1).toBeVisible();
     await s1.locator("button").click();
@@ -253,4 +257,36 @@ test("@phone no connection: the whole screen with the steps, „Виж посл�
     await expect(page.locator(".st-net")).toBeHidden({ timeout: 20_000 });
     await expect(s3.locator("button", { hasText: "Отивам" })).not.toHaveAttribute("aria-disabled", "true");
   } finally { await endShift(w); await freeTable(a, 3); }
+});
+
+test("@phone the search never rebuilds a masked phone: only the whole number finds a reservation, and it stays masked", async ({ page, context }) => {
+  const a = await admin(), w = await newWaiter(a);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
+  const name = "Гост " + rnd(), phone = "0889" + String(100000 + Math.floor(Math.random() * 899999));
+  const hm = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).split(":").map(Number);
+  /* a booking for today at the last hour (the test clock of the API is 19:00) */
+  const r = await a.post("/api/admin/reservations/new", { data: { date: today, time: "21:30", people: 2, name, phone } });
+  expect(r.status(), "booking at " + hm.join(":")).toBeLessThan(300);
+  const id = (await r.json()).id as string;
+  try {
+    /* through the API: a part of the hidden middle never matches, the whole number does and comes back masked */
+    const find = async (q: string) => ((await (await w.api.get("/api/staff/search?q=" + encodeURIComponent(q))).json()) as { reservations: { name: string; phone: string }[] }).reservations.filter((x) => x.name === name);
+    for (const part of [phone.slice(0, 5), phone.slice(0, 6), phone.slice(2, 8), phone.slice(0, 9), phone.slice(4)]) expect(await find(part), part).toEqual([]);
+    const hit = await find(phone.slice(0, 4) + " " + phone.slice(4, 6) + " " + phone.slice(6, 8) + " " + phone.slice(8));
+    expect(hit.length).toBe(1);
+    expect(hit[0].phone).not.toContain(phone.slice(4, 8));
+    expect((await find("+359" + phone.slice(1))).length).toBe(1);
+    /* on the screen */
+    await signInCtx(context, w);
+    await page.goto("/servitor/");
+    await ready(page);
+    await page.locator(".st-findfield").click();
+    const dlg = page.locator(".st-find.on"), inp = dlg.locator("#fq");
+    await inp.fill(phone.slice(0, 7));
+    await expect(dlg.locator(".fgrp, .fempty").first()).toBeVisible();
+    await expect(dlg).not.toContainText(name);
+    await inp.fill(phone);
+    await expect(dlg.locator("button.frow", { hasText: name })).toBeVisible();
+    await expect(dlg.locator("button.frow", { hasText: name })).not.toContainText(phone.slice(4, 8));
+  } finally { await a.post("/api/admin/reservations/" + id + "/status", { data: { status: "cancelled" } }); }
 });

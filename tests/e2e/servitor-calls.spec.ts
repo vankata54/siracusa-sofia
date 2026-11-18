@@ -77,7 +77,11 @@ test("@phone two waiters: the other's taken call is dimmed with „Поема <�
     await expect(c9).toHaveClass(/other-taken/);
     await expect(c9.locator(".meta")).toContainText("Поема " + w2.name);
     await expect(c9.locator("button")).toHaveCount(0);
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".callc.other-taken")!).opacity)).toBe("0.7");
+    /* quieter by its colours, not by transparency: AA contrast in both themes */
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".callc.other-taken")!).opacity)).toBe("1");
+    expect(await serious(page)).toEqual([]);
+    await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+    expect(await serious(page)).toEqual([]);
     /* the colleague's call cannot be closed by me (the core says who has it) */
     const r = await w1.api.post("/api/floor/call/" + id + "/done");
     expect(r.status()).toBe(409);

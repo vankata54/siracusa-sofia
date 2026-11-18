@@ -109,7 +109,10 @@ test("a live call: „Отивам“ → „Обслужено“, the vibratio
   }
   await expect(page.locator(".w.rect .face")).toContainText("Отивам");
   await page.locator(".w.rect .btn").click();
-  await expect(page.locator(".st-toast.on")).toContainText("Обслужено");
+  await expect(page.locator(".st-toast.on")).toContainText("Маса " + n + ": обслужено");
+  /* the ticking timers are not a live region: only the change is told */
+  await expect(page.locator("[data-pair][aria-live], [aria-live] [data-since]")).toHaveCount(0);
+  await expect(page.locator("[data-say]")).toHaveAttribute("role", "status");
   const left = (await api<any>(w, "GET", "floor/table/" + n)).body.calls;
   expect(left).toEqual([]);
 
@@ -121,7 +124,7 @@ test("a live call: „Отивам“ → „Обслужено“, the vibratio
   await expect(page.locator(".w.round .muted")).toHaveText("2× Пица Маргарита");
   await expect(page.locator(".w.round .btn")).toHaveText("Сервирах");
   await page.locator(".w.round .btn").click();
-  await expect(page.locator(".st-toast.on")).toContainText("Сервирано · Маса " + n);
+  await expect(page.locator(".st-toast.on")).toContainText("Маса " + n + ": сервирано");
   await expect.poll(async () => (await api<any>(w, "GET", "floor/table/" + n)).body.unserved.length).toBe(0);
 
   /* no connection */

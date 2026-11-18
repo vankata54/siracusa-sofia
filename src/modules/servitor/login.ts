@@ -8,6 +8,7 @@
    Kitchen and driver accounts go to their own app; the main admin, the owner and the manager to #next= or the dashboard. */
 import "sc-icons:user,arrow-left,eye,lock,sign-in,sign-out,sparkle,bell-ringing,check-circle,warning,arrow-clockwise";
 import { mountStaff, type Staff } from "../staff/frame.ts";
+import { askDrop } from "./bits.ts";
 import { pinApi, shiftApi, floorApi, ApiError, type PinPeople, type ShiftMine, type HallLive } from "../../client/api-floor.ts";
 import { staffApi, type Me } from "../../client/api-admin.ts";
 import { aurl } from "../../admin/routes.ts";
@@ -39,14 +40,15 @@ export async function mountLogin(): Promise<void> {
   const seg = () => '<div class="st-seg" role="group" aria-label="Начин на вход"><button type="button" data-v="pin" aria-pressed="' + (view === "pin") + '">Личен ПИН</button><button type="button" data-v="pass" aria-pressed="' + (view === "pass") + '">Парола</button></div>';
   function pinView(): string {
     const list = people ? people.people : [], known = !!people && people.known, locked = lockUntil > Date.now();
-    if (!list.some((p) => p.id === who) && list.length) who = list[0].id;
-    let h = '<div><h1 class="h1">Вход за персонала</h1><p class="lead" style="margin-top:6px">Личен 4-цифрен ПИН, който дава управителят.</p></div>' + seg();
+    /* nobody is chosen until a tap (or the choice remembered on this phone): digits typed blindly never count against a colleague */
+    if (who && !list.some((p) => p.id === who)) who = "";
+    let h = '<div><h1 class="h1">Вход за персонала</h1><p class="lead sub">Личен 4-цифрен ПИН, който дава управителят.</p></div>' + seg();
     if (!known) return h + '<div class="notice">' + ic("lock", 22) + "<span>Първият вход на нов телефон е с парола. После тук влизаш с личния ПИН.</span></div>" +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-v="pass">' + ic("sign-in", 22) + "Влез с парола</button>";
     if (!list.length) return h + '<div class="notice">' + ic("user", 22) + "<span>Още никой няма личен ПИН. Управителят го задава в „Персонал“. Дотогава влез с парола.</span></div>" +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-v="pass">' + ic("sign-in", 22) + "Влез с парола</button>";
     h += '<div><p class="st-cap" id="l-who">Кой влиза?</p><div class="who" role="group" aria-labelledby="l-who">' + list.map((p) => '<button class="chip" type="button" data-who="' + esc(p.id) + '" aria-pressed="' + (who === p.id) + '">' + ic("user", 18) + esc(p.name) + "</button>").join("") +
-      '</div><p class="small muted" style="margin:8px 0 0">Имената идват от „Персонал“ в админ панела. На личен телефон изборът се помни.</p></div>' +
+      '</div><p class="small muted note">Имената идват от „Персонал“ в админ панела. На личен телефон изборът се помни.</p></div>' +
       '<div class="dots' + (pinBad ? " bad" : "") + '" aria-hidden="true">' + [0, 1, 2, 3].map((i) => '<span class="' + (i < pin.length ? "on" : "") + '"></span>').join("") + "</div>" +
       '<p class="pinerr" role="status" aria-live="polite">' + (pinMsg ? esc(pinMsg) : '<span class="vh">Въведени ' + pin.length + " от 4 цифри</span>") + "</p>" +
       '<div class="pinpad">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => '<button type="button" data-d="' + d + '"' + (locked || busy ? " disabled" : "") + ">" + d + "</button>").join("") +
@@ -55,13 +57,13 @@ export async function mountLogin(): Promise<void> {
   }
   function passView(): string {
     const fresh = !people || !people.known;
-    return '<div><div class="row" style="gap:8px;flex-wrap:wrap"><h1 class="h1">Вход с парола</h1>' + (fresh ? "" : '<span class="prop">' + ic("sparkle", 14) + "Алтернатива</span>") + "</div>" +
-      '<p class="lead" style="margin-top:6px">' + (fresh ? "Първият вход на нов телефон е с парола. После тук влизаш с личния ПИН." : "За личен телефон. Паролата дава управителят.") + "</p></div>" + seg() +
-      '<form class="stack" style="gap:16px" novalidate><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="например servitor1"' + (perr.u ? ' aria-invalid="true" aria-describedby="uerr"' : "") + ">" + (perr.u ? '<span class="err" id="uerr">' + esc(perr.u) + "</span>" : "") + "</div>" +
+    return '<div><div class="row ttl"><h1 class="h1">Вход с парола</h1>' + (fresh ? "" : '<span class="prop">' + ic("sparkle", 14) + "Алтернатива</span>") + "</div>" +
+      '<p class="lead sub">' + (fresh ? "Първият вход на нов телефон е с парола. После тук влизаш с личния ПИН." : "За личен телефон. Паролата дава управителят.") + "</p></div>" + seg() +
+      '<form class="stack pform" novalidate><div class="field"><label for="u">Потребител</label><input class="input" id="u" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="например servitor1"' + (perr.u ? ' aria-invalid="true" aria-describedby="uerr"' : "") + ">" + (perr.u ? '<span class="err" id="uerr">' + esc(perr.u) + "</span>" : "") + "</div>" +
       '<div class="field"><label for="p">Парола</label><div class="pw"><input class="input" id="p" type="' + (showPw ? "text" : "password") + '" autocomplete="off"' + (perr.p ? ' aria-invalid="true" aria-describedby="perr"' : "") + '><button class="show" type="button" data-show aria-controls="p" aria-pressed="' + showPw + '">' + ic(showPw ? "lock" : "eye", 20) + (showPw ? "Скрий" : "Покажи") + "</button></div>" +
       (perr.p ? '<span class="err" id="perr">' + esc(perr.p) + "</span>" : "") + "</div>" +
       '<button class="pill pill-red pill-lg pill-block" type="submit"' + (busy ? ' aria-busy="true"' : "") + ">" + ic("sign-in", 22) + "Влез</button></form>" +
-      '<p class="small muted" style="margin:0;text-align:center">Забравена парола? Управителят я сменя от админ панела.</p>';
+      '<p class="small muted center">Забравена парола? Управителят я сменя от админ панела.</p>';
   }
   function zonesText(): string {
     if (!mine) return "";
@@ -70,23 +72,23 @@ export async function mountLogin(): Promise<void> {
   function shiftView(): string {
     const m = mine!, since = m.shift ? S.clock(ms(m.shift.since)) : S.clock(Date.now());
     const zt = zonesText();
-    return '<div class="hello"><span class="av">' + ic("user", 32) + '</span><div><h1 class="h2">Смяна · ' + esc(me ? me.user.name : "") + '</h1><p class="muted" style="margin:2px 0 0;font-weight:700">' + dayText(sofiaDay()) + " · от " + since + "</p></div></div>" +
+    return '<div class="hello"><span class="av">' + ic("user", 32) + '</span><div><h1 class="h2">Смяна · ' + esc(me ? me.user.name : "") + '</h1><p class="muted when">' + dayText(sofiaDay()) + " · от " + since + "</p></div></div>" +
       '<div><p class="st-cap" id="l-t">Моите маси днес</p>' + (m.tables.length ? '<div class="tchips" role="group" aria-labelledby="l-t">' + m.tables.map((t) => {
         const other = !!t.owner && !t.mine;
         return '<button class="chip" type="button" data-t="' + t.n + '" aria-pressed="' + picked.includes(t.n) + '"' + (other ? ' aria-disabled="true"' : "") + ' aria-label="Маса ' + t.n + ", " + ZONE[t.zone] + (other ? ", при " + esc(t.owner!.name) : "") + '">' + t.n + "</button>";
       }).join("") + "</div>" : '<div class="notice">' + ic("warning", 22) + "<span>Още няма маси. Управителят ги добавя в „Залата“ в админ панела.</span></div>") +
-      '<p class="small muted" style="margin:10px 0 0">Избери своите маси за смяната. Управителят може да ги промени.' + (zt ? " " + zt + "." : "") + "</p></div>" +
+      '<p class="small muted note">Избери своите маси за смяната. Управителят може да ги промени.' + (zt ? " " + zt + "." : "") + "</p></div>" +
       '<div class="notice">' + ic("bell-ringing", 22) + "<span>Повикванията от моите маси идват на телефона и на часовника. Повикванията от другите маси, които никой не е поел, също се виждат.</span></div>" +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-start' + (picked.length && !busy ? "" : ' aria-disabled="true"') + ">" + (m.shift ? "Запази масите" : "Започни смяната") + " · " + plural(picked.length, "маса", "маси") + "</button>" +
       (m.shift ? '<a class="pill pill-line pill-lg pill-block" href="' + esc(murl.servitor()) + '">Към залата</a>' : "");
   }
   function endView(): string {
     const m = mine!;
-    if (!m.shift) return '<div><h1 class="h1">Край на смяната</h1><p class="lead" style="margin-top:6px">Не си на смяна.</p></div>' +
+    if (!m.shift) return '<div><h1 class="h1">Край на смяната</h1><p class="lead sub">Не си на смяна.</p></div>' +
       '<button class="pill pill-red pill-lg pill-block" type="button" data-out>' + ic("sign-out", 22) + "Излез</button>" +
       '<a class="pill pill-line pill-lg pill-block" href="' + esc(murl.servitor("vhod", "shift")) + '">Започни смяната</a>';
     const open = hall ? hall.tables.filter((t) => t.mine && t.state !== "free") : [];
-    return '<div><h1 class="h1">Край на смяната</h1><p class="lead" style="margin-top:6px">На смяна от ' + S.clock(ms(m.shift.since)) + ". Отворените маси се предават, преди изход.</p></div>" +
+    return '<div><h1 class="h1">Край на смяната</h1><p class="lead sub">На смяна от ' + S.clock(ms(m.shift.since)) + ". Отворените маси се предават, преди изход.</p></div>" +
       (open.length ? '<div class="stack">' + open.map((t) => '<div class="endrow"><div><b>Маса ' + t.n + "</b><span>" + ZONE[t.zone] + "</span></div>" + S.stt(t.state, t.state === "call" ? "Вика" : t.state === "ready" ? SHORT.ready : t.label, STATE_ICON[t.state]) + "</div>").join("") + "</div>" +
         '<div class="field"><label for="to">Предай масите на</label><select class="input" id="to">' + m.colleagues.map((c) => '<option value="' + esc(c.username) + '"' + (to === c.username ? " selected" : "") + ">" + esc(c.name) + "</option>").join("") + '<option value=""' + (to === "" && m.colleagues.length ? " selected" : "") + ">Управителя</option></select>" +
         (m.colleagues.length ? "" : '<span class="help">Няма друг сервитьор на смяна: управителят ги дава на колега.</span>') + "</div>"
@@ -146,6 +148,7 @@ export async function mountLogin(): Promise<void> {
   }
   function digit(d: string) {
     if (view !== "pin" || busy || lockUntil > Date.now() || !people || !people.known || !people.people.length) return;
+    if (!who) { pinBad = false; pinMsg = "Първо избери кой влиза."; render(); main.querySelector<HTMLElement>("[data-who]")?.focus(); return; }
     pinBad = false; pinMsg = "";
     if (pin.length < 4) pin += d;
     render();
@@ -187,6 +190,8 @@ export async function mountLogin(): Promise<void> {
   }
   async function endShift() {
     if (busy) return;
+    /* the orders this person left unsent on the phone: asked about first (the next person never sends them) */
+    if (!(await askDrop(S))) return;
     busy = true; render();
     try {
       const r = await shiftApi.end(to || null);

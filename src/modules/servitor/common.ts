@@ -119,6 +119,8 @@ export function hallStore(st: Staff): HallStore {
   function schedule() { clearTimeout(t); t = setTimeout(load, 120); }
   st.onLive(LIVE, schedule);
   st.onReload(() => { load(); });
+  /* a session closed on another phone ("Предай масите и излез") or a change missed by the stream: a quiet look every minute */
+  setInterval(() => { if (!document.hidden && !st.offline && h) load(); }, 60_000);
   return { get: () => h, load, set, on: (fn) => { subs.push(fn); } };
 }
 /** an action of the core failed: what to say */
@@ -131,7 +133,7 @@ export function why(e: unknown): string {
 export function shiftInfo(st: Staff, store: HallStore): () => Promise<ShiftInfo> {
   return async () => {
     const h = store.get() || (await store.load());
-    const extra = '<p class="st-cap" style="margin-top:18px">Известия</p><div class="kvs"><div class="kv"><span>Вибрация за повикване</span><b>2 дълги</b></div><div class="kv"><span>Вибрация за готово ястие</span><b>3 кратки</b></div>' +
+    const extra = '<p class="st-cap gap">Известия</p><div class="kvs"><div class="kv"><span>Вибрация за повикване</span><b>2 дълги</b></div><div class="kv"><span>Вибрация за готово ястие</span><b>3 кратки</b></div>' +
       '<div class="kv"><span>Смарт часовник</span><a class="link" href="' + esc(murl.servitor("chasovnik")) + '">Виж екрана' + ic("caret-right", 18) + "</a></div></div>";
     /* the main admin, the owner or the manager looking at the app: no shift of their own to start */
     if ((!h || !h.me.onShift) && st.boss) return { extra };
@@ -154,24 +156,50 @@ export function searchOf(store: HallStore): () => Promise<SearchProvider> {
   return () => import("./find.ts").then((m) => m.provider(store.get));
 }
 
+/* ---------- the focus after an action that takes its own button away ---------- */
+/** the focus fell to the page (its control was drawn again or removed): put it on the first of these that exists in main
+    (a control, or a heading made focusable); nothing changes while the focus is on something real */
+export function refocus(st: Staff, sels: string[]): void {
+  const a = document.activeElement as HTMLElement | null;
+  if (a && a !== document.body && a.isConnected && !(a.closest(".st-toast") && !a.closest(".st-toast.on"))) return;
+  for (const s of sels) {
+    const el = s ? st.main.querySelector<HTMLElement>(s) : null;
+    if (!el) continue;
+    if (!el.matches("a[href], button, input, select, textarea, [tabindex]")) el.tabIndex = -1;
+    el.focus({ preventScroll: true }); el.scrollIntoView({ block: "nearest" });
+    return;
+  }
+}
+/** the control after (else before) this one among the actions of the screen: where the focus goes when it disappears */
+export function neighbour(st: Staff, fk: string, sel = "[data-take], [data-done], [data-serve]"): string {
+  const list = Array.from(st.main.querySelectorAll<HTMLElement>(sel)), i = list.findIndex((el) => el.dataset.fk === fk);
+  const n = i < 0 ? null : list[i + 1] || list[i - 1] || null;
+  return n && n.dataset.fk ? '[data-fk="' + CSS.escape(n.dataset.fk) + '"]' : "";
+}
+
 /* ---------- "Отивам" / "Обслужено" (+ "Отмени" 5 s): the same in "Залата" and "Повиквания" ---------- */
 export function callActions(st: Staff, store: HallStore) {
   const busy = new Set<string>();
   const find = (id: string) => { const h = store.get(); return h ? h.calls.find((x) => x.id === id) || null : null; };
+  const fk = (p: string, id: string) => '[data-fk="' + CSS.escape(p + id) + '"]';
   return {
+    /** the focus moves from "Отивам" to "Обслужено" of the same call */
     async take(id: string) {
       const c = find(id); if (!c || busy.has(id)) return;
       busy.add(id);
-      try { store.set(await floorApi.callTake(id)); st.haptic(); st.toast("Маса " + c.table.n + ": отивам. Колегите виждат, че масата е поета."); }
+      try { store.set(await floorApi.callTake(id)); refocus(st, [fk("d", id), "h2"]); st.haptic(); st.toast("Маса " + c.table.n + ": отивам. Колегите виждат, че масата е поета."); }
       catch (e) { st.toast(why(e)); store.load(); }
       finally { busy.delete(id); }
     },
+    /** the call goes away: the focus goes to the next call's button (else the previous one, else the heading) */
     async done(id: string) {
       const c = find(id); if (!c || busy.has(id)) return;
       busy.add(id);
+      const next = neighbour(st, "d" + id);
       try {
         store.set(await floorApi.callDone(id));
-        st.toast("Маса " + c.table.n + " е обслужена", { undo: async () => { try { store.set(await floorApi.callUndo(id)); } catch (e) { st.toast(why(e)); store.load(); } } });
+        refocus(st, [next, "h2"]);
+        st.toast("Маса " + c.table.n + ": обслужено", { undo: async () => { try { store.set(await floorApi.callUndo(id)); refocus(st, [fk("d", id), fk("g", id), "h2"]); } catch (e) { st.toast(why(e)); store.load(); } } });
       } catch (e) { st.toast(why(e)); store.load(); }
       finally { busy.delete(id); }
     },

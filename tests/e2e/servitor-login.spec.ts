@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { admin, newWaiter, signInCtx, startShift, endShift, guest, freeTable, errors, serious, layout } from "./servitor-helpers.ts";
+import { admin, newWaiter, signInCtx, startShift, endShift, guest, freeTable, errors, serious, layout, rnd } from "./servitor-helpers.ts";
 import { floorLock } from "./_floor-lock.ts";
 floorLock(); /* the live hall is shared: one such test at a time (tests/e2e/_floor-lock.ts) */
 
@@ -99,6 +99,10 @@ test("@phone the PIN on a known phone: the person + 4 digits, a wrong PIN said a
     await page.goto("/servitor/vhod/");
     await expect(page.locator("main h1")).toHaveText("Вход за персонала");
     await expect(page.locator('[data-v="pin"]')).toHaveAttribute("aria-pressed", "true");
+    /* nobody is chosen before a tap: digits typed blindly never count against a colleague */
+    await expect(page.locator('[data-who][aria-pressed="true"]')).toHaveCount(0);
+    await page.keyboard.type("1");
+    await expect(page.locator(".pinerr")).toHaveText("Първо избери кой влиза.");
     const me = page.locator("[data-who]", { hasText: w.name });
     await me.click();
     await expect(me).toHaveAttribute("aria-pressed", "true");
@@ -145,4 +149,39 @@ test("@phone the end of the shift: the open tables are handed over, the sign-out
     expect(mine2.shift.tables.map((t: { n: number }) => t.n).sort()).toEqual([13, 18]);
     expect(errs).toEqual([]);
   } finally { await endShift(w); await endShift(w2); await freeTable(a, 13); }
+});
+
+test("@phone the PIN with many people at 360: the names wrap, every one in reach, the digits on the screen", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const a = await admin(), w = await newWaiter(a, "Сервитьор с дълго име " + rnd());
+  const more = await Promise.all(Array.from({ length: 9 }, (_, i) => newWaiter(a, "Колега " + (i + 1) + " " + rnd().slice(0, 3))));
+  try {
+    for (const x of [w, ...more]) expect((await a.post("/api/admin/staff/" + x.id + "/pin", { data: {} })).status()).toBe(200);
+    /* this phone becomes known with the password, then the sign-out */
+    await page.goto("/servitor/vhod/");
+    await page.locator("#u").fill(w.username); await page.locator("#p").fill(w.password);
+    await page.locator('button[type="submit"]').click();
+    await expect(page.locator("main h1")).toHaveText("Смяна · " + w.name);
+    await page.request.post("/api/auth/logout");
+    await page.goto("/servitor/vhod/");
+    await expect(page.locator("main h1")).toHaveText("Вход за персонала");
+    const chips = page.locator("[data-who]");
+    expect(await chips.count()).toBeGreaterThanOrEqual(10);
+    const g = await page.evaluate(() => {
+      const r = (el: Element) => el.getBoundingClientRect();
+      return { who: r(document.querySelector(".lg .who")!).width, chips: [...document.querySelectorAll("[data-who]")].map((c) => [r(c).left, r(c).right]), pad: [...document.querySelectorAll(".pinpad button")].map((c) => [r(c).left, r(c).right]), lg: r(document.querySelector(".lg")!).width, over: document.documentElement.scrollWidth - innerWidth, w: innerWidth };
+    });
+    expect(g.over).toBeLessThanOrEqual(0);
+    expect(g.lg).toBeLessThanOrEqual(g.w);
+    expect(g.who).toBeLessThanOrEqual(g.w - 32);
+    for (const [l, rr] of [...g.chips, ...g.pad]) { expect(l).toBeGreaterThanOrEqual(0); expect(rr).toBeLessThanOrEqual(g.w); }
+    /* the last one is chosen with a finger, the digits are there */
+    const last = chips.last();
+    await last.click();
+    await expect(last).toHaveAttribute("aria-pressed", "true");
+    await page.locator('.pinpad [data-d="0"]').scrollIntoViewIfNeeded();
+    await expect(page.locator('.pinpad [data-d="0"]')).toBeInViewport();
+    expect(await serious(page)).toEqual([]);
+    await layout(page, "pin 10 people 360");
+  } finally { for (const x of [w, ...more]) await a.post("/api/admin/staff/" + x.id + "/active", { data: { active: false } }); }
 });

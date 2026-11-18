@@ -18,7 +18,20 @@ void mountTable();
 [data-page="table"] .oline .sub .g{font-size:14px; color:var(--muted); font-weight:600}
 [data-page="table"] .oline .mods{font-size:15px; color:var(--muted); font-weight:600}
 [data-page="table"] .oline.served .q{opacity:.75}
-[data-page="table"] .ono{margin:12px 0 0}
+[data-page="table"] .ono{margin:12px 0 0; outline-offset:4px; border-radius:6px}
+[data-page="table"] .hero .cstrip{margin-top:14px}
+[data-page="table"] .st-empty.tight{padding-top:24px}
+[data-page="table"] .ocard.flat{box-shadow:none; padding:0; margin-top:4px}
+[data-page="table"] .qnote{margin:10px 0 0}
+[data-page="table"] .qesc{margin:10px 0 0; font-size:15px}
+[data-page="table"] .qesc[hidden]{display:none}
+[data-page="table"] .qrcard.late{outline:3px solid var(--red); outline-offset:3px}
+[data-page="table"] .qrcard.late .qesc{color:var(--red)}
+[data-page="table"] .oh .price.bsum{color:var(--ink); font-size:17px}
+[data-page="table"] .paidrow.all{padding:6px 4px 0}
+[data-page="table"] .closehint{margin:8px 4px 0; text-align:center}
+[data-page="table"] .onote.shared{margin:0 4px 12px; align-items:flex-start}
+[data-page="table"] .onote .muted{font-weight:600}
 [data-page="table"] .onote{display:flex; gap:6px; align-items:center; color:var(--warn); font-weight:700; font-size:15px}
 [data-page="table"] .tot{display:flex; justify-content:space-between; align-items:baseline; padding:16px 4px 0; font-size:20px; font-weight:800}
 [data-page="table"] .reqs{display:grid; gap:8px}
@@ -30,12 +43,26 @@ void mountTable();
 [data-page="table"] .ocard.queued{box-shadow:inset 0 0 0 2px var(--ember), var(--shadow)}
 [data-page="table"] .qlist{margin:8px 0; padding:0 0 0 20px; display:grid; gap:4px; font-weight:700}
 .paidrow{display:flex; align-items:center; gap:8px; color:var(--ok); font-weight:800}
+.paidrow.sm{font-size:14px}
+.paidrow.mt8{margin-top:8px}
+.st-sheet .m12{margin:0 0 12px}
+.st-sheet .m0{margin:0}
+.st-sheet .mt12{margin-top:12px}
+.st-sheet .paycap{margin:16px 0 8px}
+.st-sheet .pickhint{margin:12px 0 4px}
+.st-sheet .receipt{margin:14px 0 0}
+.st-sheet .notice.mb12{margin-bottom:12px}
+.st-sheet .paid{color:var(--muted)}
+.st-sheet .chk .who{display:block}
 .splitcard{border-radius:22px; background:var(--surface-2); padding:12px 14px}
 .splitcard + .splitcard{margin-top:10px}
 .splitcard .hd{display:flex; justify-content:space-between; align-items:baseline; font-weight:800; font-size:18px}
 .splitcard .ln{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:3px 0}
+.splitcard .ln .price{font-weight:700}
 .splitcard .acts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
 .st-sheet .chk small{font-size:14px; font-weight:700}
+.st-sheet .shead{margin:0 0 12px; font-weight:700}
+.st-sheet .mt14{margin-top:14px}
 .st-sheet .grams{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
 .st-sheet .grams .chip{justify-content:center; font-variant-numeric:tabular-nums; padding:0 4px; min-width:0}
 .st-sheet .pill[aria-busy="true"],.st-bar .pill[aria-busy="true"]{opacity:.7}

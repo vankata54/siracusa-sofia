@@ -106,7 +106,7 @@ test("„За коя маса?“ → search → „+“ → a note → „По�
   await rv.locator("[data-send]").click();
   await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята");
   await expect(page.locator(".sent .lead")).toContainText("Маса " + n + " · 3 артикула · 22,37 €");
-  await expect(page.locator(".sent .muted")).toContainText(/№ \d+, № \d+ · отделни сметки · в сметката на масата/);
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ \\(Гост 1\\), № \\d+ \\(Гост 2\\) · в сметката на Маса " + n));
 
   /* the kitchen has them; the table has two bills with the notes */
   const kitchen = await playwright.request.newContext({ baseURL }); await signIn(kitchen, "kitchen");
@@ -151,11 +151,11 @@ test("the draft survives „Назад“; no connection: „Запази на �
   await expect(page.locator(".st-sheetwrap.on .rfl").nth(1)).toHaveText("Няма връзка: поръчката тръгва към кухнята сама, щом се върне.");
   await page.locator(".st-sheetwrap.on [data-send]").click();
   await expect(page.locator(".sent h1")).toHaveText("Запазено на телефона");
-  await expect(page.locator(".sent")).toContainText("Номерът на поръчката идва, щом има връзка.");
+  await expect(page.locator(".sent")).toContainText("Номерът на поръчката идва, щом кухнята я получи.");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("st-outbox") || "[]").length)).toBe(1);
   await context.setOffline(false);
   await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята", { timeout: 15_000 });
-  await expect(page.locator(".sent .muted")).toContainText(/№ \d+ · в сметката на масата/);
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ · в сметката на Маса " + n));
   expect(await page.evaluate(() => localStorage.getItem("st-outbox"))).toBeNull();
   const d = (await api<any>(context.request, "GET", "floor/table/" + n)).body;
   expect(d.bills[0].orders[0].lines[0].id).toBe("salata-tsezar-s-pileshki-prachki");
@@ -223,6 +223,69 @@ test("after 22:30 the sending is stopped; a steak with grams; „Изчерпа�
   expect(errs).toEqual([]);
 });
 
+test("a lost answer: „Не разбрахме дали стигна“, the order screen tries again by itself, ONE order in the kitchen", async ({ page, context }) => {
+  const errs = errors(page), n = tables(page)[0];
+  await signIn(context, "waiter");
+  await freeTable(context.request, n);
+  await page.addInitScript(() => { try { if (!sessionStorage.getItem("lost-init")) { sessionStorage.setItem("lost-init", "1"); localStorage.removeItem("st-outbox"); } } catch { /* ignore */ } });
+  await page.goto("/servitor/porachka/" + Q + "#" + n);
+  await ready(page);
+  /* the first send reaches the server, but its answer is lost on the way back */
+  let first = true;
+  await page.route("**/api/floor/table/" + n + "/order", async (route) => {
+    if (!first) return route.continue();
+    first = false; await route.fetch(); await route.abort("failed");
+  });
+  await search(page, "kebap");
+  await row(page, "Кебапчета").locator("[data-inc]").click();
+  await page.locator(".st-bar [data-send]").click();
+  await expect(page.locator(".sent h1")).toHaveText("Не разбрахме дали стигна");
+  await expect(page.locator(".sent .lead")).toHaveText("Пробваме пак сами. Поръчката няма да влезе два пъти в кухнята.");
+  /* no other screen is opened: this one sends it again (the same key) and shows the number */
+  await expect(page.locator(".sent h1")).toHaveText("Поръчката е в кухнята", { timeout: 15_000 });
+  await expect(page.locator(".sent .muted")).toContainText(new RegExp("№ \\d+ · в сметката на Маса " + n));
+  expect(await page.evaluate(() => localStorage.getItem("st-outbox"))).toBeNull();
+  const d = (await api<any>(context.request, "GET", "floor/table/" + n)).body;
+  expect(d.bills.flatMap((b: any) => b.orders).length).toBe(1);
+  expect(errs.filter((e) => !/Failed to load resource|ERR_FAILED/.test(e))).toEqual([]);
+});
+
+test("a saved order of another person is never sent; an old one of mine is a draft to check; „Изход“ asks and removes mine", async ({ page, context }) => {
+  const errs = errors(page), [n1, n2] = [tables(page)[1], tables(page)[2]];
+  await signIn(context, "waiter");
+  for (const n of [n1, n2]) await freeTable(context.request, n);
+  const line = (id: string) => ({ rid: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2), lines: [{ id, q: 1 }] });
+  const old = Date.now() - 26 * 3600_000;
+  await page.addInitScript((x) => {
+    if (sessionStorage.getItem("box-init")) return; sessionStorage.setItem("box-init", "1");
+    localStorage.setItem("st-outbox", JSON.stringify([
+      { id: "other1", table: x.a, at: Date.now(), day: "", user: "someone-else", n: 1, sum: 7.61, guests: [], labels: ["1× Кебапчета"], input: x.other },
+      { id: "mine-old", table: x.b, at: x.at, day: "", user: "waiter", n: 1, sum: 4.75, guests: [], labels: ["1× Шопска салата"], input: x.mine },
+    ]));
+  }, { a: n1, b: n2, at: old, other: line("kebapcheta"), mine: line("shopska-salata") });
+  await page.goto("/servitor/porachka/" + Q + "#" + n2);
+  await ready(page);
+  await expect(page.locator("[data-body] .notice").first()).toContainText(/Запазена на телефона в .*\d\d:\d\d и не е изпратена сама/);
+  await expect(page.locator(".st-bar [data-review]")).toHaveText("1 артикул · Преглед");
+  await page.waitForTimeout(3000);
+  for (const n of [n1, n2]) expect((await api<any>(context.request, "GET", "floor/table/" + n)).body.session, "Маса " + n).toBeNull();
+  const box = await page.evaluate(() => JSON.parse(localStorage.getItem("st-outbox") || "[]").map((q: { id: string }) => q.id));
+  expect(box).toEqual(["other1"]);
+  /* "Изход": the question, "Остани", then "Изтрий и излез" (mine go, another person's stay untouched) */
+  await page.locator('.st-top [data-act="menu"]').click();
+  await page.locator('.st-sheetwrap.on [data-act="logout"]').click();
+  const q = page.locator(".st-sheetwrap.on .st-sheet").last();
+  await expect(q.locator("h2")).toHaveText("Има 1 поръчка, която не е изпратена. Изтрий я?");
+  await q.getByRole("button", { name: "Остани" }).click();
+  await expect(page.locator(".st-top h1")).toHaveText("Нова поръчка");
+  await page.locator('.st-sheetwrap.on [data-act="logout"]').click();
+  await page.locator(".st-sheetwrap.on .st-sheet").last().getByRole("button", { name: "Изтрий и излез" }).click();
+  await expect(page).toHaveURL(/vhod/);
+  expect(await page.evaluate((k) => localStorage.getItem(k), "st-draft-" + n2)).toBeNull();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("st-outbox") || "[]").map((q: { id: string }) => q.id))).toEqual(["other1"]);
+  expect(errs).toEqual([]);
+});
+
 test("360 and 390, light and dark: no horizontal scroll, targets ≥ 48 px, axe without serious @phone", async ({ browser, baseURL }) => {
   for (const [width, theme] of [[360, "light"], [360, "dark"], [390, "light"], [390, "dark"]] as const) {
     const ctx = await browser.newContext({ viewport: { width, height: 800 }, baseURL });
@@ -231,7 +294,11 @@ test("360 and 390, light and dark: no horizontal scroll, targets ≥ 48 px, axe 
     await page.addInitScript((t) => { try { localStorage.setItem("st-prefs", JSON.stringify({ theme: t })); } catch { /* ignore */ } }, theme);
     for (const path of ["/servitor/porachka/" + Q, "/servitor/porachka/" + Q + "#14"]) {
       await page.goto(path); await ready(page);
-      if (path.endsWith("#14")) { await page.getByRole("button", { name: "Поотделно" }).click(); await search(page, "pica"); await page.locator(".qrow [data-inc]").first().click(); }
+      if (path.endsWith("#14")) {
+        await page.getByRole("button", { name: "Поотделно" }).click(); await search(page, "pica"); await page.locator(".qrow [data-inc]").first().click();
+        /* back to "Последно поръчвани" and the categories (the tiles are named by what they show) */
+        await page.locator(".search .clr").click(); await expect(page.locator(".cattile").first()).toBeVisible();
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), path).toBeLessThanOrEqual(0);
       expect(await clipped(page), path).toEqual([]);
       const small = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>("main button, main a, .st-bar button, .st-top button, .st-top a, .st-nav a"))
@@ -242,6 +309,13 @@ test("360 and 390, light and dark: no horizontal scroll, targets ≥ 48 px, axe 
     }
     await page.locator(".st-bar [data-review]").click();
     await expect(page.locator(".st-sheetwrap.on .st-sheet h2")).toHaveText("Маса 14 · преглед");
+    /* a note on a line: the button is still named by what it shows */
+    await page.locator(".st-sheetwrap.on .notebtn").first().click();
+    await page.locator(".st-sheetwrap.on").last().getByRole("button", { name: "Без лук" }).click();
+    await page.locator(".st-sheetwrap.on").last().getByRole("button", { name: "Запази бележката" }).click();
+    await expect(page.locator(".st-sheetwrap.on .notebtn").first()).toContainText("Промени бележката");
+    const ax = await new AxeBuilder({ page }).include(".st-sheetwrap.on").analyze();
+    expect(ax.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     expect(await clipped(page)).toEqual([]);
     expect(errs).toEqual([]);

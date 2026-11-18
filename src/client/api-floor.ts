@@ -183,7 +183,7 @@ export const shiftApi = {
   mine: pick(async (c) => c.floor.shiftMine(await g(c)), () => http<ShiftMine>("GET", "floor/shift")),
   start: pick(async (c, tables: Ref[]) => c.floor.shiftStart(await g(c), tables), (tables) => http<ShiftMine>("POST", "floor/shift/start", { tables })),
   /** hands the tables over and SIGNS OUT (the demo: the staff session of this browser) */
-  end: pick(async (c, to?: string | null) => { const r = await c.floor.shiftEnd(await g(c), to || null); const tok = demoTok("staff"); if (tok) await c.staff.logout(tok); setDemoTok("staff", null); return r; },
+  end: pick(async (c, to?: string | null) => { const r = await c.floor.shiftEnd(await g(c), to || null); if (r.closed) { const tok = demoTok("staff"); if (tok) await c.staff.logout(tok); setDemoTok("staff", null); } return r; },
     (to?: string | null) => http<{ ok: true; handed: number[]; to: string | null }>("POST", "floor/shift/end", { to: to || null })),
   view: pick(async (c) => c.floor.shiftView(await g(c)), () => http<WaiterShiftView>("GET", "floor/shift/view")),
   setTables: pick(async (c, who: string, tables: Ref[], to?: string | null) => c.floor.shiftSetTables(await g(c), who, tables, to || null), (who: string, tables: Ref[], to?: string | null) => http<WaiterShiftView>("POST", "floor/shift/tables", { who, tables, to: to || null })),

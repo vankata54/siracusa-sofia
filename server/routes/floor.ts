@@ -122,9 +122,9 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
   /* the end of the shift signs the person out too (the screen goes back to the sign-in) */
   app.post("/api/floor/shift/end", async (c) => {
     const s = await staff(c), b = await body(c), r = await core.floor.shiftEnd(s, typeof b.to === "string" && b.to ? b.to : null);
-    const t = getCookie(c, STAFF_COOKIE);
-    if (t) await core.staff.logout(t);
-    deleteCookie(c, STAFF_COOKIE, { path: "/" });
+    /* only a waiter who had a shift is signed out; the main admin / owner / manager without one stay signed in */
+    const t = getCookie(c, STAFF_COOKIE), hadShift = !!(r as { closed?: boolean }).closed;
+    if (t && hadShift) { await core.staff.logout(t); deleteCookie(c, STAFF_COOKIE, { path: "/" }); }
     return c.json(r);
   });
   app.get("/api/floor/shift/view", async (c) => c.json(await core.floor.shiftView(await staff(c))));

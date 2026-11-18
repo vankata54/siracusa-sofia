@@ -17,7 +17,30 @@ void mountOrder();
 [data-page="order"] .pick .tgrid .tile{min-height:96px}
 [data-page="order"] .pick .tile .w{flex-wrap:wrap}
 [data-page="order"] .cattiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-[data-page="order"] .cattile > span{min-width:0; overflow-wrap:break-word}
+/* "Студени предястия": the long word stays whole (a smaller picture and gap instead of a cut in the middle) */
+[data-page="order"] .cattile{gap:10px; padding:10px 10px 10px 8px}
+[data-page="order"] .cattile .pic{width:48px; height:48px; border-radius:15px}
+[data-page="order"] .cattile > span{min-width:0; hyphens:manual}
+/* the guests wrap to a second line: "+ Гост" is never cut at the edge */
+[data-page="order"] .guests{flex-wrap:wrap; overflow:visible; margin:10px 0 0; padding:2px 0}
+/* "Последно поръчвани": the price of a steak is "за 100 гр." (two lines), the "+" never covers it; sold out: the word
+   takes the place of the price and there is no "+" */
+[data-page="order"] .rbtn .price{white-space:normal; padding-right:40px}
+[data-page="order"] .rbtn.off{opacity:1; background:var(--surface-2); box-shadow:none; cursor:not-allowed}
+[data-page="order"] .rbtn.off .nm{padding-right:0; color:var(--muted)}
+[data-page="order"] .rbtn .outw{display:flex; align-items:center; gap:4px; font-size:14px; font-weight:800; color:var(--warn)}
+[data-page="order"] .kdrop{margin-top:10px}
+[data-page="order"] .pt8{padding-top:8px}
+[data-page="order"] .pt12{padding-top:12px}
+[data-page="order"] .mt12{margin-top:12px}
+[data-page="order"] .st-empty.tight{padding-top:24px}
+[data-page="order"] .st-empty .ill.mute{color:var(--muted)}
+[data-page="order"] .sent .price.ink{color:var(--ink)}
+[data-page="order"] .sent .m0{margin:0}
+.st-sheet .shead{margin:0 0 12px; font-weight:700}
+.st-sheet .mt14{margin-top:14px}
+.st-sheet .m0{margin:0}
+.st-sheet .gcap{margin:12px 0 0}
 /* the narrow phone (360): the long words ("Свободна", "Гарнитури") stay inside their tiles */
 @container app (max-width:370px){
   [data-page="order"] .pick .tile{padding:10px 8px 10px 10px}

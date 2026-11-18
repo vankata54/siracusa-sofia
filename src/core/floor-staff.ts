@@ -373,7 +373,7 @@ export async function serve(ctx: Ctx, s: StaffCtx, ref: string | number, keys?: 
     const now = iso(ctx), saved: Order[] = [];
     /* each order is read again and written under its own lock (the kitchen may be marking another line of it right now) */
     for (const no of new Set(todo.map((b) => b.no))) {
-      const o = await patchOrder(ctx, no, (o) => { for (const b of todo) if (b.no === no && o.lines[b.idx]) { o.lines[b.idx].servedAt = now; b.l = o.lines[b.idx]; } });
+      const o = await patchOrder(ctx, no, (o) => { for (const b of todo) if (b.no === no && o.lines[b.idx]) { o.lines[b.idx].servedAt = now; o.lines[b.idx].servedBy = s.user.username; b.l = o.lines[b.idx]; } });
       if (o) saved.push(o);
     }
     if (todo.length) await audit(ctx, s.user.username, "floor.serve", t.id, { n: t.n, lines: todo.map((b) => b.key) });
@@ -390,6 +390,8 @@ export async function unserve(ctx: Ctx, s: StaffCtx, ref: string | number, keys:
     const orders = await sessionOrders(ctx, sit), lines = billLines(orders), nowMs = nowDate(ctx).getTime();
     const want = [...new Set((Array.isArray(keys) ? keys : []).map(String))].map((k) => { const b = lines.find((x) => x.key === k); if (!b) throw new CoreError("not_found", FLOOR_MSG.sLine, 404); return b; });
     if (!want.length || want.some((b) => !b.l.servedAt || nowMs - Date.parse(b.l.servedAt) > FLOOR_UNDO_MS)) throw new CoreError("undo_late", FLOOR_MSG.sUndo, 409);
+    /* "Отмени" after "Сервирах": the one who served it (or the main admin, owner, manager) */
+    if (!isBoss(s) && want.some((b) => b.l.servedBy && b.l.servedBy !== s.user.username)) throw new CoreError("forbidden", "Само който е сервирал, може да го върне.", 403);
     const now = iso(ctx);
     for (const no of new Set(want.map((b) => b.no))) {
       let back: OrderStatus | null = null;
@@ -498,7 +500,7 @@ const stem = (w: string) => (w.length > 5 ? w.slice(0, w.length - 1) : w);
 const wordHit = (q: string, list: string[]) => list.some((w) => { const l = lat(w); return q.length >= 3 && (l.indexOf(q) === 0 || q.indexOf(stem(l)) === 0); });
 /** One field, the waiter's own things only (the dishes are searched in the browser, lib/search.ts): tables (a number,
     "свободни", "сметка", "градина", "моите"), orders at the tables ("2187" or a dish), today's reservations ("19:30",
-    digits of the phone, a name), "изчерпано". */
+    the whole phone number only, a name), "изчерпано". */
 export async function staffSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise<StaffSearch> {
   needFloor(s);
   const text = String(raw || "").slice(0, 80), q = lat(text), words = q.split(" ").filter((w) => w && !STOP.includes(w));
@@ -538,16 +540,20 @@ export async function staffSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise<S
     }
   }
   out.orders.sort((a, b) => Number(b.mine) - Number(a.mine) || +b.no - +a.no);
-  /* today's reservations: the hour, digits of the phone, the table, a name */
+  /* today's reservations: the hour, the whole phone number (never a part of it), the table, a name */
   if (out.reservations) {
     const today = sofiaYmd(nowDate(ctx)), tnOf = new Map(hall.map((t) => [t.id, t.n]));
     const hm = time ? time[1].padStart(2, "0") + ":" + time[2] : "";
+    const qd = text.replace(/\D/g, ""), phoneQ = /^(0\d{9}|359\d{9})$/.test(qd) && /^[\d\s+()-]+$/.test(text.trim()) ? qd : "";
     const list = (await ctx.repo.list<Reservation>(COL.reservations, { date: today } as Partial<Reservation>)).filter((r) => r.status !== "cancelled");
     for (const r of list.sort((a, b) => (a.time < b.time ? -1 : 1))) {
       const n = r.table ? tnOf.get(r.table) ?? null : null;
       let hit = kRes;
       if (!hit && time) hit = r.time === hm;
-      if (!hit && !time) hit = nums.some((x) => (x.length >= 3 ? r.phone.replace(/\D/g, "").indexOf(x) > -1 : String(n) === x || r.time.indexOf(x.padStart(2, "0") + ":") === 0));
+      /* the phone only by the WHOLE number ("0888 12 34 56", "+359 888 …"): the list shows it masked, so a part of it never
+         matches (digit by digit the hidden middle could be rebuilt without the log of "Покажи") */
+      if (!hit && !time && phoneQ) { const pd = r.phone.replace(/\D/g, ""); hit = phoneQ === pd || (pd.startsWith("0") && phoneQ === "359" + pd.slice(1)); }
+      if (!hit && !time) hit = nums.some((x) => x.length < 3 && (String(n) === x || r.time.indexOf(x.padStart(2, "0") + ":") === 0));
       if (!hit && txt.length) hit = txt.every((w) => lat(r.name).split(" ").some((p) => p.indexOf(w) === 0));
       if (hit) out.reservations.push({ id: r.id, time: r.time, people: r.people, tableN: n, name: r.name, phone: maskPhone(r.phone), note: r.note || "", status: r.status });
     }

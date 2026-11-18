@@ -101,3 +101,24 @@ describe("the modules together on the real cores", () => {
     expect(c.orders).not.toEqual(a.orders);
   });
 });
+
+describe("the waiter's small rules (servitor.review-2, small 2-4)", () => {
+  it("'Отмени' after 'Сервирах' only by who served; a colleague may be left without tables by the manager; a boss without a shift ends nothing", async () => {
+    const { core, repo } = mk(), s = await people(core);
+    await core.staff.upsert({ username: "waiter2", name: "Сервитьор 2", role: "waiter", password: PW });
+    const w2 = (await core.staff.bySession((await core.staff.login("waiter2", PW, "1.1.1.w2")).token))!;
+    const a = await core.floor.order(s.waiter, 5, { lines: [{ id: pizza.id, q: 1 }] });
+    const o = (await repo.get<Order>("orders", a.orders[0]))!;
+    for (const sec of [...new Set(o.lines.map((l) => l.sec!))]) { await core.kitchen.start(s.kitchen, o.no, sec); await core.kitchen.done(s.kitchen, o.no, sec); }
+    const served = await core.floor.serve(s.waiter, 5);
+    await expect(core.floor.unserve(w2, 5, served.served)).rejects.toMatchObject({ code: "forbidden", status: 403 });
+    await core.floor.unserve(s.manager, 5, served.served); /* a boss may */
+    /* tables: the manager cannot leave a waiter with none */
+    await core.floor.shiftStart(s.waiter, [1, 2]);
+    await core.floor.shiftStart(w2, [3]);
+    /* the manager may give a colleague's tables to another waiter (decision of the chief 18.11): the colleague stays on shift without tables */
+    await core.floor.shiftSetTables(s.manager, "waiter", [1, 2, 3]);
+    /* the manager has no shift: ending it changes nothing and says so */
+    expect((await core.floor.shiftEnd(s.manager, null)).closed).toBe(false);
+  });
+});

@@ -106,11 +106,11 @@ export async function shiftStart(ctx: Ctx, s: StaffCtx, tables: (string | number
   return shiftMine(ctx, s);
 }
 /** "Предай N маси и излез": to = the username of a colleague on shift (he gets my occupied tables), or nothing. */
-export async function shiftEnd(ctx: Ctx, s: StaffCtx, to?: string | null): Promise<{ ok: true; handed: number[]; to: string | null }> {
+export async function shiftEnd(ctx: Ctx, s: StaffCtx, to?: string | null): Promise<{ ok: true; handed: number[]; to: string | null; closed?: boolean }> {
   needFloor(s);
   return serial(ctx.repo, LOCK, async () => {
     const shifts = await openShifts(ctx), mine = shifts.find((x) => x.user === s.user.id);
-    if (!mine) return { ok: true as const, handed: [], to: null };
+    if (!mine) return { ok: true as const, handed: [], to: null, closed: false };
     const h = (await liveHall(ctx)).tables, busy = new Set((await openSessions(ctx)).map((x) => x.table)), open = mine.tables.filter((t) => busy.has(t));
     const who = to ? shifts.find((x) => x.user !== s.user.id && x.username === String(to)) : undefined;
     if (to && !who) invalid({ to: SHIFT_MSG.to }, SHIFT_MSG.to);
@@ -120,7 +120,7 @@ export async function shiftEnd(ctx: Ctx, s: StaffCtx, to?: string | null): Promi
     await ctx.repo.put(COL.shifts, mine);
     await audit(ctx, s.user.username, "shift.end", s.user.username, { handed: nums(h, open), to: who ? who.username : null });
     say(ctx, { ...mine, tables: [] });
-    return { ok: true as const, handed: nums(h, open), to: who ? who.username : null };
+    return { ok: true as const, handed: nums(h, open), to: who ? who.username : null, closed: true };
   });
 }
 

@@ -16,7 +16,7 @@ export interface OrderLine { id: string; q: number; mods: string[]; extra: numbe
   /** "Започни" in the kitchen: when the section started this line ("готви се от 19:22") */
   cookAt?: Iso;
   /** "Сервирах" (a table order): when the waiter served this line */
-  servedAt?: Iso;
+  servedAt?: Iso; servedBy?: string;
   /** marked "Изчерпано днес" after the order was accepted (the kitchen) */
   out?: boolean;
   /** a note for the kitchen on this line; the weight of a `per100` steak in grams; the guest of the table ("Гост 1") */

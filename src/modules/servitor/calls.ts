@@ -5,6 +5,7 @@
    "Обслужено" (+ "Отмени" 5 s); a colleague's taken call is dimmed with "Поема <име>"; the QR orders with "Отвори масата". */
 import "sc-icons:squares-four";
 import { mountStaff, type Staff } from "../staff/frame.ts";
+import { startOutbox } from "./bits.ts";
 import { fmt } from "../../lib/format.ts";
 import { ZONE, REASON, tableUrl, plural, ms, lvl, queue, paint, hallStore, shiftInfo, subOf, searchOf, callActions, esc, ic, murl, type HallLive, type HallCall, type HallQr, type HallStore } from "./common.ts";
 
@@ -14,6 +15,7 @@ export async function mountCalls(): Promise<void> {
   if (!st) return;
   const S: Staff = st;
   store = hallStore(S);
+  startOutbox(S); /* the orders kept on this phone: sent on reconnect; asked about at "Изход" (bits.ts) */
   const acts = callActions(S, store);
 
   function card(h: HallLive, c: HallCall): string {
@@ -27,18 +29,18 @@ export async function mountCalls(): Promise<void> {
     const escl = c.taken ? "" : '<span class="esc" data-esc hidden>' + ic("warning", 18) + "Изпратено и на управителя</span>";
     return '<article class="callc' + cls + '"' + (c.taken ? "" : lvl(h)) + ' aria-label="Маса ' + c.table.n + ", " + r[0] + '">' +
       '<div class="t1"><b>Маса ' + c.table.n + '</b><span class="zone">' + ZONE[c.table.zone] + "</span></div>" +
-      '<div class="timer" style="grid-row:span 2"><span>чака</span><b>' + S.timer(ms(c.at)) + "</b></div>" +
+      '<div class="timer"><span>чака</span><b>' + S.timer(ms(c.at)) + "</b></div>" +
       '<div class="why">' + ic(r[1], 24) + r[0] + "</div>" +
       '<div class="meta">' + who + note + escl + "</div>" +
       (c.taken && !c.taken.mine ? "" : '<div class="acts">' + (c.taken
-        ? '<button class="pill pill-red" type="button" data-done="' + esc(c.id) + '" data-fk="d' + esc(c.id) + '"' + off + ' style="background:var(--ok);color:var(--on-ok)">' + ic("check", 22) + "Обслужено</button>"
+        ? '<button class="pill pill-ok" type="button" data-done="' + esc(c.id) + '" data-fk="d' + esc(c.id) + '"' + off + '>' + ic("check", 22) + "Обслужено</button>"
         : '<button class="pill pill-red" type="button" data-take="' + esc(c.id) + '" data-fk="g' + esc(c.id) + '"' + off + ">Отивам</button>") +
         '<a class="pill pill-line" href="' + esc(tableUrl(c.table.n)) + '">Масата</a></div>') + "</article>";
   }
   function qrCard(h: HallLive, q: HallQr): string {
     return '<article class="callc qrc"' + lvl(h, h.settings.qrManager) + ' aria-label="Маса ' + q.table.n + ', QR поръчка за потвърждение">' +
       '<div class="t1"><b>Маса ' + q.table.n + '</b><span class="zone">' + ZONE[q.table.zone] + "</span></div>" +
-      '<div class="timer" style="grid-row:span 2"><span>чака</span><b>' + S.timer(ms(q.at)) + "</b></div>" +
+      '<div class="timer"><span>чака</span><b>' + S.timer(ms(q.at)) + "</b></div>" +
       '<div class="why">' + ic("qr-code", 24) + "QR поръчка · " + plural(q.n, "артикул", "артикула") + "</div>" +
       '<div class="meta"><span>Първата поръчка от QR чака моето потвърждение · ' + fmt(q.sum) + (q.open ? " + стек по грамаж" : "") + "</span>" +
       '<span class="esc" data-esc hidden>' + ic("warning", 18) + "Изпратено и на управителя</span></div>" +
@@ -74,6 +76,8 @@ export async function mountCalls(): Promise<void> {
   });
   store.on(render);
   S.onNet(render);
+  /* "#all" from a link on this same screen */
+  window.addEventListener("hashchange", () => { const f = /(^#|&)all\b/.test(location.hash) ? "all" : "mine"; if (f !== filter) { filter = f; render(); } });
   setInterval(() => { if (!document.hidden && !S.stale) render(); }, 15_000);
   await store.load();
   render();

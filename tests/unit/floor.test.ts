@@ -666,11 +666,11 @@ describe("the waiter's shift", () => {
     expect((await core.floor.shiftMine(s.waiter)).shift!.tables.map((x) => x.n)).toEqual([1, 3, 4, 9]);
     /* the end: the occupied tables go to the colleague, the free ones stay without a waiter */
     await expect(core.floor.shiftEnd(s.waiter2, "nobody")).rejects.toMatchObject({ code: "invalid", fields: { to: expect.any(String) } });
-    expect(await core.floor.shiftEnd(s.waiter2, "waiter")).toEqual({ ok: true, handed: [8], to: "waiter" });
+    expect(await core.floor.shiftEnd(s.waiter2, "waiter")).toEqual({ ok: true, handed: [8], to: "waiter", closed: true });
     sv = await core.floor.shiftView(s.owner);
     expect(sv.waiters.map((w) => [w.name, w.tables.map((x) => x.n)])).toEqual([["Сервитьор 1", [1, 3, 4, 8, 9]]]);
     expect((await core.floor.shiftMine(s.waiter2)).shift).toBeNull();
-    expect(await core.floor.shiftEnd(s.waiter2)).toEqual({ ok: true, handed: [], to: null });
+    expect(await core.floor.shiftEnd(s.waiter2)).toEqual({ ok: true, handed: [], to: null, closed: false });
     const log = (await core.audit.list({ limit: 500 })).map((e) => e.action);
     for (const a of ["shift.start", "shift.tables", "shift.end"]) expect(log).toContain(a);
     /* a shift never continues on the next day */
@@ -700,13 +700,15 @@ describe("the waiter's search", () => {
     expect(f.orders.map((o) => [o.no, o.table.n, o.lines[0].q])).toEqual([[d.orders[0], 12, 2]]);
     f = await core.floor.search(s.waiter, pizza.n.split(" ").slice(0, 2).join(" "));
     expect(f.orders.map((o) => o.no)).toEqual([d.orders[0]]);
-    /* reservations: the hour, the digits of the phone, the name; the phone is masked */
-    for (const q of ["20:30", "3456", "мария", "резервации"]) {
+    /* reservations: the hour, the WHOLE phone number, the name; the phone is masked */
+    for (const q of ["20:30", "0888 12 34 56", "+359888123456", "мария", "резервации"]) {
       f = await core.floor.search(s.waiter, q);
       expect(f.reservations, q).toEqual([{ id: r.id, time: "20:30", people: 2, tableN: 5, name: "Мария Петрова", phone: "0888 •• •• 56", note: "", status: expect.any(String) }]);
     }
     expect(JSON.stringify(await core.floor.search(s.waiter, "мария"))).not.toContain("0888123456");
     expect((await core.floor.search(s.waiter, "19:00")).reservations).toEqual([]);
+    /* a part of the number never matches: the hidden middle cannot be rebuilt digit by digit (review 2, 17.11) */
+    for (const q of ["3456", "08881", "088812", "8881234", "088812345", "12 34"]) expect((await core.floor.search(s.waiter, q)).reservations, q).toEqual([]);
     /* sold out today: the data and today's switch */
     await core.menu.setSoldOut(pizza2.id, true, "kitchen");
     f = await core.floor.search(s.waiter, "изчерпано");

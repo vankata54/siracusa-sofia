@@ -3,6 +3,12 @@
    src/modules/staff/staff.css. Only tokens. */
 
 /* ---------- Залата ---------- */
+.st-sec.first{padding-top:12px}
+.st-sec .pill.after{margin-top:12px}
+.st-cap.gap{margin-top:18px}
+.zseg{margin-bottom:12px}
+.tile .tm.since{font-weight:700; color:var(--muted)}
+.st-h .link{font-size:16px}
 .sum{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
 .sum a{display:grid; gap:2px; padding:12px 14px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow); text-decoration:none; color:var(--ink); min-height:76px}
 .sum b{font-size:28px; font-weight:800; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums}
@@ -21,6 +27,11 @@
 .tgrid .tile .w{min-width:0}
 .tgrid .tile.other{opacity:1}
 .tgrid .tile .own{opacity:1}
+/* 360: the longest word ("Свободна", "Вода / прибори") stays inside the tile: less side room, the icon may go above it */
+@container app (max-width:370px){
+  .tgrid .tile{padding:10px 8px 10px 10px}
+  .tgrid .tile .w{flex-wrap:wrap; gap:2px 4px}
+}
 .resl{display:grid; gap:8px}
 .resr{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:center; padding:12px 16px 12px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--hi), var(--shadow)}
 .resr .tm{grid-row:span 2; display:grid; place-items:center; min-width:64px; height:56px; border-radius:16px; background:var(--surface-2); font-weight:800; font-size:18px; font-variant-numeric:tabular-nums}
@@ -29,6 +40,10 @@
 .st-h .link{min-height:48px}
 .rsheet .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
 .rsheet .field{margin-top:14px}
+.rsheet .field:first-child{margin-top:0}
+.rsheet .help{margin-top:4px}
+.rsheet .field p.muted{margin:0}
+.rsheet .note{margin:8px 0 0}
 .rsheet select.input{appearance:auto}
 .rsheet .tchips{display:flex; flex-wrap:wrap; gap:8px}
 .rsheet .tchips .chip{min-width:72px; justify-content:center; font-variant-numeric:tabular-nums}
@@ -48,6 +63,11 @@
 .callc .cnote{color:var(--ink); font-weight:700}
 .callc.late .cnote{color:var(--on-red)}
 .qrc .why{color:var(--red)}
+.callc .timer{grid-row:span 2}
+.callc .pill-ok{background:var(--ok); color:var(--on-ok)}
+/* a colleague's taken call is quieter by its colours (tokens with AA contrast), never by transparency */
+.list .callc.other-taken{opacity:1}
+.list .callc.other-taken .t1 b,.list .callc.other-taken .timer b,.list .callc.other-taken .why{color:var(--muted)}
 .callc.late.qrc .why{color:var(--on-red)}
 
 /* ---------- Готови ---------- */
@@ -59,6 +79,12 @@
 /* ---------- Вход и смяна ---------- */
 .lg{padding:28px 16px 0; display:grid; gap:18px}
 .lg .h1{font-size:34px}
+.lg .lead.sub{margin-top:6px}
+.lg .note{margin:8px 0 0}
+.lg .ttl{gap:8px; flex-wrap:wrap}
+.lg .pform{gap:16px}
+.lg .center{margin:0; text-align:center}
+.lg .when{margin:2px 0 0; font-weight:700}
 .lg h1{outline:0}
 .lg .pw{position:relative}
 .lg .pw .input{padding-right:120px}
@@ -73,9 +99,10 @@
 .lg .pinpad button:active{transform:scale(.94)}
 .lg .pinpad button.fn{background:transparent; box-shadow:none; font-size:16px}
 .lg .pinpad button[disabled]{opacity:.45; cursor:not-allowed}
-.lg .who{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:0 -16px; padding:2px 16px}
-.lg .who::-webkit-scrollbar{display:none}
-.lg .who .chip{flex:none}
+.lg{grid-template-columns:minmax(0,1fr)} /* a grid item never grows to the width of its content */
+/* the people with a PIN wrap onto more rows: every name in reach of the thumb, the page never wider than the phone */
+.lg .who{display:flex; flex-wrap:wrap; gap:8px; padding:2px 0}
+.lg .who .chip{max-width:100%}
 .lg .tchips{display:flex; flex-wrap:wrap; gap:8px}
 .lg .tchips .chip{min-width:64px; justify-content:center; font-size:17px; font-variant-numeric:tabular-nums}
 .lg .tchips .chip[aria-disabled="true"]{opacity:.45; cursor:not-allowed}

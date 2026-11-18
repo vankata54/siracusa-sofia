@@ -62,6 +62,7 @@
      theme(), setTheme(t), navApp()       "system" | "light" | "dark" | "hour"; "google" | "waze"
      onPrefs(fn): () => void              theme or navigation app changed
      haptic(pattern?), logout()
+     beforeLogout(fn): () => void          a question before "Изход" (the waiter's unsent orders): fn resolves false = stay
 
    Reserved data-act values (the frame handles the click anywhere on the page): find, menu, retry, queue, cached, reload,
    theme, navapp, logout. Any element with data-off shows the reason in a toast instead of acting.
@@ -142,6 +143,7 @@ export interface Staff {
   onPrefs(fn: () => void): () => void;
   haptic(pattern?: number | number[]): void;
   logout(): void;
+  beforeLogout(fn: () => boolean | Promise<boolean>): () => void;
 }
 export interface SheetOpts { title: string; html?: string; foot?: string; /** a selector inside the sheet (default: "Затвори") */ focus?: string; onClose?: () => void }
 
@@ -337,8 +339,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
   function toast(text: string, t: { undo?: () => void; undoLabel?: string; ms?: number } = {}) {
     toastEl.innerHTML = "<span>" + esc(text) + "</span>" + (t.undo ? '<button type="button">' + esc(t.undoLabel || "Отмени") + "</button>" : "");
     toastEl.classList.toggle("solo", !t.undo);
-    const low = !netEl.hidden; toastEl.classList.toggle("low", low);
-    toastEl.style.top = low ? Math.max(136, Math.round(68 + netEl.offsetHeight + 4)) + "px" : "";
+    placeToast();
     const b = $<HTMLButtonElement>("button", toastEl); if (b) b.onclick = () => { toastEl.classList.remove("on"); clearTimeout(toastT); t.undo!(); };
     requestAnimationFrame(() => toastEl.classList.add("on"));
     clearTimeout(toastT);
@@ -401,6 +402,11 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     }
     setConn(streamLost ? "re" : "on"); return true;
   }
+  /** the toast sits under the top bar, or under the strip "Няма връзка" while it is shown */
+  function placeToast() {
+    const low = !netEl.hidden; toastEl.classList.toggle("low", low);
+    toastEl.style.top = low ? Math.max(136, Math.round(68 + netEl.offsetHeight + 4)) + "px" : "";
+  }
   function drawNet() {
     const off = conn === "off";
     const meBtn = $(".st-me", topEl);
@@ -416,6 +422,8 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     }
     /* what sticks under the top bar starts below the strip */
     app.style.setProperty("--st-stick", 68 + (netEl.hidden ? 0 : netEl.offsetHeight) + "px");
+    /* a toast already shown moves with the strip (it never covers it) */
+    if (toastEl.classList.contains("on")) placeToast();
     /* the whole screen (the waiter's "Залата"), or the old data with a note */
     const full = offFull();
     main.hidden = full; if (findSlot) findSlot.hidden = full || !o.search;
@@ -459,8 +467,11 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
   }
   function setTheme(t: Theme) { prefs.theme = t; savePrefs(); applyTheme(); $$('[data-act="theme"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === t))); prefSubs.forEach((f) => f()); }
   let leaving = false;
-  function logout() {
-    if (leaving) return; leaving = true;
+  const guards = new Set<() => boolean | Promise<boolean>>();
+  async function logout() {
+    if (leaving) return;
+    for (const g of guards) { try { if (!(await g())) return; } catch { return; } }
+    leaving = true;
     const back = MOD[o.module].login;
     (back ? import("../../client/api-admin.ts").then(async ({ staffApi }) => { try { await staffApi.logout(); } catch { /* the cookie goes anyway on the next sign-in */ } location.href = back(); })
       : adminRuntime().then((a) => a.logout())).catch(() => { leaving = false; toast("Няма връзка. Изходът ще стане, щом се върне."); });
@@ -516,6 +527,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     onPrefs(fn) { prefSubs.add(fn); return () => { prefSubs.delete(fn); }; },
     haptic(p) { try { const ua = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation; if (ua && !ua.hasBeenActive) return; if (navigator.vibrate) navigator.vibrate(p || 12); } catch { /* no vibration */ } },
     logout,
+    beforeLogout(fn) { guards.add(fn); return () => { guards.delete(fn); }; },
   };
   (window as unknown as { SCStaff?: Staff }).SCStaff = st;
   if (navigator.onLine === false) setConn("off");
