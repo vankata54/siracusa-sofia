@@ -9,7 +9,7 @@ export type DAction =
   | { k: "take"; nos: string[] }
   | { k: "go"; nos?: string[] }
   | { k: "arrive"; no: string }
-  | { k: "deliver"; no: string }
+  | { k: "deliver"; no: string; sum?: string }
   | { k: "problem"; no: string; kind: ProblemKind; note?: string }
   | { k: "returned"; no: string }
   | { k: "fuel"; input: FuelInput };
@@ -36,13 +36,13 @@ export function makeOutbox(store: DStore): DOutbox {
 export interface DFlush { sent: number; dropped: string[]; stopped: boolean }
 /** sends the kept steps in order; `isOffline(e)`: still no connection, stop and keep the rest; any other refusal drops
     that step (the message is shown) and goes on */
-export async function flushOutbox(box: DOutbox, run: (q: DQueued) => Promise<unknown>, isOffline: (e: unknown) => boolean): Promise<DFlush> {
+export async function flushOutbox(box: DOutbox, run: (q: DQueued) => Promise<unknown>, isOffline: (e: unknown) => boolean, onDrop?: (q: DQueued, e: unknown) => void): Promise<DFlush> {
   const res: DFlush = { sent: 0, dropped: [], stopped: false };
   for (const q of box.list()) {
     try { await run(q); box.remove(q.id); res.sent++; }
     catch (e) {
       if (isOffline(e)) { res.stopped = true; break; }
-      box.remove(q.id); res.dropped.push(e instanceof Error && e.message ? e.message : "Записът не мина.");
+      box.remove(q.id); if (onDrop) onDrop(q, e); res.dropped.push(e instanceof Error && e.message ? e.message : "Записът не мина.");
     }
   }
   return res;
@@ -76,7 +76,7 @@ export function applyLocal(d: Delivery, a: DAction, at: number): boolean {
     case "deliver":
       if (a.no !== d.no || !(d.st === "road" || (d.st === "prob" && d.problem && !d.problem.solved))) return false;
       if (d.problem) d.problem = { ...d.problem, solved: "delivered", solvedAt: iso };
-      set("done"); d.deliveredAt = iso; d.collected = { pay: d.pay, payLabel: d.payLabel, sum: d.total, at: iso, feeMissing: !d.feeKnown }; return true;
+      set("done"); d.deliveredAt = iso; d.collected = { pay: d.pay, payLabel: d.payLabel, sum: a.sum != null && a.sum !== "" ? Number(String(a.sum).replace(",", ".")) || d.total : d.total, at: iso, feeMissing: !d.feeKnown }; return true;
     case "problem":
       if (a.no !== d.no || !(d.st === "picked" || d.st === "road")) return false;
       set("prob"); d.problem = { kind: a.kind, label: stepWord(a).slice(9), at: iso, note: a.note || null, solved: "", solvedAt: null }; return true;

@@ -14,10 +14,12 @@
      POST  /api/driver/deliveries/:no/returned            "Върнах я"
      POST  /api/driver/deliveries/:no/ask      {note?}    "Адрес извън зоните": the question to the manager
      POST  /api/driver/undo         {id}                  "Отмени" (409 undo_gone / undo_late / undo_changed)
-     GET   /api/driver/route                              Път А, Път Б, "Моят ред" (no km: [ЛИПСВА: маршрути от OSRM])
+     GET   /api/driver/route                              Път А, Път Б, "Моят ред" (no km: [ЛИПСВА: километри и минути на маршрута])
      POST  /api/driver/route        {pick}   ·   POST /api/driver/route/move {no, dir}
      GET   /api/driver/fuel   ·   POST /api/driver/fuel {litres, sum, km, full, cash, photo, noPhoto}
-     POST  /api/driver/receipt      (the body is the photo) {url: "/media/<sha256>.<ext>"}; 30 an hour per person
+     POST  /api/driver/receipt      (the body is the photo) {url: "/api/driver/receipts/<sha256>.<ext>"}; 30 an hour
+     GET   /api/driver/receipts/:name  the photo (a driver, the bosses; never public)
+     POST  /api/driver/cars/:id/km {km}  a wrong last km of a car (the bosses)
      GET   /api/driver/shift  ·   POST /api/driver/end {km, handed}
      GET   /api/driver/search?q=
    The main admin, the owner, the manager:
@@ -33,11 +35,11 @@ import type { Hono } from "hono";
 import type { AdminDeps } from "./deps.ts";
 import { qv } from "./deps.ts";
 import { sniffImage } from "./menu.ts";
-import { CoreError, rid, DRIVER_MSG, RECEIPT_PER_HOUR, type AskAnswer, type FuelInput, type ProblemKind, type RoutePick, type ShiftStart } from "../../src/core/index.ts";
+import { CoreError, rid, DRIVER_MSG, RECEIPT_PER_HOUR, RECEIPT_URL, receiptAccess, type AskAnswer, type FuelInput, type ProblemKind, type RoutePick, type ShiftStart } from "../../src/core/index.ts";
 
 const MEDIA_TYPE: Record<string, string> = { webp: "image/webp", jpg: "image/jpeg", png: "image/png" };
 
-export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): void {
+export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string; receiptsDir: string }): void {
   const { core, staff, body } = d;
   /** the moment a step was made on the phone (kept with no connection): ISO or epoch ms, the core checks it */
   const atOf = (b: Record<string, unknown>): string | number | undefined => (typeof b.at === "string" || typeof b.at === "number" ? b.at : undefined);
@@ -47,6 +49,7 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): vo
   app.post("/api/driver/start", async (c) => { const s = await staff(c); return c.json(await core.driver.start(s, (await body(c)) as ShiftStart), 201); });
   app.post("/api/driver/prefs", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.prefs(s, { nav: b.nav, parked: b.parked })); });
   app.post("/api/driver/car", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.changeCar(s, { car: b.car, kmEnd: b.kmEnd, kmStart: b.kmStart })); });
+  app.post("/api/driver/cars/:id/km", async (c) => { const s = await staff(c), b = await body(c); return c.json(await core.driver.setCarKm(s, c.req.param("id"), b.km as number | string)); });
   app.put("/api/driver/cars", async (c) => { const s = await staff(c); return c.json(await core.driver.saveCars(s, (await body(c)).cars)); });
 
   app.get("/api/driver/list", async (c) => c.json(await core.driver.list(await staff(c), { all: qv(c, "all") === "1" })));
@@ -67,8 +70,18 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): vo
   app.get("/api/driver/fuel/report", async (c) => c.json(await core.driver.fuelReport(await staff(c), { from: qv(c, "from"), to: qv(c, "to") })));
   app.get("/api/driver/fuel", async (c) => c.json(await core.driver.fuel(await staff(c))));
   app.post("/api/driver/fuel", async (c) => { const s = await staff(c); return c.json(await core.driver.fuelAdd(s, (await body(c)) as FuelInput), 201); });
-  /* the photo of a receipt: the same checks and the same store as a photo of the menu (png / jpeg / webp by the first
-     bytes, up to 5 MB, /media/<sha256>.<ext>); only a driver in a shift, at most RECEIPT_PER_HOUR an hour per person */
+  /* the photo of a receipt: png / jpeg / webp by the first bytes and the size in the header, up to 5 MB; kept apart from the
+     menu's photos (data/receipts) and never public: GET /api/driver/receipts/<sha256>.<ext> for a driver, the main
+     admin, the owner, the manager (private cache, no sniffing, sandboxed); only a driver in a shift uploads, at most
+     RECEIPT_PER_HOUR an hour per person */
+  const receiptsDir = d.receiptsDir;
+  app.get("/api/driver/receipts/:name", async (c) => {
+    receiptAccess(await staff(c));
+    const name = c.req.param("name"), m = /^([a-f0-9]{64})\.(webp|jpg|png)$/.exec(name);
+    const file = m ? path.join(receiptsDir, name) : "";
+    if (!m || !fs.existsSync(file)) return c.json({ error: "not_found", message: "Няма такава снимка." }, 404);
+    return new Response(fs.readFileSync(file), { headers: { "content-type": MEDIA_TYPE[m[2]], "cache-control": "private, max-age=31536000, immutable", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'" } });
+  });
   const uploads = new Map<string, number[]>();
   app.post("/api/driver/receipt", async (c) => {
     const s = await staff(c);
@@ -77,14 +90,14 @@ export function driverRoutes(app: Hono, d: AdminDeps & { mediaDir: string }): vo
     uploads.set(s.user.id, mine);
     if (mine.length >= RECEIPT_PER_HOUR) throw Object.assign(new CoreError("throttled", DRIVER_MSG.receiptMany, 429), { retryIn: Math.max(1, Math.ceil((mine[0] + 3600_000 - t) / 1000)) });
     const buf = new Uint8Array(await c.req.arrayBuffer()), ext = sniffImage(buf);
-    await core.driver.receiptCheck(s, { bytes: buf.length, ext });
+    await core.driver.receiptCheck(s, { bytes: buf.length, ext, data: buf });
     const name = crypto.createHash("sha256").update(buf).digest("hex") + "." + ext;
-    fs.mkdirSync(d.mediaDir, { recursive: true });
-    const file = path.join(d.mediaDir, name);
+    fs.mkdirSync(receiptsDir, { recursive: true });
+    const file = path.join(receiptsDir, name);
     if (!fs.existsSync(file)) { const tmp = file + "." + rid(4) + ".tmp"; fs.writeFileSync(tmp, buf); fs.renameSync(tmp, file); }
     mine.push(t);
     await core.audit.log(s.user.username, "fuel.receipt", name, { bytes: buf.length });
-    return c.json({ url: "/media/" + name, type: MEDIA_TYPE[ext!], bytes: buf.length }, 201);
+    return c.json({ url: RECEIPT_URL + name, type: MEDIA_TYPE[ext!], bytes: buf.length }, 201);
   });
 
   app.get("/api/driver/shift", async (c) => c.json(await core.driver.shift(await staff(c))));

@@ -52,9 +52,12 @@ export async function initDelivery(): Promise<void> {
     return '<div class="chg big">Върни ' + esc(fmt(g - c)) + "</div>";
   }
 
-  function render() {
+  /* drawn again keeping the focus on the same control (or on the main button of the bar) */
+  const render = () => drv.paint(draw);
+  function draw() {
     if (!d) return;
-    const x = d, locked = L && L.route.locked && L.route.locked !== x.no ? L.route.locked : null, app = drv.navApp();
+    const lk = L && L.route.locked && L.route.locked !== d.no ? [...L.active, ...L.waiting].find((y) => y.no === L!.route.locked) : null;
+    const x = d, locked = lk && lk.st === "road" ? lk.no : null, app = drv.navApp();
     st.setTop({ title: "№ " + x.no, sub: zoneName(x) });
     let h = '<section class="st-sec">' + flow(x) + "</section>";
     if (x.st === "prob" && x.problem) h += '<section class="st-sec"><div class="notice bad">' + ic("warning", 22) + "<span><b>Проблем: " + esc(x.problem.label) + ".</b> Ресторантът е уведомен в " + esc(at(x.problem.at)) + ". " +
@@ -63,7 +66,7 @@ export async function initDelivery(): Promise<void> {
     if (x.outzone && live(x)) h += '<section class="st-sec"><div class="notice bad">' + ic("map-pin-line", 22) + "<span><b>Адресът е извън зоните за доставка.</b> " +
       (x.ask ? esc(askLine(x)) + " " + (x.ask.answer === "return" ? "Не я вземай: остава в ресторанта." : x.ask.answer === "pickup" ? "Не я карай: ресторантът предлага на клиента да я вземе." : x.ask.answer === "deliver" ? "Можеш да я вземеш." : "Отговорът идва тук.") : "Преди да тръгнеш, уточни с ресторанта дали да я караш и каква е сумата.") +
       '<br><a class="pill pill-line" href="' + RT_TEL + '">' + ic("phone", 20) + "Обади се в ресторанта</a></span></div></section>";
-    if (isLate(x)) h += '<section class="st-sec"><div class="notice bad">' + ic("timer", 22) + "<span><b>Закъснява " + Math.max(1, Math.ceil((Date.now() - x.due!) / 60000)) + " мин.</b> Обади се на клиента и кажи кога пристигаш. Ресторантът също вижда закъснението.<br>" +
+    if (isLate(x)) h += '<section class="st-sec"><div class="notice bad">' + ic("timer", 22) + "<span><b>Закъснява " + Math.max(1, Math.ceil((Date.now() - x.due!) / 60000)) + "\u00a0мин.</b> Обади се на клиента и кажи кога пристигаш. Ресторантът също вижда закъснението.<br>" +
       '<button class="pill pill-line" type="button" data-call>' + ic("phone", 20) + "Обади се на клиента</button></span></div></section>";
     if (x.st === "road" && locked) h += '<section class="st-sec"><div class="notice">' + ic("info", 22) + '<span>Сега караш към <a class="link" href="' + esc(murl.shofyor("dostavka", locked)) + '" style="min-height:0;display:inline">№ ' + esc(locked) + "</a>. Тази е следваща по реда на маршрута.</span></div></section>";
     const ap = addrParts(x);
@@ -79,7 +82,7 @@ export async function initDelivery(): Promise<void> {
       (x.disc > 0 ? '<div class="kv" style="border-top:1px solid var(--line)"><span class="muted">Отстъпка</span><b class="price">-' + esc(fmt(x.disc)) + "</b></div>" : "") +
       '<div class="kv"' + (x.disc > 0 ? "" : ' style="border-top:1px solid var(--line)"') + '><span class="muted">Доставка</span><b>' + (x.outzone ? "уточни с ресторанта" : x.fee === 0 ? "Безплатна" : x.fee === null ? MISS("[ЛИПСВА: такса за " + x.zone + "]") : esc(fmt(x.fee))) + "</b></div>" +
       '<div class="kv tot"><span>Общо</span><span class="price">' + (x.outzone ? esc(fmt(x.total)) + " + доставка" : esc(money(x))) + "</span></div>" +
-      (x.outzone ? '<p class="osum" style="text-align:right">уточни с ресторанта</p>' : "") + "</div></section>";
+      "</div></section>";
     h += '<section class="st-sec"><div class="st-h"><h2>Плащане</h2></div><div class="paygrid">' + (["cash", "card", "voucher"] as const).map((k) => '<div class="' + (x.pay === k ? "on" : "") + '"' + (x.pay === k ? ' aria-current="true"' : "") + ">" + ic(PAY[k][1], 24) + PAY[k][0] + "</div>").join("") + "</div>";
     if (x.pay === "cash" && payable(x)) h += changeBox(x);
     if (x.pay === "card" && live(x)) h += '<div class="notice" style="margin-top:12px">' + ic("credit-card", 22) + "<span>Вземи терминала за карти. " + MISS(M.terminal) + "</span></div>";
@@ -113,6 +116,28 @@ export async function initDelivery(): Promise<void> {
   }
 
   /* ----- sheets ----- */
+  function sumSheet(x: Delivery) {
+    const def = (Math.round(x.total * 100) / 100).toFixed(2).replace(".", ",");
+    const s = openSheet({ title: "Колко взе?",
+      html: '<p style="margin:0 0 10px">' + (x.outzone ? "Адресът е извън зоните: сумата е тази, която каза ресторантът." : "Таксата за " + esc(x.zone) + " не е въведена: сумата е без нея.") + " Въведи колко взе в брой.</p>" +
+        '<div class="field bigf"><label for="took">Взех в брой</label><div class="wrapi"><input class="input" id="took" inputmode="decimal" autocomplete="off" value="' + def + '" aria-describedby="took-e"><span class="u">€</span></div><span class="err" id="took-e"></span></div>',
+      foot: '<button class="pill pill-lg pill-block" type="button" data-took style="background:var(--ok);color:var(--on-ok)">' + ic("check-circle", 22) + "Доставена</button>", focus: "#took" });
+    const inp = s.el.querySelector<HTMLInputElement>("#took")!, er = s.el.querySelector<HTMLElement>("#took-e")!, go = s.el.querySelector<HTMLButtonElement>("[data-took]")!;
+    go.onclick = async () => {
+      const v = inp.value.trim().replace(/\s/g, ""), n = parseFloat(v.replace(",", "."));
+      if (!(n >= 0) || !/^\d+([.,]\d{1,2})?$/.test(v)) { er.textContent = "Въведи сумата, която взе, например 24,50."; inp.setAttribute("aria-invalid", "true"); inp.focus(); return; }
+      go.disabled = true;
+      try {
+        const r = await drv.act({ k: "deliver", no: x.no, sum: v });
+        s.close(); st.haptic([20, 40, 20]);
+        drv.stepToast("№ " + x.no + " е доставена: взе " + fmt(n) + ".", r, load);
+        window.scrollTo({ top: 0 }); await after(r.queued); drv.focusBar();
+      } catch (e) {
+        go.disabled = false;
+        if (e instanceof ApiError && e.fields && e.fields.sum) { er.textContent = e.fields.sum; inp.setAttribute("aria-invalid", "true"); inp.focus(); } else { s.close(); drv.oops(e); await load(); }
+      }
+    };
+  }
   function callSheet() {
     const s = openSheet({ title: "Обаждане до клиента",
       html: '<div class="callbig"><span>' + esc(d!.name) + "</span><b>Скрит номер</b><span>Обаждането минава през номера на ресторанта " + esc(RT) + "</span></div>" +
@@ -131,7 +156,7 @@ export async function initDelivery(): Promise<void> {
       foot: '<button class="pill pill-red pill-lg pill-block" type="button" data-askmgr>' + ic("chat-circle-dots", 22) + "Питай управителя</button><a class=\"pill pill-line pill-lg pill-block\" href=\"" + RT_TEL + '">' + ic("phone", 22) + "Обади се в ресторанта</a>" });
     s.el.querySelector<HTMLButtonElement>("[data-askmgr]")!.onclick = async (e) => {
       const b = e.currentTarget as HTMLButtonElement; b.disabled = true;
-      try { await driverApi.ask(d!.no, undefined); s.close(); st.toast("Попита управителя за № " + d!.no + ". Отговорът идва тук."); await load(); }
+      try { await driverApi.ask(d!.no, undefined); s.close(); st.toast("Попита управителя за № " + d!.no + ". Отговорът идва тук."); await load(); drv.focusBar(); }
       catch (er) { b.disabled = false; drv.oops(er); }
     };
   }
@@ -162,7 +187,7 @@ export async function initDelivery(): Promise<void> {
           const r = await drv.act({ k: "problem", no: d!.no, kind: k, note: inp ? inp.value : undefined });
           s.close(); st.haptic([30, 60, 30]);
           drv.stepToast("Ресторантът е уведомен: " + PROB.find((p) => p[0] === k)![1] + ".", r, load);
-          await after(r.queued);
+          await after(r.queued); drv.focusBar();
         } catch (er) { send.disabled = false; drv.oops(er); }
       }
     });
@@ -172,12 +197,29 @@ export async function initDelivery(): Promise<void> {
   async function load() {
     if (!no) { main.innerHTML = '<section class="st-sec">' + st.empty({ icon: "magnifying-glass", title: "Няма такава доставка", action: '<a class="pill pill-line pill-lg" href="' + esc(murl.shofyor()) + '">Към доставките</a>' }) + "</section>"; bar.innerHTML = ""; return; }
     try {
-      const [one, all] = await Promise.all([drv.cached("d-" + no, () => driverApi.get(no)), drv.cached("list", () => driverApi.list())]);
-      d = drv.local([one])[0]; L = all; st.synced(); render();
+      const all = await drv.cached("list", () => driverApi.list());
+      L = { ...all, active: drv.local(all.active.map((y) => ({ ...y }))), waiting: drv.local(all.waiting.map((y) => ({ ...y }))) };
+      let one: Delivery | null = null;
+      try { one = await drv.cached("d-" + no, () => driverApi.get(no)); }
+      catch (e) {
+        if (!(e instanceof ApiError && e.code === "offline")) throw e;
+        /* never opened with a connection: the copy in the list kept on the phone */
+        one = [...all.active, ...all.waiting, ...all.done].find((y) => y.no === no) || null;
+        if (!one) { notHere(); return; }
+      }
+      d = drv.local([{ ...one }])[0]; st.synced(); render();
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) { st.setTop({ title: "Доставка", sub: "" }); main.innerHTML = '<section class="st-sec">' + st.empty({ icon: "magnifying-glass", title: "Няма такава доставка", text: "№ " + no + " не е твоя или вече я няма.", action: '<a class="pill pill-line pill-lg" href="' + esc(murl.shofyor()) + '">Към доставките</a>' }) + "</section>"; bar.innerHTML = ""; return; }
       st.fail(e);
     }
+  }
+  /** no connection and this delivery is not on the phone: say so; "Назад" goes to the one before (the same page) */
+  function notHere() {
+    st.setTop({ title: "№ " + no, sub: "" });
+    main.innerHTML = '<section class="st-sec">' + st.empty({ icon: "wifi-slash", title: "Тази доставка не е заредена на телефона", text: "Отвори я, щом има връзка.",
+      action: '<button class="pill pill-line pill-lg" type="button" data-back style="margin-top:8px">' + ic("caret-left", 22) + "Назад</button>" }) + "</section>";
+    bar.innerHTML = "";
+    main.querySelector<HTMLButtonElement>("[data-back]")!.onclick = () => history.back();
   }
   /** after a step: the screen from the server (or as the kept step leaves it) */
   async function after(queued?: unknown) { if (queued) { d = drv.local([d!])[0]; render(); } else await load(); }
@@ -206,6 +248,9 @@ export async function initDelivery(): Promise<void> {
       } else if (b.hasAttribute("data-ret")) {
         const r = await drv.act({ k: "returned", no: x.no }); st.haptic();
         drv.stepToast("№ " + x.no + " е върната в ресторанта.", r, load); await after(r.queued);
+      } else if (b.dataset.st === "done" && x.pay === "cash" && (x.outzone || !x.feeKnown)) {
+        /* the screen says "уточни с ресторанта" / "+ такса": the driver says what he took (it goes into the cash to hand over) */
+        busy = false; b.disabled = false; sumSheet(x); return;
       } else if (b.dataset.st) {
         const s2 = b.dataset.st, r = await drv.act(s2 === "picked" ? { k: "take", nos: [x.no] } : s2 === "road" ? { k: "go", nos: [x.no] } : { k: "deliver", no: x.no });
         st.haptic(s2 === "done" ? [20, 40, 20] : 12);
@@ -213,7 +258,7 @@ export async function initDelivery(): Promise<void> {
         window.scrollTo({ top: 0 }); await after(r.queued);
       }
     } catch (er) { drv.oops(er); await load(); }
-    finally { busy = false; b.disabled = false; }
+    finally { busy = false; b.disabled = false; drv.focusBar(); }
   });
   await load();
 }

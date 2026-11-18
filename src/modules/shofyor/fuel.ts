@@ -2,7 +2,7 @@
    the sum in €, the km (big fields, numeric keyboard), the price per litre live, "Напълних резервоара догоре", "Платих в
    брой от събраните пари", the photo of the receipt (optional: OPEN-QUESTIONS 29; "Камерата не работи"), the core's
    errors under the fields, the entries of the shift. With no connection the entry is kept on the phone. */
-import { mountDriver, driverApi, ApiError, ic, esc, fmt, MISS, kmText, type DQueued } from "./app.ts";
+import { mountDriver, driverApi, ApiError, ic, esc, fmt, MISS, kmText, clock, LS, FUEL_DRAFT, type DQueued } from "./app.ts";
 import type { FuelPage, FuelInput } from "../../client/api-driver.ts";
 
 const num = (v: string) => parseFloat(String(v || "").replace(",", ".").replace(/\s/g, ""));
@@ -13,7 +13,7 @@ export async function initFuel(): Promise<void> {
   if (!drv0) return;
   const drv = drv0;
   const { st } = drv, main = st.main, bar = st.bar!;
-  let P: FuelPage | null = null, photo: string | null = null, noPhoto = false, full = false, paidCash = false, errs: Record<string, string> = {}, sending = false;
+  let P: FuelPage | null = null, photo: string | null = null, noPhoto = false, full = false, paidCash = false, errs: Record<string, string> = {}, sending = false, draftAt = 0;
   const v: Record<string, string> = { litres: "", sum: "", km: "" };
   bar.innerHTML = '<button class="pill pill-red" type="button" data-save>' + ic("check", 22) + "Запиши зареждането</button>";
 
@@ -22,10 +22,13 @@ export async function initFuel(): Promise<void> {
       (errs[id] ? ' aria-invalid="true" aria-describedby="e-' + id + '"' : help ? ' aria-describedby="h-' + id + '"' : "") + '><span class="u">' + unit + "</span></div>" +
       (errs[id] ? '<span class="err" id="e-' + id + '">' + esc(errs[id]) + "</span>" : help ? '<span class="help" id="h-' + id + '">' + help + "</span>" : "") + "</div>";
   }
-  function render() {
+  /* drawn again keeping the focus on the same control (or on the main button of the bar) */
+  const render = () => drv.paint(draw);
+  function draw() {
     if (!P) return;
     const car = P.car, q = drv.queued().filter((x) => x.a.k === "fuel");
-    let h = '<section class="st-sec"><div class="carline"><span class="ii">' + ic("car", 24) + "</span><span><b>" + esc(car.n) + "</b><small>Гориво " + MISS("[ЛИПСВА: вид]") + " · рег. № " + (car.plate ? esc(car.plate) : MISS("[ЛИПСВА]")) + '</small></span><button class="pill pill-soft" type="button" data-carsheet>Смени</button></div></section>';
+    let h = (draftAt ? '<section class="st-sec"><div class="notice warn" data-draft>' + ic("warning", 22) + "<span><b>Зареждането от " + esc(clock(draftAt)) + " не се записа.</b> Поправи полетата и натисни „Запиши зареждането“.</span></div></section>" : "") +
+      '<section class="st-sec"><div class="carline"><span class="ii">' + ic("car", 24) + "</span><span><b>" + esc(car.n) + "</b><small>Гориво " + MISS("[ЛИПСВА: вид]") + " · рег. № " + (car.plate ? esc(car.plate) : MISS("[ЛИПСВА]")) + '</small></span><button class="pill pill-soft" type="button" data-carsheet>Смени</button></div></section>';
     h += '<section class="st-sec"><div class="fgrid">' + field("litres", "Литри", "л", "decimal", "0,00") + field("sum", "Сума", "€", "decimal", "0,00") +
       field("km", "Километраж", "км", "numeric", "0", "Числото от таблото на колата. Последно записан: " + kmText(P.lastKm) + " км.") + "</div>" +
       '<div class="calc" style="margin-top:12px" id="calc"><span>Цена на литър</span><b aria-live="polite">-</b></div><p class="pwarn" id="pwarn" role="status"></p>' +
@@ -52,11 +55,21 @@ export async function initFuel(): Promise<void> {
     const w = main.querySelector("#pwarn"), odd = l > 0 && s > 0 && (s / l < 1 || s / l > 3);
     if (w) w.textContent = odd ? "Провери литрите и сумата: " + f2(s / l) + " €/л е необичайна цена." : "";
   }
+  /* an entry kept on the phone and refused by the core when it was sent: back in the form, with the core's words */
+  const draftKey = FUEL_DRAFT + drv.state.user.username;
+  function readDraft() { try {
+    const dr = JSON.parse(LS.get(draftKey) || "null") as { at: number; input: FuelInput; fields: Record<string, string> } | null;
+    if (dr && dr.input) {
+      v.litres = String(dr.input.litres ?? ""); v.sum = String(dr.input.sum ?? ""); v.km = String(dr.input.km ?? "");
+      full = !!dr.input.full; paidCash = !!dr.input.cash; photo = dr.input.photo || null; noPhoto = !!dr.input.noPhoto; errs = dr.fields || {}; draftAt = dr.at || Date.now();
+    }
+  } catch { /* a broken draft is dropped */ } }
+  readDraft();
   async function load() {
     try { P = await drv.cached("fuel", () => driverApi.fuel()); st.synced(); render(); }
     catch (e) { st.fail(e); }
   }
-  drv.onChange(() => { if (!main.contains(document.activeElement) || !(document.activeElement instanceof HTMLInputElement)) void load(); });
+  drv.onChange(() => { if (!main.contains(document.activeElement) || !(document.activeElement instanceof HTMLInputElement)) { readDraft(); void load(); } });
 
   main.addEventListener("input", (e) => { const t = e.target as HTMLInputElement; if (t.dataset.f) { v[t.dataset.f] = t.value; calc(); } });
   main.addEventListener("change", (e) => {
@@ -71,6 +84,8 @@ export async function initFuel(): Promise<void> {
     if ((e.target as Element).closest("[data-photo]")) main.querySelector<HTMLInputElement>("[data-file]")!.click();
   }, true);
   async function upload(file: File) {
+    /* the size first: a big photo never leaves the phone (the server answers before its words) */
+    if (file.size > 5 * 1024 * 1024) { photo = null; errs.photo = "Снимката е до 5 MB."; render(); return; }
     const slot = main.querySelector<HTMLElement>("[data-photo] b");
     if (slot) slot.textContent = "Качваме снимката …";
     try { photo = (await driverApi.receipt(file)).url; delete errs.photo; noPhoto = false; st.toast("Снимката е добавена."); }
@@ -85,6 +100,7 @@ export async function initFuel(): Promise<void> {
       const r = await drv.act({ k: "fuel", input });
       const was = { ...v };
       v.litres = ""; v.sum = ""; v.km = ""; photo = null; noPhoto = false; full = false; paidCash = false;
+      draftAt = 0; LS.set(draftKey, null);
       if (r.queued) { render(); st.toast("Записано на телефона. Тръгва, щом има връзка."); }
       else { await load(); st.toast("Зареждането е записано: " + was.litres.replace(".", ",") + " л · " + fmt(num(was.sum)) + "."); }
       window.scrollTo({ top: 0 });

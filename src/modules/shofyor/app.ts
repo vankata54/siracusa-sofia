@@ -46,7 +46,9 @@ export function addrParts(d: Delivery): { main: string; sub: string } {
   let main = m ? a.slice(0, m.index) : a;
   const sub = m ? a.slice(m.index).replace(/^,\s*/, "") : "";
   if (z && !d.outzone && !main.toLowerCase().includes(z.toLowerCase())) main = z + ", " + main;
-  return { main, sub };
+  /* "вх. Б", "бл. 311", "ет. 4", "№ 12" never break apart */
+  const keep = (t: string) => t.replace(/(^|[\s,])(вх\.|бл\.|ет\.|ап\.|№)\s+/g, "$1$2\u00a0");
+  return { main: keep(main), sub: keep(sub) };
 }
 /** the address in one line (the search, the labels) */
 export function addrLine(d: Delivery): string { const p = addrParts(d); return p.main + (p.sub ? ", " + p.sub : ""); }
@@ -73,9 +75,9 @@ export function dueStt(d: Delivery, now = Date.now()): string {
   if (d.st === "cancelled") return stt("prob", "Отказана", "x");
   if (d.due == null || !d.dueAt) return "";
   const left = Math.round((d.due - now) / 60000);
-  if (now > d.due) return stt("late", "Закъснява " + Math.max(1, Math.ceil((now - d.due) / 60000)) + " мин", "timer");
-  if (left < 5) return stt("soon", "Остават " + Math.max(1, left) + " мин", "timer");
-  if (d.etaLate > 0) return stt("soon", "Срок " + d.dueAt + " · ще закъснее ~" + d.etaLate + " мин", "timer");
+  if (now > d.due) return stt("late", "Закъснява " + Math.max(1, Math.ceil((now - d.due) / 60000)) + "\u00a0мин", "timer");
+  if (left < 5) return stt("soon", "Остават " + Math.max(1, left) + "\u00a0мин", "timer");
+  if (d.etaLate > 0) return stt("soon", "Срок " + d.dueAt + " · ще закъснее ~" + d.etaLate + "\u00a0мин", "timer");
   return stt("picked", "Срок " + d.dueAt, "clock");
 }
 export const isLate = (d: Delivery, now = Date.now()) => live(d) && d.due != null && now > d.due;
@@ -118,6 +120,13 @@ function searchProvider(examples: () => string[]): SearchProvider {
   };
 }
 
+/** a selector that finds the same control after the screen is drawn again */
+function focusKey(el: HTMLElement): string | null {
+  if (el.id) return "#" + CSS.escape(el.id);
+  for (const at of Array.from(el.attributes)) if (at.name.startsWith("data-") && at.name !== "data-offnav") return at.value ? "[" + at.name + '="' + CSS.escape(at.value) + '"]' : "[" + at.name + "]";
+  const h = el.getAttribute("href");
+  return h ? 'a[href="' + CSS.escape(h) + '"]' : null;
+}
 /* ---------- the frame of a screen ---------- */
 export interface DriverOpts { screen: string; tab: "list" | "route" | "fuel" | "shift" | null; title: string; back?: { href: string; label: string }; bar?: boolean; homeFind?: boolean }
 export interface Drv {
@@ -132,6 +141,10 @@ export interface Drv {
   local<T extends Delivery>(list: T[]): T[];
   /** something changed (real time, the connection is back and the kept steps went, the navigation app) */
   onChange(fn: () => void): void;
+  /** draw the screen again keeping the focus on the same control (or, when it is gone, on the main button of the bar) */
+  paint(draw: () => void): void;
+  /** after a step: the focus on the new main button of the bar when the old one is gone (never <body>) */
+  focusBar(): void;
   /** the number on "Доставки" */
   badge(n: number): void;
   /** the toast after a step: "Записано на телефона: …" with no connection; "Отмени" through the core (or the queue) */
@@ -145,12 +158,17 @@ export interface Drv {
   /** the numbers for the examples of the search */
   setExamples(nos: string[]): void;
 }
-const LS = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* blocked */ } } };
+/** a fuel entry kept on the phone and refused by the core when it was sent: "Гориво" shows it again with the errors */
+export const FUEL_DRAFT = "dr-fuel-draft:";
+export const LS = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string | null) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* blocked */ } } };
 const isOff = (e: unknown) => e instanceof ApiError && e.code === "offline";
 
 export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
   let examples: string[] = [];
-  const box = makeOutbox({ get: () => LS.get("dr-outbox"), set: (v) => LS.set("dr-outbox", v) });
+  /* the steps and the copies on the phone are per person: another driver on the same phone never sends them */
+  let user = "";
+  const boxKey = () => "dr-outbox:" + user;
+  const box = makeOutbox({ get: () => LS.get(boxKey()), set: (v) => LS.set(boxKey(), v) });
   let state: DriverState | null = null;
   let carSheetRef: ((onDone?: () => void) => Promise<void>) | null = null;
   let startMoving: () => void = () => { /* set after the mount */ };
@@ -163,6 +181,7 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
   });
   if (!st0) return null;
   const st = st0;
+  user = st.me ? st.me.user.username : "";
   /* the frame's sheet (not SC.sheet of the site: tests/unit/runtime.test.ts looks for ".sheet(" calls) */
   const openSheet = (o: Parameters<Staff["sheet"]>[0]) => { st.ov.querySelector(".st-toast")?.classList.remove("on"); return st.sheet(o); };
   try { state = await cachedCall("state", () => driverApi.state()); }
@@ -213,7 +232,7 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
       case "take": return driverApi.take(a.nos, o);
       case "go": return driverApi.go(a.nos, o);
       case "arrive": return driverApi.arrive(a.no, o);
-      case "deliver": return driverApi.deliver(a.no, o);
+      case "deliver": return driverApi.deliver(a.no, { ...o, ...(a.sum != null ? { sum: a.sum } : {}) });
       case "problem": return driverApi.problem(a.no, a.kind, a.note, o);
       case "returned": return driverApi.returned(a.no, o);
       case "fuel": return driverApi.fuelAdd({ ...a.input, ...o });
@@ -227,9 +246,17 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
     if (flushing) return flushing;
     if (!box.size()) return Promise.resolve();
     flushing = (async () => {
-      const r = await flushOutbox(box, run, isOff);
+      const words: string[] = [];
+      const r = await flushOutbox(box, run, isOff, (q, e) => {
+        const er = e instanceof ApiError ? e : null;
+        if (q.a.k === "fuel") {
+          LS.set(FUEL_DRAFT + user, JSON.stringify({ at: q.at, input: q.a.input, fields: (er && er.fields) || {} }));
+          const f = er && er.fields ? Object.values(er.fields)[0] : er ? er.message : "";
+          words.push("Зареждането от " + clock(q.at) + " не се записа: " + (f || "провери го в „Гориво“.") + (/[.!]$/.test(f || "") ? "" : ".") + " Поправи го в „Гориво“.");
+        } else words.push(er && er.message ? er.message : "Записът не мина.");
+      });
       st.netRefresh();
-      if (r.sent || r.dropped.length) st.toast(r.dropped.length ? r.dropped.join(" ") : "Записаното на телефона е изпратено: " + plural(r.sent, "запис", "записа") + ".");
+      if (r.sent || words.length) st.toast(words.length ? words.join(" ") : "Записаното на телефона е изпратено: " + plural(r.sent, "запис", "записа") + ".", words.length ? { ms: 8000 } : {});
     })().finally(() => { flushing = null; });
     return flushing;
   }
@@ -239,7 +266,10 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
 
   /* ----- real time: one redraw for a burst of events ----- */
   st.onLive(["driver.course", "driver.ask", "order.status", "order.new"], (d, type) => {
-    if (type === "order.status" && (d as { status?: string }).status === "ready") st.haptic([20, 40, 20]);
+    const x = (d || {}) as { status?: string; mode?: string };
+    if (type === "order.new" && x.mode && x.mode !== "delivery") return;
+    if (type === "order.status" && (x.status === "accepted" || x.status === "cooking" || x.status === "picked_up")) return;
+    if (type === "order.status" && x.status === "ready") st.haptic([20, 40, 20]);
     changed(250);
   });
   st.onPrefs(() => { changed(); if (state && state.shift && state.shift.nav !== st.navApp()) driverApi.prefs({ nav: st.navApp() as "google" | "waze" }).catch(() => { /* the phone remembers it */ }); });
@@ -293,10 +323,10 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
     st.toast(e instanceof ApiError && e.message ? e.message : "Не успяхме. Опитай пак.");
   }
   async function cachedCall<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    try { const v = await fn(); LS.set("dr-cache-" + key, JSON.stringify({ at: Date.now(), v })); return v; }
+    try { const v = await fn(); LS.set("dr-cache-" + user + "-" + key, JSON.stringify({ at: Date.now(), v })); return v; }
     catch (e) {
       if (!isOff(e)) throw e;
-      const c = LS.get("dr-cache-" + key);
+      const c = LS.get("dr-cache-" + user + "-" + key);
       if (!c) throw e;
       try { const x = JSON.parse(c) as { at: number; v: T }; st.synced(x.at); return x.v; } catch { throw e; }
     }
@@ -315,17 +345,55 @@ export async function mountDriver(o: DriverOpts): Promise<Drv | null> {
     onChange(fn) { subs.add(fn); },
     badge(n) { st.setBadge("list", n); },
     stepToast(text, r, after) {
-      if (r.queued) { const q = r.queued; st.toast("Записано на телефона: " + text, { undo: () => { drv.unqueue(q); changed(); } }); return; }
+      if (r.queued) {
+        const q = r.queued, told = /\s*Клиент[^.]*\./.test(text);
+        st.toast("Записано на телефона: " + text.replace(/\s*Клиент[^.]*\./g, "") + (told ? " Клиентът ще го види, щом има връзка." : ""), { undo: () => { drv.unqueue(q); changed(); focusBar(); } });
+        return;
+      }
       const u = (r.res as { undo?: { id: string } } | undefined)?.undo;
       st.toast(text, u ? { ms: Math.max(3000, Math.min(10_000, drv.state.undoMs || 10_000)), undo: async () => {
         try { await driverApi.undo(u.id); st.toast("Отменено."); } catch (e) { oops(e); }
-        changed(); if (after) after();
+        changed(); if (after) after(); focusBar();
       } } : {});
     },
+    paint(draw) {
+      const a = document.activeElement as HTMLElement | null, inside = !!a && a !== document.body && (st.main.contains(a) || (!!st.bar && st.bar.contains(a)));
+      const key = inside ? focusKey(a!) : null;
+      draw();
+      if (!inside || (a && a.isConnected && document.activeElement === a)) return;
+      /* the same selector, and among several (the address and "Отвори" go to the same delivery) the one with the same words */
+      const text = (a!.textContent || "").trim(), all = key ? [...st.main.querySelectorAll<HTMLElement>(key), ...(st.bar ? st.bar.querySelectorAll<HTMLElement>(key) : [])] : [];
+      const again = all.find((x) => (x.textContent || "").trim() === text) || all[0] || null;
+      if (again && !(again as HTMLButtonElement).disabled) again.focus({ preventScroll: true }); else focusBar();
+    },
+    focusBar: () => focusBar(),
     oops, carSheet, cached: cachedCall,
     navApp: () => st.navApp(),
     setExamples(nos) { examples = nos; },
   };
+  /** the main button of the bar (after a step its button is gone), else the screen */
+  function focusBar() {
+    requestAnimationFrame(() => {
+      const a = document.activeElement;
+      if (a && a !== document.body && a.isConnected && !st.ov.querySelector(".st-toast")?.contains(a)) return;
+      const b = st.bar && st.bar.querySelector<HTMLElement>("button:not([disabled]), a[href]");
+      (b || st.main).focus({ preventScroll: true });
+    });
+  }
+  /* "Изход" with steps still on the phone: they would be lost (the next driver never sends them); the copies go too */
+  st.beforeLogout(() => new Promise<boolean>((done) => {
+    const clean = () => { try { Object.keys(localStorage).filter((k) => k === boxKey() || k.startsWith("dr-cache-" + user + "-")).forEach((k) => localStorage.removeItem(k)); } catch { /* blocked */ } };
+    const n = box.size();
+    if (!n) { clean(); done(true); return; }
+    let ok = false;
+    const sh = openSheet({ title: "Записите не са изпратени",
+      html: '<p style="margin:0">' + plural(n, "запис още чака", "записа още чакат") + " връзка. Изходът ги изтрива от телефона и ресторантът няма да ги види.</p>",
+      foot: '<button class="pill pill-line pill-lg" type="button" data-no>Остани</button><button class="pill pill-red pill-lg" type="button" data-yes>Изтрий и излез</button>',
+      onClose: () => done(ok) });
+    sh.foot!.classList.add("two");
+    sh.foot!.querySelector<HTMLButtonElement>("[data-no]")!.onclick = () => sh.close();
+    sh.foot!.querySelector<HTMLButtonElement>("[data-yes]")!.onclick = () => { ok = true; clean(); sh.close(); };
+  }));
   /* the badge of "Доставки" and the examples of the search on the other screens ("Моите доставки" counts what it draws),
      as the steps kept on the phone leave the deliveries */
   if (o.screen !== "list") {

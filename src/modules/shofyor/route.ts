@@ -1,6 +1,6 @@
 /* Шофьор · Маршрут (/shofyor/marshrut/; design/pages-shofyor/route.html). A stylised scheme (not a map: the quarters
    as blobs around the restaurant S, the next address red), "Път А · по срока" / "Път Б · по-кратък" / "Моят ред" as the
-   core gives them (km, minutes and fuel are never invented: [ЛИПСВА: маршрути от OSRM]), "Адресите по ред" with the
+   core gives them (km, minutes and fuel are never invented: [ЛИПСВА: километри и минути на маршрута]), "Адресите по ред" with the
    arrival "около" (when the core has one) and the deadline, "По-рано" / "По-късно" on every address; the one he drives
    to is locked first ("Караш към нея сега: остава първа") without its buttons. */
 import { mountDriver, driverApi, ic, esc, plural, murl, addrParts, isLate, MISS, type Delivery } from "./app.ts";
@@ -26,15 +26,24 @@ export async function initRoute(): Promise<void> {
 
   function scheme(stops: Delivery[]): string {
     const P0 = POS.home, nx = stops[0];
-    const pt = (d: Delivery, i: number): [number, number] => { const p = POS[d.outzone ? "out" : d.zone] || POS.out, j = jitter(d.no, i); return [p[0] + j[0], p[1] + j[1]]; };
+    /* the addresses of one quarter side by side in its blob (never one over the other), a little off-centre by the number */
+    const key = (d: Delivery) => (d.outzone || !POS[d.zone] ? "out" : d.zone);
+    const count: Record<string, number> = {}, seen: Record<string, number> = {};
+    stops.forEach((d) => { count[key(d)] = (count[key(d)] || 0) + 1; });
+    const pt = (d: Delivery, i: number): [number, number] => {
+      const z = key(d), p = POS[z], k = (seen[z] = (seen[z] ?? -1) + 1), n = count[z], j = jitter(d.no, i);
+      return n > 1 ? [p[0] + Math.round((k - (n - 1) / 2) * 34), p[1] + (k % 2 ? 9 : -7)] : [p[0] + j[0], p[1] + j[1]];
+    };
     const pts = stops.map(pt);
     let path = "M" + P0.join(","), prev = P0;
     pts.forEach((p) => { const mx = (prev[0] + p[0]) / 2 + (p[1] - prev[1]) * 0.12, my = (prev[1] + p[1]) / 2 - (p[0] - prev[0]) * 0.12; path += " Q" + mx.toFixed(1) + "," + my.toFixed(1) + " " + p.join(","); prev = p; });
     const last = pts[pts.length - 1];
     const svg = '<svg viewBox="0 0 360 272" role="img" aria-label="Схема на маршрута: ресторантът и ' + plural(stops.length, "адрес", "адреса") + ' по ред. Не е карта; списъкът отдолу е същият.">' +
-      zonesShown.map((z) => { const p = POS[z]; return '<ellipse class="sv-zone" cx="' + p[0] + '" cy="' + p[1] + '" rx="52" ry="30"/><text class="sv-zl" x="' + (p[0] + LBL[z][0]) + '" y="' + (p[1] + LBL[z][1]) + '" text-anchor="middle">' + esc(z) + "</text>"; }).join("") +
+      zonesShown.map((z) => { const p = POS[z]; return '<ellipse class="sv-zone" cx="' + p[0] + '" cy="' + p[1] + '" rx="52" ry="30"/>'; }).join("") +
       (stops.some((d) => d.outzone || !POS[d.zone]) ? '<text class="sv-zl" x="' + POS.out[0] + '" y="' + (POS.out[1] - 26) + '">извън</text>' : "") +
       '<path class="sv-ret" d="M' + last.join(",") + " L" + P0.join(",") + '"/><path class="sv-path" d="' + path + '"/>' +
+      /* the names of the quarters over the lines, on a pad of the background (a line never crosses a word) */
+      zonesShown.map((z) => { const p = POS[z]; return '<text class="sv-zl" x="' + (p[0] + LBL[z][0]) + '" y="' + (p[1] + LBL[z][1]) + '" text-anchor="middle">' + esc(z) + "</text>"; }).join("") +
       '<rect class="sv-home" x="' + (P0[0] - 17) + '" y="' + (P0[1] - 17) + '" width="34" height="34" rx="10"/><text class="sv-stop-t sv-home-t" x="' + P0[0] + '" y="' + P0[1] + '">S</text>' +
       stops.map((d, i) => { const p = pts[i], c = d === nx ? "next" : ""; return '<circle class="sv-stop ' + c + '" cx="' + p[0] + '" cy="' + p[1] + '" r="16"/><text class="sv-stop-t ' + c + '" x="' + p[0] + '" y="' + p[1] + '">' + (i + 1) + "</text>"; }).join("") + "</svg>";
     return '<div class="scheme"><div class="in">' + svg + '</div><div class="cap">' + ic("info", 16) + "Схема, не е карта. S е ресторантът, червено е следващият адрес.</div></div>";
@@ -45,7 +54,9 @@ export async function initRoute(): Promise<void> {
       '<span class="nums"><span class="muted">км, минути и гориво ' + MISS(o.note) + "</span></span>" +
       '<span class="ord">' + o.zones.map((z, i) => (i + 1) + ". " + esc(z)).join(" → ") + " → S</span></button>";
   }
-  function render() {
+  /* drawn again keeping the focus on the same control (or on the main button of the bar) */
+  const render = () => drv.paint(draw);
+  function draw() {
     if (!R) return;
     const stops = R.stops, L = R.locked;
     if (!stops.length) {
@@ -60,8 +71,8 @@ export async function initRoute(): Promise<void> {
       '<p class="small muted" style="margin:10px 4px 0">Път А води първо до поръчките с по-ранен срок, Път Б първо до близките квартали.</p></section>';
     h += '<section class="st-sec"><div class="st-h"><h2>Адресите по ред</h2><span class="muted">пристигане</span></div><div class="stops">' +
       stops.map((d, i) => { const ap = addrParts(d), late = isLate(d) || d.etaLate > 0;
-        return '<div class="stop' + (late ? " late" : "") + '" data-no="' + esc(d.no) + '"><span class="no">' + (i + 1) + '</span><a class="stopa" href="' + esc(murl.shofyor("dostavka", d.no)) + '"><span class="a" style="display:block">' + esc(ap.main) + '</span><span class="s" style="display:block">№ ' + esc(d.no) + " · " + esc(d.stLabel) + "</span>" + (late ? '<span class="lt">' + ic("timer", 16) + (isLate(d) ? "закъснява" : "ще закъснее ~" + d.etaLate + " мин") + "</span>" : "") + "</a>" +
-        '<span class="eta">' + (d.etaAt ? '<b aria-label="около ' + esc(d.etaAt) + '">~' + esc(d.etaAt) + "</b>" : "") + (d.dueAt ? "срок " + esc(d.dueAt) : "") + "</span>" +
+        return '<div class="stop' + (late ? " late" : "") + '" data-no="' + esc(d.no) + '"><span class="no">' + (i + 1) + '</span><a class="stopa" href="' + esc(murl.shofyor("dostavka", d.no)) + '"><span class="a" style="display:block">' + esc(ap.main) + '</span><span class="s" style="display:block">№ ' + esc(d.no) + " · " + esc(d.stLabel) + "</span>" + (late ? '<span class="lt">' + ic("timer", 16) + (isLate(d) ? "закъснява" : "ще закъснее ~" + d.etaLate + "\u00a0мин") + "</span>" : "") + "</a>" +
+        '<span class="eta">' + (d.etaAt ? '<b><span class="vh">около </span><span aria-hidden="true">~</span>' + esc(d.etaAt) + "</b>" : "") + (d.dueAt ? "срок " + esc(d.dueAt) : "") + "</span>" +
         (R!.preview ? "" : d.no === L ? '<span class="lockh">' + ic("lock", 16) + "Караш към нея сега: остава първа</span>"
           : '<span class="mv"><button class="pill pill-soft" type="button" data-up="' + esc(d.no) + '"' + (i === 0 || (i === 1 && L) ? " disabled" : "") + ' aria-label="По-рано: № ' + esc(d.no) + '">' + ic("caret-up", 20) + 'По-рано</button><button class="pill pill-soft" type="button" data-down="' + esc(d.no) + '"' + (i === stops.length - 1 ? " disabled" : "") + ' aria-label="По-късно: № ' + esc(d.no) + '">' + ic("caret-down", 20) + "По-късно</button></span>") + "</div>"; }).join("") +
       '<div class="stop home"><span class="no">S</span><span><span class="a" style="display:block">Обратно в ресторанта</span></span><span class="eta"></span></div></div>' +

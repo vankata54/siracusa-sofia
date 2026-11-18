@@ -34,12 +34,14 @@ export async function initList(): Promise<void> {
     return '<a class="drow2 ' + cls + '" href="' + esc(href(d)) + '">' +
       '<span class="no">' + no + '</span><span><span class="a">' + esc(ap.main) + '</span><span class="s">№ ' + esc(d.no) + (ap.sub ? " · " + esc(ap.sub) : "") + (d.etaAt && !fin ? " · пристигане около " + esc(d.etaAt) : "") + "</span>" +
       (d.outzone && !fin && d.ask ? '<span class="s">' + esc(askLine(d)) + "</span>" : "") +
-      '<span class="ln">' + (d.outzone && !fin ? "" : '<span class="price">' + esc(fin && d.collected ? fmt(d.collected.sum) : money(d)) + "</span>") + payWord(d) + "</span>" +
+      '<span class="ln"><span class="price">' + esc(fin && d.collected ? fmt(d.collected.sum) : money(d)) + "</span>" + payWord(d) + "</span>" +
       '<span class="ln">' + (d.outzone && !fin ? st.stt("out", "Извън зоните", "warning") : "") + (d.st === "wait" || d.st === "picked" || d.st === "road" || openProb(d) ? dStt(d) : "") + (openProb(d) ? "" : dueStt(d)) + "</span></span></a>";
   }
   const at = (i: string | null) => (i ? st.clock(Date.parse(i)) : "");
 
-  function render() {
+  /* drawn again keeping the focus on the same control (or on the main button of the bar) */
+  const render = () => drv.paint(draw);
+  function draw() {
     if (!data) return;
     const L = data, mine = drv.local(L.active.slice()), waiting = drv.local(L.waiting.slice()), done = L.done.slice();
     /* a kept step moves a ready one into "mine" and a delivered one out of the route */
@@ -113,6 +115,7 @@ export async function initList(): Promise<void> {
     } catch (er) { drv.oops(er); }
     finally { busy = false; b.disabled = false; }
     await load();
+    drv.focusBar();
   });
   await load();
 }

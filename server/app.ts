@@ -69,7 +69,11 @@ interface Sub { send: (type: string, data: unknown) => void; staff: boolean; ord
   role?: string; sections?: string[] }
 /** the hall live (the guests' notes, calls, carts) is for the roles that work in the hall: the main admin, owner, manager and
     who has "Сервитьор", "Залата" or "Поръчки"; marketing, the kitchen and the driver do not get it (servitor.review-2, round 2) */
+/** the events a driver's phone needs (review 2 of the driver): his own module, the statuses and new orders (a ready
+    delivery), the menu and "Натоварено"; never the totals of the orders, the notes, the owner's answers, the shift */
+const DRIVER_HEARS = /^(driver\.|order\.status$|order\.new$|menu\.|kitchen\.busy$|stream\.)/;
 export function staffMayHear(s: Pick<Sub, "role" | "sections">, type?: string): boolean {
+  if (s.role === "driver" && type && !DRIVER_HEARS.test(type)) return false;
   if (!type || !type.startsWith("floor.")) return true;
   return s.role === "admin" || s.role === "owner" || s.role === "manager" || !!s.sections && s.sections.some((x) => x === "waiter" || x === "hall" || x === "orders");
 }
@@ -102,6 +106,8 @@ export function createApp(opts: AppOpts) {
   const clients = new Set<Sub>();
   const dataDir = opts.dbFile === ":memory:" ? path.resolve("data") : path.dirname(path.resolve(opts.dbFile));
   const mediaDir = path.resolve(opts.mediaDir || path.join(dataDir, "media"));
+  /* the photos of the fuel receipts: apart from the public /media/, served only to the staff (server/routes/driver.ts) */
+  const receiptsDir = path.join(path.dirname(mediaDir), "receipts");
   let publisher: Publisher | null = null;
   const ctx: Ctx = {
     repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
@@ -117,7 +123,7 @@ export function createApp(opts: AppOpts) {
     onMenu: (m) => { if (publisher) void siteFor().then((site) => publisher!.enqueue(m, site)).catch((e) => console.error("site data", e)); },
     /* the site data changed (zones, hall, events, offers): the same queue, with the effective menu */
     onSite: (site) => { if (publisher) void core.menuEdit.effective().then((m) => publisher!.enqueue(m, site)).catch((e) => console.error("site data", e)); },
-    mediaExists: (u) => { const m = /^\/media\/([a-f0-9]{64}\.(?:webp|jpg|png))$/.exec(u); return !!m && fs.existsSync(path.join(mediaDir, m[1])); },
+    mediaExists: (u) => { const m = /^\/media\/([a-f0-9]{64}\.(?:webp|jpg|png))$/.exec(u), r = /^\/api\/driver\/receipts\/([a-f0-9]{64}\.(?:webp|jpg|png))$/.exec(u); return m ? fs.existsSync(path.join(mediaDir, m[1])) : !!r && fs.existsSync(path.join(receiptsDir, r[1])); },
   };
   const core = createCore(ctx);
   /* the site data for a rebuild: null while nothing was changed (the build uses the built-in data, as `npm run build`) */
@@ -538,7 +544,7 @@ export function createApp(opts: AppOpts) {
   /* stage D, the kitchen (server/routes/kitchen.ts) */
   kitchenRoutes(app, adm);
   /* the driver (core/driver.ts): the shift, the deliveries, fuel (+ the photo of a receipt), the manager's views */
-  driverRoutes(app, { ...adm, mediaDir });
+  driverRoutes(app, { ...adm, mediaDir, receiptsDir });
   /* stage D: the hall live, the waiter's search, the PIN on a known device (server/routes/floor.ts) */
   floorRoutes(app, { ...adm, limit, ip, cookieOpts });
   /* stage D, step 6: the manager's and the owner's modules (server/routes/boss.ts; core/shift.ts, core/owner.ts) */

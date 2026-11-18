@@ -277,8 +277,10 @@ export function publicOrder(o: Order, withKey = false): PublicOrder {
     lines: o.lines.map((l) => ({ id: l.id, q: l.q, mods: l.mods, extra: l.extra, name: l.name, unit: l.unit, cat: l.cat, course: l.course })),
     times: o.times || { accepted: o.createdAt }, changes: o.changes || 0,
   };
-  if (o.status === "on_way" && o.arrivedAt) p.arrivedAt = o.arrivedAt;
-  if (o.problem && o.problem.solved !== "delivered" && !FINISHED.includes(o.status) && o.status !== "cancelled") p.hold = true;
+  const hold = !!o.problem && o.problem.solved !== "delivered" && !FINISHED.includes(o.status) && o.status !== "cancelled";
+  /* "Шофьорът е пред входа" only while he is there: never with a problem (the customer reads the neutral state) */
+  if (o.status === "on_way" && o.arrivedAt && !hold) p.arrivedAt = o.arrivedAt;
+  if (hold) p.hold = true;
   if (withKey && o.key) p.key = o.key;
   if (o.status === "cancelled" && o.reason) p.reason = o.reason;
   return p;

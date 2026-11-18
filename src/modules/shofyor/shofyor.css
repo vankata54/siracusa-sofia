@@ -80,3 +80,4 @@ html[data-staff="driver"] .st-sheet .kv:has(.geoacts){flex-wrap:wrap; row-gap:8p
 html[data-staff="driver"] .st-sheet .geoacts{margin-left:auto}
 html[data-staff="driver"] .st-sheet .geoacts .pill{padding:0 14px}
 html[data-staff="driver"] main h2[tabindex="-1"]:focus{outline:none}
+html[data-staff="driver"] .scheme .sv-zl{paint-order:stroke; stroke:var(--surface); stroke-width:6px; stroke-linejoin:round}

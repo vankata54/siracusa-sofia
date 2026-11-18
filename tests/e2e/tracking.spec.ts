@@ -514,3 +514,50 @@ test("tracking: 'Шофьорът е пред входа' live, when the driver 
   await driver.dispose(); await staff.dispose();
   expect(errors).toEqual([]);
 });
+
+test("tracking: a driver's problem reads neutrally, live and after a reload; never 'Шофьорът е пред входа' (decision 18.11)", async ({ page, request, playwright, baseURL }) => {
+  const E = env();
+  test.skip(!E.MANAGER_PASSWORD || !E.DRIVER_PASSWORD, "no .env with staff passwords");
+  const errors = watch(page);
+  const o = await makeOrder(request);
+  const { staff, set } = await staffCtx(playwright, baseURL);
+  await set(o.no, "cooking"); await set(o.no, "ready");
+  const driver = await playwright.request.newContext({ baseURL });
+  expect((await driver.post("/api/auth/login", { data: { username: "driver", password: E.DRIVER_PASSWORD } })).ok()).toBe(true);
+  const shift = async () => {
+    const st = await (await driver.get("/api/driver/state")).json();
+    const car = st.cars.find((c: { busyBy: string | null }) => !c.busyBy);
+    if (!st.shift) expect([201, 409]).toContain((await driver.post("/api/driver/start", { data: { car: car.id, km: (car.lastKm || 1000) + 1 } })).status());
+  };
+  await shift();
+  let tk = await driver.post("/api/driver/take", { data: { nos: [o.no] } });
+  if (tk.status() === 409 && (await tk.json()).error === "no_shift") { await shift(); tk = await driver.post("/api/driver/take", { data: { nos: [o.no] } }); }
+  expect(tk.status()).toBe(200);
+  await cookies(page);
+  const stream = page.waitForResponse((r) => r.url().includes("/api/stream") && r.url().includes("order=" + o.no));
+  await page.goto(trk(o));
+  await stream;
+  expect((await driver.post("/api/driver/go", { data: { nos: [o.no] } })).status()).toBe(200);
+  expect((await driver.post("/api/driver/deliveries/" + o.no + "/arrive")).status()).toBe(200);
+  await expect(page.locator(".say")).toHaveText("Шофьорът е пред входа");
+  /* "Няма никой": the customer reads the neutral words (no kind, no driver), live */
+  expect((await driver.post("/api/driver/deliveries/" + o.no + "/problem", { data: { kind: "nobody" } })).status()).toBe(200);
+  await expect(page.locator(".say")).toHaveText("Има забавяне с доставката");
+  await expect(page.locator(".sub")).toContainText("Ресторантът ще се свърже с вас.");
+  await expect(page.locator("[data-hero]")).not.toContainText("пред входа");
+  await expect(page.locator("[data-hero]")).not.toContainText(/Няма никой|шофьор/i);
+  const pub = await (await request.get("/api/orders/" + o.no + "-" + o.key)).json();
+  expect([pub.hold, pub.arrivedAt, JSON.stringify(pub).includes("nobody")]).toEqual([true, undefined, false]);
+  /* after a reload, and after "Върнах я" */
+  await page.reload();
+  await expect(page.locator(".say")).toHaveText("Има забавяне с доставката");
+  expect((await driver.post("/api/driver/deliveries/" + o.no + "/returned")).status()).toBe(200);
+  await page.reload();
+  await expect(page.locator(".say")).toHaveText("Има забавяне с доставката");
+  await expect(page.locator("main")).not.toContainText("Шофьорът е пред входа");
+  await noHScroll(page);
+  const now = await (await driver.get("/api/driver/state")).json();
+  if (now.shift) expect([200, 409]).toContain((await driver.post("/api/driver/end", { data: { km: now.shift.lastKm, handed: true } })).status());
+  await driver.dispose(); await staff.dispose();
+  expect(errors).toEqual([]);
+});

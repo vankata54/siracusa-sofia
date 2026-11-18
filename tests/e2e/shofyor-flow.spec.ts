@@ -103,8 +103,12 @@ test("a web order arrives live, „Взех“ with „Отмени“, „Тр�
   await expect(take).toBeVisible();
   await take.click();
   await expect(toast(page)).toContainText("1 поръчка е взета");
+  /* the focus stays on the screen: the new main button (never <body>) */
+  const focusIn = (sel: string) => page.evaluate((s) => !!document.activeElement && !!document.activeElement.closest(s), sel);
+  await expect.poll(() => focusIn(".st-bar")).toBe(true);
   await toast(page).getByRole("button", { name: "Отмени" }).click();
   await expect(toast(page)).toContainText("Отменено.");
+  await expect.poll(() => focusIn(".st-bar")).toBe(true);
   await expect(bar(page).getByRole("button", { name: /^Взех 1 поръчка$/ })).toBeVisible();
   expect((await get(page, o.no)).st).toBe("wait");
   await bar(page).getByRole("button", { name: /^Взех 1 поръчка$/ }).click();
@@ -118,6 +122,12 @@ test("a web order arrives live, „Взех“ with „Отмени“, „Тр�
   await expect(card.locator(".arr")).toContainText("Клиентът вижда „Шофьорът е пред входа“");
   await expect(card).toContainText("[ЛИПСВА: доставчик за SMS]");
   await expect(tp.locator("body")).toContainText("Шофьорът е пред входа");
+  /* a live event (another order ready) redraws the list: the focus stays on "Отвори" of the same card */
+  await card.locator(".acts a.pill-soft").focus();
+  const o3 = await order(page.context().request, S.base, { addr: "ж.к. Дружба 1, бл. 12" });
+  await ready(kitchen, S.base, o3.no);
+  await expect(page.locator(".drow2", { hasText: "№ " + o3.no })).toBeVisible();
+  expect(await page.evaluate(() => [document.activeElement?.textContent?.trim(), !!document.activeElement?.closest(".next")])).toEqual(["Отвори", true]);
   /* the delivery: the customer by name only, the stages, the change */
   await bar(page).getByRole("link", { name: "Отвори № " + o.no }).click();
   await expect(page).toHaveURL(new RegExp("/shofyor/dostavka/#" + o.no + "$"));
@@ -143,7 +153,7 @@ test("a web order arrives live, „Взех“ with „Отмени“, „Тр�
   await done.click();
   await expect(toast(page)).toContainText("№ " + o.no + " е доставена.");
   await expect(page.locator(".flow li.on")).toHaveCount(3);
-  await expect(bar(page).getByRole("link", { name: "Към доставките" })).toBeVisible();
+  await expect(bar(page).getByRole("link", { name: /^(Към доставките|Следваща · № \d+)/ })).toBeVisible();
   await expect(tp.locator("body")).toContainText(/Доставена|Приятен апетит|доставихме/i);
   expect((await get(page, o.no)).st).toBe("done");
   await cust.close();
@@ -229,5 +239,19 @@ test("an address outside the zones: „уточни с ресторанта“, 
   await expect(bar(page).getByRole("button", { name: "Взех от ресторанта" })).toBeVisible();
   await bar(page).getByRole("button", { name: "Взех от ресторанта" }).click();
   await expect(page.locator(".flow li.on")).toHaveText("Взета");
+  /* the screen says "уточни с ресторанта": "Доставена" asks how much he took, and that goes into the cash */
+  await bar(page).getByRole("button", { name: "Тръгвам · На път" }).click();
+  await bar(page).locator('[data-st="done"]').click();
+  const sh2 = page.locator(".st-sheetwrap.on .st-sheet");
+  await expect(sh2.locator("h2")).toHaveText("Колко взе?");
+  await expect(page.locator("#took")).toBeFocused();
+  await page.fill("#took", "abc");
+  await sh2.locator("[data-took]").click();
+  await expect(page.locator("#took-e")).toHaveText("Въведи сумата, която взе, например 24,50.");
+  await page.fill("#took", "35,00");
+  await sh2.locator("[data-took]").click();
+  await expect(toast(page)).toContainText("№ " + o.no + " е доставена: взе 35,00 €.");
+  const got = (await (await api(page).get(S.base + "/api/driver/deliveries/" + o.no)).json()) as { st: string; collected: { sum: number } };
+  expect([got.st, got.collected.sum]).toEqual(["done", 35]);
   expect(errs).toEqual([]);
 });

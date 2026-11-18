@@ -29,13 +29,14 @@
    ask(no, note?)               "Адрес извън зоните": the question to the manager -> AskView (D.ask shows the answer;
                                 event "driver.ask"). take / go of that order wait for "deliver"
    route()                      RouteView {pick, options[] (A "Път А · по срока", B "Път Б · по-кратък", own "Моят ред";
-                                km, minutes, fuel are ALWAYS null + note "[ЛИПСВА: маршрути от OSRM]"), same, stops[] (D in
+                                km, minutes, fuel are ALWAYS null + note "[ЛИПСВА: километри и минути на маршрута]"), same, stops[] (D in
                                 the chosen order; D.locked = he drives to it, always first), locked, etaNote}
    routePick("A" | "B" | "own") -> RouteView
    routeMove(no, "up" | "down") "По-рано" / "По-късно" (makes "Моят ред") -> RouteView. 409 locked / edge
    fuel()                       FuelPage {car, lastKm, cashOnHand, entries[] (this shift), lastPerLitre}
    fuelAdd({litres, sum, km, full?, cash?, photo?, noPhoto?})  -> FuelPage + entry. 422 fields litres / sum / km / photo
-   receipt(file)                the photo of the receipt (png / jpeg / webp by content, 5 MB; demo 1 MB) -> {url} for fuelAdd
+   receipt(file)                the photo of the receipt (png / jpeg / webp by content and header, 5 MB; demo 1 MB) -> {url} for
+                                fuelAdd; the server keeps it apart and never public (/api/driver/receipts/<sha256>.<ext>)
    shift()                      ShiftSummary: delivered, problems, fuel, cash {rows[], sum}, float, fuelCash, handover
                                 (= cash + float - fuelCash), owe, cards, vouchers, km {legs[], total}, unfinished[], handTo
    end({km, handed})            "Приключи смяната" -> ShiftSummary (closed: true). 409 unfinished (message lists the №,
@@ -49,6 +50,7 @@
    answer(id, "return" | "pickup" | "deliver")  -> AskView (+ undoUntil). 409 answered
    answerUndo(id)               the manager's "Отмени" of an answer -> AskView. 409 undo_late / undo_changed
    saveCars([{id?, n, plate?}]) the cars (a setting) -> CarView[]
+   setCarKm(car, km)            a wrong last km of a car (a typo in fuel or at the end of a shift) -> CarView[]; log driver.car_km
    -- the owner, or the section "Финанси и гориво" (others 403) --
    fuelReport({from?, to?})     FuelReport {total, byDay[], byDriver[], byCar[] (per100: l/100 km), rows[]}
    -- real time --
@@ -83,7 +85,7 @@ const MIME = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" } as cons
 
 async function receiptDemo(c: Core, file: Blob): Promise<Receipt> {
   const s = await g(c), b = new Uint8Array(await file.arrayBuffer()), ext = sniffImage(b);
-  await c.driver.receiptCheck(s, { bytes: b.length, ext });
+  await c.driver.receiptCheck(s, { bytes: b.length, ext, data: b });
   let bin = "";
   for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
   return { url: "data:" + MIME[ext!] + ";base64," + btoa(bin), type: MIME[ext!], bytes: b.length };
@@ -93,6 +95,8 @@ async function receiptServer(file: Blob): Promise<Receipt> {
   try { r = await fetch("/api/driver/receipt", { method: "POST", credentials: "same-origin", headers: { "content-type": file.type || "application/octet-stream" }, body: file }); }
   catch { throw new ApiError("offline", "Няма връзка. Проверете интернета и опитайте пак.", 0); }
   const j = await r.json().catch(() => null);
+  /* the size limit of the server answers before the route: the core's word for it */
+  if (r.status === 413) throw new ApiError("too_large", "Снимката е до 5 MB.", 413);
   if (!r.ok) throw new ApiError(j?.error || "server", j?.message || "Нещо се обърка. Опитайте пак.", r.status, j?.fields, j?.retryIn);
   return j as Receipt;
 }
@@ -133,6 +137,8 @@ export const driverApi = {
   asks: pick(async (c, o: { all?: boolean } = {}) => c.driver.asks(await g(c), o), (o = {}) => http<AskView[]>("GET", "driver/asks" + (o.all ? "?all=1" : ""))),
   answer: pick(async (c, id: string, a: AskAnswer) => c.driver.answer(await g(c), id, a), (id, a) => http<AskView>("POST", "driver/asks/" + e(id) + "/answer", { answer: a })),
   answerUndo: pick(async (c, id: string) => c.driver.answerUndo(await g(c), id), (id) => http<AskView>("POST", "driver/asks/" + e(id) + "/undo")),
+  /** a wrong last km of a car (the bosses; a line in the log) */
+  setCarKm: pick(async (c, car: string, km: number | string) => c.driver.setCarKm(await g(c), car, km), (car, km) => http<CarView[]>("POST", "driver/cars/" + e(car) + "/km", { km })),
   saveCars: pick(async (c, cars: { id?: string; n: string; plate?: string | null }[]) => c.driver.saveCars(await g(c), cars), (cars) => http<CarView[]>("PUT", "driver/cars", { cars })),
   /** real time: "driver.course", "driver.ask", "order.status", "stream.lost", "stream.back" (returns the unsubscribe) */
   on: (type: string, fn: (data: unknown, type: string) => void): (() => void) => api.on(type, fn),

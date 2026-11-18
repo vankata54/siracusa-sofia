@@ -72,7 +72,7 @@ export { K_ALL, K_MSG, K_MISSING, KS_TEXT, DEFAULT_KITCHEN, TABLET_ALIVE_SEC, KI
   type KSummary, type KOutItem, type KOutRow, type KSoldOut, type KOutResult, type KBusyView, type KFound, type KSearch, type KOpt } from "./kitchen.ts";
 /* the driver (core/driver.ts): the screens import the types and the words through src/client/api-driver.ts */
 export {
-  DRIVER_MSG, DRIVER_MISSING, DRIVER_UNDO_MS, DELIVERY_LABEL, PROBLEM_LABEL, PROBLEM_KINDS, ANSWER_LABEL, ASK_ANSWERS, DRIVER_STATUS_LABEL, NAV_APPS, DEFAULT_CARS, ARRIVED_TEXT, RECEIPT_MAX, RECEIPT_PER_HOUR,
+  DRIVER_MSG, DRIVER_MISSING, DRIVER_UNDO_MS, DELIVERY_LABEL, PROBLEM_LABEL, PROBLEM_KINDS, ANSWER_LABEL, ASK_ANSWERS, DRIVER_STATUS_LABEL, NAV_APPS, DEFAULT_CARS, ARRIVED_TEXT, RECEIPT_MAX, RECEIPT_PER_HOUR, RECEIPT_URL, receiptAccess, imageDims,
   type DeliveryState, type ProblemKind, type AskAnswer, type DriverStatus, type NavApp, type RoutePick, type DriverCar, type CarView, type ShiftView, type DriverState, type ShiftStart,
   type Delivery, type DriverList, type AskView, type RouteView, type RouteOption, type StepResult, type ArriveResult, type FuelView, type FuelPage, type FuelInput, type FuelReport,
   type ShiftTotals, type ShiftSummary, type DriverRow, type DriversView, type DriverShift, type DriverAsk, type FuelEntry,
@@ -174,7 +174,7 @@ export function createCore(ctx: Ctx) {
       state: driverMod.state, start: driverMod.start, prefs: driverMod.prefs, changeCar: driverMod.changeCar, saveCars: driverMod.saveCars,
       list: driverMod.list, get: driverMod.get, take: driverMod.take, go: driverMod.go, arrive: driverMod.arrive, deliver: driverMod.deliver,
       problem: driverMod.problem, returned: driverMod.returned, undo: driverMod.undo, ask: driverMod.ask, asks: driverMod.asks, answer: driverMod.answer, answerUndo: driverMod.answerUndo,
-      route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck,
+      route: driverMod.route, routePick: driverMod.routePick, routeMove: driverMod.routeMove, fuel: driverMod.fuel, fuelAdd: driverMod.fuelAdd, fuelReport: driverMod.fuelReport, receiptCheck: driverMod.receiptCheck, setCarKm: driverMod.setCarKm,
       shift: driverMod.shift, end: driverMod.end, drivers: driverMod.drivers, search: driverMod.search,
     }),
     /* ---------- stage D: the hall live (core/floor*.ts). The guests' calls take the table code and the phone's token; the

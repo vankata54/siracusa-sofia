@@ -17,7 +17,9 @@ export async function initShift(): Promise<void> {
   const { st } = drv, main = st.main, bar = st.bar!;
   let S: ShiftSummary | null = null, kmEnd = "", handed = false, errs: Record<string, string> = {}, ended: ShiftSummary | null = null, busy = false;
 
-  function render() {
+  /* drawn again keeping the focus on the same control (or on the main button of the bar) */
+  const render = () => drv.paint(draw);
+  function draw() {
     if (ended) {
       const e = ended;
       bar.innerHTML = ""; st.app.classList.remove("withbar");
@@ -81,7 +83,7 @@ export async function initShift(): Promise<void> {
     busy = true; b.disabled = true; errs = {};
     try {
       ended = await driverApi.end({ km: kmEnd, handed });
-      try { localStorage.removeItem("dr-outbox"); Object.keys(localStorage).filter((k) => k.startsWith("dr-cache-")).forEach((k) => localStorage.removeItem(k)); } catch { /* blocked */ }
+      try { const u = drv.state.user.username; Object.keys(localStorage).filter((k) => k === "dr-outbox:" + u || k.startsWith("dr-cache-" + u + "-")).forEach((k) => localStorage.removeItem(k)); } catch { /* blocked */ }
       /* the session goes with the shift: "Смяната приключи" is on the sign-in (no pencil, no bars, only "Към входа") */
       await signOut().catch(() => { /* the next sign-in replaces the session */ });
       const e = ended;

@@ -17,7 +17,8 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const ROLES: RoleId[] = ["admin", "owner", "manager", "waiter", "kitchen", "driver", "marketing"];
 const PW = "test-password-123";
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+/* a png header with its size (512 x 256): the core reads the size, a signature alone is not a picture */
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 2, 0, 0, 0, 1, 0, 8, 2, 0, 0, 0]);
 
 describe("the driver: routes", async () => {
   const { app, core } = createApp({ dbFile: ":memory:", distDir: dist, timers: false, build: null, smsDemo: true, previewApi: true, mediaDir: media });
@@ -140,7 +141,7 @@ describe("the driver: routes", async () => {
     expect((await (await req("GET", "/api/driver/fuel/report", "owner")).json()).total).toEqual({ n: 1, litres: 30, sum: 45 });
   });
 
-  it("the photo of a receipt: a driver in a shift, png / jpeg / webp by content, up to 5 MB, kept as /media/<sha256>.<ext>", async () => {
+  it("the photo of a receipt: a driver in a shift, png / jpeg / webp by content and header, up to 5 MB, kept apart and never public", async () => {
     const up = (who: RoleId, body: Uint8Array, type = "image/png", len?: number) => app.request("/api/driver/receipt", { method: "POST", headers: { "content-type": type, cookie: cookie[who], ...(len ? { "content-length": String(len) } : {}) }, body: body as unknown as BodyInit });
     expect((await up("waiter", PNG)).status).toBe(403);
     expect((await up("manager", PNG)).status).toBe(409); /* a boss without a shift: no_shift */
@@ -153,12 +154,18 @@ describe("the driver: routes", async () => {
     expect(ok.status).toBe(201);
     const j = await ok.json();
     expect(j).toMatchObject({ type: "image/png", bytes: PNG.length });
-    expect(j.url).toMatch(/^\/media\/[a-f0-9]{64}\.png$/);
-    expect(fs.existsSync(path.join(media, j.url.slice(7)))).toBe(true);
-    const got = await app.request(j.url);
-    expect([got.status, got.headers.get("content-type"), got.headers.get("x-content-type-options")]).toEqual([200, "image/png", "nosniff"]);
+    expect(j.url).toMatch(/^\/api\/driver\/receipts\/[a-f0-9]{64}\.png$/);
+    expect(fs.existsSync(path.join(tmp, "receipts", j.url.split("/").pop()))).toBe(true);
+    /* never public: without a session 401, a waiter 403; the driver and the bosses see it (private cache, sandboxed) */
+    expect((await app.request(j.url)).status).toBe(401);
+    expect((await app.request(j.url, { headers: { cookie: cookie.waiter } })).status).toBe(403);
+    const got = await app.request(j.url, { headers: { cookie: cookie.driver } });
+    expect([got.status, got.headers.get("content-type"), got.headers.get("x-content-type-options"), got.headers.get("cache-control")]).toEqual([200, "image/png", "nosniff", "private, max-age=31536000, immutable"]);
+    expect((await app.request(j.url, { headers: { cookie: cookie.manager } })).status).toBe(200);
+    /* a png signature followed by html is not a picture */
+    expect((await up("driver", new Uint8Array([...PNG.slice(0, 8), ...new TextEncoder().encode("<html><script>alert(1)</script>")]))).status).toBe(415);
     /* fuel takes only a photo that is really there */
-    const miss = await req("POST", "/api/driver/fuel", "driver", { litres: 5, sum: 8, km: 48500, photo: "/media/" + "c".repeat(64) + ".png" });
+    const miss = await req("POST", "/api/driver/fuel", "driver", { litres: 5, sum: 8, km: 48500, photo: "/api/driver/receipts/" + "c".repeat(64) + ".png" });
     expect(miss.status).toBe(422);
     expect((await miss.json()).fields).toEqual({ photo: "Снимката не се качи. Снимай бележката пак." });
     const withPhoto = await req("POST", "/api/driver/fuel", "driver", { litres: 5, sum: 8, km: 48500, photo: j.url });

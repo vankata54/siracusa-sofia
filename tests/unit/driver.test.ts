@@ -72,7 +72,7 @@ describe("the shift: the car, the km, the change", () => {
   it("a car change in the shift: the end of leg 1 and the start of leg 2, the km per car and in total", async () => {
     const { core } = mk(), s = await people(core);
     await begin(core, s.driver, "a1", 48250);
-    await begin(core, s.driver2, "a2", 100);
+    await begin(core, s.driver2, "a2", 31500); /* the end below stays within 2 000 km of the start */
     await expect(core.driver.changeCar(s.driver, { car: "a1", kmEnd: 48300, kmStart: 1 })).rejects.toMatchObject({ fields: { car: "Вече караш тази кола." } });
     await expect(core.driver.changeCar(s.driver, { car: "a2", kmEnd: 48300, kmStart: 200 })).rejects.toMatchObject({ fields: { car: "Тази кола е в смяната на Шофьор 2." } });
     await core.driver.end(s.driver2, { km: 31540, handed: true });
@@ -481,8 +481,8 @@ describe("the route", () => {
     expect(r.pick).toBe("A");
     expect(r.options.map((o) => [o.key, o.title, o.order])).toEqual([["A", "Път А · по срока", [a.no, c.no, b.no]], ["B", "Път Б · по-кратък", [c.no, a.no, b.no]]]);
     expect(r.options[1].zones).toEqual(["Дружба 2", "Дружба 1", "Бусманци"]);
-    for (const o of r.options) expect([o.km, o.minutes, o.fuel, o.note]).toEqual([null, null, null, "[ЛИПСВА: маршрути от OSRM]"]);
-    expect(r).toMatchObject({ same: false, locked: null, note: "[ЛИПСВА: маршрути от OSRM]" });
+    for (const o of r.options) expect([o.km, o.minutes, o.fuel, o.note]).toEqual([null, null, null, "[ЛИПСВА: километри и минути на маршрута]"]);
+    expect(r).toMatchObject({ same: false, locked: null, note: "[ЛИПСВА: километри и минути на маршрута]" });
     expect(JSON.stringify(r)).not.toMatch(/"km":\s*\d|"minutes":\s*\d/);
     /* the estimated arrival: the zone's minutes + 2 min per previous address, from now while he has not left */
     const now = t.now;
@@ -548,8 +548,8 @@ describe("fuel and the cash", () => {
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48249 })).rejects.toMatchObject({ fields: { km: "По-малко е от последно записания (48 250 км). Провери таблото." } });
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48300, cash: true })).rejects.toMatchObject({ fields: { sum: "Имаш 20,00 € в брой. Останалото плати с карта или питай управителя." } });
     await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 45, km: 48300, photo: "javascript:alert(1)" })).rejects.toMatchObject({ fields: { photo: "Снимката не се качи. Снимай бележката пак." } });
-    const f1 = await core.driver.fuelAdd(s.driver, { litres: "30,5", sum: "45,75", km: "48 300", full: true, photo: "/media/" + "a".repeat(64) + ".jpg" });
-    expect(f1.entry).toMatchObject({ car: "a1", carName: "Автомобил 1", litres: 30.5, sum: 45.75, perLitre: 1.5, km: 48300, full: true, cash: false, photo: "/media/" + "a".repeat(64) + ".jpg", atClock: "19:42" });
+    const f1 = await core.driver.fuelAdd(s.driver, { litres: "30,5", sum: "45,75", km: "48 300", full: true, photo: "/api/driver/receipts/" + "a".repeat(64) + ".jpg" });
+    expect(f1.entry).toMatchObject({ car: "a1", carName: "Автомобил 1", litres: 30.5, sum: 45.75, perLitre: 1.5, km: 48300, full: true, cash: false, photo: "/api/driver/receipts/" + "a".repeat(64) + ".jpg", atClock: "19:42" });
     expect(f1.lastKm).toBe(48300);
     await expect(core.driver.fuelAdd(s.driver, { litres: 10, sum: 15, km: 48299 })).rejects.toMatchObject({ fields: { km: expect.stringContaining("48 300") } });
     /* a delivered cash order, then fuel paid from the collected money */

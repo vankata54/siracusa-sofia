@@ -419,12 +419,23 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     const low = !netEl.hidden; toastEl.classList.toggle("low", low);
     toastEl.style.top = low ? Math.max(136, Math.round(68 + netEl.offsetHeight + 4)) + "px" : "";
   }
+  /** no connection: every link that would load another page (the tabs, "Отвори № 1042", "Към доставките") looks and
+      reads as off (aria-disabled, dimmed); the screen redraws, so new links are marked as they come */
+  function markLinks() {
+    const off = conn === "off";
+    [...$$<HTMLAnchorElement>("a[href]", app), ...$$<HTMLAnchorElement>("a[href]", ov)].forEach((x) => {
+      if (off && leavesPage(x)) { if (!x.dataset.offnav) { x.dataset.offnav = "1"; x.setAttribute("aria-disabled", "true"); } }
+      else if (x.dataset.offnav) { delete x.dataset.offnav; x.removeAttribute("aria-disabled"); }
+    });
+  }
+  const linkObs = new MutationObserver(() => { if (conn === "off") markLinks(); });
   function drawNet() {
     const off = conn === "off";
     const meBtn = $(".st-me", topEl);
     if (meBtn) { meBtn.classList.toggle("off", conn !== "on"); meBtn.setAttribute("aria-label", "Смяна и настройки, " + CONN_WORD[conn]); }
     app.classList.toggle("is-off", off);
-    if (navEl) { navEl.classList.toggle("stale", off && mode === "stale"); $$("a", navEl).forEach((x) => { if (off) x.setAttribute("aria-disabled", "true"); else x.removeAttribute("aria-disabled"); }); }
+    if (navEl) navEl.classList.toggle("stale", off && mode === "stale");
+    markLinks();
     if (conn === "on") { netEl.hidden = true; netEl.innerHTML = ""; }
     else {
       const queue = off && mode === "queue" && !!o.queue;
@@ -443,6 +454,7 @@ export async function mountStaff(o: StaffOpts): Promise<Staff | null> {
     preEl.innerHTML = off && mode === "stale" && !full && lastSync > 0
       ? '<section class="st-sec" data-stale><div class="notice warn">' + ic("clock", 22) + "<span><b>Последни данни от " + clock(lastSync) + ".</b> " + esc(o.staleNote || "Таймерите са спрени, а „Отивам“ ще може, щом има връзка.") + "</span></div></section>" : "";
   }
+  linkObs.observe(app, { childList: true, subtree: true }); linkObs.observe(ov, { childList: true, subtree: true });
   window.addEventListener("offline", () => setConn("off"));
   window.addEventListener("online", () => { probe(); });
   if (!o.bare) {

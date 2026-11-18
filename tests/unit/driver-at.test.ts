@@ -1,7 +1,10 @@
 /* The driver's core (src/core/driver.ts): a step kept on the phone with no connection is sent later with the moment it
    was made (`at`), like the kitchen's actions: the times of the order, the log and the window of "Отмени" follow it. */
 import { describe, it, expect } from "vitest";
-import { createCore, MemoryRepo, type Hasher, type Order, type StaffCtx, type RoleId, type PushPayload } from "../../src/core/index.ts";
+import { staffMayHear } from "../../server/app.ts";
+import { COL } from "../../src/core/ctx.ts";
+import { imageDims } from "../../src/core/driver.ts";
+import { createCore, MemoryRepo, publicOrder, type Hasher, type Order, type StaffCtx, type RoleId, type PushPayload } from "../../src/core/index.ts";
 import { items } from "../../src/lib/data.ts";
 
 const hasher: Hasher = { async hash(p) { return { salt: "s" + p.length, hash: "h:" + p, algo: "scrypt" }; }, async verify(p, _s, h) { return h === "h:" + p; } };
@@ -56,9 +59,13 @@ describe("the moment of a step (at)", () => {
     expect(d.deliveries[0].deliveredAt).toBe(new Date(T0 + 16 * MINUTE).toISOString());
     const log = (await core.audit.list()).filter((x) => x.action === "driver.arrive");
     expect(log[0].at).toBe(new Date(T0 + 15 * MINUTE).toISOString());
+    /* the log keeps both moments: when it was made and when the server received it */
+    expect(log[0].data).toMatchObject({ receivedAt: new Date(T0 + 20 * MINUTE).toISOString(), offline: true });
     /* never before the last change of the order, never after now */
     const o2 = await ready(core, s);
-    const r2 = await core.driver.take(s.driver, [o2.no], { at: T0 + 1 });
+    /* before the order was ready (its previous step): refused; a few seconds before (the phone's clock): moved to it */
+    await expect(core.driver.take(s.driver, [o2.no], { at: T0 + 1 })).rejects.toMatchObject({ code: "bad_at", status: 422, message: "Записът за №\u00a0" + o2.no + " е отпреди предишната ѝ стъпка и не се записва." });
+    const r2 = await core.driver.take(s.driver, [o2.no], { at: t.now - 20_000 });
     expect(Date.parse(r2.deliveries[0].pickedAt!)).toBeGreaterThanOrEqual(Date.parse(o2.updatedAt));
     await expect(core.driver.go(s.driver, [o2.no], { at: t.now + 5 * MINUTE })).rejects.toMatchObject({ code: "bad_at", status: 422, message: "Часовникът на телефона е напред. Провери го и опитай пак." });
     await expect(core.driver.go(s.driver, [o2.no], { at: T0 - 60 * MINUTE })).rejects.toMatchObject({ code: "bad_at", message: "Действието е отпреди началото на смяната и не се записва." });
@@ -66,5 +73,72 @@ describe("the moment of a step (at)", () => {
     /* fuel entered with no connection */
     const f = await core.driver.fuelAdd(s.driver, { litres: "40", sum: "60", km: 48300, at: T0 + 18 * MINUTE });
     expect(f.entry.at).toBe(new Date(T0 + 18 * MINUTE).toISOString());
+  });
+});
+
+describe("the rules of review 2 (flows)", () => {
+  it("at most 30 minutes back (decision 18.11)", async () => {
+    const { core, t } = mk(), s = await people(core);
+    await begin(core, s.driver);
+    const o = await ready(core, s);
+    t.now = T0 + 45 * MINUTE;
+    await expect(core.driver.take(s.driver, [o.no], { at: T0 + 2 * MINUTE })).rejects.toMatchObject({ code: "bad_at", message: "Записът е по-стар от 30 минути и не се записва. Кажи на управителя какво е станало." });
+    expect((await core.driver.take(s.driver, [o.no], { at: T0 + 20 * MINUTE })).deliveries[0].pickedAt).toBe(new Date(T0 + 20 * MINUTE).toISOString());
+  });
+  it("a km more than 2 000 over the last record is refused at the start, in fuel and at the end; the bosses correct a car's km", async () => {
+    const { core } = mk(), s = await people(core);
+    await begin(core, s.driver, "a1", 48250);
+    const HIGH = "Над 2 000 км повече от последния запис. Провери числото.";
+    await expect(core.driver.fuelAdd(s.driver, { litres: 30, sum: 50, km: 98250 })).rejects.toMatchObject({ status: 422, fields: { km: HIGH } });
+    await expect(core.driver.end(s.driver, { km: 98250, handed: true })).rejects.toMatchObject({ status: 422, fields: { km: HIGH } });
+    await core.driver.fuelAdd(s.driver, { litres: 30, sum: 50, km: 48300 });
+    await core.driver.end(s.driver, { km: 48400, handed: true });
+    await expect(begin(core, s.driver, "a1", 98400)).rejects.toMatchObject({ status: 422, fields: { km: HIGH } });
+    /* a wrong record is corrected by the main admin, the owner or the manager (with a line in the log); never the driver */
+    await expect(core.driver.setCarKm(s.driver, "a1", 48000)).rejects.toEqual(code("forbidden", 403));
+    const cars = await core.driver.setCarKm(s.manager, "a1", 48390);
+    expect(cars.find((c) => c.id === "a1")!.lastKm).toBe(48390);
+    expect((await core.audit.list()).find((x) => x.action === "driver.car_km")).toMatchObject({ actor: "manager", target: "a1", data: { from: 48400, to: 48390 } });
+    expect((await begin(core, s.driver, "a1", 48395)).shift!.kmStart).toBe(48395);
+  });
+  it("another driver's open question: „чака се отговор“; one undelivered order: „Достави я“", async () => {
+    const { core } = mk(), s = await people(core);
+    await begin(core, s.driver); await begin(core, s.driver2, "a2", 31540);
+    const o = await ready(core, s, { addr: "ж.к. Дружба 2, бл. 311" });
+    await core.driver.ask(s.driver2, o.no);
+    await expect(core.driver.take(s.driver, [o.no])).rejects.toMatchObject({ message: "№\u00a0" + o.no + ": чака се отговор от управителя за адреса." });
+    await expect(core.driver.take(s.driver2, [o.no])).rejects.toMatchObject({ message: "№\u00a0" + o.no + ": чакаш отговор от управителя за адреса." });
+    const p = await ready(core, s);
+    await core.driver.take(s.driver, [p.no]);
+    await expect(core.driver.end(s.driver, { km: 48300, handed: true })).rejects.toMatchObject({ message: "Имаш недоставена поръчка: №\u00a0" + p.no + ". Достави я или я върни в ресторанта, преди да приключиш." });
+  });
+  it("the customer's page with a problem: no „пред входа“, only the neutral hold", async () => {
+    const { core } = mk(), s = await people(core);
+    await begin(core, s.driver);
+    const o = await ready(core, s);
+    await core.driver.take(s.driver, [o.no]); await core.driver.go(s.driver, [o.no]); await core.driver.arrive(s.driver, o.no);
+    expect(publicOrder((await core.ctx.repo.get(COL.orders, o.no)) as Order).arrivedAt).toBeTruthy();
+    await core.driver.problem(s.driver, o.no, "nobody");
+    const p1 = publicOrder((await core.ctx.repo.get(COL.orders, o.no)) as Order) as unknown as Record<string, unknown>;
+    expect([p1.arrivedAt, p1.hold, JSON.stringify(p1).includes("nobody")]).toEqual([undefined, true, false]);
+    await core.driver.returned(s.driver, o.no);
+    const p2 = publicOrder((await core.ctx.repo.get(COL.orders, o.no)) as Order) as unknown as Record<string, unknown>;
+    expect([p2.arrivedAt, p2.hold]).toEqual([undefined, true]);
+  });
+  it("a receipt is a picture: its size is read from the header", async () => {
+    const png = (body: number[]) => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...body]);
+    const ihdr = png([0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 2, 0, 0, 0, 1, 0, 8, 2, 0, 0, 0]);
+    expect(imageDims(ihdr, "png")).toEqual({ w: 512, h: 256 });
+    expect(imageDims(png([...new TextEncoder().encode("<html><script>alert(1)</script></html>")]), "png")).toBeNull();
+    const { core } = mk(), s = await people(core);
+    await begin(core, s.driver);
+    await expect(core.driver.receiptCheck(s.driver, { bytes: 46, ext: "png", data: png([...new TextEncoder().encode("<html><script>alert(1)</script></html>")]) })).rejects.toEqual(code("unsupported", 415));
+    await expect(core.driver.receiptCheck(s.driver, { bytes: ihdr.length, ext: "png", data: ihdr })).resolves.toEqual({ ok: true });
+  });
+  it("the driver's phone hears only what it needs", () => {
+    const d = { role: "driver", sections: ["driver"] };
+    expect(["driver.course", "driver.ask", "order.status", "order.new", "menu.soldout", "kitchen.busy"].map((t) => staffMayHear(d, t))).toEqual([true, true, true, true, true, true]);
+    expect(["order.created", "note.created", "feedback.created", "owner.answer", "shift.update", "floor.call"].map((t) => staffMayHear(d, t))).toEqual([false, false, false, false, false, false]);
+    expect(staffMayHear({ role: "manager", sections: [] }, "order.created")).toBe(true);
   });
 });

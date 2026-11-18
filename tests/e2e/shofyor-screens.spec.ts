@@ -60,7 +60,7 @@ test("„Маршрут“: the locked first stop without its buttons, „По-�
   await go(page, "/shofyor/marshrut/");
   await expect(page.locator(".scheme svg[role=img]")).toHaveAttribute("aria-label", /3 адреса по ред/);
   await expect(page.locator(".rc").first()).toContainText("Път А · по срока");
-  await expect(page.locator(".rc").first()).toContainText("[ЛИПСВА: маршрути от OSRM]");
+  await expect(page.locator(".rc").first()).toContainText("[ЛИПСВА: километри и минути на маршрута]");
   await expect(page.locator(".rc .nums")).not.toContainText(/\d+\s*(км|мин)/);
   const stops = page.locator(".stops .stop:not(.home)");
   await expect(stops).toHaveCount(3);
@@ -137,14 +137,15 @@ test("the search: only his deliveries; Enter opens the first one", async ({ page
 test("@phone no connection: a status is kept on the phone („Записано на телефона“, the strip) and sent after the reconnect", async ({ page, context }) => {
   const errs = errors(page);
   await signed(page);
-  const [o] = await readyOrders(page, [{ addr: "ж.к. Дружба 2, бл. 300" }]);
-  expect((await api(page).post(S.base + "/api/driver/take", { data: { nos: [o.no] } })).status()).toBe(200);
+  const [o, o2] = await readyOrders(page, [{ addr: "ж.к. Дружба 2, бл. 300" }, { addr: "ж.к. Дружба 2, бл. 301" }]);
+  expect((await api(page).post(S.base + "/api/driver/take", { data: { nos: [o.no, o2.no] } })).status()).toBe(200);
   await go(page, "/shofyor/dostavka/#" + o.no);
   await context.setOffline(true);
   await expect(page.locator(".st-net")).toContainText("Няма връзка.");
   /* the screen stays: the tabs and the links to other screens say why */
   const tab = page.locator('.st-nav a[data-tab="route"]');
   await expect(tab).toHaveAttribute("aria-disabled", "true");
+  await expect(bar(page).locator("a[data-offnav]")).toHaveCount(0); /* the actions of this delivery stay */
   await tab.click({ force: true });
   await expect(toast(page)).toContainText("Няма връзка: остани на този екран, действията се пазят тук.");
   await expect(page).toHaveURL(new RegExp("/shofyor/dostavka/#" + o.no + "$"));
@@ -155,9 +156,53 @@ test("@phone no connection: a status is kept on the phone („Записано �
   await page.locator('.st-net [data-act="queue"]').click();
   await expect(page.locator(".st-sheetwrap.on .hist")).toContainText("№ " + o.no + " · На път");
   await page.keyboard.press("Escape");
+  /* "Доставена" on the phone, then "Следваща" to a delivery never opened with the connection: drawn from the kept list */
+  await bar(page).getByRole("button", { name: /^Доставена/ }).click();
+  await expect(toast(page)).toContainText("Записано на телефона: № " + o.no + " е доставена.");
+  await expect(page.locator(".st-net")).toContainText("2 статуса чакат и тръгват сами.");
+  /* (the route test left its deliveries on the way: "Следваща" is the first of them, or № o2) */
+  const nextL = bar(page).getByRole("link", { name: /^Следваща · № \d+/ });
+  const nextNo = ((await nextL.textContent()) || "").replace(/\D+/g, "");
+  expect([o.no]).not.toContain(nextNo);
+  await nextL.click();
+  await expect(page.locator(".st-top h1")).toHaveText("№ " + nextNo);
+  await expect(page.locator(".acard .addr b")).toBeVisible();
+  await expect(page.locator("main .st-skel")).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText("Сега караш към № " + o.no);
+  /* a delivery that is not on the phone says so, and "Назад" goes back */
+  await page.evaluate(() => { location.hash = "#999999"; });
+  await expect(page.locator("main h2")).toHaveText("Тази доставка не е заредена на телефона");
+  await page.getByRole("button", { name: "Назад" }).click();
+  await expect(page.locator(".st-top h1")).toHaveText("№ " + nextNo);
+  void o2;
   await context.setOffline(false);
   await expect(page.locator(".st-net")).toBeHidden({ timeout: 15_000 });
-  await expect.poll(async () => (await (await api(page).get(S.base + "/api/driver/deliveries/" + o.no)).json()).st, { timeout: 10_000 }).toBe("road");
+  await expect.poll(async () => (await (await api(page).get(S.base + "/api/driver/deliveries/" + o.no)).json()).st, { timeout: 10_000 }).toBe("done");
+  expect(errs).toEqual([]);
+});
+
+test("@phone no connection: a fuel entry the core refuses comes back to the form with its errors (never lost)", async ({ page, context }) => {
+  const errs = errors(page);
+  await signed(page);
+  await go(page, "/shofyor/gorivo/");
+  await context.setOffline(true);
+  await expect(page.locator(".st-net")).toContainText("Няма връзка.");
+  await page.fill("#f-litres", "30"); await page.fill("#f-sum", "50"); await page.fill("#f-km", "100");
+  await bar(page).getByRole("button", { name: "Запиши зареждането" }).click();
+  await expect(toast(page)).toContainText("Записано на телефона.");
+  await expect(page.locator(".hist .h").first()).toContainText("чака връзка");
+  await context.setOffline(false);
+  await expect(page.locator(".st-toast.on")).toContainText(/Зареждането от \d\d:\d\d не се записа: По-малко е от последно записания/, { timeout: 15_000 });
+  await expect(page.locator("[data-draft]")).toContainText("не се записа.");
+  await expect(page.locator("#e-km")).toContainText("По-малко е от последно записания");
+  await expect(page.locator("#f-litres")).toHaveValue("30");
+  await expect(page.locator("#f-sum")).toHaveValue("50");
+  /* fixed and saved: the draft goes */
+  const last = (await (await api(page).get(S.base + "/api/driver/fuel")).json()).lastKm as number;
+  await page.fill("#f-km", String(last + 10));
+  await bar(page).getByRole("button", { name: "Запиши зареждането" }).click();
+  await expect(toast(page)).toContainText("Зареждането е записано");
+  await expect(page.locator("[data-draft]")).toHaveCount(0);
   expect(errs).toEqual([]);
 });
 
@@ -244,11 +289,11 @@ test("„Край на смяната“: blocked by an undelivered order, the c
   await expect(bar(page).getByRole("button", { name: "Приключи смяната" })).toBeDisabled();
   await api(page).post(S.base + "/api/driver/go", { data: { nos: [o.no] } });
   await api(page).post(S.base + "/api/driver/deliveries/" + o.no + "/deliver", { data: {} });
-  const sum = (await (await api(page).get(S.base + "/api/driver/shift")).json()) as { handover: number; cash: { sum: number }; float: number; fuelCash: number };
+  const sum = (await (await api(page).get(S.base + "/api/driver/shift")).json()) as { handover: number; cash: { sum: number }; float: number; fuelCash: number; fuel: number };
   expect(sum.handover).toBeCloseTo(sum.cash.sum + (sum.float || 0) - sum.fuelCash, 2);
   await page.reload(); await drawn(page);
   /* the words follow the number: "1 зареждане" (the fuel test made one), "доставена" / "доставени" */
-  await expect(page.locator(".dsum")).toContainText(/1\s*зареждане(?!я)/);
+  await expect(page.locator(".dsum")).toContainText(sum.fuel === 1 ? /1\s*зареждане(?!я)/ : new RegExp(sum.fuel + "\\s*зареждания"));
   const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
   await expect(page.locator(".cashbox .big")).toHaveText(fmt(sum.handover));
   await expect(page.locator(".cashbox")).toContainText("+ Начално ресто");
