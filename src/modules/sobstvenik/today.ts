@@ -9,7 +9,7 @@
 import "sc-icons:wallet,caret-right,truck,storefront,phone,chair,briefcase,users-three,hourglass,warning,check-circle,chart-bar,warning-circle,chat-circle-dots,pencil-simple";
 import { mountBoss, delta, type Boss } from "../boss/frame.ts";
 import { ownerApi, type OwnerToday } from "../../client/api-boss.ts";
-import { ic, esc, plural, fmt, fd, eur0, sample, banner, go, screen } from "./common.ts";
+import { ic, esc, plural, fmt, fd, eur0, sample, banner, go, screen, miss } from "./common.ts";
 import { card, line, cols, hbars, legend, bindTips } from "./charts.ts";
 
 export async function initToday(): Promise<void> {
@@ -48,9 +48,9 @@ function todayScreen(boss: Boss): void {
     const money = d.money, empty = noHistory(d), now = d.now, dayName = d.weekday;
     const sumTxt = (v: number | null) => (v == null ? "" : fmt(v));
     let h = "";
-    if (empty) h += '<div class="ow-grid"><div class="wall">' + banner({ icon: "hourglass", title: "Още събираме история", text: "Сравнението идва след 4 седмици. Дотогава виждаш числата за днес." }) + "</div></div>";
+    if (empty) h += '<div class="ow-grid"><div class="wall">' + banner({ icon: "hourglass", title: "Още събираме история", text: "Сравнението с обичайното идва след 4 седмици. Дотогава виждаш числата за днес." }) + "</div></div>";
     else if (d.alert) h += '<div class="ow-grid"><div class="wall td-alert" data-edit-id="own.today.alert">' + banner({ tone: d.alert.dir === "down" ? "warn" : "ok", icon: d.alert.dir === "down" ? "warning" : "check-circle", title: d.alert.text,
-      text: '<span class="ow-muted">' + esc(d.alert.sub) + " (средно от същия ден в последните 4 седмици).</span>" + (d.sample ? " " + sample() : ""),
+      text: '<span class="ow-muted">' + esc(d.alert.sub).replace(/ €/g, "\u00a0€") + " (средно от същия ден в последните 4 седмици).</span>" + (d.sample ? " " + sample() : ""),
       action: money ? '<button class="pill pill-line" type="button" data-goto="hourly">' + ic("chart-bar", 20) + "Виж по час</button>" : "" }) + "</div></div>";
     h += '<div class="ow-grid td-grid">';
     /* the main number */
@@ -106,6 +106,7 @@ function todayScreen(boss: Boss): void {
       '<div class="td-live"><a href="' + go.orders("s=work") + '"><b>' + L.inWork + "</b><span>в работа</span></a>" +
       '<a href="' + go.hall() + '"><b>' + L.tables.busy + "<small> от " + L.tables.total + "</small></b><span>заети маси</span></a>" +
       '<a href="' + go.reservations() + '"><b>' + r.ahead + "</b><span>" + (nowM >= 1020 ? "резервации тази вечер" : "резервации до края на деня") + (r.aheadPeople ? " · " + plural(r.aheadPeople, "човек", "души") : "") + "</span></a></div>" +
+      (L.tables.missing || d.sample ? '<p class="ow-note">' + (L.tables.missing ? "Масите са условни: " + miss(L.tables.missing) : "") + (d.sample ? " " + sample() : "") + "</p>" : "") +
       '<a class="pill pill-red pill-lg pill-block" href="' + go.shift() + '">' + ic("users-three", 22) + "Смяната сега</a></section>";
   }
 
@@ -127,10 +128,10 @@ function todayScreen(boss: Boss): void {
     const tot = L.total, wa = L.weekAgo;
     const inner = '<div class="ow-row" style="align-items:baseline;gap:6px 14px"><span class="ow-big">' + (money ? fmt(tot.revenue || 0) : plural(tot.orders, "поръчка", "поръчки")) + "</span>" + (empty ? "" : delta(v(tot), v(wa), { vs: "от 7-те дни преди това" })) + "</div>" +
       (money ? '<p class="ow-note">' + plural(tot.orders, "поръчка", "поръчки") + " · среден бон " + fmt(tot.orders ? (tot.revenue || 0) / tot.orders : 0) + "</p>" : "") +
-      cols("week", items, { fmt: money ? eur0 : String, prev: empty ? null : L.days.map((x) => v(x.weekAgo)), prevTip: (i) => " · 7 дни по-рано " + (money ? fmt(L.days[i].weekAgo.revenue || 0) : String(L.days[i].weekAgo.orders)) }) +
+      cols("week", items, { fmt: money ? eur0 : undefined, prev: empty ? null : L.days.map((x) => v(x.weekAgo)), prevTip: (i) => " · 7 дни по-рано" + (i === L.days.length - 1 ? " (до " + d.now + ")" : "") + " " + (money ? fmt(L.days[i].weekAgo.revenue || 0) : String(L.days[i].weekAgo.orders)) }) +
       legend(empty ? [["Последните 7 дни"], ["Днес (до " + d.now + ")", "r"]] : [["Последните 7 дни"], ["Днес (до " + d.now + ")", "r"], ["7 дни по-рано", "ln prev"]]) +
       '<div class="ow-row" style="justify-content:space-between">' + (d.sample ? sample() : "<span></span>") + '<a class="link" href="' + go.trends() + '">Към тенденциите' + ic("caret-right", 18) + "</a></div>";
-    return card({ page: "today", id: "week", cls: "w2", title: "Последните 7 дни", sub: fd(L.days[0].date, true) + " - " + fd(L.days[L.days.length - 1].date, true), inner,
+    return card({ page: "today", id: "week", cls: "w2 td-week", title: "Последните 7 дни", sub: fd(L.days[0].date, true) + " - " + fd(L.days[L.days.length - 1].date, true), inner,
       table: { head: money ? ["Ден", "Оборот", "Поръчки", "7 дни по-рано"] : ["Ден", "Поръчки", "7 дни по-рано"],
         rows: L.days.map((x) => (money ? [fd(x.date, true), fmt(x.revenue || 0), x.orders, empty ? "-" : fmt(x.weekAgo.revenue || 0)] : [fd(x.date, true), x.orders, empty ? "-" : x.weekAgo.orders])) } });
   }

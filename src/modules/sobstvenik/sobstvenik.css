@@ -144,3 +144,24 @@
 #dc-nh:focus{outline:none}
 /* ---------- while a new period is counted: the old numbers fade (the period stays sharp) ---------- */
 .bs-main [data-body][aria-busy="true"] > :not(.ow-per){opacity:.55; transition:opacity var(--t-base) var(--ease) 150ms}
+/* ---------- the label of today's point (charts.ts placeLabels): below left, above right, on the card's colour ---------- */
+.ow-plot .elab.dl{transform:translate(calc(-100% - 10px), 4px)}
+.ow-plot .elab.r{transform:translate(10px, calc(-100% - 10px))}
+.ow-plot .elab.bg{background:var(--surface); padding:0 4px; border-radius:6px; z-index:2}
+/* ---------- after the review ---------- */
+/* "Днес" from 900 to 1239 px (2 columns): "Последните 7 дни" beside "По канал", no empty half row */
+@container app (min-width:900px) and (max-width:1239px){ .ow-grid > .td-week{grid-column:auto} }
+/* "Чака те" as tall as the main number on its row (no empty strip under it) */
+.td-grid > .td-wait{align-self:stretch}
+/* the difference: the words after the percent wrap without a leading gap */
+.bs-app[data-mod="sobstvenik"] .ow-d small{margin-left:0}
+.bs-app[data-mod="sobstvenik"] .ow-d .p{margin-right:4px}
+/* the dish card: the name never under "Затвори" (the button goes to its own line when the card is narrow) */
+#dish > header{flex-wrap:wrap}
+#dish > header > .tr-dish{flex:1 1 230px; min-width:0}
+#dish h2{overflow-wrap:anywhere}
+/* the e-mail reports: what a switch that is on does until the address comes */
+.tr-mail label small .wait{display:block; color:var(--muted)}
+/* an answer kept on the phone (no connection): waiting, not done */
+.dc-ans.kept{box-shadow:inset 0 0 0 1.5px var(--warn)}
+.dc-ans.kept .ic{color:var(--warn)}

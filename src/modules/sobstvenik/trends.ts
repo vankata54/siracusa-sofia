@@ -5,14 +5,14 @@
    "Още без данни" with the [ЛИПСВА] of the core; "Изтегли CSV" (the core's rows); "Отчети по имейл" (ownerApi.setMail;
    the address [ЛИПСВА], the sending "Скоро"); the dish card from the search (#dish=<id>).
    Hash: #p=today|yday|30|month|custom&a=&b=, #c=year, #dish=<id>, #top #heat #res #clients #times #offers. */
-import "sc-icons:caret-right,truck,storefront,phone,chair,briefcase,globe,calendar-check,warning-circle,eye,scales,x,chart-bar,house";
+import "sc-icons:hourglass,caret-right,truck,storefront,phone,chair,briefcase,globe,calendar-check,warning-circle,eye,scales,x,chart-bar,house";
 import { mountBoss, delta, type Boss } from "../boss/frame.ts";
 import { ownerApi, type OwnerTrends, type MailSettings } from "../../client/api-boss.ts";
 import { pic } from "../../lib/render.ts";
 import { findDish, catById, isOut } from "../../lib/data.ts";
 import {
   ic, esc, plural, fmt, fd, dayL, eur0, f1, sample, soon, miss, go, screen, perFromHash, perHash, periodHTML, perWords, bindPeriod, query,
-  hashMap, setHash, act, decBadge, downloadCsv, csvBtn, findPer, today, type PerWords,
+  hashMap, setHash, act, decBadge, downloadCsv, csvBtn, findPer, today, fmtNb, NONE, cutNotice, type PerWords,
 } from "./common.ts";
 import { card, cols, hbars, legend, bindTips } from "./charts.ts";
 
@@ -46,11 +46,14 @@ function trendsScreen(boss: Boss): void {
   }
   const S = screen<Data>(boss, {
     load, draw, err: "Поръчките и оборотът са запазени. Опитай пак след малко.", top: () => periodHTML(P),
+    bad: () => { if (P.per !== "custom") return false; P.per = "7"; perHash(P, { dish: dishId }); return true; },
     after: () => { bindTips(body); },
     live: ["order.created", "order.status", "order.changed", "reservation.created", "reservation.status"], every: 120_000,
   });
   decBadge(boss);
   bindPeriod(boss, P, () => S.reload(false), () => words, () => ({ dish: dishId }));
+  /* a period over 92 days in the address: set right, said once, and the address follows */
+  if (P.cut) { perHash(P, { dish: dishId }); boss.toast(cutNotice(P)); }
   let jumped = false;
   function jump() {
     if (jumped) return; jumped = true;
@@ -61,11 +64,17 @@ function trendsScreen(boss: Boss): void {
   function draw(D: Data): string {
     setTimeout(jump, 0);
     const d = D.t, cur = d.totals, prev = d.prev, money = d.money, W = perWords(P, d); words = W;
-    const dl = (a: number, b: number, inv = false) => delta(a, b, { inv });
+    const dl = (a: number, b: number, inv = false) => delta(a, b, { inv, none: NONE });
     let h = periodHTML(P);
-    const noData = !cur.orders && !cur.reservations && !cur.cancelled;
+    const noData = !cur.orders && !cur.reservations && !cur.cancelled, fresh = !d.history;
     h += '<div class="tr-acts"><p class="ow-meta"><span><b>' + esc(W.label) + "</b> · спрямо " + esc(W.cmpLabel) + "</span>" + (d.sample ? sample() : "") + "</p>" +
-      (noData ? "" : '<div class="acts">' + csvBtn() + "</div>") + "</div>";
+      (noData || fresh ? "" : '<div class="acts">' + csvBtn() + "</div>") + "</div>";
+    /* a new restaurant: no day before today (the prototype's "Без история") */
+    if (fresh) {
+      h += '<section class="ow-card" data-edit-id="own.trends.empty">' + boss.empty({ icon: "hourglass", title: "Още събираме история", text: "Тенденциите и сравнението идват след 4 седмици. Днешните числа са в „Днес“.",
+        action: '<a class="pill pill-line pill-lg" href="' + go.today() + '">' + ic("house", 22) + "Към „Днес“</a>" }) + "</section>";
+      return h;
+    }
     if (noData) {
       h += '<section class="ow-card" data-edit-id="own.trends.empty">' + boss.empty({ icon: "chart-bar", title: "Няма поръчки за този период", text: P.per === "today" ? "Поръчките за днес се появяват тук от 10:00." : "Избери друг период.",
         action: P.per === "30" ? '<a class="pill pill-line pill-lg" href="' + go.today() + '">' + ic("house", 22) + "Към „Днес“</a>" : '<button class="pill pill-line pill-lg" type="button" data-per="30">Последните 30 дни</button>' }) + "</section>";
@@ -89,14 +98,19 @@ function trendsScreen(boss: Boss): void {
 
   /* the turnover by day (for one day: by hour), the comparison as a line */
   function mainCard(d: OwnerTrends, W: PerWords): string {
-    const money = d.money, v = (x: { revenue: number | null; orders: number }) => (money ? x.revenue || 0 : x.orders), f = money ? eur0 : String;
+    const money = d.money, v = (x: { revenue: number | null; orders: number }) => (money ? x.revenue || 0 : x.orders), f = money ? eur0 : undefined;
     const what = money ? "Оборот" : "Поръчки";
     if (W.one) {
-      const hrs = d.byHour;
+      const hrs = d.byHour, um = d.until ? +d.until.slice(0, 2) * 60 + +d.until.slice(3, 5) : null;
+      /* today: the comparison only up to "сега" (the same minute a week ago), the mark "сега" as on "Днес" */
+      const after = (hr: number) => um != null && hr * 60 > um;
+      const nowX = um != null && um >= 600 && um < 1380 ? ((um - 600) / 60 / hrs.length) * 100 : null;
       return card({ page: "trends", id: "main", cls: "wall", title: what + " по час", sub: fd(d.from) + (d.until ? " до " + d.until : ""),
         inner: cols("main", hrs.map((x) => ({ l: x.hour + ":00", v: money ? Math.round(x.revenue || 0) : x.orders, t: x.hour + ":00 - " + x.hour + ":59", tv: (money ? fmt(x.revenue || 0) + " · " : "") + plural(x.orders, "поръчка", "поръчки") })),
-          { fmt: f, xn: 5, prev: hrs.map((x) => v(x.cmp)), prevTip: (i) => " · сравнение " + (money ? fmt(hrs[i].cmp.revenue || 0) : String(hrs[i].cmp.orders)) }) + legend([["Избраният ден"], [W.cmpName, "ln prev"]]),
-        table: { head: money ? ["Час", "Оборот", "Поръчки", W.cmpName] : ["Час", "Поръчки", W.cmpName], rows: hrs.map((x) => (money ? [x.hour + ":00", fmt(x.revenue || 0), x.orders, fmt(x.cmp.revenue || 0)] : [x.hour + ":00", x.orders, x.cmp.orders])) } });
+          { fmt: f, xn: 5, nowX, prev: hrs.map((x) => (after(x.hour) ? null : v(x.cmp))), prevTip: (i) => (after(hrs[i].hour) ? "" : " · сравнение " + (money ? fmt(hrs[i].cmp.revenue || 0) : String(hrs[i].cmp.orders))) }) +
+          legend([[um != null ? "Днес (до " + d.until + ")" : "Избраният ден"], [W.cmpName + (um != null ? ", до същия час" : ""), "ln prev"]]),
+        table: { head: money ? ["Час", "Оборот", "Поръчки", W.cmpName] : ["Час", "Поръчки", W.cmpName], rows: hrs.map((x) => { const c = after(x.hour) ? "-" : money ? fmt(x.cmp.revenue || 0) : x.cmp.orders, f2 = after(x.hour);
+          return money ? [x.hour + ":00", f2 ? "-" : fmt(x.revenue || 0), f2 ? "-" : x.orders, c] : [x.hour + ":00", f2 ? "-" : x.orders, c]; }) } });
     }
     const days = d.byDay, n = days.length, t0 = today(), hasToday = d.to === t0;
     return card({ page: "trends", id: "main", cls: "wall", title: what + " по ден",
@@ -196,8 +210,8 @@ function trendsScreen(boss: Boss): void {
     const M = mail;
     if (!M) return "";
     return '<section class="ow-card" aria-labelledby="h-ml" data-edit-id="own.trends.mail"><header><div><h2 id="h-ml">Отчети по имейл<small>' + esc(M.format) + " до " + miss(M.email) + "</small></h2></div></header><div class=\"tr-mail\">" +
-      '<label><span class="t">Всеки понеделник в 6:00<small>За миналата седмица</small></span><span class="ow-switch"><input type="checkbox" role="switch" data-mail="weekly"' + (M.weekly ? " checked" : "") + '><span class="tr"></span></span></label>' +
-      '<label><span class="t">На 1-во число<small>За миналия месец</small></span><span class="ow-switch"><input type="checkbox" role="switch" data-mail="monthly"' + (M.monthly ? " checked" : "") + '><span class="tr"></span></span></label></div>' +
+      '<label><span class="t">Всеки понеделник в 6:00<small>За миналата седмица' + (M.weekly && /ЛИПСВА/.test(M.email) ? '<span class="wait">Ще тръгне, щом агенцията добави имейла</span>' : "") + '</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mw" data-mail="weekly"' + (M.weekly ? " checked" : "") + '><span class="tr"></span></span></label>' +
+      '<label><span class="t">На 1-во число<small>За миналия месец' + (M.monthly && /ЛИПСВА/.test(M.email) ? '<span class="wait">Ще тръгне, щом агенцията добави имейла</span>' : "") + '</small></span><span class="ow-switch"><input type="checkbox" role="switch" id="ow-mm" data-mail="monthly"' + (M.monthly ? " checked" : "") + '><span class="tr"></span></span></label></div>' +
       '<p class="ow-note">Изпращането тръгва, щом агенцията добави имейла. ' + soon() + "</p></section>";
   }
 
@@ -205,10 +219,10 @@ function trendsScreen(boss: Boss): void {
     const d = D.t, x = d.dish!, m = findDish(x.id), cat = m ? catById[m.cat] : null, money = d.money, pv = D.prevDish;
     const items = x.byDay.map((b) => ({ l: dayL(b.date, x.byDay.length), v: b.q, t: fd(b.date), tv: plural(b.q, "брой", "броя") }));
     return '<div class="ow-grid"><section class="ow-card wall" id="dish" aria-labelledby="h-ds" data-edit-id="own.trends.dish"><header><div class="tr-dish">' + (m ? pic(m) : "") + '<div><h2 id="h-ds">' + esc(x.name) + '</h2><span class="ow-note">' +
-      esc([cat ? cat.n : "", m ? fmt(m.p) : ""].filter(Boolean).join(" · ")) + (m && isOut(m) ? " · Изчерпано днес" : "") + "</span></div></div>" +
+      [cat ? esc(cat.n) : "", m ? fmtNb(m.p) : ""].filter(Boolean).join(" · ") + (m && isOut(m) ? " · Изчерпано днес" : "") + "</span></div></div>" +
       '<button class="pill pill-soft ow-tbtn" type="button" data-undish>' + ic("x", 18) + "Затвори</button></header>" +
-      '<div class="tr-two"><div><span class="k">Продадени за периода</span><b>' + plural(x.q, "брой", "броя") + "</b>" + (pv ? delta(x.q, pv.q) : "") + "</div>" +
-      (money ? '<div><span class="k">Оборот от ястието</span><b>' + fmt(x.revenue || 0) + "</b>" + (pv ? delta(x.revenue || 0, pv.revenue || 0) : "") + "</div>" : "") + "</div>" +
+      '<div class="tr-two"><div><span class="k">Продадени за периода</span><b>' + plural(x.q, "брой", "броя") + "</b>" + (pv ? delta(x.q, pv.q, { none: NONE }) : "") + "</div>" +
+      (money ? '<div><span class="k">Оборот от ястието</span><b>' + fmt(x.revenue || 0) + "</b>" + (pv ? delta(x.revenue || 0, pv.revenue || 0, { none: NONE }) : "") + "</div>" : "") + "</div>" +
       (W.one ? "" : cols("dish", items, { xn: items.length > 14 ? 4 : 7 })) +
       '<div class="ow-row" style="justify-content:space-between">' + (d.sample ? sample() : "<span></span>") + '<a class="link" href="' + go.menu(x.id) + '">В менюто на админа' + ic("caret-right", 18) + "</a></div></section></div><div style=\"height:16px\"></div>";
   }
@@ -234,7 +248,7 @@ function trendsScreen(boss: Boss): void {
     const name = k === "weekly" ? "отчетът всеки понеделник в 6:00" : "отчетът на 1-во число";
     const set = (v: boolean) => ownerApi.setMail({ [k]: v });
     void act(boss, { op: "setMail", args: [{ [k]: on }], label: (on ? "Включено: " : "Изключено: ") + name, run: () => set(on),
-      ok: (m) => { mail = m; boss.toast((on ? "Включено: " : "Изключено: ") + name, { undo: () => { void set(was).then((m2) => { mail = m2; S.redraw(); }, () => boss.toast("Не успяхме да го върнем. Опитай пак.")); } }); },
+      ok: (m) => { mail = m; S.redraw(); boss.toast((on ? "Включено: " : "Изключено: ") + name, { undo: () => { void set(was).then((m2) => { mail = m2; S.redraw(); }, () => boss.toast("Не успяхме да го върнем. Опитай пак.")); } }); },
       queued: () => { if (mail) mail = { ...mail, [k]: on }; },
       fail: () => { t.checked = was; return false; } });
   });

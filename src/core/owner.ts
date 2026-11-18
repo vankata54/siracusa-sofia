@@ -27,6 +27,8 @@ import { notesWaiting, listNotes, saveAnswer, undoAnswer, ANSWER_APPLIED } from 
 import { blockList, blockDecide, type BlockRow } from "./reservations-admin.ts";
 import { fuelReport, drivers as driversView, DRIVER_MISSING, type DriverShift, type FuelReport } from "./driver.ts";
 import { liveZones } from "./zones.ts";
+import { getSection } from "./site-data.ts";
+import { HALL_MISSING } from "./hall.ts";
 import type { TableSession } from "./floor.ts";
 import { sofiaYmd, addDaysYmd } from "../lib/time.ts";
 import { fmt } from "../lib/format.ts";
@@ -86,9 +88,10 @@ export interface OwnerToday {
   cancelled: number;
   /** the turnover from 10:00 cumulative, every 15 min, against the usual (money only; null without it) */
   byHour: { step: number; labels: string[]; cur: (number | null)[]; usual: number[]; nowIndex: number } | null;
-  live: { inWork: number; tables: { busy: number; total: number }; reservations: { n: number; people: number; ahead: number; aheadPeople: number } };
+  live: { inWork: number; tables: { busy: number; total: number; /** [ЛИПСВА] while the plan of the hall is the conditional one */ missing: string }; reservations: { n: number; people: number; ahead: number; aheadPeople: number } };
   byChannel: { key: H.Ch5; label: string; orders: number; revenue: number | null }[];
-  /** the last 7 days (today included) and the 7 before them ("7 дни по-рано") */
+  /** the last 7 days (today included) and the 7 before them ("7 дни по-рано"; the day a week ago only up to this minute,
+      as today: never a whole day against a part of one) */
   last7: { days: { date: string; short: string; orders: number; revenue: number | null; weekAgo: { date: string; orders: number; revenue: number | null } }[]; total: { orders: number; revenue: number | null }; weekAgo: { orders: number; revenue: number | null } };
   /** "Чака те" for the owner: no-shows to decide, the next question (the owner only), the notes */
   waits: OwnerWaits;
@@ -125,7 +128,8 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
   const rs = h.reservations.filter((r) => r.date === day && (r.status === "new" || r.status === "confirmed" || r.status === "seated"));
   const ahead = rs.filter((r) => r.status !== "seated" && +r.time.slice(0, 2) * 60 + +r.time.slice(3) >= cut);
   /* the last 7 days and the 7 before */
-  const d7 = H.byDay(H.slice(h, addDaysYmd(day, -6), day)), w7 = H.byDay(H.slice(h, addDaysYmd(day, -13), addDaysYmd(day, -7)));
+  const d7 = H.byDay(H.slice(h, addDaysYmd(day, -6), day)), w7 = [...H.byDay(H.slice(h, addDaysYmd(day, -13), addDaysYmd(day, -8))), ...H.byDay(H.slice(h, lw, lw, cut))];
+  const plan = await getSection(ctx, "hall");
   const sumD = (l: H.DayRow[]) => ({ orders: l.reduce((a, d) => a + d.orders, 0), revenue: m(l.reduce((a, d) => a + d.revenue, 0)) });
   return {
     date: day, now, weekday: wd, money, sample: cur.orders.some(H.isSample),
@@ -135,7 +139,7 @@ export async function ownerToday(ctx: Ctx, s: StaffCtx): Promise<OwnerToday> {
     lastWeek: { date: lw, sum: m(lwt.revenue), orders: lwt.orders, label: H.lastDayName(day) + " по това време" },
     avg: { value: money ? t.avg : null, usual: money ? (u.orders ? round2(u.revenue / u.orders) : 0) : null },
     cancelled: t.cancelled, byHour,
-    live: { inWork: work, tables: { busy: hall.tables.filter((x) => x.state !== "free").length, total: hall.tables.length }, reservations: { n: rs.length, people: rs.reduce((a, r) => a + r.people, 0), ahead: ahead.length, aheadPeople: ahead.reduce((a, r) => a + r.people, 0) } },
+    live: { inWork: work, tables: { busy: hall.tables.filter((x) => x.state !== "free").length, total: hall.tables.length, missing: plan.version ? "" : HALL_MISSING }, reservations: { n: rs.length, people: rs.reduce((a, r) => a + r.people, 0), ahead: ahead.length, aheadPeople: ahead.reduce((a, r) => a + r.people, 0) } },
     byChannel: H.byChannel5(cur).map((c) => ({ ...c, revenue: m(c.revenue) })),
     last7: { days: d7.map((d, i) => ({ date: d.date, short: H.dayShort(d.date), orders: d.orders, revenue: m(d.revenue), weekAgo: { date: w7[i].date, orders: w7[i].orders, revenue: m(w7[i].revenue) } })), total: sumD(d7), weekAgo: sumD(w7) },
     waits: await waitsOf(ctx, s),
@@ -147,6 +151,8 @@ export interface TrendQuery { period?: H.Period; from?: string; to?: string; com
 type TotalsM = Omit<H.Totals, "revenue" | "avg"> & { revenue: number | null; avg: number | null };
 export interface OwnerTrends {
   period: H.Period; from: string; to: string; days: number; until: string | null; money: boolean; sample: boolean;
+  /** is there any order before today (a new restaurant: "Още събираме история") */
+  history: boolean;
   /** what it is compared with: "prev" (for "Днес" / "Вчера" the same weekday last week) or "year" (364 days back) */
   cmp: { kind: H.Compare; from: string; to: string };
   totals: TotalsM; prev: TotalsM;
@@ -192,7 +198,7 @@ export async function ownerTrends(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Pr
   const sample = R.cur.orders.some(H.isSample) || R.prev.orders.some(H.isSample);
   if (sample) csv.push(["Примерни данни"]);
   return {
-    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, money, sample,
+    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, money, sample, history: hasHistory(h),
     cmp: { kind: R.kind, from: R.c.from, to: R.c.to },
     totals: totM(H.totals(R.cur), money), prev: totM(H.totals(R.prev), money),
     byDay: cd.map((d, i) => ({ date: d.date, orders: d.orders, revenue: m(d.revenue), reservations: d.reservations, noShows: d.noShows, cancelled: d.cancelled, cmp: { date: pd[i] ? pd[i].date : "", orders: pd[i] ? pd[i].orders : 0, revenue: m(pd[i] ? pd[i].revenue : 0) } })),
@@ -210,18 +216,36 @@ export async function ownerTrends(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): Pr
 export interface PayBlock { online: { cash: number; card: number; voucher: number }; table: { cash: number; card: number; unpaid: number }; total: number }
 export interface OwnerFinance {
   period: H.Period; from: string; to: string; days: number; until: string | null; sample: boolean;
+  /** is there any order before today (a new restaurant: "Още събираме история") */
+  history: boolean;
   cmp: { kind: H.Compare; from: string; to: string };
   revenue: { cur: number; prev: number };
+  /** the km driven: the finished legs of the drivers' shifts started in the period (null without any) */
+  km: { cur: number | null; prev: number | null };
   /** by payment: online (site, phone, office) "В брой" / "Карта при получаване" / "Ваучер"; at the tables cash / card from the
       waiter's payments (unpaid: the tables' orders not paid yet) */
   pay: PayBlock; prevPay: PayBlock;
   /** fuel by day, driver and car (core/driver.ts fuelReport) for the period; prev: the total of the comparison */
   fuel: Pick<FuelReport, "total" | "byDay" | "byDriver" | "byCar">; prevFuel: FuelReport["total"];
+  /** the fuel of the comparison by day (aligned by the index with the days of the period) */
+  prevFuelDays: { date: string; n: number; litres: number; sum: number }[];
   /** one delivery: the fuel of the period per delivered order against the fee of each quarter ([ЛИПСВА] where unknown) */
-  delivery: { delivered: number; fuelPer: number | null; fees: { zone: string; free: boolean; fee: number | null; missing: string | null }[]; driverCost: string };
+  delivery: { delivered: number; fuelPer: number | null; prevFuelPer: number | null; fees: { zone: string; free: boolean; fee: number | null; missing: string | null }[]; driverCost: string };
   /** the drivers' cash today: still to hand over (open shifts) and handed over (closed today) */
   cash: { date: string; rows: { user: string; name: string; open: boolean; toHand: number; handed: number | null }[]; toHand: number; handed: number; handTo: string };
   cost: string; csv: string[][];
+}
+/** any order before today */
+const hasHistory = (h: H.History): boolean => h.orders.some((o) => H.dayOf(o) < h.today);
+/** the km of the drivers' shifts started in [from, to]: the finished legs and the last leg of a closed shift */
+function kmOf(shifts: DriverShift[], from: string, to: string): number | null {
+  let km = 0, any = false;
+  for (const x of shifts) {
+    const d = sofiaYmd(new Date(x.startedAt)); if (d < from || d > to) continue;
+    for (const l of x.legs || []) { km += Math.max(0, l.kmEnd - l.kmStart); any = true; }
+    if (x.status === "closed" && typeof x.kmEnd === "number") { km += Math.max(0, x.kmEnd - x.kmStart); any = true; }
+  }
+  return any ? km : null;
 }
 function payOf(sl: H.Slice, sessions: TableSession[]): PayBlock {
   const r = (n: number) => round2(n), o = { cash: 0, card: 0, voucher: 0 }, t = { cash: 0, card: 0, unpaid: 0 };
@@ -240,25 +264,37 @@ export async function ownerFinance(ctx: Ctx, s: StaffCtx, q: TrendQuery = {}): P
   if (!ownerMoney(s)) throw new CoreError("forbidden", OWNER_MSG.finance, 403);
   const h = await H.loadHistory(ctx), R = ranges(h, q), sessions = await ctx.repo.list<TableSession>(COL.tableSessions);
   const fr = await fuelReport(ctx, s, { from: R.from, to: R.to }), pf = await fuelReport(ctx, s, { from: R.c.from, to: R.c.to });
-  const delivered = R.cur.orders.filter((o) => o.mode === "delivery" && o.status === "delivered").length;
+  const isDel = (o: H.Slice["orders"][number]) => o.mode === "delivery" && o.status === "delivered";
+  const delivered = R.cur.orders.filter(isDel).length, prevDelivered = R.prev.orders.filter(isDel).length;
   const zones = await liveZones(ctx);
   /* the cash of the drivers today */
   const day = h.today, dv = await driversView(ctx, s), staff = new Map((await ctx.repo.list<{ id: string; username: string; name: string }>(COL.staff)).map((u) => [u.username, u.name]));
-  const closed = (await ctx.repo.list<DriverShift>(COL.shifts)).filter((x) => x.role === "driver" && x.status === "closed" && !!x.endedAt && sofiaYmd(new Date(x.endedAt)) === day && !!x.closing);
+  const shifts = (await ctx.repo.list<DriverShift>(COL.shifts)).filter((x) => x.role === "driver");
+  const closed = shifts.filter((x) => x.status === "closed" && !!x.endedAt && sofiaYmd(new Date(x.endedAt)) === day && !!x.closing);
   const rows = [...dv.drivers.map((d) => ({ user: d.user, name: d.name, open: true, toHand: round2(d.cash), handed: null as number | null })),
     ...closed.map((x) => ({ user: x.user, name: staff.get(x.user) || x.name, open: false, toHand: 0, handed: round2(x.closing!.handover) }))];
   const pay = payOf(R.cur, sessions), prevPay = payOf(R.prev, sessions);
-  const byDay = H.byDay(R.cur), fuelDay = new Map(fr.byDay.map((d) => [d.date, d]));
-  const csv = [["Ден", "Оборот €", "Поръчки", "Гориво €", "Литри"], ...byDay.map((d) => [d.date, csvNum(d.revenue), String(d.orders), csvNum(fuelDay.get(d.date)?.sum || 0), String(fuelDay.get(d.date)?.litres || 0).replace(".", ",")])];
+  const byDay = H.byDay(R.cur), prevDays = H.byDay(R.prev), fuelDay = new Map(fr.byDay.map((d) => [d.date, d])), prevFuelDay = new Map(pf.byDay.map((d) => [d.date, d]));
+  const fuelOf = (m: typeof fuelDay, date: string) => m.get(date) || { date, n: 0, litres: 0, sum: 0 };
+  const prevFuelDays = prevDays.map((d) => fuelOf(prevFuelDay, d.date));
+  /* "Изтегли CSV": by day the revenue, the payment, the fuel and the comparison (the same columns as "Тенденции") */
+  const lit = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
+  const csv = [["Ден", "Оборот €", "Поръчки", "В брой €", "Карта при получаване €", "Ваучер €", "На маса €", "Гориво €", "Литри", "Сравнение: ден", "Сравнение: оборот €", "Сравнение: гориво €"],
+    ...byDay.map((d, i) => {
+      const p = payOf(H.slice(h, d.date, d.date), sessions), f = fuelOf(fuelDay, d.date), c = prevDays[i], cf = prevFuelDays[i];
+      return [d.date, csvNum(d.revenue), String(d.orders), csvNum(p.online.cash), csvNum(p.online.card), csvNum(p.online.voucher), csvNum(p.table.cash + p.table.card + p.table.unpaid), csvNum(f.sum), lit(f.litres),
+        c ? c.date : "", c ? csvNum(c.revenue) : "", cf ? csvNum(cf.sum) : ""];
+    })];
   const sample = R.cur.orders.some(H.isSample);
   if (sample) csv.push(["Примерни данни"]);
   return {
-    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample,
+    period: R.period, from: R.from, to: R.to, days: H.span(R.from, R.to), until: R.onlyToday ? H.hm(h.now) : null, sample, history: hasHistory(h),
     cmp: { kind: R.kind, from: R.c.from, to: R.c.to },
     revenue: { cur: H.totals(R.cur).revenue, prev: H.totals(R.prev).revenue },
+    km: { cur: kmOf(shifts, R.from, R.to), prev: kmOf(shifts, R.c.from, R.c.to) },
     pay, prevPay,
-    fuel: { total: fr.total, byDay: fr.byDay, byDriver: fr.byDriver, byCar: fr.byCar }, prevFuel: pf.total,
-    delivery: { delivered, fuelPer: delivered && fr.total.sum ? round2(fr.total.sum / delivered) : null,
+    fuel: { total: fr.total, byDay: fr.byDay, byDriver: fr.byDriver, byCar: fr.byCar }, prevFuel: pf.total, prevFuelDays,
+    delivery: { delivered, fuelPer: delivered && fr.total.sum ? round2(fr.total.sum / delivered) : null, prevFuelPer: prevDelivered && pf.total.sum ? round2(pf.total.sum / prevDelivered) : null,
       fees: zones.map((z) => ({ zone: z.n, free: z.free, fee: z.free ? 0 : z.fee, missing: !z.free && z.fee == null ? OWNER_MISSING.fee : null })), driverCost: OWNER_MISSING.driverCost },
     cash: { date: day, rows, toHand: round2(rows.reduce((a, x) => a + x.toHand, 0)), handed: round2(rows.reduce((a, x) => a + (x.handed || 0), 0)), handTo: DRIVER_MISSING.handTo },
     cost: OWNER_MISSING.cost, csv,
@@ -365,7 +401,8 @@ export interface OwnerDecisions {
   /** the first question without an answer */
   next: string | null;
   /** the no-shows that wait for a decision (the phone masked) */
-  blocks: { rows: BlockRow[]; canDecide: boolean; limit: number };
+  /** blocked: how many numbers are blocked now ("1 блокиран номер.") */
+  blocks: { rows: BlockRow[]; canDecide: boolean; limit: number; blocked: number };
   mail: MailSettings;
   google: { missing: string[] };
   waits: OwnerWaits;
@@ -377,7 +414,7 @@ export async function ownerDecisions(ctx: Ctx, s: StaffCtx): Promise<OwnerDecisi
   return {
     canAnswer: s.user.role === "owner", questions: qs, groups: OWNER_GROUPS,
     counts: { total: qs.length, open: open.length, answered: qs.length - open.length }, next: open[0] ? open[0].id : null,
-    blocks: { rows: bl.rows.filter((r) => r.status === "pending"), canDecide: bl.canDecide, limit: bl.limit },
+    blocks: { rows: bl.rows.filter((r) => r.status === "pending"), canDecide: bl.canDecide, limit: bl.limit, blocked: bl.rows.filter((r) => r.status === "blocked").length },
     mail: await mailOf(ctx), google: { missing: [OWNER_MISSING.google, OWNER_MISSING.rating] }, waits: await waitsOf(ctx, s, notes),
   };
 }

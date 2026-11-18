@@ -12,6 +12,11 @@ export const TIPS: Record<string, Tip[]> = {};
 /** which cards show their table instead of the chart (kept over a redraw) */
 export const showTbl: Record<string, boolean> = {};
 
+/** the top of a count axis: its half is whole too (4 / 2 / 0, 30 / 15 / 0), never "2.5" */
+export function niceCount(v: number): number {
+  let m = 1; while (v > 100 * m) m *= 10;
+  return [2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 50, 60, 80, 100].map((x) => x * m).find((x) => x >= v) || 100 * m;
+}
 export function niceMax(v: number): number {
   if (v <= 0) return 1;
   const p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p;
@@ -27,7 +32,9 @@ function xLabels(labels: string[], xn = 7, ticks: number[] | null = null, line =
     if (idx[idx.length - 1] !== n - 1) { if (n - 1 - idx[idx.length - 1] < step * 0.7 && idx.length > 1) idx[idx.length - 1] = n - 1; else idx.push(n - 1); }
   }
   return '<div class="xa" aria-hidden="true">' + idx.map((i) => {
-    const left = n === 1 ? 50 : line ? (i / (n - 1)) * 100 : ((i + 0.5) / n) * 100, tr = line && i === 0 ? "0" : line && i === n - 1 ? "-100%" : "-50%";
+    /* the first and the last label stay inside the chart (many narrow columns: the label is wider than its column) */
+    const edge = !line && n > 7 && (i === 0 || i === n - 1);
+    const left = n === 1 ? 50 : line ? (i / (n - 1)) * 100 : edge ? (i === 0 ? 0 : 100) : ((i + 0.5) / n) * 100, tr = (line || edge) && i === 0 ? "0" : (line || edge) && i === n - 1 ? "-100%" : "-50%";
     return '<span style="left:' + left + "%;transform:translateX(" + tr + ')">' + esc(labels[i]) + "</span>";
   }).join("") + "</div>";
 }
@@ -35,19 +42,21 @@ const yAxis = (nice: number, f: (v: number) => string = String) => '<div class="
 const grid = () => '<div class="grid"><i></i><i></i><i></i></div>';
 
 export interface ColItem { l: string; v: number; v2?: number; hi?: boolean; t: string; tv: string }
-/** columns; prev: the comparison as a line */
-export function cols(id: string, items: ColItem[], o: { prev?: number[] | null; prevTip?: (i: number) => string; fmt?: (v: number) => string; xn?: number } = {}): string {
-  const prev = o.prev || null, n = items.length;
-  /* counts (no money format): whole ticks only, at least 0 / 1 / 2 */
-  const mx = Math.max(...items.map((x) => (x.v || 0) + (x.v2 || 0)), ...(prev || []), 1), nice = o.fmt ? niceMax(Math.max(mx, 10)) : Math.max(2, niceMax(mx));
+/** columns; prev: the comparison as a line (null: no point, e.g. after "сега"); nowX: the mark "сега" (% of the width) */
+export function cols(id: string, items: ColItem[], o: { prev?: (number | null)[] | null; prevTip?: (i: number) => string; fmt?: (v: number) => string; xn?: number; nowX?: number | null } = {}): string {
+  const prev = o.prev || null, n = items.length, pv = (prev || []).filter((v): v is number => v != null);
+  /* counts (no money format): whole ticks only (the half too) */
+  const mx = Math.max(...items.map((x) => (x.v || 0) + (x.v2 || 0)), ...pv, 1), nice = o.fmt ? niceMax(Math.max(mx, 10)) : niceCount(mx);
   TIPS[id] = items.map((x, i) => ({ t: x.t, tv: x.tv + (prev && o.prevTip ? o.prevTip(i) : "") }));
   const c = '<div class="cols">' + items.map((x, i) => {
     const h = ((x.v || 0) / nice) * 100, h2 = ((x.v2 || 0) / nice) * 100;
     return '<span data-i="' + i + '"' + (x.v2 ? ' class="st"' : "") + ">" + (x.v2 ? '<i class="ns" style="height:' + h2 + '%"></i>' : "") +
       "<i" + (x.hi ? ' class="hi"' : "") + ' style="height:' + Math.max(h, x.v ? 0.8 : 0) + "%" + (x.v2 ? ";border-radius:0" : "") + '"></i></span>';
   }).join("") + "</div>";
-  const line = prev ? '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="ln prev" points="' + prev.map((v, i) => (((i + 0.5) / n) * 100).toFixed(2) + "," + (100 - (v / nice) * 100).toFixed(2)).join(" ") + '"/></svg>' : "";
-  return '<div class="ow-plot" data-plot="' + id + '">' + yAxis(nice, o.fmt) + '<div class="area">' + grid() + c + line + "</div>" + xLabels(items.map((x) => x.l), o.xn) + "</div>";
+  const pts = prev ? prev.map((v, i) => (v == null ? "" : (((i + 0.5) / n) * 100).toFixed(2) + "," + (100 - (v / nice) * 100).toFixed(2))).filter(Boolean).join(" ") : "";
+  const line = pts ? '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline class="ln prev" points="' + pts + '"/></svg>' : "";
+  const now = o.nowX != null ? '<i class="now" style="left:' + o.nowX + '%"></i>' : "";
+  return '<div class="ow-plot" data-plot="' + id + '">' + yAxis(nice, o.fmt) + '<div class="area">' + grid() + c + line + now + "</div>" + xLabels(items.map((x) => x.l), o.xn) + "</div>";
 }
 
 /** a line: cur and prev; cur may end earlier (today up to now) */
@@ -66,9 +75,9 @@ export function line(id: string, labels: string[], cur: (number | null)[], prev:
   if (pc && prev) { const ix = Math.round((pc.x / 100) * (n - 1)); if (prev[ix] != null) py = 100 - ((prev[ix] as number) / nice) * 100; }
   const below = py != null && pc != null && py < pc.y && pc.y - py < 18, bl = below || (!!pc && pc.y < 15);
   const lx = pc ? (bl && o.nowX != null ? Math.max(pc.x, o.nowX) : pc.x) : 0;
-  /* near the right edge the label goes to the left of the point (never out of the card) */
+  /* the first guess; placeLabels() moves it where no line crosses it, inside the chart */
   const toR = bl && lx < 75;
-  const labs = pc && o.curLabel ? '<span class="elab ' + (toR ? "bl" : "l") + '" style="left:' + (toR ? lx : pc.x) + "%;top:" + pc.y + '%">' + esc(o.curLabel) + "</span>" : "";
+  const labs = pc && o.curLabel ? '<span class="elab ' + (toR ? "bl" : "l") + '" data-x="' + pc.x + '" data-nx="' + (o.nowX != null ? o.nowX : "") + '" style="left:' + (toR ? lx : pc.x) + "%;top:" + pc.y + '%">' + esc(o.curLabel) + "</span>" : "";
   const now = o.nowX != null ? '<i class="now" style="left:' + o.nowX + '%"></i>' : "";
   return '<div class="ow-plot" data-plot="' + id + '" data-line="1">' + yAxis(nice, o.fmt0 || o.fmt) + '<div class="area">' + grid() + svg + now + dots + labs + "</div>" + xLabels(labels, o.xn, o.ticks || null, true) + "</div>";
 }
@@ -98,8 +107,40 @@ export function card(o: { id: string; page: string; title: string; sub?: string;
     (tb ? tableHTML(o.table!, plain) : o.inner) + (o.extra || "") + "</section>";
 }
 
-/** the tooltips on pointer move (the table is the accessible way to the same numbers) */
+/** the label of today's point: the first place around the point where no line of the chart crosses it and it stays
+    inside the chart (above left, below right after "сега", below left, above right); else above left on the card's colour */
+export function placeLabels(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>(".ow-plot .elab").forEach((lab) => {
+    const plot = lab.closest<HTMLElement>(".ow-plot")!, area = plot.querySelector<HTMLElement>(".area")!, svg = area.querySelector("svg");
+    const A = area.getBoundingClientRect(), P = plot.getBoundingClientRect(); if (!A.width) return;
+    const segs: [number, number, number, number][] = [];
+    svg?.querySelectorAll("polyline").forEach((pl) => {
+      const p = (pl.getAttribute("points") || "").trim().split(/\s+/).map((xy) => xy.split(",").map(Number)).map(([x, y]) => [A.left + (x / 100) * A.width, A.top + (y / 100) * A.height]);
+      for (let i = 1; i < p.length; i++) segs.push([p[i - 1][0], p[i - 1][1], p[i][0], p[i][1]]);
+    });
+    const hits = (r: DOMRect) => segs.some(([x1, y1, x2, y2]) => {
+      const L = r.left - 2, R = r.right + 2, T = r.top - 2, B = r.bottom + 2;
+      if (Math.max(x1, x2) < L || Math.min(x1, x2) > R) return false;
+      /* sample the segment inside the box's x range */
+      for (let k = 0; k <= 12; k++) { const t = k / 12, x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t; if (x >= L && x <= R && y >= T && y <= B) return true; }
+      return false;
+    });
+    const x = +(lab.dataset.x || 0), nx = lab.dataset.nx ? +lab.dataset.nx : null;
+    const tries: [string, number][] = [["l", x], ["bl", nx != null ? Math.max(x, nx) : x], ["dl", x], ["r", x]];
+    lab.classList.remove("bg");
+    for (const [cls, left] of tries) {
+      lab.classList.remove("l", "bl", "dl", "r"); lab.classList.add(cls); lab.style.left = left + "%";
+      const r = lab.getBoundingClientRect();
+      if (r.left >= P.left && r.right <= P.right && r.top >= P.top - 4 && !hits(r)) return;
+    }
+    lab.classList.remove("l", "bl", "dl", "r"); lab.classList.add("l", "bg"); lab.style.left = x + "%";
+  });
+}
+let placing = false;
+/** the tooltips on pointer move (the table is the accessible way to the same numbers); the point labels placed */
 export function bindTips(root: ParentNode): void {
+  placeLabels(root);
+  if (!placing) { placing = true; window.addEventListener("resize", () => placeLabels(document)); }
   root.querySelectorAll<HTMLElement>("[data-plot]").forEach((pl) => {
     const data = TIPS[pl.dataset.plot || ""], area = pl.querySelector<HTMLElement>(".area");
     if (!data || !area || pl.dataset.tip) return;

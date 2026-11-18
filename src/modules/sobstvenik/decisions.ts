@@ -7,10 +7,10 @@
    "Бележки" (kind "answer"), it changes nothing until the agency applies it. The filter "Чакат отговор / Отговорени" with
    the counts, the list by groups, "Промени отговора". On a computer the card is sticky on the left, the list on the right.
    "Google профил": "Скоро" with the [ЛИПСВА] of the core. Hash: #f=done, #q=<id>, #noshow, #google. */
-import "sc-icons:lock,check,check-circle,caret-right,chat-circle-dots,pencil-simple,paper-plane-right,ticket,info,clock,star";
+import "sc-icons:hourglass,lock,check,check-circle,caret-right,chat-circle-dots,pencil-simple,paper-plane-right,ticket,info,clock,star";
 import { mountBoss, type Boss } from "../boss/frame.ts";
 import { ownerApi, ApiError, type OwnerDecisions, type QuestionView } from "../../client/api-boss.ts";
-import { ic, esc, plural, soon, miss, go, screen, hashMap, setHash, act, ago } from "./common.ts";
+import { ic, esc, plural, soon, miss, go, screen, hashMap, setHash, act, ago, keptAnswers } from "./common.ts";
 
 export async function initDecisions(): Promise<void> {
   const boss = await mountBoss({ module: "sobstvenik", tab: "decisions", title: "Решения", search: { load: () => import("./find.ts").then((m) => m.provider(boss!)) } });
@@ -20,6 +20,8 @@ export async function initDecisions(): Promise<void> {
 
 /* the words of the status of an answer in "Бележки" */
 const NSN: Record<string, string> = { new: "при агенцията, чака преглед", approved: "одобрен, агенцията го прилага", doing: "агенцията го прилага", review: "приложен, чака публикуване", published: "приложен", rejected: "агенцията ще се обади" };
+/** an answer kept on the phone (no connection): shown on its card and in the list until it goes */
+type QV = QuestionView & { kept?: boolean };
 const grpName = (q: QuestionView) => (q.sec === "r" ? (q.id === "v1" ? "Решения за ресторанта · ваучери" : "Решения за ресторанта") : q.group);
 
 function decisionsScreen(boss: Boss): void {
@@ -27,7 +29,7 @@ function decisionsScreen(boss: Boss): void {
   let filt: "wait" | "done" = h0.f === "done" ? "done" : "wait", cur = h0.q || "", other = false, otherErr = "", otherVal = "", focusAfter: "" | "card" | "noshow" = h0.q ? "card" : "";
   body.innerHTML = boss.skeleton(4, "Зареждаме решенията…");
   const S = screen<OwnerDecisions>(boss, {
-    load: () => ownerApi.decisions(), draw, err: "Отговорите ти са запазени. Опитай пак след малко.",
+    load: () => ownerApi.decisions().then(withKept), draw, err: "Отговорите ти са запазени. Опитай пак след малко.",
     after: (d) => {
       boss.badge("decisions", d.waits.blocks + (d.waits.next ? 1 : 0), ["чака теб", "чакат теб"]);
       const ta = body.querySelector<HTMLTextAreaElement>("#dc-other"); if (ta) ta.value = otherVal;
@@ -41,6 +43,12 @@ function decisionsScreen(boss: Boss): void {
     if (jumped) return; jumped = true;
     const k = /(^#|&)noshow($|&)/.test(location.hash) ? "noshow" : /(^#|&)google($|&)/.test(location.hash) ? "google" : "";
     const t = k && document.getElementById(k); if (t) setTimeout(() => t.scrollIntoView({ block: "start" }), 60);
+  }
+  /* the answers waiting on the phone count as answered (marked "Записан на телефона") */
+  function withKept(d: OwnerDecisions): OwnerDecisions {
+    const K = keptAnswers(boss);
+    d.questions = d.questions.map((q): QV => (K[q.id] ? { ...q, kept: true, answer: { answer: K[q.id].answer, other: K[q.id].text, at: new Date().toISOString(), status: "new", noteId: "", applied: false, changed: q.answer ? q.answer.changed + 1 : 0 } } : q));
+    return d;
   }
   const qById = (d: OwnerDecisions, id: string) => d.questions.find((q) => q.id === id) || null;
   const lists = (d: OwnerDecisions) => ({ wait: d.questions.filter((q) => !q.answer), done: d.questions.filter((q) => !!q.answer) });
@@ -69,7 +77,8 @@ function decisionsScreen(boss: Boss): void {
       h += '<div class="dc-list">' + groups.map((g) => "<h3>" + esc(g.n) + " · " + g.l.length + '</h3><div class="rows">' + g.l.map((x) => {
         const a = x.answer;
         return '<button class="dc-row" type="button" data-q="' + esc(x.id) + '" aria-current="' + (x.id === cur) + '"><span class="n" aria-hidden="true">' + (x.n ? esc(x.n) : ic("ticket", 20)) + '</span><span class="t"><b>' + esc(x.text) + "</b><small>" +
-          (a ? (a.answer === "default" ? "Съгласен с варианта по подразбиране" : "Друго: " + esc(a.other)) : "По подразбиране: " + miss(x.def)) + '</small></span><span class="s">' + (a ? '<span class="ow-tag ok">' + ic("check", 16) + "Отговорен</span>" : ic("caret-right", 20)) + "</span></button>";
+          (a ? (a.answer === "default" ? "Съгласен с варианта по подразбиране" : "Друго: " + esc(a.other)) : (x.hasDefault ? "По подразбиране: " : "Сега в системата: ") + miss(x.def)) + '</small></span><span class="s">' +
+          ((x as QV).kept ? '<span class="ow-tag warn">' + ic("hourglass", 16) + "Записан</span>" : a ? '<span class="ow-tag ok">' + ic("check", 16) + "Отговорен</span>" : ic("caret-right", 20)) + "</span></button>";
       }).join("") + "</div>").join("") + "</div>";
     }
     h += "</div>";
@@ -83,7 +92,10 @@ function decisionsScreen(boss: Boss): void {
       '<h3 id="dc-qt">' + esc(q.text) + "</h3>" +
       '<div class="dc-def"><small>' + (canDef ? "Вариант по подразбиране (така работи системата сега)" : "Сега в системата") + "</small><span>" + miss(q.def || "[ЛИПСВА]") + "</span></div>";
     const nextBtn = i < list.length - 1 ? '<button class="pill pill-soft pill-lg" type="button" data-next>Следващ' + ic("caret-right", 22) + "</button>" : "";
-    if (a && !other) {
+    if (a && !other && (q as QV).kept) {
+      h += '<div class="dc-ans kept" role="status">' + ic("hourglass", 24) + "<span><b>" + (a.answer === "default" ? "Съгласен с варианта по подразбиране" : "Отговор: " + esc(a.other)) + '</b><span class="ow-muted">Записан на телефона, още не е изпратен. Тръгва сам, щом има връзка.</span></span></div>' +
+        (nextBtn ? '<div class="dc-acts">' + nextBtn + "</div>" : "");
+    } else if (a && !other) {
       h += '<div class="dc-ans" role="status">' + ic("check-circle", 24) + "<span><b>" + (a.answer === "default" ? "Съгласен с варианта по подразбиране" : "Отговор: " + esc(a.other)) + '</b><span class="ow-muted">Изпратен ' + esc(ago(a.at)) + " · " + esc(NSN[a.status] || "при агенцията") + (a.changed ? " · отговорът е сменян" : "") + "</span></span></div>" +
         '<div class="dc-acts">' + (CAN ? '<button class="pill pill-line pill-lg" type="button" data-change>' + ic("pencil-simple", 22) + "Промени отговора</button>" : "") + nextBtn + "</div>";
     } else if (!CAN) {
@@ -109,7 +121,7 @@ function decisionsScreen(boss: Boss): void {
         '<p class="ow-note">Блокиран номер не може да резервира онлайн и да прави профил.</p>' +
         (B.canDecide ? '<div class="ow-row"><button class="pill pill-ink pill-lg" type="button" data-bl="block" data-ref="' + esc(b.ref) + '">' + ic("lock", 22) + 'Блокирай</button><button class="pill pill-line pill-lg" type="button" data-bl="clear" data-ref="' + esc(b.ref) + '">Не блокирай</button></div>' : "") + "</div>").join("") + "</div>"
         : '<p class="td-ok" style="display:flex;gap:12px;align-items:center;margin:0">' + ic("check-circle", 26) + "<span><b>Няма неявили се за решение.</b></span></p>") +
-      '<p class="ow-note">Целият списък и отблокирането: <a class="link" href="' + go.reservations("blocks") + '">Резервации · Блокиране' + ic("caret-right", 18) + "</a></p></section>";
+      '<p class="ow-note">' + (B.blocked ? plural(B.blocked, "блокиран номер", "блокирани номера") + ". " : "") + 'Целият списък и отблокирането: <a class="link" href="' + go.reservations("blocks") + '">Резервации · Блокиране' + ic("caret-right", 18) + "</a></p></section>";
   }
 
   const googleHTML = (d: OwnerDecisions) => '<section class="ow-card" id="google" aria-labelledby="dc-gh" data-edit-id="own.decisions.google"><header><div><h2 id="dc-gh">Google профил</h2></div>' + soon() + '</header><div class="dc-g">' +
@@ -127,7 +139,8 @@ function decisionsScreen(boss: Boss): void {
   function send(q: QuestionView, kind: "default" | "other", text: string) {
     const was = cur, d = S.data()!;
     void act(boss, {
-      op: "answer", args: [q.id, { answer: kind, text: kind === "other" ? text : undefined }], label: "Отговорът" + (q.n ? " (т. " + q.n + ")" : ""),
+      op: "answer", args: [q.id, { answer: kind, text: kind === "other" ? text : undefined }], label: "Отговорът" + (q.n ? " на т. " + q.n : ""),
+      offMsg: "Отговорът" + (q.n ? " на т. " + q.n : "") + " е записан на телефона. Тръгва сам, щом има връзка.",
       run: () => ownerApi.answer(q.id, { answer: kind, text: kind === "other" ? text : undefined }),
       ok: (r) => {
         other = false; otherErr = ""; otherVal = "";
@@ -137,7 +150,13 @@ function decisionsScreen(boss: Boss): void {
           undo: () => { ownerApi.answerUndo(q.id).then(() => { cur = was; focusAfter = "card"; sync(); void S.reload(); }, (e) => boss.toast(e instanceof ApiError ? e.message : "Не успяхме да го върнем. Опитай пак.")); },
         });
       },
-      queued: () => { other = false; otherErr = ""; otherVal = ""; S.redraw(); },
+      /* without a connection: the card shows the answer as waiting and the next question comes, as after a success */
+      queued: () => {
+        other = false; otherErr = ""; otherVal = "";
+        withKept(d);
+        if (filt === "wait") { const w = lists(d).wait; cur = w[0] ? w[0].id : ""; }
+        sync(); S.redraw(); focusCard();
+      },
       fail: (e) => { if (e instanceof ApiError && e.status === 422 && e.fields && e.fields.text) { otherErr = e.fields.text; other = true; S.redraw(); body.querySelector<HTMLElement>("#dc-other")?.focus(); return true; } return false; },
     });
   }
@@ -171,6 +190,7 @@ function decisionsScreen(boss: Boss): void {
   /* no "Отмени" (decision 16.11): the core does not bring back exactly the earlier state */
   function block(ref: string, action: "block" | "clear", who: string) {
     void act(boss, { op: "block", args: [ref, action], label: action === "block" ? who + " е блокиран" : who + " не е блокиран", run: () => ownerApi.block(ref, action),
+      offMsg: who + (action === "block" ? " ще бъде блокиран" : " ще остане без блокиране") + ", щом има връзка. Решението е записано на телефона.",
       ok: () => { focusAfter = "noshow"; void S.reload(); boss.toast(action === "block" ? who + " е блокиран." : who + " не е блокиран.", { action: { label: "Резервации", href: go.reservations("blocks") } }); },
       queued: () => { document.getElementById("dc-nh")?.focus({ preventScroll: true }); } });
   }

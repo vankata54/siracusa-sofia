@@ -75,3 +75,11 @@ export async function layout(page: Page): Promise<{ side: boolean; tiny: string[
 export const isPhone = (page: Page) => (page.viewportSize()?.width || 1440) < 900;
 /** "10,22 €" */
 export const eur = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace(".", ",") + " €";
+/** one order 3 days ago, written straight into the test database (the API takes no order for an earlier day): the
+    restaurant has history, so "Тенденции" and "Финанси" show their numbers (a new restaurant: sobstvenik-fresh.spec.ts) */
+export function seedPast(db = DB): void {
+  const ts = Date.now() - 3 * 864e5, day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date(ts)), at = Date.parse(day + "T12:00:00+02:00");
+  const o = { id: "own-past-1", no: "6999", key: "kpast", mode: "pickup", channel: "web", lines: [{ id: "kebapcheta", name: "Кебапчета", unit: 7.61, q: 1, mods: [], extra: 0 }], sub: 7.61, disc: 0, fee: 0, total: 7.61,
+    pay: "cash", payLabel: "В брой", status: "picked", placedAt: "12:00", ts: at, phone: "0888123400", name: "Клиент", zone: "", addr: "", times: {}, createdAt: new Date(at).toISOString(), updatedAt: new Date(at).toISOString() };
+  dbPut(db, "orders", o, { no: 6999, mode: o.mode, status: o.status, phone: o.phone, total: o.total, channel: o.channel });
+}

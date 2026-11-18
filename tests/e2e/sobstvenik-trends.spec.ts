@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur } from "./sobstvenik-helpers.ts";
+import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur, seedPast } from "./sobstvenik-helpers.ts";
+
+test.beforeAll(() => seedPast());
 
 /* "Собственик" › "Тенденции" (/sobstvenik/tendentsii/) and "Финанси и гориво" (/sobstvenik/finansi/) on the real
    server: the period and "Сравни с" (the hash, the line "спрямо …", "Миналата година" = 364 days back), the KPIs equal
@@ -61,6 +63,24 @@ test("„Избери дати“: over 92 days -> the notice and 92 days", asyn
   await expect(page.locator("#ow-a")).toHaveValue(v);
   await expect(page.locator("#ow-ch")).toContainText("Най-много 92 дни.");
   await expect(page).toHaveURL(new RegExp("p=custom.*a=" + v));
+});
+
+test("a period over 92 days in the address: set right with the notice, never an error", async ({ page, context }) => {
+  const errs = errors(page);
+  await signIn(context, "owner");
+  const t = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
+  await page.goto("/sobstvenik/tendentsii/#p=custom&a=2025-01-01&b=" + t);
+  await ready(page, "Тенденции", ".ow-kpis, .ow-card");
+  await expect(page.locator(".bs-toast")).toContainText("Най-много 92 дни: показваме");
+  const a = new Date(Date.parse(t) - 91 * 864e5).toISOString().slice(0, 10);
+  await expect(page.locator("#ow-a")).toHaveValue(a);
+  await expect(page).toHaveURL(new RegExp("a=" + a));
+  await expect(page.locator(".ow-banner.danger")).toHaveCount(0);
+  /* a broken date: the default period, no error */
+  await page.goto("/sobstvenik/finansi/#p=custom&a=2026-02-31&b=" + t);
+  await ready(page, "Финанси и гориво", ".ow-kpis, .ow-card");
+  await expect(page.locator(".ow-banner.danger")).toHaveCount(0);
+  expect(errs).toEqual([]);
 });
 
 test("„Изтегли CSV“: the name, the header first, a row per day", async ({ page, context }) => {
@@ -136,7 +156,7 @@ test("„Финанси и гориво“: the revenue = the core, the payment,
   const [dl] = await Promise.all([page.waitForEvent("download"), page.locator("[data-csv]").click()]);
   expect(dl.suggestedFilename()).toMatch(/^siracusa-finansi-\d{4}-\d\d-\d\d-\d{4}-\d\d-\d\d\.csv$/);
   const rows = fs.readFileSync((await dl.path())!, "utf8").replace(/^﻿/, "").split("\n");
-  expect(rows[0]).toBe("Ден;Оборот €;Поръчки;Гориво €;Литри");
+  expect(rows[0]).toBe("Ден;Оборот €;Поръчки;В брой €;Карта при получаване €;Ваучер €;На маса €;Гориво €;Литри;Сравнение: ден;Сравнение: оборот €;Сравнение: гориво €");
   expect(rows.length).toBe(8);
   /* the manager: the core says 403, the module is not his */
   const base = new URL(page.url()).origin, ctx = await page.context().browser()!.newContext({ baseURL: base });

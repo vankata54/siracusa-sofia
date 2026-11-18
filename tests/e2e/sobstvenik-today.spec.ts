@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur } from "./sobstvenik-helpers.ts";
+import { signIn, webOrder, errors, axe, ready, layout, isPhone, eur, seedPast } from "./sobstvenik-helpers.ts";
+
+test.beforeAll(() => seedPast());
 
 /* "Собственик" › "Днес" (/sobstvenik/, src/modules/sobstvenik/today.ts) on the real server and its core: the main number
    equals the admin dashboard's "Днес: X € от N поръчки" after web orders made through the site's API (and it follows a new
@@ -22,8 +24,10 @@ test("„Днес“ = the dashboard's „Днес: X € от N поръчки�
   await webOrder(context, [{ id: "kebapcheta", q: 1 }]);
   s = await sum();
   await expect(page.locator(".td-hero .sum")).toHaveText(eur(s.sum), { timeout: 10_000 });
-  /* no history yet: no comparison at all (it comes after 4 weeks; tests/e2e/sobstvenik-history.spec.ts has the days) */
-  await expect(page.locator(".td-hero .cmp")).toHaveCount(0);
+  /* "Миналия … по това време" is a sum with cents, without a percent */
+  await expect(page.locator(".td-hero .lw").filter({ hasText: "по това време" })).toHaveText(/^(Миналия|Миналата) [а-я]+ по това време: \d+,\d\d €$/);
+  /* "На живо": the tables of the conditional plan say so */
+  await expect(page.locator(".bs-main")).toContainText("Масите са условни: [ЛИПСВА: истински маси и план]");
   await expect(page.locator(".td-hero")).toContainText("Пълният отчет в админа");
   await expect(page.locator('.td-hero a.link')).toHaveAttribute("href", "/admin/reports/#p=today");
   /* "На живо": "Смяната сега" leads to the manager's module */
@@ -31,28 +35,6 @@ test("„Днес“ = the dashboard's „Днес: X € от N поръчки�
   /* the five channels */
   await expect(page.locator("#channels .ow-hb .r")).toHaveCount(5);
   await expect(page.locator("#channels")).toContainText("Вземане от сайта");
-  expect(errs).toEqual([]);
-});
-
-test("a new restaurant: „Още събираме история“, „Чака те“ has the next question for the owner only", async ({ page, context, browser }) => {
-  const errs = errors(page);
-  await signIn(context, "owner");
-  await page.goto("/sobstvenik/");
-  await ready(page, "Днес");
-  /* the fresh test database has no days before today */
-  await expect(page.locator(".ow-banner")).toContainText("Още събираме история");
-  await expect(page.locator(".ow-banner")).toContainText("Сравнението идва след 4 седмици.");
-  const wait = page.locator(".td-wait");
-  await expect(wait).toContainText("Следващ въпрос от агенцията");
-  await expect(wait.locator('a[href^="/sobstvenik/reshenia/#q="]')).toHaveCount(1);
-  /* the main admin: no question (he only reads them) */
-  const ctx = await browser.newContext({ viewport: page.viewportSize()!, baseURL: new URL(page.url()).origin });
-  const p2 = await ctx.newPage();
-  await signIn(ctx, "admin");
-  await p2.goto("/sobstvenik/");
-  await ready(p2, "Днес");
-  await expect(p2.locator(".td-wait")).not.toContainText("Следващ въпрос от агенцията");
-  await ctx.close();
   expect(errs).toEqual([]);
 });
 

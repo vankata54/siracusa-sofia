@@ -73,6 +73,29 @@ test.describe.serial("@desktop the questions of the agency", () => {
     expect(errs).toEqual([]);
   });
 
+  test("no connection: the answer is kept on the phone, shown on its card, the next question comes; it goes when the connection is back", async ({ page, context }) => {
+    await signIn(context, "owner");
+    await page.goto("/sobstvenik/reshenia/");
+    await ready(page, "Решения", "#dc-focus, .ow-empty");
+    const q = (await card(page).getAttribute("data-qid"))!, n = await waitCount(page);
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    await expect(page.locator(".bs-net")).toBeVisible();
+    if (!(await card(page).locator("[data-agree]").count())) { await card(page).locator("[data-other]").click(); await page.locator("#dc-other").fill("Да."); await card(page).locator("[data-send]").click(); }
+    else await card(page).locator("[data-agree]").click();
+    await expect(page.locator(".bs-toast")).toHaveText(/^Отговорът (на т\. \S+ )?е записан на телефона\. Тръгва сам, щом има връзка\.$/);
+    await expect(card(page)).not.toHaveAttribute("data-qid", q);
+    expect(await waitCount(page)).toBe(n - 1);
+    await page.locator('.dc-filter [data-f="done"]').click();
+    await page.locator('.dc-row[data-q="' + q + '"]').click();
+    await expect(card(page).locator(".dc-ans.kept")).toContainText("Записан на телефона, още не е изпратен.");
+    await expect(page.locator('.dc-row[data-q="' + q + '"]')).toContainText("Записан");
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect.poll(async () => (await answers(context, q)).length, { timeout: 15_000 }).toBe(1);
+    await expect(card(page).locator(".dc-ans.kept")).toHaveCount(0, { timeout: 10_000 });
+  });
+
   test("the main admin reads only: „Отговаря собственикът“, no „Съгласен“, the core says 403", async ({ page, context }) => {
     await signIn(context, "admin");
     await page.goto("/sobstvenik/reshenia/");
@@ -108,6 +131,7 @@ test("no-shows: „Блокирай“ with the confirmation, „Не блоки
   await expect(page.locator(".bs-toast a")).toHaveAttribute("href", "/admin/reservations/#blocks");
   await expect(it(a)).toHaveCount(0);
   await expect(page.locator("#dc-nh")).toBeFocused();
+  await expect(page.locator("#noshow")).toContainText(/\d+ блокира(н номер|ни номера)\./);
   await it(b).locator('[data-bl="clear"]').click();
   await expect(page.locator(".bs-toast")).toContainText(b + " не е блокиран.");
   await expect(it(b)).toHaveCount(0);

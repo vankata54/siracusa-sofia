@@ -13,7 +13,7 @@ const T0 = Date.parse("2026-11-16T17:42:00Z"); /* Monday 19:42 in Sofia */
 function mk() {
   const t = { now: T0 }, repo = new MemoryRepo();
   const at = (clock: string) => createCore({ repo, hasher, now: () => new Date(t.now), clock, smsDemo: true });
-  return { core: at("19:42"), at, t };
+  return { core: at("19:42"), at, t, repo };
 }
 type Core = ReturnType<typeof mk>["core"];
 const ROLES: RoleId[] = ["admin", "owner", "manager", "waiter", "kitchen", "driver", "marketing"];
@@ -207,5 +207,49 @@ describe("'Финанси'", () => {
     expect(f.delivery.fees.some((z) => z.missing === "[ЛИПСВА: такса в €]")).toBe(true);
     expect(f.cash).toMatchObject({ rows: [], toHand: 0, handed: 0, handTo: "[ЛИПСВА: на кого се предават парите]" });
     expect(f.cost).toBe("[ЛИПСВА: себестойност на ястията]");
+  });
+});
+
+describe("after the review of the owner's screens", () => {
+  it("'На живо' says [ЛИПСВА] while the plan of the hall is the conditional one; a new restaurant has no history", async () => {
+    const m = mk(), { core } = m, { s } = await people(core);
+    await order(core);
+    const t = await core.owner.today(s.owner);
+    expect(t.live.tables.missing).toBe("[ЛИПСВА: истински маси и план]");
+    expect((await core.owner.trends(s.owner, { period: "7" })).history).toBe(false);
+    expect((await core.owner.finance(s.owner, { period: "7" })).history).toBe(false);
+    await past(m, "2026-11-10", 1);
+    expect((await core.owner.trends(s.owner, { period: "7" })).history).toBe(true);
+    expect((await core.owner.finance(s.owner, { period: "7" })).history).toBe(true);
+  });
+  it("'Последните 7 дни': the day a week ago only up to this minute (as today), the days before it whole", async () => {
+    const m = mk(), { core } = m, { s } = await people(core);
+    await past(m, "2026-11-09", 2); await past(m, "2026-11-08", 1);
+    /* the same Monday at 21:00 (after 19:42): not in the comparison of today */
+    m.t.now = Date.UTC(2026, 10, 9, 19, 0); await order(m.at("21:00")); m.t.now = T0;
+    const t = await core.owner.today(s.owner), d = t.last7.days;
+    expect(d[6].weekAgo).toMatchObject({ date: "2026-11-09", orders: 2 });
+    expect(d[5].weekAgo).toMatchObject({ date: "2026-11-08", orders: 1 });
+    expect(t.last7.weekAgo.orders).toBe(3);
+  });
+  it("'Финанси': the km (null without shifts), the fuel of the comparison by day, the CSV by day with the payment and the comparison; the blocked count", async () => {
+    const { core } = mk(), { s } = await people(core);
+    await order(core);
+    const f = await core.owner.finance(s.owner, { period: "7" });
+    expect(f.km).toEqual({ cur: null, prev: null });
+    expect(f.prevFuelDays).toHaveLength(7); expect(f.prevFuelDays[0]).toMatchObject({ date: f.cmp.from, sum: 0 });
+    expect(f.delivery.prevFuelPer).toBeNull();
+    expect(f.csv[0]).toEqual(["Ден", "Оборот €", "Поръчки", "В брой €", "Карта при получаване €", "Ваучер €", "На маса €", "Гориво €", "Литри", "Сравнение: ден", "Сравнение: оборот €", "Сравнение: гориво €"]);
+    expect(f.csv).toHaveLength(8); expect(f.csv[7][0]).toBe("2026-11-16"); expect(f.csv[7][3]).toBe(f.csv[7][1]); expect(f.csv[7][9]).toBe("2026-11-09");
+    expect((await core.owner.decisions(s.owner)).blocks.blocked).toBe(0);
+  });
+  it("'Изминати км': the finished legs and the closed shifts started in the period", async () => {
+    const m = mk(), { core } = m, { s } = await people(core);
+    const sh = (id: string, startedAt: string, extra: Record<string, unknown>) => m.repo.put("shifts", { id, role: "driver", user: "u", name: "Шофьор 1", car: "c2", float: null, nav: "google", parked: "", route: { pick: "fast", own: null }, driving: null, last: null, createdAt: startedAt, updatedAt: startedAt, legFrom: startedAt, startedAt, ...extra });
+    await sh("a", "2026-11-15T08:00:00Z", { status: "closed", kmStart: 1100, kmEnd: 1180, legs: [{ car: "c1", kmStart: 500, kmEnd: 540, from: "2026-11-15T08:00:00Z", to: "2026-11-15T12:00:00Z" }] });
+    await sh("b", "2026-11-16T08:00:00Z", { status: "open", kmStart: 2000, legs: [] });
+    await sh("c", "2026-11-05T08:00:00Z", { status: "closed", kmStart: 100, kmEnd: 130, legs: [] });
+    const f = await core.owner.finance(s.owner, { period: "7" });
+    expect(f.km).toEqual({ cur: 120, prev: 30 });
   });
 });

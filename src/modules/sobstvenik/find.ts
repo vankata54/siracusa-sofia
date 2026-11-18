@@ -72,7 +72,7 @@ export function provider(boss: Boss): BossSearch {
   const dishHref = (id: string) => { const s = per(), h = ["dish=" + encodeURIComponent(id)]; if (findPer.s) { if (s.per !== "7") h.unshift("p=" + s.per); if (s.cmp === "year") h.push("c=year"); if (s.per === "custom") h.push("a=" + s.a, "b=" + s.b); } return go.trends(h.join("&")); };
   function dRow(x: Dish): string {
     const v = sales.get(perKey() + x.id), out = x.t.indexOf("out") > -1, c = catById[x.cat];
-    return '<a class="ow-fr" href="' + esc(dishHref(x.id)) + '">' + pic(x) + "<span><b>" + esc(x.n) + "</b><small>" + esc(c ? c.n : "") + " · " + fmt(x.p) + (out ? " · Изчерпано днес" : "") + '</small></span><span class="fv">' +
+    return '<a class="ow-fr" href="' + esc(dishHref(x.id)) + '">' + pic(x) + "<span><b>" + esc(x.n) + "</b><small>" + esc(c ? c.n : "") + " · " + fmt(x.p).replace(" €", "\u00a0€") + (out ? " · Изчерпано днес" : "") + '</small></span><span class="fv">' +
       (v ? (v.q ? plural(v.q, "брой", "броя") + (v.revenue != null ? "<small>" + fmt(v.revenue) + "</small>" : "") : "<small>0 броя</small>") : "") + "</span></a>";
   }
   const row = (href: string, icon: string, title: string, meta: string) => '<a class="ow-fr" href="' + esc(href) + '"><span class="fi">' + ic(icon, 22) + "</span><span><b>" + esc(title) + "</b>" + (meta ? "<small>" + meta + "</small>" : "") + '</span><span class="fv">' + ic("caret-right", 20) + "</span></a>";

@@ -16,7 +16,7 @@ import { fmt } from "../../lib/format.ts";
 import { murl } from "../routes.ts";
 import { aurl } from "../../admin/routes.ts";
 import { showTbl } from "./charts.ts";
-import { outbox } from "../boss/outbox.ts";
+import { outbox, fresh, type Kept } from "../boss/outbox.ts";
 
 export { ic, esc, plural, fmt };
 export const NB = " ";
@@ -48,7 +48,11 @@ export const sample = (t?: string) => '<span class="ow-tag">' + ic("info", 16) +
 export const soon = () => '<span class="ow-tag soon">' + ic("sparkle", 16) + "Скоро</span>";
 export const missing = (t: string) => '<span class="missing">[ЛИПСВА: ' + esc(t) + "]</span>";
 /** the text of the core with its "[ЛИПСВА: …]" marks shown as such */
-export const miss = (t: string) => esc(t).replace(/\[ЛИПСВА(?::\s*([^\]]*))?\]/g, (_m, x) => '<span class="missing">[ЛИПСВА' + (x ? ": " + x : "") + "]</span>");
+export const miss = (t: string) => esc(t).replace(/\[ЛИПСВА(?::\s*([^\]]*))?\]/g, (_m, x) => '<span class="missing">[ЛИПСВА' + (x ? ": " + String(x).replace(/ (€|л|км)/g, NB + "$1") : "") + "]</span>");
+/** the sum in running text: "7,15 €" never broken before "€" */
+export const fmtNb = (v: number) => fmt(v).replace(" €", NB + "€");
+/** a comparison with nothing to compare with (0 in the earlier period): said, not hidden */
+export const NONE = '<span class="ow-d flat"><small>няма с какво да се сравни</small></span>';
 export const banner = (o: { tone?: string; icon?: string; title?: string; text?: string; action?: string }) =>
   '<div class="ow-banner ' + (o.tone || "") + '" role="' + (o.tone === "danger" || o.tone === "warn" ? "alert" : "status") + '">' + ic(o.icon || "info", 26) + '<div class="tx">' + (o.title ? "<b>" + esc(o.title) + "</b>" : "") + (o.text || "") + "</div>" + (o.action || "") + "</div>";
 export const isOff = (e: unknown) => e instanceof ApiError && e.code === "offline";
@@ -78,12 +82,22 @@ export function setHash(o: Record<string, string>): void {
   const h = Object.keys(o).filter((k) => o[k]).map((k) => k + "=" + encodeURIComponent(o[k])).join("&");
   try { history.replaceState(history.state, "", location.pathname + location.search + (h ? "#" + h : "")); } catch { /* ignore */ }
 }
-export function perFromHash(): PerState {
-  const h = hashMap(), t = today(), s: PerState = { per: "7", cmp: h.c === "year" ? "year" : "prev", a: addDays(t, -13), b: t };
+const okYmd = (v: string) => /^\d{4}-\d\d-\d\d$/.test(v) && new Date(v + "T12:00:00Z").toISOString().slice(0, 10) === v;
+/** the period from the address; dates in the future, reversed or over 92 days are set right (cut: the notice to say) */
+export function perFromHash(): PerState & { cut?: boolean } {
+  const h = hashMap(), t = today(), s: PerState & { cut?: boolean } = { per: "7", cmp: h.c === "year" ? "year" : "prev", a: addDays(t, -13), b: t };
   if (PERIODS.some((p) => p[0] === h.p)) s.per = h.p as Per;
-  if (/^\d{4}-\d\d-\d\d$/.test(h.a || "") && /^\d{4}-\d\d-\d\d$/.test(h.b || "")) { s.a = h.a; s.b = h.b; }
+  if (okYmd(h.a || "") && okYmd(h.b || "")) {
+    let a = h.a, b = h.b;
+    if (a > b) { const x = a; a = b; b = x; }
+    if (b > t) b = t; if (a > b) a = b;
+    if (span(a, b) > MAX_DAYS) { a = addDays(b, -(MAX_DAYS - 1)); s.cut = true; }
+    s.a = a; s.b = b;
+  }
   return s;
 }
+/** "Най-много 92 дни: показваме …" (the prototype's notice) */
+export const cutNotice = (s: PerState) => "Най-много " + MAX_DAYS + " дни: показваме " + fd(s.a, true) + " - " + fd(s.b, true);
 export function perHash(s: PerState, extra: Record<string, string> = {}): void {
   setHash({ ...hashMap(), p: s.per === "7" ? "" : s.per, c: s.cmp === "year" ? "year" : "", a: s.per === "custom" ? s.a : "", b: s.per === "custom" ? s.b : "", ...extra });
 }
@@ -130,14 +144,18 @@ export function bindPeriod(boss: Boss, s: PerState, load: () => Promise<void>, w
     const t0 = today(); if (b > t0) b = t0; if (a > t0) a = t0;
     const cut = span(a, b) > MAX_DAYS; if (cut) a = addDays(b, -(MAX_DAYS - 1));
     s.a = a; s.b = b; perHash(s, extra());
+    /* the fields show the period at once (the numbers follow) */
+    root.querySelector<HTMLInputElement>("[data-ca]")!.value = a; root.querySelector<HTMLInputElement>("[data-cb]")!.value = b;
     const which = t.matches("[data-ca]") ? "[data-ca]" : "[data-cb]";
-    load().then(() => { told(); if (cut) boss.toast("Най-много " + MAX_DAYS + " дни: показваме " + fd(a, true) + " - " + fd(b, true)); const f = root.querySelector<HTMLElement>(which); if (f) f.focus({ preventScroll: true }); });
+    load().then(() => { told(); if (cut) boss.toast(cutNotice(s)); const f = root.querySelector<HTMLElement>(which); if (f) f.focus({ preventScroll: true }); });
   });
 }
 
 /* ---------- one screen: load, draw, live, a quiet look ---------- */
 export interface Screen<T> { reload(quiet?: boolean): Promise<void>; data(): T | null; redraw(): void }
-export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) => string; after?: (d: T) => void; err: string; top?: () => string; noRights?: string; every?: number; live?: string[] }): Screen<T> {
+export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) => string; after?: (d: T) => void; err: string; top?: () => string; noRights?: string; every?: number; live?: string[];
+  /** a period the core refuses (422): set it right and load again (never an error that "Опитай пак" cannot fix) */
+  bad?: () => boolean }): Screen<T> {
   let d: T | null = null, seq = 0, t: ReturnType<typeof setTimeout> | undefined;
   const body = boss.body;
   function redraw() {
@@ -169,7 +187,7 @@ export function screen<T>(boss: Boss, o: { load: () => Promise<T>; draw: (d: T) 
       if (my !== seq) return latest;
       if (isOff(e)) { if (!d) body.innerHTML = (o.top ? o.top() : "") + boss.error("Няма връзка със сървъра. Щом се върне, зареждаме сами.", "Няма връзка"); return; }
       if (e instanceof ApiError && e.status === 403) { body.innerHTML = boss.noRights(o.noRights || "dashboard"); return; }
-      if (e instanceof ApiError && e.status === 422) { boss.toast(e.message); if (d) return; }
+      if (e instanceof ApiError && e.status === 422 && o.bad && o.bad()) { boss.toast("Избери период до " + MAX_DAYS + " дни, не в бъдещето. Показваме последните 7 дни."); void reload(false); return; }
       if (!d || !quiet) body.innerHTML = (o.top ? o.top() : "") + boss.error(o.err);
     } finally {
       if (my === seq) body.removeAttribute("aria-busy");
@@ -199,9 +217,11 @@ type Op = "answer" | "block" | "setMail";
 /* the box of THIS person (src/modules/boss/outbox.ts: the same person, the same shift day from 04:00, up to 2 hours) */
 let me = "";
 const BX = outbox("own-outbox", () => me);
-export async function act<T>(boss: Boss, o: { op: Op; args: unknown[]; label: string; run: () => Promise<T>; ok: (r: T) => void; queued?: () => void; fail?: (e: unknown) => boolean }): Promise<T | null> {
+export async function act<T>(boss: Boss, o: { op: Op; args: unknown[]; label: string; run: () => Promise<T>; ok: (r: T) => void; queued?: () => void; fail?: (e: unknown) => boolean;
+  /** the whole sentence of the notice when the action waits on the phone */
+  offMsg?: string }): Promise<T | null> {
   me = boss.me.user.username;
-  const keep = () => { BX.keep(o.op, o.args, o.label); boss.toast(o.label + "." + OFF); if (o.queued) o.queued(); return null; };
+  const keep = () => { BX.keep(o.op, o.args, o.label); boss.toast(o.offMsg || o.label + "." + OFF); if (o.queued) o.queued(); return null; };
   if (boss.offline()) return keep();
   try { const r = await o.run(); o.ok(r); return r; }
   catch (e) {
@@ -210,6 +230,14 @@ export async function act<T>(boss: Boss, o: { op: Op; args: unknown[]; label: st
     boss.toast(msgOf(e));
     return null;
   }
+}
+/** the answers of this person kept on the phone (not sent yet): question -> {answer, text} (the last one wins) */
+export function keptAnswers(boss: Boss): Record<string, { answer: "default" | "other"; text: string }> {
+  const out: Record<string, { answer: "default" | "other"; text: string }> = {}, me = boss.me.user.username;
+  let l: Kept[] = [];
+  try { const v = JSON.parse(localStorage.getItem("own-outbox") || "[]"); l = Array.isArray(v) ? v : []; } catch { /* private mode */ }
+  for (const k of l) if (k && k.op === "answer" && k.user === me && fresh(k)) { const a = (k.args[1] || {}) as { answer?: string; text?: string }; out[String(k.args[0])] = { answer: a.answer === "other" ? "other" : "default", text: a.text || "" }; }
+  return out;
 }
 export async function flush(boss: Boss): Promise<void> {
   me = boss.me.user.username;
