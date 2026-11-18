@@ -248,9 +248,9 @@ test("every tab of both modules: the frame, the right tab, the skeleton in the m
       await expect(bar.locator((isPhone(page) ? "a" : "a.it") + " > span:first-of-type")).toHaveText(tabs.map((t) => t[1].split(" ")[0]));
       await expect(bar.locator(isPhone(page) ? "a" : "a.it").nth(1)).toHaveAttribute("href", tabs[1][0]);
       /* the mount point of the screen: the skeleton (hidden from the reader) with a hidden status, or the screen once its
-         author has filled it ("Управител": src/modules/upravitel, [data-upscr]) */
+         author has filled it ("Управител": src/modules/upravitel, [data-upscr]; "Собственик": src/modules/sobstvenik, [data-owscr]) */
       const body = page.locator("#main [data-body]");
-      await expect(body.locator('[aria-hidden="true"] .skel, [data-upscr]').first()).toBeVisible();
+      await expect(body.locator('[aria-hidden="true"] .skel, [data-upscr], [data-owscr]').first()).toBeVisible();
       /* the top bar: "Търси" (56 x 56 on the phone), the profile (48 x 48), no sound for the owner */
       if (isPhone(page)) { const b = (await page.locator('[data-bs="find"]').boundingBox())!; expect(b.width).toBeGreaterThanOrEqual(56); expect(b.height).toBe(56); }
       else { await expect(page.locator("#bs-q")).toBeVisible(); await expect(page.locator(".bs-top a.bs-toadmin").last()).toHaveText("Към админа"); }

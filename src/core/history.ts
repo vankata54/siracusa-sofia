@@ -29,7 +29,15 @@ export const HISTORY_MSG = { range: "Изберете период от-до, д
 export const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
 /* ---------- small helpers (Sofia days, the shop clock) ---------- */
-export const dayOf = (o: Pick<Order, "ts" | "createdAt">): string => sofiaYmd(new Date(o.ts || o.createdAt));
+/* the Sofia day of an order, remembered per moment: the reports ask it for every order of every day of a period
+   (92 days × hundreds of orders); Intl formatting each time made "Тенденции" take seconds */
+const DAY_CACHE = new Map<number | string, string>();
+export const dayOf = (o: Pick<Order, "ts" | "createdAt">): string => {
+  const k = o.ts || o.createdAt;
+  let d = DAY_CACHE.get(k);
+  if (d === undefined) { d = sofiaYmd(new Date(k)); if (DAY_CACHE.size > 50_000) DAY_CACHE.clear(); DAY_CACHE.set(k, d); }
+  return d;
+};
 /** the minute of the day the order was placed (the shop clock) */
 export const minOf = (o: Pick<Order, "placedAt">): number => +o.placedAt.slice(0, 2) * 60 + +o.placedAt.slice(3);
 export const span = (a: string, b: string): number => Math.round((Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10))) / 864e5) + 1;

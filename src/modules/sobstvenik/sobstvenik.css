@@ -1,0 +1,146 @@
+/* Siracusa · „Собственик“: само каквото екраните имат отделно в прототипа (design/pages-sobstvenik/today.html,
+   trends.html, finance.html, decisions.html, <style>), 1:1. Всичко останало е в src/modules/boss/boss.css (ow-*).
+   Само токени; ширините с @container app (и card за тесните карти). */
+/* ---------- today ---------- */
+.td-grid{grid-auto-flow:row dense}
+.td-hero{display:grid; gap:14px; align-self:stretch; align-content:space-between; padding:20px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow)}
+.td-hero .l{display:flex; align-items:center; gap:8px; font-weight:700; color:var(--muted); font-size:15px}
+.td-hero .l .ic{color:var(--red)}
+.td-hero .sum{font-size:56px; line-height:1; letter-spacing:-.05em; font-weight:800; white-space:nowrap}
+.td-hero .of{font-size:19px; font-weight:700; margin-top:6px}
+.td-hero .cmp{display:grid; gap:8px; justify-items:start}
+.td-hero .cmp .ow-d{white-space:normal}
+.td-hero .lw{font-size:16px; color:var(--muted); font-weight:600}
+.td-hero .lw b{color:var(--ink)}
+.td-hero .mini{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:4px}
+.td-hero .mini > div{padding:12px 14px; border-radius:18px; background:var(--surface-2); display:grid; gap:2px; align-content:start; min-width:0}
+.td-hero .mini .k{font-size:14px; font-weight:700; color:var(--muted)}
+.td-hero .mini b{font-size:22px; letter-spacing:-.03em; white-space:nowrap}
+.td-hero .ft{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
+@container app (max-width:380px){ .td-hero{padding:16px} .td-hero .sum{font-size:46px} }
+@container app (min-width:900px){ .td-hero .sum{font-size:72px} }
+.td-live{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
+.td-live a{display:grid; gap:2px; align-content:start; padding:12px; border-radius:18px; background:var(--surface-2); color:inherit; text-decoration:none; min-width:0; min-height:96px}
+.td-live a:hover{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.td-live b{font-size:30px; letter-spacing:-.04em; line-height:1.1; white-space:nowrap}
+.td-live b small{font-size:16px; color:var(--muted); letter-spacing:0}
+.td-live span{font-size:15px; font-weight:700; color:var(--muted); line-height:1.3; overflow-wrap:anywhere}
+@container app (max-width:400px){ .td-live{grid-template-columns:repeat(2,minmax(0,1fr))} .td-live a:last-child{grid-column:1 / -1; min-height:0} }
+@container app (min-width:1240px){ .td-live{grid-template-columns:repeat(2,minmax(0,1fr))} .td-live a:last-child{grid-column:1 / -1; min-height:0} }
+.td-hero .mini .ow-d{display:block; white-space:normal}
+@container app (min-width:1240px){ .td-wait .ow-li{flex-wrap:wrap} .td-wait .ow-li .end{width:100%; padding-left:56px} }
+.td-wait .pill{min-height:48px; padding:0 16px; flex:none}
+.td-wait .tx b{display:block}
+.td-wait .wcnt{flex:none; min-width:28px; height:28px; padding:0 8px; border-radius:14px; background:var(--red); color:var(--on-red); font-size:15px; font-weight:800; display:inline-grid; place-items:center; font-variant-numeric:tabular-nums; margin-right:8px; vertical-align:1px}
+.td-wait .more{display:block; font-size:15px; color:var(--muted); font-weight:600}
+@container app (max-width:440px){ .td-wait .ow-li .si{display:none} .td-wait .pill{padding:0 14px} }
+.td-ok{display:flex; align-items:center; gap:12px; font-size:17px}
+.td-ok .ic{color:var(--ok); flex:none}
+.td-alert b{font-size:18px}
+/* ---------- trends ---------- */
+.tr-grid{grid-auto-flow:row dense}
+.tr-acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin:0 0 16px}
+.tr-acts .ow-meta{margin:0; flex:1 1 300px; min-width:0}
+.tr-acts .acts{display:flex; flex-wrap:wrap; gap:8px}
+@container app (max-width:560px){ .tr-acts .acts, .tr-acts .acts .pill{width:100%} }
+.tr-kpis{margin-bottom:16px}
+.tr-kpis .ow-d{white-space:normal}
+.tr-dish{display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; align-items:center}
+.tr-dish .pic{width:72px; height:72px; border-radius:20px}
+.tr-dish b{display:block; font-size:19px; line-height:1.25}
+.tr-pair{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line)}
+.tr-pair:first-child{border-top:0}
+.tr-pair .pp{display:flex; flex:none}
+.tr-pair .pp .pic{width:40px; height:40px; border-radius:12px; box-shadow:0 0 0 2px var(--surface)}
+.tr-pair .pp .pic + .pic{margin-left:-10px}
+.tr-pair .tx{flex:1; min-width:0; line-height:1.3; font-weight:700}
+.tr-pair .v{flex:none; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+.tr-two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px}
+.tr-two > div{padding:12px 14px; border-radius:18px; background:var(--surface-2); display:grid; gap:2px; min-width:0}
+.tr-two .k{font-size:14px; font-weight:700; color:var(--muted); line-height:1.3}
+.tr-two b{font-size:24px; letter-spacing:-.03em; white-space:nowrap}
+.tr-two .ow-d{white-space:normal}
+.tr-mail{display:grid; gap:4px}
+.tr-mail label{display:flex; align-items:center; gap:12px; min-height:56px; cursor:pointer}
+.tr-mail label .t{flex:1; min-width:0; line-height:1.35}
+.tr-mail label small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.tr-miss{display:grid; gap:12px}
+.tr-miss > div{display:flex; gap:12px; align-items:flex-start}
+.tr-miss .ill{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); flex:none}
+.tr-miss b{display:block}
+.tr-seg{max-width:340px}
+/* ---------- finance ---------- */
+.fi-grid{grid-auto-flow:row dense}
+.fi-acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin:0 0 16px}
+.fi-acts .ow-meta{margin:0; flex:1 1 300px; min-width:0}
+@container app (max-width:560px){ .fi-acts .pill{width:100%} }
+.fi-kpis{margin-bottom:16px}
+.fi-kpis .ow-d{white-space:normal}
+.fi-kv{display:grid}
+.fi-kv > div{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:10px 0; border-top:1px solid var(--line)}
+.fi-kv > div:first-child{border-top:0}
+.fi-kv span{min-width:0; line-height:1.35}
+.fi-kv span small{display:block; font-size:15px; color:var(--muted); font-weight:600}
+.fi-kv b{font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; max-width:62%}
+.fi-kv b .missing{white-space:normal}
+.fi-kv .tot{border-top:2px solid var(--line-strong); font-size:18px}
+.fi-drv{display:grid; gap:10px}
+.fi-drv > div{padding:14px; border-radius:18px; background:var(--surface-2); display:grid; gap:6px}
+.fi-drv .hd{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+.fi-drv .hd b{font-size:18px}
+.fi-big{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px}
+.fi-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@container app (max-width:420px){ .fi-three{grid-template-columns:repeat(2,minmax(0,1fr))} .fi-three > div:last-child{grid-column:1 / -1} }
+.fi-cost .ill{width:56px; height:56px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--red)}
+/* ---------- decisions ---------- */
+.dc-ns{display:grid; gap:10px}
+.dc-ns .it{display:grid; gap:10px; padding:14px; border-radius:18px; background:var(--surface-2)}
+.dc-ns .it b{font-size:18px}
+.dc-ns .it .ow-row .pill{flex:1 1 160px; max-width:300px}
+.dc-q{display:grid; gap:14px; padding:22px; border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); scroll-margin-top:96px}
+.dc-q .eye{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:15px; font-weight:700; color:var(--muted)}
+.dc-q .eye b{color:var(--ink)}
+.dc-q h3{margin:0; font-size:22px; line-height:1.3; letter-spacing:-.02em; text-wrap:pretty}
+@container app (min-width:900px){ .dc-q h3{font-size:26px} .dc-q{padding:28px} }
+.dc-q h3:focus, .ow-card h2:focus, .sheet-h h2:focus{outline:none}
+.dc-def{display:grid; gap:2px; padding:14px 16px; border-radius:18px; background:var(--surface-2)}
+.dc-def small{font-size:14px; font-weight:700; color:var(--muted)}
+.dc-def span{font-size:17px; font-weight:700; line-height:1.4}
+.dc-acts{display:flex; flex-wrap:wrap; gap:8px}
+.dc-acts .pill{flex:1 1 180px}
+.dc-other{display:grid; gap:10px}
+.dc-other .ow-row .pill{flex:1 1 180px}
+.dc-ans{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:18px; box-shadow:inset 0 0 0 1.5px var(--ok)}
+.dc-ans .ic{color:var(--ok); margin-top:2px; flex:none}
+.dc-ans b{display:block}
+.dc-prog{display:grid; gap:6px}
+.dc-prog .bar{height:8px; border-radius:4px; background:var(--surface-2); overflow:hidden}
+.dc-prog .bar i{display:block; height:100%; background:var(--ok); border-radius:4px}
+.dc-prog span{font-size:15px; font-weight:700; color:var(--muted)}
+.dc-filter{max-width:520px; margin:0 0 12px}
+.dc-filter .sm{display:none}
+@container app (max-width:380px){ .dc-filter .lg{display:none} .dc-filter .sm{display:inline} }
+@container app (min-width:1200px){ .dc-wrap{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start} .dc-main{position:sticky; top:100px} .dc-list h3:first-child{margin-top:0} }
+.dc-list h3{margin:20px 4px 8px; font-size:16px; font-weight:800; color:var(--muted)}
+.dc-list .rows{border-radius:var(--r-core); background:var(--surface); box-shadow:var(--hi), var(--shadow); overflow:hidden}
+.dc-row{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; width:100%; min-height:72px; padding:10px 16px; border:0; border-top:1px solid var(--line); background:transparent; color:inherit; text-align:left; font:inherit; cursor:pointer}
+.dc-row:first-child{border-top:0}
+.dc-row:hover{background:color-mix(in srgb, var(--surface-2) 50%, transparent)}
+.dc-row[aria-current="true"]{background:var(--surface-2)}
+.dc-row .n{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); font-weight:800; font-size:15px; font-variant-numeric:tabular-nums}
+.dc-row[aria-current="true"] .n{background:var(--ink); color:var(--bg)}
+.dc-row .t{min-width:0}
+.dc-row .t b{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:16px; line-height:1.35}
+.dc-row .t small{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:14px; color:var(--muted); font-weight:600; margin-top:2px; line-height:1.35}
+.dc-row .s{white-space:nowrap}
+@container app (max-width:420px){ .dc-row{grid-template-columns:minmax(0,1fr) auto; padding:10px 14px} .dc-row .n{display:none} }
+.dc-g .it{display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--line)}
+.dc-g .it:first-of-type{border-top:0}
+.dc-g .ill{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); flex:none}
+.dc-g b{display:block}
+.dc-ns .nw{white-space:nowrap}
+.dc-ro{display:flex; gap:12px; align-items:flex-start; margin:0; padding:14px 16px; border-radius:18px; box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.dc-ro .ic{flex:none; color:var(--muted); margin-top:2px}
+#dc-nh:focus{outline:none}
+/* ---------- while a new period is counted: the old numbers fade (the period stays sharp) ---------- */
+.bs-main [data-body][aria-busy="true"] > :not(.ow-per){opacity:.55; transition:opacity var(--t-base) var(--ease) 150ms}

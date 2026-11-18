@@ -1,19 +1,14 @@
 ---
 /* /sobstvenik/: „Днес“ на модула „Собственик“ (design/pages-sobstvenik/today.html).
-   Тук е само рамката (src/modules/boss/frame.ts: горна лента, раздели, молив, профил, търсачка, без връзка, права) с
-   активен раздел „today“. Тялото на екрана го пише авторът на екрана в src/modules/sobstvenik/ и го закача по-долу. */
+   Рамката е src/modules/boss/frame.ts (горна лента, раздели, молив, профил, търсачка, без връзка, права); екранът е
+   src/modules/sobstvenik/today.ts (данните от ядрото през ownerApi, src/client/api-boss.ts). */
 import Admin from "../../layouts/Admin.astro";
 import "../../modules/boss/boss.css";
+import "../../modules/sobstvenik/sobstvenik.css";
 ---
 <Admin title="Днес" page="boss-sobstvenik-today">
 <script>
-import { mountBoss } from "../../modules/boss/frame.ts";
-mountBoss({ module: "sobstvenik", tab: "today", title: "Днес" }).then((boss) => {
-  /* null: без сесия (към входа), друга роля (към нейното начало) или „Нямаш права за този екран.“ (вече е нарисувано) */
-  if (!boss) return;
-  /* ЕКРАНЪТ „Днес“ СЕ ЗАКАЧА ТУК: boss.body държи скелета (boss.skeleton()), докато дойдат първите данни;
-     после boss.body.innerHTML = …, boss.loaded() след всяко успешно зареждане, boss.onRetry(…) за „Опитай пак“,
-     boss.onLive(…) за събитията на живо. API-то е описано най-горе във frame.ts. */
-});
+import { initToday } from "../../modules/sobstvenik/today.ts";
+initToday();
 </script>
 </Admin>
