@@ -79,7 +79,7 @@ export function lateMinOf(o: Order, today: string, now: number, zoneMin: Map<str
   return now > due ? now - due : 0;
 }
 /** "47 мин" / "6 ч 47 мин": the delay in words (the problems, the call sheet and the course of a driver: one text) */
-export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? " " + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
+export function lateText(m: number): string { const h = Math.floor(m / 60), r = m % 60; return h ? h + "\u00a0ч" + (r ? "\u00a0" + r + "\u00a0мин" : "") : m + "\u00a0мин"; }
 /** the orders that wait for "Приеми": from the site, by phone, the offices (a table order is already in the kitchen:
     the waiter sent it, or the QR order was confirmed) */
 export const waitsAccept = (o: Pick<Order, "status" | "channel" | "table">): boolean => o.status === "accepted" && !isTable(o);
