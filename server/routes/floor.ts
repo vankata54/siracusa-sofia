@@ -20,6 +20,9 @@
    Limits (off in the test mode): 600 calls per phone and 20000 per address in 10 minutes (the guests of the restaurant
    share one Wi-Fi address); "call" 12 and "send" 10 per phone in 10 minutes; wrong codes: 30 per address in 10 minutes
    (only the wrong ones count).
+   The live stream of a table (GET /api/stream?table=<code>) never carries the phone's token in its address (addresses end
+   up in the logs of a proxy): every answered call of a guest leaves the token in an httpOnly cookie "sc_tg_<code>" that
+   the browser sends only to /api/stream (guestCookie below; server/app.ts reads it).
 
    THE STAFF (the section "Сервитьор"; the main admin, the owner and the manager always):
      GET  /api/floor/hall                                       the hall live
@@ -53,6 +56,11 @@ import type { AdminDeps } from "./deps.ts";
 import { CoreError, HALL_MSG, type CallKind, type PinModule, type RejectReason, type StaffOrderInput } from "../../src/core/index.ts";
 
 export const STAFF_COOKIE = "sc_staff", KNOWN_COOKIE = "sc_kd";
+/** the guest's cookie for the live stream of one table: its name (per table code, so two tables in two tabs do not
+    replace one another) and where the browser sends it (the stream only, never the pages or the rest of the API) */
+export const GUEST_STREAM_PATH = "/api/stream", GUEST_COOKIE_AGE = 24 * 3600;
+export const guestCookie = (code: string): string => "sc_tg_" + code;
+const QR_CODE = /^[a-z2-9]{8}$/, GUEST_TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
 export interface FloorDeps extends AdminDeps {
   /** server/app.ts: at most `max` per `key` in `minutes` (429 with retryIn); returns undo() */
   limit: (key: string, max: number, minutes: number, msg: string) => () => void;
@@ -76,7 +84,13 @@ export function floorRoutes(app: Hono, d: FloorDeps): void {
     limit("fl-ip:" + a, 20000, 10, GUEST_BUSY);
     limit("fl-g:" + a + ":" + g.slice(0, 64), 600, 10, GUEST_BUSY);
     const undoOwn = own ? limit("fl-" + path + ":" + g.slice(0, 64), own[0], 10, own[1]) : () => {};
-    try { return c.json((await fn({ code: c.req.param("code") as string, g, b, f: cf(c).floor })) as object); }
+    try {
+      const code = c.req.param("code") as string, out = (await fn({ code, g, b, f: cf(c).floor })) as object;
+      /* the core took this phone as a guest of the table: the token for the stream goes into its cookie (set only when it
+         is missing or another phone's, so the usual answer carries no Set-Cookie) */
+      if (QR_CODE.test(code) && GUEST_TOKEN.test(g) && getCookie(c, guestCookie(code)) !== g) setCookie(c, guestCookie(code), g, { ...d.cookieOpts, path: GUEST_STREAM_PATH, maxAge: GUEST_COOKIE_AGE });
+      return c.json(out);
+    }
     catch (e) {
       if (!(e instanceof CoreError && e.status < 500 && e.status !== 404)) undoOwn();
       /* a wrong code: counted; over the limit the answer is 429 instead of 404 */

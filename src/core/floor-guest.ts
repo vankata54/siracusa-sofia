@@ -86,7 +86,7 @@ export async function guestOpen(ctx: Ctx, code: string, tok: string, fresh = fal
 export async function guestView(ctx: Ctx, code: string, tok: string): Promise<GuestView> {
   return withGuest(ctx, code, tok, (s, g) => viewOf(ctx, s, g.id), true);
 }
-/** /api/stream?table=<code>&g=<token>: the id of the sitting this phone is a guest of, or null */
+/** /api/stream?table=<code> (the token from the phone's cookie for that table): the id of the sitting this phone is a guest of, or null */
 export async function streamSession(ctx: Ctx, code: string, tok: string): Promise<string | null> {
   try {
     const t = await enter(ctx, code, tok), o = await openSessionOf(ctx, t.id);

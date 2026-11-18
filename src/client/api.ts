@@ -73,8 +73,10 @@ function streamUrl(): string {
   const q = new URLSearchParams();
   if (watching.orders.size) q.set("order", [...watching.orders].join(","));
   if (watching.offices.size) q.set("office", [...watching.offices].join(","));
-  /* ts: only so that the address changes (and the stream reconnects) when a new sitting opens at the same table */
-  if (watching.table) { q.set("table", watching.table.code); q.set("g", watching.table.g); q.set("ts", watching.table.session); }
+  /* the phone's token is NOT in the address: the server reads it from the httpOnly cookie its answers left for this table
+     (server/routes/floor.ts guestCookie). ts: only so that the address changes (and the stream reconnects) when a new
+     sitting opens at the same table */
+  if (watching.table) { q.set("table", watching.table.code); q.set("ts", watching.table.session); }
   const s = q.toString();
   return "/api/stream" + (s ? "?" + s : "");
 }

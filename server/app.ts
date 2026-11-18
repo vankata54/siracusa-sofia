@@ -20,11 +20,11 @@ import { customersRoutes } from "./routes/customers.ts";
 import { reportsRoutes } from "./routes/reports.ts";
 import { staffAdminRoutes } from "./routes/staff-admin.ts";
 import { kitchenRoutes } from "./routes/kitchen.ts";
-import { floorRoutes, KNOWN_COOKIE } from "./routes/floor.ts";
+import { floorRoutes, KNOWN_COOKIE, guestCookie } from "./routes/floor.ts";
 import { siteRoutes as siteDataRoutes } from "./routes/site.ts";
 import { driverRoutes } from "./routes/driver.ts";
 import { bossRoutes } from "./routes/boss.ts";
-import { createPublisher, astroBuild, buildHash, type BuildFn, type Publisher } from "./publish.ts";
+import { createPublisher, astroBuild, buildHash, weeklyDue, type BuildFn, type Publisher } from "./publish.ts";
 import type { SiteBuild } from "../src/core/site-data.ts";
 import { SqliteRepo } from "./db/repo.ts";
 import { webPushSender, type Vapid } from "./push.ts";
@@ -495,8 +495,10 @@ export function createApp(opts: AppOpts) {
     const orders = new Set<string>(), offices = new Set<string>();
     for (const id of (c.req.query("order") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.orders.find(id); if (o) orders.add(o.no); }
     for (const code of (c.req.query("office") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.office.raw(code); if (o) offices.add(o.code); }
-    /* ?table=<the table's code>&g=<the phone's token>: the sitting this phone is a guest of (core/floor-guest.ts) */
-    const tables = new Set<string>(), tCode = c.req.query("table") || "", tGuest = c.req.query("g") || "";
+    /* ?table=<the table's code>: the sitting this phone is a guest of (core/floor-guest.ts). The phone's token comes only
+       from its httpOnly cookie for this table (server/routes/floor.ts guestCookie), never from the address: a token in
+       the address would stay in the access log of the proxy */
+    const tables = new Set<string>(), tCode = /^[a-z2-9]{8}$/.test(c.req.query("table") || "") ? (c.req.query("table") as string) : "", tGuest = tCode ? getCookie(c, guestCookie(tCode)) || "" : "";
     const seat = async () => { const sid = tCode && tGuest ? await core.floor.stream(tCode, tGuest) : null; tables.clear(); if (sid) tables.add(sid); };
     await seat();
     return streamSSE(c, async (stream) => {
@@ -632,8 +634,20 @@ export function createApp(opts: AppOpts) {
   }).catch((e) => console.error("menu boot", e));
   /* today's published lunch menu starts at midnight (Sofia): checked every 5 minutes, the site rebuilds when it changed */
   if (opts.timers !== false) setInterval(() => { core.menuEdit.refresh("tick").catch((e) => console.error("menu refresh", e)); }, 5 * 60_000).unref();
+  /* the weekly rebuild (server/publish.ts weeklyDue): a site older than a week is built again between 04:00 and 05:00 in
+     Sofia with the live menu and site data (the dates of the events in the pages come from the build); checked every 20 min */
+  const weekly = async (at = new Date()): Promise<boolean> => {
+    if (!publisher || !weeklyDue(at, publisher.builtAt())) return false;
+    const st = publisher.state();
+    if (st.state === "building" || st.state === "queued" || st.waiting) return false;
+    const [m, site] = await Promise.all([core.menuEdit.effective(), siteFor()]);
+    await core.audit.log("system", "site.weekly");
+    publisher.enqueue(m, site, true);
+    return true;
+  };
+  if (opts.timers !== false) setInterval(() => { weekly().catch((e) => console.error("weekly rebuild", e)); }, 20 * 60_000).unref();
   /* "Изтрий" of a customer (GDPR): deleted for good once the window for "Отмени" has passed (core/customers-admin.ts) */
   if (opts.timers !== false) setInterval(() => { core.customersAdmin.purge().catch((e) => console.error("customers purge", e)); }, 5_000).unref();
 
-  return { app, core, sqlite, db, sweep, publisher: () => publisher };
+  return { app, core, sqlite, db, sweep, weekly, publisher: () => publisher };
 }

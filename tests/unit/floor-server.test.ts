@@ -146,19 +146,30 @@ describe("the hall live: routes", async () => {
 
   it("the stream: a guest hears only the sitting of its own table; a wrong token hears nothing of it", async () => {
     const c15 = await S.codeOf(15), c16 = await S.codeOf(16);
-    await guest(c15, "open", A); await guest(c16, "open", B);
-    const open = async (url: string) => {
-      const res = await app.request(url), reader = res.body!.getReader(), dec = new TextDecoder();
+    const o15 = await guest(c15, "open", A), o16 = await guest(c16, "open", B);
+    /* the token for the stream is left in an httpOnly cookie of that table, sent only to /api/stream; an answer to a
+       phone that already has it sets nothing */
+    expect(o15.headers.getSetCookie()).toEqual([expect.stringMatching(new RegExp("^sc_tg_" + c15 + "=" + A + "; Max-Age=86400; Path=/api/stream; HttpOnly; SameSite=Lax$"))]);
+    expect((await app.request("/api/floor/t/" + c15 + "/view", { method: "POST", headers: { ...J, cookie: jar(o15) }, body: JSON.stringify({ g: A }) })).headers.getSetCookie()).toEqual([]);
+    expect((await guest(c15, "view", B)).headers.getSetCookie()).toEqual([]); /* not a guest of that table (403): no cookie */
+    const open = async (url: string, cookie = "") => {
+      const res = await app.request(url, { headers: cookie ? { cookie } : {} }), reader = res.body!.getReader(), dec = new TextDecoder();
       let buf = "";
       const pump = async () => { for (;;) { const { value, done } = await reader.read(); if (done) return; buf += dec.decode(value, { stream: true }); } };
       void pump().catch(() => undefined);
       return { text: () => buf, close: () => reader.cancel().catch(() => undefined) };
     };
-    const mine = await open("/api/stream?table=" + c15 + "&g=" + A), other = await open("/api/stream?table=" + c16 + "&g=" + B), thief = await open("/api/stream?table=" + c15 + "&g=" + B);
+    const mine = await open("/api/stream?table=" + c15, jar(o15)), other = await open("/api/stream?table=" + c16, jar(o16)), thief = await open("/api/stream?table=" + c15, "sc_tg_" + c15 + "=" + B);
+    /* the token in the address is not read any more (it would stay in the logs), and another table's cookie does not count */
+    const inUrl = await open("/api/stream?table=" + c15 + "&g=" + A), wrongTable = await open("/api/stream?table=" + c15, "sc_tg_" + c16 + "=" + A);
     const wait = () => new Promise((r) => setTimeout(r, 60));
     await wait();
     expect(mine.text()).toContain("event: hello");
-    expect(JSON.parse(/event: hello\ndata: (.*)/.exec(thief.text())![1]).tables).toEqual([]);
+    const hello = (x: { text: () => string }) => JSON.parse(/event: hello\ndata: (.*)/.exec(x.text())![1]).tables;
+    expect(hello(mine)).toHaveLength(1);
+    expect(hello(thief)).toEqual([]);
+    expect(hello(inUrl)).toEqual([]);
+    expect(hello(wrongTable)).toEqual([]);
     await guest(c15, "cart/add", A, { id: pizza.id });
     await wait();
     expect(mine.text()).toContain("event: floor.session");
@@ -175,7 +186,7 @@ describe("the hall live: routes", async () => {
     expect(mine.text().split("event: floor.session").length).toBe(before + 1);
     expect(mine.text()).not.toContain("event: order.line");
     expect(other.text()).not.toContain("floor.session");
-    await mine.close(); await other.close(); await thief.close();
+    await mine.close(); await other.close(); await thief.close(); await inUrl.close(); await wrongTable.close();
   });
 
   it("the static pages of the QR table: /masa/<код>/ and /masa/<код>/<екран>/", async () => {

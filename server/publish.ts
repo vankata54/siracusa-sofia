@@ -10,6 +10,9 @@
    A menu that was already built (the previous folder, by its content hash in <folder>/.menu-hash) is not built again:
    the folders only change places ("Върни" is instant: the comparison ignores the date and the removed list, which every
    commit changes, pagesHash). Several publishes while a build runs: only the newest is built.
+   The weekly rebuild (weeklyDue below, the timer in server/app.ts): the dates of the events in the HTML and JSON-LD come
+   from the day of the build, so a site that nobody published for a week is built again at night with the same menu
+   (enqueue(..., force): always a real build, never a swap).
    In the tests the build is replaced (opts.build), no real astro run. */
 import fs from "node:fs";
 import path from "node:path";
@@ -61,6 +64,15 @@ export function pagesHash(m: Menu, site?: SiteBuild | null): string {
   return buildHash({ ...rest, updated: "", removed: [] } as Menu, site);
 }
 
+/** The weekly rebuild: is it due now? The site is older than 7 days (less 2 hours, so the night of the same weekday
+    counts) and it is between 04:00 and 05:00 in Sofia (the restaurant is closed, no orders; a failed build is tried again
+    at the next check inside the hour, then the next night). builtAt: the time of dist/index.html (0 = no build). */
+export const WEEKLY_MS = 7 * 24 * 3600_000 - 2 * 3600_000;
+export function weeklyDue(now: Date, builtAt: number): boolean {
+  if (!builtAt || now.getTime() - builtAt < WEEKLY_MS) return false;
+  return +new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", hourCycle: "h23" }).format(now) === 4;
+}
+
 /** the real build: `astro build --outDir <out>` with MENU_FILE and SITE_FILE (the server build, never the demo) */
 export function astroBuild(root: string): BuildFn {
   return (menuFile, outDir, siteFile) => new Promise((resolve, reject) => {
@@ -79,7 +91,7 @@ export function astroBuild(root: string): BuildFn {
 export function createPublisher(o: { distDir: string; dataDir: string; build: BuildFn; onSwap: () => void; log?: (m: string) => void }) {
   const dist = path.resolve(o.distDir), next = dist + "-next", prev = dist + "-prev";
   let st: BuildState = { state: "idle", at: null };
-  let pending: { m: Menu; site: SiteBuild | null } | null = null, running: Promise<void> | null = null, n = 0;
+  let pending: { m: Menu; site: SiteBuild | null; force: boolean } | null = null, running: Promise<void> | null = null, n = 0;
   const now = () => new Date().toISOString();
   const hashOf = (dir: string) => { try { return fs.readFileSync(path.join(dir, HASH_FILE), "utf8").trim(); } catch { return ""; } };
   const pagesOf = (dir: string) => { try { return fs.readFileSync(path.join(dir, PAGES_FILE), "utf8").trim(); } catch { return ""; } };
@@ -100,12 +112,14 @@ export function createPublisher(o: { distDir: string; dataDir: string; build: Bu
   const mark = (dir: string, h: string, ph: string) => { fs.writeFileSync(path.join(dir, HASH_FILE), h + "\n"); fs.writeFileSync(path.join(dir, PAGES_FILE), ph + "\n"); };
   const same = (dir: string, h: string, ph: string) => fs.existsSync(path.join(dir, "index.html")) && (hashOf(dir) === h || pagesOf(dir) === ph);
 
-  async function one(m: Menu, site: SiteBuild | null) {
+  async function one(m: Menu, site: SiteBuild | null, force = false) {
     const h = buildHash(m, site), ph = pagesHash(m, site), t0 = Date.now();
     st = { state: "building", at: now() };
     try {
-      if (same(dist, h, ph)) { writeRedirects(dist, m, site); mark(dist, h, ph); o.onSwap(); st = { state: "done", at: now(), how: "swap", ms: 0 }; return; }
-      if (same(prev, h, ph)) {
+      /* force (the weekly rebuild, a deploy): the same menu is built again, the folders are never just swapped */
+      if (force) { /* fall through to the build */ }
+      else if (same(dist, h, ph)) { writeRedirects(dist, m, site); mark(dist, h, ph); o.onSwap(); st = { state: "done", at: now(), how: "swap", ms: 0 }; return; }
+      if (!force && same(prev, h, ph)) {
         /* the previous site has the pages of this menu ("Върни"): the folders change places, no build. Between the renames
            the server serves the folder that is there (server/app.ts: <dist>, else <dist>-prev), never a 404 */
         writeRedirects(prev, m, site);
@@ -140,13 +154,14 @@ export function createPublisher(o: { distDir: string; dataDir: string; build: Bu
     }
   }
   async function loop() {
-    while (pending) { const p = pending; pending = null; await one(p.m, p.site); }
+    while (pending) { const p = pending; pending = null; await one(p.m, p.site, p.force); }
     running = null;
   }
   return {
-    /** queue the menu and the site data (null = the built-in data); only the newest waiting pair is built */
-    enqueue(m: Menu, site: SiteBuild | null = null): void {
-      pending = { m: JSON.parse(JSON.stringify(m)), site: site ? JSON.parse(JSON.stringify(site)) : null };
+    /** queue the menu and the site data (null = the built-in data); only the newest waiting pair is built.
+        force: build even when the folder already has the pages of this menu (a waiting forced build stays forced) */
+    enqueue(m: Menu, site: SiteBuild | null = null, force = false): void {
+      pending = { m: JSON.parse(JSON.stringify(m)), site: site ? JSON.parse(JSON.stringify(site)) : null, force: force || (!!pending && pending.force) };
       if (running) { if (st.state !== "building") st = { state: "queued", at: now() }; return; }
       st = { state: "queued", at: now() };
       running = Promise.resolve().then(loop);
@@ -154,6 +169,8 @@ export function createPublisher(o: { distDir: string; dataDir: string; build: Bu
     state(): BuildState & { waiting: boolean } { return { ...st, waiting: !!pending }; },
     /** the content hash of the menu the live site was built with ("" for a build without one, e.g. `npm run build`) */
     builtHash(): string { return hashOf(dist); },
+    /** when the live site was built (the time of its index.html; a swap of the folders keeps it): 0 = no build */
+    builtAt(): number { try { return fs.statSync(path.join(dist, "index.html")).mtimeMs; } catch { return 0; } },
     /** tests: wait until the queue is empty */
     async idle(): Promise<void> { while (running) await running; },
   };

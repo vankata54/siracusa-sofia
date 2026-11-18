@@ -1,0 +1,14 @@
+# Siracusa: the backup every night at 03:30 in Sofia (the restaurant is closed; before the weekly rebuild at 04:00).
+#   sudo cp deploy/siracusa-backup.* /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now siracusa-backup.timer
+#   systemctl list-timers siracusa-backup.timer
+[Unit]
+Description=Siracusa: nightly backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Europe/Sofia
+# a night the server was off: the backup runs when it starts
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

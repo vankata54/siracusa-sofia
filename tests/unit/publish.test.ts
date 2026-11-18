@@ -5,7 +5,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createPublisher, buildHash, pagesHash } from "../../server/publish.ts";
+import { createPublisher, buildHash, pagesHash, weeklyDue } from "../../server/publish.ts";
 import { createApp } from "../../server/app.ts";
 import { builtinMenu } from "../../src/core/menu-edit.ts";
 import type { Menu } from "../../src/data/menu.ts";
@@ -13,6 +13,66 @@ import type { Menu } from "../../src/data/menu.ts";
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sc-pub-"));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const site = (dir: string, text: string) => { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "index.html"), text); };
+
+describe("the weekly rebuild", () => {
+  const DAY = 24 * 3600_000;
+  /* 04:30 in Sofia: 02:30 UTC in winter (UTC+2), 01:30 UTC in summer (UTC+3) */
+  const winter = new Date("2026-11-23T02:30:00Z"), summer = new Date("2026-07-06T01:30:00Z");
+  it("due only for a site older than a week, between 04:00 and 05:00 in Sofia (winter and summer time)", () => {
+    expect(weeklyDue(winter, winter.getTime() - 7 * DAY)).toBe(true);
+    expect(weeklyDue(summer, summer.getTime() - 8 * DAY)).toBe(true);
+    /* built the same night a week ago, a little later than now: still due (the 2 hours of slack) */
+    expect(weeklyDue(winter, winter.getTime() - 7 * DAY + 40 * 60_000)).toBe(true);
+    expect(weeklyDue(winter, winter.getTime() - 6 * DAY)).toBe(false);
+    expect(weeklyDue(winter, 0)).toBe(false); /* no build at all: nothing to refresh */
+    expect(weeklyDue(new Date("2026-11-23T03:00:00Z"), 1)).toBe(false); /* 05:00 in Sofia */
+    expect(weeklyDue(new Date("2026-11-23T01:59:00Z"), 1)).toBe(false); /* 03:59 */
+    expect(weeklyDue(new Date("2026-11-23T17:30:00Z"), 1)).toBe(false); /* 19:30: never while the restaurant works */
+    expect(weeklyDue(new Date("2026-07-06T02:30:00Z"), 1)).toBe(false); /* 05:30 in summer */
+  });
+  it("a forced build builds the same menu again (no swap), a plain one does not; the previous folder is kept", async () => {
+    const dist = path.join(tmp, "dw"), data = path.join(tmp, "dataw");
+    let builds = 0;
+    const p = createPublisher({ distDir: dist, dataDir: data, onSwap: () => {}, build: async (_m, out) => { builds++; site(out, "build " + builds); } });
+    expect(p.builtAt()).toBe(0);
+    const a = builtinMenu();
+    p.enqueue(a); await p.idle();
+    expect(builds).toBe(1);
+    expect(p.builtAt()).toBeGreaterThan(0);
+    p.enqueue(a); await p.idle();
+    expect(builds).toBe(1); /* the same pages: nothing to build */
+    p.enqueue(a, null, true); await p.idle();
+    expect(builds).toBe(2);
+    expect(p.state()).toMatchObject({ state: "done", how: "build" });
+    expect(fs.readFileSync(path.join(dist, "index.html"), "utf8")).toBe("build 2");
+    expect(fs.readFileSync(path.join(dist + "-prev", "index.html"), "utf8")).toBe("build 1");
+    expect(p.builtHash()).toBe(buildHash(a));
+    /* a forced build that waits stays forced when a plain one is queued behind it */
+    let free = () => {};
+    const slow = createPublisher({ distDir: path.join(tmp, "dw2"), dataDir: data, onSwap: () => {}, build: async (_m, out) => { builds++; await new Promise<void>((r) => { free = r; }); site(out, "b" + builds); } });
+    slow.enqueue(a); await new Promise((r) => setTimeout(r, 20));
+    slow.enqueue(a, null, true); slow.enqueue(a);
+    free(); await new Promise((r) => setTimeout(r, 20)); free();
+    await slow.idle();
+    expect(builds).toBe(4);
+  });
+  it("the server: weekly() queues a forced build only when due, writes the log, and never on top of a running build", async () => {
+    const dist = path.join(tmp, "dws");
+    site(dist, "old");
+    let builds = 0;
+    const x = createApp({ dbFile: ":memory:", distDir: dist, timers: false, build: async (_m, out) => { builds++; site(out, "weekly " + builds); } });
+    await x.publisher()!.idle();
+    const start = builds, old = Date.now() - 8 * DAY;
+    fs.utimesSync(path.join(dist, "index.html"), old / 1000, old / 1000);
+    expect(await x.weekly(new Date("2026-11-23T17:30:00Z"))).toBe(false); /* not at night */
+    expect(await x.weekly(winter)).toBe(true);
+    await x.publisher()!.idle();
+    expect(builds).toBe(start + 1);
+    expect((await x.core.audit.list({ action: "site.weekly" })).length).toBe(1);
+    expect(await x.weekly(winter)).toBe(false); /* the new build is fresh */
+    x.sqlite.close();
+  });
+});
 
 describe("publisher", () => {
   it("pagesHash ignores the date and the removed list, buildHash does not", () => {

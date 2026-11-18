@@ -1,0 +1,20 @@
+# Siracusa: one backup of the database and the uploads (scripts/backup.mjs). Started by siracusa-backup.timer;
+# by hand: sudo systemctl start siracusa-backup && journalctl -u siracusa-backup -n 20
+[Unit]
+Description=Siracusa: backup of the database and the uploads
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=siracusa
+Group=siracusa
+WorkingDirectory=/srv/siracusa/current
+Environment=TZ=Europe/Sofia
+ExecStart=/usr/bin/node scripts/backup.mjs
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/siracusa
+UMask=0077

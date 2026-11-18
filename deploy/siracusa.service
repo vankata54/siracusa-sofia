@@ -1,0 +1,43 @@
+# Siracusa: the site and the API as one service (docs/DEPLOY.md).
+#   sudo cp deploy/siracusa.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now siracusa
+# It runs the version the link /srv/siracusa/current points to (deploy/deploy.sh switches it and restarts the service).
+# The secrets are in /srv/siracusa/shared/.env (the server reads the file itself; nothing secret in this unit).
+[Unit]
+Description=Siracusa Bar & Grill (site, API, live streams)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=siracusa
+Group=siracusa
+WorkingDirectory=/srv/siracusa/current
+Environment=NODE_ENV=production
+Environment=TZ=Europe/Sofia
+ExecStart=/usr/bin/node --experimental-strip-types --no-warnings server/index.ts
+Restart=always
+RestartSec=2
+# the live streams (kitchen, waiter, driver) are long connections: give them time to close, then stop
+TimeoutStopSec=15
+KillSignal=SIGTERM
+# the site is rebuilt by the service itself after "Публикувай" in the admin: it needs memory for one build
+MemoryHigh=1500M
+MemoryMax=2G
+LimitNOFILE=65536
+# the service writes only inside /srv/siracusa (the database, the uploads, the rebuilt site)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/siracusa
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
