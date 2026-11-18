@@ -103,7 +103,8 @@ export const FLOOR_MSG = {
 
 /* ---------- the document ---------- */
 export interface FloorGuest { /** "p1" … "p7" */ id: string; n: number; tok: string; at: Iso }
-export interface FloorCartLine { key: string; id: string; q: number; mods: string[]; /** the phone that added it ("p2") */ who: string; at: Iso }
+export interface FloorCartLine { key: string; id: string; q: number; mods: string[]; /** the phone that added it ("p2") */ who: string; at: Iso;
+  /** the other phones that changed its quantity: a line touched by a phone the waiter has not seen goes through him */ by?: string[] }
 export interface FloorCall {
   id: string; kind: CallKind; note: string; at: Iso; /** the phone ("p2"), or null: asked through the bill */ by: string | null;
   /** how many more requests joined this call (a second phone asking for the bill) */
@@ -115,7 +116,7 @@ export interface FloorCall {
 }
 export interface FloorBillReq { at: Iso; pay: "cash" | "card"; split: "one" | "guests" | "dishes"; keys: string[] }
 export interface FloorPayment { id: string; at: Iso; by: string; how: "cash" | "card"; sum: number; keys: string[]; label: string }
-export interface FloorRating { ratingId: string; happy: boolean; sent: boolean; code: string; at: Iso }
+export interface FloorRating { ratingId: string; happy: boolean; sent: boolean; code: string; at: Iso; /** the one line of this phone in "Обратна връзка" */ feedback?: string }
 export interface TableSession {
   id: string; /** the hall's table id ("S12") and its number when the sitting opened */ table: string; n: number;
   status: "open" | "closed"; rev: number; by: "qr" | "waiter";
@@ -133,6 +134,8 @@ export interface TableSession {
   bills: Record<string, FloorBillReq>;
   /** the lines removed in the last seconds (for "Отмени" only, FLOOR_UNDO_MS) */
   gone?: { line: FloorCartLine; at: Iso; by: string }[];
+  /** the phones whose dishes the waiter confirmed ("Потвърди и прати"): only they may send straight to the kitchen */
+  seen?: string[];
   /** "По ястия": line key -> the phone that pays it */
   picks: Record<string, string>;
   payments: FloorPayment[];
@@ -320,23 +323,21 @@ export function billWant(s: TableSession, lines: BillLine[], gid: string, split:
   const open = lines.filter((b) => !b.out && !b.paid && !covered.has(b.key));
   return split === "one" ? open : split === "guests" ? open.filter((b) => b.l.guest === gid) : open.filter((b) => s.picks[b.key] === gid);
 }
-/** A phone the waiter has "seen": it was at the table before the first QR order was confirmed, or one of its dishes is in
-    a confirmed QR order. A phone that came later (the code is permanent and stays in a browser's history) sends its first
-    order through the waiter (decision 17.11.2026, check 1 of the QR table). */
-export function phoneSeen(s: Pick<TableSession, "guests">, orders: Order[], gid: string): boolean {
-  const qr = orders.filter((o) => o.channel === "qr" && o.status !== "cancelled");
-  if (!qr.length) return false;
-  const g = s.guests.find((x) => x.id === gid);
-  if (!g) return false;
-  const first = Math.min(...qr.map((o) => Date.parse(o.createdAt)));
-  return Date.parse(g.at) <= first || qr.some((o) => o.lines.some((l) => l.guest === gid));
+/** A phone the waiter has "seen": the waiter confirmed its dishes (decision 18.11.2026; being at the table before a
+    confirmation is not enough). Every line of an order that went straight to the kitchen came from seen phones, so a
+    phone with a dish in a QR order is seen too (sittings from before the `seen` list). */
+export function phoneSeen(s: Pick<TableSession, "seen">, orders: Order[], gid: string): boolean {
+  if ((s.seen || []).includes(gid)) return true;
+  return orders.some((o) => o.channel === "qr" && o.status !== "cancelled" && o.lines.some((l) => l.guest === gid));
 }
+/** the phones of a line: who added it and who changed it */
+export const lineTouch = (l: { who?: string; by?: string[] }): string[] => [...(l.who ? [l.who] : []), ...(l.by || [])];
 /** does the next QR send wait for the waiter: no confirmed QR order yet in this sitting, a steak without its weight, or a
-    dish (or the sender) from a phone the waiter has not seen yet (phoneSeen) */
-export function sendToWaiter(s: Pick<TableSession, "guests">, orders: Order[], lines: { id: string; who?: string }[], by?: string | null): boolean {
+    line added or changed by a phone the waiter has not seen (also "+1" on another phone's line), or such a sender */
+export function sendToWaiter(s: Pick<TableSession, "seen">, orders: Order[], lines: { id: string; who?: string; by?: string[] }[], by?: string | null): boolean {
   if (!orders.some((o) => o.channel === "qr" && o.status !== "cancelled")) return true;
   if (lines.some((l) => !!(byId[l.id] && byId[l.id].per100))) return true;
-  const who = new Set(lines.map((l) => l.who).filter((w): w is string => !!w));
+  const who = new Set(lines.flatMap(lineTouch));
   if (by) who.add(by);
   return [...who].some((w) => !phoneSeen(s, orders, w));
 }
@@ -399,10 +400,12 @@ export function guestViewOf(ctx: Ctx, s: TableSession, orders: Order[], env: Flo
     google: RESTAURANT.googleReview,
   };
 }
+/** this phone has at least one ordered dish that is not sold out (the -10% code, decision 18.11.2026) */
+export const orderedBy = (orders: Order[], gid: string): boolean => orders.some((o) => o.status !== "cancelled" && o.lines.some((l) => l.guest === gid && !l.out));
 /** the rating comes with the bill (after this phone asked for it, after someone asked for the whole bill, or after the
     close), and only to a phone that ordered something in this sitting: one -10% code per such phone (decision 17.11.2026) */
 export function canRate(s: TableSession, gid: string, orders: Order[]): boolean {
-  const ordered = orders.some((o) => o.status !== "cancelled" && o.lines.some((l) => l.guest === gid));
+  const ordered = orderedBy(orders, gid);
   return ordered && (s.status === "closed" || !!s.bills[gid] || Object.keys(s.bills).some((k) => s.bills[k].split === "one"));
 }
 

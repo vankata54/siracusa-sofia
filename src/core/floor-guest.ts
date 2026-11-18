@@ -17,7 +17,7 @@ import { parseMods } from "../lib/pricing.ts";
 import { sofiaYmd } from "../lib/time.ts";
 import {
   FLOOR_MSG, CALL_KINDS, MAX_PHONES, CALL_NOTE_MAX, RATING_TEXT_MAX, FLOOR_UNDO_MS, lockKey, openSessionOf, saveSession, newSession, sessionOrders,
-  floorEnv, guestViewOf, emitSession, emitCall, closeIfStale, callState, billLines, billWant, sendToWaiter, canRate, phoneLabel, phoneOf, ZONE_NAME,
+  floorEnv, guestViewOf, emitSession, emitCall, closeIfStale, callState, billLines, billWant, sendToWaiter, canRate, orderedBy, phoneLabel, phoneOf, ZONE_NAME,
   type CallKind, type TableSession, type FloorGuest, type FloorCartLine, type GuestView,
 } from "./floor.ts";
 
@@ -151,7 +151,14 @@ export async function guestCartQty(ctx: Ctx, code: string, tok: string, key: str
     if (!l) throw new CoreError("not_found", FLOOR_MSG.line, 404);
     const d = typeof q === "string" && /^[+-][1-9]\d?$/.test(q) ? +q : null;
     const v = qtyOf(d == null ? q : Math.max(0, l.q + d), 0);
-    if (v === 0) s.cart = s.cart.filter((x) => x !== l); else l.q = v;
+    /* more of a dish that cannot be ordered now (sold out, breakfast after 11:30 …) is refused, as "+" is */
+    if (v > l.q) { tableKitchenOpen(ctx, "guest"); await dishFor(ctx, l.id, l.mods); }
+    if (v === 0) s.cart = s.cart.filter((x) => x !== l);
+    else {
+      /* who changed another phone's line: such a line goes through the waiter if that phone is new (decision 18.11.2026) */
+      if (v !== l.q && l.who !== g.id && !(l.by || []).includes(g.id)) l.by = [...(l.by || []), g.id];
+      l.q = v;
+    }
     return changed(ctx, s, g.id);
   });
 }
@@ -329,7 +336,7 @@ export async function guestRate(ctx: Ctx, code: string, tok: string, p: { happy:
   return withGuest(ctx, code, tok, async (s, g, t) => {
     if (!p || typeof p.happy !== "boolean") throw Object.assign(new CoreError("invalid", FLOOR_MSG.rateAnswer, 422), { fields: { happy: FLOOR_MSG.rateAnswer } });
     const orders = await sessionOrders(ctx, s);
-    if (!orders.some((o) => o.status !== "cancelled" && o.lines.some((l) => l.guest === g.id))) throw new CoreError("not_ordered", FLOOR_MSG.rateNone, 409);
+    if (!orderedBy(orders, g.id)) throw new CoreError("not_ordered", FLOOR_MSG.rateNone, 409);
     if (!canRate(s, g.id, orders)) throw new CoreError("not_finished", FLOOR_MSG.rateEarly, 409);
     const text = p.text ? String(p.text).trim().slice(0, RATING_TEXT_MAX) : "", now = iso(ctx);
     let r = s.ratings[g.id], doc = r ? await ctx.repo.get<Rating>(COL.ratings, r.ratingId) : null;
@@ -344,7 +351,8 @@ export async function guestRate(ctx: Ctx, code: string, tok: string, p: { happy:
     }
     await ctx.repo.put(COL.ratings, doc);
     /* "Не" with a text: into the admin's "Обратна връзка" (Клиенти), where the manager reads it (decision 17.11.2026) */
-    if (text && !p.happy) await tableFeedback(ctx, { table: t.n, zone: ZONE_NAME[t.zone], text, rating: doc.id });
+    /* one line per phone and sitting: a new text replaces the old one (decision 18.11.2026) */
+    if (text && !p.happy) r.feedback = (await tableFeedback(ctx, { table: t.n, zone: ZONE_NAME[t.zone], text, rating: doc.id, id: r.feedback })).id;
     s.ratings[g.id] = r;
     await saveSession(ctx, s);
     /* the staff hear that a rating came (never the text); the other phones see nothing of it */

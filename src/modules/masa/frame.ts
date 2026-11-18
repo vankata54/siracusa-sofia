@@ -137,7 +137,7 @@ export function mountMasa(o: ScreenOpts): Masa {
     banners(b = {}) {
       const v = state.view;
       let h = "";
-      if (state.offline) h += '<div class="mnote bad" role="alert">' + ic("warning-circle", 24) + "<div><b>" + L("Няма връзка", "No connection") + "</b><p>" + L("Поръчката ви е запазена - опитайте пак. Ако е спешно, махнете на сервитьора.", "Your order is saved - try again. If it is urgent, wave to the waiter.") + '</p><div class="acts"><button class="pill pill-ink" type="button" data-mretry>' + ic("arrow-clockwise", 20) + L("Опитай пак", "Try again") + "</button></div></div></div>";
+      if (state.offline) h += '<div class="mnote bad" role="alert">' + ic("warning-circle", 24) + "<div><b>" + L("Няма връзка", "No connection") + "</b><p>" + (o.screen === "cart" ? L("Поръчката ви е запазена - опитайте пак. Ако е спешно, махнете на сервитьора.", "Your order is saved - try again. If it is urgent, wave to the waiter.") : L("Опитайте пак след малко. Ако е спешно, махнете на сервитьора.", "Try again in a moment. If it is urgent, wave to the waiter.")) + '</p><div class="acts"><button class="pill pill-ink" type="button" data-mretry>' + ic("arrow-clockwise", 20) + L("Опитай пак", "Try again") + "</button></div></div></div>";
       else if (state.lost) h += '<div class="mnote" role="status">' + ic("arrow-clockwise", 24) + "<div><b>" + L("Свързваме се отново", "Reconnecting") + "</b><p>" + L("Показваме последното, което знаем. Обновява се само.", "We show the last we know. It updates by itself.") + "</p></div></div>";
       if (b.kitchen !== false && v && !v.kitchen.open && v.status === "open") {
         h += '<div class="mnote warn" role="status">' + ic("clock", 24) + "<div><b>" + M.kitchenWhy() + "</b><p>" +
@@ -327,7 +327,7 @@ export function mountMasa(o: ScreenOpts): Masa {
       if (!state.view) { gate("offline"); return; }
       const was = state.offline;
       state.offline = true; draw("offline");
-      if (!was || !reading) toast(offlineText || L("Няма връзка. Поръчката ви е запазена - опитайте пак.", "No connection. Your order is saved - try again."));
+      if (!was || !reading) toast(offlineText || (o.screen === "cart" ? L("Няма връзка. Поръчката ви е запазена - опитайте пак.", "No connection. Your order is saved - try again.") : L("Няма връзка. Опитайте пак след малко.", "No connection. Try again in a moment.")));
       return;
     }
     if (err.status === 404 && /Този код/.test(err.message)) { state.view = null as unknown as View; gate("invalid"); return; }

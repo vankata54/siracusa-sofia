@@ -63,7 +63,9 @@ test("two phones: the shared cart, the waiter confirms, the kitchen cooks, „С
     await expect(send).toHaveText("Изпрати към сервитьора · 22,37 €");
     await send.click();
     await expect(page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
+    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора.");
     await expect(p2.page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
+    await expect(p2.page.locator("[data-whose]")).toHaveText(/^Поръчката на Телефон \d чака сервитьора\.$/);
     await expect(p2.page.locator(".rnd-h")).toContainText("чака сервитьора");
 
     /* the waiter confirms: Прието, live on both phones */
@@ -192,6 +194,16 @@ test("a phone that comes after the first confirmed order sends its first order t
     await expect(send).toHaveText("Изпрати към сервитьора · 7,61 €");
     await send.click();
     await expect(page.locator(".wait h2")).toHaveText("Чака потвърждение от сервитьора");
+    await expect(page.locator("[data-whose]")).toHaveText("Вашата поръчка чака сервитьора.");
+    /* the first phone: whose order waits, and its new dishes go with it */
+    const late = (await G.post("view")).pending.phone as number;
+    const pa = await phone(browser, page, baseURL!, A);
+    await G.add("tarator");
+    await pa.page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    await expect(pa.page.locator("[data-whose]")).toHaveText("Поръчката на Телефон " + late + " чака сервитьора.");
+    await expect(pa.page.locator(".sum .how")).toHaveText("Новото отива при сервитьора заедно с чакащата поръчка на Телефон " + late + ".");
+    await expect(pa.page.locator(".sum .how")).not.toContainText("Първата поръчка");
+    await pa.ctx.close();
     /* the waiter sees the new phone's order to confirm */
     const tb = await W.table(n);
     expect(tb.pending.lines.map((l: { name: string; phone: number }) => l.name)).toEqual(["Кебапчета"]);
@@ -199,4 +211,61 @@ test("a phone that comes after the first confirmed order sends its first order t
     await expect(page.locator(".wait")).toHaveCount(0);
     expect(errs).toEqual([]);
   } finally { await W.clear(n).catch(() => {}); await W.ctx.close(); }
+});
+
+test("only phones the waiter confirmed send to the kitchen: (а) an ex-guest who opened the free table, (б) a phone that joined while the first order waited, (в) „+1“ ×9 on an old phone's line; the waiter sees „нов телефон“", async ({ page, browser, baseURL }) => {
+  test.setTimeout(60_000);
+  const errs = watch(page);
+  const n = tableN(page, 2), t = await codeOf(browser, baseURL!, n);
+  const W = await staff(browser, baseURL!, "waiter");
+  await W.clear(n);
+  const X = tok("by-x" + n), A = tok("by-a" + n), Y = tok("by-y" + n);
+  const gx = guest(W.r, t.code, X), ga = guest(W.r, t.code, A), gy = guest(W.r, t.code, Y);
+  const wctx = await browser.newContext({ baseURL, viewport: page.viewportSize() || undefined, extraHTTPHeaders: { "x-sc-clock": CLOCK } });
+  try {
+    /* (а) X (an old guest's phone) opens the free table first; the group comes and orders, the waiter confirms */
+    await page.addInitScript((x) => localStorage.setItem("sc-masa-g", x), X);
+    await page.goto("/masa/" + t.code + "/" + PV);
+    await expect(page.locator(".wl-t")).toHaveText("Маса " + n);
+    await ga.open(true); await ga.add("tiramisu"); await ga.send();
+    /* (б) Y joins while that first order waits */
+    await gy.open(true);
+    await W.confirm(n);
+    /* X's dish: through the waiter (the page says so) */
+    await page.goto("/masa/" + t.code + "/menu/" + PV);
+    await page.locator('[data-row="tarator"] [data-madd]').click();
+    await expect(page.locator(".toast")).toContainText("Добавено в общата количка");
+    await page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    await expect(page.locator("[data-send]").filter({ visible: true })).toContainText("Изпрати към сервитьора");
+    expect((await gx.send()).to).toBe("waiter");
+    /* the waiter's table screen: „нов телефон“ at X's line */
+    const wp = await wctx.newPage();
+    const { signIn } = await import("./masa-helpers.ts");
+    await signIn(wctx.request, "waiter");
+    await wp.goto("/servitor/masa/" + PV + "#" + n);
+    await expect(wp.locator(".oline", { hasText: "Таратор" }).locator(".newph")).toHaveText("нов телефон");
+    await W.reject(n, "test");
+    await gx.post("rejected-ok");
+    const vx = await gx.post("view");
+    await gx.post("cart/remove", { key: vx.cart.lines[0].key });
+    /* (б) Y: its first order through the waiter too */
+    await gy.add("shopska-salata");
+    expect((await gy.send()).to).toBe("waiter");
+    expect((await W.table(n)).pending.lines.map((l: { isNew: boolean }) => l.isNew)).toEqual([true]);
+    await W.reject(n, "test");
+    const vy = await gy.post("view");
+    await gy.post("cart/remove", { key: vy.cart.lines[0].key });
+    /* (в) X presses "+1" nine times on A's line: A's order goes through the waiter */
+    const va = await ga.add("kebapcheta");
+    const k = va.cart.lines.find((l: { id: string }) => l.id === "kebapcheta").key;
+    for (let i = 0; i < 9; i++) await gx.post("cart/qty", { key: k, q: "+1" });
+    const pa = await phone(browser, page, baseURL!, A);
+    await pa.page.goto("/masa/" + t.code + "/kolichka/" + PV);
+    await expect(pa.page.locator(".cl", { hasText: "Кебапчета" }).locator("output")).toHaveText("10");
+    await expect(pa.page.locator("[data-send]").filter({ visible: true })).toContainText("Изпрати към сервитьора");
+    await pa.ctx.close();
+    expect((await ga.send()).to).toBe("waiter");
+    expect((await W.table(n)).pending.lines[0].isNew).toBe(true);
+    expect(errs).toEqual([]);
+  } finally { await wctx.close(); await W.clear(n).catch(() => {}); await W.ctx.close(); }
 });

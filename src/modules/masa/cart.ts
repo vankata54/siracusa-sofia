@@ -15,8 +15,11 @@ const pic = (id: string) => (SC.byId[id] ? SC.pic(id) : '<span class="pic"></spa
 function waitHTML(): string {
   const v = M.view, L = M.L, p = v.pending;
   if (!p) return "";
+  /* whose order waits: this phone's, or another phone's (a late phone's first order while the table is confirmed) */
+  const whose = p.phone === M.me() ? L("Вашата поръчка чака сервитьора.", "Your order is waiting for the waiter.") : L("Поръчката на Телефон " + p.phone + " чака сервитьора.", "Phone " + p.phone + "’s order is waiting for the waiter.");
   return '<div class="shell" role="status" aria-live="polite"><div class="core wait"><span class="ring">' + M.ic("hourglass", 44) + "</span>" +
     "<h2>" + L("Чака потвърждение от сервитьора", "Waiting for the waiter to confirm") + "</h2>" +
+    '<p class="whose" data-whose>' + whose + "</p>" +
     "<p>" + L("Сервитьорът ще потвърди поръчката до минута. Така пазим масата от чужди поръчки. Следващите отиват направо в кухнята.", "The waiter will confirm the order within a minute. This keeps your table safe from orders that are not yours. Next orders go straight to the kitchen.") + "</p>" +
     '<p class="meta">' + M.dishes(p.n) + " · " + M.fmt(p.sum) + " · " + L("изпратено в ", "sent at ") + M.clock(p.at) + "</p></div></div>";
 }
@@ -25,7 +28,7 @@ function sub(l: GuestCartLine): string {
   const x = SC.byId[l.id], L = M.L;
   if (l.per100) return (x ? M.fmt(x.p) + " " : "") + L("за 100 гр. · грамажът след рязане", "per 100 g · weighed after cutting");
   const w = x ? D.gnb(x) : "";
-  return M.fmt(l.unit || 0) + (w ? ' <span class="nw">· ' + w + "</span>" : "");
+  return M.fmt(l.unit || 0) + (w ? "\u00a0· " + '<span class="nw">' + w + "</span>" : "");
 }
 const BLOCK: Record<string, [string, string]> = { sold_out: ["Изчерпано днес", "Sold out today"], removed: ["Вече не е в менюто", "No longer on the menu"], lunch: ["Обедното меню не се поръчва от масата", "The lunch menu is not ordered from the table"], breakfast: ["Закуските са до 11:30", "Breakfast is served until 11:30"] };
 
@@ -43,7 +46,7 @@ function draftHTML(): string {
         const x = SC.byId[l.id], canMore = !!x && D.orderable(x) && !l.block;
         return '<div class="cl" data-key="' + l.key + '">' + pic(l.id) + '<span><span class="nm">' + M.esc(l.name) + '</span><span class="sub">' + sub(l) + "</span>" + (l.block ? '<span class="blk">' + M.ic("warning-circle", 16) + L(BLOCK[l.block][0], BLOCK[l.block][1]) + "</span>" : "") + "</span>" +
           /* a line that cannot be sent: only "Махни" (no counter) */
-          (l.block ? '<button class="pill pill-line rm" type="button" data-q="-' + l.q + '" data-k="' + l.key + '" aria-label="' + L("Махни ", "Remove ") + M.esc(l.name) + '">' + M.ic("trash", 18) + L("Махни", "Remove") + "</button>" :
+          (l.block ? '<button class="pill pill-line rm" type="button" data-q="-' + l.q + '" data-k="' + l.key + '" aria-label="' + L("Махни ", "Remove ") + M.esc(l.name) + '">' + M.ic("trash", 18) + '<span class="lbl">' + L("Махни", "Remove") + "</span></button>" :
           '<span class="counter" role="group" aria-label="' + L("Брой: ", "Quantity: ") + M.esc(l.name) + '"><button type="button" data-q="-1" data-k="' + l.key + '" aria-label="' + (l.q > 1 ? L("Намали", "Decrease") : L("Махни", "Remove")) + '">' + M.ic(l.q > 1 ? "minus" : "trash", 20) + "</button><output>" + l.q + '</output><button type="button" data-q="1" data-k="' + l.key + '" aria-label="' + L("Увеличи", "Increase") + '"' + (canMore ? "" : ' aria-disabled="true"') + ">" + M.ic("plus", 20) + "</button></span>") + "</div>";
       }).join("") + "</div>";
   }).join("") + '</div></div><p class="note-auto" style="margin-top:10px">' + M.ic("users-three", 18) + "<span>" + L("Всеки на масата може да промени количката. Промените се виждат веднага на всички телефони.", "Anyone at the table can change the cart. Changes show at once on every phone.") + "</span></p></section>";
@@ -95,14 +98,18 @@ function sendBtn(cls: string): string {
 function sideHTML(): string {
   const v = M.view, L = M.L, first = v.cart.toWaiter || !!v.pending, sentSum = v.total + (v.pending ? v.pending.sum : 0), had = v.orders.length || v.pending;
   const steak = v.cart.toWaiter && v.orders.length > 0 && v.cart.lines.some((l) => l.per100);
-  const late = v.cart.toWaiter && v.orders.some((o) => o.channel === "qr") && !steak;
+  const qrDone = v.orders.some((o) => o.channel === "qr");
+  const late = v.cart.toWaiter && qrDone && !steak && !v.pending;
+  /* the table is confirmed, but an order waits (another phone's first one): the new dishes go with it */
+  const joins = qrDone && !!v.pending && !steak;
   const nOk = v.cart.lines.reduce((a, l) => a + (l.block ? 0 : l.q), 0);
   return '<div class="side"><div class="shell"><div class="core sum"><h2 class="h3" style="margin:0 0 4px">' + L("За изпращане", "To send") + "</h2>" +
     '<div class="kv"><span>' + M.dishes(nOk) + '</span><span class="price">' + M.fmt(v.cart.sum) + (v.cart.open ? " +" : "") + "</span></div>" +
     (had ? '<div class="kv"><span>' + L("Сметка на масата досега", "Table bill so far") + '</span><span class="price">' + M.fmt(sentSum) + "</span></div>" +
       '<div class="kv tot"><span><b>' + L("Общо с новите", "Total with the new ones") + '</b></span><span class="price">' + M.fmt(sentSum + v.cart.sum) + "</span></div>" : "") +
     (!v.kitchen.open ? "" : '<p class="how">' + M.ic(first ? "hourglass" : "cooking-pot", 20) + "<span>" +
-      (late ? L("Първата поръчка от нов телефон на масата я потвърждава сервитьорът, после отива в кухнята.", "The first order from a new phone at the table is confirmed by the waiter, then it goes to the kitchen.")
+      (joins ? (v.pending!.phone === M.me() ? L("Новото отива при сервитьора заедно с вашата чакаща поръчка.", "The new dishes go to the waiter together with your waiting order.") : L("Новото отива при сервитьора заедно с чакащата поръчка на Телефон " + v.pending!.phone + ".", "The new dishes go to the waiter together with Phone " + v.pending!.phone + "’s waiting order."))
+        : late ? L("Първата поръчка от нов телефон на масата я потвърждава сервитьорът, после отива в кухнята.", "The first order from a new phone at the table is confirmed by the waiter, then it goes to the kitchen.")
         : steak ? L("Стекът „за 100 гр.“ минава през сервитьора: той отбелязва грамажа и праща поръчката в кухнята.", "A steak “per 100 g” goes through the waiter: they note the weight and send the order to the kitchen.")
         : first ? L("Първата поръчка я потвърждава сервитьорът, после отива в кухнята.", "The waiter confirms the first order, then it goes to the kitchen.") : L("Сервитьорът вече потвърди масата: тази поръчка отива направо в кухнята.", "The waiter has already confirmed your table: this order goes straight to the kitchen.")) + "</span></p>") +
     blockedNote() + sendBtn("pill-lg pill-block send") + "</div></div>" +

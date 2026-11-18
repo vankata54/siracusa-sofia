@@ -97,6 +97,13 @@ test("the bill by dishes from two phones, the rest, „Всичко вече е 
     expect(row).toMatchObject({ name: expect.stringMatching(new RegExp("^QR маса, Маса " + n + "\\b")), topic: "Оценка от масата", contact: "" });
     const rt = await M.ok(M.r.get("/api/floor/ratings"));
     expect(JSON.stringify(rt)).toContain("Чакахме дълго за сметката.");
+    /* and in the manager's module: „Оценки от масите“ on „Сега“ */
+    const mp = await M.ctx.newPage();
+    await mp.goto("/upravitel/");
+    const blk = mp.locator("#rates");
+    await expect(blk.locator("h2")).toHaveText("Оценки от масите");
+    await expect(blk).toContainText("„Чакахме дълго за сметката.“");
+    await expect(blk).toContainText("Маса " + n);
     await M.ctx.close();
     expect(errs).toEqual([]);
     expect(p2.errors).toEqual([]);

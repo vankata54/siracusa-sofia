@@ -11,7 +11,7 @@
    - an empty table, guests without an order ("Гостите седнаха": floorApi.seat), the closed sitting;
    - everything live (floor.session, floor.qr, floor.call, order.new, order.line, order.status); no connection: the old
      data with the frame's note, the actions say why they wait; the orders kept on the phone are shown here too. */
-import "sc-icons:receipt,money,credit-card,door-open,chair,hourglass,qr-code,note,check,check-circle,cooking-pot,chef-hat,users,bell-ringing,fork-knife,drop,chat-circle-dots,plus,warning,clock,caret-left,x";
+import "sc-icons:receipt,money,credit-card,door-open,chair,hourglass,qr-code,note,check,check-circle,cooking-pot,chef-hat,users,bell-ringing,fork-knife,drop,chat-circle-dots,plus,warning,warning-circle,clock,caret-left,x";
 import { mountStaff, type Staff, type Sheet } from "../staff/frame.ts";
 import { floorApi, ApiError, type TableDetail, type StaffLine, type StaffBill, type HallCall, type PendingLine } from "../../client/api-floor.ts";
 import { murl } from "../routes.ts";
@@ -99,7 +99,8 @@ export async function mountTable(): Promise<void> {
         : other ? "" : '<button class="pill" type="button" data-take="' + esc(c.id) + '"' + off() + ">Отивам</button>") + "</div>";
   }
   function pendingLine(l: PendingLine): string {
-    return '<div class="oline"><span class="q">' + l.q + "×</span><div><div class=\"nm\">" + esc(l.name) + "</div>" +
+    /* a phone the waiter has not confirmed yet (decision 18.11.2026): "нов телефон" at its line */
+    return '<div class="oline"><span class="q">' + l.q + "×</span><div><div class=\"nm\">" + esc(l.name) + (l.isNew ? ' <span class="newph">' + ic("warning-circle", 16) + "нов телефон</span>" : "") + "</div>" +
       (l.mods && l.mods.length ? '<div class="mods">' + esc(l.mods.join(", ")) + "</div>" : "") +
       '<div class="sub"><span class="price">' + (l.per100 ? fmt(l.price100 || 0) + " за 100 гр.</span><span class=\"g\">грамаж при потвърждение" : fmt(l.sum || 0)) + "</span></div></div></div>";
   }

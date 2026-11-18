@@ -49,9 +49,17 @@ export async function listFeedback(ctx: Ctx): Promise<Feedback[]> {
 
 /** "Не" with a few words from the rating at a QR table (decision 17.11.2026): into the same "Обратна връзка" of the admin
     (section "Клиенти", where the manager reads it), with the source "QR маса, Маса N" and no contact (the guest is a phone
-    without a name). Not an inquiry. */
-export async function tableFeedback(ctx: Ctx, f: { table: number; zone: string; text: string; rating: string }): Promise<Feedback> {
+    without a name). Not an inquiry. id: the line this phone wrote before (one per phone and sitting, replaced). */
+export async function tableFeedback(ctx: Ctx, f: { table: number; zone: string; text: string; rating: string; id?: string }): Promise<Feedback> {
   const now = iso(ctx), msg = String(f.text || "").trim().slice(0, 2000);
+  /* the same phone again: its line is replaced (new again for the admin), never a second one */
+  const old = f.id ? await ctx.repo.get<Feedback>(COL.feedback, f.id) : null;
+  if (old) {
+    const doc: Feedback = { ...old, message: msg, status: "new", updatedAt: now };
+    await ctx.repo.put(COL.feedback, doc);
+    emit(ctx, "feedback.created", { id: doc.id, topic: doc.topic || "" });
+    return doc;
+  }
   const doc: Feedback = { id: rid(8), name: "QR маса, Маса " + f.table + (f.zone ? " · " + f.zone : ""), contact: "", mode: "phone", message: msg, topic: TABLE_TOPIC, status: "new", createdAt: now, updatedAt: now };
   await ctx.repo.put(COL.feedback, { ...doc, rating: f.rating });
   emit(ctx, "feedback.created", { id: doc.id, topic: doc.topic || "" });

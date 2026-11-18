@@ -14,6 +14,8 @@ import { pic } from "../../lib/render.ts";
 import { findDish, catById } from "../../lib/data.ts";
 import { ic, esc, plural, NB, ppl, timer, agoMin, statusLine, go, screen, act, callSheet, pickWaiter, hashMap, CH_IC, dayOf, sectionsHTML, prettyPhone, isOff, msgOf, type Screen } from "./common.ts";
 import { fmtNb as fmt } from "../../lib/format.ts";
+import { floorApi, type TableRating } from "../../client/api-floor.ts";
+import { aurl } from "../../admin/routes.ts";
 
 export async function initNow(): Promise<void> {
   const boss = await mountBoss({ module: "upravitel", tab: "now", title: "Сега", search: { load: () => import("./find.ts").then((m) => m.provider(boss!)) } });
@@ -31,6 +33,23 @@ function nowScreen(boss: Boss): void {
     after: (d) => { boss.badge("now", d.counts.now); },
   });
   const D = () => S.data();
+
+  /* ---------- "Оценки от масите": the texts after "Не" at the QR tables (decision 18.11.2026); only for the roles the
+     core lets read them (floorApi.ratings: main admin, owner, manager), loaded beside the shift's data ---------- */
+  let rates: TableRating[] | null = null;
+  const loadRates = () => { floorApi.ratings().then((r) => { rates = r; S.redraw(); }, () => { rates = null; }); };
+  loadRates();
+  boss.onLive(() => loadRates(), ["rating.created"]);
+  function ratingsHTML(): string {
+    if (!rates) return "";
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
+    const no = rates.filter((r) => !r.happy && r.text && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date(r.at)) === today).slice(0, 5);
+    const hm = (iso: string) => new Intl.DateTimeFormat("bg-BG", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+    return '<section class="mg-blk now-rates" id="rates" aria-labelledby="h-rt"><div class="mg-h"><h2 id="h-rt">Оценки от масите</h2>' + (no.length ? cnt(no.length) : "") +
+      '<a class="mg-link more" href="' + aurl.section("customers", "tab=feedback") + '">Обратна връзка ' + ic("arrow-up-right", 18) + "</a></div>" +
+      (no.length ? '<div class="mg-card mg-list">' + no.map((r) => '<div class="mg-wrow"><span class="wi">' + ic("warning-circle", 22) + '</span><div class="wt"><b>„' + esc(r.text) + '“</b><small>' + (r.tableN ? "Маса" + NB + r.tableN + " · " : "") + esc(hm(r.at)) + "</small></div></div>").join("") + "</div>"
+        : '<div class="mg-allok">' + ic("check-circle", 32) + "<div><b>Днес няма недоволни гости с бележка.</b><span>Отговорът „Не“ от QR масата идва тук и в „Обратна връзка“.</span></div></div>") + "</section>";
+  }
 
   /* ---------- the pulse: 5 numbers, each leads to its place ---------- */
   function pulse(d: MgrNow): string {
@@ -112,7 +131,7 @@ function nowScreen(boss: Boss): void {
 
   function draw(d: MgrNow): string {
     const has = d.problems.some((x) => !x.done);
-    return '<div class="now-grid' + (has ? " has-probs" : "") + '" data-upscr="now"><div class="now-day">' + statusLine(d.date, d.now) + '</div><div class="now-pulse">' + pulse(d) + "</div>" + problems(d) + waits(d) + kitchen(d.kitchen) + "</div>";
+    return '<div class="now-grid' + (has ? " has-probs" : "") + '" data-upscr="now"><div class="now-day">' + statusLine(d.date, d.now) + '</div><div class="now-pulse">' + pulse(d) + "</div>" + problems(d) + waits(d) + kitchen(d.kitchen) + ratingsHTML() + "</div>";
   }
 
   /* ---------- the actions ---------- */

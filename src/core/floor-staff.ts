@@ -26,7 +26,7 @@ import { searchDishes, latin } from "../lib/search.ts";
 import { sofiaYmd } from "../lib/time.ts";
 import {
   FLOOR_MSG, CALL_STAFF, CALL_WARN_MIN, REJECT_REASONS, ZONE_NAME, BILL_ALL, FLOOR_UNDO_MS, LINE_LABEL, needFloor, lockKey, openSessionOf, openSessions, saveSession, newSession,
-  sessionOrders, tableOf, billLines, sumOf, r2, phoneOf, phoneLabel, callLate, emitSession, emitCall, closeIfStale, patchOrder,
+  sessionOrders, tableOf, billLines, sumOf, r2, phoneOf, phoneLabel, callLate, emitSession, emitCall, closeIfStale, patchOrder, lineTouch,
   type BillLine, type CallKind, type FloorCall, type FloorPayment, type LineSt, type RejectReason, type TableSession,
 } from "./floor.ts";
 import { openShifts, tableOwners, type TableOwner } from "./floor-shift.ts";
@@ -63,7 +63,8 @@ export interface StaffLine {
 }
 export interface StaffOrder { no: string; placedAt: string; ts: number; channel: "qr" | "waiter"; /** confirmed by a waiter */ via: boolean; source: string; by: string; note: string; status: OrderStatus; statusLabel: string; lines: StaffLine[]; sum: number }
 export interface StaffBill { name: string; sum: number; paid: number; rest: number; orders: StaffOrder[] }
-export interface PendingLine { key: string; id: string; name: string; q: number; mods: string[]; per100: boolean; /** the price for 100 g of a steak */ price100: number | null; unit: number | null; sum: number | null; phone: number }
+export interface PendingLine { key: string; id: string; name: string; q: number; mods: string[]; per100: boolean; /** the price for 100 g of a steak */ price100: number | null; unit: number | null; sum: number | null; phone: number;
+  /** added or changed by a phone the waiter has not confirmed yet ("нов телефон"; only after the table's first confirmed QR order) */ isNew: boolean }
 export interface TableDetail {
   table: TRef & { zoneName: string; seats: number }; owner: { username: string; name: string } | null; mine: boolean;
   state: TableStateKey; label: string; since: Iso | null;
@@ -104,11 +105,13 @@ function callView(c: FloorCall, s: TableSession, t: TRef, me: StaffCtx, owner: T
     warn: !c.taken && nowMs - Date.parse(c.at) >= CALL_WARN_MIN * 60_000, late: callLate(c, nowMs, managerMin), mine: !!owner && owner.user === me.user.id, forMe: !tk || tk.mine };
 }
 function pendingView(s: TableSession): { lines: PendingLine[]; n: number; sum: number; open: boolean } {
+  const seen = s.seen || [], confirmed = seen.length > 0;
   const lines: PendingLine[] = (s.pending ? s.pending.lines : []).map((l) => {
     const x = byId[l.id], per100 = !!(x && x.per100);
     let unit: number | null = null;
     if (x && !per100) { try { unit = checkOne(l.id, l.mods); } catch { unit = x.p; } }
-    return { key: l.key, id: l.id, name: x ? x.n : l.id, q: l.q, mods: l.mods, per100, price100: per100 ? x.p : null, unit, sum: unit == null ? null : r2(unit * l.q), phone: phoneOf(l.who) || 0 };
+    return { key: l.key, id: l.id, name: x ? x.n : l.id, q: l.q, mods: l.mods, per100, price100: per100 ? x.p : null, unit, sum: unit == null ? null : r2(unit * l.q), phone: phoneOf(l.who) || 0,
+      isNew: confirmed && lineTouch(l).some((w) => !seen.includes(w)) };
   });
   return { lines, n: lines.reduce((a, l) => a + l.q, 0), sum: r2(lines.reduce((a, l) => a + (l.sum || 0), 0)), open: lines.some((l) => l.sum == null) };
 }
@@ -279,6 +282,8 @@ export async function qrConfirm(ctx: Ctx, s: StaffCtx, ref: string | number, gra
       if (e instanceof CoreError && f) { const nf: Record<string, string> = {}; for (const k of Object.keys(f)) { const m = /^lines\.(\d+)\.grams$/.exec(k); nf[m && pl[+m[1]] ? "grams." + pl[+m[1]].key : k] = f[k]; } (e as CoreError & { fields?: unknown }).fields = nf; }
       throw e;
     }
+    /* the waiter has seen these phones now: their next orders may go straight to the kitchen (decision 18.11.2026) */
+    sit.seen = [...new Set([...(sit.seen || []), ...pl.flatMap(lineTouch)])];
     sit.orders.push(o.no); sit.pending = null; sit.rejected = null;
     await audit(ctx, s.user.username, "floor.qr_confirm", o.no, { table: t.n, total: o.total, lines: o.lines.length });
     emit(ctx, "floor.qr", { table: t.id, n: t.n, session: sit.id, state: "confirmed", no: o.no });
@@ -540,19 +545,16 @@ export async function staffSearch(ctx: Ctx, s: StaffCtx, raw: string): Promise<S
     }
   }
   out.orders.sort((a, b) => Number(b.mine) - Number(a.mine) || +b.no - +a.no);
-  /* today's reservations: the hour, the whole phone number (never a part of it), the table, a name */
+  /* today's reservations: the hour, the table, a name. Never by the phone (decision 18.11.2026, round 2): the list shows it
+     masked, and even the whole number can be found by trying (about 1 200 requests), without a line in the log */
   if (out.reservations) {
     const today = sofiaYmd(nowDate(ctx)), tnOf = new Map(hall.map((t) => [t.id, t.n]));
     const hm = time ? time[1].padStart(2, "0") + ":" + time[2] : "";
-    const qd = text.replace(/\D/g, ""), phoneQ = /^(0\d{9}|359\d{9})$/.test(qd) && /^[\d\s+()-]+$/.test(text.trim()) ? qd : "";
     const list = (await ctx.repo.list<Reservation>(COL.reservations, { date: today } as Partial<Reservation>)).filter((r) => r.status !== "cancelled");
     for (const r of list.sort((a, b) => (a.time < b.time ? -1 : 1))) {
       const n = r.table ? tnOf.get(r.table) ?? null : null;
       let hit = kRes;
       if (!hit && time) hit = r.time === hm;
-      /* the phone only by the WHOLE number ("0888 12 34 56", "+359 888 …"): the list shows it masked, so a part of it never
-         matches (digit by digit the hidden middle could be rebuilt without the log of "Покажи") */
-      if (!hit && !time && phoneQ) { const pd = r.phone.replace(/\D/g, ""); hit = phoneQ === pd || (pd.startsWith("0") && phoneQ === "359" + pd.slice(1)); }
       if (!hit && !time) hit = nums.some((x) => x.length < 3 && (String(n) === x || r.time.indexOf(x.padStart(2, "0") + ":") === 0));
       if (!hit && txt.length) hit = txt.every((w) => lat(r.name).split(" ").some((p) => p.indexOf(w) === 0));
       if (hit) out.reservations.push({ id: r.id, time: r.time, people: r.people, tableN: n, name: r.name, phone: maskPhone(r.phone), note: r.note || "", status: r.status });

@@ -27,7 +27,7 @@ function linesHTML(pick: boolean): string {
   return '<div class="shell"><div class="core lines">' + ls.map((l) => {
     const owner = v.bill.picks[l.key], on = owner === M.me();
     const body = '<span class="nm">' + (l.q > 1 ? l.q + " × " : "") + M.esc(l.name) + "</span>" + M.whoTag(l.phone, l.who) + '<span class="price">' + (l.out ? L("Изчерпано днес", "Sold out today") : M.fmt(l.sum)) + "</span>";
-    if (!pick || l.out) return '<div class="bl">' + body + (l.paid ? '<span class="payer me">' + L("Платено", "Paid") + "</span>" : "") + "</div>";
+    if (!pick || l.out) return '<div class="bl' + (pick ? " indent" : "") + '">' + body + (l.paid ? '<span class="payer me">' + L("Платено", "Paid") + "</span>" : "") + "</div>";
     const lock = (txt: string) => '<div class="bl pick taken"><input type="checkbox" checked disabled aria-label="' + M.esc(l.name) + ": " + M.esc(txt) + '">' + body + '<span class="payer">' + M.esc(txt) + "</span></div>";
     if (l.paid) return lock(L("Платено", "Paid"));
     if (owner && !on) return lock(M.name(owner) + L(" плаща", " pays"));
@@ -87,7 +87,7 @@ function othersHTML(): string {
 
 function codeHTML(): string {
   const r = M.view.rating!, L = M.L;
-  return '<div class="code ember-card"><span class="k">' + L("Вашият код за -" + r.pct + "% от следващата поръчка", "Your code for " + r.pct + "% off your next order") + '</span><div class="row"><span class="v" data-code>' + M.esc(r.code) + '</span><button class="pill pill-ink" type="button" data-copy>' + M.ic("copy", 18) + L("Копирай кода", "Copy code") + "</button></div><p>" + L("За следваща поръчка от сайта или на масата. Кодът е за телефон, от който е поръчано на масата: по един на телефон.", "For your next order on the website or at the table. The code is for a phone that ordered at the table: one per phone.") + "</p></div>";
+  return '<div class="code ember-card"><span class="k">' + L("Вашият код за -" + r.pct + "% от следващата поръчка", "Your code for " + r.pct + "% off your next order") + '</span><div class="row"><span class="v" data-code>' + M.esc(r.code) + '</span><button class="pill pill-ink" type="button" data-copy>' + M.ic("copy", 18) + L("Копирай кода", "Copy code") + "</button></div><p>" + L("Важи за следваща поръчка от сайта или на масата, по един код на всеки телефон, от който е поръчано.", "For your next order on the website or at the table, one code for every phone that ordered.") + "</p></div>";
 }
 function googleHTML(big: boolean): string {
   const L = M.L, g = M.view.google;
@@ -138,7 +138,7 @@ function askHTML(): string {
 let jumped = false;
 function render(m: Masa) {
   M = m;
-  const v = M.view, L = M.L, closed = v.status === "closed", n = lines().reduce((a, l) => a + l.q, 0);
+  const v = M.view, L = M.L, closed = v.status === "closed", n = lines().reduce((a, l) => a + (l.out ? 0 : l.q), 0);
   const focused = document.activeElement && (document.activeElement as HTMLElement).id === "fb";
   const fb = M.main.querySelector<HTMLTextAreaElement>("#fb");
   if (fb) R.fb = fb.value;

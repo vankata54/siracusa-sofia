@@ -113,3 +113,6 @@
 .lg .endrow > div > span{display:block; font-size:15px; color:var(--muted); font-weight:600}
 .lg .endrow .stt{margin-left:auto}
 .lg .pill[aria-disabled="true"]{opacity:.55}
+/* the waiting QR order: "нов телефон" at the lines of a phone not confirmed yet (decision 18.11.2026) */
+.oline .newph{display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:2px 10px 2px 8px; border-radius:999px; background:var(--ember-soft); color:var(--ink); font-size:14px; font-weight:800; white-space:nowrap; vertical-align:2px}
+.oline .newph .ic{color:var(--warn)}

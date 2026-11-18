@@ -259,7 +259,7 @@ test("@phone no connection: the whole screen with the steps, „Виж посл�
   } finally { await endShift(w); await freeTable(a, 3); }
 });
 
-test("@phone the search never rebuilds a masked phone: only the whole number finds a reservation, and it stays masked", async ({ page, context }) => {
+test("@phone the search never finds a reservation by the phone (not even the whole number); the name finds it, the phone stays masked", async ({ page, context }) => {
   const a = await admin(), w = await newWaiter(a);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date());
   const name = "Гост " + rnd(), phone = "0889" + String(100000 + Math.floor(Math.random() * 899999));
@@ -272,10 +272,11 @@ test("@phone the search never rebuilds a masked phone: only the whole number fin
     /* through the API: a part of the hidden middle never matches, the whole number does and comes back masked */
     const find = async (q: string) => ((await (await w.api.get("/api/staff/search?q=" + encodeURIComponent(q))).json()) as { reservations: { name: string; phone: string }[] }).reservations.filter((x) => x.name === name);
     for (const part of [phone.slice(0, 5), phone.slice(0, 6), phone.slice(2, 8), phone.slice(0, 9), phone.slice(4)]) expect(await find(part), part).toEqual([]);
-    const hit = await find(phone.slice(0, 4) + " " + phone.slice(4, 6) + " " + phone.slice(6, 8) + " " + phone.slice(8));
+    expect(await find(phone.slice(0, 4) + " " + phone.slice(4, 6) + " " + phone.slice(6, 8) + " " + phone.slice(8))).toEqual([]);
+    expect(await find("+359" + phone.slice(1))).toEqual([]);
+    const hit = await find(name);
     expect(hit.length).toBe(1);
     expect(hit[0].phone).not.toContain(phone.slice(4, 8));
-    expect((await find("+359" + phone.slice(1))).length).toBe(1);
     /* on the screen */
     await signInCtx(context, w);
     await page.goto("/servitor/");
@@ -286,6 +287,9 @@ test("@phone the search never rebuilds a masked phone: only the whole number fin
     await expect(dlg.locator(".fgrp, .fempty").first()).toBeVisible();
     await expect(dlg).not.toContainText(name);
     await inp.fill(phone);
+    await expect(dlg.locator(".fgrp, .fempty").first()).toBeVisible();
+    await expect(dlg).not.toContainText(name);
+    await inp.fill(name);
     await expect(dlg.locator("button.frow", { hasText: name })).toBeVisible();
     await expect(dlg.locator("button.frow", { hasText: name })).not.toContainText(phone.slice(4, 8));
   } finally { await a.post("/api/admin/reservations/" + id + "/status", { data: { status: "cancelled" } }); }

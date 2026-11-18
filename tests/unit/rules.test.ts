@@ -148,6 +148,12 @@ describe("tracking: key and public view", () => {
     expect(mayReceive(sub, { public: true })).toBe(true);
     expect(mayReceive({ ...sub, staff: true }, {})).toBe(true);
     expect(mayReceive(sub, { office: "123456" })).toBe(false);
+    /* the hall live: not for marketing, the kitchen or the driver; yes for the waiter and the bosses */
+    expect(mayReceive({ ...sub, staff: true, role: "marketing", sections: ["dashboard", "notes", "site"] }, {}, "floor.session")).toBe(false);
+    expect(mayReceive({ ...sub, staff: true, role: "kitchen", sections: ["dashboard", "kitchen"] }, {}, "floor.call")).toBe(false);
+    expect(mayReceive({ ...sub, staff: true, role: "kitchen", sections: ["dashboard", "kitchen"] }, {}, "order.new")).toBe(true);
+    expect(mayReceive({ ...sub, staff: true, role: "waiter", sections: ["dashboard", "waiter"] }, {}, "floor.call")).toBe(true);
+    expect(mayReceive({ ...sub, staff: true, role: "manager", sections: [] }, {}, "floor.qr")).toBe(true);
   });
 });
 

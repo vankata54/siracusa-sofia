@@ -64,9 +64,17 @@ export interface AppOpts {
 /* a real-time subscriber: staff (cookie) get everything; others only public events and the order / office they asked for */
 interface Sub { send: (type: string, data: unknown) => void; staff: boolean; orders: Set<string>; offices: Set<string>;
   /** the table sessions (sittings) this subscriber is a guest of (core/floor.ts) */
-  tables?: Set<string> }
-export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices" | "tables">, to: Audience): boolean {
-  return s.staff || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office)) || (!!to.table && !!s.tables && s.tables.has(to.table));
+  tables?: Set<string>;
+  /** a staff member: the role and the sections (the hall's live events only for those who work in the hall) */
+  role?: string; sections?: string[] }
+/** the hall live (the guests' notes, calls, carts) is for the roles that work in the hall: the main admin, owner, manager and
+    who has "Сервитьор", "Залата" or "Поръчки"; marketing, the kitchen and the driver do not get it (servitor.review-2, round 2) */
+export function staffMayHear(s: Pick<Sub, "role" | "sections">, type?: string): boolean {
+  if (!type || !type.startsWith("floor.")) return true;
+  return s.role === "admin" || s.role === "owner" || s.role === "manager" || !!s.sections && s.sections.some((x) => x === "waiter" || x === "hall" || x === "orders");
+}
+export function mayReceive(s: Pick<Sub, "staff" | "orders" | "offices" | "tables" | "role" | "sections">, to: Audience, type?: string): boolean {
+  return (s.staff && staffMayHear(s, type)) || !!to.public || (!!to.order && s.orders.has(to.order)) || (!!to.office && s.offices.has(to.office)) || (!!to.table && !!s.tables && s.tables.has(to.table));
 }
 
 /* compression for text responses (HTML, JS, CSS, SVG, JSON): brotli when the browser takes it, else gzip */
@@ -98,7 +106,7 @@ export function createApp(opts: AppOpts) {
   const ctx: Ctx = {
     repo: new SqliteRepo(sqlite), hasher: scryptHasher, requireTrackKey: opts.requireTrackKey !== false, smsDemo: !!opts.smsDemo, noLimits: !!opts.previewApi,
     emit: (type, data, to) => {
-      clients.forEach((s) => { if (mayReceive(s, to || {})) s.send(type, data); });
+      clients.forEach((s) => { if (mayReceive(s, to || {}, type)) s.send(type, data); });
       /* a line of a table order changed in the kitchen (order.line goes to the staff): the guests of that sitting get
          floor.session with the new line states (core/floor.ts sessionTouched) */
       const sid = type === "order.line" && !(to && to.table) && data && typeof (data as { session?: unknown }).session === "string" ? (data as { session: string }).session : "";
@@ -470,7 +478,7 @@ export function createApp(opts: AppOpts) {
      /api/stream?order=1042-k7f3m2pq&office=173012: public events (reservations freed/taken, kitchen minutes) + only the
      events of these orders / office orders. Staff (cookie) get everything. Unknown keys are ignored. */
   app.get("/api/stream", async (c) => {
-    const isStaff = !!(await core.staff.bySession(getCookie(c, STAFF_COOKIE)));
+    const me = await core.staff.bySession(getCookie(c, STAFF_COOKIE)), isStaff = !!me;
     const orders = new Set<string>(), offices = new Set<string>();
     for (const id of (c.req.query("order") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.orders.find(id); if (o) orders.add(o.no); }
     for (const code of (c.req.query("office") || "").split(",").filter(Boolean).slice(0, 10)) { const o = await core.office.raw(code); if (o) offices.add(o.code); }
@@ -479,7 +487,7 @@ export function createApp(opts: AppOpts) {
     const seat = async () => { const sid = tCode && tGuest ? await core.floor.stream(tCode, tGuest) : null; tables.clear(); if (sid) tables.add(sid); };
     await seat();
     return streamSSE(c, async (stream) => {
-      const sub: Sub = { staff: isStaff, orders, offices, tables, send: (type, data) => { stream.writeSSE({ event: type, data: JSON.stringify(data) }).catch(() => {}); } };
+      const sub: Sub = { staff: isStaff, role: me ? me.user.role : undefined, sections: me ? me.sections : undefined, orders, offices, tables, send: (type, data) => { stream.writeSSE({ event: type, data: JSON.stringify(data) }).catch(() => {}); } };
       clients.add(sub);
       stream.onAbort(() => { clients.delete(sub); });
       await stream.writeSSE({ event: "hello", data: JSON.stringify({ orders: [...orders], offices: [...offices], tables: [...tables] }) });

@@ -182,3 +182,6 @@ main:focus{outline:none}
 .unas > span{display:inline-flex; align-items:center; gap:8px}
 .mnote .oth{align-items:flex-start}
 .mnote .oth .av{margin-top:1px}
+
+/* ---------- after the visual review, round 2 ---------- */
+@container app (max-width:370px){ .mpage .h1{font-size:34px} }
