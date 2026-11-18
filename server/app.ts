@@ -494,7 +494,8 @@ export function createApp(opts: AppOpts) {
       while (!stream.aborted) {
         await stream.sleep(25_000);
         /* the staff session can end (sign-out, 12 h): from then on only public events and the own orders */
-        if (sub.staff && !(await core.staff.bySession(getCookie(c, STAFF_COOKIE)))) sub.staff = false;
+        /* the session may have ended, or its rights changed in "Роли и права": the next events follow the current ones */
+        if (sub.staff) { const now = await core.staff.bySession(getCookie(c, STAFF_COOKIE)); if (!now) sub.staff = false; else { sub.role = now.user.role; sub.sections = now.sections; } }
         /* the sitting can end and a new one open at the same table while the page stays open */
         if (tCode) await seat().catch(() => {});
         await stream.writeSSE({ event: "ping", data: "{}" }).catch(() => {});
