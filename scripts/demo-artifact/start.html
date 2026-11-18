@@ -1,0 +1,124 @@
+<title>Siracusa демо</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: one column of doors into the demo, grouped by who uses each screen (guest, table, staff, management). */
+:root{
+  --bg:#F2F2EF; --surface:#FBFBFA; --surface-2:#E8E8E3; --ink:#121211; --muted:#5C5C57;
+  --line:rgba(18,18,17,.12); --red:#CC2A1E; --on-red:#FFFFFF; --ember:#F2B23A; --ember-soft:rgba(242,178,58,.18);
+  --font:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --ink:#F2F2EF; --muted:#A09F99;
+  --line:rgba(242,242,239,.14); --red:#E0453A; --on-red:#FFFFFF; --ember:#F2B23A; --ember-soft:rgba(242,178,58,.14); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1C1C1A; --surface-2:#272725; --ink:#F2F2EF; --muted:#A09F99;
+  --line:rgba(242,242,239,.14); --red:#E0453A; --on-red:#FFFFFF; --ember:#F2B23A; --ember-soft:rgba(242,178,58,.14); color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--font); font-size:16px; line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:24px 40px}
+.wrap{max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:28px}
+header{display:flex; flex-direction:column; gap:10px}
+.eyebrow{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+h1{font-size:clamp(28px, 7vw, 40px); line-height:1.1; margin:0; font-weight:800; text-wrap:balance}
+h1 b{color:var(--red)}
+.lead{margin:0; color:var(--muted); max-width:60ch}
+.note{display:flex; gap:10px; align-items:flex-start; background:var(--ember-soft); border:1px solid var(--ember); border-radius:16px; padding:14px 16px}
+.note strong{display:block}
+section{display:flex; flex-direction:column; gap:12px}
+h2{font-size:20px; margin:0; font-weight:800}
+.grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px}
+a.door{display:flex; flex-direction:column; justify-content:center; gap:2px; min-height:64px; padding:12px 16px; border-radius:18px;
+  background:var(--surface); border:1px solid var(--line); color:var(--ink); text-decoration:none; min-width:0}
+a.door b{font-size:17px}
+a.door span{font-size:14px; color:var(--muted)}
+a.door:hover{border-color:var(--ink)}
+a.door:focus-visible{outline:3px solid var(--red); outline-offset:2px}
+a.door.main{background:var(--red); border-color:var(--red); color:var(--on-red)}
+a.door.main span{color:var(--on-red); opacity:.9}
+.acc{border-collapse:collapse; width:100%; font-size:15px}
+.acc th, .acc td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
+.acc th{font-size:14px; color:var(--muted); font-weight:600}
+.acc code{font-size:15px; background:var(--surface-2); padding:1px 6px; border-radius:6px}
+.tablewrap{overflow-x:auto}
+ol{margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px}
+footer{font-size:14px; color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Siracusa Bar &amp; Grill · ж.к. Дружба 2</div>
+    <h1>Демо за преглед: <b>сайтът и всички модули</b></h1>
+    <p class="lead">Всичко работи в този браузър: поръчките, масите, кухнята и шофьорът си говорят на живо. Данните остават само на това устройство.</p>
+    <div class="note" role="note"><div><strong>Само за преглед, не за истински клиенти.</strong>Поръчките не стигат до ресторанта, SMS и имейли не се пращат. Истинската версия тръгва, когато има хостинг и домейн.</div></div>
+  </header>
+
+  <section aria-labelledby="h-site">
+    <h2 id="h-site">Клиентът</h2>
+    <div class="grid">
+      <a class="door main" href="nachalo.html"><b>Сайтът</b><span>Началната страница</span></a>
+      <a class="door" href="menu/index.html"><b>Меню</b><span>127 артикула, филтри</span></a>
+      <a class="door" href="kolichka/index.html"><b>Количка</b><span>Доставка и вземане</span></a>
+      <a class="door" href="rezervatsia/index.html"><b>Резервация</b><span>Маса за днес и напред</span></a>
+      <a class="door" href="vhod/index.html"><b>Вход с телефон</b><span>Кодът се показва на екрана</span></a>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-table">
+    <h2 id="h-table">На масата (QR)</h2>
+    <div class="grid">
+      <a class="door" href="admin/qr/index.html"><b>QR кодовете</b><span>Влез като admin, после докосни код на маса</span></a>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-staff">
+    <h2 id="h-staff">Персоналът</h2>
+    <div class="grid">
+      <a class="door" href="servitor/vhod/index.html"><b>Сервитьор</b><span>Телефон и часовник</span></a>
+      <a class="door" href="kuhnya/vhod/index.html"><b>Кухня</b><span>Таблет, най-добре хоризонтално</span></a>
+      <a class="door" href="shofyor/vhod/index.html"><b>Шофьор</b><span>Телефон: кола, км, доставки</span></a>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-boss">
+    <h2 id="h-boss">Управлението</h2>
+    <div class="grid">
+      <a class="door" href="admin/vhod/index.html"><b>Управител</b><span>Вход: manager, избери „Модула“</span></a>
+      <a class="door" href="admin/vhod/index.html"><b>Собственик</b><span>Вход: owner, избери „Модула“</span></a>
+      <a class="door" href="admin/vhod/index.html"><b>Админ панел</b><span>Вход: admin</span></a>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-acc">
+    <h2 id="h-acc">Акаунти</h2>
+    <div class="tablewrap">
+      <table class="acc">
+        <thead><tr><th scope="col">Роля</th><th scope="col">Потребител</th></tr></thead>
+        <tbody>
+          <tr><td>Главен админ</td><td><code>admin</code></td></tr>
+          <tr><td>Собственик</td><td><code>owner</code></td></tr>
+          <tr><td>Управител</td><td><code>manager</code></td></tr>
+          <tr><td>Сервитьор</td><td><code>waiter</code></td></tr>
+          <tr><td>Кухня</td><td><code>kitchen</code></td></tr>
+          <tr><td>Шофьор</td><td><code>driver</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lead">Паролите са дадени отделно, не са на тази страница.</p>
+  </section>
+
+  <section aria-labelledby="h-try">
+    <h2 id="h-try">Целият поток за 3 минути</h2>
+    <ol>
+      <li>Сайтът › Меню › добави ястие › Количка › поръчай за доставка.</li>
+      <li>Кухня (kitchen) › „Започни“, после задръж „Готово“ 1 сек.</li>
+      <li>Шофьор (driver) › „Взех“ › „Тръгвам“ › „Пристигнах“ › „Доставена“.</li>
+      <li>Страницата на поръчката показва всяка стъпка. Управителят и собственикът я виждат на живо.</li>
+    </ol>
+  </section>
+
+  <footer>Тази начална страница е само за демото. Логото „Siracusa“ на всяка страница води обратно тук.</footer>
+</div>

@@ -140,6 +140,14 @@ QR маса, Сервитьор + часовник, Кухня, Шофьор, У
 
 ### Стъпка 7. На живо (етап E)
 
+**Докъде е (18.11.2026):**
+- Хостинг, домейн, SMS и имейл още няма: чакат собственика. Списъкът за него с изискванията и ориентировъчни цени е в `docs/ZA-SOBSTVENIKA-PUSKANE.md` и публикуван на https://claude.ai/artifact/VCtdUtAGc3fWM8wqRVy4jn.
+- Демото (всички модули) е публикувано като Artifact на https://claude.ai/artifact/VhMxkezHEAwcs77QhmuNao (комит e345d18).
+- Как се обновява на същия линк:
+  1. `npm run build:demo`;
+  2. `node scripts/demo-artifact/prep.mjs <папка>` (сервизът отказва пътища с „_“: `_astro` става `assets`; началната страница е `scripts/demo-artifact/start.html`, началото на сайта е `nachalo.html`);
+  3. публикувай `<папка>/index.html` с `url` на артефакта, `root` = `<папка>/site` и файловете от `parts-1.json`, после от `parts-2.json`.
+
 Промпт за новата сесия (стъпка 6 е ГОТОВО, `build/v1`):
 
 ```
@@ -147,26 +155,23 @@ QR маса, Сервитьор + часовник, Кухня, Шофьор, У
 
 НАЧАЛО
 1. git fetch origin build/v1 && git checkout -B <сесийния клон> origin/build/v1 (след всеки комит: git push origin HEAD:build/v1; комитите без ред за съавторство и без име на модел).
-2. Прочети изцяло: CLAUDE.md, docs/HANDOFF-NEXT.md (стъпки 6-7 и раздел 4), docs/STATUS.md, docs/DECISIONS.md (най-долу печели), docs/BUILD-TODO.md (особено „Пускане (етап E)“, „Стъпка 6: дребни след ГОТОВО и за етап E“, „Скорост“), docs/OPEN-QUESTIONS.md („Хостинг“), docs/AGENTS.md, docs/MODULES-BRIEF.md.
+2. Прочети изцяло: CLAUDE.md, docs/HANDOFF-NEXT.md (стъпки 6-7 и раздел 4), docs/STATUS.md, docs/DECISIONS.md (най-долу печели), docs/BUILD-TODO.md (особено „Пускане (етап E)“, „Стъпка 6: дребни след ГОТОВО и за етап E“, „Скорост“), docs/ZA-SOBSTVENIKA-PUSKANE.md, docs/OPEN-QUESTIONS.md („Хостинг“, SMS, имейл), docs/AGENTS.md, docs/MODULES-BRIEF.md.
 3. npm install, node scripts/make-env.mjs, npm test, npm run build, npm run build:demo и всички e2e (E2E_PORT извън блоковете на агентите, --workers=2 --trace off). Ако нещо не минава още в началото, оправи първо него.
 4. Резюме до 15 реда и започни веднага.
 
 РАБОТА
-Етап E по docs/BUILD-PLAN.md. Ако има хостинг (docs/OPEN-QUESTIONS.md), деплой там с базата, HTTPS, COOKIE_SECURE=1, TRUST_PROXY, HTTP/2, VAPID ключовете в .env на сървъра, седмичен build и redirects.json (BUILD-TODO, „Пускане“). Ако няма: демото (npm run build:demo) публикувано като Artifact, който отварям от телефона (по-долу). Lighthouse на телефон (начало, меню, ястие, количка): Performance ≥ 90, Accessibility 100, SEO 100, Best Practices ≥ 95. Кешът на страниците на модулите в Service Worker и токенът на госта в потока на живо (BUILD-TODO). 2 проверяващи на всяка част до ГОТОВО.
+Етап E по docs/BUILD-PLAN.md.
+- Ако собственикът вече е дал хостинг (виж docs/OPEN-QUESTIONS.md и какво ти казвам в чата): деплой там с базата, HTTPS, COOKIE_SECURE=1, TRUST_PROXY, HTTP/2, VAPID ключовете в .env на сървъра, ежедневен архив на базата, седмичен build и redirects.json (BUILD-TODO, „Пускане“), после домейнът, SMS доставчикът и имейлът според избора му.
+- Ако още няма хостинг: обнови демото на същия линк (HANDOFF-NEXT, стъпка 7, „Как се обновява“) и направи всичко от етап E, което не зависи от хостинга: Lighthouse на телефон (начало, меню, ястие, количка: Performance ≥ 90, Accessibility 100, SEO 100, Best Practices ≥ 95), кешът на страниците на модулите в Service Worker, токенът на госта в потока на живо, дребните от BUILD-TODO, скрипт за деплой и архив, готов за първия сървър.
+- 2 проверяващи на всяка част до ГОТОВО.
 
 ПРАВИЛА
 - Спирай и питай само ако нещо блокира работата. За всичко друго избери най-безопасния вариант, запиши го в DECISIONS с „(шеф)“ и продължи.
-- Не измисляй факти: [ЛИПСВА: ...] и в docs/OPEN-QUESTIONS.md. Пароли само в .env и в чата.
+- Не измисляй факти: [ЛИПСВА: ...] и в docs/OPEN-QUESTIONS.md. Пароли и достъпи само в .env и в чата, никога в git.
 - Раздел 4 на HANDOFF-NEXT. Най-много 3 агента наведнъж, всеки в свое git копие със свой блок портове (ownServer отмества до +30).
 
 НАКРАЯ
-- Обнови STATUS, BUILD-TODO, DECISIONS, agents-log и HANDOFF-NEXT (стъпка 7 ГОТОВО). В чата: линкът, какво е готово, числата от проверките и какво решавам аз.
-```
-
-Ако няма хостинг, частта за демото:
-
-```
-Стъпка 7 от docs/HANDOFF-NEXT.md: етап E по docs/BUILD-PLAN.md. Ако няма хостинг (docs/OPEN-QUESTIONS.md), публикувай демото (npm run build:demo) като Artifact, който отварям от телефона: първо провери с малък тест дали подстраниците на многофайлов артефакт имат достъп до claude.use; ако нямат, главната страница е таблото и държи базата, а модулите са в iframe и пращат бележките от молива с postMessage. Бележките от молива да се пазят в базата на артефакта, за да ги чете следващата сесия. Lighthouse на телефон (начало, меню, ястие, количка): Performance ≥ 90, Accessibility 100, SEO 100, Best Practices ≥ 95. Кажи ми ясно, че демото е за преглед, не за истински клиенти. Дай ми линка.
+- Обнови STATUS, BUILD-TODO, DECISIONS, agents-log и HANDOFF-NEXT (стъпка 7 ГОТОВО или докъде е стигнала). В чата: линкът, какво е готово, числата от проверките и какво решавам аз. Кажи ясно, че демото е за преглед, не за истински клиенти.
 ```
 
 ### Промпт след прекъсване от лимит
